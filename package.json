@@ -1,0 +1,17 @@
+{
+  "name": "bogcha-saas",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:api": "npm run start:dev --workspace=apps/api",
+    "dev:web": "npm run dev --workspace=apps/platform-web",
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down",
+    "prisma:migrate": "npm run prisma:migrate --workspace=apps/api",
+    "prisma:generate": "npm run prisma:generate --workspace=apps/api",
+    "prisma:seed": "npm run prisma:seed --workspace=apps/api"
+  }
+}

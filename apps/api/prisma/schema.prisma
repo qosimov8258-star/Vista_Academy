@@ -1,0 +1,189 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Platform-level identity (Platform Super Admin / Support).
+// Tenant-level users (Katta admin, Kichik admin, tarbiyachi, ota-ona, ...)
+// belong to a later IAM/Tenancy module and are intentionally out of scope
+// for the platform panel.
+// ---------------------------------------------------------------------------
+
+enum PlatformUserRole {
+  PLATFORM_SUPER_ADMIN
+  PLATFORM_SUPPORT
+}
+
+model PlatformUser {
+  id           String           @id @default(uuid())
+  email        String           @unique
+  passwordHash String           @map("password_hash")
+  fullName     String           @map("full_name")
+  role         PlatformUserRole @default(PLATFORM_SUPER_ADMIN)
+  isActive     Boolean          @default(true) @map("is_active")
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+
+  refreshTokens      RefreshToken[]
+  walletTransactions WalletTransaction[] @relation("WalletTransactionCreatedBy")
+
+  @@map("platform_users")
+}
+
+model RefreshToken {
+  id         String    @id @default(uuid())
+  userId     String    @map("user_id")
+  tokenHash  String    @unique @map("token_hash")
+  userAgent  String?   @map("user_agent")
+  ip         String?
+  expiresAt  DateTime  @map("expires_at")
+  revokedAt  DateTime? @map("revoked_at")
+  replacedBy String?   @map("replaced_by")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user PlatformUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// ---------------------------------------------------------------------------
+// Organizations (bog'chalar tarmog'i / tenant) and branches (filiallar).
+// ---------------------------------------------------------------------------
+
+enum OrganizationStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+model Organization {
+  id           String             @id @default(uuid())
+  name         String
+  slug         String             @unique
+  contactName  String?            @map("contact_name")
+  contactEmail String?            @map("contact_email")
+  contactPhone String?            @map("contact_phone")
+  status       OrganizationStatus @default(ACTIVE)
+  createdAt    DateTime           @default(now()) @map("created_at")
+  updatedAt    DateTime           @updatedAt @map("updated_at")
+
+  branches     Branch[]
+  subscription Subscription?
+  wallet       Wallet?
+
+  @@map("organizations")
+}
+
+model Branch {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  name           String
+  address        String?
+  timezone       String   @default("Asia/Tashkent")
+  currency       String   @default("UZS")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@map("branches")
+}
+
+// ---------------------------------------------------------------------------
+// Plans & subscriptions (SaaS platform billing).
+// ---------------------------------------------------------------------------
+
+model Plan {
+  id             String   @id @default(uuid())
+  name           String
+  code           String   @unique
+  priceMonthly   Decimal  @map("price_monthly") @db.Decimal(14, 2)
+  currency       String   @default("UZS")
+  maxBranches    Int      @map("max_branches")
+  maxChildren    Int      @map("max_children")
+  maxEmployees   Int      @map("max_employees")
+  maxStorageGb   Int      @map("max_storage_gb")
+  features       Json     @default("{}")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  GRACE_PERIOD
+  SUSPENDED
+  CANCELLED
+}
+
+model Subscription {
+  id                 String             @id @default(uuid())
+  organizationId     String             @unique @map("organization_id")
+  planId             String             @map("plan_id")
+  status             SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart DateTime           @map("current_period_start")
+  currentPeriodEnd   DateTime           @map("current_period_end")
+  graceUntil         DateTime?          @map("grace_until")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan         Plan         @relation(fields: [planId], references: [id])
+
+  @@index([planId])
+  @@map("subscriptions")
+}
+
+// ---------------------------------------------------------------------------
+// Wallet (immutable ledger) per organization.
+// ---------------------------------------------------------------------------
+
+enum WalletTransactionType {
+  TOP_UP
+  SUBSCRIPTION_CHARGE
+  REFUND
+  BONUS
+  ADJUSTMENT
+}
+
+model Wallet {
+  id             String   @id @default(uuid())
+  organizationId String   @unique @map("organization_id")
+  balance        Decimal  @default(0) @db.Decimal(14, 2)
+  currency       String   @default("UZS")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  transactions WalletTransaction[]
+
+  @@map("wallets")
+}
+
+model WalletTransaction {
+  id              String                 @id @default(uuid())
+  walletId        String                 @map("wallet_id")
+  type            WalletTransactionType
+  amount          Decimal                @db.Decimal(14, 2)
+  balanceAfter    Decimal                @map("balance_after") @db.Decimal(14, 2)
+  note            String?
+  createdByUserId String?                @map("created_by_user_id")
+  createdAt       DateTime               @default(now()) @map("created_at")
+
+  wallet        Wallet        @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  createdByUser PlatformUser? @relation("WalletTransactionCreatedBy", fields: [createdByUserId], references: [id])
+
+  @@index([walletId, createdAt])
+  @@map("wallet_transactions")
+}
