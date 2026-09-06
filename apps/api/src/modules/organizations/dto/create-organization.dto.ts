@@ -31,4 +31,18 @@ export class CreateOrganizationDto {
   @IsOptional()
   @IsString()
   planId?: string;
+
+  @ApiProperty({ example: "Aziza Karimova", description: "Tashkilotning Katta admin akkaunti to'liq ismi" })
+  @IsString()
+  @MinLength(2)
+  adminFullName!: string;
+
+  @ApiProperty({ example: "admin@quyoshcha.uz", description: "Katta admin login emaili (tashkilot doirasida unikal)" })
+  @IsEmail()
+  adminEmail!: string;
+
+  @ApiProperty({ example: "ChangeMe123!", description: "Katta admin login paroli" })
+  @IsString()
+  @MinLength(8)
+  adminPassword!: string;
 }

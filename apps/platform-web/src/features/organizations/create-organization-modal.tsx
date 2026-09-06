@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
+import { organizationAccessUrl } from "@/lib/admin-web";
 import type { Organization, Plan } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Input, Select } from "@/components/ui/input";
@@ -18,6 +19,9 @@ const schema = z.object({
   contactEmail: z.union([z.string().email("Email formati noto'g'ri"), z.literal("")]).optional(),
   contactPhone: z.string().optional(),
   planId: z.string().optional(),
+  adminFullName: z.string().min(2, "To'liq ism kamida 2 belgi"),
+  adminEmail: z.string().email("Email formati noto'g'ri"),
+  adminPassword: z.string().min(8, "Kamida 8 belgi"),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -25,6 +29,7 @@ type FormValues = z.infer<typeof schema>;
 export function CreateOrganizationModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [created, setCreated] = useState<Organization | null>(null);
 
   const { data: plans } = useQuery({
     queryKey: ["plans"],
@@ -46,19 +51,52 @@ export function CreateOrganizationModal({ open, onClose }: { open: boolean; onCl
         contactEmail: values.contactEmail || undefined,
         planId: values.planId || undefined,
       }),
-    onSuccess: () => {
+    onSuccess: (organization) => {
       queryClient.invalidateQueries({ queryKey: ["organizations"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard", "summary"] });
-      reset();
-      onClose();
+      setCreated(organization);
     },
     onError: (err) => {
       setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
     },
   });
 
+  const handleClose = () => {
+    reset();
+    setCreated(null);
+    setServerError(null);
+    onClose();
+  };
+
+  if (created) {
+    const url = organizationAccessUrl(created.slug);
+    return (
+      <Modal open={open} onClose={handleClose} title="Tashkilot yaratildi">
+        <div className="space-y-4">
+          <p className="text-sm text-[var(--color-text)]">
+            <span className="font-medium">{created.name}</span> muvaffaqiyatli yaratildi. Katta admin quyidagi havola
+            orqali tizimga kirib, filiallar (bog'chalar) qo&apos;shishni boshlashi mumkin:
+          </p>
+          <div className="rounded-lg border border-[var(--color-border)] bg-gray-50 px-3 py-2">
+            <a href={url} target="_blank" rel="noreferrer" className="break-all text-sm font-medium text-[var(--color-primary)] hover:underline">
+              {url}
+            </a>
+          </div>
+          <Button type="button" variant="secondary" size="sm" onClick={() => navigator.clipboard?.writeText(url)}>
+            Havolani nusxalash
+          </Button>
+          <div className="flex justify-end pt-2">
+            <Button type="button" onClick={handleClose}>
+              Yopish
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    );
+  }
+
   return (
-    <Modal open={open} onClose={onClose} title="Yangi bog'chalar tarmog'i">
+    <Modal open={open} onClose={handleClose} title="Yangi bog'chalar tarmog'i">
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
@@ -92,8 +130,34 @@ export function CreateOrganizationModal({ open, onClose }: { open: boolean; onCl
           ))}
         </Select>
 
+        <div className="border-t border-[var(--color-border)] pt-4">
+          <p className="mb-3 text-sm font-medium text-[var(--color-text)]">Katta admin akkaunti</p>
+          <div className="space-y-4">
+            <Input
+              label="To'liq ism"
+              placeholder="Aziza Karimova"
+              error={errors.adminFullName?.message}
+              {...register("adminFullName")}
+            />
+            <Input
+              label="Login email"
+              type="email"
+              placeholder="admin@tarmoq.uz"
+              error={errors.adminEmail?.message}
+              {...register("adminEmail")}
+            />
+            <Input
+              label="Parol"
+              type="password"
+              placeholder="Kamida 8 belgi"
+              error={errors.adminPassword?.message}
+              {...register("adminPassword")}
+            />
+          </div>
+        </div>
+
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
+          <Button type="button" variant="secondary" onClick={handleClose}>
             Bekor qilish
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>

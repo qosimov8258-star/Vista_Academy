@@ -72,28 +72,473 @@ model Organization {
   createdAt    DateTime           @default(now()) @map("created_at")
   updatedAt    DateTime           @updatedAt @map("updated_at")
 
-  branches     Branch[]
-  subscription Subscription?
-  wallet       Wallet?
+  branches               Branch[]
+  subscription           Subscription?
+  wallet                 Wallet?
+  tenantUsers            TenantUser[]
+  children               Child[]
+  employees              Employee[]
+  invoices               Invoice[]
+  payments               Payment[]
+  ledgerEntries          LedgerEntry[]
+  dailyReports           DailyReport[]
+  developmentAssessments DevelopmentAssessment[]
+  leads                  Lead[]
+  healthProfiles         HealthProfile[]
+  vaccinations           Vaccination[]
+  medicationLogs         MedicationLog[]
+  guardians              Guardian[]
+  notificationLogs       NotificationLog[]
 
   @@map("organizations")
+}
+
+// ---------------------------------------------------------------------------
+// Tenant-level identity (Katta admin / Network admin for now).
+// Created automatically alongside its Organization; scoped per tenant since
+// email uniqueness is only guaranteed within an organization, not globally.
+// ---------------------------------------------------------------------------
+
+enum TenantUserRole {
+  NETWORK_ADMIN
+  BRANCH_ADMIN
+  MANAGER
+}
+
+model TenantUser {
+  id             String         @id @default(uuid())
+  organizationId String         @map("organization_id")
+  branchId       String?        @map("branch_id")
+  email          String
+  passwordHash   String         @map("password_hash")
+  fullName       String         @map("full_name")
+  role           TenantUserRole @default(NETWORK_ADMIN)
+  isActive       Boolean        @default(true) @map("is_active")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  organization      Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch            Branch?              @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  refreshTokens     TenantRefreshToken[]
+  recordedPayments  Payment[]
+  assignedLeads     Lead[]               @relation("LeadAssignedTo")
+  leadActivities    LeadActivity[]       @relation("LeadActivityCreatedBy")
+  medicationLogs    MedicationLog[]
+  sentNotifications NotificationLog[]    @relation("NotificationSentBy")
+
+  @@unique([organizationId, email])
+  @@index([branchId])
+  @@map("tenant_users")
+}
+
+model TenantRefreshToken {
+  id           String    @id @default(uuid())
+  tenantUserId String    @map("tenant_user_id")
+  tokenHash    String    @unique @map("token_hash")
+  userAgent    String?   @map("user_agent")
+  ip           String?
+  expiresAt    DateTime  @map("expires_at")
+  revokedAt    DateTime? @map("revoked_at")
+  replacedBy   String?   @map("replaced_by")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  tenantUser TenantUser @relation(fields: [tenantUserId], references: [id], onDelete: Cascade)
+
+  @@index([tenantUserId])
+  @@map("tenant_refresh_tokens")
 }
 
 model Branch {
   id             String   @id @default(uuid())
   organizationId String   @map("organization_id")
   name           String
+  slug           String
   address        String?
   timezone       String   @default("Asia/Tashkent")
   currency       String   @default("UZS")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization           Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  tenantUsers            TenantUser[]
+  groups                 Group[]
+  children               Child[]
+  employees              Employee[]
+  attendances            Attendance[]
+  invoices               Invoice[]
+  payments               Payment[]
+  ledgerEntries          LedgerEntry[]
+  menuEntries            MenuEntry[]
+  employeeAttendances    EmployeeAttendance[]
+  dailyReports           DailyReport[]
+  developmentAssessments DevelopmentAssessment[]
+  leads                  Lead[]
+  healthProfiles         HealthProfile[]
+  vaccinations           Vaccination[]
+  medicationLogs         MedicationLog[]
+  shifts                 Shift[]
+  payrollEntries         PayrollEntry[]
+  notificationLogs       NotificationLog[]
 
   @@unique([organizationId, name])
+  @@unique([organizationId, slug])
   @@index([organizationId])
   @@map("branches")
+}
+
+// ---------------------------------------------------------------------------
+// Groups, children, employees, attendance and (simplified) parent billing.
+// Minimal shape to power the branch dashboard KPIs; will grow into the full
+// modules described in the product spec (schedules, HR, ledgered payments).
+// ---------------------------------------------------------------------------
+
+enum GroupStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model Group {
+  id        String      @id @default(uuid())
+  branchId  String      @map("branch_id")
+  name      String
+  capacity  Int         @default(20)
+  status    GroupStatus @default(ACTIVE)
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
+
+  branch   Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  children Child[]
+
+  @@unique([branchId, name])
+  @@index([branchId])
+  @@map("groups")
+}
+
+enum ChildStatus {
+  ACTIVE
+  INACTIVE
+  QUARANTINED
+}
+
+model Child {
+  id               String      @id @default(uuid())
+  organizationId   String      @map("organization_id")
+  branchId         String      @map("branch_id")
+  groupId          String?     @map("group_id")
+  fullName         String      @map("full_name")
+  birthDate        DateTime?   @map("birth_date")
+  status           ChildStatus @default(ACTIVE)
+  quarantineUntil  DateTime?   @map("quarantine_until") @db.Date
+  quarantineReason String?     @map("quarantine_reason")
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @updatedAt @map("updated_at")
+
+  organization           Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch                 Branch                  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  group                  Group?                  @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  attendances            Attendance[]
+  invoices               Invoice[]
+  payments               Payment[]
+  ledgerEntries          LedgerEntry[]
+  dailyReports           DailyReport[]
+  developmentAssessments DevelopmentAssessment[]
+  convertedFromLead      Lead?
+  healthProfile          HealthProfile?
+  vaccinations           Vaccination[]
+  medicationLogs         MedicationLog[]
+  guardians              ChildGuardian[]
+  notificationLogs       NotificationLog[]
+
+  @@index([organizationId, branchId])
+  @@index([groupId])
+  @@map("children")
+}
+
+// ---------------------------------------------------------------------------
+// Kundalik hisobot (daily report) & rivojlanish kuzatuvi (development tracking)
+// per spec §1.8. Photo/media attachments are out of scope here — this
+// environment has no object storage wired up, so a file-upload field would be
+// dead weight with nothing behind it.
+// ---------------------------------------------------------------------------
+
+enum EatingQuality {
+  GOOD
+  AVERAGE
+  POOR
+}
+
+enum MoodStatus {
+  HAPPY
+  NEUTRAL
+  UPSET
+}
+
+model DailyReport {
+  id             String         @id @default(uuid())
+  organizationId String         @map("organization_id")
+  branchId       String         @map("branch_id")
+  childId        String         @map("child_id")
+  date           DateTime       @db.Date
+  eatingQuality  EatingQuality? @map("eating_quality")
+  sleepMinutes   Int?           @map("sleep_minutes")
+  mood           MoodStatus?
+  toiletNotes    String?        @map("toilet_notes")
+  activityNotes  String?        @map("activity_notes")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  child        Child        @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@unique([childId, date])
+  @@index([branchId, date])
+  @@map("daily_reports")
+}
+
+enum DevelopmentRating {
+  BELOW_EXPECTED
+  ON_TRACK
+  ABOVE_EXPECTED
+}
+
+model DevelopmentAssessment {
+  id              String             @id @default(uuid())
+  organizationId  String             @map("organization_id")
+  branchId        String             @map("branch_id")
+  childId         String             @map("child_id")
+  period          String // "YYYY-MM"
+  speechRating    DevelopmentRating? @map("speech_rating")
+  motorRating     DevelopmentRating? @map("motor_rating")
+  socialRating    DevelopmentRating? @map("social_rating")
+  cognitiveRating DevelopmentRating? @map("cognitive_rating")
+  note            String?
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  child        Child        @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@unique([childId, period])
+  @@index([branchId, period])
+  @@map("development_assessments")
+}
+
+model Employee {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  branchId       String   @map("branch_id")
+  fullName       String   @map("full_name")
+  position       String
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch         Branch               @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  attendances    EmployeeAttendance[]
+  salaryScheme   SalaryScheme?
+  shifts         Shift[]
+  payrollEntries PayrollEntry[]
+
+  @@index([organizationId, branchId])
+  @@map("employees")
+}
+
+enum EmployeeAttendanceStatus {
+  PRESENT
+  ABSENT
+}
+
+model EmployeeAttendance {
+  id         String                   @id @default(uuid())
+  employeeId String                   @map("employee_id")
+  branchId   String                   @map("branch_id")
+  date       DateTime                 @db.Date
+  status     EmployeeAttendanceStatus
+  note       String?
+  createdAt  DateTime                 @default(now()) @map("created_at")
+  updatedAt  DateTime                 @updatedAt @map("updated_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  branch   Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, date])
+  @@index([branchId, date])
+  @@map("employee_attendances")
+}
+
+model MenuEntry {
+  id        String   @id @default(uuid())
+  branchId  String   @map("branch_id")
+  date      DateTime @db.Date
+  breakfast String?
+  lunch     String?
+  snack     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([branchId, date])
+  @@index([branchId, date])
+  @@map("menu_entries")
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+}
+
+model Attendance {
+  id        String           @id @default(uuid())
+  childId   String           @map("child_id")
+  branchId  String           @map("branch_id")
+  date      DateTime         @db.Date
+  status    AttendanceStatus
+  note      String?
+  createdAt DateTime         @default(now()) @map("created_at")
+  updatedAt DateTime         @updatedAt @map("updated_at")
+
+  child  Child  @relation(fields: [childId], references: [id], onDelete: Cascade)
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([childId, date])
+  @@index([branchId, date])
+  @@map("attendances")
+}
+
+// ---------------------------------------------------------------------------
+// Billing (ota-ona to'lovlari): invoices and payments are separate aggregates
+// per spec §1.11 — a payment can be allocated across one or more invoices via
+// PaymentAllocation, and every money movement is additionally recorded as an
+// append-only LedgerEntry per child (corrections happen via new entries —
+// REFUND/ADJUSTMENT — never by editing or deleting a prior one).
+//
+// Payment gateways (Click/Payme/Uzum) from the spec are intentionally not
+// wired up here: without real sandbox credentials, a "provider" adapter would
+// just be dead code that nothing can ever call. PaymentMethod is structured
+// so gateway methods can be added later behind the same Payment/Allocation
+// model without a schema change to the parts already in use (CASH/BANK_TRANSFER).
+// ---------------------------------------------------------------------------
+
+enum InvoiceStatus {
+  PENDING
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+model Invoice {
+  id             String        @id @default(uuid())
+  organizationId String        @map("organization_id")
+  branchId       String        @map("branch_id")
+  childId        String        @map("child_id")
+  amount         Decimal       @db.Decimal(12, 2)
+  discountAmount Decimal       @default(0) @map("discount_amount") @db.Decimal(12, 2)
+  paidAmount     Decimal       @default(0) @map("paid_amount") @db.Decimal(12, 2)
+  currency       String        @default("UZS")
+  period         String
+  dueDate        DateTime      @map("due_date")
+  status         InvoiceStatus @default(PENDING)
+  paidAt         DateTime?     @map("paid_at")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  organization  Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch        Branch              @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  child         Child               @relation(fields: [childId], references: [id], onDelete: Cascade)
+  allocations   PaymentAllocation[]
+  ledgerEntries LedgerEntry[]
+
+  @@index([organizationId, branchId, status])
+  @@index([childId])
+  @@map("invoices")
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+}
+
+enum PaymentStatus {
+  COMPLETED
+  REFUNDED
+}
+
+model Payment {
+  id               String        @id @default(uuid())
+  organizationId   String        @map("organization_id")
+  branchId         String        @map("branch_id")
+  childId          String        @map("child_id")
+  amount           Decimal       @db.Decimal(12, 2)
+  currency         String        @default("UZS")
+  method           PaymentMethod @default(CASH)
+  status           PaymentStatus @default(COMPLETED)
+  note             String?
+  recordedByUserId String?       @map("recorded_by_user_id")
+  refundedAt       DateTime?     @map("refunded_at")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+
+  organization  Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch        Branch              @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  child         Child               @relation(fields: [childId], references: [id], onDelete: Cascade)
+  recordedBy    TenantUser?         @relation(fields: [recordedByUserId], references: [id], onDelete: SetNull)
+  allocations   PaymentAllocation[]
+  ledgerEntries LedgerEntry[]
+
+  @@index([organizationId, branchId])
+  @@index([childId])
+  @@map("payments")
+}
+
+model PaymentAllocation {
+  id        String   @id @default(uuid())
+  paymentId String   @map("payment_id")
+  invoiceId String   @map("invoice_id")
+  amount    Decimal  @db.Decimal(12, 2)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@unique([paymentId, invoiceId])
+  @@index([invoiceId])
+  @@map("payment_allocations")
+}
+
+enum LedgerEntryType {
+  CHARGE
+  DISCOUNT
+  PAYMENT
+  REFUND
+  ADJUSTMENT
+}
+
+model LedgerEntry {
+  id             String          @id @default(uuid())
+  organizationId String          @map("organization_id")
+  branchId       String          @map("branch_id")
+  childId        String          @map("child_id")
+  type           LedgerEntryType
+  /// Signed: positive increases what the family owes (CHARGE, REFUND), negative decreases it (DISCOUNT, PAYMENT).
+  amount         Decimal         @db.Decimal(12, 2)
+  invoiceId      String?         @map("invoice_id")
+  paymentId      String?         @map("payment_id")
+  note           String?
+  createdAt      DateTime        @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  child        Child        @relation(fields: [childId], references: [id], onDelete: Cascade)
+  invoice      Invoice?     @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  payment      Payment?     @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  @@index([childId, createdAt])
+  @@map("ledger_entries")
 }
 
 // ---------------------------------------------------------------------------
@@ -101,19 +546,19 @@ model Branch {
 // ---------------------------------------------------------------------------
 
 model Plan {
-  id             String   @id @default(uuid())
-  name           String
-  code           String   @unique
-  priceMonthly   Decimal  @map("price_monthly") @db.Decimal(14, 2)
-  currency       String   @default("UZS")
-  maxBranches    Int      @map("max_branches")
-  maxChildren    Int      @map("max_children")
-  maxEmployees   Int      @map("max_employees")
-  maxStorageGb   Int      @map("max_storage_gb")
-  features       Json     @default("{}")
-  isActive       Boolean  @default(true) @map("is_active")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id           String   @id @default(uuid())
+  name         String
+  code         String   @unique
+  priceMonthly Decimal  @map("price_monthly") @db.Decimal(14, 2)
+  currency     String   @default("UZS")
+  maxBranches  Int      @map("max_branches")
+  maxChildren  Int      @map("max_children")
+  maxEmployees Int      @map("max_employees")
+  maxStorageGb Int      @map("max_storage_gb")
+  features     Json     @default("{}")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   subscriptions Subscription[]
 
@@ -172,18 +617,360 @@ model Wallet {
 }
 
 model WalletTransaction {
-  id              String                 @id @default(uuid())
-  walletId        String                 @map("wallet_id")
+  id              String                @id @default(uuid())
+  walletId        String                @map("wallet_id")
   type            WalletTransactionType
-  amount          Decimal                @db.Decimal(14, 2)
-  balanceAfter    Decimal                @map("balance_after") @db.Decimal(14, 2)
+  amount          Decimal               @db.Decimal(14, 2)
+  balanceAfter    Decimal               @map("balance_after") @db.Decimal(14, 2)
   note            String?
-  createdByUserId String?                @map("created_by_user_id")
-  createdAt       DateTime               @default(now()) @map("created_at")
+  createdByUserId String?               @map("created_by_user_id")
+  createdAt       DateTime              @default(now()) @map("created_at")
 
   wallet        Wallet        @relation(fields: [walletId], references: [id], onDelete: Cascade)
   createdByUser PlatformUser? @relation("WalletTransactionCreatedBy", fields: [createdByUserId], references: [id])
 
   @@index([walletId, createdAt])
   @@map("wallet_transactions")
+}
+
+// ---------------------------------------------------------------------------
+// CRM / Navbat (leads & waiting list) — spec §1.6. Pipeline stages and lead
+// sources are a fixed, sensible set rather than the spec's "configurable per
+// organization" taxonomy — a full rule-configuration UI is its own project.
+// ---------------------------------------------------------------------------
+
+enum LeadStage {
+  NEW
+  TRIAL_DAY_SCHEDULED
+  CONTRACT
+  WON
+  LOST
+}
+
+enum LeadSource {
+  WEBSITE
+  REFERRAL
+  SOCIAL_MEDIA
+  WALK_IN
+  OTHER
+}
+
+enum AgeGroup {
+  AGE_1_2
+  AGE_2_3
+  AGE_3_4
+  AGE_4_5
+  AGE_5_6
+  AGE_6_7
+}
+
+model Lead {
+  id               String     @id @default(uuid())
+  organizationId   String     @map("organization_id")
+  branchId         String     @map("branch_id")
+  childFullName    String     @map("child_full_name")
+  childBirthDate   DateTime?  @map("child_birth_date")
+  ageGroup         AgeGroup?  @map("age_group")
+  parentName       String     @map("parent_name")
+  parentPhone      String     @map("parent_phone")
+  source           LeadSource @default(OTHER)
+  stage            LeadStage  @default(NEW)
+  lostReason       String?    @map("lost_reason")
+  assignedToUserId String?    @map("assigned_to_user_id")
+  convertedChildId String?    @unique @map("converted_child_id")
+  createdAt        DateTime   @default(now()) @map("created_at")
+  updatedAt        DateTime   @updatedAt @map("updated_at")
+
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch         Branch         @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  assignedTo     TenantUser?    @relation("LeadAssignedTo", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  convertedChild Child?         @relation(fields: [convertedChildId], references: [id], onDelete: SetNull)
+  activities     LeadActivity[]
+
+  @@index([organizationId, branchId, stage])
+  @@map("leads")
+}
+
+enum LeadActivityType {
+  CALL
+  MESSAGE
+  MEETING
+  TRIAL_DAY
+  STAGE_CHANGE
+  NOTE
+}
+
+model LeadActivity {
+  id              String           @id @default(uuid())
+  leadId          String           @map("lead_id")
+  type            LeadActivityType
+  note            String?
+  createdByUserId String?          @map("created_by_user_id")
+  createdAt       DateTime         @default(now()) @map("created_at")
+
+  lead      Lead        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  createdBy TenantUser? @relation("LeadActivityCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([leadId, createdAt])
+  @@map("lead_activities")
+}
+
+// ---------------------------------------------------------------------------
+// Sog'liq / Tibbiyot (health) — spec §1.9. Karantin (quarantine) is modeled
+// as a Child status + reason/until fields rather than a separate history
+// table, matching how the existing ChildStatus field already works.
+// ---------------------------------------------------------------------------
+
+enum BloodType {
+  A_POSITIVE
+  A_NEGATIVE
+  B_POSITIVE
+  B_NEGATIVE
+  AB_POSITIVE
+  AB_NEGATIVE
+  O_POSITIVE
+  O_NEGATIVE
+  UNKNOWN
+}
+
+model HealthProfile {
+  id                String     @id @default(uuid())
+  childId           String     @unique @map("child_id")
+  organizationId    String     @map("organization_id")
+  branchId          String     @map("branch_id")
+  bloodType         BloodType? @map("blood_type")
+  chronicConditions String?    @map("chronic_conditions")
+  allergies         String?
+  notes             String?
+  createdAt         DateTime   @default(now()) @map("created_at")
+  updatedAt         DateTime   @updatedAt @map("updated_at")
+
+  child        Child        @relation(fields: [childId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@map("health_profiles")
+}
+
+enum VaccinationStatus {
+  SCHEDULED
+  DONE
+  MISSED
+}
+
+model Vaccination {
+  id             String            @id @default(uuid())
+  childId        String            @map("child_id")
+  organizationId String            @map("organization_id")
+  branchId       String            @map("branch_id")
+  name           String
+  scheduledDate  DateTime          @map("scheduled_date") @db.Date
+  doneDate       DateTime?         @map("done_date") @db.Date
+  status         VaccinationStatus @default(SCHEDULED)
+  note           String?
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+
+  child        Child        @relation(fields: [childId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@index([branchId, scheduledDate])
+  @@map("vaccinations")
+}
+
+model MedicationLog {
+  id               String   @id @default(uuid())
+  childId          String   @map("child_id")
+  organizationId   String   @map("organization_id")
+  branchId         String   @map("branch_id")
+  medicationName   String   @map("medication_name")
+  dose             String
+  givenAt          DateTime @map("given_at")
+  givenByUserId    String?  @map("given_by_user_id")
+  parentAuthorized Boolean  @default(false) @map("parent_authorized")
+  note             String?
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  child        Child        @relation(fields: [childId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  givenBy      TenantUser?  @relation(fields: [givenByUserId], references: [id], onDelete: SetNull)
+
+  @@index([childId, givenAt])
+  @@map("medication_logs")
+}
+
+// ---------------------------------------------------------------------------
+// Guardian (ota-ona/vasiy) linking — spec §1.7. This is the data foundation
+// for a future parent portal; no separate portal-web app is built here.
+// ---------------------------------------------------------------------------
+
+enum GuardianRelation {
+  FATHER
+  MOTHER
+  GRANDPARENT
+  OTHER
+}
+
+model Guardian {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  fullName       String   @map("full_name")
+  phone          String
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  children     ChildGuardian[]
+
+  @@index([organizationId])
+  @@map("guardians")
+}
+
+model ChildGuardian {
+  id                      String           @id @default(uuid())
+  childId                 String           @map("child_id")
+  guardianId              String           @map("guardian_id")
+  relation                GuardianRelation @default(OTHER)
+  isPrimary               Boolean          @default(false) @map("is_primary")
+  canPickup               Boolean          @default(true) @map("can_pickup")
+  canViewFinance          Boolean          @default(false) @map("can_view_finance")
+  canReceiveNotifications Boolean          @default(true) @map("can_receive_notifications")
+  createdAt               DateTime         @default(now()) @map("created_at")
+
+  child    Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  guardian Guardian @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+
+  @@unique([childId, guardianId])
+  @@index([guardianId])
+  @@map("child_guardians")
+}
+
+// ---------------------------------------------------------------------------
+// HR / Payroll — spec §1.13. CUSTOM_FORMULA from the spec is intentionally
+// omitted: it requires a safe expression DSL (explicitly not eval()), and a
+// half-built "safe" evaluator would be worse than not having one.
+// ---------------------------------------------------------------------------
+
+enum SalaryRuleType {
+  FIXED
+  PER_HOUR
+  PER_CHILD
+}
+
+model SalaryScheme {
+  id          String         @id @default(uuid())
+  employeeId  String         @unique @map("employee_id")
+  ruleType    SalaryRuleType @default(FIXED) @map("rule_type")
+  fixedAmount Decimal        @default(0) @map("fixed_amount") @db.Decimal(14, 2)
+  rate        Decimal        @default(0) @db.Decimal(14, 2)
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@map("salary_schemes")
+}
+
+model Shift {
+  id         String   @id @default(uuid())
+  employeeId String   @map("employee_id")
+  branchId   String   @map("branch_id")
+  date       DateTime @db.Date
+  hours      Decimal  @db.Decimal(5, 2)
+  note       String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  branch   Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, date])
+  @@index([branchId, date])
+  @@map("shifts")
+}
+
+enum PayrollStatus {
+  DRAFT
+  PAID
+}
+
+model PayrollEntry {
+  id            String        @id @default(uuid())
+  employeeId    String        @map("employee_id")
+  branchId      String        @map("branch_id")
+  period        String
+  baseAmount    Decimal       @default(0) @map("base_amount") @db.Decimal(14, 2)
+  bonusAmount   Decimal       @default(0) @map("bonus_amount") @db.Decimal(14, 2)
+  penaltyAmount Decimal       @default(0) @map("penalty_amount") @db.Decimal(14, 2)
+  totalAmount   Decimal       @default(0) @map("total_amount") @db.Decimal(14, 2)
+  status        PayrollStatus @default(DRAFT)
+  paidAt        DateTime?     @map("paid_at")
+  note          String?
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  branch   Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, period])
+  @@index([branchId, period])
+  @@map("payroll_entries")
+}
+
+// ---------------------------------------------------------------------------
+// Bildirishnomalar (notifications) — spec §1.14. No SMS/Telegram/Email
+// gateway is configured in this environment, so this is a communications
+// LOG staff use to track what should go out and mark it sent once they've
+// actually dispatched it themselves — not an automatic dispatcher. The
+// channel/status shape matches what a real provider integration would plug
+// into later without a schema change.
+// ---------------------------------------------------------------------------
+
+enum NotificationEventType {
+  CHILD_ABSENT
+  DAILY_REPORT_READY
+  PAYMENT_DUE
+  PAYMENT_OVERDUE
+  VACCINATION_DUE
+  QUARANTINE_ALERT
+  LEAD_FOLLOW_UP
+  CUSTOM
+}
+
+enum NotificationChannel {
+  SMS
+  TELEGRAM
+  EMAIL
+  PHONE_CALL
+  IN_APP
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+}
+
+model NotificationLog {
+  id               String                @id @default(uuid())
+  organizationId   String                @map("organization_id")
+  branchId         String                @map("branch_id")
+  childId          String?               @map("child_id")
+  eventType        NotificationEventType @map("event_type")
+  channel          NotificationChannel?
+  recipientName    String                @map("recipient_name")
+  recipientContact String?               @map("recipient_contact")
+  message          String
+  status           NotificationStatus    @default(PENDING)
+  sentByUserId     String?               @map("sent_by_user_id")
+  sentAt           DateTime?             @map("sent_at")
+  createdAt        DateTime              @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  child        Child?       @relation(fields: [childId], references: [id], onDelete: Cascade)
+  sentBy       TenantUser?  @relation("NotificationSentBy", fields: [sentByUserId], references: [id], onDelete: SetNull)
+
+  @@index([branchId, status, createdAt])
+  @@map("notification_logs")
 }

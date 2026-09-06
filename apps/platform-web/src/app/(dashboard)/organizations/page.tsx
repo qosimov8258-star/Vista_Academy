@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { formatDate, formatMoney } from "@/lib/format";
+import { organizationAccessUrl } from "@/lib/admin-web";
 import { subscriptionStatusLabel, subscriptionStatusTone } from "@/features/subscriptions/status";
 import { CreateOrganizationModal } from "@/features/organizations/create-organization-modal";
 
@@ -84,6 +85,7 @@ export default function OrganizationsPage() {
                   <th className="px-5 py-3 font-medium">Hamyon</th>
                   <th className="px-5 py-3 font-medium">Holat</th>
                   <th className="px-5 py-3 font-medium">Yaratilgan</th>
+                  <th className="px-5 py-3 font-medium">Havola</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--color-border)]">
@@ -114,6 +116,17 @@ export default function OrganizationsPage() {
                       </Badge>
                     </td>
                     <td className="px-5 py-3 text-[var(--color-text-muted)]">{formatDate(org.createdAt)}</td>
+                    <td className="px-5 py-3">
+                      <a
+                        href={organizationAccessUrl(org.slug)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[var(--color-primary)] hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        /{org.slug} ↗
+                      </a>
+                    </td>
                   </tr>
                 ))}
               </tbody>

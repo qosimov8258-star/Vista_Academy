@@ -1,10 +1,12 @@
 import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
+import * as argon2 from "argon2";
 import { PrismaService } from "../../database/prisma.service";
 import { CreateOrganizationDto } from "./dto/create-organization.dto";
 import { UpdateOrganizationDto } from "./dto/update-organization.dto";
 import { OrganizationQueryDto } from "./dto/organization-query.dto";
 import { CreateBranchDto } from "./dto/create-branch.dto";
+import { UpdateBranchDto } from "./dto/update-branch.dto";
 import { slugify } from "./slugify";
 
 @Injectable()
@@ -25,15 +27,28 @@ export class OrganizationsService {
         },
       });
 
+      const firstBranchName = dto.firstBranchName?.trim() || "Bosh filial";
       await tx.branch.create({
         data: {
           organizationId: organization.id,
-          name: dto.firstBranchName?.trim() || "Bosh filial",
+          name: firstBranchName,
+          slug: await this.generateUniqueBranchSlug(organization.id, firstBranchName, tx),
         },
       });
 
       await tx.wallet.create({
         data: { organizationId: organization.id, balance: 0 },
+      });
+
+      const adminPasswordHash = await argon2.hash(dto.adminPassword);
+      await tx.tenantUser.create({
+        data: {
+          organizationId: organization.id,
+          email: dto.adminEmail.toLowerCase(),
+          passwordHash: adminPasswordHash,
+          fullName: dto.adminFullName,
+          role: "NETWORK_ADMIN",
+        },
       });
 
       if (dto.planId) {
@@ -109,8 +124,54 @@ export class OrganizationsService {
   async addBranch(organizationId: string, dto: CreateBranchDto) {
     await this.findOne(organizationId);
     try {
-      return await this.prisma.branch.create({
-        data: { organizationId, name: dto.name, address: dto.address },
+      return await this.prisma.$transaction(async (tx) => {
+        const branch = await tx.branch.create({
+          data: {
+            organizationId,
+            name: dto.name,
+            address: dto.address,
+            slug: await this.generateUniqueBranchSlug(organizationId, dto.name, tx),
+          },
+        });
+
+        if (dto.managerFullName && dto.managerEmail && dto.managerPassword) {
+          const passwordHash = await argon2.hash(dto.managerPassword);
+          await tx.tenantUser.create({
+            data: {
+              organizationId,
+              branchId: branch.id,
+              email: dto.managerEmail.toLowerCase(),
+              passwordHash,
+              fullName: dto.managerFullName,
+              role: "BRANCH_ADMIN",
+            },
+          });
+        }
+
+        return branch;
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+        throw new ConflictException("Bu nom yoki email bilan filial/foydalanuvchi allaqachon mavjud");
+      }
+      throw err;
+    }
+  }
+
+  async getBranch(organizationId: string, branchId: string) {
+    const branch = await this.prisma.branch.findFirst({ where: { id: branchId, organizationId } });
+    if (!branch) {
+      throw new NotFoundException("Filial topilmadi");
+    }
+    return branch;
+  }
+
+  async updateBranch(organizationId: string, branchId: string, dto: UpdateBranchDto) {
+    await this.getBranch(organizationId, branchId);
+    try {
+      return await this.prisma.branch.update({
+        where: { id: branchId },
+        data: dto,
       });
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
@@ -127,6 +188,25 @@ export class OrganizationsService {
     // eslint-disable-next-line no-constant-condition
     while (true) {
       const existing = await this.prisma.organization.findUnique({ where: { slug: candidate } });
+      if (!existing) return candidate;
+      suffix += 1;
+      candidate = `${base}-${suffix}`;
+    }
+  }
+
+  private async generateUniqueBranchSlug(
+    organizationId: string,
+    name: string,
+    client: Prisma.TransactionClient | PrismaService = this.prisma,
+  ): Promise<string> {
+    const base = slugify(name);
+    let candidate = base;
+    let suffix = 1;
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const existing = await client.branch.findUnique({
+        where: { organizationId_slug: { organizationId, slug: candidate } },
+      });
       if (!existing) return candidate;
       suffix += 1;
       candidate = `${base}-${suffix}`;

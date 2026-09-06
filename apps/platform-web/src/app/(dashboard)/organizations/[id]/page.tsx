@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LoadingState, ErrorState } from "@/components/ui/states";
 import { formatDateTime, formatMoney } from "@/lib/format";
+import { organizationAccessUrl } from "@/lib/admin-web";
 import { subscriptionStatusLabel, subscriptionStatusTone } from "@/features/subscriptions/status";
 import { AssignSubscriptionModal } from "@/features/organizations/assign-subscription-modal";
 import { TopUpModal } from "@/features/organizations/top-up-modal";
@@ -74,6 +75,14 @@ export default function OrganizationDetailPage({ params }: { params: Promise<{ i
             {org.status === "ACTIVE" ? "Faol" : "To'xtatilgan"}
           </Badge>
         </div>
+        <a
+          href={organizationAccessUrl(org.slug)}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-2 inline-block text-sm text-[var(--color-primary)] hover:underline"
+        >
+          {organizationAccessUrl(org.slug)} ↗
+        </a>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
