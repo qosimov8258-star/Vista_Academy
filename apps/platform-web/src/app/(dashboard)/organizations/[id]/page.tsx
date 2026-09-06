@@ -15,6 +15,7 @@ import { subscriptionStatusLabel, subscriptionStatusTone } from "@/features/subs
 import { AssignSubscriptionModal } from "@/features/organizations/assign-subscription-modal";
 import { TopUpModal } from "@/features/organizations/top-up-modal";
 import { AddBranchModal } from "@/features/organizations/add-branch-modal";
+import { EditOrganizationModal } from "@/features/organizations/edit-organization-modal";
 
 const TX_TYPE_LABEL: Record<WalletTransaction["type"], string> = {
   TOP_UP: "To'ldirish",
@@ -31,6 +32,7 @@ export default function OrganizationDetailPage({ params }: { params: Promise<{ i
   const [subscriptionModal, setSubscriptionModal] = useState<"assign" | "change" | null>(null);
   const [topUpOpen, setTopUpOpen] = useState(false);
   const [branchOpen, setBranchOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   const orgQuery = useQuery({
     queryKey: ["organizations", id],
@@ -71,9 +73,14 @@ export default function OrganizationDetailPage({ params }: { params: Promise<{ i
               /{org.slug} • {org.contactEmail ?? "email ko'rsatilmagan"} • {org.contactPhone ?? "telefon yo'q"}
             </p>
           </div>
-          <Badge tone={org.status === "ACTIVE" ? "success" : "danger"}>
-            {org.status === "ACTIVE" ? "Faol" : "To'xtatilgan"}
-          </Badge>
+          <div className="flex items-center gap-3">
+            <Badge tone={org.status === "ACTIVE" ? "success" : "danger"}>
+              {org.status === "ACTIVE" ? "Faol" : "To'xtatilgan"}
+            </Badge>
+            <Button size="sm" variant="secondary" onClick={() => setEditOpen(true)}>
+              Tahrirlash
+            </Button>
+          </div>
         </div>
         <a
           href={organizationAccessUrl(org.slug)}
@@ -227,6 +234,7 @@ export default function OrganizationDetailPage({ params }: { params: Promise<{ i
       )}
       <TopUpModal open={topUpOpen} onClose={() => setTopUpOpen(false)} organizationId={id} />
       <AddBranchModal open={branchOpen} onClose={() => setBranchOpen(false)} organizationId={id} />
+      <EditOrganizationModal open={editOpen} organization={org} onClose={() => setEditOpen(false)} />
     </div>
   );
 }

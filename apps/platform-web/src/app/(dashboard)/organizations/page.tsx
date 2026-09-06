@@ -14,12 +14,14 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { organizationAccessUrl } from "@/lib/admin-web";
 import { subscriptionStatusLabel, subscriptionStatusTone } from "@/features/subscriptions/status";
 import { CreateOrganizationModal } from "@/features/organizations/create-organization-modal";
+import { EditOrganizationModal } from "@/features/organizations/edit-organization-modal";
 
 export default function OrganizationsPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
   const [createOpen, setCreateOpen] = useState(false);
+  const [editOrg, setEditOrg] = useState<Organization | null>(null);
 
   const params = new URLSearchParams({ page: String(page), limit: "20" });
   if (search) params.set("search", search);
@@ -86,6 +88,7 @@ export default function OrganizationsPage() {
                   <th className="px-5 py-3 font-medium">Holat</th>
                   <th className="px-5 py-3 font-medium">Yaratilgan</th>
                   <th className="px-5 py-3 font-medium">Havola</th>
+                  <th className="px-5 py-3 text-right font-medium">Amallar</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--color-border)]">
@@ -127,6 +130,11 @@ export default function OrganizationsPage() {
                         /{org.slug} ↗
                       </a>
                     </td>
+                    <td className="px-5 py-3 text-right">
+                      <Button variant="secondary" size="sm" onClick={() => setEditOrg(org)}>
+                        Tahrirlash
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -155,6 +163,7 @@ export default function OrganizationsPage() {
       )}
 
       <CreateOrganizationModal open={createOpen} onClose={() => setCreateOpen(false)} />
+      {editOrg && <EditOrganizationModal open organization={editOrg} onClose={() => setEditOrg(null)} />}
     </div>
   );
 }
