@@ -9,20 +9,20 @@ export class UpdateOrganizationDto {
   @MinLength(2)
   name?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ nullable: true, description: "null yuborilsa tozalanadi" })
   @IsOptional()
   @IsString()
-  contactName?: string;
+  contactName?: string | null;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ nullable: true, description: "null yuborilsa tozalanadi" })
   @IsOptional()
   @IsEmail()
-  contactEmail?: string;
+  contactEmail?: string | null;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ nullable: true, description: "null yuborilsa tozalanadi" })
   @IsOptional()
   @IsString()
-  contactPhone?: string;
+  contactPhone?: string | null;
 
   @ApiPropertyOptional({ enum: OrganizationStatus })
   @IsOptional()
