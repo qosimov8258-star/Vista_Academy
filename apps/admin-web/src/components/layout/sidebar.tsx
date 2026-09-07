@@ -3,10 +3,40 @@
 import Link from "next/link";
 import { usePathname, useParams } from "next/navigation";
 import clsx from "clsx";
+import type { ComponentType, SVGProps } from "react";
 import { useAuth } from "@/lib/use-auth";
 import { useBranchContext } from "@/lib/use-branch-context";
+import {
+  ArrowLeftIcon,
+  BellIcon,
+  BriefcaseIcon,
+  BuildingIcon,
+  CalendarIcon,
+  ChecklistIcon,
+  ChildIcon,
+  GroupIcon,
+  HomeIcon,
+  KeyIcon,
+  MealIcon,
+  MoneyIcon,
+  NoteIcon,
+  PhoneIcon,
+  TeacherIcon,
+} from "@/components/ui/icons";
 
 const ROLE_LABEL = { NETWORK_ADMIN: "Tarmoq Admin", BRANCH_ADMIN: "Filial Menejeri", MANAGER: "Administrator" } as const;
+
+type NavIcon = ComponentType<SVGProps<SVGSVGElement>>;
+
+interface NavItem {
+  href: string;
+  label: string;
+  icon: NavIcon;
+  show: boolean;
+  exact?: boolean;
+  // Yonma-yon turgan bo'limlarni ajratish uchun sarlavha
+  group?: string;
+}
 
 export function Sidebar({ slug }: { slug: string }) {
   const pathname = usePathname();
@@ -22,35 +52,39 @@ export function Sidebar({ slug }: { slug: string }) {
   const inBranchContext = isNetworkAdmin && !!params?.branchSlug;
   const base = inBranchContext ? `/${slug}/${params.branchSlug}` : `/${slug}`;
 
-  const rootNavItems = [
-    { href: `/${slug}`, label: "Bosh sahifa", icon: "📊", show: true, exact: true },
-    { href: `/${slug}/branches`, label: "Filiallar", icon: "🏫", show: true },
+  const rootNavItems: NavItem[] = [
+    { href: `/${slug}`, label: "Bosh sahifa", icon: HomeIcon, show: true, exact: true },
+    { href: `/${slug}/branches`, label: "Filiallar", icon: BuildingIcon, show: true },
   ];
 
-  const operationalNavItems = [
-    { href: base, label: "Bosh sahifa", icon: "📊", show: true, exact: true },
-    { href: `${base}/crm`, label: "Arizalar (CRM)", icon: "📞", show: true },
-    { href: `${base}/children`, label: "Bolalar", icon: "🧒", show: true },
-    { href: `${base}/groups`, label: "Guruhlar", icon: "👥", show: true },
-    { href: `${base}/employees`, label: "Xodimlar", icon: "🧑‍🏫", show: true },
-    { href: `${base}/hr`, label: "Ish haqi (HR)", icon: "💼", show: true },
-    { href: `${base}/attendance`, label: "Davomat", icon: "📋", show: true },
-    { href: `${base}/daily-reports`, label: "Kundalik hisobot", icon: "📝", show: true },
-    { href: `${base}/staff-attendance`, label: "Xodimlar davomati", icon: "🗓️", show: true },
-    { href: `${base}/nutrition`, label: "Ovqatlanish", icon: "🍽️", show: true },
-    { href: `${base}/finance`, label: "Moliya", icon: "💵", show: true },
-    { href: `${base}/notifications`, label: "Bildirishnomalar", icon: "🔔", show: true },
+  const operationalNavItems: NavItem[] = [
+    { href: base, label: "Bosh sahifa", icon: HomeIcon, show: true, exact: true },
+
+    { href: `${base}/crm`, label: "Arizalar (CRM)", icon: PhoneIcon, show: true, group: "Qabul va tarbiyalanuvchilar" },
+    { href: `${base}/children`, label: "Bolalar", icon: ChildIcon, show: true },
+    { href: `${base}/groups`, label: "Guruhlar", icon: GroupIcon, show: true },
+
+    { href: `${base}/employees`, label: "Xodimlar", icon: TeacherIcon, show: true, group: "Xodimlar" },
+    { href: `${base}/hr`, label: "Ish haqi (HR)", icon: BriefcaseIcon, show: true },
+    { href: `${base}/staff-attendance`, label: "Xodimlar davomati", icon: CalendarIcon, show: true },
+
+    { href: `${base}/attendance`, label: "Davomat", icon: ChecklistIcon, show: true, group: "Kundalik ish" },
+    { href: `${base}/daily-reports`, label: "Kundalik hisobot", icon: NoteIcon, show: true },
+    { href: `${base}/nutrition`, label: "Ovqatlanish", icon: MealIcon, show: true },
+
+    { href: `${base}/finance`, label: "Moliya", icon: MoneyIcon, show: true, group: "Moliya va aloqa" },
+    { href: `${base}/notifications`, label: "Bildirishnomalar", icon: BellIcon, show: true },
     // Branch/user management stay a network-wide (root-level) concern, never
     // duplicated inside a single branch's panel.
-    { href: `/${slug}/users`, label: "Foydalanuvchilar", icon: "🔑", show: canManageUsers && !inBranchContext },
+    { href: `/${slug}/users`, label: "Foydalanuvchilar", icon: KeyIcon, show: canManageUsers && !inBranchContext },
   ];
 
   const navItems = (isNetworkAdmin && !inBranchContext ? rootNavItems : operationalNavItems).filter((item) => item.show);
 
   return (
-    <aside className="hidden w-60 shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)] md:flex">
-      <div className="flex items-center gap-2 border-b border-[var(--color-border)] px-5 py-4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-primary)] text-sm font-bold text-white">
+    <aside className="hidden w-64 shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)] md:flex">
+      <div className="flex items-center gap-2.5 border-b border-[var(--color-border)] px-5 py-4">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-primary)] text-sm font-bold text-white">
           B
         </div>
         <div className="min-w-0">
@@ -67,31 +101,52 @@ export function Sidebar({ slug }: { slug: string }) {
         <div className="border-b border-[var(--color-border)] px-3 py-3">
           <Link
             href={`/${slug}/branches`}
-            className="flex items-center gap-1 text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+            className="group flex items-center gap-1.5 text-xs font-medium text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
           >
-            ← Filiallar
+            <ArrowLeftIcon className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" />
+            Filiallar
           </Link>
-          <p className="mt-1 truncate text-sm font-semibold text-[var(--color-text)]">{branch?.name ?? "..."}</p>
+          <p className="mt-1.5 truncate text-sm font-semibold text-[var(--color-text)]">{branch?.name ?? "..."}</p>
         </div>
       )}
 
-      <nav className="flex-1 space-y-1 px-3 py-4">
+      <nav className="flex-1 overflow-y-auto scrollbar-thin px-3 py-4">
         {navItems.map((item) => {
-          const active = "exact" in item && item.exact ? pathname === item.href : pathname.startsWith(item.href);
+          const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
+          const Icon = item.icon;
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={clsx(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                active
-                  ? "bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
-                  : "text-[var(--color-text-muted)] hover:bg-gray-50 hover:text-[var(--color-text)]",
+            <div key={item.href}>
+              {item.group && (
+                <p className="mt-5 mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]/70">
+                  {item.group}
+                </p>
               )}
-            >
-              <span>{item.icon}</span>
-              {item.label}
-            </Link>
+              <Link
+                href={item.href}
+                aria-current={active ? "page" : undefined}
+                className={clsx(
+                  "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  active
+                    ? "bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
+                    : "text-[var(--color-text-muted)] hover:bg-gray-50 hover:text-[var(--color-text)]",
+                )}
+              >
+                {/* Faol bo'limni chetdagi chiziq bilan belgilash */}
+                <span
+                  className={clsx(
+                    "absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-[var(--color-primary)] transition-opacity",
+                    active ? "opacity-100" : "opacity-0",
+                  )}
+                />
+                <Icon
+                  className={clsx(
+                    "h-[18px] w-[18px] shrink-0 transition-colors",
+                    active ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)]/80",
+                  )}
+                />
+                <span className="truncate">{item.label}</span>
+              </Link>
+            </div>
           );
         })}
       </nav>
