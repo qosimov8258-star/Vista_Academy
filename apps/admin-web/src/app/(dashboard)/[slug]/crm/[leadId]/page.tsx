@@ -77,7 +77,7 @@ export default function LeadDetailPage({ params }: { params: Promise<{ slug: str
         <div className="flex items-center justify-between rounded-lg border border-[var(--color-success)]/30 bg-[var(--color-success-bg)] px-4 py-3">
           <p className="text-sm font-medium text-[var(--color-success)]">Bu ariza bola profiliga aylantirilgan</p>
           <Link href={`/${slug}/children/${lead.convertedChildId}`}>
-            <Button size="sm" variant="secondary">
+            <Button size="sm" variant="outline">
               Bola profilini ko&apos;rish →
             </Button>
           </Link>
@@ -90,7 +90,7 @@ export default function LeadDetailPage({ params }: { params: Promise<{ slug: str
             <CardTitle>Amallar</CardTitle>
           </CardHeader>
           <CardBody className="flex flex-wrap gap-2">
-            <Button variant="secondary" onClick={() => setStageModalOpen(true)}>
+            <Button variant="outline" onClick={() => setStageModalOpen(true)}>
               Bosqichni o&apos;zgartirish
             </Button>
             {!isFinal && (

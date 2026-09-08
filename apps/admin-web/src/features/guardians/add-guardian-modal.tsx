@@ -148,7 +148,7 @@ export function AddGuardianModal({
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
               />
-              <Button type="button" variant="secondary" onClick={() => setSearch(searchInput)}>
+              <Button type="button" variant="outline" onClick={() => setSearch(searchInput)}>
                 Qidirish
               </Button>
             </div>
@@ -218,7 +218,7 @@ export function AddGuardianModal({
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
+          <Button type="button" variant="outline" onClick={onClose}>
             Bekor qilish
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>

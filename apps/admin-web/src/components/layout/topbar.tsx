@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/use-auth";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { ROLE_LABEL } from "@/lib/permissions";
+import { Avatar } from "@/components/ui/avatar";
 
 
 export function Topbar({ slug }: { slug: string }) {
@@ -30,12 +31,15 @@ export function Topbar({ slug }: { slug: string }) {
       </div>
       <div className="flex items-center gap-4">
         {user && (
-          <div className="text-right">
-            <p className="text-sm font-medium text-[var(--color-text)]">{user.fullName || user.email}</p>
-            <p className="text-xs text-[var(--color-text-muted)]">{ROLE_LABEL[user.role]}</p>
+          <div className="flex items-center gap-2.5">
+            <div className="text-right">
+              <p className="text-sm font-medium text-[var(--color-text)]">{user.fullName || user.email}</p>
+              <p className="text-xs text-[var(--color-text-muted)]">{ROLE_LABEL[user.role]}</p>
+            </div>
+            <Avatar user={user} size={32} />
           </div>
         )}
-        <Button variant="secondary" size="sm" onClick={handleLogout}>
+        <Button variant="outline" size="sm" onClick={handleLogout}>
           Chiqish
         </Button>
       </div>

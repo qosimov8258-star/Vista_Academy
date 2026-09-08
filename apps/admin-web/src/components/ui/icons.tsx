@@ -217,3 +217,29 @@ export function PlusIcon(props: IconProps) {
     </Icon>
   );
 }
+
+export function SidebarIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="3" y="4" width="18" height="16" rx="2.5" />
+      <path d="M9.5 4v16" />
+    </Icon>
+  );
+}
+
+export function ChartIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4 20V11M10 20V4M16 20v-6M22 20H2" />
+    </Icon>
+  );
+}
+
+export function SearchIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m16.2 16.2 4.3 4.3" />
+    </Icon>
+  );
+}

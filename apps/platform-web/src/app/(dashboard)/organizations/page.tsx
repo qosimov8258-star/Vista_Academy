@@ -125,7 +125,7 @@ export default function OrganizationsPage() {
           action={
             isFiltered ? (
               <Button
-                variant="secondary"
+                variant="outline"
                 size="sm"
                 onClick={() => {
                   setSearch("");
@@ -147,8 +147,9 @@ export default function OrganizationsPage() {
         <Card
           className={`overflow-hidden transition-opacity duration-200 ${isFetching ? "opacity-60" : "opacity-100"}`}
         >
-          {/* Katta ekranda jadval */}
-          <div className="hidden md:block">
+          {/* Katta ekranda jadval. Tor oynada ustunlar kesilib qolmasligi
+              uchun jadval o'z ichida yon tomonga siljiydi. */}
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full text-left text-sm">
               <thead className="bg-[var(--color-surface-sunken)] text-[11px] uppercase tracking-wider text-[var(--color-text-subtle)]">
                 <tr>
@@ -231,7 +232,7 @@ export default function OrganizationsPage() {
                     <td className="px-5 py-3">
                       <div className="flex items-center justify-end gap-1">
                         <Button
-                          variant="secondary"
+                          variant="outline"
                           size="sm"
                           onClick={(e) => {
                             e.stopPropagation();

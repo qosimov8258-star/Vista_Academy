@@ -87,7 +87,7 @@ export default function AttendancePage({ params }: { params: Promise<{ slug: str
           <h1 className="text-xl font-semibold text-[var(--color-text)]">Kunlik hisobot — Davomat</h1>
           <p className="text-sm text-[var(--color-text-muted)]">Bolalarning kunlik qatnashuvini belgilang</p>
         </div>
-        <Button variant="secondary" loading={exporting} disabled={!date || !branchId} onClick={handleExport}>
+        <Button variant="outline" loading={exporting} disabled={!date || !branchId} onClick={handleExport}>
           Eksport (CSV)
         </Button>
       </div>
@@ -141,7 +141,7 @@ export default function AttendancePage({ params }: { params: Promise<{ slug: str
                   <div className="flex gap-2">
                     <Button
                       size="sm"
-                      variant={child.status === "PRESENT" ? "primary" : "secondary"}
+                      variant={child.status === "PRESENT" ? "primary" : "tertiary"}
                       className={clsx(child.status === "PRESENT" && "bg-[var(--color-success)] hover:opacity-90")}
                       loading={mutation.isPending && mutation.variables?.childId === child.childId && mutation.variables?.status === "PRESENT"}
                       onClick={() => mutation.mutate({ childId: child.childId, status: "PRESENT" })}
@@ -150,7 +150,7 @@ export default function AttendancePage({ params }: { params: Promise<{ slug: str
                     </Button>
                     <Button
                       size="sm"
-                      variant={child.status === "ABSENT" ? "danger" : "secondary"}
+                      variant={child.status === "ABSENT" ? "danger" : "tertiary"}
                       loading={mutation.isPending && mutation.variables?.childId === child.childId && mutation.variables?.status === "ABSENT"}
                       onClick={() => mutation.mutate({ childId: child.childId, status: "ABSENT" })}
                     >

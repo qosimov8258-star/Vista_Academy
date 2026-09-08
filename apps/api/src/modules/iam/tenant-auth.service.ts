@@ -128,6 +128,7 @@ export class TenantAuthService {
       email: string;
       fullName: string;
       role: TenantAccessTokenPayload["role"];
+      avatarUpdatedAt: Date | null;
     },
     organization: { slug: string; name: string },
   ): TenantAuthenticatedUser {
@@ -142,6 +143,7 @@ export class TenantAuthService {
       email: tenantUser.email,
       fullName: tenantUser.fullName,
       role: tenantUser.role,
+      avatarUpdatedAt: tenantUser.avatarUpdatedAt?.toISOString() ?? null,
     };
   }
 }

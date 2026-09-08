@@ -204,7 +204,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
         <CardHeader className="flex items-center justify-between">
           <CardTitle>Rivojlanish ({latestAssessment?.period ?? "hali baholanmagan"})</CardTitle>
           {canWrite && (
-            <Button size="sm" variant="secondary" onClick={() => setAssessOpen(true)}>
+            <Button size="sm" variant="outline" onClick={() => setAssessOpen(true)}>
               {latestAssessment ? "Tahrirlash" : "Baholash"}
             </Button>
           )}
@@ -268,7 +268,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
         <CardHeader className="flex items-center justify-between">
           <CardTitle>Sog'liq profili</CardTitle>
           {canWrite && (
-            <Button size="sm" variant="secondary" onClick={() => setHealthOpen(true)}>
+            <Button size="sm" variant="outline" onClick={() => setHealthOpen(true)}>
               {health ? "Tahrirlash" : "To'ldirish"}
             </Button>
           )}
@@ -307,7 +307,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
         <CardHeader className="flex items-center justify-between">
           <CardTitle>Vaksinatsiyalar</CardTitle>
           {canWrite && (
-            <Button size="sm" variant="secondary" onClick={() => setVaccinationOpen(true)}>
+            <Button size="sm" variant="outline" onClick={() => setVaccinationOpen(true)}>
               + Yangi vaksinatsiya
             </Button>
           )}
@@ -364,7 +364,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
         <CardHeader className="flex items-center justify-between">
           <CardTitle>Dori-darmon jurnali</CardTitle>
           {canWrite && (
-            <Button size="sm" variant="secondary" onClick={() => setMedicationOpen(true)}>
+            <Button size="sm" variant="outline" onClick={() => setMedicationOpen(true)}>
               + Yangi yozuv
             </Button>
           )}
@@ -413,7 +413,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
         <CardHeader className="flex items-center justify-between">
           <CardTitle>Ota-onalar</CardTitle>
           {canWrite && (
-            <Button size="sm" variant="secondary" onClick={() => setGuardianOpen(true)}>
+            <Button size="sm" variant="outline" onClick={() => setGuardianOpen(true)}>
               + Ota-ona qo'shish
             </Button>
           )}

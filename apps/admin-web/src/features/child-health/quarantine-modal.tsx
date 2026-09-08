@@ -62,7 +62,7 @@ export function QuarantineModal({
         <Textarea label="Sabab" rows={2} placeholder="Vetryanka (suvchechak)" error={errors.reason?.message} {...register("reason")} />
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
+          <Button type="button" variant="outline" onClick={onClose}>
             Bekor qilish
           </Button>
           <Button type="submit" variant="danger" loading={isSubmitting || mutation.isPending}>

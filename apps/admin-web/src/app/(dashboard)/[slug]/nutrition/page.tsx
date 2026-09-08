@@ -97,7 +97,7 @@ export default function NutritionPage({ params }: { params: Promise<{ slug: stri
         </div>
         <div className="flex items-center gap-2">
           <Button
-            variant="secondary"
+            variant="outline"
             size="sm"
             disabled={!weekStart}
             onClick={() => setWeekStart((w) => (w ? addDays(w, -7) : w))}
@@ -108,7 +108,7 @@ export default function NutritionPage({ params }: { params: Promise<{ slug: stri
             {weekStart && weekEnd ? `${formatDate(weekStart)} — ${formatDate(weekEnd)}` : "…"}
           </span>
           <Button
-            variant="secondary"
+            variant="outline"
             size="sm"
             disabled={!weekStart}
             onClick={() => setWeekStart((w) => (w ? addDays(w, 7) : w))}
@@ -150,7 +150,7 @@ export default function NutritionPage({ params }: { params: Promise<{ slug: stri
                       <td className="px-5 py-3 text-[var(--color-text-muted)]">{entry?.snack || "—"}</td>
                       {canWrite && (
                         <td className="px-5 py-3 text-right">
-                          <Button size="sm" variant="secondary" onClick={() => setEditDate(day)}>
+                          <Button size="sm" variant="outline" onClick={() => setEditDate(day)}>
                             Tahrirlash
                           </Button>
                         </td>

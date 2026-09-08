@@ -103,7 +103,7 @@ export default function EmployeesPage({ params }: { params: Promise<{ slug: stri
                     </td>
                     <td className="px-5 py-3">
                       {canWrite && (
-                        <Button size="sm" variant="secondary" onClick={() => setSchemeEmployeeId(employee.id)}>
+                        <Button size="sm" variant="outline" onClick={() => setSchemeEmployeeId(employee.id)}>
                           Sozlash
                         </Button>
                       )}

@@ -114,7 +114,7 @@ export default function PlansPage() {
                 <div className="mt-auto flex gap-2 pt-1">
                   <Button
                     size="sm"
-                    variant="secondary"
+                    variant="outline"
                     className="flex-1"
                     onClick={() => {
                       setEditingPlan(plan);
@@ -125,8 +125,8 @@ export default function PlansPage() {
                   </Button>
                   <Button
                     size="sm"
-                    variant={plan.isActive ? "secondary" : "primary"}
-                    className={plan.isActive ? "flex-1 text-[var(--color-danger)]" : "flex-1"}
+                    variant={plan.isActive ? "dangerSoft" : "primary"}
+                    className="flex-1"
                     onClick={() => toggleActive.mutate(plan)}
                     loading={toggleActive.isPending && toggleActive.variables?.id === plan.id}
                   >

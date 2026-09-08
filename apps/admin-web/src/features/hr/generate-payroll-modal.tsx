@@ -118,7 +118,7 @@ export function GeneratePayrollModal({ open, onClose, slug }: { open: boolean; o
         <Input label="Izoh (ixtiyoriy)" {...register("note")} />
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
+          <Button type="button" variant="outline" onClick={onClose}>
             Bekor qilish
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>

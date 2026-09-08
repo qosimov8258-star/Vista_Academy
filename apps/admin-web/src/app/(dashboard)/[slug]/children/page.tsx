@@ -69,7 +69,7 @@ export default function ChildrenPage({ params }: { params: Promise<{ slug: strin
           <p className="text-sm text-[var(--color-text-muted)]">Tarmoqqa ro'yxatga olingan bolalar</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="secondary" loading={exporting} onClick={handleExport}>
+          <Button variant="outline" loading={exporting} onClick={handleExport}>
             Eksport (CSV)
           </Button>
           {canWrite && <Button onClick={() => setCreateOpen(true)}>+ Yangi bola</Button>}
@@ -166,11 +166,11 @@ export default function ChildrenPage({ params }: { params: Promise<{ slug: strin
               Jami {childrenQuery.data.meta.total} ta, {childrenQuery.data.meta.page}-sahifa
             </span>
             <div className="flex gap-2">
-              <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
                 Oldingi
               </Button>
               <Button
-                variant="secondary"
+                variant="outline"
                 size="sm"
                 disabled={page * childrenQuery.data.meta.limit >= childrenQuery.data.meta.total}
                 onClick={() => setPage((p) => p + 1)}

@@ -23,6 +23,7 @@ import { DevelopmentModule } from "./modules/development/development.module";
 import { BillingModule } from "./modules/billing/billing.module";
 import { TenantDashboardModule } from "./modules/tenant-dashboard/tenant-dashboard.module";
 import { TenantUsersModule } from "./modules/tenant-users/tenant-users.module";
+import { ProfileModule } from "./modules/profile/profile.module";
 import { CrmModule } from "./modules/crm/crm.module";
 import { ChildHealthModule } from "./modules/child-health/child-health.module";
 import { GuardiansModule } from "./modules/guardians/guardians.module";
@@ -53,6 +54,7 @@ import { ExportsModule } from "./modules/exports/exports.module";
     BillingModule,
     TenantDashboardModule,
     TenantUsersModule,
+    ProfileModule,
     CrmModule,
     ChildHealthModule,
     GuardiansModule,

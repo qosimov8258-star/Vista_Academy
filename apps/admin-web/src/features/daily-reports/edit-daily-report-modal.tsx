@@ -106,7 +106,7 @@ export function EditDailyReportModal({
         <Textarea label="Kunlik faoliyat" rows={3} placeholder="Bugun nima qildi..." {...register("activityNotes")} />
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
+          <Button type="button" variant="outline" onClick={onClose}>
             Bekor qilish
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
