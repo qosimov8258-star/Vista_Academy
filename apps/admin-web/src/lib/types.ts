@@ -430,3 +430,49 @@ export interface NotificationLog {
   createdAt: string;
   child?: { id: string; fullName: string } | null;
 }
+
+/** Super Adminning filial hisoboti (`/app/dashboard/branch-report`). */
+export interface BranchReport {
+  branch: {
+    id: string;
+    name: string;
+    slug: string;
+    address: string | null;
+    timezone: string;
+    currency: string;
+    createdAt: string;
+  };
+  children: {
+    active: number;
+    boys: number;
+    girls: number;
+    /** Migratsiyadan oldin qo'shilgan bolalarda jins ko'rsatilmagan. */
+    unknownGender: number;
+    quarantined: number;
+    inactive: number;
+  };
+  groups: {
+    total: number;
+    active: number;
+    capacity: number;
+    items: {
+      id: string;
+      name: string;
+      capacity: number;
+      status: GroupStatus;
+      childrenCount: number;
+      teachers: string[];
+    }[];
+  };
+  employees: {
+    total: number;
+    active: number;
+    withAccount: number;
+    byPosition: { position: string; count: number }[];
+  };
+  finance: {
+    monthRevenue: number;
+    outstandingDebt: number;
+    invoices: { status: InvoiceStatus; count: number; billed: number; paid: number }[];
+  };
+}

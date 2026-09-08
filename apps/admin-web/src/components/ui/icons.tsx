@@ -226,3 +226,11 @@ export function SidebarIcon(props: IconProps) {
     </Icon>
   );
 }
+
+export function ChartIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4 20V11M10 20V4M16 20v-6M22 20H2" />
+    </Icon>
+  );
+}
