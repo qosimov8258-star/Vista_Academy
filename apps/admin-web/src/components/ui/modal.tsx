@@ -2,6 +2,7 @@
 
 import { ReactNode, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { CloseIcon } from "@/components/ui/icons";
 
 interface ModalProps {
   open: boolean;
@@ -40,7 +41,7 @@ export function Modal({ open, onClose, title, children, widthClassName = "max-w-
             className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 cursor-pointer"
             aria-label="Yopish"
           >
-            ✕
+            <CloseIcon className="h-4 w-4" />
           </button>
         </div>
         <div className="px-5 py-4">{children}</div>

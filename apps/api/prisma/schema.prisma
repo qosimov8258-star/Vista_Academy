@@ -222,8 +222,11 @@ enum ChildStatus {
 }
 
 model Child {
-  id               String      @id @default(uuid())
-  organizationId   String      @map("organization_id")
+  id             String @id @default(uuid())
+  organizationId String @map("organization_id")
+  // Xodimlar va ota-onalar og'zaki ishlatadigan qisqa raqam ("id12345").
+  // Tashkilot ichida unikal, UUID esa ichki identifikator bo'lib qoladi.
+  publicId         Int         @map("public_id")
   branchId         String      @map("branch_id")
   groupId          String?     @map("group_id")
   fullName         String      @map("full_name")
@@ -250,6 +253,7 @@ model Child {
   guardians              ChildGuardian[]
   notificationLogs       NotificationLog[]
 
+  @@unique([organizationId, publicId])
   @@index([organizationId, branchId])
   @@index([groupId])
   @@map("children")

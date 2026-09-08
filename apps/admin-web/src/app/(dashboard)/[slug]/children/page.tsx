@@ -8,10 +8,11 @@ import type { Child } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
-import { formatDate } from "@/lib/format";
+import { formatChildId, formatDate } from "@/lib/format";
 import { downloadCsv } from "@/lib/download";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { CreateChildModal } from "@/features/children/create-child-modal";
@@ -23,10 +24,17 @@ const STATUS_TONE: Record<string, "success" | "neutral" | "danger"> = {
   INACTIVE: "neutral",
   QUARANTINED: "danger",
 };
+const RELATION_LABEL: Record<string, string> = {
+  MOTHER: "Onasi",
+  FATHER: "Otasi",
+  GRANDPARENT: "Buvi/bobo",
+  OTHER: "Vasiy",
+};
 
 export default function ChildrenPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const { user } = useAuth();
@@ -43,9 +51,13 @@ export default function ChildrenPage({ params }: { params: Promise<{ slug: strin
   };
 
   const childrenQuery = useQuery({
-    queryKey: ["children", slug, page, forcedBranchId],
+    queryKey: ["children", slug, page, forcedBranchId, search],
     queryFn: () =>
-      getPaginated<Child>(`/app/children?page=${page}&limit=20${forcedBranchId ? `&branchId=${forcedBranchId}` : ""}`),
+      getPaginated<Child>(
+        `/app/children?page=${page}&limit=20` +
+          (forcedBranchId ? `&branchId=${forcedBranchId}` : "") +
+          (search ? `&search=${encodeURIComponent(search)}` : ""),
+      ),
     placeholderData: (prev) => prev,
   });
 
@@ -66,19 +78,42 @@ export default function ChildrenPage({ params }: { params: Promise<{ slug: strin
 
       {!canWrite && <ViewOnlyNote role={user?.role} />}
 
+      <Card className="p-4">
+        <Input
+          placeholder="Ism, ota-ona yoki ID bo'yicha qidirish (masalan id14732)"
+          value={search}
+          onChange={(e) => {
+            setPage(1);
+            setSearch(e.target.value);
+          }}
+          className="sm:max-w-md"
+        />
+      </Card>
+
       {childrenQuery.isLoading ? (
         <LoadingState />
       ) : childrenQuery.isError ? (
         <ErrorState message={(childrenQuery.error as Error).message} />
       ) : !childrenQuery.data || childrenQuery.data.data.length === 0 ? (
-        <EmptyState title="Bola topilmadi" description={canWrite ? "Yangi bola qo'shish uchun tugmani bosing" : undefined} />
+        <EmptyState
+          title="Bola topilmadi"
+          description={
+            search
+              ? "Qidiruv shartini o'zgartiring"
+              : canWrite
+                ? "Yangi bola qo'shish uchun tugmani bosing"
+                : undefined
+          }
+        />
       ) : (
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="border-b border-[var(--color-border)] bg-gray-50 text-xs uppercase text-[var(--color-text-muted)]">
                 <tr>
+                  <th className="px-5 py-3 font-medium">ID</th>
                   <th className="px-5 py-3 font-medium">To'liq ism</th>
+                  <th className="px-5 py-3 font-medium">Ota-ona / aloqa</th>
                   <th className="px-5 py-3 font-medium">Tug'ilgan sana</th>
                   {!forcedBranchId && <th className="px-5 py-3 font-medium">Filial</th>}
                   <th className="px-5 py-3 font-medium">Guruh</th>
@@ -88,10 +123,27 @@ export default function ChildrenPage({ params }: { params: Promise<{ slug: strin
               <tbody className="divide-y divide-[var(--color-border)]">
                 {childrenQuery.data.data.map((child) => (
                   <tr key={child.id} className="hover:bg-gray-50">
+                    <td className="px-5 py-3">
+                      <span className="font-mono text-xs text-[var(--color-text-muted)]">
+                        {formatChildId(child.publicId)}
+                      </span>
+                    </td>
                     <td className="px-5 py-3 font-medium">
                       <Link href={`/${slug}/children/${child.id}`} className="text-[var(--color-primary)] hover:underline">
                         {child.fullName}
                       </Link>
+                    </td>
+                    <td className="px-5 py-3">
+                      {child.guardians?.[0] ? (
+                        <>
+                          <p className="text-[var(--color-text)]">{child.guardians[0].guardian.fullName}</p>
+                          <p className="text-xs text-[var(--color-text-muted)]">
+                            {RELATION_LABEL[child.guardians[0].relation]} • {child.guardians[0].guardian.phone}
+                          </p>
+                        </>
+                      ) : (
+                        <span className="text-[var(--color-text-muted)]">—</span>
+                      )}
                     </td>
                     <td className="px-5 py-3 text-[var(--color-text-muted)]">
                       {child.birthDate ? formatDate(child.birthDate) : "—"}

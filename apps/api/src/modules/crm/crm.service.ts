@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantAuthenticatedUser, TenantScope, requireOperationalScope, toTenantScope } from "../iam/tenant-auth.types";
+import { createChildWithGuardian, withPublicIdRetry } from "../children/child-creation";
 import { CreateLeadDto } from "./dto/create-lead.dto";
 import { LeadQueryDto } from "./dto/lead-query.dto";
 import { UpdateLeadStageDto } from "./dto/update-lead-stage.dto";
@@ -146,25 +147,34 @@ export class CrmService {
       }
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      const child = await tx.child.create({
-        data: {
-          organizationId: scope.organizationId,
-          branchId,
-          groupId: dto.groupId,
-          fullName: lead.childFullName,
-          birthDate: lead.childBirthDate,
-        },
-      });
-      const updatedLead = await tx.lead.update({
-        where: { id },
-        data: { stage: "WON", convertedChildId: child.id },
-      });
-      await tx.leadActivity.create({
-        data: { leadId: id, type: "STAGE_CHANGE", note: "Bolaga aylantirildi", createdByUserId: user.id },
-      });
-      return { lead: updatedLead, child };
-    });
+    // Bola qo'lda qo'shilgani bilan bir xil yo'ldan o'tadi: qisqa ID oladi va
+    // arizadagi ota-ona ma'lumoti vasiy sifatida bog'lanadi. Arizada kim
+    // ekani (ota/ona) so'ralmagani uchun aloqa turi OTHER bo'lib qoladi —
+    // keyinchalik bolaning kartochkasidan aniqlashtiriladi.
+    return withPublicIdRetry(() =>
+      this.prisma.$transaction(async (tx) => {
+        const child = await createChildWithGuardian(
+          tx,
+          {
+            organizationId: scope.organizationId,
+            branchId,
+            groupId: dto.groupId,
+            fullName: lead.childFullName,
+            birthDate: lead.childBirthDate,
+            guardian: { fullName: lead.parentName, phone: lead.parentPhone, relation: "OTHER" },
+          },
+          {},
+        );
+        const updatedLead = await tx.lead.update({
+          where: { id },
+          data: { stage: "WON", convertedChildId: child.id },
+        });
+        await tx.leadActivity.create({
+          data: { leadId: id, type: "STAGE_CHANGE", note: "Bolaga aylantirildi", createdByUserId: user.id },
+        });
+        return { lead: updatedLead, child };
+      }),
+    );
   }
 
   async stats(scope: TenantScope) {

@@ -55,7 +55,9 @@ export function Sidebar({ slug }: { slug: string }) {
     { href: `/${slug}`, label: "Bosh sahifa", icon: HomeIcon, show: true, exact: true },
     { href: `/${slug}/branches`, label: "Filiallar", icon: BuildingIcon, show: true },
     // Super Admin har bir filialga admin va moliyachi tayinlaydi, shuning uchun
-    // foydalanuvchilar bo'limi uning asosiy ro'yxatida turishi shart.
+    // foydalanuvchilar bo'limi uning asosiy ro'yxatida turishi shart. Filial
+    // ichiga kirilganda bu havola ko'rinmaydi — u yerda filialning kundalik
+    // ishi turadi, foydalanuvchi boshqaruvi esa tarmoq darajasidagi ish.
     { href: `/${slug}/users`, label: "Foydalanuvchilar", icon: KeyIcon, show: showUsersNav },
   ];
 

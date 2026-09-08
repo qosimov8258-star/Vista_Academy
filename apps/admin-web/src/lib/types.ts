@@ -52,6 +52,8 @@ export type ChildStatus = "ACTIVE" | "INACTIVE" | "QUARANTINED";
 export interface Child {
   id: string;
   organizationId: string;
+  /** Xodimlar va ota-onalar ishlatadigan qisqa raqam; UI da "id12345" ko'rinishida. */
+  publicId: number;
   branchId: string;
   groupId: string | null;
   fullName: string;
@@ -62,6 +64,8 @@ export interface Child {
   createdAt: string;
   group?: { id: string; name: string } | null;
   branch?: { id: string; name: string };
+  /** Asosiy vasiy birinchi bo'lib keladi. */
+  guardians?: ChildGuardian[];
 }
 
 export interface Employee {

@@ -3,43 +3,37 @@
 import { use, useState } from "react";
 import Link from "next/link";
 import { useQueries, useQuery } from "@tanstack/react-query";
+import clsx from "clsx";
 import { api } from "@/lib/api";
 import type { DashboardSummary, Organization, TenantUser } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { formatMoney } from "@/lib/format";
+import { BuildingIcon, ChevronRightIcon, PlusIcon, SettingsIcon } from "@/components/ui/icons";
 import { CreateBranchModal } from "@/features/branches/create-branch-modal";
 
-function StatBlock({
-  icon,
-  label,
-  value,
-  tone,
-}: {
-  icon: string;
-  label: string;
-  value: string;
-  tone?: "success" | "danger";
-}) {
+/**
+ * Kartaning pastki qismidagi bitta ko'rsatkich. Har biriga alohida ikonka
+ * qo'yilmaydi — to'rt-besh xil belgi yonma-yon turganda karta shovqinli
+ * bo'lib ketadi; raqamning o'zi va ustidagi izoh yetarli.
+ */
+function Stat({ label, value, tone }: { label: string; value: string; tone?: "success" | "danger" }) {
   return (
-    <div className="flex min-w-[120px] items-center gap-3">
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-50 text-lg">{icon}</span>
-      <div className="min-w-0">
-        <p className="text-xs text-[var(--color-text-muted)]">{label}</p>
-        <p
-          className={`truncate text-xl font-semibold ${
-            tone === "success"
-              ? "text-[var(--color-success)]"
-              : tone === "danger"
-                ? "text-[var(--color-danger)]"
-                : "text-[var(--color-text)]"
-          }`}
-        >
-          {value}
-        </p>
-      </div>
+    <div className="px-5 py-4">
+      <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">{label}</p>
+      <p
+        className={clsx(
+          "mt-1 truncate text-[19px] font-semibold tabular-nums tracking-tight",
+          tone === "success"
+            ? "text-[var(--color-success)]"
+            : tone === "danger"
+              ? "text-[var(--color-danger)]"
+              : "text-[var(--color-text)]",
+        )}
+      >
+        {value}
+      </p>
     </div>
   );
 }
@@ -74,10 +68,13 @@ export default function BranchesPage({ params }: { params: Promise<{ slug: strin
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-[var(--color-text)]">Filiallar</h1>
-          <p className="text-sm text-[var(--color-text-muted)]">Tarmoqqa tegishli bog'cha binolari</p>
+          <h1 className="text-[22px] font-semibold tracking-tight text-[var(--color-text)]">Filiallar</h1>
+          <p className="mt-0.5 text-sm text-[var(--color-text-muted)]">Tarmoqqa tegishli bog&apos;cha binolari</p>
         </div>
-        <Button onClick={() => setCreateOpen(true)}>+ Filial qo&apos;shish</Button>
+        <Button onClick={() => setCreateOpen(true)} className="gap-1.5 rounded-full">
+          <PlusIcon className="h-4 w-4" />
+          Filial qo&apos;shish
+        </Button>
       </div>
 
       {isLoading ? (
@@ -92,79 +89,72 @@ export default function BranchesPage({ params }: { params: Promise<{ slug: strin
             const manager = usersQuery.data?.find((u) => u.role === "BRANCH_ADMIN" && u.branchId === branch.id) ?? null;
             const summaryQuery = summaryQueries[i];
             const summary = summaryQuery?.data;
-            const summaryLoading = summaryQuery?.isLoading ?? true;
+            const loading = summaryQuery?.isLoading ?? true;
+            const num = (v?: number) => (loading ? "—" : String(v ?? 0));
+            const money = (v?: number) => (loading ? "—" : formatMoney(v ?? 0));
+            const hasDebt = (summary?.outstandingDebt ?? 0) > 0;
 
             return (
-              <Card
+              <div
                 key={branch.id}
-                className="group relative overflow-hidden transition-all hover:-translate-y-0.5 hover:border-[var(--color-primary)] hover:shadow-md"
+                className="group relative overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_28px_-8px_rgba(16,24,40,0.15)]"
               >
+                {/* Butun karta filialga kirish havolasi; ustidagi tugmalar z-10 bilan tepada turadi */}
                 <Link
                   href={`/${slug}/${branch.slug}`}
                   className="absolute inset-0 z-0"
                   aria-label={`${branch.name} filialiga kirish`}
                 />
 
-                <div className="relative z-10 flex flex-col gap-5 p-6 lg:flex-row lg:items-center lg:justify-between">
-                  <div className="pointer-events-none flex min-w-0 items-start gap-4 lg:w-72 lg:shrink-0">
-                    <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[var(--color-primary)]/10 text-2xl">
-                      🏫
-                    </span>
-                    <div className="min-w-0">
-                      <h3 className="truncate text-xl font-bold text-[var(--color-text)] group-hover:text-[var(--color-primary)]">
-                        {branch.name}
-                      </h3>
-                      <p className="mt-0.5 truncate text-sm text-[var(--color-text-muted)]">
-                        {branch.address || "Manzil ko'rsatilmagan"}
-                      </p>
-                      <div className="mt-2 flex items-center gap-1.5 text-sm">
-                        <span className="text-[var(--color-text-muted)]">Filial admini:</span>
-                        {manager ? (
-                          <span className="font-medium text-[var(--color-text)]">{manager.fullName}</span>
-                        ) : (
-                          <Badge tone="warning">Tayinlanmagan</Badge>
-                        )}
-                      </div>
-                    </div>
+                <div className="pointer-events-none relative z-10 flex items-center gap-4 px-5 py-4">
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
+                    <BuildingIcon className="h-6 w-6" />
+                  </span>
+
+                  <div className="min-w-0 flex-1">
+                    <h3 className="truncate text-[17px] font-semibold tracking-tight text-[var(--color-text)]">
+                      {branch.name}
+                    </h3>
+                    <p className="mt-0.5 truncate text-[13px] text-[var(--color-text-muted)]">
+                      {branch.address || "Manzil ko'rsatilmagan"}
+                    </p>
                   </div>
 
-                  <div className="pointer-events-none flex flex-1 flex-wrap items-center gap-x-8 gap-y-4 border-t border-[var(--color-border)] pt-5 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
-                    <StatBlock icon="🧒" label="Bolalar" value={summaryLoading ? "—" : String(summary?.childrenCount ?? 0)} />
-                    <StatBlock icon="👥" label="Guruhlar" value={summaryLoading ? "—" : String(summary?.activeGroupsCount ?? 0)} />
-                    <StatBlock icon="🧑‍🏫" label="Xodimlar" value={summaryLoading ? "—" : String(summary?.employeesCount ?? 0)} />
-                    <StatBlock
-                      icon="💵"
-                      label="Joriy oy tushumi"
-                      value={summaryLoading ? "—" : formatMoney(summary?.monthRevenue ?? 0)}
-                      tone="success"
-                    />
-                    {(summary?.outstandingDebt ?? 0) > 0 && (
-                      <StatBlock
-                        icon="⚠️"
-                        label="Qarzdorlik"
-                        value={summaryLoading ? "—" : formatMoney(summary?.outstandingDebt ?? 0)}
-                        tone="danger"
-                      />
+                  <div className="hidden items-center gap-2 sm:flex">
+                    <span className="text-[13px] text-[var(--color-text-muted)]">Filial admini</span>
+                    {manager ? (
+                      <span className="text-[13px] font-medium text-[var(--color-text)]">{manager.fullName}</span>
+                    ) : (
+                      <Badge tone="warning">Tayinlanmagan</Badge>
                     )}
                   </div>
 
-                  <div className="relative z-10 flex shrink-0 items-center gap-2 self-start lg:self-center">
+                  <div className="pointer-events-auto relative z-10 flex shrink-0 items-center gap-1">
                     <Link
                       href={`/${slug}/branches/${branch.id}`}
                       title="Filial sozlamalari"
-                      className="rounded-lg p-2 text-[var(--color-text-muted)] transition-colors hover:bg-gray-100 hover:text-[var(--color-text)]"
+                      aria-label={`${branch.name} sozlamalari`}
+                      className="rounded-full p-2 text-[var(--color-text-muted)] transition-colors hover:bg-gray-100 hover:text-[var(--color-text)]"
                     >
-                      ⚙️
+                      <SettingsIcon className="h-[18px] w-[18px]" />
                     </Link>
-                    <Link
-                      href={`/${slug}/${branch.slug}`}
-                      className="hidden text-sm font-medium text-[var(--color-primary)] hover:underline lg:inline"
-                    >
-                      Kirish →
-                    </Link>
+                    <ChevronRightIcon className="h-5 w-5 text-gray-300 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-[var(--color-primary)]" />
                   </div>
                 </div>
-              </Card>
+
+                <div
+                  className={clsx(
+                    "pointer-events-none relative z-10 grid divide-x divide-[var(--color-border)] border-t border-[var(--color-border)] bg-gray-50/60",
+                    hasDebt ? "grid-cols-2 sm:grid-cols-5" : "grid-cols-2 sm:grid-cols-4",
+                  )}
+                >
+                  <Stat label="Bolalar" value={num(summary?.childrenCount)} />
+                  <Stat label="Guruhlar" value={num(summary?.activeGroupsCount)} />
+                  <Stat label="Xodimlar" value={num(summary?.employeesCount)} />
+                  <Stat label="Joriy oy tushumi" value={money(summary?.monthRevenue)} tone="success" />
+                  {hasDebt && <Stat label="Qarzdorlik" value={money(summary?.outstandingDebt)} tone="danger" />}
+                </div>
+              </div>
             );
           })}
         </div>

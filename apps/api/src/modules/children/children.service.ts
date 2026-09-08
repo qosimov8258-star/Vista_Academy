@@ -4,6 +4,17 @@ import { PrismaService } from "../../database/prisma.service";
 import { TenantScope, requireOperationalScope } from "../iam/tenant-auth.types";
 import { CreateChildDto } from "./dto/create-child.dto";
 import { ChildQueryDto } from "./dto/child-query.dto";
+import { createChildWithGuardian, withPublicIdRetry } from "./child-creation";
+
+/** Ro'yxatda ota-ona telefoni ko'rinishi uchun asosiy vasiy ham olinadi. */
+const childInclude = {
+  group: { select: { id: true, name: true } },
+  branch: { select: { id: true, name: true } },
+  guardians: {
+    orderBy: { isPrimary: "desc" as const },
+    include: { guardian: { select: { id: true, fullName: true, phone: true } } },
+  },
+} satisfies Prisma.ChildInclude;
 
 @Injectable()
 export class ChildrenService {
@@ -14,15 +25,27 @@ export class ChildrenService {
     if (dto.groupId) {
       await this.requireGroup(branchId, dto.groupId);
     }
-    return this.prisma.child.create({
-      data: {
-        organizationId: scope.organizationId,
-        branchId,
-        groupId: dto.groupId,
-        fullName: dto.fullName,
-        birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
-      },
-    });
+
+    return withPublicIdRetry(() =>
+      this.prisma.$transaction((tx) =>
+        createChildWithGuardian(
+          tx,
+          {
+            organizationId: scope.organizationId,
+            branchId,
+            groupId: dto.groupId,
+            fullName: dto.fullName,
+            birthDate: dto.birthDate ? new Date(dto.birthDate) : null,
+            guardian: {
+              fullName: dto.guardianFullName,
+              phone: dto.guardianPhone,
+              relation: dto.guardianRelation,
+            },
+          },
+          childInclude,
+        ),
+      ),
+    );
   }
 
   async findAll(scope: TenantScope, query: ChildQueryDto) {
@@ -31,13 +54,13 @@ export class ChildrenService {
       branchId: scope.branchId ?? query.branchId,
       ...(query.groupId ? { groupId: query.groupId } : {}),
       ...(query.status ? { status: query.status } : {}),
-      ...(query.search ? { fullName: { contains: query.search, mode: "insensitive" as Prisma.QueryMode } } : {}),
+      ...(query.search ? { OR: searchFilters(query.search) } : {}),
     };
 
     const [items, total] = await this.prisma.$transaction([
       this.prisma.child.findMany({
         where,
-        include: { group: { select: { id: true, name: true } }, branch: { select: { id: true, name: true } } },
+        include: childInclude,
         orderBy: { createdAt: "desc" },
         skip: (query.page - 1) * query.limit,
         take: query.limit,
@@ -51,7 +74,7 @@ export class ChildrenService {
   async findOne(scope: TenantScope, id: string) {
     const child = await this.prisma.child.findFirst({
       where: { id, organizationId: scope.organizationId },
-      include: { group: { select: { id: true, name: true } }, branch: { select: { id: true, name: true } } },
+      include: childInclude,
     });
     if (!child) {
       throw new NotFoundException("Bola topilmadi");
@@ -75,4 +98,22 @@ export class ChildrenService {
     }
     return group;
   }
+}
+
+/**
+ * Qidiruv ism bo'yicha ham, ID bo'yicha ham ishlaydi — ota-ona telefonda
+ * "id12345" deb aytadi, xodim esa o'shani qidiruvga kiritadi.
+ */
+function searchFilters(search: string): Prisma.ChildWhereInput[] {
+  const filters: Prisma.ChildWhereInput[] = [
+    { fullName: { contains: search, mode: "insensitive" } },
+    { guardians: { some: { guardian: { fullName: { contains: search, mode: "insensitive" } } } } },
+  ];
+
+  const digits = search.replace(/^id/i, "").trim();
+  if (/^\d{1,5}$/.test(digits)) {
+    filters.push({ publicId: Number(digits) });
+  }
+
+  return filters;
 }

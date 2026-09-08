@@ -11,18 +11,30 @@ import { Badge } from "@/components/ui/badge";
 import { LoadingState, ErrorState } from "@/components/ui/states";
 import { formatDate, formatMoney } from "@/lib/format";
 import { canWriteOperational } from "@/lib/permissions";
+import {
+  BellIcon,
+  BriefcaseIcon,
+  CalendarIcon,
+  ChecklistIcon,
+  ChildIcon,
+  GroupIcon,
+  MealIcon,
+  MoneyIcon,
+  NoteIcon,
+  PhoneIcon,
+} from "@/components/ui/icons";
 
 const QUICK_ACTIONS = [
-  { label: "Arizalar (CRM)", icon: "📞", suffix: "crm" },
-  { label: "Bolalar", icon: "🧒", suffix: "children" },
-  { label: "Guruhlar", icon: "👥", suffix: "groups" },
-  { label: "Moliya", icon: "💵", suffix: "finance" },
-  { label: "Davomat", icon: "📋", suffix: "attendance" },
-  { label: "Kundalik hisobot", icon: "📝", suffix: "daily-reports" },
-  { label: "Xodimlar davomati", icon: "🗓️", suffix: "staff-attendance" },
-  { label: "Ovqatlanish", icon: "🍽️", suffix: "nutrition" },
-  { label: "Ish haqi (HR)", icon: "💼", suffix: "hr" },
-  { label: "Bildirishnomalar", icon: "🔔", suffix: "notifications" },
+  { label: "Arizalar (CRM)", icon: PhoneIcon, suffix: "crm" },
+  { label: "Bolalar", icon: ChildIcon, suffix: "children" },
+  { label: "Guruhlar", icon: GroupIcon, suffix: "groups" },
+  { label: "Moliya", icon: MoneyIcon, suffix: "finance" },
+  { label: "Davomat", icon: ChecklistIcon, suffix: "attendance" },
+  { label: "Kundalik hisobot", icon: NoteIcon, suffix: "daily-reports" },
+  { label: "Xodimlar davomati", icon: CalendarIcon, suffix: "staff-attendance" },
+  { label: "Ovqatlanish", icon: MealIcon, suffix: "nutrition" },
+  { label: "Ish haqi (HR)", icon: BriefcaseIcon, suffix: "hr" },
+  { label: "Bildirishnomalar", icon: BellIcon, suffix: "notifications" },
 ];
 
 export default function DashboardPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -233,16 +245,21 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
         <div>
           <h2 className="mb-3 text-sm font-semibold text-[var(--color-text)]">Tezkor navigatsiya</h2>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {QUICK_ACTIONS.map((action) => (
-              <Link
-                key={action.suffix}
-                href={`/${slug}/${action.suffix}`}
-                className="flex flex-col items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-5 text-center shadow-sm transition-colors hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/5"
-              >
-                <span className="text-2xl">{action.icon}</span>
-                <span className="text-sm font-medium text-[var(--color-text)]">{action.label}</span>
-              </Link>
-            ))}
+            {QUICK_ACTIONS.map((action) => {
+              const Icon = action.icon;
+              return (
+                <Link
+                  key={action.suffix}
+                  href={`/${slug}/${action.suffix}`}
+                  className="group flex flex-col items-center gap-2.5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-5 text-center shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--color-primary)]/30 hover:shadow-[0_10px_28px_-8px_rgba(16,24,40,0.15)]"
+                >
+                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] transition-colors group-hover:bg-[var(--color-primary)] group-hover:text-white">
+                    <Icon className="h-[22px] w-[22px]" />
+                  </span>
+                  <span className="text-[13px] font-medium leading-tight text-[var(--color-text)]">{action.label}</span>
+                </Link>
+              );
+            })}
           </div>
         </div>
       )}

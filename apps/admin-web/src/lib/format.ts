@@ -18,3 +18,8 @@ export function formatDateTime(value: string): string {
     minute: "2-digit",
   }).format(new Date(value));
 }
+
+/** Bolaning qisqa raqami. Bazada son, ko'rsatishda "id12345". */
+export function formatChildId(publicId: number): string {
+  return `id${publicId}`;
+}
