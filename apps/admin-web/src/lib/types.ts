@@ -49,6 +49,8 @@ export interface Group {
 
 export type ChildStatus = "ACTIVE" | "INACTIVE" | "QUARANTINED";
 
+export type Gender = "MALE" | "FEMALE";
+
 export interface Child {
   id: string;
   organizationId: string;
@@ -56,7 +58,12 @@ export interface Child {
   publicId: number;
   branchId: string;
   groupId: string | null;
+  firstName: string;
+  lastName: string;
+  /** "Familiya Ism" — qidiruv va ro'yxatlar shu maydonni ishlatadi. */
   fullName: string;
+  /** Migratsiyadan oldin qo'shilgan bolalarda noma'lum bo'lishi mumkin. */
+  gender: Gender | null;
   birthDate: string | null;
   status: ChildStatus;
   quarantineUntil: string | null;

@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LoadingState, ErrorState } from "@/components/ui/states";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
-import { formatDate, formatDateTime } from "@/lib/format";
+import { formatDate, formatDateTime, formatGender } from "@/lib/format";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { EditDevelopmentModal } from "@/features/development/edit-development-modal";
 import { EditHealthProfileModal, BLOOD_TYPE_LABEL } from "@/features/child-health/edit-health-profile-modal";
@@ -155,7 +155,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
           </Badge>
         </div>
         <p className="text-sm text-[var(--color-text-muted)]">
-          {child.branch?.name ?? "—"} • {child.group?.name ?? "Guruhsiz"}
+          {child.branch?.name ?? "—"} • {child.group?.name ?? "Guruhsiz"} • {formatGender(child.gender)}
           {child.birthDate ? ` • ${formatDate(child.birthDate)}` : ""}
         </p>
       </div>

@@ -1,3 +1,5 @@
+import type { Gender } from "./types";
+
 export function formatMoney(value: string | number, currency = "UZS"): string {
   const num = typeof value === "string" ? Number(value) : value;
   return new Intl.NumberFormat("uz-UZ", { maximumFractionDigits: 0 }).format(num) + " " + currency;
@@ -22,4 +24,11 @@ export function formatDateTime(value: string): string {
 /** Bolaning qisqa raqami. Bazada son, ko'rsatishda "id12345". */
 export function formatChildId(publicId: number): string {
   return `id${publicId}`;
+}
+
+/** Migratsiyadan oldingi bolalarda jins noma'lum bo'lishi mumkin. */
+export function formatGender(gender: Gender | null): string {
+  if (gender === "MALE") return "O'g'il bola";
+  if (gender === "FEMALE") return "Qiz bola";
+  return "Jinsi ko'rsatilmagan";
 }

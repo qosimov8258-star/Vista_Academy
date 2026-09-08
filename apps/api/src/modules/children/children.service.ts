@@ -34,7 +34,9 @@ export class ChildrenService {
             organizationId: scope.organizationId,
             branchId,
             groupId: dto.groupId,
-            fullName: dto.fullName,
+            firstName: dto.firstName,
+            lastName: dto.lastName,
+            gender: dto.gender,
             birthDate: dto.birthDate ? new Date(dto.birthDate) : null,
             guardian: {
               fullName: dto.guardianFullName,

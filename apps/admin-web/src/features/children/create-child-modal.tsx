@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -9,11 +9,14 @@ import { api, ApiError } from "@/lib/api";
 import type { Child, Group } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Input, Select } from "@/components/ui/input";
+import { DateOfBirthInput } from "@/components/ui/date-of-birth-input";
 import { Button } from "@/components/ui/button";
 
 const schema = z.object({
   groupId: z.string().optional(),
-  fullName: z.string().min(2, "To'liq ism kamida 2 belgi"),
+  lastName: z.string().min(2, "Familiya kamida 2 belgi"),
+  firstName: z.string().min(2, "Ism kamida 2 belgi"),
+  gender: z.enum(["MALE", "FEMALE"], { message: "Jinsini tanlang" }),
   birthDate: z.string().optional(),
   guardianFullName: z.string().min(2, "Ota-ona ismi kamida 2 belgi"),
   guardianRelation: z.enum(["MOTHER", "FATHER", "GRANDPARENT", "OTHER"]),
@@ -30,12 +33,13 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
 
   const {
     register,
+    control,
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { guardianRelation: "MOTHER" },
+    defaultValues: { guardianRelation: "MOTHER", birthDate: "" },
   });
 
   const { data: groups } = useQuery({
@@ -77,15 +81,25 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
           </div>
         )}
 
-        <Input
-          label="Bolaning ismi va familiyasi"
-          placeholder="Usmon Umaraliyev"
-          hint="Saqlanganda bolaga qisqa ID beriladi (masalan id14732)"
-          error={errors.fullName?.message}
-          {...register("fullName")}
-        />
+        {/* Familiya oldinda: ro'yxatlar va hujjatlar "Familiya Ism" tartibida */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input label="Tug'ilgan sana" type="date" error={errors.birthDate?.message} {...register("birthDate")} />
+          <Input
+            label="Familiya"
+            placeholder="Umaraliyev"
+            error={errors.lastName?.message}
+            {...register("lastName")}
+          />
+          <Input label="Ism" placeholder="Usmon" error={errors.firstName?.message} {...register("firstName")} />
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Select label="Jinsi" defaultValue="" error={errors.gender?.message} {...register("gender")}>
+            <option value="" disabled>
+              Tanlang
+            </option>
+            <option value="MALE">O&apos;g&apos;il bola</option>
+            <option value="FEMALE">Qiz bola</option>
+          </Select>
           <Select label="Guruh (ixtiyoriy)" defaultValue="" {...register("groupId")}>
             <option value="">Tanlanmagan</option>
             {groups?.map((group) => (
@@ -95,6 +109,20 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
             ))}
           </Select>
         </div>
+
+        <Controller
+          control={control}
+          name="birthDate"
+          render={({ field }) => (
+            <DateOfBirthInput
+              label="Tug'ilgan sana (ixtiyoriy)"
+              value={field.value ?? ""}
+              onChange={field.onChange}
+              error={errors.birthDate?.message}
+              hint="Saqlanganda bolaga qisqa ID beriladi (masalan id14732)"
+            />
+          )}
+        />
 
         <div className="space-y-4 border-t border-[var(--color-border)] pt-4">
           <p className="text-sm font-medium text-[var(--color-text)]">
@@ -106,7 +134,7 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_140px]">
             <Input
               label="Ismi va familiyasi"
-              placeholder="Aziza Umaraliyeva"
+              placeholder="Umaraliyeva Aziza"
               error={errors.guardianFullName?.message}
               {...register("guardianFullName")}
             />

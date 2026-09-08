@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { GuardianRelation } from "@prisma/client";
+import { Gender, GuardianRelation } from "@prisma/client";
 import { IsDateString, IsEnum, IsOptional, IsString, Matches, MinLength } from "class-validator";
 
 export class CreateChildDto {
@@ -8,10 +8,19 @@ export class CreateChildDto {
   @IsString()
   groupId?: string;
 
-  @ApiProperty({ example: "Usmon Umaraliyev" })
+  @ApiProperty({ example: "Umaraliyev", description: "Familiya" })
   @IsString()
   @MinLength(2)
-  fullName!: string;
+  lastName!: string;
+
+  @ApiProperty({ example: "Usmon", description: "Ism" })
+  @IsString()
+  @MinLength(2)
+  firstName!: string;
+
+  @ApiProperty({ enum: Gender, example: Gender.MALE })
+  @IsEnum(Gender)
+  gender!: Gender;
 
   @ApiPropertyOptional({ example: "2021-05-14" })
   @IsOptional()

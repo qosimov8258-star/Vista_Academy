@@ -1,4 +1,4 @@
-import { GuardianRelation, Prisma } from "@prisma/client";
+import { Gender, GuardianRelation, Prisma } from "@prisma/client";
 import { normalizePhone } from "../../common/phone";
 
 /** Birinchi blok: id10000..id19999, keyin 20000-liklar va hokazo. */
@@ -57,9 +57,20 @@ export interface CreateChildInput {
   organizationId: string;
   branchId: string;
   groupId?: string | null;
-  fullName: string;
+  firstName: string;
+  lastName: string;
+  /** Eski yozuvlarda jins noma'lum bo'lishi mumkin, yangi bolada esa majburiy. */
+  gender?: Gender | null;
   birthDate?: Date | null;
   guardian: ChildGuardianInput;
+}
+
+/**
+ * Ro'yxatlarda, eksportda va hisob-fakturada ko'rinadigan yagona nom.
+ * Tartib "Familiya Ism" — hujjatlar va alifbo bo'yicha saralash shunga tayanadi.
+ */
+export function composeChildFullName(lastName: string, firstName: string): string {
+  return `${lastName.trim()} ${firstName.trim()}`.trim();
 }
 
 /**
@@ -99,7 +110,10 @@ export async function createChildWithGuardian<T extends Prisma.ChildInclude>(
       branchId: input.branchId,
       groupId: input.groupId ?? undefined,
       publicId,
-      fullName: input.fullName.trim(),
+      firstName: input.firstName.trim(),
+      lastName: input.lastName.trim(),
+      fullName: composeChildFullName(input.lastName, input.firstName),
+      gender: input.gender ?? undefined,
       birthDate: input.birthDate ?? undefined,
       guardians: {
         create: { guardianId: guardian.id, relation: input.guardian.relation, isPrimary: true },

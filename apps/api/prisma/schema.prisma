@@ -215,6 +215,11 @@ model Group {
   @@map("groups")
 }
 
+enum Gender {
+  MALE
+  FEMALE
+}
+
 enum ChildStatus {
   ACTIVE
   INACTIVE
@@ -226,10 +231,16 @@ model Child {
   organizationId String @map("organization_id")
   // Xodimlar va ota-onalar og'zaki ishlatadigan qisqa raqam ("id12345").
   // Tashkilot ichida unikal, UUID esa ichki identifikator bo'lib qoladi.
-  publicId         Int         @map("public_id")
-  branchId         String      @map("branch_id")
-  groupId          String?     @map("group_id")
+  publicId  Int    @map("public_id")
+  branchId  String @map("branch_id")
+  groupId   String? @map("group_id")
+  firstName String @map("first_name")
+  lastName  String @map("last_name")
+  // Familiya + ism birlashmasi. Ikki qismdan hosil qilinadi, lekin ustun
+  // sifatida saqlanadi: qidiruv, eksport, hisob-faktura va davomat
+  // ro'yxatlari bola nomini shu yagona maydondan oladi.
   fullName         String      @map("full_name")
+  gender           Gender?
   birthDate        DateTime?   @map("birth_date")
   status           ChildStatus @default(ACTIVE)
   quarantineUntil  DateTime?   @map("quarantine_until") @db.Date

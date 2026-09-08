@@ -3,6 +3,12 @@ import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantAuthenticatedUser, TenantScope, requireOperationalScope, toTenantScope } from "../iam/tenant-auth.types";
 import { createChildWithGuardian, withPublicIdRetry } from "../children/child-creation";
+
+/** "Umaraliyev Usmon" -> { lastName: "Umaraliyev", firstName: "Usmon" } */
+function splitLeadChildName(value: string): { lastName: string; firstName: string } {
+  const [first, ...rest] = value.trim().split(/\s+/);
+  return { lastName: first ?? value.trim(), firstName: rest.join(" ") };
+}
 import { CreateLeadDto } from "./dto/create-lead.dto";
 import { LeadQueryDto } from "./dto/lead-query.dto";
 import { UpdateLeadStageDto } from "./dto/update-lead-stage.dto";
@@ -159,7 +165,12 @@ export class CrmService {
             organizationId: scope.organizationId,
             branchId,
             groupId: dto.groupId,
-            fullName: lead.childFullName,
+            // Arizada bola nomi bitta maydonda so'raladi. Birinchi so'zni
+            // familiya deb olamiz ("Familiya Ism" konvensiyasi bo'yicha);
+            // jins ham arizada so'ralmaydi, shuning uchun noma'lum qoladi va
+            // bolaning kartochkasidan aniqlashtiriladi.
+            ...splitLeadChildName(lead.childFullName),
+            gender: null,
             birthDate: lead.childBirthDate,
             guardian: { fullName: lead.parentName, phone: lead.parentPhone, relation: "OTHER" },
           },
