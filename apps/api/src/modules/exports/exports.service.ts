@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantScope } from "../iam/tenant-auth.types";
+import { formatChildPublicId } from "../children/child-creation";
 
 function csvEscape(value: unknown): string {
   if (value === null || value === undefined) return "";
@@ -30,14 +31,35 @@ export class ExportsService {
   async childrenCsv(scope: TenantScope, branchId?: string): Promise<string> {
     const children = await this.prisma.child.findMany({
       where: { organizationId: scope.organizationId, branchId: scope.branchId ?? branchId },
-      include: { branch: { select: { name: true } }, group: { select: { name: true } } },
+      include: {
+        branch: { select: { name: true } },
+        group: { select: { name: true } },
+        guardians: {
+          orderBy: { isPrimary: "desc" },
+          take: 1,
+          include: { guardian: { select: { fullName: true, phone: true } } },
+        },
+      },
       orderBy: { fullName: "asc" },
     });
     return toCsv(
-      ["To'liq ism", "Tug'ilgan sana", "Filial", "Guruh", "Holat", "Ro'yxatga olingan sana"],
+      [
+        "ID",
+        "To'liq ism",
+        "Tug'ilgan sana",
+        "Ota-ona",
+        "Telefon",
+        "Filial",
+        "Guruh",
+        "Holat",
+        "Ro'yxatga olingan sana",
+      ],
       children.map((c) => [
+        formatChildPublicId(c.publicId),
         c.fullName,
         c.birthDate ? c.birthDate.toISOString().slice(0, 10) : "",
+        c.guardians[0]?.guardian.fullName ?? "",
+        c.guardians[0]?.guardian.phone ?? "",
         c.branch?.name ?? "",
         c.group?.name ?? "",
         c.status,

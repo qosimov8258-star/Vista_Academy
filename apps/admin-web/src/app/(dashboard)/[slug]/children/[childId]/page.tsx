@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LoadingState, ErrorState } from "@/components/ui/states";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
-import { formatDate, formatDateTime } from "@/lib/format";
+import { formatDate, formatDateTime, formatGender } from "@/lib/format";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { EditDevelopmentModal } from "@/features/development/edit-development-modal";
 import { EditHealthProfileModal, BLOOD_TYPE_LABEL } from "@/features/child-health/edit-health-profile-modal";
@@ -29,6 +29,7 @@ import { AddMedicationModal } from "@/features/child-health/add-medication-modal
 import { QuarantineModal } from "@/features/child-health/quarantine-modal";
 import { AddGuardianModal } from "@/features/guardians/add-guardian-modal";
 import { EditGuardianLinkModal } from "@/features/guardians/edit-guardian-link-modal";
+import { canWriteOperational } from "@/lib/permissions";
 
 const VACCINATION_STATUS_LABEL: Record<string, string> = {
   SCHEDULED: "Rejalashtirilgan",
@@ -86,7 +87,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
   const [guardianOpen, setGuardianOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<ChildGuardian | null>(null);
   const { user } = useAuth();
-  const canWrite = user?.role !== "NETWORK_ADMIN";
+  const canWrite = canWriteOperational(user?.role);
   const queryClient = useQueryClient();
   const { branchSlug } = useBranchContext(slug);
   const childrenHref = branchSlug ? `/${slug}/${branchSlug}/children` : `/${slug}/children`;
@@ -154,12 +155,12 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
           </Badge>
         </div>
         <p className="text-sm text-[var(--color-text-muted)]">
-          {child.branch?.name ?? "—"} • {child.group?.name ?? "Guruhsiz"}
+          {child.branch?.name ?? "—"} • {child.group?.name ?? "Guruhsiz"} • {formatGender(child.gender)}
           {child.birthDate ? ` • ${formatDate(child.birthDate)}` : ""}
         </p>
       </div>
 
-      {!canWrite && <ViewOnlyNote />}
+      {!canWrite && <ViewOnlyNote role={user?.role} />}
 
       {child.status === "QUARANTINED" ? (
         <Card className="border-[var(--color-danger)]/40">

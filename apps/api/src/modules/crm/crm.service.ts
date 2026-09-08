@@ -1,7 +1,14 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
-import { TenantAuthenticatedUser, TenantScope, requireBranchScope } from "../iam/tenant-auth.types";
+import { TenantAuthenticatedUser, TenantScope, requireOperationalScope, toTenantScope } from "../iam/tenant-auth.types";
+import { createChildWithGuardian, withPublicIdRetry } from "../children/child-creation";
+
+/** "Umaraliyev Usmon" -> { lastName: "Umaraliyev", firstName: "Usmon" } */
+function splitLeadChildName(value: string): { lastName: string; firstName: string } {
+  const [first, ...rest] = value.trim().split(/\s+/);
+  return { lastName: first ?? value.trim(), firstName: rest.join(" ") };
+}
 import { CreateLeadDto } from "./dto/create-lead.dto";
 import { LeadQueryDto } from "./dto/lead-query.dto";
 import { UpdateLeadStageDto } from "./dto/update-lead-stage.dto";
@@ -18,8 +25,8 @@ export class CrmService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(user: TenantAuthenticatedUser, dto: CreateLeadDto) {
-    const scope = { organizationId: user.organizationId, branchId: user.branchId };
-    const branchId = requireBranchScope(scope);
+    const scope = toTenantScope(user);
+    const branchId = requireOperationalScope(scope);
 
     return this.prisma.$transaction(async (tx) => {
       const lead = await tx.lead.create({
@@ -78,8 +85,8 @@ export class CrmService {
   }
 
   async updateStage(user: TenantAuthenticatedUser, id: string, dto: UpdateLeadStageDto) {
-    const scope = { organizationId: user.organizationId, branchId: user.branchId };
-    const branchId = requireBranchScope(scope);
+    const scope = toTenantScope(user);
+    const branchId = requireOperationalScope(scope);
     const lead = await this.prisma.lead.findFirst({ where: { id, organizationId: scope.organizationId } });
     if (!lead) {
       throw new NotFoundException("Ariza topilmadi");
@@ -112,8 +119,8 @@ export class CrmService {
   }
 
   async addActivity(user: TenantAuthenticatedUser, id: string, dto: CreateLeadActivityDto) {
-    const scope = { organizationId: user.organizationId, branchId: user.branchId };
-    const branchId = requireBranchScope(scope);
+    const scope = toTenantScope(user);
+    const branchId = requireOperationalScope(scope);
     const lead = await this.prisma.lead.findFirst({ where: { id, organizationId: scope.organizationId } });
     if (!lead) {
       throw new NotFoundException("Ariza topilmadi");
@@ -127,8 +134,8 @@ export class CrmService {
   }
 
   async convert(user: TenantAuthenticatedUser, id: string, dto: ConvertLeadDto) {
-    const scope = { organizationId: user.organizationId, branchId: user.branchId };
-    const branchId = requireBranchScope(scope);
+    const scope = toTenantScope(user);
+    const branchId = requireOperationalScope(scope);
     const lead = await this.prisma.lead.findFirst({ where: { id, organizationId: scope.organizationId } });
     if (!lead) {
       throw new NotFoundException("Ariza topilmadi");
@@ -146,25 +153,39 @@ export class CrmService {
       }
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      const child = await tx.child.create({
-        data: {
-          organizationId: scope.organizationId,
-          branchId,
-          groupId: dto.groupId,
-          fullName: lead.childFullName,
-          birthDate: lead.childBirthDate,
-        },
-      });
-      const updatedLead = await tx.lead.update({
-        where: { id },
-        data: { stage: "WON", convertedChildId: child.id },
-      });
-      await tx.leadActivity.create({
-        data: { leadId: id, type: "STAGE_CHANGE", note: "Bolaga aylantirildi", createdByUserId: user.id },
-      });
-      return { lead: updatedLead, child };
-    });
+    // Bola qo'lda qo'shilgani bilan bir xil yo'ldan o'tadi: qisqa ID oladi va
+    // arizadagi ota-ona ma'lumoti vasiy sifatida bog'lanadi. Arizada kim
+    // ekani (ota/ona) so'ralmagani uchun aloqa turi OTHER bo'lib qoladi —
+    // keyinchalik bolaning kartochkasidan aniqlashtiriladi.
+    return withPublicIdRetry(() =>
+      this.prisma.$transaction(async (tx) => {
+        const child = await createChildWithGuardian(
+          tx,
+          {
+            organizationId: scope.organizationId,
+            branchId,
+            groupId: dto.groupId,
+            // Arizada bola nomi bitta maydonda so'raladi. Birinchi so'zni
+            // familiya deb olamiz ("Familiya Ism" konvensiyasi bo'yicha);
+            // jins ham arizada so'ralmaydi, shuning uchun noma'lum qoladi va
+            // bolaning kartochkasidan aniqlashtiriladi.
+            ...splitLeadChildName(lead.childFullName),
+            gender: null,
+            birthDate: lead.childBirthDate,
+            guardian: { fullName: lead.parentName, phone: lead.parentPhone, relation: "OTHER" },
+          },
+          {},
+        );
+        const updatedLead = await tx.lead.update({
+          where: { id },
+          data: { stage: "WON", convertedChildId: child.id },
+        });
+        await tx.leadActivity.create({
+          data: { leadId: id, type: "STAGE_CHANGE", note: "Bolaga aylantirildi", createdByUserId: user.id },
+        });
+        return { lead: updatedLead, child };
+      }),
+    );
   }
 
   async stats(scope: TenantScope) {

@@ -9,7 +9,7 @@ datasource db {
 
 // ---------------------------------------------------------------------------
 // Platform-level identity (Platform Super Admin / Support).
-// Tenant-level users (Katta admin, Kichik admin, tarbiyachi, ota-ona, ...)
+// Tenant-level users (Super Admin, Filial menejeri, Administrator, ...)
 // belong to a later IAM/Tenancy module and are intentionally out of scope
 // for the platform panel.
 // ---------------------------------------------------------------------------
@@ -94,15 +94,17 @@ model Organization {
 }
 
 // ---------------------------------------------------------------------------
-// Tenant-level identity (Katta admin / Network admin for now).
+// Tenant-level identity (Super Admin — enum value stays NETWORK_ADMIN).
 // Created automatically alongside its Organization; scoped per tenant since
 // email uniqueness is only guaranteed within an organization, not globally.
 // ---------------------------------------------------------------------------
 
 enum TenantUserRole {
-  NETWORK_ADMIN
-  BRANCH_ADMIN
-  MANAGER
+  NETWORK_ADMIN // "Super Admin" — tashkilot bo'ylab, faqat kuzatuvchi
+  BRANCH_ADMIN // "Filial admini" — bitta filial, to'liq huquq
+  FINANCE // "Moliyachi" — bitta filial, faqat Moliya va Ish haqida yozadi
+  MANAGER // "Administrator" — bitta filial, kundalik ish
+  TEACHER // "O'qituvchi" — faqat o'ziga biriktirilgan guruhlar
 }
 
 model TenantUser {
@@ -125,6 +127,7 @@ model TenantUser {
   leadActivities    LeadActivity[]       @relation("LeadActivityCreatedBy")
   medicationLogs    MedicationLog[]
   sentNotifications NotificationLog[]    @relation("NotificationSentBy")
+  employee          Employee?
 
   @@unique([organizationId, email])
   @@index([branchId])
@@ -206,12 +209,18 @@ model Group {
   createdAt DateTime    @default(now()) @map("created_at")
   updatedAt DateTime    @updatedAt @map("updated_at")
 
-  branch   Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  branch   Branch         @relation(fields: [branchId], references: [id], onDelete: Cascade)
   children Child[]
+  teachers GroupTeacher[]
 
   @@unique([branchId, name])
   @@index([branchId])
   @@map("groups")
+}
+
+enum Gender {
+  MALE
+  FEMALE
 }
 
 enum ChildStatus {
@@ -221,11 +230,20 @@ enum ChildStatus {
 }
 
 model Child {
-  id               String      @id @default(uuid())
-  organizationId   String      @map("organization_id")
-  branchId         String      @map("branch_id")
-  groupId          String?     @map("group_id")
+  id             String @id @default(uuid())
+  organizationId String @map("organization_id")
+  // Xodimlar va ota-onalar og'zaki ishlatadigan qisqa raqam ("id12345").
+  // Tashkilot ichida unikal, UUID esa ichki identifikator bo'lib qoladi.
+  publicId  Int    @map("public_id")
+  branchId  String @map("branch_id")
+  groupId   String? @map("group_id")
+  firstName String @map("first_name")
+  lastName  String @map("last_name")
+  // Familiya + ism birlashmasi. Ikki qismdan hosil qilinadi, lekin ustun
+  // sifatida saqlanadi: qidiruv, eksport, hisob-faktura va davomat
+  // ro'yxatlari bola nomini shu yagona maydondan oladi.
   fullName         String      @map("full_name")
+  gender           Gender?
   birthDate        DateTime?   @map("birth_date")
   status           ChildStatus @default(ACTIVE)
   quarantineUntil  DateTime?   @map("quarantine_until") @db.Date
@@ -249,6 +267,7 @@ model Child {
   guardians              ChildGuardian[]
   notificationLogs       NotificationLog[]
 
+  @@unique([organizationId, publicId])
   @@index([organizationId, branchId])
   @@index([groupId])
   @@map("children")
@@ -325,6 +344,23 @@ model DevelopmentAssessment {
   @@map("development_assessments")
 }
 
+/// Guruh va tarbiyachi bog'lanishi. Ko'p-ko'pga: bitta guruhda tarbiyachi
+/// va uning yordamchisi bo'lishi, bitta tarbiyachi esa bir necha guruhga
+/// biriktirilishi mumkin. O'qituvchining tizimda nimani ko'rishi aynan shu
+/// jadval orqali aniqlanadi.
+model GroupTeacher {
+  groupId    String   @map("group_id")
+  employeeId String   @map("employee_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  group    Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, employeeId])
+  @@index([employeeId])
+  @@map("group_teachers")
+}
+
 model Employee {
   id             String   @id @default(uuid())
   organizationId String   @map("organization_id")
@@ -335,8 +371,14 @@ model Employee {
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
+  // Xodimning kabineti (login). Hamma xodimga ham kerak emas — oshpaz yoki
+  // farrosh tizimga kirmaydi, shuning uchun bog'lanish ixtiyoriy.
+  tenantUserId String? @unique @map("tenant_user_id")
+
   organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   branch         Branch               @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  tenantUser     TenantUser?          @relation(fields: [tenantUserId], references: [id], onDelete: SetNull)
+  teachingGroups GroupTeacher[]
   attendances    EmployeeAttendance[]
   salaryScheme   SalaryScheme?
   shifts         Shift[]

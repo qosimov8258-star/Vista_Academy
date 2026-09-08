@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../database/prisma.service";
-import { TenantScope, requireBranchScope } from "../iam/tenant-auth.types";
+import { TenantScope, requireOperationalScope } from "../iam/tenant-auth.types";
 import { MarkStaffAttendanceDto } from "./dto/mark-staff-attendance.dto";
 import { StaffAttendanceQueryDto } from "./dto/staff-attendance-query.dto";
 
@@ -19,7 +19,7 @@ export class StaffAttendanceService {
   constructor(private readonly prisma: PrismaService) {}
 
   async mark(scope: TenantScope, dto: MarkStaffAttendanceDto) {
-    const branchId = requireBranchScope(scope);
+    const branchId = requireOperationalScope(scope);
     const employee = await this.prisma.employee.findFirst({
       where: { id: dto.employeeId, organizationId: scope.organizationId },
     });

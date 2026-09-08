@@ -14,6 +14,7 @@ import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { downloadCsv } from "@/lib/download";
 import { useBranchContext } from "@/lib/use-branch-context";
 import clsx from "clsx";
+import { canWriteTeaching } from "@/lib/permissions";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 
@@ -32,7 +33,7 @@ export default function AttendancePage({ params }: { params: Promise<{ slug: str
   const [date, setDate] = useState("");
   const [exporting, setExporting] = useState(false);
   const { user } = useAuth();
-  const canWrite = user?.role !== "NETWORK_ADMIN";
+  const canWrite = canWriteTeaching(user?.role);
 
   useEffect(() => {
     setDate((current) => current || todayDateString());
@@ -112,7 +113,7 @@ export default function AttendancePage({ params }: { params: Promise<{ slug: str
         </div>
       </Card>
 
-      {!canWrite && <ViewOnlyNote />}
+      {!canWrite && <ViewOnlyNote role={user?.role} />}
 
       {!date ? (
         <LoadingState />
@@ -129,7 +130,13 @@ export default function AttendancePage({ params }: { params: Promise<{ slug: str
           <ul className="divide-y divide-[var(--color-border)]">
             {attendanceQuery.data.children.map((child) => (
               <li key={child.childId} className="flex items-center justify-between px-5 py-3">
-                <span className="text-sm font-medium text-[var(--color-text)]">{child.fullName}</span>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-[var(--color-text)]">{child.fullName}</p>
+                  {/* Bir necha guruhli tarbiyachi kimni belgilayotganini bilsin */}
+                  {child.groupName && (
+                    <p className="text-xs text-[var(--color-text-muted)]">{child.groupName}</p>
+                  )}
+                </div>
                 {canWrite ? (
                   <div className="flex gap-2">
                     <Button

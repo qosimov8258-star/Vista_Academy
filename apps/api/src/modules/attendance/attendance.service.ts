@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../database/prisma.service";
-import { TenantScope, requireBranchScope } from "../iam/tenant-auth.types";
+import { TenantScope, requireTeachingScope } from "../iam/tenant-auth.types";
+import { assertTeacherOwnsChild, resolveTeacherGroupIds, teacherChildWhere } from "../iam/teacher-scope";
 import { NotificationsService } from "../notifications/notifications.service";
 import { MarkAttendanceDto } from "./dto/mark-attendance.dto";
 import { AttendanceQueryDto } from "./dto/attendance-query.dto";
@@ -23,7 +24,7 @@ export class AttendanceService {
   ) {}
 
   async mark(scope: TenantScope, dto: MarkAttendanceDto) {
-    const branchId = requireBranchScope(scope);
+    const branchId = requireTeachingScope(scope);
     const child = await this.prisma.child.findFirst({ where: { id: dto.childId, organizationId: scope.organizationId } });
     if (!child) {
       throw new NotFoundException("Bola topilmadi");
@@ -31,6 +32,7 @@ export class AttendanceService {
     if (child.branchId !== branchId) {
       throw new ForbiddenException("Bu bolaga kirish huquqingiz yo'q");
     }
+    await assertTeacherOwnsChild(this.prisma, scope, child);
     const date = toDateOnly(dto.date);
     const record = await this.prisma.attendance.upsert({
       where: { childId_date: { childId: dto.childId, date } },
@@ -70,12 +72,13 @@ export class AttendanceService {
       throw new NotFoundException("Filial topilmadi");
     }
     const date = toDateOnly(query.date ?? todayDateString());
+    const teacherGroupIds = await resolveTeacherGroupIds(this.prisma, scope);
 
     const [children, records] = await Promise.all([
       this.prisma.child.findMany({
-        where: { branchId, status: "ACTIVE" },
-        select: { id: true, fullName: true },
-        orderBy: { fullName: "asc" },
+        where: teacherChildWhere({ branchId, status: "ACTIVE" }, teacherGroupIds),
+        select: { id: true, fullName: true, group: { select: { id: true, name: true } } },
+        orderBy: [{ group: { name: "asc" } }, { fullName: "asc" }],
       }),
       this.prisma.attendance.findMany({ where: { branchId, date } }),
     ]);
@@ -86,6 +89,7 @@ export class AttendanceService {
       children: children.map((c) => ({
         childId: c.id,
         fullName: c.fullName,
+        groupName: c.group?.name ?? null,
         status: recordByChild.get(c.id)?.status ?? null,
         note: recordByChild.get(c.id)?.note ?? null,
       })),
@@ -94,13 +98,16 @@ export class AttendanceService {
 
   async todaySummary(scope: TenantScope) {
     const date = toDateOnly(todayDateString());
+    const teacherGroupIds = await resolveTeacherGroupIds(this.prisma, scope);
+    const base = {
+      date,
+      branchId: scope.branchId ?? undefined,
+      branch: { organizationId: scope.organizationId },
+      ...(teacherGroupIds === null ? {} : { child: { groupId: { in: teacherGroupIds } } }),
+    };
     const [present, absent] = await Promise.all([
-      this.prisma.attendance.count({
-        where: { status: "PRESENT", date, branchId: scope.branchId ?? undefined, branch: { organizationId: scope.organizationId } },
-      }),
-      this.prisma.attendance.count({
-        where: { status: "ABSENT", date, branchId: scope.branchId ?? undefined, branch: { organizationId: scope.organizationId } },
-      }),
+      this.prisma.attendance.count({ where: { ...base, status: "PRESENT" } }),
+      this.prisma.attendance.count({ where: { ...base, status: "ABSENT" } }),
     ]);
     return { present, absent };
   }

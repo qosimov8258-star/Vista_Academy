@@ -1,4 +1,4 @@
-export type TenantUserRole = "NETWORK_ADMIN" | "BRANCH_ADMIN" | "MANAGER";
+export type TenantUserRole = "NETWORK_ADMIN" | "BRANCH_ADMIN" | "FINANCE" | "MANAGER" | "TEACHER";
 
 export interface TenantAuthenticatedUser {
   id: string;
@@ -37,6 +37,13 @@ export interface Organization {
 
 export type GroupStatus = "ACTIVE" | "INACTIVE";
 
+export interface GroupTeacherLink {
+  groupId: string;
+  employeeId: string;
+  employee?: { id: string; fullName: string; position: string };
+  group?: { id: string; name: string };
+}
+
 export interface Group {
   id: string;
   branchId: string;
@@ -45,16 +52,26 @@ export interface Group {
   status: GroupStatus;
   createdAt: string;
   _count?: { children: number };
+  teachers?: GroupTeacherLink[];
 }
 
 export type ChildStatus = "ACTIVE" | "INACTIVE" | "QUARANTINED";
 
+export type Gender = "MALE" | "FEMALE";
+
 export interface Child {
   id: string;
   organizationId: string;
+  /** Xodimlar va ota-onalar ishlatadigan qisqa raqam; UI da "id12345" ko'rinishida. */
+  publicId: number;
   branchId: string;
   groupId: string | null;
+  firstName: string;
+  lastName: string;
+  /** "Familiya Ism" — qidiruv va ro'yxatlar shu maydonni ishlatadi. */
   fullName: string;
+  /** Migratsiyadan oldin qo'shilgan bolalarda noma'lum bo'lishi mumkin. */
+  gender: Gender | null;
   birthDate: string | null;
   status: ChildStatus;
   quarantineUntil: string | null;
@@ -62,6 +79,8 @@ export interface Child {
   createdAt: string;
   group?: { id: string; name: string } | null;
   branch?: { id: string; name: string };
+  /** Asosiy vasiy birinchi bo'lib keladi. */
+  guardians?: ChildGuardian[];
 }
 
 export interface Employee {
@@ -72,6 +91,9 @@ export interface Employee {
   position: string;
   isActive: boolean;
   createdAt: string;
+  /** Kabineti bo'lmagan xodimda null — u tizimga kirmaydi. */
+  tenantUser?: { id: string; email: string; role: TenantUserRole; isActive: boolean } | null;
+  teachingGroups?: GroupTeacherLink[];
 }
 
 export type AttendanceStatus = "PRESENT" | "ABSENT";
@@ -79,6 +101,7 @@ export type AttendanceStatus = "PRESENT" | "ABSENT";
 export interface AttendanceChild {
   childId: string;
   fullName: string;
+  groupName: string | null;
   status: AttendanceStatus | null;
   note: string | null;
 }
@@ -204,6 +227,7 @@ export interface DailyReport {
 export interface DailyReportChild {
   childId: string;
   fullName: string;
+  groupName: string | null;
   report: DailyReport | null;
 }
 

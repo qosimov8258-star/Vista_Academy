@@ -16,6 +16,7 @@ import { formatDate } from "@/lib/format";
 import { CreateLeadModal } from "@/features/crm/create-lead-modal";
 import { AGE_GROUP_LABEL, SOURCE_LABEL, STAGE_LABEL, STAGE_ORDER, STAGE_TONE } from "@/features/crm/labels";
 import { useBranchContext } from "@/lib/use-branch-context";
+import { canWriteOperational } from "@/lib/permissions";
 
 type StageFilter = "ALL" | LeadStage;
 
@@ -25,7 +26,7 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
   const [stageFilter, setStageFilter] = useState<StageFilter>("ALL");
   const [createOpen, setCreateOpen] = useState(false);
   const { user } = useAuth();
-  const canWrite = user?.role !== "NETWORK_ADMIN";
+  const canWrite = canWriteOperational(user?.role);
   const { branchId: forcedBranchId } = useBranchContext(slug);
 
   // NOTE: /app/leads/stats does not currently accept a branchId filter (backend
@@ -59,7 +60,7 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
         {canWrite && <Button onClick={() => setCreateOpen(true)}>+ Yangi ariza</Button>}
       </div>
 
-      {!canWrite && <ViewOnlyNote />}
+      {!canWrite && <ViewOnlyNote role={user?.role} />}
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         <Card className="px-4 py-3">

@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../database/prisma.service";
-import { TenantScope, requireBranchScope } from "../iam/tenant-auth.types";
+import { TenantScope, requireOperationalScope } from "../iam/tenant-auth.types";
 import { UpsertDevelopmentAssessmentDto } from "./dto/upsert-development-assessment.dto";
 
 @Injectable()
@@ -8,7 +8,7 @@ export class DevelopmentService {
   constructor(private readonly prisma: PrismaService) {}
 
   async upsert(scope: TenantScope, dto: UpsertDevelopmentAssessmentDto) {
-    const branchId = requireBranchScope(scope);
+    const branchId = requireOperationalScope(scope);
     const child = await this.prisma.child.findFirst({ where: { id: dto.childId, organizationId: scope.organizationId } });
     if (!child) {
       throw new NotFoundException("Bola topilmadi");

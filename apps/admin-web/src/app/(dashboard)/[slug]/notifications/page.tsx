@@ -15,6 +15,7 @@ import { formatDateTime } from "@/lib/format";
 import { CreateNotificationModal } from "@/features/notifications/create-notification-modal";
 import { MarkSentModal } from "@/features/notifications/mark-sent-modal";
 import { useBranchContext } from "@/lib/use-branch-context";
+import { canWriteOperational } from "@/lib/permissions";
 
 const eventTypeLabels: Record<NotificationEventType, string> = {
   CHILD_ABSENT: "Bola kelmadi",
@@ -48,7 +49,7 @@ export default function NotificationsPage({ params }: { params: Promise<{ slug: 
   const [createOpen, setCreateOpen] = useState(false);
   const [markSentTarget, setMarkSentTarget] = useState<NotificationLog | null>(null);
   const { user } = useAuth();
-  const canWrite = user?.role !== "NETWORK_ADMIN";
+  const canWrite = canWriteOperational(user?.role);
   const { branchId: forcedBranchId } = useBranchContext(slug);
 
   const notificationsQuery = useQuery({
@@ -78,7 +79,7 @@ export default function NotificationsPage({ params }: { params: Promise<{ slug: 
         {canWrite && <Button onClick={() => setCreateOpen(true)}>+ Yangi yozuv</Button>}
       </div>
 
-      {!canWrite && <ViewOnlyNote />}
+      {!canWrite && <ViewOnlyNote role={user?.role} />}
 
       <div className="flex gap-2">
         {statusFilters.map((f) => (

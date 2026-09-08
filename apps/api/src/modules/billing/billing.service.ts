@@ -1,7 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { InvoiceStatus, Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
-import { TenantScope, requireBranchScope } from "../iam/tenant-auth.types";
+import { TenantScope, requireMoneyScope } from "../iam/tenant-auth.types";
 import { CreateInvoiceDto } from "./dto/create-invoice.dto";
 import { InvoiceQueryDto } from "./dto/invoice-query.dto";
 import { RecordPaymentDto } from "./dto/record-payment.dto";
@@ -14,7 +14,7 @@ export class BillingService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(scope: TenantScope, dto: CreateInvoiceDto) {
-    const branchId = requireBranchScope(scope);
+    const branchId = requireMoneyScope(scope);
     const child = await this.prisma.child.findFirst({ where: { id: dto.childId, organizationId: scope.organizationId } });
     if (!child) {
       throw new NotFoundException("Bola topilmadi");
@@ -95,7 +95,7 @@ export class BillingService {
   }
 
   async recordPayment(scope: TenantScope, recordedByUserId: string, dto: RecordPaymentDto) {
-    const branchId = requireBranchScope(scope);
+    const branchId = requireMoneyScope(scope);
     const invoice = await this.prisma.invoice.findFirst({
       where: { id: dto.invoiceId, organizationId: scope.organizationId },
     });
@@ -166,7 +166,7 @@ export class BillingService {
   }
 
   async refundPayment(scope: TenantScope, paymentId: string) {
-    const branchId = requireBranchScope(scope);
+    const branchId = requireMoneyScope(scope);
     const payment = await this.prisma.payment.findFirst({
       where: { id: paymentId, organizationId: scope.organizationId },
       include: { allocations: { include: { invoice: true } } },

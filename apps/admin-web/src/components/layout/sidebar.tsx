@@ -6,6 +6,7 @@ import clsx from "clsx";
 import type { ComponentType, SVGProps } from "react";
 import { useAuth } from "@/lib/use-auth";
 import { useBranchContext } from "@/lib/use-branch-context";
+import { ROLE_LABEL, canManageUsers, isTeacher } from "@/lib/permissions";
 import {
   ArrowLeftIcon,
   BellIcon,
@@ -24,8 +25,6 @@ import {
   TeacherIcon,
 } from "@/components/ui/icons";
 
-const ROLE_LABEL = { NETWORK_ADMIN: "Tarmoq Admin", BRANCH_ADMIN: "Filial Menejeri", MANAGER: "Administrator" } as const;
-
 type NavIcon = ComponentType<SVGProps<SVGSVGElement>>;
 
 interface NavItem {
@@ -42,7 +41,8 @@ export function Sidebar({ slug }: { slug: string }) {
   const pathname = usePathname();
   const { user } = useAuth();
   const isNetworkAdmin = user?.role === "NETWORK_ADMIN";
-  const canManageUsers = user?.role === "NETWORK_ADMIN" || user?.role === "BRANCH_ADMIN";
+  const showUsersNav = canManageUsers(user?.role);
+  const teacher = isTeacher(user?.role);
   const params = useParams<{ branchSlug?: string }>();
   const { branch } = useBranchContext(slug);
   // A NETWORK_ADMIN who hasn't drilled into a specific branch only manages
@@ -55,6 +55,21 @@ export function Sidebar({ slug }: { slug: string }) {
   const rootNavItems: NavItem[] = [
     { href: `/${slug}`, label: "Bosh sahifa", icon: HomeIcon, show: true, exact: true },
     { href: `/${slug}/branches`, label: "Filiallar", icon: BuildingIcon, show: true },
+    // Super Admin har bir filialga admin va moliyachi tayinlaydi, shuning uchun
+    // foydalanuvchilar bo'limi uning asosiy ro'yxatida turishi shart. Filial
+    // ichiga kirilganda bu havola ko'rinmaydi — u yerda filialning kundalik
+    // ishi turadi, foydalanuvchi boshqaruvi esa tarmoq darajasidagi ish.
+    { href: `/${slug}/users`, label: "Foydalanuvchilar", icon: KeyIcon, show: showUsersNav },
+  ];
+
+  // O'qituvchi kabineti: faqat o'z guruhlariga tegishli uchta bo'lim.
+  // Qolgan modullar (moliya, xodimlar, CRM, ...) unga ko'rinmaydi ham,
+  // ochilmaydi ham — server tomonda ham yopiq.
+  const teacherNavItems: NavItem[] = [
+    { href: `/${slug}`, label: "Bosh sahifa", icon: HomeIcon, show: true, exact: true },
+    { href: `/${slug}/attendance`, label: "Davomat", icon: ChecklistIcon, show: true, group: "Mening guruhlarim" },
+    { href: `/${slug}/daily-reports`, label: "Kundalik hisobot", icon: NoteIcon, show: true },
+    { href: `/${slug}/children`, label: "Bolalar", icon: ChildIcon, show: true },
   ];
 
   const operationalNavItems: NavItem[] = [
@@ -76,10 +91,12 @@ export function Sidebar({ slug }: { slug: string }) {
     { href: `${base}/notifications`, label: "Bildirishnomalar", icon: BellIcon, show: true },
     // Branch/user management stay a network-wide (root-level) concern, never
     // duplicated inside a single branch's panel.
-    { href: `/${slug}/users`, label: "Foydalanuvchilar", icon: KeyIcon, show: canManageUsers && !inBranchContext },
+    { href: `/${slug}/users`, label: "Foydalanuvchilar", icon: KeyIcon, show: showUsersNav && !inBranchContext },
   ];
 
-  const navItems = (isNetworkAdmin && !inBranchContext ? rootNavItems : operationalNavItems).filter((item) => item.show);
+  const navItems = (
+    teacher ? teacherNavItems : isNetworkAdmin && !inBranchContext ? rootNavItems : operationalNavItems
+  ).filter((item) => item.show);
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)] md:flex">

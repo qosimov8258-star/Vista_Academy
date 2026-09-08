@@ -13,12 +13,7 @@ import { LoadingState, ErrorState } from "@/components/ui/states";
 import { formatDate } from "@/lib/format";
 import { EditBranchModal } from "@/features/branches/edit-branch-modal";
 import { CreateTenantUserModal } from "@/features/users/create-tenant-user-modal";
-
-const ROLE_LABEL: Record<TenantUser["role"], string> = {
-  NETWORK_ADMIN: "Tarmoq admin",
-  BRANCH_ADMIN: "Filial menejeri",
-  MANAGER: "Administrator",
-};
+import { ROLE_LABEL } from "@/lib/permissions";
 
 export default function BranchDetailPage({ params }: { params: Promise<{ slug: string; branchId: string }> }) {
   const { slug, branchId } = use(params);
@@ -64,7 +59,7 @@ export default function BranchDetailPage({ params }: { params: Promise<{ slug: s
         </CardHeader>
         <CardBody className="space-y-3">
           <p className="text-sm text-[var(--color-text-muted)]">
-            Filial menejeri shu havola orqali tizimga kirib, faqat shu filialga tegishli ma&apos;lumotlarni ko&apos;radi.
+            Filial jamoasi shu havola orqali tizimga kirib, faqat shu filialga tegishli ma&apos;lumotlarni ko&apos;radi.
           </p>
           <div className="rounded-lg border border-[var(--color-border)] bg-gray-50 px-3 py-2">
             <a href={branchUrl} target="_blank" rel="noreferrer" className="break-all text-sm font-medium text-[var(--color-primary)] hover:underline">
@@ -111,13 +106,13 @@ export default function BranchDetailPage({ params }: { params: Promise<{ slug: s
           <CardHeader className="flex items-center justify-between">
             <CardTitle>Filial jamoasi</CardTitle>
             <Button size="sm" onClick={() => setAssignDirectorOpen(true)}>
-              + Filial menejeri tayinlash
+              + Xodim tayinlash
             </Button>
           </CardHeader>
           <CardBody className="p-0">
             {branchTeam.length === 0 ? (
               <p className="px-5 py-6 text-sm text-[var(--color-text-muted)]">
-                Bu filialga hali menejer tayinlanmagan
+                Bu filialga hali filial admini yoki moliyachi tayinlanmagan
               </p>
             ) : (
               <ul className="divide-y divide-[var(--color-border)]">

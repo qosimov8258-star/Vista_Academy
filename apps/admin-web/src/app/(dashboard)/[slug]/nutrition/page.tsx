@@ -13,6 +13,7 @@ import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { formatDate } from "@/lib/format";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { EditMenuModal } from "@/features/nutrition/edit-menu-modal";
+import { canWriteOperational } from "@/lib/permissions";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -35,7 +36,7 @@ function addDays(dateString: string, days: number): string {
 export default function NutritionPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const { user } = useAuth();
-  const canWrite = user?.role !== "NETWORK_ADMIN";
+  const canWrite = canWriteOperational(user?.role);
   const { branchId: forcedBranchId } = useBranchContext(slug);
   const [branchId, setBranchId] = useState("");
   // "Today" depends on the viewer's clock, which can differ between the
@@ -117,7 +118,7 @@ export default function NutritionPage({ params }: { params: Promise<{ slug: stri
         </div>
       </Card>
 
-      {!canWrite && <ViewOnlyNote />}
+      {!canWrite && <ViewOnlyNote role={user?.role} />}
 
       {!weekStart || !branchId ? (
         weekStart ? <EmptyState title="Filial mavjud emas" /> : <LoadingState />

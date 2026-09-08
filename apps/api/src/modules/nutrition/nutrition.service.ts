@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../database/prisma.service";
-import { TenantScope, requireBranchScope } from "../iam/tenant-auth.types";
+import { TenantScope, requireOperationalScope } from "../iam/tenant-auth.types";
 import { UpsertMenuEntryDto } from "./dto/upsert-menu-entry.dto";
 import { MenuQueryDto } from "./dto/menu-query.dto";
 
@@ -13,7 +13,7 @@ export class NutritionService {
   constructor(private readonly prisma: PrismaService) {}
 
   async upsert(scope: TenantScope, dto: UpsertMenuEntryDto) {
-    const branchId = requireBranchScope(scope);
+    const branchId = requireOperationalScope(scope);
     const date = toDateOnly(dto.date);
     return this.prisma.menuEntry.upsert({
       where: { branchId_date: { branchId, date } },

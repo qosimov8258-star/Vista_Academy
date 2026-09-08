@@ -1,7 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
-import { TenantScope, requireBranchScope } from "../iam/tenant-auth.types";
+import { TenantScope, requireOperationalScope } from "../iam/tenant-auth.types";
 import { AddChildGuardianDto } from "./dto/add-child-guardian.dto";
 import { UpdateChildGuardianDto } from "./dto/update-child-guardian.dto";
 import { GuardianQueryDto } from "./dto/guardian-query.dto";
@@ -46,7 +46,7 @@ export class GuardiansService {
   }
 
   async addToChild(scope: TenantScope, childId: string, dto: AddChildGuardianDto) {
-    requireBranchScope(scope);
+    requireOperationalScope(scope);
     const child = await this.requireChild(scope, childId);
 
     let guardianId = dto.guardianId;
@@ -87,7 +87,7 @@ export class GuardiansService {
   }
 
   async updateLink(scope: TenantScope, linkId: string, dto: UpdateChildGuardianDto) {
-    requireBranchScope(scope);
+    requireOperationalScope(scope);
     const link = await this.prisma.childGuardian.findFirst({
       where: { id: linkId },
       include: { child: true },
@@ -106,7 +106,7 @@ export class GuardiansService {
   }
 
   async removeLink(scope: TenantScope, linkId: string) {
-    requireBranchScope(scope);
+    requireOperationalScope(scope);
     const link = await this.prisma.childGuardian.findFirst({
       where: { id: linkId },
       include: { child: true },

@@ -7,7 +7,9 @@ import type { Plan } from "@/lib/types";
 import { Card, CardBody } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
+import { PageHeader } from "@/components/ui/page-header";
+import { CardsSkeleton, ErrorState, EmptyState } from "@/components/ui/states";
+import { BuildingIcon, CardIcon, ChildIcon, DatabaseIcon, PlusIcon, TeamIcon } from "@/components/ui/icons";
 import { formatMoney } from "@/lib/format";
 import { PlanFormModal } from "@/features/plans/plan-form-modal";
 
@@ -27,55 +29,93 @@ export default function PlansPage() {
     onError: (err) => alert(err instanceof ApiError ? err.message : "Kutilmagan xatolik"),
   });
 
+  const openCreate = () => {
+    setEditingPlan(null);
+    setModalOpen(true);
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-[var(--color-text)]">Tarif rejalar</h1>
-          <p className="text-sm text-[var(--color-text-muted)]">SaaS obuna narxlari va limitlari</p>
-        </div>
-        <Button
-          onClick={() => {
-            setEditingPlan(null);
-            setModalOpen(true);
-          }}
-        >
-          + Yangi reja
-        </Button>
-      </div>
+    <div className="space-y-5">
+      <PageHeader
+        title="Tarif rejalar"
+        description="SaaS obuna narxlari va limitlari"
+        actions={
+          <Button onClick={openCreate}>
+            <PlusIcon className="h-4 w-4" />
+            Yangi reja
+          </Button>
+        }
+      />
 
       {isLoading ? (
-        <LoadingState />
+        <CardsSkeleton count={3} />
       ) : isError ? (
         <ErrorState message={(error as Error).message} />
       ) : !plans || plans.length === 0 ? (
-        <EmptyState title="Tarif rejalar yo'q" description="Birinchi tarif rejasini yarating" />
+        <EmptyState
+          icon={CardIcon}
+          title="Tarif rejalar yo'q"
+          description="Tashkilotlarga obuna biriktirish uchun avval tarif rejasini yarating"
+          action={
+            <Button size="sm" onClick={openCreate}>
+              <PlusIcon className="h-4 w-4" />
+              Yangi reja
+            </Button>
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {plans.map((plan) => (
-            <Card key={plan.id} className="flex flex-col">
-              <CardBody className="flex flex-1 flex-col gap-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-base font-semibold text-[var(--color-text)]">{plan.name}</p>
-                    <p className="text-xs text-[var(--color-text-muted)]">{plan.code}</p>
+            <Card
+              key={plan.id}
+              // Nofaol rejalar bir qarashda ajralib tursin
+              className={`flex flex-col ${plan.isActive ? "" : "opacity-70"}`}
+            >
+              <CardBody className="flex flex-1 flex-col gap-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-[16px] font-semibold text-[var(--color-text)]">{plan.name}</p>
+                    <p className="mt-0.5 font-mono text-[11px] uppercase tracking-wide text-[var(--color-text-subtle)]">
+                      {plan.code}
+                    </p>
                   </div>
-                  <Badge tone={plan.isActive ? "success" : "neutral"}>{plan.isActive ? "Faol" : "Nofaol"}</Badge>
+                  <Badge dot tone={plan.isActive ? "success" : "neutral"}>
+                    {plan.isActive ? "Faol" : "Nofaol"}
+                  </Badge>
                 </div>
-                <p className="text-2xl font-semibold text-[var(--color-text)]">
-                  {formatMoney(plan.priceMonthly, plan.currency)}
-                  <span className="text-sm font-normal text-[var(--color-text-muted)]"> /oy</span>
+
+                <p className="flex items-baseline gap-1.5">
+                  <span className="text-[28px] font-semibold tabular-nums leading-none text-[var(--color-text)]">
+                    {formatMoney(plan.priceMonthly, plan.currency)}
+                  </span>
+                  <span className="text-[13px] text-[var(--color-text-muted)]">/oy</span>
                 </p>
-                <ul className="space-y-1 text-sm text-[var(--color-text-muted)]">
-                  <li>🏢 {plan.maxBranches} tagacha filial</li>
-                  <li>🧒 {plan.maxChildren} tagacha bola</li>
-                  <li>👥 {plan.maxEmployees} tagacha xodim</li>
-                  <li>💾 {plan.maxStorageGb} GB storage</li>
+
+                {/* Limitlar — iOS ro'yxati uslubida, emoji o'rniga ikonkalar bilan */}
+                <ul className="space-y-2 rounded-[var(--radius-lg)] bg-[var(--color-surface-sunken)] px-3.5 py-3 text-[13px] text-[var(--color-text-muted)]">
+                  <li className="flex items-center gap-2.5">
+                    <BuildingIcon className="h-4 w-4 shrink-0 text-[var(--color-text-subtle)]" />
+                    <span className="tabular-nums">{plan.maxBranches}</span> tagacha filial
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <ChildIcon className="h-4 w-4 shrink-0 text-[var(--color-text-subtle)]" />
+                    <span className="tabular-nums">{plan.maxChildren}</span> tagacha bola
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <TeamIcon className="h-4 w-4 shrink-0 text-[var(--color-text-subtle)]" />
+                    <span className="tabular-nums">{plan.maxEmployees}</span> tagacha xodim
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <DatabaseIcon className="h-4 w-4 shrink-0 text-[var(--color-text-subtle)]" />
+                    <span className="tabular-nums">{plan.maxStorageGb}</span> GB xotira
+                  </li>
                 </ul>
-                <div className="mt-auto flex gap-2 pt-2">
+
+                <div className="mt-auto flex gap-2 pt-1">
                   <Button
                     size="sm"
                     variant="secondary"
+                    className="flex-1"
                     onClick={() => {
                       setEditingPlan(plan);
                       setModalOpen(true);
@@ -85,9 +125,10 @@ export default function PlansPage() {
                   </Button>
                   <Button
                     size="sm"
-                    variant={plan.isActive ? "danger" : "primary"}
+                    variant={plan.isActive ? "secondary" : "primary"}
+                    className={plan.isActive ? "flex-1 text-[var(--color-danger)]" : "flex-1"}
                     onClick={() => toggleActive.mutate(plan)}
-                    loading={toggleActive.isPending}
+                    loading={toggleActive.isPending && toggleActive.variables?.id === plan.id}
                   >
                     {plan.isActive ? "Faolsizlantirish" : "Faollashtirish"}
                   </Button>

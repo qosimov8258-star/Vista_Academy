@@ -32,16 +32,16 @@ export class CreateOrganizationDto {
   @IsString()
   planId?: string;
 
-  @ApiProperty({ example: "Aziza Karimova", description: "Tashkilotning Katta admin akkaunti to'liq ismi" })
+  @ApiProperty({ example: "Aziza Karimova", description: "Tashkilotning Super Admin akkaunti to'liq ismi" })
   @IsString()
   @MinLength(2)
   adminFullName!: string;
 
-  @ApiProperty({ example: "admin@quyoshcha.uz", description: "Katta admin login emaili (tashkilot doirasida unikal)" })
+  @ApiProperty({ example: "admin@quyoshcha.uz", description: "Super Admin login emaili (tashkilot doirasida unikal)" })
   @IsEmail()
   adminEmail!: string;
 
-  @ApiProperty({ example: "ChangeMe123!", description: "Katta admin login paroli" })
+  @ApiProperty({ example: "ChangeMe123!", description: "Super Admin login paroli" })
   @IsString()
   @MinLength(8)
   adminPassword!: string;

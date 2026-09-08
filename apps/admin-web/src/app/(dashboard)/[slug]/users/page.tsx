@@ -11,12 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { formatDate } from "@/lib/format";
 import { CreateTenantUserModal } from "@/features/users/create-tenant-user-modal";
-
-const ROLE_LABEL: Record<TenantUser["role"], string> = {
-  NETWORK_ADMIN: "Tarmoq admin",
-  BRANCH_ADMIN: "Filial menejeri",
-  MANAGER: "Administrator",
-};
+import { ROLE_LABEL, canManageUsers } from "@/lib/permissions";
 
 export default function UsersPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
@@ -33,8 +28,10 @@ export default function UsersPage({ params }: { params: Promise<{ slug: string }
     queryFn: () => api.get<TenantUser[]>("/app/users"),
   });
 
-  const canCreate = currentUser?.role === "NETWORK_ADMIN" || currentUser?.role === "BRANCH_ADMIN";
-  const createLabel = currentUser?.role === "NETWORK_ADMIN" ? "+ Filial menejeri" : "+ Administrator";
+  const isSuperAdmin = currentUser?.role === "NETWORK_ADMIN";
+  const canCreate = canManageUsers(currentUser?.role);
+  // Super Admin oynaning ichida rolni tanlaydi, shuning uchun tugma umumiy nomda
+  const createLabel = isSuperAdmin ? "+ Yangi xodim" : "+ Administrator";
 
   return (
     <div className="space-y-6">
@@ -42,8 +39,8 @@ export default function UsersPage({ params }: { params: Promise<{ slug: string }
         <div>
           <h1 className="text-xl font-semibold text-[var(--color-text)]">Foydalanuvchilar</h1>
           <p className="text-sm text-[var(--color-text-muted)]">
-            {currentUser?.role === "NETWORK_ADMIN"
-              ? "Filial menejerlari va administratorlar"
+            {isSuperAdmin
+              ? "Har bir filialning admini, moliyachisi va administratorlari"
               : "O'z filialingiz administratorlari"}
           </p>
         </div>

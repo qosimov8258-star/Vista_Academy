@@ -12,12 +12,13 @@ import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { CreateGroupModal } from "@/features/groups/create-group-modal";
+import { canWriteOperational } from "@/lib/permissions";
 
 export default function GroupsPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const [createOpen, setCreateOpen] = useState(false);
   const { user } = useAuth();
-  const canWrite = user?.role !== "NETWORK_ADMIN";
+  const canWrite = canWriteOperational(user?.role);
   const { branchId: forcedBranchId } = useBranchContext(slug);
 
   const orgQuery = useQuery({
@@ -43,7 +44,7 @@ export default function GroupsPage({ params }: { params: Promise<{ slug: string 
         {canWrite && <Button onClick={() => setCreateOpen(true)}>+ Yangi guruh</Button>}
       </div>
 
-      {!canWrite && <ViewOnlyNote />}
+      {!canWrite && <ViewOnlyNote role={user?.role} />}
 
       {groupsQuery.isLoading ? (
         <LoadingState />

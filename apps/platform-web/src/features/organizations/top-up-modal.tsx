@@ -52,7 +52,10 @@ export function TopUpModal({
     <Modal open={open} onClose={onClose} title="Hamyonni to'ldirish">
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
-          <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
+          <div
+            role="alert"
+            className="rounded-[var(--radius-lg)] bg-[var(--color-danger-bg)] px-3 py-2.5 text-[13px] text-[var(--color-danger)]"
+          >
             {serverError}
           </div>
         )}

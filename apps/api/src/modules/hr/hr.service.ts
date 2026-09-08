@@ -1,7 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
-import { TenantScope, requireBranchScope } from "../iam/tenant-auth.types";
+import { TenantScope, requireMoneyScope } from "../iam/tenant-auth.types";
 import { UpsertSalarySchemeDto } from "./dto/upsert-salary-scheme.dto";
 import { CreateShiftDto } from "./dto/create-shift.dto";
 import { ShiftQueryDto } from "./dto/shift-query.dto";
@@ -39,7 +39,7 @@ export class HrService {
   }
 
   async upsertSalaryScheme(scope: TenantScope, employeeId: string, dto: UpsertSalarySchemeDto) {
-    requireBranchScope(scope);
+    requireMoneyScope(scope);
     await this.requireEmployee(scope, employeeId);
     return this.prisma.salaryScheme.upsert({
       where: { employeeId },
@@ -49,7 +49,7 @@ export class HrService {
   }
 
   async createShift(scope: TenantScope, dto: CreateShiftDto) {
-    const branchId = requireBranchScope(scope);
+    const branchId = requireMoneyScope(scope);
     const employee = await this.requireEmployee(scope, dto.employeeId);
     const date = new Date(`${dto.date}T00:00:00.000Z`);
     return this.prisma.shift.upsert({
@@ -76,7 +76,7 @@ export class HrService {
   }
 
   async generatePayroll(scope: TenantScope, dto: GeneratePayrollDto) {
-    const branchId = requireBranchScope(scope);
+    const branchId = requireMoneyScope(scope);
     const employee = await this.requireEmployee(scope, dto.employeeId);
     const scheme = await this.prisma.salaryScheme.findUnique({ where: { employeeId: dto.employeeId } });
     if (!scheme) {
@@ -119,7 +119,7 @@ export class HrService {
   }
 
   async markPayrollPaid(scope: TenantScope, id: string) {
-    const branchId = requireBranchScope(scope);
+    const branchId = requireMoneyScope(scope);
     const entry = await this.prisma.payrollEntry.findFirst({ where: { id } });
     if (!entry || entry.branchId !== branchId) {
       throw new NotFoundException("Payroll yozuvi topilmadi");
