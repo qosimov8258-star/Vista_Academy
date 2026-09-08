@@ -62,7 +62,7 @@ export function AddBranchModal({
         <Input label="Filial nomi" placeholder="Yunusobod filiali" error={errors.name?.message} {...register("name")} />
         <Input label="Manzil (ixtiyoriy)" placeholder="Yunusobod tumani, 12-uy" {...register("address")} />
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
+          <Button type="button" variant="outline" onClick={onClose}>
             Bekor qilish
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>

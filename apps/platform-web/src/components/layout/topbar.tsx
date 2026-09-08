@@ -62,7 +62,7 @@ export function Topbar() {
             </span>
           </div>
         )}
-        <Button variant="secondary" size="sm" onClick={handleLogout}>
+        <Button variant="outline" size="sm" onClick={handleLogout}>
           <LogoutIcon className="h-4 w-4" />
           <span className="hidden sm:inline">Chiqish</span>
         </Button>

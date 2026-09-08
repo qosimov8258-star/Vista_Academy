@@ -190,7 +190,7 @@ export default function SettingsPage({ params }: { params: Promise<{ slug: strin
                 <Button
                   type="button"
                   size="sm"
-                  variant="secondary"
+                  variant="outline"
                   loading={avatarMutation.isPending}
                   onClick={() => fileInputRef.current?.click()}
                 >
@@ -200,7 +200,7 @@ export default function SettingsPage({ params }: { params: Promise<{ slug: strin
                   <Button
                     type="button"
                     size="sm"
-                    variant="secondary"
+                    variant="outline"
                     loading={removeAvatarMutation.isPending}
                     onClick={() => removeAvatarMutation.mutate()}
                   >

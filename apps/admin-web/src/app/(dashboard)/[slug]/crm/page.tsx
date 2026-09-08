@@ -161,11 +161,11 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
               Jami {leadsQuery.data.meta.total} ta, {leadsQuery.data.meta.page}-sahifa
             </span>
             <div className="flex gap-2">
-              <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
                 Oldingi
               </Button>
               <Button
-                variant="secondary"
+                variant="outline"
                 size="sm"
                 disabled={page * leadsQuery.data.meta.limit >= leadsQuery.data.meta.total}
                 onClick={() => setPage((p) => p + 1)}

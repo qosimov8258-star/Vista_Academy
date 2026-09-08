@@ -57,7 +57,7 @@ export function CreateGroupModal({ open, onClose, slug }: { open: boolean; onClo
         <Input label="Sig'imi" type="number" min={1} max={100} error={errors.capacity?.message} {...register("capacity")} />
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
+          <Button type="button" variant="outline" onClick={onClose}>
             Bekor qilish
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>

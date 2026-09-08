@@ -122,7 +122,7 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
                   <div className="flex gap-2">
                     <Button
                       size="sm"
-                      variant={employee.status === "PRESENT" ? "primary" : "secondary"}
+                      variant={employee.status === "PRESENT" ? "primary" : "tertiary"}
                       className={clsx(employee.status === "PRESENT" && "bg-[var(--color-success)] hover:opacity-90")}
                       loading={
                         mutation.isPending &&
@@ -135,7 +135,7 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
                     </Button>
                     <Button
                       size="sm"
-                      variant={employee.status === "ABSENT" ? "danger" : "secondary"}
+                      variant={employee.status === "ABSENT" ? "danger" : "tertiary"}
                       loading={
                         mutation.isPending &&
                         mutation.variables?.employeeId === employee.employeeId &&

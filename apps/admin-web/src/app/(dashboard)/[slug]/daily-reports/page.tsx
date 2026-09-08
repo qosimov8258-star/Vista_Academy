@@ -126,7 +126,7 @@ export default function DailyReportsPage({ params }: { params: Promise<{ slug: s
                 <div className="flex items-center gap-2">
                   <Badge tone={c.report ? "success" : "neutral"}>{c.report ? "To'ldirilgan" : "To'ldirilmagan"}</Badge>
                   {canWrite && (
-                    <Button size="sm" variant="secondary" onClick={() => setEditChild({ childId: c.childId, fullName: c.fullName })}>
+                    <Button size="sm" variant="outline" onClick={() => setEditChild({ childId: c.childId, fullName: c.fullName })}>
                       {c.report ? "Tahrirlash" : "To'ldirish"}
                     </Button>
                   )}

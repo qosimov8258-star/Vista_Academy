@@ -71,7 +71,7 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
           <p className="text-sm text-[var(--color-text-muted)]">Ota-onalar uchun hisob-fakturalar</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="secondary" loading={exporting} onClick={handleExport}>
+          <Button variant="outline" loading={exporting} onClick={handleExport}>
             Eksport (CSV)
           </Button>
           {canWrite && <Button onClick={() => setCreateOpen(true)}>+ Yangi hisob-faktura</Button>}
@@ -130,7 +130,7 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
                       </td>
                       <td className="px-5 py-3 text-right">
                         {canWrite && (invoice.status === "PENDING" || invoice.status === "PARTIALLY_PAID" || invoice.status === "OVERDUE") && (
-                          <Button size="sm" variant="secondary" onClick={() => setPayInvoice(invoice)}>
+                          <Button size="sm" variant="outline" onClick={() => setPayInvoice(invoice)}>
                             To&apos;lov qabul qilish
                           </Button>
                         )}
@@ -147,11 +147,11 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
               Jami {invoicesQuery.data.meta.total} ta, {invoicesQuery.data.meta.page}-sahifa
             </span>
             <div className="flex gap-2">
-              <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
                 Oldingi
               </Button>
               <Button
-                variant="secondary"
+                variant="outline"
                 size="sm"
                 disabled={page * invoicesQuery.data.meta.limit >= invoicesQuery.data.meta.total}
                 onClick={() => setPage((p) => p + 1)}

@@ -229,7 +229,7 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
                           {canWrite && entry.status === "DRAFT" && (
                             <Button
                               size="sm"
-                              variant="secondary"
+                              variant="outline"
                               loading={markPaidMutation.isPending && markPaidMutation.variables === entry.id}
                               onClick={() => markPaidMutation.mutate(entry.id)}
                             >
@@ -257,7 +257,7 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
                 </span>
                 <div className="flex gap-2">
                   <Button
-                    variant="secondary"
+                    variant="outline"
                     size="sm"
                     disabled={payrollPage <= 1}
                     onClick={() => setPayrollPage((p) => p - 1)}
@@ -265,7 +265,7 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
                     Oldingi
                   </Button>
                   <Button
-                    variant="secondary"
+                    variant="outline"
                     size="sm"
                     disabled={payrollPage * payrollQuery.data.meta.limit >= payrollQuery.data.meta.total}
                     onClick={() => setPayrollPage((p) => p + 1)}

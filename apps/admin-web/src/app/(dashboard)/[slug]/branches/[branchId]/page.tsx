@@ -47,7 +47,7 @@ export default function BranchDetailPage({ params }: { params: Promise<{ slug: s
         </Link>
         <div className="mt-1 flex items-center justify-between">
           <h1 className="text-xl font-semibold text-[var(--color-text)]">{branch.name}</h1>
-          <Button size="sm" variant="secondary" onClick={() => setEditOpen(true)}>
+          <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
             Tahrirlash
           </Button>
         </div>
@@ -68,7 +68,7 @@ export default function BranchDetailPage({ params }: { params: Promise<{ slug: s
           </div>
           <Button
             type="button"
-            variant="secondary"
+            variant="outline"
             size="sm"
             onClick={() => navigator.clipboard?.writeText(branchUrl)}
           >

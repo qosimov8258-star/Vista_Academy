@@ -86,7 +86,7 @@ export default function NotificationsPage({ params }: { params: Promise<{ slug: 
           <Button
             key={f.value}
             size="sm"
-            variant={status === f.value ? "primary" : "secondary"}
+            variant={status === f.value ? "primary" : "tertiary"}
             onClick={() => setStatusFilter(f.value)}
           >
             {f.label}
@@ -160,7 +160,7 @@ export default function NotificationsPage({ params }: { params: Promise<{ slug: 
                     {canWrite && (
                       <td className="px-5 py-3">
                         {n.status === "PENDING" && (
-                          <Button size="sm" variant="secondary" onClick={() => setMarkSentTarget(n)}>
+                          <Button size="sm" variant="outline" onClick={() => setMarkSentTarget(n)}>
                             Yuborildi deb belgilash
                           </Button>
                         )}
@@ -177,11 +177,11 @@ export default function NotificationsPage({ params }: { params: Promise<{ slug: 
               Jami {notificationsQuery.data.meta.total} ta, {notificationsQuery.data.meta.page}-sahifa
             </span>
             <div className="flex gap-2">
-              <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
                 Oldingi
               </Button>
               <Button
-                variant="secondary"
+                variant="outline"
                 size="sm"
                 disabled={page * notificationsQuery.data.meta.limit >= notificationsQuery.data.meta.total}
                 onClick={() => setPage((p) => p + 1)}

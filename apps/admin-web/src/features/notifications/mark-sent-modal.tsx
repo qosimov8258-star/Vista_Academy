@@ -95,7 +95,7 @@ export function MarkSentModal({
         </Select>
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="secondary" onClick={handleClose}>
+          <Button type="button" variant="outline" onClick={handleClose}>
             Bekor qilish
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>

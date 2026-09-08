@@ -89,7 +89,7 @@ export default function OrganizationDetailPage({ params }: { params: Promise<{ i
             <Badge dot tone={org.status === "ACTIVE" ? "success" : "danger"}>
               {org.status === "ACTIVE" ? "Faol" : "To'xtatilgan"}
             </Badge>
-            <Button size="sm" variant="secondary" onClick={() => setEditOpen(true)}>
+            <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
               Tahrirlash
             </Button>
           </>
@@ -111,7 +111,7 @@ export default function OrganizationDetailPage({ params }: { params: Promise<{ i
         <Card className="overflow-hidden lg:col-span-2">
           <CardHeader className="flex items-center justify-between gap-3">
             <CardTitle>Filiallar ({org.branches.length})</CardTitle>
-            <Button size="sm" variant="secondary" onClick={() => setBranchOpen(true)}>
+            <Button size="sm" variant="outline" onClick={() => setBranchOpen(true)}>
               <PlusIcon className="h-3.5 w-3.5" />
               Filial
             </Button>
@@ -178,7 +178,7 @@ export default function OrganizationDetailPage({ params }: { params: Promise<{ i
                   </div>
                 </dl>
                 <div className="flex flex-wrap gap-2 pt-1">
-                  <Button size="sm" variant="secondary" onClick={() => setSubscriptionModal("change")}>
+                  <Button size="sm" variant="outline" onClick={() => setSubscriptionModal("change")}>
                     Rejani o&apos;zgartirish
                   </Button>
                   {org.subscription.status === "SUSPENDED" ? (

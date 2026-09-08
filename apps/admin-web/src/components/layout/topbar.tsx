@@ -39,7 +39,7 @@ export function Topbar({ slug }: { slug: string }) {
             <Avatar user={user} size={32} />
           </div>
         )}
-        <Button variant="secondary" size="sm" onClick={handleLogout}>
+        <Button variant="outline" size="sm" onClick={handleLogout}>
           Chiqish
         </Button>
       </div>
