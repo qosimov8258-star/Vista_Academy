@@ -10,30 +10,73 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { formatMoney } from "@/lib/format";
-import { BuildingIcon, ChevronRightIcon, PlusIcon, SettingsIcon } from "@/components/ui/icons";
+import { ChevronRightIcon, PlusIcon, SettingsIcon } from "@/components/ui/icons";
 import { CreateBranchModal } from "@/features/branches/create-branch-modal";
 
 /**
- * Kartaning pastki qismidagi bitta ko'rsatkich. Har biriga alohida ikonka
- * qo'yilmaydi — to'rt-besh xil belgi yonma-yon turganda karta shovqinli
- * bo'lib ketadi; raqamning o'zi va ustidagi izoh yetarli.
+ * Har bir filial o'z rangida — bir necha filial bo'lganda ular bir-biriga
+ * o'xshab ketmaydi. Rang ma'no tashimaydi, faqat kartani tanib olishga
+ * yordam beradi.
  */
-function Stat({ label, value, tone }: { label: string; value: string; tone?: "success" | "danger" }) {
+const BRANCH_PALETTE = [
+  { soft: "bg-emerald-50", mono: "bg-emerald-100 text-emerald-700", band: "from-emerald-50/80" },
+  { soft: "bg-sky-50", mono: "bg-sky-100 text-sky-700", band: "from-sky-50/80" },
+  { soft: "bg-violet-50", mono: "bg-violet-100 text-violet-700", band: "from-violet-50/80" },
+  { soft: "bg-amber-50", mono: "bg-amber-100 text-amber-700", band: "from-amber-50/80" },
+  { soft: "bg-rose-50", mono: "bg-rose-100 text-rose-600", band: "from-rose-50/80" },
+  { soft: "bg-teal-50", mono: "bg-teal-100 text-teal-700", band: "from-teal-50/80" },
+];
+
+function monogram(name: string): string {
+  return name.trim()[0]?.toUpperCase() ?? "?";
+}
+
+function initials(name: string): string {
+  return (
+    name
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? "")
+      .join("") || "?"
+  );
+}
+
+/**
+ * Kartaning pastki qismidagi bitta ko'rsatkich. Ikonka qo'yilmaydi — besh
+ * xil belgi yonma-yon turganda karta shovqinli bo'lib ketadi; raqamning
+ * o'zi va ustidagi izoh yetarli.
+ */
+function Stat({
+  label,
+  value,
+  tone,
+  loading,
+}: {
+  label: string;
+  value: string;
+  tone?: "success" | "danger";
+  loading?: boolean;
+}) {
   return (
     <div className="px-5 py-4">
       <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">{label}</p>
-      <p
-        className={clsx(
-          "mt-1 truncate text-[19px] font-semibold tabular-nums tracking-tight",
-          tone === "success"
-            ? "text-[var(--color-success)]"
-            : tone === "danger"
-              ? "text-[var(--color-danger)]"
-              : "text-[var(--color-text)]",
-        )}
-      >
-        {value}
-      </p>
+      {loading ? (
+        <span className="mt-2 block h-4 w-16 animate-pulse rounded-full bg-[var(--color-surface-sunken)]" />
+      ) : (
+        <p
+          className={clsx(
+            "mt-1 truncate text-[19px] font-semibold tabular-nums tracking-tight",
+            tone === "success"
+              ? "text-[var(--color-success)]"
+              : tone === "danger"
+                ? "text-[var(--color-danger)]"
+                : "text-[var(--color-text)]",
+          )}
+        >
+          {value}
+        </p>
+      )}
     </div>
   );
 }
@@ -90,14 +133,15 @@ export default function BranchesPage({ params }: { params: Promise<{ slug: strin
             const summaryQuery = summaryQueries[i];
             const summary = summaryQuery?.data;
             const loading = summaryQuery?.isLoading ?? true;
-            const num = (v?: number) => (loading ? "—" : String(v ?? 0));
-            const money = (v?: number) => (loading ? "—" : formatMoney(v ?? 0));
+            const num = (v?: number) => String(v ?? 0);
+            const money = (v?: number) => formatMoney(v ?? 0);
             const hasDebt = (summary?.outstandingDebt ?? 0) > 0;
+            const palette = BRANCH_PALETTE[i % BRANCH_PALETTE.length];
 
             return (
               <div
                 key={branch.id}
-                className="group relative overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_28px_-8px_rgba(16,24,40,0.15)]"
+                className="group relative overflow-hidden rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_28px_-8px_rgba(16,24,40,0.15)]"
               >
                 {/* Butun karta filialga kirish havolasi; ustidagi tugmalar z-10 bilan tepada turadi */}
                 <Link
@@ -106,9 +150,20 @@ export default function BranchesPage({ params }: { params: Promise<{ slug: strin
                   aria-label={`${branch.name} filialiga kirish`}
                 />
 
-                <div className="pointer-events-none relative z-10 flex items-center gap-4 px-5 py-4">
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
-                    <BuildingIcon className="h-6 w-6" />
+                {/* Yuqori qismga filial rangidan yengil o'tish beriladi */}
+                <div
+                  className={clsx(
+                    "pointer-events-none relative z-10 flex items-center gap-4 bg-gradient-to-r to-transparent px-5 py-4",
+                    palette.band,
+                  )}
+                >
+                  <span
+                    className={clsx(
+                      "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-[19px] font-semibold",
+                      palette.mono,
+                    )}
+                  >
+                    {monogram(branch.name)}
                   </span>
 
                   <div className="min-w-0 flex-1">
@@ -120,12 +175,17 @@ export default function BranchesPage({ params }: { params: Promise<{ slug: strin
                     </p>
                   </div>
 
-                  <div className="hidden items-center gap-2 sm:flex">
-                    <span className="text-[13px] text-[var(--color-text-muted)]">Filial admini</span>
+                  {/* Filial admini — Xodimlar sahifasidagi kabi bosh harflar bilan */}
+                  <div className="hidden shrink-0 items-center gap-2 sm:flex">
                     {manager ? (
-                      <span className="text-[13px] font-medium text-[var(--color-text)]">{manager.fullName}</span>
+                      <span className="inline-flex items-center gap-2 rounded-full bg-[var(--color-surface)]/80 py-1 pl-1 pr-3 text-[13px]">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-[10px] font-semibold text-emerald-700">
+                          {initials(manager.fullName)}
+                        </span>
+                        <span className="font-medium text-[var(--color-text)]">{manager.fullName}</span>
+                      </span>
                     ) : (
-                      <Badge tone="warning">Tayinlanmagan</Badge>
+                      <Badge tone="warning">Filial admini tayinlanmagan</Badge>
                     )}
                   </div>
 
@@ -134,26 +194,38 @@ export default function BranchesPage({ params }: { params: Promise<{ slug: strin
                       href={`/${slug}/branches/${branch.id}`}
                       title="Filial sozlamalari"
                       aria-label={`${branch.name} sozlamalari`}
-                      className="rounded-full p-2 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)]"
+                      className="rounded-full p-2 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
                     >
                       <SettingsIcon className="h-[18px] w-[18px]" />
                     </Link>
-                    <ChevronRightIcon className="h-5 w-5 text-gray-300 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-[var(--color-primary)]" />
+                    <ChevronRightIcon className="h-5 w-5 text-[var(--color-text-muted)]/40 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-[var(--color-primary)]" />
                   </div>
                 </div>
 
-                <div
-                  className={clsx(
-                    "pointer-events-none relative z-10 grid divide-x divide-[var(--color-border)] border-t border-[var(--color-border)] bg-gray-50/60",
-                    hasDebt ? "grid-cols-2 sm:grid-cols-5" : "grid-cols-2 sm:grid-cols-4",
-                  )}
-                >
-                  <Stat label="Bolalar" value={num(summary?.childrenCount)} />
-                  <Stat label="Guruhlar" value={num(summary?.activeGroupsCount)} />
-                  <Stat label="Xodimlar" value={num(summary?.employeesCount)} />
-                  <Stat label="Joriy oy tushumi" value={money(summary?.monthRevenue)} tone="success" />
-                  {hasDebt && <Stat label="Qarzdorlik" value={money(summary?.outstandingDebt)} tone="danger" />}
+                <div className="pointer-events-none relative z-10 grid grid-cols-2 divide-x divide-y divide-[var(--color-separator)] border-t border-[var(--color-separator)] sm:grid-cols-4 sm:divide-y-0">
+                  <Stat label="Bolalar" value={num(summary?.childrenCount)} loading={loading} />
+                  <Stat label="Guruhlar" value={num(summary?.activeGroupsCount)} loading={loading} />
+                  <Stat label="Xodimlar" value={num(summary?.employeesCount)} loading={loading} />
+                  <Stat
+                    label="Joriy oy tushumi"
+                    value={money(summary?.monthRevenue)}
+                    tone="success"
+                    loading={loading}
+                  />
                 </div>
+
+                {/* Qarzdorlik ustun emas, ogohlantirish: u bo'lmasa karta ham tinch turadi */}
+                {hasDebt && (
+                  <div className="pointer-events-none relative z-10 flex items-center gap-2 border-t border-[var(--color-separator)] bg-[var(--color-danger-bg)] px-5 py-2.5">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-danger)]" />
+                    <span className="text-[13px] text-[var(--color-danger)]">
+                      To&apos;lanmagan qarzdorlik
+                      <span className="ml-1.5 font-semibold tabular-nums">
+                        {money(summary?.outstandingDebt)}
+                      </span>
+                    </span>
+                  </div>
+                )}
               </div>
             );
           })}
