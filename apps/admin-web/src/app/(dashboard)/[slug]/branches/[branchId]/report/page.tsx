@@ -37,37 +37,86 @@ const INVOICE_STATUS_TONE: Record<InvoiceStatus, "success" | "warning" | "danger
   CANCELLED: "neutral",
 };
 
+/**
+ * iOS'ning sog'liq/statistika kartalari uslubida: yuqorida rangli ikonka va
+ * yozuv bir qatorda, ostida yirik raqam, kerak bo'lsa yupqa o'lchov chizig'i.
+ * Blur yo'q — oq yuza, ingichka chegara va deyarli sezilmas soya.
+ */
+type TileTint = "brand" | "sky" | "rose" | "success" | "danger" | "neutral";
+
+const TINT_ICON: Record<TileTint, string> = {
+  brand: "bg-[var(--color-primary)]/10 text-[var(--color-primary)]",
+  sky: "bg-sky-50 text-sky-600",
+  rose: "bg-rose-50 text-rose-500",
+  success: "bg-[var(--color-success-bg)] text-[var(--color-success)]",
+  danger: "bg-[var(--color-danger-bg)] text-[var(--color-danger)]",
+  neutral: "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)]",
+};
+
+const TINT_METER: Record<TileTint, string> = {
+  brand: "bg-[var(--color-primary)]",
+  sky: "bg-sky-500",
+  rose: "bg-rose-400",
+  success: "bg-[var(--color-success)]",
+  danger: "bg-[var(--color-danger)]",
+  neutral: "bg-[var(--color-text-muted)]",
+};
+
+const TINT_VALUE: Record<TileTint, string> = {
+  brand: "text-[var(--color-text)]",
+  sky: "text-[var(--color-text)]",
+  rose: "text-[var(--color-text)]",
+  success: "text-[var(--color-success)]",
+  danger: "text-[var(--color-danger)]",
+  neutral: "text-[var(--color-text)]",
+};
+
 function StatTile({
   label,
   value,
   hint,
   icon: Icon,
-  tone = "default",
+  tint = "neutral",
+  meter,
 }: {
   label: string;
   value: string | number;
   hint?: string;
   icon: ComponentType<SVGProps<SVGSVGElement>>;
-  tone?: "default" | "success" | "danger";
+  tint?: TileTint;
+  /** Ulushni ko'rsatuvchi yupqa chiziq — raqamning kontekstini beradi. */
+  meter?: { value: number; total: number };
 }) {
-  const valueTone =
-    tone === "success"
-      ? "text-[var(--color-success)]"
-      : tone === "danger"
-        ? "text-[var(--color-danger)]"
-        : "text-[var(--color-text)]";
+  const percent = meter && meter.total > 0 ? Math.round((meter.value / meter.total) * 100) : null;
 
   return (
-    <Card className="p-4">
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-[13px] font-medium text-[var(--color-text-muted)]">{label}</p>
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)]">
+    <div className="rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface)] p-[18px] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
+      <div className="flex items-center gap-2.5">
+        <span
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] ${TINT_ICON[tint]}`}
+        >
           <Icon className="h-[18px] w-[18px]" />
         </span>
+        <p className="min-w-0 truncate text-[13px] font-medium text-[var(--color-text-muted)]">{label}</p>
       </div>
-      <p className={`mt-2 text-[26px] font-semibold leading-none tabular-nums ${valueTone}`}>{value}</p>
-      {hint && <p className="mt-1 text-[12px] text-[var(--color-text-muted)]">{hint}</p>}
-    </Card>
+
+      <p
+        className={`mt-3.5 text-[32px] font-semibold leading-none tracking-[-0.02em] tabular-nums ${TINT_VALUE[tint]}`}
+      >
+        {value}
+      </p>
+
+      {percent !== null && (
+        <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-[var(--color-surface-sunken)]">
+          <div
+            className={`h-full rounded-full transition-[width] duration-500 ease-[var(--ease-out)] ${TINT_METER[tint]}`}
+            style={{ width: `${Math.min(100, percent)}%` }}
+          />
+        </div>
+      )}
+
+      {hint && <p className="mt-2.5 text-[12px] text-[var(--color-text-muted)]">{hint}</p>}
+    </div>
   );
 }
 
@@ -134,42 +183,40 @@ export default function BranchReportPage({
             label="Jami bolalar"
             value={children.active}
             icon={ChildIcon}
+            tint="brand"
             hint={children.inactive > 0 ? `${children.inactive} ta nofaol` : "Faol holatdagilar"}
           />
           <StatTile
             label="O'g'il bolalar"
             value={children.boys}
             icon={ChildIcon}
-            hint={genderKnown > 0 ? `${Math.round((children.boys / genderKnown) * 100)}%` : undefined}
+            tint="sky"
+            meter={genderKnown > 0 ? { value: children.boys, total: genderKnown } : undefined}
+            hint={
+              genderKnown > 0 ? `${Math.round((children.boys / genderKnown) * 100)}% — ${genderKnown} tadan` : undefined
+            }
           />
           <StatTile
             label="Qiz bolalar"
             value={children.girls}
             icon={ChildIcon}
-            hint={genderKnown > 0 ? `${Math.round((children.girls / genderKnown) * 100)}%` : undefined}
+            tint="rose"
+            meter={genderKnown > 0 ? { value: children.girls, total: genderKnown } : undefined}
+            hint={
+              genderKnown > 0 ? `${Math.round((children.girls / genderKnown) * 100)}% — ${genderKnown} tadan` : undefined
+            }
           />
         </div>
-        {genderKnown > 0 && (
-          <Card className="mt-3 p-4">
-            <div className="flex items-center justify-between text-[13px]">
-              <span className="font-medium text-[var(--color-text)]">O&apos;g&apos;il bolalar</span>
-              <span className="tabular-nums text-[var(--color-text-muted)]">
-                {children.boys} / {genderKnown}
-              </span>
-            </div>
-            <ProgressBar value={children.boys} total={genderKnown} className="mt-2" />
-            {children.unknownGender > 0 && (
-              <p className="mt-3 text-[12px] text-[var(--color-text-muted)]">
-                {children.unknownGender} ta bolaning jinsi ko&apos;rsatilmagan — ular bu nisbatga kirmaydi.
-              </p>
-            )}
-          </Card>
+        {children.unknownGender > 0 && (
+          <p className="mt-2.5 px-1 text-[12px] text-[var(--color-text-muted)]">
+            {children.unknownGender} ta bolaning jinsi ko&apos;rsatilmagan — ular bu nisbatga kirmaydi.
+          </p>
         )}
       </section>
 
       <section>
         <SectionTitle>Guruhlar</SectionTitle>
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden rounded-[20px]">
           <CardHeader className="flex items-center justify-between">
             <CardTitle>
               {groups.active} ta faol guruh · {groups.capacity} o&apos;rin
@@ -218,22 +265,26 @@ export default function BranchReportPage({
       <section>
         <SectionTitle>Xodimlar</SectionTitle>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-          <StatTile label="Jami xodimlar" value={employees.total} icon={TeacherIcon} />
+          <StatTile label="Jami xodimlar" value={employees.total} icon={TeacherIcon} tint="brand" />
           <StatTile
             label="Faol"
             value={employees.active}
             icon={BriefcaseIcon}
+            tint="success"
+            meter={employees.total > 0 ? { value: employees.active, total: employees.total } : undefined}
             hint={employees.total - employees.active > 0 ? `${employees.total - employees.active} ta nofaol` : undefined}
           />
           <StatTile
             label="Kabineti bor"
             value={employees.withAccount}
             icon={KeyIcon}
+            tint="neutral"
+            meter={employees.total > 0 ? { value: employees.withAccount, total: employees.total } : undefined}
             hint="Tizimga kira oladi"
           />
         </div>
         {employees.byPosition.length > 0 && (
-          <Card className="mt-3 p-4">
+          <Card className="mt-3 rounded-[20px] p-[18px]">
             <p className="mb-2.5 text-[13px] font-medium text-[var(--color-text)]">Lavozimlar bo&apos;yicha</p>
             <div className="flex flex-wrap gap-2">
               {employees.byPosition.map((row) => (
@@ -257,17 +308,17 @@ export default function BranchReportPage({
             label="Joriy oy tushumi"
             value={formatMoney(finance.monthRevenue)}
             icon={MoneyIcon}
-            tone="success"
+            tint="success"
           />
           <StatTile
             label="Qarzdorlik"
             value={formatMoney(finance.outstandingDebt)}
             icon={MoneyIcon}
-            tone={finance.outstandingDebt > 0 ? "danger" : "default"}
+            tint={finance.outstandingDebt > 0 ? "danger" : "neutral"}
             hint={finance.outstandingDebt > 0 ? "To'lanishi kerak" : "Qarzdorlik yo'q"}
           />
         </div>
-        <Card className="mt-3 overflow-hidden">
+        <Card className="mt-3 overflow-hidden rounded-[20px]">
           <CardHeader>
             <CardTitle>Hisob-fakturalar holati</CardTitle>
           </CardHeader>
