@@ -10,6 +10,7 @@ import type { Organization, Plan } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Input, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { CheckCircleIcon } from "@/components/ui/icons";
 import { useState } from "react";
 
 const schema = z.object({
@@ -29,6 +30,7 @@ type FormValues = z.infer<typeof schema>;
 export function CreateOrganizationModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const [created, setCreated] = useState<Organization | null>(null);
 
   const { data: plans } = useQuery({
@@ -74,16 +76,39 @@ export function CreateOrganizationModal({ open, onClose }: { open: boolean; onCl
       <Modal open={open} onClose={handleClose} title="Tashkilot yaratildi">
         <div className="space-y-4">
           <p className="text-sm text-[var(--color-text)]">
-            <span className="font-medium">{created.name}</span> muvaffaqiyatli yaratildi. Katta admin quyidagi havola
+            <span className="font-medium">{created.name}</span> muvaffaqiyatli yaratildi. Super Admin quyidagi havola
             orqali tizimga kirib, filiallar (bog'chalar) qo&apos;shishni boshlashi mumkin:
           </p>
-          <div className="rounded-lg border border-[var(--color-border)] bg-gray-50 px-3 py-2">
-            <a href={url} target="_blank" rel="noreferrer" className="break-all text-sm font-medium text-[var(--color-primary)] hover:underline">
+          <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-sunken)] px-3.5 py-2.5">
+            <a
+              href={url}
+              target="_blank"
+              rel="noreferrer"
+              className="break-all text-[13px] font-medium text-[var(--color-primary)] hover:underline"
+            >
               {url}
             </a>
           </div>
-          <Button type="button" variant="secondary" size="sm" onClick={() => navigator.clipboard?.writeText(url)}>
-            Havolani nusxalash
+          {/* Nusxalash tugmasi bosilganini bildiradi — aks holda hech nima
+              o'zgarmagandek tuyuladi va foydalanuvchi qayta bosaveradi. */}
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={async () => {
+              await navigator.clipboard?.writeText(url);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 2000);
+            }}
+          >
+            {copied ? (
+              <>
+                <CheckCircleIcon className="h-4 w-4 text-[var(--color-success)]" />
+                Nusxalandi
+              </>
+            ) : (
+              "Havolani nusxalash"
+            )}
           </Button>
           <div className="flex justify-end pt-2">
             <Button type="button" onClick={handleClose}>
@@ -99,7 +124,10 @@ export function CreateOrganizationModal({ open, onClose }: { open: boolean; onCl
     <Modal open={open} onClose={handleClose} title="Yangi bog'chalar tarmog'i">
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
-          <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
+          <div
+            role="alert"
+            className="rounded-[var(--radius-lg)] bg-[var(--color-danger-bg)] px-3 py-2.5 text-[13px] text-[var(--color-danger)]"
+          >
             {serverError}
           </div>
         )}
@@ -131,7 +159,7 @@ export function CreateOrganizationModal({ open, onClose }: { open: boolean; onCl
         </Select>
 
         <div className="border-t border-[var(--color-border)] pt-4">
-          <p className="mb-3 text-sm font-medium text-[var(--color-text)]">Katta admin akkaunti</p>
+          <p className="mb-3 text-sm font-medium text-[var(--color-text)]">Super Admin akkaunti</p>
           <div className="space-y-4">
             <Input
               label="To'liq ism"

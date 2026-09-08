@@ -124,7 +124,10 @@ export function EditOrganizationModal({
         })}
       >
         {serverError && (
-          <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
+          <div
+            role="alert"
+            className="rounded-[var(--radius-lg)] bg-[var(--color-danger-bg)] px-3 py-2.5 text-[13px] text-[var(--color-danger)]"
+          >
             {serverError}
           </div>
         )}

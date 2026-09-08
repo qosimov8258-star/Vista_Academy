@@ -8,7 +8,16 @@ import type { Organization, Wallet, WalletTransaction } from "@/lib/types";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { LoadingState, ErrorState } from "@/components/ui/states";
+import { PageHeader } from "@/components/ui/page-header";
+import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
+import {
+  ArrowLeftIcon,
+  BuildingIcon,
+  ExternalLinkIcon,
+  InboxIcon,
+  PlusIcon,
+  RefreshIcon,
+} from "@/components/ui/icons";
 import { formatDateTime, formatMoney } from "@/lib/format";
 import { organizationAccessUrl } from "@/lib/admin-web";
 import { subscriptionStatusLabel, subscriptionStatusTone } from "@/features/subscriptions/status";
@@ -41,7 +50,8 @@ export default function OrganizationDetailPage({ params }: { params: Promise<{ i
 
   const walletQuery = useQuery({
     queryKey: ["wallet", id],
-    queryFn: () => api.get<{ wallet: Wallet; transactions: WalletTransaction[] }>(`/platform/organizations/${id}/wallet`),
+    queryFn: () =>
+      api.get<{ wallet: Wallet; transactions: WalletTransaction[] }>(`/platform/organizations/${id}/wallet`),
   });
 
   const statusMutation = useMutation({
@@ -61,57 +71,76 @@ export default function OrganizationDetailPage({ params }: { params: Promise<{ i
   if (!org) return null;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <Link href="/organizations" className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
-          ← Tashkilotlar
-        </Link>
-        <div className="mt-1 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-semibold text-[var(--color-text)]">{org.name}</h1>
-            <p className="text-sm text-[var(--color-text-muted)]">
-              /{org.slug} • {org.contactEmail ?? "email ko'rsatilmagan"} • {org.contactPhone ?? "telefon yo'q"}
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Badge tone={org.status === "ACTIVE" ? "success" : "danger"}>
+    <div className="space-y-5">
+      <PageHeader
+        title={org.name}
+        description={`/${org.slug} · ${org.contactEmail ?? "email ko'rsatilmagan"} · ${org.contactPhone ?? "telefon yo'q"}`}
+        back={
+          <Link
+            href="/organizations"
+            className="group inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
+          >
+            <ArrowLeftIcon className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" />
+            Tashkilotlar
+          </Link>
+        }
+        actions={
+          <>
+            <Badge dot tone={org.status === "ACTIVE" ? "success" : "danger"}>
               {org.status === "ACTIVE" ? "Faol" : "To'xtatilgan"}
             </Badge>
             <Button size="sm" variant="secondary" onClick={() => setEditOpen(true)}>
               Tahrirlash
             </Button>
-          </div>
-        </div>
-        <a
-          href={organizationAccessUrl(org.slug)}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-2 inline-block text-sm text-[var(--color-primary)] hover:underline"
-        >
-          {organizationAccessUrl(org.slug)} ↗
-        </a>
-      </div>
+          </>
+        }
+      />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader className="flex items-center justify-between">
+      {/* Tashkilot paneliga o'tish — bu sahifadagi eng ko'p bosiladigan havola */}
+      <a
+        href={organizationAccessUrl(org.slug)}
+        target="_blank"
+        rel="noreferrer"
+        className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-primary-soft)] px-3.5 py-1.5 text-[13px] font-medium text-[var(--color-primary)] transition-opacity hover:opacity-80"
+      >
+        {organizationAccessUrl(org.slug)}
+        <ExternalLinkIcon className="h-3.5 w-3.5" />
+      </a>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <Card className="overflow-hidden lg:col-span-2">
+          <CardHeader className="flex items-center justify-between gap-3">
             <CardTitle>Filiallar ({org.branches.length})</CardTitle>
             <Button size="sm" variant="secondary" onClick={() => setBranchOpen(true)}>
-              + Filial qo&apos;shish
+              <PlusIcon className="h-3.5 w-3.5" />
+              Filial
             </Button>
           </CardHeader>
           <CardBody className="p-0">
-            <ul className="divide-y divide-[var(--color-border)]">
-              {org.branches.map((branch) => (
-                <li key={branch.id} className="flex items-center justify-between px-5 py-3">
-                  <div>
-                    <p className="text-sm font-medium text-[var(--color-text)]">{branch.name}</p>
-                    <p className="text-xs text-[var(--color-text-muted)]">{branch.address ?? "Manzil ko'rsatilmagan"}</p>
-                  </div>
-                  <span className="text-xs text-[var(--color-text-muted)]">{branch.timezone}</span>
-                </li>
-              ))}
-            </ul>
+            {org.branches.length === 0 ? (
+              <EmptyState
+                compact
+                icon={BuildingIcon}
+                title="Filial yo'q"
+                description="Bu tashkilotga birinchi filialni qo'shing"
+              />
+            ) : (
+              <ul className="divide-y divide-[var(--color-separator)]">
+                {org.branches.map((branch) => (
+                  <li key={branch.id} className="flex items-center justify-between gap-4 px-5 py-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-[14px] font-medium text-[var(--color-text)]">{branch.name}</p>
+                      <p className="truncate text-[12px] text-[var(--color-text-muted)]">
+                        {branch.address ?? "Manzil ko'rsatilmagan"}
+                      </p>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-[var(--color-surface-sunken)] px-2.5 py-1 text-[11px] text-[var(--color-text-muted)]">
+                      {branch.timezone}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </CardBody>
         </Card>
 
@@ -122,24 +151,42 @@ export default function OrganizationDetailPage({ params }: { params: Promise<{ i
           <CardBody className="space-y-3">
             {org.subscription ? (
               <>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-[var(--color-text)]">{org.subscription.plan?.name}</span>
-                  <Badge tone={subscriptionStatusTone(org.subscription.status)}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[15px] font-semibold text-[var(--color-text)]">
+                    {org.subscription.plan?.name}
+                  </span>
+                  <Badge dot tone={subscriptionStatusTone(org.subscription.status)}>
                     {subscriptionStatusLabel(org.subscription.status)}
                   </Badge>
                 </div>
-                <p className="text-xs text-[var(--color-text-muted)]">
-                  {formatMoney(org.subscription.plan?.priceMonthly ?? "0")} / oy
+                <p className="text-[13px] tabular-nums text-[var(--color-text)]">
+                  {formatMoney(org.subscription.plan?.priceMonthly ?? "0")}
+                  <span className="text-[var(--color-text-muted)]"> / oy</span>
                 </p>
-                <p className="text-xs text-[var(--color-text-muted)]">
-                  Davr: {formatDateTime(org.subscription.currentPeriodStart)} — {formatDateTime(org.subscription.currentPeriodEnd)}
-                </p>
-                <div className="flex flex-wrap gap-2 pt-2">
+                <dl className="space-y-1.5 rounded-[var(--radius-lg)] bg-[var(--color-surface-sunken)] px-3.5 py-3 text-[12px]">
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-[var(--color-text-muted)]">Davr boshi</dt>
+                    <dd className="tabular-nums text-[var(--color-text)]">
+                      {formatDateTime(org.subscription.currentPeriodStart)}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-[var(--color-text-muted)]">Davr oxiri</dt>
+                    <dd className="tabular-nums text-[var(--color-text)]">
+                      {formatDateTime(org.subscription.currentPeriodEnd)}
+                    </dd>
+                  </div>
+                </dl>
+                <div className="flex flex-wrap gap-2 pt-1">
                   <Button size="sm" variant="secondary" onClick={() => setSubscriptionModal("change")}>
                     Rejani o&apos;zgartirish
                   </Button>
                   {org.subscription.status === "SUSPENDED" ? (
-                    <Button size="sm" onClick={() => statusMutation.mutate("activate")} loading={statusMutation.isPending}>
+                    <Button
+                      size="sm"
+                      onClick={() => statusMutation.mutate("activate")}
+                      loading={statusMutation.isPending}
+                    >
                       Faollashtirish
                     </Button>
                   ) : (
@@ -155,73 +202,92 @@ export default function OrganizationDetailPage({ params }: { params: Promise<{ i
                 </div>
               </>
             ) : (
-              <>
-                <p className="text-sm text-[var(--color-text-muted)]">Bu tashkilotda hali obuna yo&apos;q</p>
-                <Button size="sm" onClick={() => setSubscriptionModal("assign")}>
-                  Obuna biriktirish
-                </Button>
-              </>
+              <EmptyState
+                compact
+                icon={RefreshIcon}
+                title="Obuna yo'q"
+                description="Bu tashkilotga hali tarif rejasi biriktirilmagan"
+                action={
+                  <Button size="sm" onClick={() => setSubscriptionModal("assign")}>
+                    Obuna biriktirish
+                  </Button>
+                }
+              />
             )}
           </CardBody>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader className="flex items-center justify-between">
+      <Card className="overflow-hidden">
+        <CardHeader className="flex items-center justify-between gap-3">
           <CardTitle>Hamyon</CardTitle>
           <Button size="sm" onClick={() => setTopUpOpen(true)}>
-            + To&apos;ldirish
+            <PlusIcon className="h-3.5 w-3.5" />
+            To&apos;ldirish
           </Button>
         </CardHeader>
-        <CardBody>
-          {walletQuery.isLoading ? (
-            <LoadingState />
-          ) : walletQuery.isError ? (
+
+        {walletQuery.isLoading ? (
+          <LoadingState />
+        ) : walletQuery.isError ? (
+          <CardBody>
             <ErrorState message={(walletQuery.error as Error).message} />
-          ) : (
-            <>
-              <p className="text-2xl font-semibold text-[var(--color-text)]">
+          </CardBody>
+        ) : (
+          <>
+            <CardBody className="border-b border-[var(--color-separator)]">
+              <p className="text-[12px] font-medium text-[var(--color-text-muted)]">Joriy balans</p>
+              <p className="mt-1 text-[28px] font-semibold tabular-nums leading-tight text-[var(--color-text)]">
                 {formatMoney(walletQuery.data?.wallet.balance ?? "0", walletQuery.data?.wallet.currency)}
               </p>
-              <div className="mt-4 overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="border-b border-[var(--color-border)] text-xs uppercase text-[var(--color-text-muted)]">
+            </CardBody>
+
+            {walletQuery.data?.transactions.length === 0 ? (
+              <EmptyState
+                compact
+                icon={InboxIcon}
+                title="Tranzaksiyalar yo'q"
+                description="Hamyon to'ldirilgandan keyin bu yerda tarix ko'rinadi"
+              />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[640px] text-left text-sm">
+                  <thead className="bg-[var(--color-surface-sunken)] text-[11px] uppercase tracking-wider text-[var(--color-text-subtle)]">
                     <tr>
-                      <th className="py-2 pr-4 font-medium">Turi</th>
-                      <th className="py-2 pr-4 font-medium">Summa</th>
-                      <th className="py-2 pr-4 font-medium">Balans</th>
-                      <th className="py-2 pr-4 font-medium">Izoh</th>
-                      <th className="py-2 pr-4 font-medium">Sana</th>
+                      <th className="px-5 py-2.5 font-semibold">Turi</th>
+                      <th className="px-3 py-2.5 text-right font-semibold">Summa</th>
+                      <th className="px-3 py-2.5 text-right font-semibold">Balans</th>
+                      <th className="px-3 py-2.5 font-semibold">Izoh</th>
+                      <th className="px-5 py-2.5 font-semibold">Sana</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[var(--color-border)]">
-                    {walletQuery.data?.transactions.length === 0 && (
-                      <tr>
-                        <td colSpan={5} className="py-6 text-center text-[var(--color-text-muted)]">
-                          Tranzaksiyalar yo&apos;q
-                        </td>
-                      </tr>
-                    )}
+                  <tbody className="divide-y divide-[var(--color-separator)]">
                     {walletQuery.data?.transactions.map((tx) => (
-                      <tr key={tx.id}>
-                        <td className="py-2 pr-4">{TX_TYPE_LABEL[tx.type]}</td>
+                      <tr key={tx.id} className="transition-colors hover:bg-[var(--color-surface-hover)]">
+                        <td className="px-5 py-3 text-[var(--color-text)]">{TX_TYPE_LABEL[tx.type]}</td>
                         <td
-                          className={`py-2 pr-4 font-medium ${Number(tx.amount) < 0 ? "text-[var(--color-danger)]" : "text-[var(--color-success)]"}`}
+                          className={`px-3 py-3 text-right font-medium tabular-nums ${
+                            Number(tx.amount) < 0 ? "text-[var(--color-danger)]" : "text-[var(--color-success)]"
+                          }`}
                         >
                           {Number(tx.amount) > 0 ? "+" : ""}
                           {formatMoney(tx.amount)}
                         </td>
-                        <td className="py-2 pr-4">{formatMoney(tx.balanceAfter)}</td>
-                        <td className="py-2 pr-4 text-[var(--color-text-muted)]">{tx.note ?? "—"}</td>
-                        <td className="py-2 pr-4 text-[var(--color-text-muted)]">{formatDateTime(tx.createdAt)}</td>
+                        <td className="px-3 py-3 text-right tabular-nums text-[var(--color-text)]">
+                          {formatMoney(tx.balanceAfter)}
+                        </td>
+                        <td className="px-3 py-3 text-[13px] text-[var(--color-text-muted)]">{tx.note ?? "—"}</td>
+                        <td className="px-5 py-3 whitespace-nowrap text-[13px] text-[var(--color-text-muted)]">
+                          {formatDateTime(tx.createdAt)}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            </>
-          )}
-        </CardBody>
+            )}
+          </>
+        )}
       </Card>
 
       {subscriptionModal && (
