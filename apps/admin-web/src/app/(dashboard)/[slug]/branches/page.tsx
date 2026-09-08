@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { formatMoney } from "@/lib/format";
-import { BuildingIcon, ChartIcon, ChevronRightIcon, PlusIcon, SettingsIcon } from "@/components/ui/icons";
+import { BuildingIcon, ChevronRightIcon, PlusIcon, SettingsIcon } from "@/components/ui/icons";
 import { CreateBranchModal } from "@/features/branches/create-branch-modal";
 
 /**
@@ -130,14 +130,6 @@ export default function BranchesPage({ params }: { params: Promise<{ slug: strin
                   </div>
 
                   <div className="pointer-events-auto relative z-10 flex shrink-0 items-center gap-1">
-                    <Link
-                      href={`/${slug}/branches/${branch.id}/report`}
-                      title="Filial ma'lumotlari"
-                      aria-label={`${branch.name} ma'lumotlari`}
-                      className="rounded-full p-2 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)]"
-                    >
-                      <ChartIcon className="h-[18px] w-[18px]" />
-                    </Link>
                     <Link
                       href={`/${slug}/branches/${branch.id}`}
                       title="Filial sozlamalari"

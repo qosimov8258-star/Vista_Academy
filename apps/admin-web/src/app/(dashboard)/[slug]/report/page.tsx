@@ -1,17 +1,16 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
 import type { ComponentType, SVGProps } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { BranchReport, InvoiceStatus } from "@/lib/types";
+import type { BranchReport, InvoiceStatus, Organization } from "@/lib/types";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LoadingState, ErrorState } from "@/components/ui/states";
 import { formatDate, formatMoney } from "@/lib/format";
 import {
-  ArrowLeftIcon,
   BriefcaseIcon,
   ChildIcon,
   KeyIcon,
@@ -191,20 +190,39 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function BranchReportPage({
-  params,
-}: {
-  params: Promise<{ slug: string; branchId: string }>;
-}) {
-  const { slug, branchId } = use(params);
+export default function BranchReportPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = use(params);
+  const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
+
+  const orgQuery = useQuery({
+    queryKey: ["org", slug],
+    queryFn: () => api.get<Organization>("/app/organizations/me"),
+  });
+
+  const branches = orgQuery.data?.branches ?? [];
+  // Filial tanlanmagan bo'lsa birinchisi olinadi — bitta filialli tarmoqda
+  // tanlash bilan ovora bo'lishning hojati yo'q.
+  const branchId = selectedBranchId ?? branches[0]?.id ?? null;
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["branch-report", slug, branchId],
     queryFn: () => api.get<BranchReport>(`/app/dashboard/branch-report?branchId=${branchId}`),
+    enabled: Boolean(branchId),
   });
 
-  if (isLoading) return <LoadingState />;
+  if (orgQuery.isLoading || (branchId && isLoading)) return <LoadingState />;
+  if (orgQuery.isError) return <ErrorState message={(orgQuery.error as Error).message} />;
   if (isError) return <ErrorState message={(error as Error).message} />;
+  if (!branchId) {
+    return (
+      <div className="rounded-[20px] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-16 text-center">
+        <p className="text-[15px] font-semibold text-[var(--color-text)]">Filial yo&apos;q</p>
+        <p className="mt-1 text-[13px] text-[var(--color-text-muted)]">
+          Ma&apos;lumotlar chiqishi uchun avval filial oching
+        </p>
+      </div>
+    );
+  }
   if (!data) return null;
 
   const { branch, children, groups, employees, finance } = data;
@@ -212,21 +230,14 @@ export default function BranchReportPage({
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <Link
-          href={`/${slug}/branches`}
-          className="group inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
-        >
-          <ArrowLeftIcon className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" />
-          Filiallar
-        </Link>
+      <div className="space-y-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <h1 className="truncate text-[22px] font-semibold tracking-tight text-[var(--color-text)]">
-              {branch.name}
+              Ma&apos;lumotlar
             </h1>
             <p className="mt-0.5 text-[13px] text-[var(--color-text-muted)]">
-              {branch.address || "Manzil ko'rsatilmagan"} · {branch.timezone} · {formatDate(branch.createdAt)} dan
+              {branch.name} · {branch.address || "Manzil ko'rsatilmagan"} · {formatDate(branch.createdAt)} dan
             </p>
           </div>
           <Link
@@ -234,9 +245,33 @@ export default function BranchReportPage({
             className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-1.5 text-[13px] font-medium text-[var(--color-text)] transition-colors hover:bg-[var(--color-surface-hover)]"
           >
             <SettingsIcon className="h-4 w-4" />
-            Sozlamalar
+            Filial sozlamalari
           </Link>
         </div>
+
+        {/* Bir nechta filial bo'lsa tanlash kerak; bittada tanlagich ortiqcha */}
+        {branches.length > 1 && (
+          <div className="flex flex-wrap gap-1.5">
+            {branches.map((item) => {
+              const active = item.id === branchId;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setSelectedBranchId(item.id)}
+                  aria-pressed={active}
+                  className={`cursor-pointer rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors ${
+                    active
+                      ? "bg-[var(--color-primary)] text-white"
+                      : "border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]"
+                  }`}
+                >
+                  {item.name}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <section>
