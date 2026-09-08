@@ -1,7 +1,7 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
-import { TenantScope, requireBranchScope } from "../iam/tenant-auth.types";
+import { TenantScope, requireOperationalScope } from "../iam/tenant-auth.types";
 import { CreateGroupDto } from "./dto/create-group.dto";
 import { GroupQueryDto } from "./dto/group-query.dto";
 
@@ -10,7 +10,7 @@ export class GroupsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(scope: TenantScope, dto: CreateGroupDto) {
-    const branchId = requireBranchScope(scope);
+    const branchId = requireOperationalScope(scope);
     try {
       return await this.prisma.group.create({
         data: { branchId, name: dto.name, capacity: dto.capacity },

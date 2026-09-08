@@ -1,4 +1,4 @@
-export type TenantUserRole = "NETWORK_ADMIN" | "BRANCH_ADMIN" | "MANAGER";
+export type TenantUserRole = "NETWORK_ADMIN" | "BRANCH_ADMIN" | "FINANCE" | "MANAGER";
 
 export interface TenantAuthenticatedUser {
   id: string;

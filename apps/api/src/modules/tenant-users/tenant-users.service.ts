@@ -3,7 +3,7 @@ import { Prisma, TenantUserRole } from "@prisma/client";
 import * as argon2 from "argon2";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantAuthenticatedUser } from "../iam/tenant-auth.types";
-import { CreateTenantUserDto } from "./dto/create-tenant-user.dto";
+import { CreateTenantUserDto, SuperAdminCreatableRole } from "./dto/create-tenant-user.dto";
 
 const SAFE_SELECT = {
   id: true,
@@ -21,7 +21,7 @@ export class TenantUsersService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(caller: TenantAuthenticatedUser, dto: CreateTenantUserDto) {
-    const { role: targetRole, branchId } = await this.resolveTarget(caller, dto.branchId);
+    const { role: targetRole, branchId } = await this.resolveTarget(caller, dto.branchId, dto.role);
 
     const passwordHash = await argon2.hash(dto.password);
     try {
@@ -56,9 +56,17 @@ export class TenantUsersService {
     });
   }
 
+  /**
+   * Yaratiladigan rol hech qachon so'rovdan to'g'ridan-to'g'ri olinmaydi —
+   * u chaqiruvchining roli bilan cheklanadi:
+   *   Super Admin -> filial admini yoki moliyachi (istalgan filialga),
+   *   Filial admini -> administrator (faqat o'z filialiga).
+   * Moliyachi va administrator umuman foydalanuvchi yarata olmaydi.
+   */
   private async resolveTarget(
     caller: TenantAuthenticatedUser,
     requestedBranchId: string,
+    requestedRole: SuperAdminCreatableRole | undefined,
   ): Promise<{ role: TenantUserRole; branchId: string }> {
     if (caller.role === "NETWORK_ADMIN") {
       const branch = await this.prisma.branch.findFirst({
@@ -67,7 +75,7 @@ export class TenantUsersService {
       if (!branch) {
         throw new NotFoundException("Filial topilmadi");
       }
-      return { role: "BRANCH_ADMIN", branchId: branch.id };
+      return { role: requestedRole ?? "BRANCH_ADMIN", branchId: branch.id };
     }
 
     if (caller.role === "BRANCH_ADMIN") {

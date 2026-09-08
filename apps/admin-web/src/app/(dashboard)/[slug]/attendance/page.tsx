@@ -14,6 +14,7 @@ import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { downloadCsv } from "@/lib/download";
 import { useBranchContext } from "@/lib/use-branch-context";
 import clsx from "clsx";
+import { canWriteOperational } from "@/lib/permissions";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 
@@ -32,7 +33,7 @@ export default function AttendancePage({ params }: { params: Promise<{ slug: str
   const [date, setDate] = useState("");
   const [exporting, setExporting] = useState(false);
   const { user } = useAuth();
-  const canWrite = user?.role !== "NETWORK_ADMIN";
+  const canWrite = canWriteOperational(user?.role);
 
   useEffect(() => {
     setDate((current) => current || todayDateString());
@@ -112,7 +113,7 @@ export default function AttendancePage({ params }: { params: Promise<{ slug: str
         </div>
       </Card>
 
-      {!canWrite && <ViewOnlyNote />}
+      {!canWrite && <ViewOnlyNote role={user?.role} />}
 
       {!date ? (
         <LoadingState />

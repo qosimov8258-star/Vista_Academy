@@ -10,6 +10,7 @@ import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LoadingState, ErrorState } from "@/components/ui/states";
 import { formatDate, formatMoney } from "@/lib/format";
+import { canWriteOperational } from "@/lib/permissions";
 
 const QUICK_ACTIONS = [
   { label: "Arizalar (CRM)", icon: "📞", suffix: "crm" },
@@ -27,7 +28,7 @@ const QUICK_ACTIONS = [
 export default function DashboardPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const { user } = useAuth();
-  const canWrite = user?.role !== "NETWORK_ADMIN";
+  const canWrite = canWriteOperational(user?.role);
   const isNetworkAdmin = user?.role === "NETWORK_ADMIN";
 
   const orgQuery = useQuery({

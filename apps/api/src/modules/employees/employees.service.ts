@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
-import { TenantScope, requireBranchScope } from "../iam/tenant-auth.types";
+import { TenantScope, requireOperationalScope } from "../iam/tenant-auth.types";
 import { CreateEmployeeDto } from "./dto/create-employee.dto";
 import { EmployeeQueryDto } from "./dto/employee-query.dto";
 
@@ -10,7 +10,7 @@ export class EmployeesService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(scope: TenantScope, dto: CreateEmployeeDto) {
-    const branchId = requireBranchScope(scope);
+    const branchId = requireOperationalScope(scope);
     return this.prisma.employee.create({
       data: { organizationId: scope.organizationId, branchId, fullName: dto.fullName, position: dto.position },
     });

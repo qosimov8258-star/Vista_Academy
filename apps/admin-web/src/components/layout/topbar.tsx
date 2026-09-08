@@ -4,8 +4,8 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/use-auth";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { ROLE_LABEL } from "@/lib/permissions";
 
-const ROLE_LABEL = { NETWORK_ADMIN: "Katta admin", BRANCH_ADMIN: "Filial menejeri", MANAGER: "Administrator" } as const;
 
 export function Topbar({ slug }: { slug: string }) {
   const router = useRouter();

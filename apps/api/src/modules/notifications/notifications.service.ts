@@ -1,7 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { NotificationEventType, Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
-import { TenantAuthenticatedUser, TenantScope, requireBranchScope } from "../iam/tenant-auth.types";
+import { TenantAuthenticatedUser, TenantScope, requireOperationalScope, toTenantScope } from "../iam/tenant-auth.types";
 import { CreateNotificationDto } from "./dto/create-notification.dto";
 import { MarkNotificationSentDto } from "./dto/mark-notification-sent.dto";
 import { NotificationQueryDto } from "./dto/notification-query.dto";
@@ -11,8 +11,8 @@ export class NotificationsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(user: TenantAuthenticatedUser, dto: CreateNotificationDto) {
-    const scope = { organizationId: user.organizationId, branchId: user.branchId };
-    const branchId = requireBranchScope(scope);
+    const scope = toTenantScope(user);
+    const branchId = requireOperationalScope(scope);
     if (dto.childId) {
       const child = await this.prisma.child.findFirst({ where: { id: dto.childId, organizationId: scope.organizationId } });
       if (!child || child.branchId !== branchId) {
@@ -51,8 +51,8 @@ export class NotificationsService {
   }
 
   async markSent(user: TenantAuthenticatedUser, id: string, dto: MarkNotificationSentDto) {
-    const scope = { organizationId: user.organizationId, branchId: user.branchId };
-    const branchId = requireBranchScope(scope);
+    const scope = toTenantScope(user);
+    const branchId = requireOperationalScope(scope);
     const log = await this.prisma.notificationLog.findFirst({ where: { id, organizationId: scope.organizationId } });
     if (!log) {
       throw new NotFoundException("Bildirishnoma topilmadi");

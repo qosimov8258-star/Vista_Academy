@@ -9,7 +9,7 @@ datasource db {
 
 // ---------------------------------------------------------------------------
 // Platform-level identity (Platform Super Admin / Support).
-// Tenant-level users (Katta admin, Kichik admin, tarbiyachi, ota-ona, ...)
+// Tenant-level users (Super Admin, Filial menejeri, Administrator, ...)
 // belong to a later IAM/Tenancy module and are intentionally out of scope
 // for the platform panel.
 // ---------------------------------------------------------------------------
@@ -94,15 +94,16 @@ model Organization {
 }
 
 // ---------------------------------------------------------------------------
-// Tenant-level identity (Katta admin / Network admin for now).
+// Tenant-level identity (Super Admin — enum value stays NETWORK_ADMIN).
 // Created automatically alongside its Organization; scoped per tenant since
 // email uniqueness is only guaranteed within an organization, not globally.
 // ---------------------------------------------------------------------------
 
 enum TenantUserRole {
-  NETWORK_ADMIN
-  BRANCH_ADMIN
-  MANAGER
+  NETWORK_ADMIN // "Super Admin" — tashkilot bo'ylab, faqat kuzatuvchi
+  BRANCH_ADMIN // "Filial admini" — bitta filial, to'liq huquq
+  FINANCE // "Moliyachi" — bitta filial, faqat Moliya va Ish haqida yozadi
+  MANAGER // "Administrator" — bitta filial, kundalik ish
 }
 
 model TenantUser {

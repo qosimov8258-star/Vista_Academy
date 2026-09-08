@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../database/prisma.service";
-import { TenantAuthenticatedUser, TenantScope, requireBranchScope } from "../iam/tenant-auth.types";
+import { TenantAuthenticatedUser, TenantScope, requireOperationalScope, toTenantScope } from "../iam/tenant-auth.types";
 import { UpsertHealthProfileDto } from "./dto/upsert-health-profile.dto";
 import { CreateVaccinationDto } from "./dto/create-vaccination.dto";
 import { UpdateVaccinationDto } from "./dto/update-vaccination.dto";
@@ -28,7 +28,7 @@ export class ChildHealthService {
   }
 
   async upsertProfile(scope: TenantScope, childId: string, dto: UpsertHealthProfileDto) {
-    const branchId = requireBranchScope(scope);
+    const branchId = requireOperationalScope(scope);
     const child = await this.requireChild(scope, childId);
     return this.prisma.healthProfile.upsert({
       where: { childId },
@@ -56,7 +56,7 @@ export class ChildHealthService {
   }
 
   async createVaccination(scope: TenantScope, childId: string, dto: CreateVaccinationDto) {
-    const branchId = requireBranchScope(scope);
+    const branchId = requireOperationalScope(scope);
     const child = await this.requireChild(scope, childId);
     return this.prisma.vaccination.create({
       data: {
@@ -71,7 +71,7 @@ export class ChildHealthService {
   }
 
   async updateVaccination(scope: TenantScope, vaccinationId: string, dto: UpdateVaccinationDto) {
-    const branchId = requireBranchScope(scope);
+    const branchId = requireOperationalScope(scope);
     const vaccination = await this.prisma.vaccination.findFirst({
       where: { id: vaccinationId, organizationId: scope.organizationId },
     });
@@ -97,8 +97,8 @@ export class ChildHealthService {
   }
 
   async createMedicationLog(user: TenantAuthenticatedUser, childId: string, dto: CreateMedicationLogDto) {
-    const scope = { organizationId: user.organizationId, branchId: user.branchId };
-    const branchId = requireBranchScope(scope);
+    const scope = toTenantScope(user);
+    const branchId = requireOperationalScope(scope);
     const child = await this.requireChild(scope, childId);
     return this.prisma.medicationLog.create({
       data: {
@@ -116,7 +116,7 @@ export class ChildHealthService {
   }
 
   async setQuarantine(scope: TenantScope, childId: string, dto: SetQuarantineDto) {
-    requireBranchScope(scope);
+    requireOperationalScope(scope);
     await this.requireChild(scope, childId);
     return this.prisma.child.update({
       where: { id: childId },
@@ -129,7 +129,7 @@ export class ChildHealthService {
   }
 
   async clearQuarantine(scope: TenantScope, childId: string) {
-    requireBranchScope(scope);
+    requireOperationalScope(scope);
     await this.requireChild(scope, childId);
     return this.prisma.child.update({
       where: { id: childId },

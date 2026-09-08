@@ -17,6 +17,7 @@ import { ChangeStageModal } from "@/features/crm/change-stage-modal";
 import { ConvertLeadModal } from "@/features/crm/convert-lead-modal";
 import { LeadActivityForm } from "@/features/crm/lead-activity-form";
 import { useBranchContext } from "@/lib/use-branch-context";
+import { canWriteOperational } from "@/lib/permissions";
 
 type LeadActivityWithCreator = LeadActivity & { createdBy?: { id: string; fullName: string } | null };
 type LeadDetail = Lead & {
@@ -29,7 +30,7 @@ export default function LeadDetailPage({ params }: { params: Promise<{ slug: str
   const [stageModalOpen, setStageModalOpen] = useState(false);
   const [convertModalOpen, setConvertModalOpen] = useState(false);
   const { user } = useAuth();
-  const canWrite = user?.role !== "NETWORK_ADMIN";
+  const canWrite = canWriteOperational(user?.role);
   const { branchSlug } = useBranchContext(slug);
   const crmHref = branchSlug ? `/${slug}/${branchSlug}/crm` : `/${slug}/crm`;
 
@@ -64,7 +65,7 @@ export default function LeadDetailPage({ params }: { params: Promise<{ slug: str
         <p className="text-xs text-[var(--color-text-muted)]">Yaratildi: {formatDate(lead.createdAt)}</p>
       </div>
 
-      {!canWrite && <ViewOnlyNote />}
+      {!canWrite && <ViewOnlyNote role={user?.role} />}
 
       {lead.lostReason && (
         <div className="rounded-lg border border-[var(--color-danger)]/30 bg-[var(--color-danger-bg)] px-4 py-3 text-sm text-[var(--color-danger)]">

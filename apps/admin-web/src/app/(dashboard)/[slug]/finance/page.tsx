@@ -16,6 +16,7 @@ import { downloadCsv } from "@/lib/download";
 import { CreateInvoiceModal } from "@/features/finance/create-invoice-modal";
 import { RecordPaymentModal } from "@/features/finance/record-payment-modal";
 import { useBranchContext } from "@/lib/use-branch-context";
+import { canWriteMoney } from "@/lib/permissions";
 
 const STATUS_LABEL: Record<Invoice["status"], string> = {
   PENDING: "Kutilmoqda",
@@ -40,7 +41,7 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
   const [payInvoice, setPayInvoice] = useState<Invoice | null>(null);
   const [exporting, setExporting] = useState(false);
   const { user } = useAuth();
-  const canWrite = user?.role !== "NETWORK_ADMIN";
+  const canWrite = canWriteMoney(user?.role);
   const { branchId: forcedBranchId } = useBranchContext(slug);
 
   const invoicesQuery = useQuery({
@@ -77,7 +78,7 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
         </div>
       </div>
 
-      {!canWrite && <ViewOnlyNote />}
+      {!canWrite && <ViewOnlyNote role={user?.role} />}
 
       {invoicesQuery.isLoading ? (
         <LoadingState />

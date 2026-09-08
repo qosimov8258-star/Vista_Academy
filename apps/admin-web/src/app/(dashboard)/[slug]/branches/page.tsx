@@ -118,7 +118,7 @@ export default function BranchesPage({ params }: { params: Promise<{ slug: strin
                         {branch.address || "Manzil ko'rsatilmagan"}
                       </p>
                       <div className="mt-2 flex items-center gap-1.5 text-sm">
-                        <span className="text-[var(--color-text-muted)]">Menejer:</span>
+                        <span className="text-[var(--color-text-muted)]">Filial admini:</span>
                         {manager ? (
                           <span className="font-medium text-[var(--color-text)]">{manager.fullName}</span>
                         ) : (

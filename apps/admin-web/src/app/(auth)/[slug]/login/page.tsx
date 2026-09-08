@@ -13,7 +13,7 @@ export default function LoginPage({ params }: { params: Promise<{ slug: string }
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-primary)] text-xl font-bold text-white">
             B
           </div>
-          <h1 className="text-lg font-semibold text-[var(--color-text)]">Katta admin</h1>
+          <h1 className="text-lg font-semibold text-[var(--color-text)]">Super Admin</h1>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">/{slug}</p>
         </div>
 

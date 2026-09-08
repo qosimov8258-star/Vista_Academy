@@ -1,7 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
-import { TenantAuthenticatedUser, TenantScope, requireBranchScope } from "../iam/tenant-auth.types";
+import { TenantAuthenticatedUser, TenantScope, requireOperationalScope, toTenantScope } from "../iam/tenant-auth.types";
 import { CreateLeadDto } from "./dto/create-lead.dto";
 import { LeadQueryDto } from "./dto/lead-query.dto";
 import { UpdateLeadStageDto } from "./dto/update-lead-stage.dto";
@@ -18,8 +18,8 @@ export class CrmService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(user: TenantAuthenticatedUser, dto: CreateLeadDto) {
-    const scope = { organizationId: user.organizationId, branchId: user.branchId };
-    const branchId = requireBranchScope(scope);
+    const scope = toTenantScope(user);
+    const branchId = requireOperationalScope(scope);
 
     return this.prisma.$transaction(async (tx) => {
       const lead = await tx.lead.create({
@@ -78,8 +78,8 @@ export class CrmService {
   }
 
   async updateStage(user: TenantAuthenticatedUser, id: string, dto: UpdateLeadStageDto) {
-    const scope = { organizationId: user.organizationId, branchId: user.branchId };
-    const branchId = requireBranchScope(scope);
+    const scope = toTenantScope(user);
+    const branchId = requireOperationalScope(scope);
     const lead = await this.prisma.lead.findFirst({ where: { id, organizationId: scope.organizationId } });
     if (!lead) {
       throw new NotFoundException("Ariza topilmadi");
@@ -112,8 +112,8 @@ export class CrmService {
   }
 
   async addActivity(user: TenantAuthenticatedUser, id: string, dto: CreateLeadActivityDto) {
-    const scope = { organizationId: user.organizationId, branchId: user.branchId };
-    const branchId = requireBranchScope(scope);
+    const scope = toTenantScope(user);
+    const branchId = requireOperationalScope(scope);
     const lead = await this.prisma.lead.findFirst({ where: { id, organizationId: scope.organizationId } });
     if (!lead) {
       throw new NotFoundException("Ariza topilmadi");
@@ -127,8 +127,8 @@ export class CrmService {
   }
 
   async convert(user: TenantAuthenticatedUser, id: string, dto: ConvertLeadDto) {
-    const scope = { organizationId: user.organizationId, branchId: user.branchId };
-    const branchId = requireBranchScope(scope);
+    const scope = toTenantScope(user);
+    const branchId = requireOperationalScope(scope);
     const lead = await this.prisma.lead.findFirst({ where: { id, organizationId: scope.organizationId } });
     if (!lead) {
       throw new NotFoundException("Ariza topilmadi");

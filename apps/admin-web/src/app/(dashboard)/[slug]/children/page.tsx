@@ -15,6 +15,7 @@ import { formatDate } from "@/lib/format";
 import { downloadCsv } from "@/lib/download";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { CreateChildModal } from "@/features/children/create-child-modal";
+import { canWriteOperational } from "@/lib/permissions";
 
 const STATUS_LABEL: Record<string, string> = { ACTIVE: "Faol", INACTIVE: "Nofaol", QUARANTINED: "Karantinda" };
 const STATUS_TONE: Record<string, "success" | "neutral" | "danger"> = {
@@ -29,7 +30,7 @@ export default function ChildrenPage({ params }: { params: Promise<{ slug: strin
   const [createOpen, setCreateOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const { user } = useAuth();
-  const canWrite = user?.role !== "NETWORK_ADMIN";
+  const canWrite = canWriteOperational(user?.role);
   const { branchId: forcedBranchId } = useBranchContext(slug);
 
   const handleExport = async () => {
@@ -63,7 +64,7 @@ export default function ChildrenPage({ params }: { params: Promise<{ slug: strin
         </div>
       </div>
 
-      {!canWrite && <ViewOnlyNote />}
+      {!canWrite && <ViewOnlyNote role={user?.role} />}
 
       {childrenQuery.isLoading ? (
         <LoadingState />

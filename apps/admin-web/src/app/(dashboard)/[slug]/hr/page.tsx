@@ -15,6 +15,7 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { LogShiftModal } from "@/features/hr/log-shift-modal";
 import { GeneratePayrollModal } from "@/features/hr/generate-payroll-modal";
 import { useBranchContext } from "@/lib/use-branch-context";
+import { canWriteMoney } from "@/lib/permissions";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 
@@ -38,7 +39,7 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
   const { slug } = use(params);
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const canWrite = user?.role !== "NETWORK_ADMIN";
+  const canWrite = canWriteMoney(user?.role);
   const { branchId: forcedBranchId } = useBranchContext(slug);
 
   // "Current period" depends on the viewer's clock, which can differ between
@@ -106,7 +107,7 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
         </div>
       </div>
 
-      {!canWrite && <ViewOnlyNote />}
+      {!canWrite && <ViewOnlyNote role={user?.role} />}
 
       <Card className="flex flex-col gap-3 p-4 sm:flex-row sm:items-end">
         <div className="block">

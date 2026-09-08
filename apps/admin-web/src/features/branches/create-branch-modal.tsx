@@ -58,13 +58,13 @@ export function CreateBranchModal({ open, onClose, slug }: { open: boolean; onCl
         <Input label="Manzil" placeholder="Toshkent sh., Yunusobod tumani" {...register("address")} />
 
         <div className="border-t border-[var(--color-border)] pt-4">
-          <p className="mb-3 text-sm font-medium text-[var(--color-text)]">Filial menejeri</p>
+          <p className="mb-3 text-sm font-medium text-[var(--color-text)]">Filial admini</p>
           <p className="mb-3 text-xs text-[var(--color-text-muted)]">
-            Bu filialni boshqaradigan menejerning login ma&apos;lumotlari — filial bilan birga bir vaqtda yaratiladi.
+            Bu filialni boshqaradigan filial adminining login ma&apos;lumotlari — filial bilan birga bir vaqtda yaratiladi.
           </p>
           <div className="space-y-4">
             <Input
-              label="Menejer to'liq ismi"
+              label="Filial admini to'liq ismi"
               placeholder="Aziz Rahimov"
               error={errors.managerFullName?.message}
               {...register("managerFullName")}
@@ -72,7 +72,7 @@ export function CreateBranchModal({ open, onClose, slug }: { open: boolean; onCl
             <Input
               label="Login email"
               type="email"
-              placeholder="menejer@tarmoq.uz"
+              placeholder="filial.admin@tarmoq.uz"
               error={errors.managerEmail?.message}
               {...register("managerEmail")}
             />

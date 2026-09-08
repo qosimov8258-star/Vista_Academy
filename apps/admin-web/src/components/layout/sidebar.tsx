@@ -6,6 +6,7 @@ import clsx from "clsx";
 import type { ComponentType, SVGProps } from "react";
 import { useAuth } from "@/lib/use-auth";
 import { useBranchContext } from "@/lib/use-branch-context";
+import { ROLE_LABEL, canManageUsers } from "@/lib/permissions";
 import {
   ArrowLeftIcon,
   BellIcon,
@@ -24,8 +25,6 @@ import {
   TeacherIcon,
 } from "@/components/ui/icons";
 
-const ROLE_LABEL = { NETWORK_ADMIN: "Tarmoq Admin", BRANCH_ADMIN: "Filial Menejeri", MANAGER: "Administrator" } as const;
-
 type NavIcon = ComponentType<SVGProps<SVGSVGElement>>;
 
 interface NavItem {
@@ -42,7 +41,7 @@ export function Sidebar({ slug }: { slug: string }) {
   const pathname = usePathname();
   const { user } = useAuth();
   const isNetworkAdmin = user?.role === "NETWORK_ADMIN";
-  const canManageUsers = user?.role === "NETWORK_ADMIN" || user?.role === "BRANCH_ADMIN";
+  const showUsersNav = canManageUsers(user?.role);
   const params = useParams<{ branchSlug?: string }>();
   const { branch } = useBranchContext(slug);
   // A NETWORK_ADMIN who hasn't drilled into a specific branch only manages
@@ -55,6 +54,9 @@ export function Sidebar({ slug }: { slug: string }) {
   const rootNavItems: NavItem[] = [
     { href: `/${slug}`, label: "Bosh sahifa", icon: HomeIcon, show: true, exact: true },
     { href: `/${slug}/branches`, label: "Filiallar", icon: BuildingIcon, show: true },
+    // Super Admin har bir filialga admin va moliyachi tayinlaydi, shuning uchun
+    // foydalanuvchilar bo'limi uning asosiy ro'yxatida turishi shart.
+    { href: `/${slug}/users`, label: "Foydalanuvchilar", icon: KeyIcon, show: showUsersNav },
   ];
 
   const operationalNavItems: NavItem[] = [
@@ -76,7 +78,7 @@ export function Sidebar({ slug }: { slug: string }) {
     { href: `${base}/notifications`, label: "Bildirishnomalar", icon: BellIcon, show: true },
     // Branch/user management stay a network-wide (root-level) concern, never
     // duplicated inside a single branch's panel.
-    { href: `/${slug}/users`, label: "Foydalanuvchilar", icon: KeyIcon, show: canManageUsers && !inBranchContext },
+    { href: `/${slug}/users`, label: "Foydalanuvchilar", icon: KeyIcon, show: showUsersNav && !inBranchContext },
   ];
 
   const navItems = (isNetworkAdmin && !inBranchContext ? rootNavItems : operationalNavItems).filter((item) => item.show);

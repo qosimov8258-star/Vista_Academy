@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../database/prisma.service";
-import { TenantScope, requireBranchScope } from "../iam/tenant-auth.types";
+import { TenantScope, requireOperationalScope } from "../iam/tenant-auth.types";
 import { NotificationsService } from "../notifications/notifications.service";
 import { UpsertDailyReportDto } from "./dto/upsert-daily-report.dto";
 import { DailyReportQueryDto } from "./dto/daily-report-query.dto";
@@ -23,7 +23,7 @@ export class DailyReportsService {
   ) {}
 
   async upsert(scope: TenantScope, dto: UpsertDailyReportDto) {
-    const branchId = requireBranchScope(scope);
+    const branchId = requireOperationalScope(scope);
     const child = await this.prisma.child.findFirst({ where: { id: dto.childId, organizationId: scope.organizationId } });
     if (!child) {
       throw new NotFoundException("Bola topilmadi");

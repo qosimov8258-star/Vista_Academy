@@ -14,6 +14,7 @@ import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { EditDailyReportModal } from "@/features/daily-reports/edit-daily-report-modal";
+import { canWriteOperational } from "@/lib/permissions";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 
@@ -34,7 +35,7 @@ export default function DailyReportsPage({ params }: { params: Promise<{ slug: s
   const [date, setDate] = useState("");
   const [editChild, setEditChild] = useState<{ childId: string; fullName: string } | null>(null);
   const { user } = useAuth();
-  const canWrite = user?.role !== "NETWORK_ADMIN";
+  const canWrite = canWriteOperational(user?.role);
 
   useEffect(() => {
     setDate((current) => current || todayDateString());
@@ -91,7 +92,7 @@ export default function DailyReportsPage({ params }: { params: Promise<{ slug: s
         </div>
       </Card>
 
-      {!canWrite && <ViewOnlyNote />}
+      {!canWrite && <ViewOnlyNote role={user?.role} />}
 
       {!date ? (
         <LoadingState />

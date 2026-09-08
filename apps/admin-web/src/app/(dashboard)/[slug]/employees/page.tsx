@@ -13,13 +13,14 @@ import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { CreateEmployeeModal } from "@/features/employees/create-employee-modal";
 import { EditSalarySchemeModal } from "@/features/hr/edit-salary-scheme-modal";
 import { useBranchContext } from "@/lib/use-branch-context";
+import { canWriteOperational } from "@/lib/permissions";
 
 export default function EmployeesPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const [createOpen, setCreateOpen] = useState(false);
   const [schemeEmployeeId, setSchemeEmployeeId] = useState<string | null>(null);
   const { user } = useAuth();
-  const canWrite = user?.role !== "NETWORK_ADMIN";
+  const canWrite = canWriteOperational(user?.role);
   const { branchId: forcedBranchId } = useBranchContext(slug);
 
   const orgQuery = useQuery({
@@ -45,7 +46,7 @@ export default function EmployeesPage({ params }: { params: Promise<{ slug: stri
         {canWrite && <Button onClick={() => setCreateOpen(true)}>+ Yangi xodim</Button>}
       </div>
 
-      {!canWrite && <ViewOnlyNote />}
+      {!canWrite && <ViewOnlyNote role={user?.role} />}
 
       {employeesQuery.isLoading ? (
         <LoadingState />

@@ -1,7 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
-import { TenantScope, requireBranchScope } from "../iam/tenant-auth.types";
+import { TenantScope, requireOperationalScope } from "../iam/tenant-auth.types";
 import { CreateChildDto } from "./dto/create-child.dto";
 import { ChildQueryDto } from "./dto/child-query.dto";
 
@@ -10,7 +10,7 @@ export class ChildrenService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(scope: TenantScope, dto: CreateChildDto) {
-    const branchId = requireBranchScope(scope);
+    const branchId = requireOperationalScope(scope);
     if (dto.groupId) {
       await this.requireGroup(branchId, dto.groupId);
     }

@@ -31,7 +31,7 @@ export class TenantOrganizationsController {
   @Post("me/branches")
   addBranch(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: CreateBranchDto) {
     if (user.role !== "NETWORK_ADMIN") {
-      throw new ForbiddenException("Faqat tarmoq admini yangi filial qo'sha oladi");
+      throw new ForbiddenException("Faqat Super Admin yangi filial qo'sha oladi");
     }
     return this.organizationsService.addBranch(user.organizationId, dto);
   }

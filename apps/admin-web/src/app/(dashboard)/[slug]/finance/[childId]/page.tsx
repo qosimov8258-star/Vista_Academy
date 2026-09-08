@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { formatDateTime, formatMoney } from "@/lib/format";
 import { useBranchContext } from "@/lib/use-branch-context";
+import { canWriteMoney } from "@/lib/permissions";
 
 const LEDGER_TYPE_LABEL: Record<LedgerEntry["type"], string> = {
   CHARGE: "Hisoblandi",
@@ -30,7 +31,7 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
   const { slug, childId } = use(params);
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const canWrite = user?.role !== "NETWORK_ADMIN";
+  const canWrite = canWriteMoney(user?.role);
   const { branchSlug } = useBranchContext(slug);
   const financeHref = branchSlug ? `/${slug}/${branchSlug}/finance` : `/${slug}/finance`;
 
