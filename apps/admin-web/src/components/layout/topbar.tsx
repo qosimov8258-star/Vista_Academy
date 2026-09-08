@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/use-auth";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -9,10 +10,15 @@ import { ROLE_LABEL } from "@/lib/permissions";
 
 export function Topbar({ slug }: { slug: string }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { user } = useAuth();
 
   const handleLogout = async () => {
     await api.post("/app/auth/logout");
+    // So'rovlar keshi tozalanmasa, xuddi shu brauzerda boshqa foydalanuvchi
+    // kirganda oldingi filialning raqamlari bir zum ko'rinib qoladi —
+    // kesh kaliti foydalanuvchiga emas, tashkilot slug'iga bog'langan.
+    queryClient.clear();
     router.push(`/${slug}/login`);
     router.refresh();
   };

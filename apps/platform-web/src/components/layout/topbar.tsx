@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/use-auth";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -19,10 +20,14 @@ function initials(name: string): string {
 
 export function Topbar() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { user } = useAuth();
 
   const handleLogout = async () => {
     await api.post("/platform/auth/logout");
+    // Keshni tozalamasak, keyingi kirgan foydalanuvchi bir zum oldingisining
+    // ma'lumotini ko'radi.
+    queryClient.clear();
     router.push("/login");
     router.refresh();
   };
