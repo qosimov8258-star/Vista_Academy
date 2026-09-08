@@ -74,6 +74,12 @@ export class TenantDashboardService {
    * shuning uchun raqamlar bo'linmalarga ajratilgan holda qaytadi.
    */
   async branchReport(scope: TenantScope, branchId: string) {
+    // Hisobotda butun filialning moliyasi bor, shuning uchun uni faqat
+    // filialni boshqaradiganlar ko'radi. O'qituvchi o'z filialida bo'lsa ham
+    // bu sahifaga kira olmaydi — u faqat o'z guruhlarini yuritadi.
+    if (scope.role !== "NETWORK_ADMIN" && scope.role !== "BRANCH_ADMIN") {
+      throw new ForbiddenException("Bu hisobotni faqat Super Admin va filial admini ko'ra oladi");
+    }
     const branch = await this.prisma.branch.findFirst({
       where: { id: branchId, organizationId: scope.organizationId },
     });

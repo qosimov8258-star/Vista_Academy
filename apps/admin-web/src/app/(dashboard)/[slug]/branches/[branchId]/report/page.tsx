@@ -129,8 +129,13 @@ export default function BranchReportPage({
 
       <section>
         <SectionTitle>Tarbiyalanuvchilar</SectionTitle>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <StatTile label="Jami bolalar" value={children.active} icon={ChildIcon} hint="Faol holatdagilar" />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <StatTile
+            label="Jami bolalar"
+            value={children.active}
+            icon={ChildIcon}
+            hint={children.inactive > 0 ? `${children.inactive} ta nofaol` : "Faol holatdagilar"}
+          />
           <StatTile
             label="O'g'il bolalar"
             value={children.boys}
@@ -142,13 +147,6 @@ export default function BranchReportPage({
             value={children.girls}
             icon={ChildIcon}
             hint={genderKnown > 0 ? `${Math.round((children.girls / genderKnown) * 100)}%` : undefined}
-          />
-          <StatTile
-            label="Karantinda"
-            value={children.quarantined}
-            icon={ChildIcon}
-            tone={children.quarantined > 0 ? "danger" : "default"}
-            hint={children.inactive > 0 ? `${children.inactive} ta nofaol` : undefined}
           />
         </div>
         {genderKnown > 0 && (
