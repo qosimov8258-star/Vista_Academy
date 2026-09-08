@@ -37,17 +37,24 @@ export interface TenantScope {
   organizationId: string;
   branchId: string | null;
   role: TenantUserRole;
+  /** O'qituvchining guruhlarini aniqlash uchun kerak (`resolveTeacherGroupIds`). */
+  userId: string;
 }
 
 export function toTenantScope(user: TenantAuthenticatedUser): TenantScope {
-  return { organizationId: user.organizationId, branchId: user.branchId, role: user.role };
+  return {
+    organizationId: user.organizationId,
+    branchId: user.branchId,
+    role: user.role,
+    userId: user.id,
+  };
 }
 
 /**
- * Requires a branch-level caller (BRANCH_ADMIN, FINANCE or MANAGER) and returns
- * their branch id. NETWORK_ADMIN ("Super Admin") is org-wide and observation-only,
- * so it is rejected here. This is the gate for the money modules — Moliya
- * (billing) and Ish haqi (HR) — which every branch-level role may write.
+ * Asosiy shart: chaqiruvchi filialga biriktirilgan bo'lishi kerak.
+ * NETWORK_ADMIN ("Super Admin") tashkilot bo'ylab faqat kuzatadi, shuning
+ * uchun bu yerda rad etiladi. To'g'ridan-to'g'ri emas, quyidagi uchta
+ * darvoza orqali ishlatiladi.
  */
 export function requireBranchScope(scope: TenantScope): string {
   if (!scope.branchId) {
@@ -57,12 +64,40 @@ export function requireBranchScope(scope: TenantScope): string {
 }
 
 /**
- * Gate for the operational modules — bolalar, guruhlar, xodimlar, davomat, CRM,
- * ovqatlanish, kundalik hisobot, bildirishnomalar. Same rule as
- * `requireBranchScope`, plus FINANCE ("Moliyachi") is read-only here: a
- * moliyachi writes in Moliya and Ish haqi only, and merely observes the rest.
+ * Pul modullari — Moliya (billing) va Ish haqi (HR).
+ * Filial admini, moliyachi va administrator yozadi; o'qituvchi bu yerga
+ * umuman kirmaydi.
+ */
+export function requireMoneyScope(scope: TenantScope): string {
+  const branchId = requireBranchScope(scope);
+  if (scope.role === "TEACHER") {
+    throw new ForbiddenException("O'qituvchi moliya bo'limlarida ishlay olmaydi");
+  }
+  return branchId;
+}
+
+/**
+ * Operatsion modullar — bolalar, guruhlar, xodimlar, CRM, ovqatlanish,
+ * bildirishnomalar, xodimlar davomati. Filial admini va administrator
+ * yozadi; moliyachi va o'qituvchi faqat kuzatadi.
  */
 export function requireOperationalScope(scope: TenantScope): string {
+  const branchId = requireBranchScope(scope);
+  if (scope.role === "FINANCE") {
+    throw new ForbiddenException("Moliyachi faqat Moliya va Ish haqi bo'limlarida o'zgartirish kirita oladi");
+  }
+  if (scope.role === "TEACHER") {
+    throw new ForbiddenException("O'qituvchi faqat o'z guruhlarining davomati va kundalik hisobotini yuritadi");
+  }
+  return branchId;
+}
+
+/**
+ * Tarbiyachilik ishi — bolalar davomati va kundalik hisobot.
+ * O'qituvchi shu yerda ishlaydi (lekin faqat o'z guruhlari doirasida —
+ * buni `assertTeacherOwnsChild` tekshiradi), moliyachi esa yo'q.
+ */
+export function requireTeachingScope(scope: TenantScope): string {
   const branchId = requireBranchScope(scope);
   if (scope.role === "FINANCE") {
     throw new ForbiddenException("Moliyachi faqat Moliya va Ish haqi bo'limlarida o'zgartirish kirita oladi");

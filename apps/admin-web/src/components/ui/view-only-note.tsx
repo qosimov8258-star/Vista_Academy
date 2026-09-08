@@ -9,7 +9,9 @@ export function ViewOnlyNote({ role }: { role?: TenantUserRole }) {
   const message =
     role === "FINANCE"
       ? "Bu bo'limni faqat ko'rmoqdasiz — moliyachi Moliya va Ish haqi bo'limlarida o'zgartirish kiritadi."
-      : "Siz kuzatuvchi sifatida ko'rmoqdasiz — yozish/qo'shish filial darajasidagi foydalanuvchilar uchun.";
+      : role === "TEACHER"
+        ? "Bu bo'limni faqat ko'rmoqdasiz — o'qituvchi o'z guruhlarining davomati va kundalik hisobotini yuritadi."
+        : "Siz kuzatuvchi sifatida ko'rmoqdasiz — yozish/qo'shish filial darajasidagi foydalanuvchilar uchun.";
 
   return (
     <div className="rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface-sunken)] px-3 py-2 text-sm text-[var(--color-text-muted)]">

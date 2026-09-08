@@ -45,6 +45,11 @@ export class TenantUsersService {
   }
 
   findAll(caller: TenantAuthenticatedUser) {
+    // Loginlar ro'yxati boshqaruv ishi. UI da o'qituvchiga bu bo'lim
+    // ko'rinmaydi, lekin so'rov to'g'ridan-to'g'ri ham yuborilishi mumkin.
+    if (caller.role !== "NETWORK_ADMIN" && caller.role !== "BRANCH_ADMIN") {
+      throw new ForbiddenException("Sizda foydalanuvchilar ro'yxatini ko'rish huquqi yo'q");
+    }
     const where: Prisma.TenantUserWhereInput = {
       organizationId: caller.organizationId,
       ...(caller.role === "NETWORK_ADMIN" ? {} : { branchId: caller.branchId }),

@@ -2,6 +2,7 @@ import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/commo
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantScope, requireOperationalScope } from "../iam/tenant-auth.types";
+import { assertTeacherOwnsChild, resolveTeacherGroupIds, teacherChildWhere } from "../iam/teacher-scope";
 import { CreateChildDto } from "./dto/create-child.dto";
 import { ChildQueryDto } from "./dto/child-query.dto";
 import { createChildWithGuardian, withPublicIdRetry } from "./child-creation";
@@ -51,13 +52,14 @@ export class ChildrenService {
   }
 
   async findAll(scope: TenantScope, query: ChildQueryDto) {
-    const where: Prisma.ChildWhereInput = {
+    const teacherGroupIds = await resolveTeacherGroupIds(this.prisma, scope);
+    const where: Prisma.ChildWhereInput = teacherChildWhere({
       organizationId: scope.organizationId,
       branchId: scope.branchId ?? query.branchId,
       ...(query.groupId ? { groupId: query.groupId } : {}),
       ...(query.status ? { status: query.status } : {}),
       ...(query.search ? { OR: searchFilters(query.search) } : {}),
-    };
+    }, teacherGroupIds);
 
     const [items, total] = await this.prisma.$transaction([
       this.prisma.child.findMany({
@@ -84,12 +86,21 @@ export class ChildrenService {
     if (scope.branchId && child.branchId !== scope.branchId) {
       throw new ForbiddenException("Bu bolaga kirish huquqingiz yo'q");
     }
+    await assertTeacherOwnsChild(this.prisma, scope, child);
     return child;
   }
 
-  countActive(scope: TenantScope) {
+  async countActive(scope: TenantScope) {
+    const teacherGroupIds = await resolveTeacherGroupIds(this.prisma, scope);
     return this.prisma.child.count({
-      where: { organizationId: scope.organizationId, branchId: scope.branchId ?? undefined, status: "ACTIVE" },
+      where: teacherChildWhere(
+        {
+          organizationId: scope.organizationId,
+          branchId: scope.branchId ?? undefined,
+          status: "ACTIVE",
+        },
+        teacherGroupIds,
+      ),
     });
   }
 

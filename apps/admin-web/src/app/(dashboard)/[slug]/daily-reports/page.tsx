@@ -14,7 +14,7 @@ import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { EditDailyReportModal } from "@/features/daily-reports/edit-daily-report-modal";
-import { canWriteOperational } from "@/lib/permissions";
+import { canWriteTeaching } from "@/lib/permissions";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 
@@ -35,7 +35,7 @@ export default function DailyReportsPage({ params }: { params: Promise<{ slug: s
   const [date, setDate] = useState("");
   const [editChild, setEditChild] = useState<{ childId: string; fullName: string } | null>(null);
   const { user } = useAuth();
-  const canWrite = canWriteOperational(user?.role);
+  const canWrite = canWriteTeaching(user?.role);
 
   useEffect(() => {
     setDate((current) => current || todayDateString());
@@ -113,6 +113,8 @@ export default function DailyReportsPage({ params }: { params: Promise<{ slug: s
                   <Link href={`/${slug}/children/${c.childId}`} className="text-sm font-medium text-[var(--color-primary)] hover:underline">
                     {c.fullName}
                   </Link>
+                  {/* Bir necha guruhli tarbiyachi uchun guruh nomi */}
+                  {c.groupName && <p className="text-xs text-[var(--color-text-muted)]">{c.groupName}</p>}
                   {c.report && (
                     <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
                       {c.report.eatingQuality && `Ovqat: ${EATING_LABEL[c.report.eatingQuality]}`}

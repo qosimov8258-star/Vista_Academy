@@ -5,14 +5,14 @@ import Link from "next/link";
 import type { ComponentType, SVGProps } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { DashboardSummary, Organization } from "@/lib/types";
+import type { DashboardSummary, Group, Organization } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { LoadingState, ErrorState } from "@/components/ui/states";
 import { formatDate, formatMoney } from "@/lib/format";
-import { canWriteOperational } from "@/lib/permissions";
+import { canWriteOperational, canWriteTeaching, isTeacher } from "@/lib/permissions";
 import {
   BellIcon,
   BriefcaseIcon,
@@ -198,7 +198,9 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
   const { slug } = use(params);
   const { user } = useAuth();
   const canWrite = canWriteOperational(user?.role);
+  const canTeach = canWriteTeaching(user?.role);
   const isNetworkAdmin = user?.role === "NETWORK_ADMIN";
+  const teacher = isTeacher(user?.role);
 
   const orgQuery = useQuery({
     queryKey: ["org", slug],
@@ -208,6 +210,13 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
   const summaryQuery = useQuery({
     queryKey: ["dashboard-summary", slug],
     queryFn: () => api.get<DashboardSummary>("/app/dashboard/summary"),
+  });
+
+  // O'qituvchida bu so'rov faqat unga biriktirilgan guruhlarni qaytaradi
+  const groupsQuery = useQuery({
+    queryKey: ["groups", slug],
+    queryFn: () => api.get<Group[]>("/app/groups"),
+    enabled: teacher,
   });
 
   if (orgQuery.isLoading) return <LoadingState />;
@@ -234,7 +243,11 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
             {user?.branchName ?? org.name}
           </h1>
           <p className="text-[13px] text-[var(--color-text-muted)]">
-            {isNetworkAdmin ? `/${org.slug}` : org.name}
+            {isNetworkAdmin
+              ? `/${org.slug}`
+              : teacher
+                ? `${org.name} · ${groupsQuery.data?.map((g) => g.name).join(", ") || "guruh biriktirilmagan"}`
+                : org.name}
           </p>
         </div>
         <p className="text-[13px] text-[var(--color-text-muted)]">Bugun · {todayLabel()}</p>
@@ -271,10 +284,13 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
 
           {notStartedYet ? (
             <Card className="p-5">
-              <p className="text-[15px] font-semibold text-[var(--color-text)]">Boshlash uchun</p>
+              <p className="text-[15px] font-semibold text-[var(--color-text)]">
+                {teacher ? "Hozircha ish yo'q" : "Boshlash uchun"}
+              </p>
               <p className="mt-1 text-[13px] text-[var(--color-text-muted)]">
-                Bu filialda hali bola ro&apos;yxatga olinmagan. Guruh ochib, bolalarni qo&apos;shsangiz,
-                davomat va kundalik hisobot shu yerda ko&apos;rina boshlaydi.
+                {teacher
+                  ? "Guruhlaringizda hali bola yo'q. Filial admini bolalarni ro'yxatga olgach, davomat va kundalik hisobot shu yerda paydo bo'ladi."
+                  : "Bu filialda hali bola ro'yxatga olinmagan. Guruh ochib, bolalarni qo'shsangiz, davomat va kundalik hisobot shu yerda ko'rina boshlaydi."}
               </p>
               {canWrite && (
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -307,7 +323,7 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
                     { label: "Kelmadi", value: summary?.todayAttendance.absent ?? 0, tone: "danger" },
                   ]}
                   href={isNetworkAdmin ? undefined : `/${slug}/attendance`}
-                  actionLabel={canWrite ? "Davomatni belgilash" : "Ko'rish"}
+                  actionLabel={canTeach ? "Davomatni belgilash" : "Ko'rish"}
                 />
                 <TodayCard
                   title="Kundalik hisobot"
@@ -315,24 +331,27 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
                   done={summary?.todayDailyReportsFilled ?? 0}
                   total={children}
                   href={isNetworkAdmin ? undefined : `/${slug}/daily-reports`}
-                  actionLabel={canWrite ? "To'ldirish" : "Ko'rish"}
+                  actionLabel={canTeach ? "To'ldirish" : "Ko'rish"}
                 />
-                <TodayCard
-                  title="Xodimlar davomati"
-                  icon={CalendarIcon}
-                  done={staffMarked}
-                  total={employees}
-                  breakdown={[
-                    { label: "Keldi", value: summary?.todayStaffAttendance.present ?? 0, tone: "success" },
-                    { label: "Kelmadi", value: summary?.todayStaffAttendance.absent ?? 0, tone: "danger" },
-                  ]}
-                  href={isNetworkAdmin ? undefined : `/${slug}/staff-attendance`}
-                  actionLabel={canWrite ? "Davomatni belgilash" : "Ko'rish"}
-                />
+                {!teacher && (
+                  <TodayCard
+                    title="Xodimlar davomati"
+                    icon={CalendarIcon}
+                    done={staffMarked}
+                    total={employees}
+                    breakdown={[
+                      { label: "Keldi", value: summary?.todayStaffAttendance.present ?? 0, tone: "success" },
+                      { label: "Kelmadi", value: summary?.todayStaffAttendance.absent ?? 0, tone: "danger" },
+                    ]}
+                    href={isNetworkAdmin ? undefined : `/${slug}/staff-attendance`}
+                    actionLabel={canWrite ? "Davomatni belgilash" : "Ko'rish"}
+                  />
+                )}
               </div>
             </section>
           )}
 
+          {!teacher && (
           <section>
             <SectionTitle>Moliya</SectionTitle>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -366,8 +385,9 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
               </Card>
             </div>
           </section>
+          )}
 
-          {!isNetworkAdmin && (
+          {!isNetworkAdmin && !teacher && (
             <section>
               <SectionTitle>Filial raqamlari</SectionTitle>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
@@ -397,7 +417,41 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
             </section>
           )}
 
-          {!isNetworkAdmin && (
+          {teacher && (
+            <section>
+              <SectionTitle>Mening guruhlarim</SectionTitle>
+              {groupsQuery.data && groupsQuery.data.length > 0 ? (
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {groupsQuery.data.map((group) => (
+                    <Link
+                      key={group.id}
+                      href={`/${slug}/attendance`}
+                      className="group flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3.5 shadow-[var(--shadow-card)] transition-colors hover:bg-[var(--color-surface-hover)]"
+                    >
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
+                        <GroupIcon className="h-5 w-5" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[15px] font-medium text-[var(--color-text)]">{group.name}</p>
+                        <p className="text-[12px] text-[var(--color-text-muted)]">
+                          {group._count?.children ?? 0} bola
+                        </p>
+                      </div>
+                      <ChevronRightIcon className="h-4 w-4 shrink-0 text-[var(--color-text-muted)]/50 transition-transform group-hover:translate-x-0.5" />
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <Card className="p-4">
+                  <p className="text-[13px] text-[var(--color-text-muted)]">
+                    Sizga hali guruh biriktirilmagan. Filial admini guruh biriktirgach, shu yerda ko&apos;rinadi.
+                  </p>
+                </Card>
+              )}
+            </section>
+          )}
+
+          {!isNetworkAdmin && !teacher && (
             <section>
               <SectionTitle>Bo&apos;limlar</SectionTitle>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">

@@ -104,6 +104,7 @@ enum TenantUserRole {
   BRANCH_ADMIN // "Filial admini" — bitta filial, to'liq huquq
   FINANCE // "Moliyachi" — bitta filial, faqat Moliya va Ish haqida yozadi
   MANAGER // "Administrator" — bitta filial, kundalik ish
+  TEACHER // "O'qituvchi" — faqat o'ziga biriktirilgan guruhlar
 }
 
 model TenantUser {
@@ -126,6 +127,7 @@ model TenantUser {
   leadActivities    LeadActivity[]       @relation("LeadActivityCreatedBy")
   medicationLogs    MedicationLog[]
   sentNotifications NotificationLog[]    @relation("NotificationSentBy")
+  employee          Employee?
 
   @@unique([organizationId, email])
   @@index([branchId])
@@ -207,8 +209,9 @@ model Group {
   createdAt DateTime    @default(now()) @map("created_at")
   updatedAt DateTime    @updatedAt @map("updated_at")
 
-  branch   Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  branch   Branch         @relation(fields: [branchId], references: [id], onDelete: Cascade)
   children Child[]
+  teachers GroupTeacher[]
 
   @@unique([branchId, name])
   @@index([branchId])
@@ -341,6 +344,23 @@ model DevelopmentAssessment {
   @@map("development_assessments")
 }
 
+/// Guruh va tarbiyachi bog'lanishi. Ko'p-ko'pga: bitta guruhda tarbiyachi
+/// va uning yordamchisi bo'lishi, bitta tarbiyachi esa bir necha guruhga
+/// biriktirilishi mumkin. O'qituvchining tizimda nimani ko'rishi aynan shu
+/// jadval orqali aniqlanadi.
+model GroupTeacher {
+  groupId    String   @map("group_id")
+  employeeId String   @map("employee_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  group    Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, employeeId])
+  @@index([employeeId])
+  @@map("group_teachers")
+}
+
 model Employee {
   id             String   @id @default(uuid())
   organizationId String   @map("organization_id")
@@ -351,8 +371,14 @@ model Employee {
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
+  // Xodimning kabineti (login). Hamma xodimga ham kerak emas — oshpaz yoki
+  // farrosh tizimga kirmaydi, shuning uchun bog'lanish ixtiyoriy.
+  tenantUserId String? @unique @map("tenant_user_id")
+
   organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   branch         Branch               @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  tenantUser     TenantUser?          @relation(fields: [tenantUserId], references: [id], onDelete: SetNull)
+  teachingGroups GroupTeacher[]
   attendances    EmployeeAttendance[]
   salaryScheme   SalaryScheme?
   shifts         Shift[]

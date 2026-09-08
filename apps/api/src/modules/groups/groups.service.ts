@@ -2,6 +2,7 @@ import { ConflictException, ForbiddenException, Injectable, NotFoundException } 
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantScope, requireOperationalScope } from "../iam/tenant-auth.types";
+import { resolveTeacherGroupIds } from "../iam/teacher-scope";
 import { CreateGroupDto } from "./dto/create-group.dto";
 import { GroupQueryDto } from "./dto/group-query.dto";
 
@@ -23,14 +24,20 @@ export class GroupsService {
     }
   }
 
-  findAll(scope: TenantScope, query: GroupQueryDto) {
+  async findAll(scope: TenantScope, query: GroupQueryDto) {
+    const teacherGroupIds = await resolveTeacherGroupIds(this.prisma, scope);
     const where: Prisma.GroupWhereInput = {
       branch: { organizationId: scope.organizationId },
       branchId: scope.branchId ?? query.branchId,
+      ...(teacherGroupIds === null ? {} : { id: { in: teacherGroupIds } }),
     };
     return this.prisma.group.findMany({
       where,
-      include: { _count: { select: { children: true } } },
+      include: {
+        _count: { select: { children: true } },
+        // Guruh kartochkasida kim tarbiyachi ekani ko'rinib tursin
+        teachers: { include: { employee: { select: { id: true, fullName: true, position: true } } } },
+      },
       orderBy: { createdAt: "desc" },
     });
   }
@@ -46,15 +53,21 @@ export class GroupsService {
     if (scope.branchId && group.branchId !== scope.branchId) {
       throw new ForbiddenException("Bu guruhga kirish huquqingiz yo'q");
     }
+    const teacherGroupIds = await resolveTeacherGroupIds(this.prisma, scope);
+    if (teacherGroupIds !== null && !teacherGroupIds.includes(group.id)) {
+      throw new ForbiddenException("Bu guruh sizga biriktirilmagan");
+    }
     return group;
   }
 
-  countActive(scope: TenantScope) {
+  async countActive(scope: TenantScope) {
+    const teacherGroupIds = await resolveTeacherGroupIds(this.prisma, scope);
     return this.prisma.group.count({
       where: {
         branch: { organizationId: scope.organizationId },
         branchId: scope.branchId ?? undefined,
         status: "ACTIVE",
+        ...(teacherGroupIds === null ? {} : { id: { in: teacherGroupIds } }),
       },
     });
   }

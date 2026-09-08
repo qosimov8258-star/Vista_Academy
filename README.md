@@ -8,7 +8,7 @@ Ko'p-tenantli (multi-tenant) bog'chalar tarmog'i uchun ERP tizimi.
 apps/
   api/            NestJS backend (Prisma + PostgreSQL)
   platform-web/   Platforma boshqaruvi (Super Admin) — tashkilotlarni yaratish/kuzatish
-  admin-web/      Tashkilot/filial admin paneli (Super Admin, Filial admini, Moliyachi, Administrator)
+  admin-web/      Tashkilot/filial paneli (Super Admin, Filial admini, Moliyachi, Administrator, O'qituvchi)
 ```
 
 Uchta ilova bitta npm workspaces monorepo ichida (`apps/*`).
@@ -77,20 +77,26 @@ npm run dev:admin    # http://localhost:3001 — tashkilot/filial admin paneli
 
 - **Rol ierarxiyasi va huquqlar** (enum qiymatlari qavs ichida — ekrandagi nom bilan bir xil emas):
 
-  | Rol | Qamrov | Moliya + Ish haqi | Qolgan bo'limlar | Foydalanuvchi yaratadi |
-  |---|---|---|---|---|
-  | Super Admin (`NETWORK_ADMIN`) | butun tarmoq | ko'radi | ko'radi | filial admini, moliyachi |
-  | Filial admini (`BRANCH_ADMIN`) | bitta filial | yozadi | yozadi | administrator |
-  | Moliyachi (`FINANCE`) | bitta filial | **yozadi** | ko'radi | — |
-  | Administrator (`MANAGER`) | bitta filial | yozadi | yozadi | — |
+  | Rol | Qamrov | Moliya + Ish haqi | Davomat + kundalik hisobot | Qolgan bo'limlar | Kim yaratadi |
+  |---|---|---|---|---|---|
+  | Super Admin (`NETWORK_ADMIN`) | butun tarmoq | ko'radi | ko'radi | ko'radi | — |
+  | Filial admini (`BRANCH_ADMIN`) | bitta filial | yozadi | yozadi | yozadi | Super Admin |
+  | Moliyachi (`FINANCE`) | bitta filial | **yozadi** | ko'radi | ko'radi | Super Admin |
+  | Administrator (`MANAGER`) | bitta filial | yozadi | yozadi | yozadi | Filial admini |
+  | O'qituvchi (`TEACHER`) | **o'z guruhlari** | yo'q | **yozadi** | ko'rmaydi | Filial admini |
 
-  Super Admin har bir filial uchun alohida filial admini va moliyachi tayinlaydi; ularning har biri faqat
-  o'z filialini ko'radi. Yaratiladigan rol hech qachon so'rovdan olinmaydi — u `resolveTarget()` da
-  chaqiruvchining roli bilan cheklanadi.
-- **Yozish huquqi ikki darvozadan o'tadi** (`apps/api/src/modules/iam/tenant-auth.types.ts`):
-  `requireBranchScope()` — Moliya va Ish haqi uchun (filialdagi barcha rollar),
-  `requireOperationalScope()` — qolgan modullar uchun (moliyachi bu yerda faqat kuzatadi).
+  Super Admin har bir filial uchun filial admini va moliyachi tayinlaydi. O'qituvchi esa Xodimlar
+  bo'limidan yaratiladi: xodim qo'shishda "Kabinet ochish" belgilansa, unga login beriladi va guruhlar
+  biriktiriladi. Yaratiladigan rol hech qachon so'rovdan olinmaydi — u chaqiruvchining roli bilan
+  cheklanadi (`resolveTarget()`, `employees.service.create()`).
+- **Yozish huquqi uch darvozadan o'tadi** (`apps/api/src/modules/iam/tenant-auth.types.ts`):
+  `requireMoneyScope()` — Moliya va Ish haqi, `requireTeachingScope()` — davomat va kundalik hisobot,
+  `requireOperationalScope()` — qolgan modullar.
   `apps/admin-web/src/lib/permissions.ts` shu qoidani UI tomonda takrorlaydi — biri o'zgarsa ikkinchisi ham.
+- **O'qituvchining guruh chegarasi** `apps/api/src/modules/iam/teacher-scope.ts` da: bog'lanish zanjiri
+  `TenantUser` → `Employee.tenantUserId` → `GroupTeacher`. `resolveTeacherGroupIds()` o'qituvchi bo'lmasa
+  `null` qaytaradi (cheklov yo'q), o'qituvchi bo'lsa guruh id lari — login xodim kartochkasiga
+  ulanmagan bo'lsa bo'sh ro'yxat, ya'ni hech narsa ochilmaydi.
 - **URL sxemasi**: `/{tashkilot-slug}` — tashkilot, `/{tashkilot-slug}/{filial-slug}` — filial darajasidagi ko'rinish (Super Admin uchun haqiqiy filial-skoup sahifa, filialdagi rollar uchun kosmetik/bookmark havola).
 - **Migratsiyalar qo'lda yoziladi** (`prisma migrate dev` ishlatilmaydi) — sabab: shadow DB ruxsati muammosi. Yangi migratsiya qo'shsangiz, oldingi migratsiya fayllarining formatiga taqlid qiling.
 - **`apps/admin-web/src/proxy.ts`** — Next.js middleware o'rnini bosuvchi maxsus routing fayli (bu loyihadagi Next.js versiyasida `middleware.ts` emas, `proxy.ts` ishlatiladi).

@@ -62,6 +62,7 @@ export default function EmployeesPage({ params }: { params: Promise<{ slug: stri
                 <tr>
                   <th className="px-5 py-3 font-medium">To'liq ism</th>
                   <th className="px-5 py-3 font-medium">Lavozim</th>
+                  <th className="px-5 py-3 font-medium">Kabinet va guruhlar</th>
                   {!forcedBranchId && <th className="px-5 py-3 font-medium">Filial</th>}
                   <th className="px-5 py-3 font-medium">Holat</th>
                   <th className="px-5 py-3 font-medium">Maosh sxemasi</th>
@@ -72,6 +73,26 @@ export default function EmployeesPage({ params }: { params: Promise<{ slug: stri
                   <tr key={employee.id} className="hover:bg-gray-50">
                     <td className="px-5 py-3 font-medium text-[var(--color-text)]">{employee.fullName}</td>
                     <td className="px-5 py-3 text-[var(--color-text-muted)]">{employee.position}</td>
+                    <td className="px-5 py-3">
+                      {employee.tenantUser ? (
+                        <div className="space-y-1">
+                          <p className="text-[13px] text-[var(--color-text)]">{employee.tenantUser.email}</p>
+                          <div className="flex flex-wrap gap-1">
+                            {employee.teachingGroups?.length ? (
+                              employee.teachingGroups.map((link) => (
+                                <Badge key={link.groupId} tone="primary">
+                                  {link.group?.name ?? "Guruh"}
+                                </Badge>
+                              ))
+                            ) : (
+                              <Badge tone="warning">Guruh biriktirilmagan</Badge>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-[13px] text-[var(--color-text-muted)]">Kabinet yo&apos;q</span>
+                      )}
+                    </td>
                     {!forcedBranchId && (
                       <td className="px-5 py-3 text-[var(--color-text-muted)]">{branchName(employee.branchId)}</td>
                     )}
