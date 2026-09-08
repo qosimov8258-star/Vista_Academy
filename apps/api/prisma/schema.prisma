@@ -115,6 +115,13 @@ model TenantUser {
   passwordHash   String         @map("password_hash")
   fullName       String         @map("full_name")
   role           TenantUserRole @default(NETWORK_ADMIN)
+  // Profil rasmi bazada saqlanadi: fayl xotirasi sozlanmagan va avatar
+  // kichik (256x256 gacha siqiladi), shuning uchun alohida saqlash
+  // xizmatiga bog'lanishdan ko'ra shu soddaroq va deploy'dan keyin
+  // yo'qolmaydi. `avatarUpdatedAt` brauzer keshini yangilash uchun.
+  avatar          Bytes?    @map("avatar")
+  avatarMimeType  String?   @map("avatar_mime_type")
+  avatarUpdatedAt DateTime? @map("avatar_updated_at")
   isActive       Boolean        @default(true) @map("is_active")
   createdAt      DateTime       @default(now()) @map("created_at")
   updatedAt      DateTime       @updatedAt @map("updated_at")

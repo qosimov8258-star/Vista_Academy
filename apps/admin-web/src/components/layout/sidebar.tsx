@@ -7,6 +7,7 @@ import type { ComponentType, SVGProps } from "react";
 import { useAuth } from "@/lib/use-auth";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { ROLE_LABEL, canManageUsers, isTeacher } from "@/lib/permissions";
+import { Avatar } from "@/components/ui/avatar";
 import {
   ArrowLeftIcon,
   BellIcon,
@@ -18,6 +19,7 @@ import {
   GroupIcon,
   HomeIcon,
   KeyIcon,
+  SettingsIcon,
   MealIcon,
   MoneyIcon,
   NoteIcon,
@@ -59,7 +61,7 @@ export function Sidebar({ slug }: { slug: string }) {
     // foydalanuvchilar bo'limi uning asosiy ro'yxatida turishi shart. Filial
     // ichiga kirilganda bu havola ko'rinmaydi — u yerda filialning kundalik
     // ishi turadi, foydalanuvchi boshqaruvi esa tarmoq darajasidagi ish.
-    { href: `/${slug}/users`, label: "Foydalanuvchilar", icon: KeyIcon, show: showUsersNav },
+    { href: `/${slug}/users`, label: "Xodimlar", icon: KeyIcon, show: showUsersNav },
   ];
 
   // O'qituvchi kabineti: faqat o'z guruhlariga tegishli uchta bo'lim.
@@ -91,19 +93,29 @@ export function Sidebar({ slug }: { slug: string }) {
     { href: `${base}/notifications`, label: "Bildirishnomalar", icon: BellIcon, show: true },
     // Branch/user management stay a network-wide (root-level) concern, never
     // duplicated inside a single branch's panel.
-    { href: `/${slug}/users`, label: "Foydalanuvchilar", icon: KeyIcon, show: showUsersNav && !inBranchContext },
+    { href: `/${slug}/users`, label: "Administratorlar", icon: KeyIcon, show: showUsersNav && !inBranchContext },
   ];
+
+  // Sozlamalar har bir rolda bo'ladi: bu foydalanuvchining o'z hisobi,
+  // qaysi bo'limlarga kirishidan qat'i nazar.
+  const settingsNavItem: NavItem = {
+    href: `/${slug}/settings`,
+    label: "Sozlamalar",
+    icon: SettingsIcon,
+    show: true,
+    group: "Hisobim",
+  };
 
   const navItems = (
     teacher ? teacherNavItems : isNetworkAdmin && !inBranchContext ? rootNavItems : operationalNavItems
-  ).filter((item) => item.show);
+  )
+    .concat(settingsNavItem)
+    .filter((item) => item.show);
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)] md:flex">
       <div className="flex items-center gap-2.5 border-b border-[var(--color-border)] px-5 py-4">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-primary)] text-sm font-bold text-white">
-          B
-        </div>
+        <Avatar user={user} size={36} />
         <div className="min-w-0">
           <p className="text-sm font-semibold leading-tight text-[var(--color-text)]">
             {user ? ROLE_LABEL[user.role] : "Admin"}

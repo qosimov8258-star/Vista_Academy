@@ -37,7 +37,12 @@ export default function UsersPage({ params }: { params: Promise<{ slug: string }
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-[var(--color-text)]">Foydalanuvchilar</h1>
+          {/* Sarlavha yon paneldagi havola nomi bilan bir xil bo'lishi kerak:
+              Super Adminda "Xodimlar", filial adminida esa u yerda allaqachon
+              xodim kartochkalari bo'limi borligi uchun "Administratorlar". */}
+          <h1 className="text-xl font-semibold text-[var(--color-text)]">
+            {isSuperAdmin ? "Xodimlar" : "Administratorlar"}
+          </h1>
           <p className="text-sm text-[var(--color-text-muted)]">
             {isSuperAdmin
               ? "Har bir filialning admini, moliyachisi va administratorlari"

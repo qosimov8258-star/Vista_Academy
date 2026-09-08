@@ -11,6 +11,8 @@ export interface TenantAuthenticatedUser {
   email: string;
   fullName: string;
   role: TenantUserRole;
+  /** Profil rasmi bor bo'lsa — oxirgi yangilangan vaqti (kesh uchun). */
+  avatarUpdatedAt: string | null;
 }
 
 export type OrganizationStatus = "ACTIVE" | "SUSPENDED";

@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
+import type { NestExpressApplication } from "@nestjs/platform-express";
 import { ValidationPipe } from "@nestjs/common";
 import cookieParser from "cookie-parser";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
@@ -8,7 +9,12 @@ import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
 import { ResponseInterceptor } from "./common/interceptors/response.interceptor";
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Profil rasmi so'rov tanasida base64 ko'rinishida keladi. Express'ning
+  // standart 100kb chegarasi 256x256 avatar uchun ham tor bo'lib qolishi
+  // mumkin; server tomonda hajm ProfileService'da alohida tekshiriladi.
+  app.useBodyParser("json", { limit: "1mb" });
 
   const corsOrigin = process.env.CORS_ORIGIN ?? "http://localhost:3000";
   app.enableCors({
