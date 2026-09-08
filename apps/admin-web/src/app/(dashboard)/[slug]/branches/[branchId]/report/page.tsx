@@ -8,7 +8,6 @@ import { api } from "@/lib/api";
 import type { BranchReport, InvoiceStatus } from "@/lib/types";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ProgressBar } from "@/components/ui/progress-bar";
 import { LoadingState, ErrorState } from "@/components/ui/states";
 import { formatDate, formatMoney } from "@/lib/format";
 import {
@@ -120,6 +119,70 @@ function StatTile({
   );
 }
 
+/**
+ * Guruhlar bir-biridan rang bilan ajraladi. Rang guruh ro'yxatdagi o'rniga
+ * qarab beriladi — ma'no tashimaydi, faqat bir xil kulrang qatorlar o'rniga
+ * har birini alohida ko'rinadigan qiladi.
+ */
+const GROUP_PALETTE = [
+  { ring: "stroke-emerald-500", chip: "bg-emerald-50 text-emerald-700", dot: "bg-emerald-500" },
+  { ring: "stroke-sky-500", chip: "bg-sky-50 text-sky-700", dot: "bg-sky-500" },
+  { ring: "stroke-violet-500", chip: "bg-violet-50 text-violet-700", dot: "bg-violet-500" },
+  { ring: "stroke-amber-500", chip: "bg-amber-50 text-amber-700", dot: "bg-amber-500" },
+  { ring: "stroke-rose-400", chip: "bg-rose-50 text-rose-600", dot: "bg-rose-400" },
+  { ring: "stroke-teal-500", chip: "bg-teal-50 text-teal-700", dot: "bg-teal-500" },
+];
+
+/**
+ * To'lganlik halqasi. Yupqa chiziqdan farqi — o'rtada raqam turadi va
+ * nisbat bir qarashda ko'rinadi, o'qishga hojat qolmaydi.
+ */
+function CapacityRing({
+  value,
+  total,
+  ringClass,
+}: {
+  value: number;
+  total: number;
+  ringClass: string;
+}) {
+  const radius = 26;
+  const circumference = 2 * Math.PI * radius;
+  const ratio = total > 0 ? Math.min(1, value / total) : 0;
+
+  return (
+    <div className="relative h-[68px] w-[68px] shrink-0">
+      <svg viewBox="0 0 64 64" className="h-full w-full -rotate-90">
+        <circle
+          cx="32"
+          cy="32"
+          r={radius}
+          fill="none"
+          strokeWidth="6"
+          className="stroke-[var(--color-surface-sunken)]"
+        />
+        <circle
+          cx="32"
+          cy="32"
+          r={radius}
+          fill="none"
+          strokeWidth="6"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference * (1 - ratio)}
+          className={`${ringClass} transition-[stroke-dashoffset] duration-700 ease-[var(--ease-out)]`}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-[17px] font-semibold leading-none tabular-nums text-[var(--color-text)]">
+          {value}
+        </span>
+        <span className="mt-0.5 text-[10px] leading-none text-[var(--color-text-muted)]">/ {total}</span>
+      </div>
+    </div>
+  );
+}
+
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
     <h2 className="mb-2.5 px-0.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
@@ -216,50 +279,117 @@ export default function BranchReportPage({
 
       <section>
         <SectionTitle>Guruhlar</SectionTitle>
-        <Card className="overflow-hidden rounded-[20px]">
-          <CardHeader className="flex items-center justify-between">
-            <CardTitle>
-              {groups.active} ta faol guruh · {groups.capacity} o&apos;rin
-            </CardTitle>
-            <span className="text-[13px] tabular-nums text-[var(--color-text-muted)]">
+
+        {/* Umumiy to'lganlik: guruhlar bo'yicha bo'lingan yagona chiziq */}
+        <div className="mb-3 rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface)] p-[18px] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <p className="text-[15px] font-semibold text-[var(--color-text)]">
+              {groups.active} ta faol guruh
+              <span className="ml-2 text-[13px] font-normal text-[var(--color-text-muted)]">
+                {groups.capacity} o&apos;rin
+              </span>
+            </p>
+            <p className="text-[13px] tabular-nums text-[var(--color-text-muted)]">
               {children.active} / {groups.capacity} to&apos;lgan
-            </span>
-          </CardHeader>
-          <CardBody className="p-0">
-            {groups.items.length === 0 ? (
-              <p className="px-5 py-8 text-center text-[13px] text-[var(--color-text-muted)]">
-                Bu filialda hali guruh ochilmagan
-              </p>
-            ) : (
-              <ul className="divide-y divide-[var(--color-separator)]">
-                {groups.items.map((group) => (
-                  <li key={group.id} className="px-5 py-3.5">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-[14px] font-medium text-[var(--color-text)]">{group.name}</p>
-                        <p className="truncate text-[12px] text-[var(--color-text-muted)]">
-                          {group.teachers.length > 0 ? group.teachers.join(", ") : "Tarbiyachi biriktirilmagan"}
-                        </p>
+              {groups.capacity > 0 && (
+                <span className="ml-2 font-medium text-[var(--color-text)]">
+                  {Math.round((children.active / groups.capacity) * 100)}%
+                </span>
+              )}
+            </p>
+          </div>
+          <div className="mt-3 flex h-2 w-full gap-0.5 overflow-hidden rounded-full bg-[var(--color-surface-sunken)]">
+            {groups.items.map((group, index) => {
+              const share = groups.capacity > 0 ? (group.childrenCount / groups.capacity) * 100 : 0;
+              if (share === 0) return null;
+              return (
+                <span
+                  key={group.id}
+                  className={`h-full ${GROUP_PALETTE[index % GROUP_PALETTE.length].dot}`}
+                  style={{ width: `${share}%` }}
+                  title={`${group.name}: ${group.childrenCount}`}
+                />
+              );
+            })}
+          </div>
+        </div>
+
+        {groups.items.length === 0 ? (
+          <div className="rounded-[20px] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-12 text-center text-[13px] text-[var(--color-text-muted)]">
+            Bu filialda hali guruh ochilmagan
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {groups.items.map((group, index) => {
+              const palette = GROUP_PALETTE[index % GROUP_PALETTE.length];
+              const free = Math.max(0, group.capacity - group.childrenCount);
+              const isFull = free === 0 && group.capacity > 0;
+              const isEmpty = group.childrenCount === 0;
+
+              return (
+                <div
+                  key={group.id}
+                  className={`rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface)] p-[18px] shadow-[0_1px_2px_rgba(16,24,40,0.05)] ${
+                    group.status === "ACTIVE" ? "" : "opacity-60"
+                  }`}
+                >
+                  <div className="flex items-start gap-4">
+                    <CapacityRing value={group.childrenCount} total={group.capacity} ringClass={palette.ring} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="min-w-0 text-[15px] font-semibold leading-tight text-[var(--color-text)]">
+                          {group.name}
+                        </h3>
+                        {group.status !== "ACTIVE" && (
+                          <span className="shrink-0 rounded-full bg-[var(--color-surface-sunken)] px-2 py-0.5 text-[11px] text-[var(--color-text-muted)]">
+                            Nofaol
+                          </span>
+                        )}
                       </div>
-                      <div className="flex shrink-0 items-center gap-2">
-                        {group.status !== "ACTIVE" && <Badge tone="neutral">Nofaol</Badge>}
-                        <span className="text-[13px] tabular-nums text-[var(--color-text)]">
-                          {group.childrenCount} / {group.capacity}
-                        </span>
+
+                      {/* Tarbiyachi — bosh harflari bilan, biriktirilmagani ko'zga tashlanadi */}
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {group.teachers.length > 0 ? (
+                          group.teachers.map((teacher) => (
+                            <span
+                              key={teacher}
+                              className={`inline-flex items-center gap-1.5 rounded-full py-1 pl-1 pr-2.5 text-[12px] font-medium ${palette.chip}`}
+                            >
+                              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/70 text-[10px] font-semibold">
+                                {teacher
+                                  .split(/\s+/)
+                                  .slice(0, 2)
+                                  .map((part) => part[0]?.toUpperCase() ?? "")
+                                  .join("")}
+                              </span>
+                              {teacher}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-warning-bg)] px-2.5 py-1 text-[12px] font-medium text-[var(--color-warning)]">
+                            Tarbiyachi biriktirilmagan
+                          </span>
+                        )}
                       </div>
                     </div>
-                    <ProgressBar
-                      value={group.childrenCount}
-                      total={group.capacity}
-                      tone={group.childrenCount >= group.capacity ? "warning" : "primary"}
-                      className="mt-2"
-                    />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardBody>
-        </Card>
+                  </div>
+
+                  <p className="mt-3.5 border-t border-[var(--color-separator)] pt-3 text-[12px] text-[var(--color-text-muted)]">
+                    {isFull ? (
+                      <span className="font-medium text-[var(--color-text)]">Guruh to&apos;lgan</span>
+                    ) : isEmpty ? (
+                      <>Hali bola qo&apos;shilmagan — {group.capacity} o&apos;rin bo&apos;sh</>
+                    ) : (
+                      <>
+                        <span className="font-medium text-[var(--color-text)]">{free}</span> o&apos;rin bo&apos;sh
+                      </>
+                    )}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       <section>
