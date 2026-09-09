@@ -53,3 +53,41 @@
     animation: none;
   }
 }
+
+/* Salomlashish quyoshi: nurlari sekin aylanadi, o'zi nafas olgandek */
+@keyframes pSpin {
+  to { transform: rotate(360deg); }
+}
+.sunRays {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pSpin 26s linear infinite;
+}
+
+@keyframes pBeam {
+  from { transform: scale(1); opacity: 0.5; }
+  to { transform: scale(1.12); opacity: 0.85; }
+}
+.sunGlow {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pBeam 3s ease-in-out infinite alternate;
+}
+
+/* Salom yozuvi biroz sakrab chiqadi */
+@keyframes pGreet {
+  0% { opacity: 0; transform: translateY(10px) scale(0.96); }
+  60% { transform: translateY(-2px) scale(1.01); }
+  100% { opacity: 1; transform: none; }
+}
+.greet {
+  animation: pGreet 0.65s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sunRays,
+  .sunGlow,
+  .greet {
+    animation: none;
+  }
+}

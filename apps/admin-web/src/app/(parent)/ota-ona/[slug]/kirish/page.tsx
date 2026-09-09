@@ -7,6 +7,7 @@ import { api, ApiError } from "@/lib/api";
 import { parentApi } from "@/lib/parent-api";
 import type { ParentAccount, PublicOrganization } from "@/lib/types";
 import { KindergartenScene } from "@/components/brand/kindergarten-scene";
+import { EyeIcon, EyeOffIcon } from "@/components/ui/icons";
 import styles from "../parent.module.css";
 
 /**
@@ -21,6 +22,7 @@ export default function ParentLoginPage({ params }: { params: Promise<{ slug: st
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const orgQuery = useQuery({
     queryKey: ["org-public", slug],
@@ -52,14 +54,23 @@ export default function ParentLoginPage({ params }: { params: Promise<{ slug: st
 
       <div className="relative -mt-8 flex-1 rounded-t-[32px] bg-[var(--p-card)] px-5 pb-10 pt-7 shadow-[var(--p-shadow)] sm:mx-auto sm:w-full sm:max-w-[440px] sm:rounded-[var(--p-radius)]">
         <div className={styles.pop}>
-          <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--p-muted)]">
-            Ota-ona kabineti
-          </p>
-          <h1 className="mt-1.5 text-[26px] font-bold leading-tight tracking-[-0.02em] text-[var(--p-ink)]">
-            Assalomu alaykum!
-          </h1>
-          <p className="mt-1.5 text-[15px] leading-relaxed text-[var(--p-muted)]">
-            Bolangizning bugungi kuni — davomati, ovqati va mashg&apos;ulotlari shu yerda.
+          <div className={`${styles.greet} flex items-start gap-3.5`}>
+            <SmilingSun />
+            <div className="min-w-0 flex-1">
+              <span className="inline-flex items-center rounded-full bg-[var(--p-sun)]/18 px-2.5 py-1 text-[11.5px] font-bold uppercase tracking-[0.07em] text-[#a8720a]">
+                Ota-ona kabineti
+              </span>
+              <h1 className="mt-2 text-[30px] font-extrabold leading-[1.1] tracking-[-0.025em] text-[var(--p-ink)]">
+                Assalomu
+                <br />
+                alaykum<span className="text-[var(--p-coral)]">!</span>
+              </h1>
+            </div>
+          </div>
+          <p className="mt-3.5 text-[15.5px] leading-relaxed text-[var(--p-muted)]">
+            Bolangizning bugungi kuni — <b className="font-semibold text-[var(--p-ink)]">davomati</b>,{" "}
+            <b className="font-semibold text-[var(--p-ink)]">ovqati</b> va{" "}
+            <b className="font-semibold text-[var(--p-ink)]">mashg&apos;ulotlari</b> shu yerda.
           </p>
 
           <form onSubmit={submit} className="mt-6 space-y-4">
@@ -87,14 +98,27 @@ export default function ParentLoginPage({ params }: { params: Promise<{ slug: st
 
             <label className="block">
               <span className="mb-2 block text-[14px] font-semibold text-[var(--p-ink)]">Parol</span>
-              <input
-                type="password"
-                autoComplete="current-password"
-                placeholder="Bog'cha bergan parol"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="h-14 w-full rounded-[18px] border-2 border-[var(--p-line)] bg-[#fffdfa] px-4 text-[17px] text-[var(--p-ink)] outline-none transition-colors placeholder:text-[var(--p-muted)]/60 focus:border-[var(--p-sun)]"
-              />
+              <span className="relative block">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  placeholder="Bog'cha bergan parol"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-14 w-full rounded-[18px] border-2 border-[var(--p-line)] bg-[#fffdfa] pl-4 pr-14 text-[17px] text-[var(--p-ink)] outline-none transition-colors placeholder:text-[var(--p-muted)]/60 focus:border-[var(--p-sun)]"
+                />
+                {/* Parolni ko'rish: bog'cha bergan parolni qo'lda terganda
+                    xato yozilmaganini tekshirish uchun */}
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+                  aria-pressed={showPassword}
+                  className="absolute right-2 top-1/2 flex h-11 w-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-[var(--p-muted)] transition-colors active:bg-black/[0.05]"
+                >
+                  {showPassword ? <EyeOffIcon className="h-[22px] w-[22px]" /> : <EyeIcon className="h-[22px] w-[22px]" />}
+                </button>
+              </span>
             </label>
 
             <button
@@ -113,5 +137,42 @@ export default function ParentLoginPage({ params }: { params: Promise<{ slug: st
         </div>
       </div>
     </div>
+  );
+}
+
+/** Kulib turgan quyosh — kabinetning salomlashish belgisi. */
+function SmilingSun() {
+  const rays = Array.from({ length: 8 }, (_, i) => {
+    const angle = ((i * 45 - 90) * Math.PI) / 180;
+    const round = (v: number) => Math.round(v * 100) / 100;
+    return {
+      x1: round(32 + 21 * Math.cos(angle)),
+      y1: round(32 + 21 * Math.sin(angle)),
+      x2: round(32 + 28 * Math.cos(angle)),
+      y2: round(32 + 28 * Math.sin(angle)),
+    };
+  });
+
+  return (
+    <svg viewBox="0 0 64 64" className="h-[58px] w-[58px] shrink-0" aria-hidden="true">
+      <defs>
+        <radialGradient id="parent-sun-glow">
+          <stop offset="0" stopColor="#ffb703" stopOpacity="0.4" />
+          <stop offset="1" stopColor="#ffb703" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <circle className={styles.sunGlow} cx="32" cy="32" r="31" fill="url(#parent-sun-glow)" />
+      <g className={styles.sunRays} stroke="#ffb703" strokeWidth="3.4" strokeLinecap="round">
+        {rays.map((r, i) => (
+          <line key={i} x1={r.x1} y1={r.y1} x2={r.x2} y2={r.y2} />
+        ))}
+      </g>
+      <circle cx="32" cy="32" r="17" fill="#ffc93c" />
+      <circle cx="26.5" cy="29.5" r="2" fill="#8a5a00" />
+      <circle cx="37.5" cy="29.5" r="2" fill="#8a5a00" />
+      <circle cx="23" cy="35" r="2.6" fill="#ff8a7a" opacity="0.65" />
+      <circle cx="41" cy="35" r="2.6" fill="#ff8a7a" opacity="0.65" />
+      <path d="M26 36.5a6.4 6.4 0 0 0 12 0" stroke="#8a5a00" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+    </svg>
   );
 }
