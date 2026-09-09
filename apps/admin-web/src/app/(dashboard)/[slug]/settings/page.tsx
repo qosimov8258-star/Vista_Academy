@@ -14,10 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
 import { LoadingState } from "@/components/ui/states";
 import { ROLE_LABEL } from "@/lib/permissions";
-
-/** Avatar shu o'lchamgacha kichraytiriladi — bazada saqlanadi, katta bo'lmasin. */
-const AVATAR_SIZE = 256;
-const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
+import { MAX_UPLOAD_BYTES, resizeToSquare } from "@/lib/resize-image";
 
 const profileSchema = z.object({
   fullName: z.string().min(2, "To'liq ism kamida 2 belgi"),
@@ -37,34 +34,6 @@ const passwordSchema = z
 type ProfileValues = z.infer<typeof profileSchema>;
 type PasswordValues = z.infer<typeof passwordSchema>;
 
-/**
- * Rasmni brauzerda kvadrat qilib kesib, kichraytiradi.
- *
- * Server tomonga tayyor, kichik rasm boradi: telefonda olingan surat bir
- * necha megabayt bo'ladi, avatar uchun esa 256px yetarli.
- */
-async function resizeToSquare(file: File): Promise<string> {
-  const bitmap = await createImageBitmap(file);
-  const side = Math.min(bitmap.width, bitmap.height);
-  const canvas = document.createElement("canvas");
-  canvas.width = AVATAR_SIZE;
-  canvas.height = AVATAR_SIZE;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Rasmni qayta ishlash imkoni bo'lmadi");
-  ctx.drawImage(
-    bitmap,
-    (bitmap.width - side) / 2,
-    (bitmap.height - side) / 2,
-    side,
-    side,
-    0,
-    0,
-    AVATAR_SIZE,
-    AVATAR_SIZE,
-  );
-  bitmap.close();
-  return canvas.toDataURL("image/jpeg", 0.85);
-}
 
 export default function SettingsPage({ params }: { params: Promise<{ slug: string }> }) {
   // Sahifa faqat o'z hisobi bilan ishlaydi — slug marshrutdan keladi, lekin

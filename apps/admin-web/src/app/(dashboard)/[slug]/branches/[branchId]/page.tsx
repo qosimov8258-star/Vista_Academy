@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useRef, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
@@ -14,13 +14,14 @@ import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { formatDate } from "@/lib/format";
 import { initials } from "@/components/ui/avatar";
+import { BranchAvatar } from "@/components/ui/branch-avatar";
+import { MAX_UPLOAD_BYTES, resizeToSquare } from "@/lib/resize-image";
 import { EditBranchModal } from "@/features/branches/edit-branch-modal";
 import { CreateTenantUserModal } from "@/features/users/create-tenant-user-modal";
 import { EditTenantUserModal } from "@/features/users/edit-tenant-user-modal";
 import { ROLE_LABEL, canManageUser } from "@/lib/permissions";
 import {
   ArrowLeftIcon,
-  BuildingIcon,
   CheckIcon,
   CopyIcon,
   LockIcon,
@@ -52,6 +53,8 @@ export default function BranchDetailPage({ params }: { params: Promise<{ slug: s
   const [deleteMember, setDeleteMember] = useState<TenantUser | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: branch, isLoading, isError, error } = useQuery({
     queryKey: ["branch", slug, branchId],
@@ -67,6 +70,48 @@ export default function BranchDetailPage({ params }: { params: Promise<{ slug: s
   const invalidateTeam = () => {
     queryClient.invalidateQueries({ queryKey: ["tenant-users", slug] });
     queryClient.invalidateQueries({ queryKey: ["employees", slug] });
+  };
+
+  /** Belgi yangilanganda filial kartasi va tashkilot ro'yxati ham yangilanadi. */
+  const invalidateBranch = () => {
+    queryClient.invalidateQueries({ queryKey: ["branch", slug, branchId] });
+    queryClient.invalidateQueries({ queryKey: ["org", slug] });
+  };
+
+  const avatarMutation = useMutation({
+    mutationFn: (image: string) =>
+      api.put(`/app/organizations/me/branches/${branchId}/avatar`, { image }),
+    onSuccess: () => {
+      setAvatarError(null);
+      invalidateBranch();
+    },
+    onError: (err) => setAvatarError(err instanceof ApiError ? err.message : "Rasmni saqlab bo'lmadi"),
+  });
+
+  const removeAvatarMutation = useMutation({
+    mutationFn: () => api.delete(`/app/organizations/me/branches/${branchId}/avatar`),
+    onSuccess: () => {
+      setAvatarError(null);
+      invalidateBranch();
+    },
+    onError: (err) => setAvatarError(err instanceof ApiError ? err.message : "Rasmni o'chirib bo'lmadi"),
+  });
+
+  const handleAvatarPick = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    // Bir xil faylni qayta tanlash ham hodisa bersin
+    event.target.value = "";
+    if (!file) return;
+    setAvatarError(null);
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setAvatarError("Rasm juda katta (8 MB gacha)");
+      return;
+    }
+    try {
+      avatarMutation.mutate(await resizeToSquare(file));
+    } catch {
+      setAvatarError("Bu faylni rasm sifatida o'qib bo'lmadi");
+    }
   };
 
   const statusMutation = useMutation({
@@ -118,15 +163,60 @@ export default function BranchDetailPage({ params }: { params: Promise<{ slug: s
           Filiallar
         </Link>
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
-              <BuildingIcon className="h-6 w-6" />
-            </span>
-            <div>
+          <div className="flex items-center gap-3.5">
+            {/* Belgini almashtirish uchun rasmning o'ziga bosiladi */}
+            <div className="group relative shrink-0">
+              <BranchAvatar branch={branch} size={64} />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={avatarMutation.isPending}
+                aria-label="Filial belgisini almashtirish"
+                title="Belgini almashtirish"
+                className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-[var(--radius-md)] bg-black/45 text-white opacity-0 transition-opacity duration-[var(--dur-fast)] hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none disabled:cursor-wait disabled:opacity-100 motion-reduce:transition-none"
+              >
+                {avatarMutation.isPending ? (
+                  <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                ) : (
+                  <PencilIcon className="h-5 w-5" />
+                )}
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+                onChange={handleAvatarPick}
+              />
+            </div>
+            <div className="min-w-0">
               <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
                 {branch.name}
               </h1>
               <p className="text-[13px] text-[var(--color-text-muted)]">/{branch.slug}</p>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="cursor-pointer text-[12.5px] font-medium text-[var(--color-primary)] hover:underline"
+                >
+                  {branch.avatarUpdatedAt ? "Belgini almashtirish" : "Belgi qo'yish"}
+                </button>
+                {branch.avatarUpdatedAt && (
+                  <>
+                    <span className="text-[12.5px] text-[var(--color-text-muted)]">·</span>
+                    <button
+                      type="button"
+                      onClick={() => removeAvatarMutation.mutate()}
+                      disabled={removeAvatarMutation.isPending}
+                      className="cursor-pointer text-[12.5px] font-medium text-[var(--color-danger)] hover:underline disabled:opacity-60"
+                    >
+                      O&apos;chirish
+                    </button>
+                  </>
+                )}
+              </div>
+              {avatarError && <p className="mt-1 text-[12.5px] text-[var(--color-danger)]">{avatarError}</p>}
             </div>
           </div>
           <Button size="sm" variant="outline" onClick={() => setEditBranchOpen(true)}>

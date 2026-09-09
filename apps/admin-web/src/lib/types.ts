@@ -32,6 +32,9 @@ export interface Branch {
   timezone: string;
   currency: string;
   createdAt: string;
+  /** Belgisi bor bo'lsa — oxirgi yangilangan vaqti (rasm keshini yangilash uchun). */
+  avatarUpdatedAt: string | null;
+  avatarMimeType: string | null;
 }
 
 export interface Organization {

@@ -9,6 +9,7 @@ import type { DashboardSummary, Organization, TenantUser } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { BranchAvatar } from "@/components/ui/branch-avatar";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { formatMoney } from "@/lib/format";
 import { ChevronRightIcon, PlusIcon, SettingsIcon } from "@/components/ui/icons";
@@ -157,14 +158,13 @@ export default function BranchesPage({ params }: { params: Promise<{ slug: strin
                     palette.band,
                   )}
                 >
-                  <span
-                    className={clsx(
-                      "flex h-12 w-12 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[19px] font-semibold",
-                      palette.mono,
-                    )}
-                  >
-                    {monogram(branch.name)}
-                  </span>
+                  {/* Belgi qo'yilgan bo'lsa rasm, aks holda nomning bosh harfi */}
+                  <BranchAvatar
+                    branch={branch}
+                    size={48}
+                    className={clsx("text-[19px] font-semibold", !branch.avatarUpdatedAt && palette.mono)}
+                    fallback={monogram(branch.name)}
+                  />
 
                   <div className="min-w-0 flex-1">
                     <h3 className="truncate text-[17px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">

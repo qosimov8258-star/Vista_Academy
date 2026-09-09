@@ -166,6 +166,13 @@ model Branch {
   address        String?
   timezone       String   @default("Asia/Tashkent")
   currency       String   @default("UZS")
+  // Filial belgisi (logotip). TenantUser avatari bilan bir xil yondashuv:
+  // rasm 256x256 gacha kichraytiriladi va bevosita bazada saqlanadi.
+  // Blob har bir filial so'roviga tushib ketmasligi uchun Prisma mijozida
+  // global `omit` qo'yilgan (qarang: src/database/prisma.service.ts).
+  avatar          Bytes?    @map("avatar")
+  avatarMimeType  String?   @map("avatar_mime_type")
+  avatarUpdatedAt DateTime? @map("avatar_updated_at")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
