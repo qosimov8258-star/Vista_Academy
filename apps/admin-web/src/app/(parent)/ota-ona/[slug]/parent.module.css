@@ -200,3 +200,39 @@
     transition: none;
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Bola kartochkasi — kabinetning yuzi
+ *
+ * Oq to'rtburchak o'rniga iliq bog'cha foni: yuqori o'ng burchakda quyosh
+ * yog'dusi, pastda maysa yashilligi, ustidan sezilar-sezilmas konfetti.
+ * Hammasi CSS gradientlari — qo'shimcha rasm yuklanmaydi.
+ * ------------------------------------------------------------------------ */
+.childCard {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(85% 70% at 92% -6%, rgba(255, 183, 3, 0.26) 0%, rgba(255, 183, 3, 0) 62%),
+    radial-gradient(70% 60% at 4% 104%, rgba(63, 191, 155, 0.2) 0%, rgba(63, 191, 155, 0) 60%),
+    radial-gradient(60% 55% at 100% 100%, rgba(86, 180, 245, 0.16) 0%, rgba(86, 180, 245, 0) 60%),
+    linear-gradient(168deg, #fffdf8 0%, #ffffff 55%);
+  border: 1px solid rgba(255, 183, 3, 0.16);
+}
+
+/* Konfetti: uchta rangdagi mayda nuqtalar, faqat yuqori qismda */
+.childCard::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background-image:
+    radial-gradient(circle, rgba(255, 122, 102, 0.5) 42%, transparent 44%),
+    radial-gradient(circle, rgba(86, 180, 245, 0.45) 42%, transparent 44%),
+    radial-gradient(circle, rgba(167, 139, 250, 0.42) 42%, transparent 44%);
+  background-size: 6px 6px, 5px 5px, 5px 5px;
+  /* O'ng tomonda — chapda bola rasmi turadi, u yerga tushsa ko'rinmaydi */
+  background-position: right 26px top 18px, right 14px top 46px, right 44px top 34px;
+  background-repeat: no-repeat;
+  opacity: 0.9;
+}

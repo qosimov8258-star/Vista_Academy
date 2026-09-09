@@ -8,10 +8,11 @@ import { ApiError } from "@/lib/api";
 import { PARENT_API_URL, parentApi } from "@/lib/parent-api";
 import type { ParentAccount, ParentAttendanceStrip, ParentChild, ParentDay } from "@/lib/types";
 import { initials } from "@/components/ui/avatar";
-import { LogoutIcon } from "@/components/ui/icons";
 import styles from "../parent.module.css";
 
 const WEEKDAY = ["Yak", "Du", "Se", "Cho", "Pay", "Ju", "Sha"];
+/** Kalendar ustunlari — hafta dushanbadan boshlanadi */
+const WEEKDAY_SHORT = ["Du", "Se", "Cho", "Pay", "Ju", "Sha", "Yak"];
 const MONTH = [
   "yanvar", "fevral", "mart", "aprel", "may", "iyun",
   "iyul", "avgust", "sentabr", "oktabr", "noyabr", "dekabr",
@@ -90,11 +91,6 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
     enabled: !!childId,
   });
 
-  const logout = async () => {
-    await parentApi.post("/app/parent/logout").catch(() => undefined);
-    router.replace(`/ota-ona/${slug}/kirish`);
-  };
-
   if (meQuery.isLoading) {
     return (
       <div className="flex min-h-[60dvh] items-center justify-center">
@@ -112,22 +108,12 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
 
   return (
     <div className="mx-auto w-full max-w-[520px] px-4 pt-5">
-        {/* Sarlavha */}
-        <header className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="truncate text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--p-muted)]">
-              {parent.organizationName}
-            </p>
-            <p className="truncate text-[15px] font-semibold text-[var(--p-ink)]">{parent.fullName}</p>
-          </div>
-          <button
-            type="button"
-            onClick={logout}
-            aria-label="Chiqish"
-            className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full bg-white/70 text-[var(--p-muted)] shadow-[var(--p-shadow)] transition-colors active:bg-white"
-          >
-            <LogoutIcon className="h-5 w-5" />
-          </button>
+        {/* Sarlavha. Chiqish tugmasi Sozlamalar bo'limida — ota-ona uni
+            kunda bir marta ham bosmaydi, tepada turishi shart emas. */}
+        <header className="min-w-0">
+          <p className="truncate text-[17px] font-bold tracking-[-0.01em] text-[var(--p-ink)]">
+            {parent.fullName}
+          </p>
         </header>
 
         {/* Bir nechta bola bo'lsa — tanlash */}
@@ -153,7 +139,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
 
         {/* Bola kartochkasi */}
         {child && (
-          <section className={`${styles.pop} mt-5 rounded-[var(--p-radius)] bg-[var(--p-card)] p-5 shadow-[var(--p-shadow)]`}>
+          <section className={`${styles.pop} ${styles.childCard} mt-5 rounded-[var(--p-radius)] p-5 shadow-[var(--p-shadow)]`}>
             <div className="flex items-center gap-4">
               <div className={styles.float}>
                 {child.avatarUpdatedAt ? (
@@ -209,33 +195,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
               </div>
             </div>
 
-            {/* Oxirgi 2 hafta */}
-            {stripQuery.data && (
-              <div className="mt-4">
-                <div className="mb-2 flex items-baseline justify-between">
-                  <p className="text-[13px] font-semibold text-[var(--p-muted)]">Oxirgi 2 hafta</p>
-                  <p className="text-[13px] text-[var(--p-muted)]">
-                    <b className="text-[var(--p-mint)]">{stripQuery.data.present}</b> kun keldi
-                  </p>
-                </div>
-                <div className="flex gap-1.5">
-                  {stripQuery.data.items.map((item) => (
-                    <span
-                      key={item.date}
-                      title={prettyDate(item.date)}
-                      className={clsx(
-                        "h-7 flex-1 rounded-[7px]",
-                        item.status === "PRESENT"
-                          ? "bg-[var(--p-mint)]"
-                          : item.status === "ABSENT"
-                            ? "bg-[var(--p-coral)]/70"
-                            : "bg-black/[0.06]",
-                      )}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
+            {stripQuery.data && <AttendanceCalendar strip={stripQuery.data} />}
           </section>
         )}
 
@@ -303,6 +263,97 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
         Savolingiz bo&apos;lsa — tarbiyachi yoki bog&apos;cha ma&apos;muriyatiga murojaat qiling
       </p>
     </div>
+  );
+}
+
+/**
+ * Davomat — kalendar ko'rinishida.
+ *
+ * Ilgari bu yerda 14 ta bir xil ustun turardi: ota-ona ularning qaysi biri
+ * qaysi kun ekanini bilolmasdi, shuning uchun ular hech nima aytmasdi.
+ * Endi har bir katak o'z sanasi va hafta kuni ustunida turadi, ostida esa
+ * oddiy so'z bilan yozilgan izoh bor.
+ */
+function AttendanceCalendar({ strip }: { strip: ParentAttendanceStrip }) {
+  // Dushanbadan boshlanadigan hafta: birinchi kun o'z ustuniga tushishi
+  // uchun oldiga bo'sh kataklar qo'yiladi.
+  const firstDay = new Date(`${strip.items[0]?.date ?? ""}T00:00:00.000Z`);
+  const lead = Number.isNaN(firstDay.getTime()) ? 0 : (firstDay.getUTCDay() + 6) % 7;
+  const today = strip.items[strip.items.length - 1]?.date;
+
+  // Yozuvi yo'q shanba-yakshanba "belgilanmagan" emas — bog'cha ishlamagan
+  // kun. Ularni sanasak, tarbiyachi hisobotni unutgandek ko'rinardi.
+  // Agar o'sha kunda davomat qilingan bo'lsa, demak bog'cha ishlagan:
+  // unda katak ham, hisob ham odatdagidek.
+  const isRestDay = (item: { date: string; status: string | null }) => {
+    if (item.status) return false;
+    const wd = new Date(`${item.date}T00:00:00.000Z`).getUTCDay();
+    return wd === 0 || wd === 6;
+  };
+  const unmarked = strip.items.filter((item) => !item.status && !isRestDay(item)).length;
+
+  return (
+    <div className="mt-4 rounded-[18px] bg-white/70 px-4 py-3.5">
+      <p className="text-[14px] font-bold text-[var(--p-ink)]">Oxirgi 2 hafta</p>
+
+      {/* Avval son bilan javob: eng ko'p so'raladigan savol shu */}
+      <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1.5">
+        <Tally count={strip.present} label="kun keldi" dot="bg-[var(--p-mint)]" />
+        <Tally count={strip.absent} label="kun kelmadi" dot="bg-[var(--p-coral)]" />
+        {unmarked > 0 && <Tally count={unmarked} label="kun belgilanmagan" dot="bg-black/15" />}
+      </div>
+
+      <div className="mt-3 grid grid-cols-7 gap-1">
+        {WEEKDAY_SHORT.map((d) => (
+          <span key={d} className="text-center text-[11px] font-semibold text-[var(--p-muted)]">
+            {d}
+          </span>
+        ))}
+        {Array.from({ length: lead }, (_, i) => (
+          <span key={`pad-${i}`} />
+        ))}
+        {strip.items.map((item) => {
+          const rest = isRestDay(item);
+          return (
+            <span
+              key={item.date}
+              title={`${prettyDate(item.date)} — ${
+                item.status === "PRESENT"
+                  ? "keldi"
+                  : item.status === "ABSENT"
+                    ? "kelmadi"
+                    : rest
+                      ? "dam olish kuni"
+                      : "belgilanmagan"
+              }`}
+              className={clsx(
+                "flex h-9 items-center justify-center rounded-[11px] text-[13px] font-bold tabular-nums",
+                item.status === "PRESENT"
+                  ? "bg-[var(--p-mint)] text-white"
+                  : item.status === "ABSENT"
+                    ? "bg-[var(--p-coral)] text-white"
+                    : rest
+                      ? "text-[var(--p-muted)]/45"
+                      : "bg-black/[0.05] text-[var(--p-muted)]",
+                // Bugungi kun ko'zga tashlanib tursin
+                item.date === today && "ring-2 ring-[var(--p-ink)]/25 ring-offset-1 ring-offset-white",
+              )}
+            >
+              {Number(item.date.slice(8, 10))}
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function Tally({ count, label, dot }: { count: number; label: string; dot: string }) {
+  return (
+    <span className="flex items-center gap-1.5 text-[13.5px] text-[var(--p-muted)]">
+      <span className={clsx("h-2.5 w-2.5 rounded-full", dot)} />
+      <b className="text-[15px] font-bold text-[var(--p-ink)]">{count}</b> {label}
+    </span>
   );
 }
 
