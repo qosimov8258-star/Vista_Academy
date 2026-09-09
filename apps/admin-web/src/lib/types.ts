@@ -122,6 +122,8 @@ export interface Child {
   status: ChildStatus;
   quarantineUntil: string | null;
   quarantineReason: string | null;
+  /** Surati bor bo'lsa — oxirgi yangilangan vaqti (rasm keshini yangilash uchun). */
+  avatarUpdatedAt: string | null;
   createdAt: string;
   group?: { id: string; name: string } | null;
   branch?: { id: string; name: string };

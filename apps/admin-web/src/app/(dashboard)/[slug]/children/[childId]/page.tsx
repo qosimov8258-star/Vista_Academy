@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useRef, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
@@ -20,8 +20,18 @@ import { DataTable, THead, TBody, Tr, Th, Td } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
-import { ArrowLeftIcon, CalendarIcon, ChecklistIcon, GroupIcon, NoteIcon, PhoneIcon } from "@/components/ui/icons";
+import {
+  ArrowLeftIcon,
+  CalendarIcon,
+  ChecklistIcon,
+  GroupIcon,
+  NoteIcon,
+  PencilIcon,
+  PhoneIcon,
+} from "@/components/ui/icons";
 import { CopyButton } from "@/components/ui/copy-button";
+import { ChildPhoto } from "@/components/ui/child-photo";
+import { prepareChildPhoto } from "@/lib/child-photo";
 import { initials } from "@/components/ui/avatar";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { formatAge, formatChildId, formatDate, formatDateTime, formatGender, formatPhone } from "@/lib/format";
@@ -122,6 +132,9 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
   const [quarantineOpen, setQuarantineOpen] = useState(false);
   const [guardianOpen, setGuardianOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<ChildGuardian | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [photoChecking, setPhotoChecking] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
   const canWrite = canWriteOperational(user?.role);
   const queryClient = useQueryClient();
@@ -163,6 +176,46 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
     queryFn: () => api.get<ChildGuardian[]>(`/app/children/${childId}/guardians`),
   });
 
+  const photoMutation = useMutation({
+    mutationFn: (image: string) => api.put(`/app/children/${childId}/avatar`, { image }),
+    onSuccess: () => {
+      setPhotoError(null);
+      queryClient.invalidateQueries({ queryKey: ["child", slug, childId] });
+      queryClient.invalidateQueries({ queryKey: ["children", slug] });
+    },
+    onError: (err) => setPhotoError(err instanceof ApiError ? err.message : "Suratni saqlab bo'lmadi"),
+  });
+
+  const removePhotoMutation = useMutation({
+    mutationFn: () => api.delete(`/app/children/${childId}/avatar`),
+    onSuccess: () => {
+      setPhotoError(null);
+      queryClient.invalidateQueries({ queryKey: ["child", slug, childId] });
+      queryClient.invalidateQueries({ queryKey: ["children", slug] });
+    },
+    onError: (err) => setPhotoError(err instanceof ApiError ? err.message : "Suratni o'chirib bo'lmadi"),
+  });
+
+  const handlePhotoPick = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    // Bir xil faylni qayta tanlash ham hodisa bersin
+    event.target.value = "";
+    if (!file) return;
+    setPhotoError(null);
+    setPhotoChecking(true);
+    try {
+      // Yuz tekshiruvi va kesish shu yerda — natija tayyor bo'lsagina yuboriladi
+      const result = await prepareChildPhoto(file);
+      if (!result.ok) {
+        setPhotoError(result.reason);
+        return;
+      }
+      photoMutation.mutate(result.image);
+    } finally {
+      setPhotoChecking(false);
+    }
+  };
+
   const clearQuarantineMutation = useMutation({
     mutationFn: () => api.delete(`/app/children/${childId}/quarantine`),
     onSuccess: () => {
@@ -192,18 +245,35 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
           qatorda edi va o'qilmasdi. Endi har bir fakt alohida katakda. */}
       <Card className="overflow-hidden">
         <div className="flex flex-wrap items-start gap-4 px-5 py-5 sm:px-6">
-          <span
-            className={clsx(
-              "flex h-16 w-16 shrink-0 items-center justify-center rounded-full text-[20px] font-semibold ring-1 ring-inset ring-[rgba(16,24,40,0.06)]",
-              child.gender === "MALE"
-                ? "bg-sky-50 text-sky-700"
-                : child.gender === "FEMALE"
-                  ? "bg-rose-50 text-rose-600"
-                  : "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)]",
+          {/* Suratni almashtirish uchun rasmning o'ziga bosiladi */}
+          <div className="group relative shrink-0">
+            <ChildPhoto child={child} size={72} fallback={initials(child.fullName)} />
+            {canWrite && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => photoInputRef.current?.click()}
+                  disabled={photoChecking || photoMutation.isPending}
+                  aria-label="Bolaning suratini almashtirish"
+                  title="Suratni almashtirish"
+                  className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-full bg-black/45 text-white opacity-0 transition-opacity duration-[var(--dur-fast)] hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none disabled:cursor-wait disabled:opacity-100 motion-reduce:transition-none"
+                >
+                  {photoChecking || photoMutation.isPending ? (
+                    <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  ) : (
+                    <PencilIcon className="h-5 w-5" />
+                  )}
+                </button>
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="hidden"
+                  onChange={handlePhotoPick}
+                />
+              </>
             )}
-          >
-            {initials(child.fullName)}
-          </span>
+          </div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2.5">
               <h1 className="text-[24px] font-semibold leading-tight tracking-[var(--tracking-title)] text-[var(--color-text)]">
@@ -213,12 +283,47 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
                 {child.status === "ACTIVE" ? "Faol" : child.status === "QUARANTINED" ? "Karantinda" : "Nofaol"}
               </Badge>
             </div>
-            <div className="mt-1.5 flex items-center gap-1.5">
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
               <span className="rounded-full bg-[var(--color-surface-sunken)] px-2.5 py-1 text-[12px] font-semibold tabular-nums text-[var(--color-text-muted)]">
                 {formatChildId(child.publicId)}
               </span>
               <CopyButton value={formatChildId(child.publicId)} label="ID nusxalash" />
+              {canWrite && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => photoInputRef.current?.click()}
+                    disabled={photoChecking || photoMutation.isPending}
+                    className="cursor-pointer text-[12.5px] font-medium text-[var(--color-primary)] hover:underline disabled:opacity-60"
+                  >
+                    {photoChecking ? "Tekshirilmoqda..." : child.avatarUpdatedAt ? "Suratni almashtirish" : "Surat qo'yish"}
+                  </button>
+                  {child.avatarUpdatedAt && (
+                    <>
+                      <span className="text-[12.5px] text-[var(--color-text-muted)]">·</span>
+                      <button
+                        type="button"
+                        onClick={() => removePhotoMutation.mutate()}
+                        disabled={removePhotoMutation.isPending}
+                        className="cursor-pointer text-[12.5px] font-medium text-[var(--color-danger)] hover:underline disabled:opacity-60"
+                      >
+                        O&apos;chirish
+                      </button>
+                    </>
+                  )}
+                </>
+              )}
             </div>
+            {photoError && (
+              <p role="alert" className="mt-1.5 max-w-[420px] text-[12.5px] text-[var(--color-danger)]">
+                {photoError}
+              </p>
+            )}
+            {canWrite && !photoError && !child.avatarUpdatedAt && (
+              <p className="mt-1.5 text-[12px] text-[var(--color-text-muted)]">
+                Yuzi ko&apos;rinib turgan surat, 3 MB gacha
+              </p>
+            )}
           </div>
         </div>
 

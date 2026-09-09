@@ -1,10 +1,11 @@
-import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantScope, requireOperationalScope } from "../iam/tenant-auth.types";
 import { assertTeacherOwnsChild, resolveTeacherGroupIds, teacherChildWhere } from "../iam/teacher-scope";
 import { CreateChildDto } from "./dto/create-child.dto";
 import { ChildQueryDto } from "./dto/child-query.dto";
+import { UpdateChildAvatarDto } from "./dto/update-child-avatar.dto";
 import { createChildWithGuardian, withPublicIdRetry } from "./child-creation";
 
 /** Ro'yxatda ota-ona telefoni ko'rinishi uchun asosiy vasiy ham olinadi. */
@@ -16,6 +17,9 @@ const childInclude = {
     include: { guardian: { select: { id: true, fullName: true, phone: true } } },
   },
 } satisfies Prisma.ChildInclude;
+
+/** 512px JPEG shu hajmdan oshmasligi kerak. */
+const MAX_CHILD_AVATAR_BYTES = 600 * 1024;
 
 @Injectable()
 export class ChildrenService {
@@ -84,6 +88,70 @@ export class ChildrenService {
       throw new NotFoundException("Bola topilmadi");
     }
     if (scope.branchId && child.branchId !== scope.branchId) {
+      throw new ForbiddenException("Bu bolaga kirish huquqingiz yo'q");
+    }
+    await assertTeacherOwnsChild(this.prisma, scope, child);
+    return child;
+  }
+
+  /**
+   * Bola suratini saqlaydi. Rasm brauzerda kvadrat qilib kesilib, 512px ga
+   * kichraytirilgan holda keladi — server faqat hajmini tekshiradi.
+   *
+   * Yozish huquqi bolani tahrirlash bilan bir xil: filial xodimlari qo'yadi,
+   * Super Admin faqat ko'radi (requireOperationalScope filialsiz rolni rad
+   * etadi), o'qituvchi esa faqat o'z guruhidagi bolaga.
+   */
+  async updateAvatar(scope: TenantScope, id: string, dto: UpdateChildAvatarDto) {
+    const child = await this.requireWritableChild(scope, id);
+
+    const [header, base64] = dto.image.split(",", 2);
+    const mimeType = header.slice("data:".length, header.indexOf(";"));
+    const buffer = Buffer.from(base64, "base64");
+    if (buffer.byteLength === 0) {
+      throw new BadRequestException("Rasm bo'sh");
+    }
+    if (buffer.byteLength > MAX_CHILD_AVATAR_BYTES) {
+      throw new BadRequestException("Rasm hajmi juda katta");
+    }
+
+    const updated = await this.prisma.child.update({
+      where: { id: child.id },
+      data: { avatar: buffer, avatarMimeType: mimeType, avatarUpdatedAt: new Date() },
+      select: { avatarUpdatedAt: true },
+    });
+    return { avatarUpdatedAt: updated.avatarUpdatedAt };
+  }
+
+  async removeAvatar(scope: TenantScope, id: string) {
+    const child = await this.requireWritableChild(scope, id);
+    await this.prisma.child.update({
+      where: { id: child.id },
+      data: { avatar: null, avatarMimeType: null, avatarUpdatedAt: null },
+    });
+    return { avatarUpdatedAt: null };
+  }
+
+  /** Binar surat. Ko'rish huquqi `findOne` bilan bir xil. */
+  async readAvatar(scope: TenantScope, id: string) {
+    await this.findOne(scope, id);
+    return this.prisma.child.findUniqueOrThrow({
+      where: { id },
+      select: { avatar: true, avatarMimeType: true },
+    });
+  }
+
+  /** Yozish uchun: bola shu tashkilot/filialda va o'qituvchining guruhida. */
+  private async requireWritableChild(scope: TenantScope, id: string) {
+    const branchId = requireOperationalScope(scope);
+    const child = await this.prisma.child.findFirst({
+      where: { id, organizationId: scope.organizationId },
+      select: { id: true, branchId: true, groupId: true },
+    });
+    if (!child) {
+      throw new NotFoundException("Bola topilmadi");
+    }
+    if (child.branchId !== branchId) {
       throw new ForbiddenException("Bu bolaga kirish huquqingiz yo'q");
     }
     await assertTeacherOwnsChild(this.prisma, scope, child);
