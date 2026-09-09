@@ -1,4 +1,5 @@
 import { ParentTabBar } from "./tab-bar";
+import { ParentPageTransition } from "./page-transition";
 import styles from "../parent.module.css";
 
 /**
@@ -19,7 +20,9 @@ export default async function ParentCabinetLayout({
   return (
     <div className={`${styles.shell} ${styles.sky} min-h-[100dvh]`}>
       {/* Pastki menyu mazmunni yopib qolmasligi uchun joy qoldiriladi */}
-      <div className="pb-[104px]">{children}</div>
+      <div className="pb-[104px]">
+        <ParentPageTransition slug={slug}>{children}</ParentPageTransition>
+      </div>
       <ParentTabBar slug={slug} />
     </div>
   );

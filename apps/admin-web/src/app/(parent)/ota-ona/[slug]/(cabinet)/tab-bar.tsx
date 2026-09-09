@@ -3,14 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
-import { BulbIcon, HomeIcon, NoteIcon, SettingsIcon } from "@/components/ui/icons";
-
-const TABS = [
-  { href: "", label: "Bosh menu", icon: HomeIcon },
-  { href: "/kundalik", label: "Kundalik", icon: NoteIcon },
-  { href: "/foydali", label: "Foydali", icon: BulbIcon },
-  { href: "/sozlamalar", label: "Sozlamalar", icon: SettingsIcon },
-];
+import styles from "../parent.module.css";
+import { CABINET_TABS, tabIndexOf } from "./tabs";
 
 /**
  * Pastdagi suzuvchi menyu. Telefonda bosh barmoq yetadigan joyda turadi,
@@ -18,11 +12,13 @@ const TABS = [
  *
  * Rangi kabinetning qolgan qismi bilan bir xil — oq yuza va iliq sariq
  * urg'u. Faol bo'lim rang bilan emas, ortidagi yumshoq tamg'a va
- * to'ldirilgan ikonka bilan ajratiladi.
+ * to'ldirilgan ikonka bilan ajratiladi; tamg'a bo'limdan bo'limga sakramay,
+ * surilib boradi.
  */
 export function ParentTabBar({ slug }: { slug: string }) {
   const pathname = usePathname();
   const base = `/ota-ona/${slug}`;
+  const activeIndex = tabIndexOf(pathname, base);
 
   return (
     <nav
@@ -31,10 +27,19 @@ export function ParentTabBar({ slug }: { slug: string }) {
       // iPhone'dagi pastki chiziq tugmalarni yopib qolmasin
       style={{ paddingBottom: "max(16px, env(safe-area-inset-bottom))" }}
     >
-      <div className="flex w-full max-w-[420px] items-stretch gap-1 rounded-full border border-[var(--p-line)] bg-[var(--p-card)] p-2 shadow-[var(--p-shadow)]">
-        {TABS.map((tab) => {
+      <div className="relative flex w-full max-w-[420px] items-stretch gap-1 rounded-full border border-[var(--p-line)] bg-[var(--p-card)] p-2 shadow-[var(--p-shadow)]">
+        {/* Suriluvchi tamg'a. Bo'lim tanilmasa ko'rsatilmaydi. */}
+        {activeIndex >= 0 && (
+          <span
+            aria-hidden="true"
+            className={styles.tabPill}
+            style={{ transform: `translate3d(calc(${activeIndex * 100}% + ${activeIndex * 4}px), 0, 0)` }}
+          />
+        )}
+
+        {CABINET_TABS.map((tab, i) => {
           const href = `${base}${tab.href}`;
-          const active = tab.href === "" ? pathname === base : pathname.startsWith(href);
+          const active = i === activeIndex;
           const Icon = tab.icon;
           return (
             <Link
@@ -42,13 +47,16 @@ export function ParentTabBar({ slug }: { slug: string }) {
               href={href}
               aria-current={active ? "page" : undefined}
               className={clsx(
-                "flex flex-1 flex-col items-center justify-center gap-1 rounded-full py-2 transition-colors duration-150",
-                active
-                  ? "bg-[var(--p-sun)]/16 text-[#a8720a]"
-                  : "text-[var(--p-muted)] active:bg-black/[0.04]",
+                "relative z-10 flex flex-1 flex-col items-center justify-center gap-1 rounded-full py-2 transition-colors duration-200",
+                active ? "text-[#a8720a]" : "text-[var(--p-muted)] active:bg-black/[0.04]",
               )}
             >
-              <Icon filled={active} className="h-[22px] w-[22px]" />
+              <Icon
+                filled={active}
+                // key: bo'lim faollashganda animatsiya boshidan ishlasin
+                key={active ? "on" : "off"}
+                className={clsx("h-[22px] w-[22px]", active && styles.tabIconActive)}
+              />
               <span className="text-[11.5px] font-semibold leading-none">{tab.label}</span>
             </Link>
           );

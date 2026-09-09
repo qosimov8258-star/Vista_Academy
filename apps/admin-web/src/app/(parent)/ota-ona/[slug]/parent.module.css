@@ -114,3 +114,89 @@
     animation: none;
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Bo'limdan bo'limga o'tish
+ *
+ * Surilish gorizontal bo'lgani uchun kirib kelayotgan mazmun bir lahza
+ * ramkadan chiqib turadi. `clip` uni kesadi va — `hidden` dan farqli —
+ * yon tomonga aylantirish maydonini yaratmaydi, ya'ni sahifa o'z
+ * yopishqoq elementlarini va tabiiy aylanishini yo'qotmaydi.
+ * ------------------------------------------------------------------------ */
+.pageWrap {
+  overflow-x: clip;
+}
+
+/*
+ * Yengil bo'lishi kerak: masofa kichik (18px), davomiylik qisqa, egri
+ * chiziq oxirida sekinlashadi — iOS'dagi varaq o'tishiga yaqin his.
+ */
+@keyframes pEnterRight {
+  from { opacity: 0; transform: translate3d(18px, 0, 0); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pEnterLeft {
+  from { opacity: 0; transform: translate3d(-18px, 0, 0); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pEnterSoft {
+  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+  to { opacity: 1; transform: none; }
+}
+
+.enterRight,
+.enterLeft,
+.enterSoft {
+  animation-duration: 0.3s;
+  animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+  animation-fill-mode: both;
+  /* Faqat o'tish paytida qatlamga ko'chiriladi, keyin xotira bo'shaydi */
+  will-change: opacity, transform;
+}
+.enterRight { animation-name: pEnterRight; }
+.enterLeft { animation-name: pEnterLeft; }
+.enterSoft { animation-name: pEnterSoft; }
+
+/*
+ * Pastki menyudagi faol tamg'a. Har bir bo'lim uchun alohida fon o'rniga
+ * bitta tamg'a suriladi — ko'z uni kuzatib boradi va o'tish uzluksiz
+ * ko'rinadi. O'lcham: to'rt bo'lim, oraliqlari 4px, qobiq ichi 8px.
+ */
+.tabPill {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 8px;
+  width: calc((100% - 16px - 12px) / 4);
+  border-radius: 999px;
+  background: rgba(255, 183, 3, 0.16);
+  /*
+   * `transform` ataylab shu yerda emas, React tomonidan qatorga yoziladi:
+   * uni CSS o'zgaruvchisiga bog'lab qo'yilsa, o'zgaruvchi almashganda
+   * brauzer `transform` ni qayta hisoblamay, tamg'a joyida qotib qoladi.
+   * Qadam = tamg'a eni (25% - 7px) + oraliq (4px).
+   */
+  transition: transform 0.34s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Faol ikonka bir lahza "nafas oladi" — bosilgani seziladi */
+@keyframes pTabPop {
+  0% { transform: scale(0.86); }
+  60% { transform: scale(1.06); }
+  100% { transform: none; }
+}
+.tabIconActive {
+  animation: pTabPop 0.34s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .enterRight,
+  .enterLeft,
+  .enterSoft,
+  .tabIconActive {
+    animation: none;
+  }
+  .tabPill {
+    transition: none;
+  }
+}
