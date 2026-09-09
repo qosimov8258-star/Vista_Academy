@@ -2,6 +2,7 @@
 
 import { use, useState } from "react";
 import Link from "next/link";
+import clsx from "clsx";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
 import type {
@@ -19,9 +20,11 @@ import { DataTable, THead, TBody, Tr, Th, Td } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
-import { ArrowLeftIcon, CalendarIcon, ChecklistIcon, GroupIcon, NoteIcon } from "@/components/ui/icons";
+import { ArrowLeftIcon, CalendarIcon, ChecklistIcon, GroupIcon, NoteIcon, PhoneIcon } from "@/components/ui/icons";
+import { CopyButton } from "@/components/ui/copy-button";
+import { initials } from "@/components/ui/avatar";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
-import { formatDate, formatDateTime, formatGender } from "@/lib/format";
+import { formatAge, formatChildId, formatDate, formatDateTime, formatGender, formatPhone } from "@/lib/format";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { EditDevelopmentModal } from "@/features/development/edit-development-modal";
 import { EditHealthProfileModal, BLOOD_TYPE_LABEL } from "@/features/child-health/edit-health-profile-modal";
@@ -62,6 +65,37 @@ const RATING_TONE: Record<string, "danger" | "success" | "primary"> = {
   ON_TRACK: "success",
   ABOVE_EXPECTED: "primary",
 };
+
+/** Bolaning bitta fakti — sarlavha ostidagi to'rt katakli qatordan biri. */
+function Fact({
+  label,
+  value,
+  hint,
+  muted,
+  numeric,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  muted?: boolean;
+  numeric?: boolean;
+}) {
+  return (
+    <div className="px-5 py-3.5 sm:px-6">
+      <dt className="text-[12px] font-medium text-[var(--color-text-muted)]">{label}</dt>
+      <dd
+        className={clsx(
+          "mt-1 truncate text-[15px] font-medium",
+          numeric && "tabular-nums",
+          muted ? "text-[var(--color-text-muted)]" : "text-[var(--color-text)]",
+        )}
+      >
+        {value}
+      </dd>
+      {hint && <p className="text-[12px] text-[var(--color-text-muted)]">{hint}</p>}
+    </div>
+  );
+}
 
 function RatingBadge({ label, value }: { label: string; value: string | null }) {
   return (
@@ -146,27 +180,126 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
 
   return (
     <div className="space-y-5">
-      <div>
-        <Link
-          href={childrenHref}
-          className="group inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
-        >
-          <ArrowLeftIcon className="h-4 w-4 transition-transform group-hover:-translate-x-0.5 motion-reduce:transition-none" />
-          Bolalar
-        </Link>
-        <div className="mt-1.5 flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
-            {child.fullName}
-          </h1>
-          <Badge tone={child.status === "ACTIVE" ? "success" : child.status === "QUARANTINED" ? "danger" : "neutral"}>
-            {child.status === "ACTIVE" ? "Faol" : child.status === "QUARANTINED" ? "Karantinda" : "Nofaol"}
-          </Badge>
+      <Link
+        href={childrenHref}
+        className="group inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
+      >
+        <ArrowLeftIcon className="h-4 w-4 transition-transform group-hover:-translate-x-0.5 motion-reduce:transition-none" />
+        Bolalar
+      </Link>
+
+      {/* Bolaning asosiy ma'lumotlari — ilgari sarlavha ostidagi bitta kulrang
+          qatorda edi va o'qilmasdi. Endi har bir fakt alohida katakda. */}
+      <Card className="overflow-hidden">
+        <div className="flex flex-wrap items-start gap-4 px-5 py-5 sm:px-6">
+          <span
+            className={clsx(
+              "flex h-16 w-16 shrink-0 items-center justify-center rounded-full text-[20px] font-semibold ring-1 ring-inset ring-[rgba(16,24,40,0.06)]",
+              child.gender === "MALE"
+                ? "bg-sky-50 text-sky-700"
+                : child.gender === "FEMALE"
+                  ? "bg-rose-50 text-rose-600"
+                  : "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)]",
+            )}
+          >
+            {initials(child.fullName)}
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h1 className="text-[24px] font-semibold leading-tight tracking-[var(--tracking-title)] text-[var(--color-text)]">
+                {child.fullName}
+              </h1>
+              <Badge tone={child.status === "ACTIVE" ? "success" : child.status === "QUARANTINED" ? "danger" : "neutral"}>
+                {child.status === "ACTIVE" ? "Faol" : child.status === "QUARANTINED" ? "Karantinda" : "Nofaol"}
+              </Badge>
+            </div>
+            <div className="mt-1.5 flex items-center gap-1.5">
+              <span className="rounded-full bg-[var(--color-surface-sunken)] px-2.5 py-1 text-[12px] font-semibold tabular-nums text-[var(--color-text-muted)]">
+                {formatChildId(child.publicId)}
+              </span>
+              <CopyButton value={formatChildId(child.publicId)} label="ID nusxalash" />
+            </div>
+          </div>
         </div>
-        <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">
-          {child.branch?.name ?? "—"} • {child.group?.name ?? "Guruhsiz"} • {formatGender(child.gender)}
-          {child.birthDate ? ` • ${formatDate(child.birthDate)}` : ""}
-        </p>
-      </div>
+
+        <dl className="grid grid-cols-2 divide-x divide-y divide-[var(--color-separator)] border-t border-[var(--color-separator)] sm:grid-cols-4 sm:divide-y-0">
+          <Fact label="Filial" value={child.branch?.name ?? "—"} />
+          <Fact label="Guruh" value={child.group?.name ?? "Guruhsiz"} muted={!child.group} />
+          <Fact label="Jinsi" value={formatGender(child.gender)} muted={!child.gender} />
+          <Fact
+            label="Tug'ilgan sana"
+            value={child.birthDate ? formatDate(child.birthDate) : "—"}
+            hint={child.birthDate ? formatAge(child.birthDate) : undefined}
+            numeric
+          />
+        </dl>
+      </Card>
+
+      {/* Bog'lanish uchun ota-ona shu yerda — ro'yxatning pastida emas */}
+      <Card className="overflow-hidden">
+        <div className="hairline flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-separator)] px-5 py-4 sm:px-6">
+          <div>
+            <h2 className="text-[15px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
+              Bog&apos;langan ota-ona
+            </h2>
+            <p className="text-[12.5px] text-[var(--color-text-muted)]">Telefon raqamini bosib nusxalang</p>
+          </div>
+          {canWrite && (
+            <Button size="sm" variant="outline" onClick={() => setGuardianOpen(true)}>
+              + Ota-ona qo&apos;shish
+            </Button>
+          )}
+        </div>
+        {guardiansQuery.isLoading ? (
+          <div className="px-5 py-5 sm:px-6">
+            <LoadingState rows={2} />
+          </div>
+        ) : guardiansQuery.isError ? (
+          <div className="px-5 py-5 sm:px-6">
+            <ErrorState message={(guardiansQuery.error as Error).message} />
+          </div>
+        ) : !guardiansQuery.data || guardiansQuery.data.length === 0 ? (
+          <div className="px-5 py-5 sm:px-6">
+            <EmptyState
+              title="Hali ota-ona biriktirilmagan"
+              description={canWrite ? "Bola bilan bog'lanish uchun ota-ona qo'shing" : undefined}
+              icon={<GroupIcon className="h-[26px] w-[26px]" />}
+            />
+          </div>
+        ) : (
+          <ul className="divide-y divide-[var(--color-separator)]">
+            {guardiansQuery.data.map((link) => (
+              <li key={link.id} className="flex flex-wrap items-center gap-3 px-5 py-3.5 sm:px-6">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)]/10 text-[12px] font-semibold text-[var(--color-primary)]">
+                  {initials(link.guardian.fullName)}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <p className="truncate text-[15px] font-medium text-[var(--color-text)]">
+                      {link.guardian.fullName}
+                    </p>
+                    {link.isPrimary && <Badge tone="primary">Asosiy</Badge>}
+                  </div>
+                  <p className="text-[12.5px] text-[var(--color-text-muted)]">
+                    {GUARDIAN_RELATION_LABEL[link.relation]}
+                    {link.canPickup && " · olib ketadi"}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1">
+                  <a
+                    href={`tel:${link.guardian.phone}`}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-surface-sunken)] px-3 py-1.5 text-[14px] font-medium tabular-nums text-[var(--color-text)] transition-colors hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)]"
+                  >
+                    <PhoneIcon className="h-3.5 w-3.5" />
+                    {formatPhone(link.guardian.phone)}
+                  </a>
+                  <CopyButton value={link.guardian.phone} label="Telefon raqamini nusxalash" />
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
 
       {!canWrite && <ViewOnlyNote role={user?.role} />}
 
@@ -437,12 +570,12 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
 
       <Card className="overflow-hidden">
         <CardHeader className="flex flex-wrap items-center justify-between gap-3">
-          <CardTitle>Ota-onalar</CardTitle>
-          {canWrite && (
-            <Button size="sm" variant="outline" onClick={() => setGuardianOpen(true)}>
-              + Ota-ona qo'shish
-            </Button>
-          )}
+          <div>
+            <CardTitle>Ota-ona huquqlari</CardTitle>
+            <p className="text-[12.5px] text-[var(--color-text-muted)]">
+              Kim olib keta oladi, kim moliyani ko&apos;radi, kimga bildirishnoma boradi
+            </p>
+          </div>
         </CardHeader>
         <CardBody className="p-0">
           {guardiansQuery.isLoading ? (
@@ -454,11 +587,9 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
               <ErrorState message={(guardiansQuery.error as Error).message} />
             </div>
           ) : !guardiansQuery.data || guardiansQuery.data.length === 0 ? (
-            <EmptyState
-              title="Hali ota-ona biriktirilmagan"
-              description={canWrite ? "Ota-ona qo'shish uchun tugmani bosing" : undefined}
-              icon={<GroupIcon className="h-[26px] w-[26px]" />}
-            />
+            <div className="px-5 py-5 sm:px-6">
+              <EmptyState title="Hali ota-ona biriktirilmagan" icon={<GroupIcon className="h-[26px] w-[26px]" />} />
+            </div>
           ) : (
             <DataTable>
               <THead>
@@ -474,7 +605,17 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
                 {guardiansQuery.data.map((link) => (
                   <Tr key={link.id}>
                     <Td className="font-medium">{link.guardian.fullName}</Td>
-                    <Td className="tabular-nums text-[var(--color-text-muted)]">{link.guardian.phone}</Td>
+                    <Td nowrap>
+                      <span className="inline-flex items-center gap-1">
+                        <a
+                          href={`tel:${link.guardian.phone}`}
+                          className="tabular-nums text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-primary)]"
+                        >
+                          {formatPhone(link.guardian.phone)}
+                        </a>
+                        <CopyButton value={link.guardian.phone} label="Telefon raqamini nusxalash" />
+                      </span>
+                    </Td>
                     <Td className="text-[var(--color-text-muted)]">{GUARDIAN_RELATION_LABEL[link.relation]}</Td>
                     <Td>
                       <div className="flex flex-wrap gap-1.5">
