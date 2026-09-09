@@ -1,5 +1,11 @@
 export type TenantUserRole = "NETWORK_ADMIN" | "BRANCH_ADMIN" | "FINANCE" | "MANAGER" | "TEACHER";
 
+/** Kirish sahifasida ko'rsatiladigan ochiq ma'lumot (token talab qilinmaydi). */
+export interface PublicOrganization {
+  name: string;
+  slug: string;
+}
+
 export interface TenantAuthenticatedUser {
   id: string;
   organizationId: string;

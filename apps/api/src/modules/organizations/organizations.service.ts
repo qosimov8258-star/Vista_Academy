@@ -101,6 +101,11 @@ export class OrganizationsService {
     };
   }
 
+  /** Kirish sahifasi uchun: faqat nom va slug, boshqa maydonlar ochilmaydi. */
+  findPublicBySlug(slug: string) {
+    return this.prisma.organization.findUnique({ where: { slug }, select: { name: true, slug: true } });
+  }
+
   async findOne(id: string) {
     const organization = await this.prisma.organization.findUnique({
       where: { id },

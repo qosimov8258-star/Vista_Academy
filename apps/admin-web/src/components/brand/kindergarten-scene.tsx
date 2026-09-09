@@ -97,6 +97,21 @@ function Daisy({ x, y }: { x: number; y: number }) {
 
 const SPARKLE_PATH = "M0 -9 Q0 0 9 0 Q0 0 0 9 Q0 0 -9 0 Q0 0 0 -9 Z";
 
+/* Uy peshtoqidagi lavha: nom uzunligiga qarab kengayadi, devor kengligidan chiqmaydi */
+const SIGN_FONT_SIZE = 13;
+const SIGN_MIN_WIDTH = 100;
+const SIGN_MAX_WIDTH = 256;
+const SIGN_PADDING = 28;
+
+function signMetrics(label: string) {
+  // Qalin katta harflar o'rtacha ~0.72em (harf oralig'i bilan) joy oladi
+  const estimated = label.length * SIGN_FONT_SIZE * 0.72 + SIGN_PADDING;
+  const width = Math.min(SIGN_MAX_WIDTH, Math.max(SIGN_MIN_WIDTH, Math.round(estimated)));
+  // Juda uzun nom lavhaga sig'masa, brauzer harflarni siqib joylashtiradi
+  const textLength = estimated > SIGN_MAX_WIDTH ? SIGN_MAX_WIDTH - SIGN_PADDING + 4 : undefined;
+  return { width, textLength };
+}
+
 const CLOUDS = [
   { width: 240, y: 56, x: 120, duration: 110, delay: -30, opacity: 1 },
   { width: 170, y: 190, x: 1180, duration: 140, delay: -95, opacity: 0.95 },
@@ -122,7 +137,15 @@ const RAYS = Array.from({ length: 12 }, (_, i) => {
   };
 });
 
-export function KindergartenScene({ className }: { className?: string }) {
+interface KindergartenSceneProps {
+  className?: string;
+  /** Uy peshtoqidagi lavha matni — tashkilot nomi. Hali yuklanmagan bo'lsa lavha bo'sh turadi. */
+  name?: string | null;
+}
+
+export function KindergartenScene({ className, name }: KindergartenSceneProps) {
+  const signLabel = name ? name.toUpperCase() : null;
+  const sign = signMetrics(signLabel ?? "BOG'CHA");
   return (
     <svg
       className={[styles.scene, className].filter(Boolean).join(" ")}
@@ -321,31 +344,45 @@ export function KindergartenScene({ className }: { className?: string }) {
 
       {/* Bog'cha binosi */}
       <g className={styles.enterUp} style={{ animationDelay: "0.1s" }}>
-        <rect x="472" y="520" width="276" height="180" rx="4" fill="#fff8ea" />
-        <polygon points="446,534 610,414 774,534" fill="#ff8577" />
-        <rect x="458" y="526" width="304" height="10" rx="5" fill="#f0645a" />
-        <line x1="610" y1="414" x2="610" y2="352" stroke="#6b7280" strokeWidth="3" />
-        <polygon className={styles.flag} points="611,354 652,366 611,378" fill="#ff6b6b" />
-        <circle cx="610" cy="478" r="20" fill="#bfe6ff" stroke="#fff" strokeWidth="5" />
-        <line x1="590" y1="478" x2="630" y2="478" stroke="#fff" strokeWidth="3" />
-        <line x1="610" y1="458" x2="610" y2="498" stroke="#fff" strokeWidth="3" />
+        <rect x="472" y="500" width="276" height="200" rx="4" fill="#fff8ea" />
+        <polygon points="446,514 610,394 774,514" fill="#ff8577" />
+        <rect x="458" y="506" width="304" height="10" rx="5" fill="#f0645a" />
+        <line x1="610" y1="394" x2="610" y2="332" stroke="#6b7280" strokeWidth="3" />
+        <polygon className={styles.flag} points="611,334 652,346 611,358" fill="#ff6b6b" />
+        <circle cx="610" cy="458" r="20" fill="#bfe6ff" stroke="#fff" strokeWidth="5" />
+        <line x1="590" y1="458" x2="630" y2="458" stroke="#fff" strokeWidth="3" />
+        <line x1="610" y1="438" x2="610" y2="478" stroke="#fff" strokeWidth="3" />
         {[498, 662].map((wx) => (
           <g key={wx}>
-            <rect x={wx} y="562" width="60" height="54" rx="6" fill="#bfe6ff" stroke="#fff" strokeWidth="5" />
-            <line x1={wx + 30} y1="562" x2={wx + 30} y2="616" stroke="#fff" strokeWidth="3" />
-            <line x1={wx} y1="589" x2={wx + 60} y2="589" stroke="#fff" strokeWidth="3" />
-            <rect x={wx - 4} y="616" width="68" height="12" rx="3" fill="#c47a3a" />
+            <rect x={wx} y="545" width="60" height="54" rx="6" fill="#bfe6ff" stroke="#fff" strokeWidth="5" />
+            <line x1={wx + 30} y1="545" x2={wx + 30} y2="599" stroke="#fff" strokeWidth="3" />
+            <line x1={wx} y1="572" x2={wx + 60} y2="572" stroke="#fff" strokeWidth="3" />
+            <rect x={wx - 4} y="599" width="68" height="12" rx="3" fill="#c47a3a" />
             {["#ff8fc0", "#ffd166", "#7ad3ff", "#ff8fc0"].map((c, i) => (
-              <circle key={i} cx={wx + 8 + i * 15} cy="613" r="5" fill={c} />
+              <circle key={i} cx={wx + 8 + i * 15} cy="596" r="5" fill={c} />
             ))}
           </g>
         ))}
-        <rect x="562" y="640" width="96" height="24" rx="6" fill="#ffd166" />
-        <text x="610" y="657" textAnchor="middle" fontSize="13" fontWeight="800" letterSpacing="1" fill="#7c4a03">
-          {"BOG'CHA"}
-        </text>
-        <path d="M586 700 V672 a24 24 0 0 1 48 0 V700 Z" fill="#0f766e" />
-        <circle cx="624" cy="686" r="3" fill="#ffd166" />
+        {/* Peshtoqdagi lavha — tashkilot nomi, eshik ustida */}
+        <rect x={610 - sign.width / 2} y="620" width={sign.width} height="26" rx="7" fill="#ffd166" />
+        {signLabel && (
+          <text
+            className={styles.signText}
+            x="610"
+            y="638"
+            textAnchor="middle"
+            fontSize={SIGN_FONT_SIZE}
+            fontWeight="800"
+            letterSpacing="1"
+            fill="#7c4a03"
+            textLength={sign.textLength}
+            lengthAdjust={sign.textLength ? "spacingAndGlyphs" : undefined}
+          >
+            {signLabel}
+          </text>
+        )}
+        <path d="M588 700 V676 a22 22 0 0 1 44 0 V700 Z" fill="#0f766e" />
+        <circle cx="622" cy="688" r="3" fill="#ffd166" />
         <rect x="578" y="700" width="64" height="6" rx="3" fill="#d9c7a3" />
         {/* Panjara */}
         <rect x="762" y="676" width="68" height="5" rx="2.5" fill="#fff" />
