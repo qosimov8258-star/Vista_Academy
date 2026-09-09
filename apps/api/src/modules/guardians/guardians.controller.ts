@@ -37,6 +37,17 @@ export class GuardiansController {
     return this.guardiansService.updateLink(toTenantScope(user), linkId, dto);
   }
 
+  /** Ota-ona kabinetini ochish yoki parolini yangilash. */
+  @Post("guardians/:id/cabinet")
+  openCabinet(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string) {
+    return this.guardiansService.openCabinet(toTenantScope(user), id);
+  }
+
+  @Delete("guardians/:id/cabinet")
+  closeCabinet(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string) {
+    return this.guardiansService.closeCabinet(toTenantScope(user), id);
+  }
+
   @Delete("child-guardians/:linkId")
   removeLink(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("linkId") linkId: string) {
     return this.guardiansService.removeLink(toTenantScope(user), linkId);

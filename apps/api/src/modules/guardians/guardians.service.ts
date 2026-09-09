@@ -5,6 +5,8 @@ import { TenantScope, requireOperationalScope } from "../iam/tenant-auth.types";
 import { AddChildGuardianDto } from "./dto/add-child-guardian.dto";
 import { UpdateChildGuardianDto } from "./dto/update-child-guardian.dto";
 import { GuardianQueryDto } from "./dto/guardian-query.dto";
+import { generateParentPassword, normalizePhone } from "../parent/parent-auth.service";
+import * as argon2 from "argon2";
 
 @Injectable()
 export class GuardiansService {
@@ -38,10 +40,36 @@ export class GuardiansService {
 
   async listForChild(scope: TenantScope, childId: string) {
     await this.requireChild(scope, childId);
-    return this.prisma.childGuardian.findMany({
+    const links = await this.prisma.childGuardian.findMany({
       where: { childId },
-      include: { guardian: true },
+      include: {
+        guardian: {
+          select: {
+            id: true,
+            organizationId: true,
+            fullName: true,
+            phone: true,
+            isActive: true,
+            lastLoginAt: true,
+            createdAt: true,
+            // Parol xeshi tashqariga chiqmaydi — faqat bor-yo'qligi kerak
+            passwordHash: true,
+          },
+        },
+      },
       orderBy: { isPrimary: "desc" },
+    });
+
+    return links.map(({ guardian, ...link }) => {
+      const { passwordHash, ...safeGuardian } = guardian;
+      return {
+        ...link,
+        guardian: {
+          ...safeGuardian,
+          /** Kabinet ochilganmi — paroli bormi degani. */
+          hasCabinet: passwordHash !== null && guardian.isActive,
+        },
+      };
     });
   }
 
@@ -103,6 +131,76 @@ export class GuardiansService {
       data: dto,
       include: { guardian: true },
     });
+  }
+
+  /**
+   * Ota-ona kabinetini ochadi yoki parolini yangilaydi.
+   *
+   * Login — vasiyning telefon raqami, parol esa tasodifiy yaratiladi va
+   * javobda BIR MARTA qaytariladi: bazada faqat xesh saqlanadi, shuning
+   * uchun keyin uni ko'rsatib bo'lmaydi — faqat yangisini yaratish mumkin.
+   */
+  async openCabinet(scope: TenantScope, guardianId: string) {
+    const guardian = await this.requireManageableGuardian(scope, guardianId);
+    const password = generateParentPassword();
+    const passwordHash = await argon2.hash(password);
+
+    await this.prisma.$transaction([
+      this.prisma.guardian.update({
+        where: { id: guardian.id },
+        // Raqam yagona ko'rinishga keltiriladi: ota-ona uni qanday
+        // yozishidan qat'i nazar login topilsin.
+        data: { passwordHash, isActive: true, phone: normalizePhone(guardian.phone) },
+      }),
+      // Parol almashsa eski seanslar yopiladi
+      this.prisma.guardianRefreshToken.updateMany({
+        where: { guardianId: guardian.id, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+    ]);
+
+    return {
+      guardianId: guardian.id,
+      fullName: guardian.fullName,
+      login: normalizePhone(guardian.phone),
+      password,
+    };
+  }
+
+  /** Kabinetni yopadi: parol olib tashlanadi va ochiq seanslar bekor qilinadi. */
+  async closeCabinet(scope: TenantScope, guardianId: string) {
+    const guardian = await this.requireManageableGuardian(scope, guardianId);
+    await this.prisma.$transaction([
+      this.prisma.guardian.update({
+        where: { id: guardian.id },
+        data: { passwordHash: null, isActive: false },
+      }),
+      this.prisma.guardianRefreshToken.updateMany({
+        where: { guardianId: guardian.id, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+    ]);
+    return { guardianId: guardian.id, hasCabinet: false };
+  }
+
+  /**
+   * Vasiy shu tashkilotda va xodimning filialidagi bolaga biriktirilganmi.
+   * Aks holda boshqa filialning ota-onasiga kabinet ochib yuborish mumkin edi.
+   */
+  private async requireManageableGuardian(scope: TenantScope, guardianId: string) {
+    const branchId = requireOperationalScope(scope);
+    const guardian = await this.prisma.guardian.findFirst({
+      where: {
+        id: guardianId,
+        organizationId: scope.organizationId,
+        children: { some: { child: { branchId } } },
+      },
+      select: { id: true, fullName: true, phone: true },
+    });
+    if (!guardian) {
+      throw new NotFoundException("Ota-ona topilmadi");
+    }
+    return guardian;
   }
 
   async removeLink(scope: TenantScope, linkId: string) {

@@ -1,0 +1,55 @@
+/*
+ * Ota-ona kabineti — bog'chaga mos iliq palitra. Boshqaruv panelidagi
+ * to'q yashil brend rangi bu yerda ishlatilmaydi: ota-ona kuniga bir marta
+ * kiradigan, bolasi haqida yaxshi xabar oladigan joy, ish quroli emas.
+ */
+.shell {
+  --p-bg: #fff8f0;
+  --p-card: #ffffff;
+  --p-ink: #2c2320;
+  --p-muted: #8a7d75;
+  --p-line: rgba(120, 90, 70, 0.1);
+
+  --p-sun: #ffb703;
+  --p-coral: #ff7a66;
+  --p-mint: #3fbf9b;
+  --p-sky: #56b4f5;
+  --p-lilac: #a78bfa;
+
+  --p-radius: 26px;
+  --p-shadow: 0 2px 4px rgba(120, 90, 70, 0.05), 0 12px 28px -10px rgba(120, 90, 70, 0.18);
+
+  min-height: 100dvh;
+  background: var(--p-bg);
+  color: var(--p-ink);
+}
+
+/* Yuqoridagi iliq yoyilma — sahifa "quyoshli" boshlanadi */
+.sky {
+  background:
+    radial-gradient(120% 90% at 15% 0%, rgba(255, 183, 3, 0.28) 0%, rgba(255, 183, 3, 0) 60%),
+    radial-gradient(110% 80% at 90% 5%, rgba(86, 180, 245, 0.25) 0%, rgba(86, 180, 245, 0) 55%);
+}
+
+@keyframes pFloat {
+  from { transform: translateY(0); }
+  to { transform: translateY(-6px); }
+}
+.float {
+  animation: pFloat 3.2s ease-in-out infinite alternate;
+}
+
+@keyframes pPop {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+.pop {
+  animation: pPop 0.5s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .float,
+  .pop {
+    animation: none;
+  }
+}

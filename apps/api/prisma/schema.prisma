@@ -880,14 +880,44 @@ model Guardian {
   organizationId String   @map("organization_id")
   fullName       String   @map("full_name")
   phone          String
+  // Ota-ona kabineti. Login — telefon raqami, shuning uchun u tashkilot
+  // ichida unikal. Parol qo'yilmagan bo'lsa kabinet hali ochilmagan:
+  // vasiy ro'yxatda bor, lekin tizimga kira olmaydi.
+  passwordHash   String?   @map("password_hash")
+  isActive       Boolean   @default(true) @map("is_active")
+  lastLoginAt    DateTime? @map("last_login_at")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
-  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  children     ChildGuardian[]
+  organization  Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  children      ChildGuardian[]
+  refreshTokens GuardianRefreshToken[]
 
+  @@unique([organizationId, phone])
   @@index([organizationId])
   @@map("guardians")
+}
+
+/**
+ * Ota-ona seanslari. TenantRefreshToken dan alohida: ota-ona tokeni
+ * hech qachon xodimlar tizimiga kira olmasligi kerak, shuning uchun
+ * ikkala oqim butunlay ajratilgan.
+ */
+model GuardianRefreshToken {
+  id         String    @id @default(uuid())
+  guardianId String    @map("guardian_id")
+  tokenHash  String    @unique @map("token_hash")
+  userAgent  String?   @map("user_agent")
+  ip         String?
+  expiresAt  DateTime  @map("expires_at")
+  revokedAt  DateTime? @map("revoked_at")
+  replacedBy String?   @map("replaced_by")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  guardian Guardian @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+
+  @@index([guardianId])
+  @@map("guardian_refresh_tokens")
 }
 
 model ChildGuardian {

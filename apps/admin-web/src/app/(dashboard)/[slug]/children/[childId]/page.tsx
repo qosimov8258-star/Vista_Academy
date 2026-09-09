@@ -43,6 +43,7 @@ import { UpdateVaccinationModal } from "@/features/child-health/update-vaccinati
 import { AddMedicationModal } from "@/features/child-health/add-medication-modal";
 import { QuarantineModal } from "@/features/child-health/quarantine-modal";
 import { AddGuardianModal } from "@/features/guardians/add-guardian-modal";
+import { ParentCabinetModal } from "@/features/guardians/parent-cabinet-modal";
 import { EditGuardianLinkModal } from "@/features/guardians/edit-guardian-link-modal";
 import { canWriteOperational } from "@/lib/permissions";
 
@@ -132,6 +133,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
   const [quarantineOpen, setQuarantineOpen] = useState(false);
   const [guardianOpen, setGuardianOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<ChildGuardian | null>(null);
+  const [cabinetLink, setCabinetLink] = useState<ChildGuardian | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [photoChecking, setPhotoChecking] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -391,6 +393,20 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
                   </p>
                 </div>
                 <div className="flex items-center gap-1">
+                  {canWrite && (
+                    <button
+                      type="button"
+                      onClick={() => setCabinetLink(link)}
+                      className={clsx(
+                        "cursor-pointer rounded-full px-3 py-1.5 text-[13px] font-semibold transition-colors",
+                        link.guardian.hasCabinet
+                          ? "bg-[var(--color-success-bg)] text-[var(--color-success)] hover:brightness-[0.97]"
+                          : "bg-[var(--color-primary)]/10 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/[0.16]",
+                      )}
+                    >
+                      {link.guardian.hasCabinet ? "Kabinet ochiq" : "Kabinet ochish"}
+                    </button>
+                  )}
                   <a
                     href={`tel:${link.guardian.phone}`}
                     className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-surface-sunken)] px-3 py-1.5 text-[14px] font-medium tabular-nums text-[var(--color-text)] transition-colors hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)]"
@@ -783,6 +799,16 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
 
       {canWrite && guardianOpen && (
         <AddGuardianModal open={guardianOpen} onClose={() => setGuardianOpen(false)} slug={slug} childId={childId} />
+      )}
+
+      {canWrite && cabinetLink && (
+        <ParentCabinetModal
+          open={!!cabinetLink}
+          onClose={() => setCabinetLink(null)}
+          slug={slug}
+          childId={childId}
+          link={cabinetLink}
+        />
       )}
 
       {canWrite && editingLink && (
