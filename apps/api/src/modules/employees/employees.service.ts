@@ -11,6 +11,9 @@ import { EmployeeQueryDto } from "./dto/employee-query.dto";
 const employeeInclude = {
   tenantUser: { select: { id: true, email: true, role: true, isActive: true } },
   teachingGroups: { include: { group: { select: { id: true, name: true } } } },
+  // Oylik sxemasi ro'yxat bilan birga keladi: aks holda tarmoq bo'ylab
+  // oyliklarni ko'rsatish uchun har bir xodimga alohida so'rov ketardi.
+  salaryScheme: { select: { ruleType: true, fixedAmount: true, rate: true } },
 } satisfies Prisma.EmployeeInclude;
 
 @Injectable()

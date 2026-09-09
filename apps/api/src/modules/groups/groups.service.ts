@@ -6,6 +6,7 @@ import { resolveTeacherGroupIds } from "../iam/teacher-scope";
 import { CreateGroupDto } from "./dto/create-group.dto";
 import { GroupQueryDto } from "./dto/group-query.dto";
 import { GroupAttendanceQueryDto } from "./dto/group-attendance-query.dto";
+import { GroupDayQueryDto } from "./dto/group-day-query.dto";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 /** Sana oralig'i cheksiz bo'lib ketmasin — bir yildan uzunini so'ramaymiz. */
@@ -190,6 +191,53 @@ export class GroupsService {
           rate: marked === 0 ? null : Math.round((counts.present / marked) * 100),
         };
       }),
+    };
+  }
+
+  /**
+   * Bitta kunning nomli ro'yxati: kim keldi, kim kelmadi, kim belgilanmagan.
+   * `attendanceRange` faqat sonlarni beradi — bu yerda ismlar kerak.
+   */
+  async attendanceDay(scope: TenantScope, id: string, query: GroupDayQueryDto) {
+    await this.assertAccess(scope, id);
+    const date = query.date ?? todayDateString();
+
+    const children = await this.prisma.child.findMany({
+      where: { groupId: id, status: "ACTIVE" },
+      select: { id: true, publicId: true, fullName: true, gender: true },
+      orderBy: { fullName: "asc" },
+    });
+
+    const records = children.length
+      ? await this.prisma.attendance.findMany({
+          where: { childId: { in: children.map((child) => child.id) }, date: toDateOnly(date) },
+          select: { childId: true, status: true, note: true },
+        })
+      : [];
+    const byChild = new Map(records.map((record) => [record.childId, record]));
+
+    const items = children.map((child) => {
+      const record = byChild.get(child.id);
+      return {
+        childId: child.id,
+        publicId: child.publicId,
+        fullName: child.fullName,
+        gender: child.gender,
+        // Yozuv yo'q bo'lsa "kelmadi" emas — hali belgilanmagan
+        status: record?.status ?? null,
+        note: record?.note ?? null,
+      };
+    });
+
+    return {
+      date,
+      total: children.length,
+      counts: {
+        present: items.filter((item) => item.status === "PRESENT").length,
+        absent: items.filter((item) => item.status === "ABSENT").length,
+        unmarked: items.filter((item) => item.status === null).length,
+      },
+      items,
     };
   }
 

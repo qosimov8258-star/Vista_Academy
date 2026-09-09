@@ -128,6 +128,7 @@ export class HrService {
   }
 
   async listPayroll(scope: TenantScope, query: PayrollQueryDto) {
+    assertPayrollReader(scope);
     const where: Prisma.PayrollEntryWhereInput = {
       branch: { organizationId: scope.organizationId },
       branchId: scope.branchId ?? query.branchId,
@@ -136,7 +137,11 @@ export class HrService {
     const [items, total] = await this.prisma.$transaction([
       this.prisma.payrollEntry.findMany({
         where,
-        include: { employee: { select: { id: true, fullName: true, position: true } } },
+        include: {
+          employee: { select: { id: true, fullName: true, position: true } },
+          // Tarmoq ko'rinishida qatorni filial nomi bilan belgilash uchun
+          branch: { select: { id: true, name: true } },
+        },
         orderBy: { createdAt: "desc" },
         skip: (query.page - 1) * query.limit,
         take: query.limit,
@@ -144,5 +149,74 @@ export class HrService {
       this.prisma.payrollEntry.count({ where }),
     ]);
     return { data: items, meta: { page: query.page, limit: query.limit, total } };
+  }
+
+  /**
+   * Ish haqi jamlanmasi: umumiy fond va filial kesimi. Ro'yxatni sahifalab
+   * yig'ish o'rniga bazada `groupBy` bilan hisoblanadi.
+   */
+  async payrollSummary(scope: TenantScope, query: PayrollQueryDto) {
+    assertPayrollReader(scope);
+    const where: Prisma.PayrollEntryWhereInput = {
+      branch: { organizationId: scope.organizationId },
+      branchId: scope.branchId ?? query.branchId,
+      ...(query.period ? { period: query.period } : {}),
+    };
+
+    const [rows, branches] = await Promise.all([
+      this.prisma.payrollEntry.groupBy({
+        by: ["branchId", "status"],
+        where,
+        _sum: { baseAmount: true, bonusAmount: true, penaltyAmount: true, totalAmount: true },
+        _count: { _all: true },
+      }),
+      this.prisma.branch.findMany({
+        where: { organizationId: scope.organizationId, ...(scope.branchId ?? query.branchId ? { id: scope.branchId ?? query.branchId } : {}) },
+        select: { id: true, name: true },
+        orderBy: { name: "asc" },
+      }),
+    ]);
+
+    const totals = { entries: 0, base: 0, bonus: 0, penalty: 0, total: 0, paid: 0, unpaid: 0 };
+    const perBranch = new Map<string, { entries: number; total: number; paid: number; unpaid: number }>();
+
+    for (const row of rows) {
+      const total = Number(row._sum.totalAmount ?? 0);
+      totals.entries += row._count._all;
+      totals.base += Number(row._sum.baseAmount ?? 0);
+      totals.bonus += Number(row._sum.bonusAmount ?? 0);
+      totals.penalty += Number(row._sum.penaltyAmount ?? 0);
+      totals.total += total;
+      if (row.status === "PAID") totals.paid += total;
+      else totals.unpaid += total;
+
+      const bucket = perBranch.get(row.branchId) ?? { entries: 0, total: 0, paid: 0, unpaid: 0 };
+      bucket.entries += row._count._all;
+      bucket.total += total;
+      if (row.status === "PAID") bucket.paid += total;
+      else bucket.unpaid += total;
+      perBranch.set(row.branchId, bucket);
+    }
+
+    return {
+      period: query.period ?? null,
+      totals,
+      branches: branches.map((branch) => ({
+        branchId: branch.id,
+        branchName: branch.name,
+        ...(perBranch.get(branch.id) ?? { entries: 0, total: 0, paid: 0, unpaid: 0 }),
+      })),
+    };
+  }
+}
+
+/**
+ * Ish haqi ma'lumotini Super Admin, filial admini va moliyachi ko'radi.
+ * Ilgari bu ro'yxat rolsiz ochiq edi — o'qituvchi ham butun filialning
+ * oyliklarini o'qiy olardi.
+ */
+function assertPayrollReader(scope: TenantScope) {
+  if (scope.role !== "NETWORK_ADMIN" && scope.role !== "BRANCH_ADMIN" && scope.role !== "FINANCE") {
+    throw new ForbiddenException("Ish haqi ma'lumotini ko'rish huquqingiz yo'q");
   }
 }
