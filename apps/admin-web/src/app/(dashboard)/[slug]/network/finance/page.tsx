@@ -20,7 +20,9 @@ import { formatChildId } from "@/lib/format";
 import { monogram, paletteFor } from "@/features/network/palette";
 import { SplitBar, formatCompact, formatSum } from "@/features/network/money";
 import { PeriodPicker, formatPeriod } from "@/features/network/period-picker";
-import { ChildIcon, MoneyIcon, TeacherIcon, WalletIcon } from "@/components/ui/icons";
+import { ChildIcon, EyeIcon, EyeOffIcon, MoneyIcon, TeacherIcon, WalletIcon } from "@/components/ui/icons";
+import { useAuth } from "@/lib/use-auth";
+import { useHiddenAmounts } from "@/lib/use-hidden-amounts";
 
 type Tab = "groups" | "children" | "payroll";
 
@@ -56,6 +58,9 @@ export default function NetworkFinancePage({ params }: { params: Promise<{ slug:
   const [period, setPeriod] = useState<string | null>(null);
   const [childFilter, setChildFilter] = useState<FinanceChildStatus | "all">("all");
   const [search, setSearch] = useState("");
+  // Yashirilgan summalar foydalanuvchi bo'yicha saqlanadi
+  const { user } = useAuth();
+  const { isHidden, toggle } = useHiddenAmounts(user?.id);
 
   useEffect(() => {
     setPeriod((current) => current ?? currentPeriod());
@@ -137,6 +142,8 @@ export default function NetworkFinancePage({ params }: { params: Promise<{ slug:
               hint={`${summary.totals.invoiceCount} ta hisob-faktura`}
               icon={<MoneyIcon className="h-5 w-5" />}
               tone="brand"
+              hidden={isHidden("billed")}
+              onToggle={() => toggle("billed")}
             />
             <KpiTile
               label="Yig'ilgan"
@@ -148,6 +155,8 @@ export default function NetworkFinancePage({ params }: { params: Promise<{ slug:
               }
               icon={<WalletIcon className="h-5 w-5" />}
               tone="success"
+              hidden={isHidden("collected")}
+              onToggle={() => toggle("collected")}
             />
             <KpiTile
               label="Qarzdorlik"
@@ -155,6 +164,8 @@ export default function NetworkFinancePage({ params }: { params: Promise<{ slug:
               hint={summary.totals.outstanding > 0 ? "To'lanmagan qoldiq" : "Qarz yo'q"}
               icon={<ChildIcon className="h-5 w-5" />}
               tone={summary.totals.outstanding > 0 ? "danger" : "neutral"}
+              hidden={isHidden("outstanding")}
+              onToggle={() => toggle("outstanding")}
             />
             <KpiTile
               label="Kassaga tushgan"
@@ -162,6 +173,8 @@ export default function NetworkFinancePage({ params }: { params: Promise<{ slug:
               hint={`${formatPeriod(summary.period)} davomida`}
               icon={<TeacherIcon className="h-5 w-5" />}
               tone="sky"
+              hidden={isHidden("collectedInPeriod")}
+              onToggle={() => toggle("collectedInPeriod")}
             />
           </div>
 
@@ -205,6 +218,8 @@ export default function NetworkFinancePage({ params }: { params: Promise<{ slug:
               employees={employeesQuery.data ?? []}
               loading={payrollSummaryQuery.isLoading || payrollQuery.isLoading}
               period={summary.period}
+              isHidden={isHidden}
+              toggle={toggle}
             />
           )}
         </>
@@ -229,12 +244,17 @@ function KpiTile({
   hint,
   icon,
   tone,
+  hidden,
+  onToggle,
 }: {
   label: string;
   value: number;
   hint?: string;
   icon: React.ReactNode;
   tone: keyof typeof KPI_TONE;
+  /** Berilsa kartochkada ko'z tugmasi chiqadi va summa yopiladi. */
+  hidden?: boolean;
+  onToggle?: () => void;
 }) {
   return (
     <Card className="p-5">
@@ -242,13 +262,29 @@ function KpiTile({
         <span className={clsx("flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)]", KPI_TONE[tone])}>
           {icon}
         </span>
-        <span className="text-[13px] font-medium text-[var(--color-text-muted)]">{label}</span>
+        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-[var(--color-text-muted)]">{label}</span>
+        {onToggle && (
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-pressed={hidden}
+            aria-label={hidden ? `${label} summasini ko'rsatish` : `${label} summasini berkitish`}
+            title={hidden ? "Summani ko'rsatish" : "Summani berkitish"}
+            className="-mr-1 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-text)]"
+          >
+            {hidden ? <EyeOffIcon className="h-[18px] w-[18px]" /> : <EyeIcon className="h-[18px] w-[18px]" />}
+          </button>
+        )}
       </div>
       <p
-        className="mt-3 text-[26px] font-bold leading-none tracking-[var(--tracking-title)] text-[var(--color-text)] tabular-nums"
-        title={`${formatSum(value)} UZS`}
+        className={clsx(
+          "mt-3 text-[26px] font-bold leading-none tracking-[var(--tracking-title)] tabular-nums",
+          hidden ? "select-none text-[var(--color-text-muted)]/50" : "text-[var(--color-text)]",
+        )}
+        // Yopiq bo'lsa to'liq summa hover'da ham ko'rinmasligi kerak
+        title={hidden ? undefined : `${formatSum(value)} UZS`}
       >
-        {formatCompact(value)}
+        {hidden ? "•••••" : formatCompact(value)}
       </p>
       {hint && <p className="mt-1.5 text-[12.5px] text-[var(--color-text-muted)]">{hint}</p>}
     </Card>
@@ -435,12 +471,16 @@ function PayrollPanel({
   employees,
   loading,
   period,
+  isHidden,
+  toggle,
 }: {
   summary?: PayrollSummary;
   entries: PayrollEntry[];
   employees: Employee[];
   loading: boolean;
   period: string;
+  isHidden: (id: string) => boolean;
+  toggle: (id: string) => void;
 }) {
   // Ish haqi hali hisoblanmagan xodimlar ham ko'rinsin: ularda oylik
   // sxemasi bor, lekin bu oy uchun yozuv yo'q.
@@ -462,12 +502,16 @@ function PayrollPanel({
           hint={`${summary?.totals.entries ?? 0} ta yozuv`}
           icon={<WalletIcon className="h-5 w-5" />}
           tone="brand"
+          hidden={isHidden("payrollTotal")}
+          onToggle={() => toggle("payrollTotal")}
         />
         <KpiTile
           label="To'langan"
           value={summary?.totals.paid ?? 0}
           icon={<MoneyIcon className="h-5 w-5" />}
           tone="success"
+          hidden={isHidden("payrollPaid")}
+          onToggle={() => toggle("payrollPaid")}
         />
         <KpiTile
           label="To'lanmagan"
@@ -475,6 +519,8 @@ function PayrollPanel({
           hint={(summary?.totals.unpaid ?? 0) > 0 ? "Hali berilmagan" : "Hammasi berilgan"}
           icon={<TeacherIcon className="h-5 w-5" />}
           tone={(summary?.totals.unpaid ?? 0) > 0 ? "danger" : "neutral"}
+          hidden={isHidden("payrollUnpaid")}
+          onToggle={() => toggle("payrollUnpaid")}
         />
       </div>
 
