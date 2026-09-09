@@ -7,6 +7,8 @@ import { TenantAuthenticatedUser, toTenantScope } from "../iam/tenant-auth.types
 import { GroupsService } from "./groups.service";
 import { CreateGroupDto } from "./dto/create-group.dto";
 import { GroupQueryDto } from "./dto/group-query.dto";
+import { GroupAttendanceQueryDto } from "./dto/group-attendance-query.dto";
+import { GroupDayQueryDto } from "./dto/group-day-query.dto";
 
 @ApiBearerAuth()
 @ApiTags("Tenant Groups")
@@ -29,5 +31,31 @@ export class GroupsController {
   @Get(":id")
   findOne(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string) {
     return this.groupsService.findOne(toTenantScope(user), id);
+  }
+
+  /** Guruh kartochkasi: tarbiyachilar, bolalar ro'yxati va jins taqsimoti. */
+  @Get(":id/overview")
+  overview(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string) {
+    return this.groupsService.overview(toTenantScope(user), id);
+  }
+
+  /** Bitta kunning nomli ro'yxati: kim keldi, kim kelmadi, kim belgilanmagan. */
+  @Get(":id/attendance/day")
+  attendanceDay(
+    @CurrentTenantUser() user: TenantAuthenticatedUser,
+    @Param("id") id: string,
+    @Query() query: GroupDayQueryDto,
+  ) {
+    return this.groupsService.attendanceDay(toTenantScope(user), id, query);
+  }
+
+  /** Sana oralig'idagi davomat: kunlik yig'indi va bola kesimidagi hisob. */
+  @Get(":id/attendance")
+  attendance(
+    @CurrentTenantUser() user: TenantAuthenticatedUser,
+    @Param("id") id: string,
+    @Query() query: GroupAttendanceQueryDto,
+  ) {
+    return this.groupsService.attendanceRange(toTenantScope(user), id, query);
   }
 }

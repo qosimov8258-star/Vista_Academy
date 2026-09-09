@@ -57,3 +57,39 @@ export function canManageUsers(role: TenantUserRole | undefined): boolean {
 export function isTeacher(role: TenantUserRole | undefined): boolean {
   return role === "TEACHER";
 }
+
+/**
+ * Xodim hisobini boshqarish. Qoidalar API'dagi
+ * `TenantUsersService.assertManageable` bilan bir xil:
+ *   - o'z hisobiga tegib bo'lmaydi (buning uchun Sozlamalar bor);
+ *   - Super Admin boshqa Super Adminga tegmaydi — aks holda tashkilot
+ *     egasini bloklab, kirib bo'lmaydigan holatga tushib qolish mumkin;
+ *   - filial admini faqat o'z filialidagi administrator va o'qituvchini.
+ */
+export function canManageUser(
+  actor: { id: string; role: TenantUserRole; branchId: string | null } | null | undefined,
+  target: { id: string; role: TenantUserRole; branchId: string | null },
+): boolean {
+  if (!actor || actor.id === target.id) return false;
+  if (actor.role === "NETWORK_ADMIN") return target.role !== "NETWORK_ADMIN";
+  if (actor.role === "BRANCH_ADMIN") {
+    return (
+      !!actor.branchId &&
+      actor.branchId === target.branchId &&
+      (target.role === "MANAGER" || target.role === "TEACHER")
+    );
+  }
+  return false;
+}
+
+/**
+ * Rolni almashtirish mumkinmi. O'qituvchining roli bu yerdan
+ * o'zgartirilmaydi: uning logini xodim kartochkasi va guruh biriktiruviga
+ * bog'langan, rolni almashtirish guruhlarni yetim qoldiradi.
+ */
+export function canChangeUserRole(
+  actor: { role: TenantUserRole } | null | undefined,
+  target: { role: TenantUserRole },
+): boolean {
+  return actor?.role === "NETWORK_ADMIN" && (target.role === "BRANCH_ADMIN" || target.role === "FINANCE");
+}

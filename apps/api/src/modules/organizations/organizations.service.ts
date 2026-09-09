@@ -1,4 +1,5 @@
-import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import * as argon2 from "argon2";
 import { PrismaService } from "../../database/prisma.service";
@@ -7,7 +8,11 @@ import { UpdateOrganizationDto } from "./dto/update-organization.dto";
 import { OrganizationQueryDto } from "./dto/organization-query.dto";
 import { CreateBranchDto } from "./dto/create-branch.dto";
 import { UpdateBranchDto } from "./dto/update-branch.dto";
+import { UpdateBranchAvatarDto } from "./dto/update-branch-avatar.dto";
 import { slugify } from "./slugify";
+
+/** Rasm brauzerda 256x256 gacha kichraytirilgani uchun bundan oshmasligi kerak. */
+const MAX_BRANCH_AVATAR_BYTES = 300 * 1024;
 
 @Injectable()
 export class OrganizationsService {
@@ -101,6 +106,11 @@ export class OrganizationsService {
     };
   }
 
+  /** Kirish sahifasi uchun: faqat nom va slug, boshqa maydonlar ochilmaydi. */
+  findPublicBySlug(slug: string) {
+    return this.prisma.organization.findUnique({ where: { slug }, select: { name: true, slug: true } });
+  }
+
   async findOne(id: string) {
     const organization = await this.prisma.organization.findUnique({
       where: { id },
@@ -164,6 +174,49 @@ export class OrganizationsService {
       throw new NotFoundException("Filial topilmadi");
     }
     return branch;
+  }
+
+  /**
+   * Filial belgisini saqlaydi. Rasm brauzerda 256x256 gacha kichraytirilib,
+   * data URL ko'rinishida keladi — server faqat hajmini tekshiradi.
+   */
+  async updateBranchAvatar(organizationId: string, branchId: string, dto: UpdateBranchAvatarDto) {
+    await this.getBranch(organizationId, branchId);
+    const [header, base64] = dto.image.split(",", 2);
+    const mimeType = header.slice("data:".length, header.indexOf(";"));
+    const buffer = Buffer.from(base64, "base64");
+
+    if (buffer.byteLength === 0) {
+      throw new BadRequestException("Rasm bo'sh");
+    }
+    if (buffer.byteLength > MAX_BRANCH_AVATAR_BYTES) {
+      throw new BadRequestException("Rasm hajmi juda katta");
+    }
+
+    const updated = await this.prisma.branch.update({
+      where: { id: branchId },
+      data: { avatar: buffer, avatarMimeType: mimeType, avatarUpdatedAt: new Date() },
+      select: { avatarUpdatedAt: true },
+    });
+    return { avatarUpdatedAt: updated.avatarUpdatedAt };
+  }
+
+  async removeBranchAvatar(organizationId: string, branchId: string) {
+    await this.getBranch(organizationId, branchId);
+    await this.prisma.branch.update({
+      where: { id: branchId },
+      data: { avatar: null, avatarMimeType: null, avatarUpdatedAt: null },
+    });
+    return { avatarUpdatedAt: null };
+  }
+
+  /** Binar rasm. `select` global `omit` dan ustun turadi. */
+  async readBranchAvatar(organizationId: string, branchId: string) {
+    await this.getBranch(organizationId, branchId);
+    return this.prisma.branch.findUniqueOrThrow({
+      where: { id: branchId },
+      select: { avatar: true, avatarMimeType: true },
+    });
   }
 
   async updateBranch(organizationId: string, branchId: string, dto: UpdateBranchDto) {

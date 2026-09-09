@@ -1,0 +1,17 @@
+/* Kirish kartasi va brend belgisi sahna ustida yumshoq ko'tarilib paydo bo'ladi */
+@keyframes loginCardEnter {
+  from { opacity: 0; transform: translateY(20px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.card {
+  animation: loginCardEnter 0.7s cubic-bezier(0.32, 0.72, 0, 1) 0.15s both;
+}
+.brand {
+  animation: loginCardEnter 0.6s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .brand {
+    animation: none;
+  }
+}

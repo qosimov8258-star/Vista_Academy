@@ -70,8 +70,8 @@ export default function NotificationsPage({ params }: { params: Promise<{ slug: 
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-[var(--color-text)]">Bildirishnomalar</h1>
-          <p className="text-sm text-[var(--color-text-muted)]">
+          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">Bildirishnomalar</h1>
+          <p className="text-[14px] text-[var(--color-text-muted)]">
             Ota-onalarga yuborilgan yoki yuborilishi kerak bo&apos;lgan xabarlar jurnali — haqiqiy SMS/Telegram
             yuborilmaydi, faqat yozib boriladi. Xabar berilgach, tegishli yozuvni &quot;Yuborildi&quot; deb belgilang.
           </p>
@@ -107,7 +107,7 @@ export default function NotificationsPage({ params }: { params: Promise<{ slug: 
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-[var(--color-border)] bg-gray-50 text-xs uppercase text-[var(--color-text-muted)]">
+              <thead className="hairline border-b border-[var(--color-separator)] bg-[var(--color-surface-sunken)] text-xs uppercase text-[var(--color-text-muted)]">
                 <tr>
                   <th className="px-5 py-3 font-medium">Hodisa</th>
                   <th className="px-5 py-3 font-medium">Qabul qiluvchi</th>
@@ -119,9 +119,9 @@ export default function NotificationsPage({ params }: { params: Promise<{ slug: 
                   {canWrite && <th className="px-5 py-3 font-medium" />}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[var(--color-border)]">
+              <tbody className="divide-y divide-[var(--color-separator)]">
                 {notificationsQuery.data.data.map((n) => (
-                  <tr key={n.id} className="hover:bg-gray-50">
+                  <tr key={n.id} className="hover:bg-[var(--color-surface-hover)]">
                     <td className="px-5 py-3 text-[var(--color-text)]">{eventTypeLabels[n.eventType]}</td>
                     <td className="px-5 py-3 text-[var(--color-text-muted)]">
                       <div className="font-medium text-[var(--color-text)]">{n.recipientName}</div>

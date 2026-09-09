@@ -6,7 +6,9 @@ import { api } from "@/lib/api";
 import type { Organization, TenantUser, TenantUserRole } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { Button } from "@/components/ui/button";
-import { LoadingState, ErrorState } from "@/components/ui/states";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { formatDate } from "@/lib/format";
 import { CreateTenantUserModal } from "@/features/users/create-tenant-user-modal";
 import { ROLE_LABEL, canManageUsers } from "@/lib/permissions";
@@ -61,7 +63,7 @@ function PersonRow({ person, isSelf }: { person: TenantUser; isSelf: boolean }) 
   const style = ROLE_STYLE[person.role];
 
   return (
-    <li className="flex items-center gap-3.5 px-4 py-3 transition-colors hover:bg-[var(--color-surface-hover)] sm:px-5">
+    <li className="flex items-center gap-3.5 px-4 py-3 transition-colors duration-[var(--dur-fast)] hover:bg-[var(--color-surface-hover)] sm:px-5">
       <span
         aria-hidden
         className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold ${style.avatar}`}
@@ -72,16 +74,8 @@ function PersonRow({ person, isSelf }: { person: TenantUser; isSelf: boolean }) 
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <span className="truncate text-[14px] font-medium text-[var(--color-text)]">{person.fullName}</span>
-          {isSelf && (
-            <span className="rounded-full bg-[var(--color-surface-sunken)] px-2 py-0.5 text-[11px] font-medium text-[var(--color-text-muted)]">
-              Siz
-            </span>
-          )}
-          {!person.isActive && (
-            <span className="rounded-full bg-[var(--color-surface-sunken)] px-2 py-0.5 text-[11px] text-[var(--color-text-muted)]">
-              Nofaol
-            </span>
-          )}
+          {isSelf && <Badge tone="neutral">Siz</Badge>}
+          {!person.isActive && <Badge tone="neutral">Nofaol</Badge>}
         </div>
         <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">{person.email}</p>
       </div>
@@ -175,7 +169,7 @@ export default function UsersPage({ params }: { params: Promise<{ slug: string }
           {/* Sarlavha yon paneldagi havola nomi bilan bir xil bo'lishi kerak:
               Super Adminda "Xodimlar", filial adminida esa u yerda allaqachon
               xodim kartochkalari bo'limi borligi uchun "Administratorlar". */}
-          <h1 className="text-[22px] font-semibold tracking-tight text-[var(--color-text)]">
+          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
             {isSuperAdmin ? "Xodimlar" : "Administratorlar"}
           </h1>
           <p className="mt-0.5 text-[13px] text-[var(--color-text-muted)]">
@@ -188,16 +182,14 @@ export default function UsersPage({ params }: { params: Promise<{ slug: string }
       </div>
 
       {usersQuery.isLoading ? (
-        <LoadingState />
+        <LoadingState rows={6} />
       ) : usersQuery.isError ? (
         <ErrorState message={(usersQuery.error as Error).message} />
       ) : people.length === 0 ? (
-        <div className="rounded-[20px] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-16 text-center">
-          <p className="text-[15px] font-semibold text-[var(--color-text)]">Hali xodim yo&apos;q</p>
-          <p className="mt-1 text-[13px] text-[var(--color-text-muted)]">
-            Filialga admin yoki moliyachi tayinlash uchun yangi xodim qo&apos;shing
-          </p>
-        </div>
+        <EmptyState
+          title="Hali xodim yo'q"
+          description="Filialga admin yoki moliyachi tayinlash uchun yangi xodim qo'shing"
+        />
       ) : (
         <>
           {/* Rol bo'yicha filtr — ayni paytda taqsimotni ham ko'rsatadi */}
@@ -214,8 +206,8 @@ export default function UsersPage({ params }: { params: Promise<{ slug: string }
                     aria-pressed={active}
                     className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors ${
                       active
-                        ? "bg-[var(--color-text)] text-white"
-                        : "border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]"
+                        ? "bg-[var(--color-primary)] text-white"
+                        : "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
                     }`}
                   >
                     {dot && <span className={`h-1.5 w-1.5 rounded-full ${active ? "bg-white/70" : dot}`} />}
@@ -236,37 +228,35 @@ export default function UsersPage({ params }: { params: Promise<{ slug: string }
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Ism yoki email"
                 aria-label="Xodim qidirish"
-                className="w-full rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] py-2 pl-10 pr-3.5 text-sm text-[var(--color-text)] outline-none transition-colors placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/15 [&::-webkit-search-cancel-button]:appearance-none"
+                className="h-11 w-full rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] pl-10 pr-3.5 text-[15px] text-[var(--color-text)] outline-none transition-[border-color,box-shadow] duration-[var(--dur-fast)] ease-[var(--ease-out)] placeholder:text-[var(--color-text-muted)]/60 focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/[0.12] [&::-webkit-search-cancel-button]:appearance-none"
               />
             </div>
           </div>
 
           {visible.length === 0 ? (
-            <div className="rounded-[20px] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-14 text-center">
-              <p className="text-[14px] font-medium text-[var(--color-text)]">Mos xodim topilmadi</p>
-              <p className="mt-1 text-[13px] text-[var(--color-text-muted)]">
-                Qidiruv so&apos;zini yoki rol filtrini o&apos;zgartirib ko&apos;ring
-              </p>
-            </div>
+            <EmptyState
+              title="Mos xodim topilmadi"
+              description="Qidiruv so'zini yoki rol filtrini o'zgartirib ko'ring"
+              icon={<SearchIcon className="h-[26px] w-[26px]" />}
+            />
           ) : (
             <div className="space-y-3">
               {sections.byBranch.map((section) => (
-                <div
-                  key={section.key}
-                  className="overflow-hidden rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]"
-                >
-                  <div className="flex flex-wrap items-center gap-2 border-b border-[var(--color-separator)] px-4 py-3 sm:px-5">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
+                <Card key={section.key} className="overflow-hidden">
+                  <div className="hairline flex flex-wrap items-center gap-2 border-b border-[var(--color-separator)] px-4 py-3 sm:px-5">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
                       <BuildingIcon className="h-[17px] w-[17px]" />
                     </span>
-                    <h2 className="text-[15px] font-semibold text-[var(--color-text)]">{section.title}</h2>
+                    <h2 className="text-[15px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
+                      {section.title}
+                    </h2>
                     <span className="text-[13px] tabular-nums text-[var(--color-text-muted)]">
                       {section.people.length}
                     </span>
                     {section.missingAdmin && (
-                      <span className="ml-auto rounded-full bg-[var(--color-warning-bg)] px-2.5 py-1 text-[12px] font-medium text-[var(--color-warning)]">
+                      <Badge tone="warning" className="ml-auto">
                         Filial admini tayinlanmagan
-                      </span>
+                      </Badge>
                     )}
                   </div>
                   {section.people.length === 0 ? (
@@ -280,16 +270,18 @@ export default function UsersPage({ params }: { params: Promise<{ slug: string }
                       ))}
                     </ul>
                   )}
-                </div>
+                </Card>
               ))}
 
               {sections.networkLevel.length > 0 && (
-                <div className="overflow-hidden rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
-                  <div className="flex items-center gap-2 border-b border-[var(--color-separator)] px-4 py-3 sm:px-5">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-violet-50 text-violet-600">
+                <Card className="overflow-hidden">
+                  <div className="hairline flex items-center gap-2 border-b border-[var(--color-separator)] px-4 py-3 sm:px-5">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-violet-50 text-violet-600">
                       <KeyIcon className="h-[17px] w-[17px]" />
                     </span>
-                    <h2 className="text-[15px] font-semibold text-[var(--color-text)]">Tarmoq darajasi</h2>
+                    <h2 className="text-[15px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
+                      Tarmoq darajasi
+                    </h2>
                     <span className="text-[13px] tabular-nums text-[var(--color-text-muted)]">
                       {sections.networkLevel.length}
                     </span>
@@ -299,7 +291,7 @@ export default function UsersPage({ params }: { params: Promise<{ slug: string }
                       <PersonRow key={person.id} person={person} isSelf={person.id === currentUser?.id} />
                     ))}
                   </ul>
-                </div>
+                </Card>
               )}
             </div>
           )}

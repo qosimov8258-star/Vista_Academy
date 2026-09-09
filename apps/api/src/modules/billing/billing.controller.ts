@@ -9,6 +9,7 @@ import { CreateInvoiceDto } from "./dto/create-invoice.dto";
 import { InvoiceQueryDto } from "./dto/invoice-query.dto";
 import { RecordPaymentDto } from "./dto/record-payment.dto";
 import { PaymentQueryDto } from "./dto/payment-query.dto";
+import { FinanceChildrenQueryDto, FinanceSummaryQueryDto } from "./dto/finance-query.dto";
 
 @ApiBearerAuth()
 @ApiTags("Tenant Billing")
@@ -17,6 +18,18 @@ import { PaymentQueryDto } from "./dto/payment-query.dto";
 @Controller("app")
 export class BillingController {
   constructor(private readonly billingService: BillingService) {}
+
+  /** Tarmoq bo'ylab moliya jamlanmasi: filial va guruh kesimida. */
+  @Get("finance/summary")
+  financeSummary(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query() query: FinanceSummaryQueryDto) {
+    return this.billingService.networkSummary(toTenantScope(user), query);
+  }
+
+  /** Bola kesimida to'lov holati: kim to'lagan, kim to'lamagan. */
+  @Get("finance/children")
+  financeChildren(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query() query: FinanceChildrenQueryDto) {
+    return this.billingService.networkChildren(toTenantScope(user), query);
+  }
 
   @Get("invoices")
   findAll(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query() query: InvoiceQueryDto) {

@@ -166,6 +166,13 @@ model Branch {
   address        String?
   timezone       String   @default("Asia/Tashkent")
   currency       String   @default("UZS")
+  // Filial belgisi (logotip). TenantUser avatari bilan bir xil yondashuv:
+  // rasm 256x256 gacha kichraytiriladi va bevosita bazada saqlanadi.
+  // Blob har bir filial so'roviga tushib ketmasligi uchun Prisma mijozida
+  // global `omit` qo'yilgan (qarang: src/database/prisma.service.ts).
+  avatar          Bytes?    @map("avatar")
+  avatarMimeType  String?   @map("avatar_mime_type")
+  avatarUpdatedAt DateTime? @map("avatar_updated_at")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
@@ -253,6 +260,12 @@ model Child {
   gender           Gender?
   birthDate        DateTime?   @map("birth_date")
   status           ChildStatus @default(ACTIVE)
+  // Bola surati. Filial va foydalanuvchi rasmlari bilan bir xil yondashuv:
+  // brauzerda kichraytirilib, bevosita bazada saqlanadi. Blob oddiy
+  // so'rovlarga tushmasligi uchun Prisma mijozida global `omit` bor.
+  avatar           Bytes?      @map("avatar")
+  avatarMimeType   String?     @map("avatar_mime_type")
+  avatarUpdatedAt  DateTime?   @map("avatar_updated_at")
   quarantineUntil  DateTime?   @map("quarantine_until") @db.Date
   quarantineReason String?     @map("quarantine_reason")
   createdAt        DateTime    @default(now()) @map("created_at")

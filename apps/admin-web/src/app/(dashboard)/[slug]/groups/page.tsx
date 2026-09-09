@@ -7,6 +7,7 @@ import type { Group, Organization } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { DataTable, THead, TBody, Tr, Th, Td } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
@@ -35,11 +36,13 @@ export default function GroupsPage({ params }: { params: Promise<{ slug: string 
   const branchName = (branchId: string) => branches.find((b) => b.id === branchId)?.name ?? "—";
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-[var(--color-text)]">Guruhlar</h1>
-          <p className="text-sm text-[var(--color-text-muted)]">Yosh toifalari bo'yicha guruhlar</p>
+          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
+            Guruhlar
+          </h1>
+          <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">Yosh toifalari bo'yicha guruhlar</p>
         </div>
         {canWrite && <Button onClick={() => setCreateOpen(true)}>+ Yangi guruh</Button>}
       </div>
@@ -47,43 +50,39 @@ export default function GroupsPage({ params }: { params: Promise<{ slug: string 
       {!canWrite && <ViewOnlyNote role={user?.role} />}
 
       {groupsQuery.isLoading ? (
-        <LoadingState />
+        <LoadingState rows={5} />
       ) : groupsQuery.isError ? (
         <ErrorState message={(groupsQuery.error as Error).message} />
       ) : !groupsQuery.data || groupsQuery.data.length === 0 ? (
         <EmptyState title="Guruh topilmadi" description={canWrite ? "Yangi guruh qo'shish uchun tugmani bosing" : undefined} />
       ) : (
         <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-[var(--color-border)] bg-gray-50 text-xs uppercase text-[var(--color-text-muted)]">
-                <tr>
-                  <th className="px-5 py-3 font-medium">Nomi</th>
-                  {!forcedBranchId && <th className="px-5 py-3 font-medium">Filial</th>}
-                  <th className="px-5 py-3 font-medium">Bolalar / Sig'im</th>
-                  <th className="px-5 py-3 font-medium">Holat</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--color-border)]">
-                {groupsQuery.data.map((group) => (
-                  <tr key={group.id} className="hover:bg-gray-50">
-                    <td className="px-5 py-3 font-medium text-[var(--color-text)]">{group.name}</td>
-                    {!forcedBranchId && (
-                      <td className="px-5 py-3 text-[var(--color-text-muted)]">{branchName(group.branchId)}</td>
-                    )}
-                    <td className="px-5 py-3 text-[var(--color-text-muted)]">
-                      {group._count?.children ?? 0} / {group.capacity}
-                    </td>
-                    <td className="px-5 py-3">
-                      <Badge tone={group.status === "ACTIVE" ? "success" : "neutral"}>
-                        {group.status === "ACTIVE" ? "Faol" : "Nofaol"}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable>
+            <THead>
+              <tr>
+                <Th>Nomi</Th>
+                {!forcedBranchId && <Th>Filial</Th>}
+                <Th numeric>Bolalar / Sig'im</Th>
+                <Th>Holat</Th>
+              </tr>
+            </THead>
+            <TBody>
+              {groupsQuery.data.map((group) => (
+                <Tr key={group.id}>
+                  <Td className="font-medium">{group.name}</Td>
+                  {!forcedBranchId && <Td className="text-[var(--color-text-muted)]">{branchName(group.branchId)}</Td>}
+                  <Td numeric className="text-[var(--color-text-muted)]">
+                    {group._count?.children ?? 0} / {group.capacity}
+                  </Td>
+                  <Td>
+                    <Badge tone={group.status === "ACTIVE" ? "success" : "neutral"}>
+                      {group.status === "ACTIVE" ? "Faol" : "Nofaol"}
+                    </Badge>
+                  </Td>
+                </Tr>
+              ))}
+            </TBody>
+          </DataTable>
         </Card>
       )}
 

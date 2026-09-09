@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { getPaginated } from "@/lib/api";
@@ -8,6 +9,7 @@ import type { Child } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { DataTable, THead, TBody, Tr, Th, Td, rowLinkProps } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
@@ -40,6 +42,7 @@ export default function ChildrenPage({ params }: { params: Promise<{ slug: strin
   const { user } = useAuth();
   const canWrite = canWriteOperational(user?.role);
   const { branchId: forcedBranchId } = useBranchContext(slug);
+  const router = useRouter();
 
   const handleExport = async () => {
     setExporting(true);
@@ -62,11 +65,13 @@ export default function ChildrenPage({ params }: { params: Promise<{ slug: strin
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-[var(--color-text)]">Bolalar</h1>
-          <p className="text-sm text-[var(--color-text-muted)]">Tarmoqqa ro'yxatga olingan bolalar</p>
+          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
+            Bolalar
+          </h1>
+          <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">Tarmoqqa ro'yxatga olingan bolalar</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" loading={exporting} onClick={handleExport}>
@@ -78,7 +83,7 @@ export default function ChildrenPage({ params }: { params: Promise<{ slug: strin
 
       {!canWrite && <ViewOnlyNote role={user?.role} />}
 
-      <Card className="p-4">
+      <Card className="p-4 sm:px-6">
         <Input
           placeholder="Ism, ota-ona yoki ID bo'yicha qidirish (masalan id14732)"
           value={search}
@@ -91,7 +96,7 @@ export default function ChildrenPage({ params }: { params: Promise<{ slug: strin
       </Card>
 
       {childrenQuery.isLoading ? (
-        <LoadingState />
+        <LoadingState rows={6} />
       ) : childrenQuery.isError ? (
         <ErrorState message={(childrenQuery.error as Error).message} />
       ) : !childrenQuery.data || childrenQuery.data.data.length === 0 ? (
@@ -107,62 +112,58 @@ export default function ChildrenPage({ params }: { params: Promise<{ slug: strin
         />
       ) : (
         <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-[var(--color-border)] bg-gray-50 text-xs uppercase text-[var(--color-text-muted)]">
-                <tr>
-                  <th className="px-5 py-3 font-medium">ID</th>
-                  <th className="px-5 py-3 font-medium">To'liq ism</th>
-                  <th className="px-5 py-3 font-medium">Ota-ona / aloqa</th>
-                  <th className="px-5 py-3 font-medium">Tug'ilgan sana</th>
-                  {!forcedBranchId && <th className="px-5 py-3 font-medium">Filial</th>}
-                  <th className="px-5 py-3 font-medium">Guruh</th>
-                  <th className="px-5 py-3 font-medium">Holat</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--color-border)]">
-                {childrenQuery.data.data.map((child) => (
-                  <tr key={child.id} className="hover:bg-gray-50">
-                    <td className="px-5 py-3">
-                      <span className="font-mono text-xs text-[var(--color-text-muted)]">
-                        {formatChildId(child.publicId)}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3 font-medium">
-                      <Link href={`/${slug}/children/${child.id}`} className="text-[var(--color-primary)] hover:underline">
-                        {child.fullName}
-                      </Link>
-                    </td>
-                    <td className="px-5 py-3">
-                      {child.guardians?.[0] ? (
-                        <>
-                          <p className="text-[var(--color-text)]">{child.guardians[0].guardian.fullName}</p>
-                          <p className="text-xs text-[var(--color-text-muted)]">
-                            {RELATION_LABEL[child.guardians[0].relation]} • {child.guardians[0].guardian.phone}
-                          </p>
-                        </>
-                      ) : (
-                        <span className="text-[var(--color-text-muted)]">—</span>
-                      )}
-                    </td>
-                    <td className="px-5 py-3 text-[var(--color-text-muted)]">
-                      {child.birthDate ? formatDate(child.birthDate) : "—"}
-                    </td>
-                    {!forcedBranchId && (
-                      <td className="px-5 py-3 text-[var(--color-text-muted)]">{child.branch?.name ?? "—"}</td>
+          <DataTable>
+            <THead>
+              <tr>
+                <Th>ID</Th>
+                <Th>To'liq ism</Th>
+                <Th>Ota-ona / aloqa</Th>
+                <Th>Tug'ilgan sana</Th>
+                {!forcedBranchId && <Th>Filial</Th>}
+                <Th>Guruh</Th>
+                <Th>Holat</Th>
+              </tr>
+            </THead>
+            <TBody>
+              {childrenQuery.data.data.map((child) => (
+                <Tr key={child.id} {...rowLinkProps(`/${slug}/children/${child.id}`, (href) => router.push(href))}>
+                  <Td>
+                    <span className="font-mono text-[12.5px] tabular-nums text-[var(--color-text-muted)]">
+                      {formatChildId(child.publicId)}
+                    </span>
+                  </Td>
+                  <Td className="font-medium">
+                    <Link href={`/${slug}/children/${child.id}`} className="text-[var(--color-primary)] hover:underline">
+                      {child.fullName}
+                    </Link>
+                  </Td>
+                  <Td>
+                    {child.guardians?.[0] ? (
+                      <>
+                        <p className="font-medium text-[var(--color-text)]">{child.guardians[0].guardian.fullName}</p>
+                        <p className="mt-0.5 text-[12.5px] text-[var(--color-text-muted)]">
+                          {RELATION_LABEL[child.guardians[0].relation]} • {child.guardians[0].guardian.phone}
+                        </p>
+                      </>
+                    ) : (
+                      <span className="text-[var(--color-text-muted)]">—</span>
                     )}
-                    <td className="px-5 py-3 text-[var(--color-text-muted)]">{child.group?.name ?? "—"}</td>
-                    <td className="px-5 py-3">
-                      <Badge tone={STATUS_TONE[child.status]}>{STATUS_LABEL[child.status]}</Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                  </Td>
+                  <Td className="tabular-nums text-[var(--color-text-muted)]">
+                    {child.birthDate ? formatDate(child.birthDate) : "—"}
+                  </Td>
+                  {!forcedBranchId && <Td className="text-[var(--color-text-muted)]">{child.branch?.name ?? "—"}</Td>}
+                  <Td className="text-[var(--color-text-muted)]">{child.group?.name ?? "—"}</Td>
+                  <Td>
+                    <Badge tone={STATUS_TONE[child.status]}>{STATUS_LABEL[child.status]}</Badge>
+                  </Td>
+                </Tr>
+              ))}
+            </TBody>
+          </DataTable>
 
-          <div className="flex items-center justify-between border-t border-[var(--color-border)] px-5 py-3 text-sm text-[var(--color-text-muted)]">
-            <span>
+          <div className="hairline flex items-center justify-between gap-3 border-t border-[var(--color-separator)] px-5 py-3.5 text-[12.5px] text-[var(--color-text-muted)] sm:px-6">
+            <span className="tabular-nums">
               Jami {childrenQuery.data.meta.total} ta, {childrenQuery.data.meta.page}-sahifa
             </span>
             <div className="flex gap-2">

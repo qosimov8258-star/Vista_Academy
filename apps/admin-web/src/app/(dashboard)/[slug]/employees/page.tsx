@@ -7,6 +7,7 @@ import type { Employee, Organization } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { DataTable, THead, TBody, Tr, Th, Td } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
@@ -37,11 +38,13 @@ export default function EmployeesPage({ params }: { params: Promise<{ slug: stri
   const branchName = (branchId: string) => branches.find((b) => b.id === branchId)?.name ?? "—";
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-[var(--color-text)]">Xodimlar</h1>
-          <p className="text-sm text-[var(--color-text-muted)]">Tarbiyachilar va boshqa xodimlar</p>
+          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
+            Xodimlar
+          </h1>
+          <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">Tarbiyachilar va boshqa xodimlar</p>
         </div>
         {canWrite && <Button onClick={() => setCreateOpen(true)}>+ Yangi xodim</Button>}
       </div>
@@ -49,70 +52,66 @@ export default function EmployeesPage({ params }: { params: Promise<{ slug: stri
       {!canWrite && <ViewOnlyNote role={user?.role} />}
 
       {employeesQuery.isLoading ? (
-        <LoadingState />
+        <LoadingState rows={6} />
       ) : employeesQuery.isError ? (
         <ErrorState message={(employeesQuery.error as Error).message} />
       ) : !employeesQuery.data || employeesQuery.data.length === 0 ? (
         <EmptyState title="Xodim topilmadi" description={canWrite ? "Yangi xodim qo'shish uchun tugmani bosing" : undefined} />
       ) : (
         <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-[var(--color-border)] bg-gray-50 text-xs uppercase text-[var(--color-text-muted)]">
-                <tr>
-                  <th className="px-5 py-3 font-medium">To'liq ism</th>
-                  <th className="px-5 py-3 font-medium">Lavozim</th>
-                  <th className="px-5 py-3 font-medium">Kabinet va guruhlar</th>
-                  {!forcedBranchId && <th className="px-5 py-3 font-medium">Filial</th>}
-                  <th className="px-5 py-3 font-medium">Holat</th>
-                  <th className="px-5 py-3 font-medium">Maosh sxemasi</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--color-border)]">
-                {employeesQuery.data.map((employee) => (
-                  <tr key={employee.id} className="hover:bg-gray-50">
-                    <td className="px-5 py-3 font-medium text-[var(--color-text)]">{employee.fullName}</td>
-                    <td className="px-5 py-3 text-[var(--color-text-muted)]">{employee.position}</td>
-                    <td className="px-5 py-3">
-                      {employee.tenantUser ? (
-                        <div className="space-y-1">
-                          <p className="text-[13px] text-[var(--color-text)]">{employee.tenantUser.email}</p>
-                          <div className="flex flex-wrap gap-1">
-                            {employee.teachingGroups?.length ? (
-                              employee.teachingGroups.map((link) => (
-                                <Badge key={link.groupId} tone="primary">
-                                  {link.group?.name ?? "Guruh"}
-                                </Badge>
-                              ))
-                            ) : (
-                              <Badge tone="warning">Guruh biriktirilmagan</Badge>
-                            )}
-                          </div>
+          <DataTable>
+            <THead>
+              <tr>
+                <Th>To'liq ism</Th>
+                <Th>Lavozim</Th>
+                <Th>Kabinet va guruhlar</Th>
+                {!forcedBranchId && <Th>Filial</Th>}
+                <Th>Holat</Th>
+                <Th>Maosh sxemasi</Th>
+              </tr>
+            </THead>
+            <TBody>
+              {employeesQuery.data.map((employee) => (
+                <Tr key={employee.id}>
+                  <Td className="font-medium">{employee.fullName}</Td>
+                  <Td className="text-[var(--color-text-muted)]">{employee.position}</Td>
+                  <Td>
+                    {employee.tenantUser ? (
+                      <div className="space-y-1.5">
+                        <p className="text-[12.5px] text-[var(--color-text-muted)]">{employee.tenantUser.email}</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {employee.teachingGroups?.length ? (
+                            employee.teachingGroups.map((link) => (
+                              <Badge key={link.groupId} tone="primary">
+                                {link.group?.name ?? "Guruh"}
+                              </Badge>
+                            ))
+                          ) : (
+                            <Badge tone="warning">Guruh biriktirilmagan</Badge>
+                          )}
                         </div>
-                      ) : (
-                        <span className="text-[13px] text-[var(--color-text-muted)]">Kabinet yo&apos;q</span>
-                      )}
-                    </td>
-                    {!forcedBranchId && (
-                      <td className="px-5 py-3 text-[var(--color-text-muted)]">{branchName(employee.branchId)}</td>
+                      </div>
+                    ) : (
+                      <span className="text-[var(--color-text-muted)]">Kabinet yo&apos;q</span>
                     )}
-                    <td className="px-5 py-3">
-                      <Badge tone={employee.isActive ? "success" : "neutral"}>
-                        {employee.isActive ? "Faol" : "Nofaol"}
-                      </Badge>
-                    </td>
-                    <td className="px-5 py-3">
-                      {canWrite && (
-                        <Button size="sm" variant="outline" onClick={() => setSchemeEmployeeId(employee.id)}>
-                          Sozlash
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                  </Td>
+                  {!forcedBranchId && <Td className="text-[var(--color-text-muted)]">{branchName(employee.branchId)}</Td>}
+                  <Td>
+                    <Badge tone={employee.isActive ? "success" : "neutral"}>
+                      {employee.isActive ? "Faol" : "Nofaol"}
+                    </Badge>
+                  </Td>
+                  <Td>
+                    {canWrite && (
+                      <Button size="sm" variant="outline" onClick={() => setSchemeEmployeeId(employee.id)}>
+                        Sozlash
+                      </Button>
+                    )}
+                  </Td>
+                </Tr>
+              ))}
+            </TBody>
+          </DataTable>
         </Card>
       )}
 
