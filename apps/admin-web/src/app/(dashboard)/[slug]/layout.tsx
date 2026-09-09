@@ -11,11 +11,16 @@ export default async function DashboardLayout({
   const { slug } = await params;
 
   return (
-    <div className="flex min-h-screen bg-[var(--color-bg)]">
+    // Qobiq aynan ekran balandligida turadi: shunda yon panel va yuqori panel
+    // joyida qoladi, faqat <main> ichidagi mazmun aylanadi. Avval `min-h-screen`
+    // edi — qobiq mazmun bilan cho'zilib, brauzerning o'zi sahifani aylantirar,
+    // yon panel ham u bilan birga ketardi.
+    <div className="flex h-dvh overflow-hidden bg-[var(--color-bg)]">
       <Sidebar slug={slug} />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar slug={slug} />
-        <main className="flex-1 overflow-y-auto px-6 py-6">{children}</main>
+        {/* min-h-0 bo'lmasa flex elementi mazmunidan kichrayolmaydi va scroll ishlamaydi */}
+        <main className="min-h-0 flex-1 overflow-y-auto px-6 py-6">{children}</main>
       </div>
     </div>
   );

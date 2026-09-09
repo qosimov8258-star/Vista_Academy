@@ -25,7 +25,7 @@ export function Topbar({ slug }: { slug: string }) {
   };
 
   return (
-    <header className="flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-3">
+    <header className="flex shrink-0 items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-3">
       <div>
         {user && <p className="text-sm font-medium text-[var(--color-text)]">{user.organizationName}</p>}
       </div>
