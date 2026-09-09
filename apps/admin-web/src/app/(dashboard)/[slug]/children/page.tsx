@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { getPaginated } from "@/lib/api";
@@ -8,7 +9,7 @@ import type { Child } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { DataTable, THead, TBody, Tr, Th, Td } from "@/components/ui/table";
+import { DataTable, THead, TBody, Tr, Th, Td, rowLinkProps } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
@@ -41,6 +42,7 @@ export default function ChildrenPage({ params }: { params: Promise<{ slug: strin
   const { user } = useAuth();
   const canWrite = canWriteOperational(user?.role);
   const { branchId: forcedBranchId } = useBranchContext(slug);
+  const router = useRouter();
 
   const handleExport = async () => {
     setExporting(true);
@@ -124,7 +126,7 @@ export default function ChildrenPage({ params }: { params: Promise<{ slug: strin
             </THead>
             <TBody>
               {childrenQuery.data.data.map((child) => (
-                <Tr key={child.id}>
+                <Tr key={child.id} {...rowLinkProps(`/${slug}/children/${child.id}`, (href) => router.push(href))}>
                   <Td>
                     <span className="font-mono text-[12.5px] tabular-nums text-[var(--color-text-muted)]">
                       {formatChildId(child.publicId)}

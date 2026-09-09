@@ -1,4 +1,4 @@
-import type { HTMLAttributes, TdHTMLAttributes, ThHTMLAttributes } from "react";
+import type { HTMLAttributes, MouseEvent, TdHTMLAttributes, ThHTMLAttributes } from "react";
 import clsx from "clsx";
 
 /**
@@ -86,4 +86,43 @@ export function Td({
       {...props}
     />
   );
+}
+
+/**
+ * Butun qatorni bosiladigan qiladi.
+ *
+ * Qator ichidagi havola va tugmalar o'z ishini bajaraveradi — bosilgan joy
+ * shundaylardan biri bo'lsa, qator hech nima qilmaydi. Matn belgilab
+ * (ajratib) olinganda ham o'tib ketmaydi.
+ *
+ * Ctrl/Cmd yoki sichqonchaning o'rta tugmasi bilan bosilsa yangi oynada
+ * ochiladi — oddiy havolada shunday bo'lishini hamma kutadi.
+ *
+ * Qator ichida haqiqiy `<a>` qolishi shart: klaviatura bilan yuradiganlar
+ * va ekran o'quvchilar aynan shu havolani topadi, `onClick` esa ularga
+ * ko'rinmaydi.
+ */
+export function rowLinkProps(href: string, navigate: (href: string) => void) {
+  const isInteractive = (event: MouseEvent<HTMLTableRowElement>) =>
+    !!(event.target as HTMLElement).closest("a, button, input, select, textarea, label, [role='button']");
+
+  const hasSelection = () => (window.getSelection()?.toString().length ?? 0) > 0;
+
+  return {
+    className: "cursor-pointer",
+    onClick: (event: MouseEvent<HTMLTableRowElement>) => {
+      if (isInteractive(event) || hasSelection()) return;
+      if (event.metaKey || event.ctrlKey) {
+        window.open(href, "_blank", "noopener");
+        return;
+      }
+      navigate(href);
+    },
+    onAuxClick: (event: MouseEvent<HTMLTableRowElement>) => {
+      // O'rta tugma — yangi oynada ochish
+      if (event.button !== 1 || isInteractive(event)) return;
+      event.preventDefault();
+      window.open(href, "_blank", "noopener");
+    },
+  };
 }
