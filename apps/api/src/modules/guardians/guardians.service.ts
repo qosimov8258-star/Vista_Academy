@@ -82,10 +82,22 @@ export class GuardiansService {
       if (!dto.fullName || !dto.phone) {
         throw new BadRequestException("guardianId yoki (fullName va phone) kiritilishi shart");
       }
-      const guardian = await this.prisma.guardian.create({
-        data: { organizationId: child.organizationId, fullName: dto.fullName, phone: dto.phone },
+      // Telefon raqami vasiyning logini bo'lgani uchun tashkilot ichida
+      // unikal. Shu raqam allaqachon ro'yxatda bo'lsa — bu o'sha odam:
+      // yangisini yaratish o'rniga mavjudini bolaga biriktiramiz. Aks holda
+      // baza cheklovi buzilib, xom Prisma xatosi chiqardi.
+      const phone = normalizePhone(dto.phone);
+      const existing = await this.prisma.guardian.findUnique({
+        where: { organizationId_phone: { organizationId: child.organizationId, phone } },
       });
-      guardianId = guardian.id;
+      if (existing) {
+        guardianId = existing.id;
+      } else {
+        const guardian = await this.prisma.guardian.create({
+          data: { organizationId: child.organizationId, fullName: dto.fullName, phone },
+        });
+        guardianId = guardian.id;
+      }
     } else {
       const existing = await this.prisma.guardian.findFirst({ where: { id: guardianId, organizationId: child.organizationId } });
       if (!existing) {
