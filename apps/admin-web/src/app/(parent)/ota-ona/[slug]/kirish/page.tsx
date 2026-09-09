@@ -23,6 +23,15 @@ export default function ParentLoginPage({ params }: { params: Promise<{ slug: st
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  // Har bir muvaffaqiyatsiz urinishda ortadi: `key` o'zgarganda React
+  // elementni qayta yaratadi va siltanish animatsiyasi boshidan ishlaydi.
+  const [failCount, setFailCount] = useState(0);
+
+  /** Foydalanuvchi tuzata boshlaganda xato yo'qoladi — quyosh ham o'ziga keladi. */
+  const edit = (setter: (value: string) => void) => (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (error) setError(null);
+    setter(event.target.value);
+  };
 
   const orgQuery = useQuery({
     queryKey: ["org-public", slug],
@@ -41,6 +50,7 @@ export default function ParentLoginPage({ params }: { params: Promise<{ slug: st
       router.refresh();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setFailCount((n) => n + 1);
     } finally {
       setBusy(false);
     }
@@ -55,7 +65,7 @@ export default function ParentLoginPage({ params }: { params: Promise<{ slug: st
       <div className="relative -mt-8 flex-1 rounded-t-[32px] bg-[var(--p-card)] px-5 pb-10 pt-7 shadow-[var(--p-shadow)] sm:mx-auto sm:w-full sm:max-w-[440px] sm:rounded-[var(--p-radius)]">
         <div className={styles.pop}>
           <div className={`${styles.greet} flex items-start gap-3.5`}>
-            <SmilingSun />
+            <SmilingSun key={failCount} sad={!!error} />
             <div className="min-w-0 flex-1">
               <span className="inline-flex items-center rounded-full bg-[var(--p-sun)]/18 px-2.5 py-1 text-[11.5px] font-bold uppercase tracking-[0.07em] text-[#a8720a]">
                 Ota-ona kabineti
@@ -91,7 +101,7 @@ export default function ParentLoginPage({ params }: { params: Promise<{ slug: st
                 autoComplete="username"
                 placeholder="+998 90 123 45 67"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={edit(setPhone)}
                 className="h-14 w-full rounded-[18px] border-2 border-[var(--p-line)] bg-[#fffdfa] px-4 text-[17px] text-[var(--p-ink)] outline-none transition-colors placeholder:text-[var(--p-muted)]/60 focus:border-[var(--p-sun)]"
               />
             </label>
@@ -104,7 +114,7 @@ export default function ParentLoginPage({ params }: { params: Promise<{ slug: st
                   autoComplete="current-password"
                   placeholder="Bog'cha bergan parol"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={edit(setPassword)}
                   className="h-14 w-full rounded-[18px] border-2 border-[var(--p-line)] bg-[#fffdfa] pl-4 pr-14 text-[17px] text-[var(--p-ink)] outline-none transition-colors placeholder:text-[var(--p-muted)]/60 focus:border-[var(--p-sun)]"
                 />
                 {/* Parolni ko'rish: bog'cha bergan parolni qo'lda terganda
@@ -140,8 +150,12 @@ export default function ParentLoginPage({ params }: { params: Promise<{ slug: st
   );
 }
 
-/** Kulib turgan quyosh — kabinetning salomlashish belgisi. */
-function SmilingSun() {
+/**
+ * Kabinetning salomlashish belgisi. Parol xato kiritilsa quyosh yuzini
+ * burishtiradi va bir siltanib qo'yadi — xatolik matni bilan birga bu
+ * holatni so'zsiz ham bildiradi.
+ */
+function SmilingSun({ sad = false }: { sad?: boolean }) {
   const rays = Array.from({ length: 8 }, (_, i) => {
     const angle = ((i * 45 - 90) * Math.PI) / 180;
     const round = (v: number) => Math.round(v * 100) / 100;
@@ -157,22 +171,47 @@ function SmilingSun() {
     <svg viewBox="0 0 64 64" className="h-[58px] w-[58px] shrink-0" aria-hidden="true">
       <defs>
         <radialGradient id="parent-sun-glow">
-          <stop offset="0" stopColor="#ffb703" stopOpacity="0.4" />
+          <stop offset="0" stopColor="#ffb703" stopOpacity={sad ? 0.18 : 0.4} />
           <stop offset="1" stopColor="#ffb703" stopOpacity="0" />
         </radialGradient>
       </defs>
       <circle className={styles.sunGlow} cx="32" cy="32" r="31" fill="url(#parent-sun-glow)" />
-      <g className={styles.sunRays} stroke="#ffb703" strokeWidth="3.4" strokeLinecap="round">
+      <g
+        className={sad ? `${styles.sunRays} ${styles.raysSad}` : styles.sunRays}
+        stroke={sad ? "#e0a83b" : "#ffb703"}
+        strokeWidth="3.4"
+        strokeLinecap="round"
+      >
         {rays.map((r, i) => (
           <line key={i} x1={r.x1} y1={r.y1} x2={r.x2} y2={r.y2} />
         ))}
       </g>
-      <circle cx="32" cy="32" r="17" fill="#ffc93c" />
-      <circle cx="26.5" cy="29.5" r="2" fill="#8a5a00" />
-      <circle cx="37.5" cy="29.5" r="2" fill="#8a5a00" />
-      <circle cx="23" cy="35" r="2.6" fill="#ff8a7a" opacity="0.65" />
-      <circle cx="41" cy="35" r="2.6" fill="#ff8a7a" opacity="0.65" />
-      <path d="M26 36.5a6.4 6.4 0 0 0 12 0" stroke="#8a5a00" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+
+      <g className={sad ? styles.wince : undefined}>
+        <circle cx="32" cy="32" r="17" fill={sad ? "#f0cf7a" : "#ffc93c"} />
+
+        {sad ? (
+          <>
+            {/* Qisilgan ko'zlar va ichkariga qiya qoshlar — burishgan yuz */}
+            <path d="M23.5 30.5a3.6 3.6 0 0 1 6 0" stroke="#8a5a00" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+            <path d="M34.5 30.5a3.6 3.6 0 0 1 6 0" stroke="#8a5a00" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+            <path d="M22.5 25.5 28 27.4" stroke="#8a5a00" strokeWidth="2" strokeLinecap="round" />
+            <path d="M41.5 25.5 36 27.4" stroke="#8a5a00" strokeWidth="2" strokeLinecap="round" />
+            <circle cx="22.5" cy="35.5" r="2.4" fill="#ff8a7a" opacity="0.4" />
+            <circle cx="41.5" cy="35.5" r="2.4" fill="#ff8a7a" opacity="0.4" />
+            {/* Pastga qaragan og'iz */}
+            <path d="M27 40.5a6 6 0 0 1 10 0" stroke="#8a5a00" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+          </>
+        ) : (
+          <>
+            <circle cx="26.5" cy="29.5" r="2" fill="#8a5a00" />
+            <circle cx="37.5" cy="29.5" r="2" fill="#8a5a00" />
+            <circle cx="23" cy="35" r="2.6" fill="#ff8a7a" opacity="0.65" />
+            <circle cx="41" cy="35" r="2.6" fill="#ff8a7a" opacity="0.65" />
+            <path d="M26 36.5a6.4 6.4 0 0 0 12 0" stroke="#8a5a00" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+          </>
+        )}
+      </g>
     </svg>
   );
 }
