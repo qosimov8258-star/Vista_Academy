@@ -9,7 +9,7 @@ import { PARENT_API_URL, parentApi } from "@/lib/parent-api";
 import type { ParentAccount, ParentAttendanceStrip, ParentChild, ParentDay } from "@/lib/types";
 import { initials } from "@/components/ui/avatar";
 import { LogoutIcon } from "@/components/ui/icons";
-import styles from "./parent.module.css";
+import styles from "../parent.module.css";
 
 const WEEKDAY = ["Yak", "Du", "Se", "Cho", "Pay", "Ju", "Sha"];
 const MONTH = [
@@ -97,12 +97,12 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
 
   if (meQuery.isLoading) {
     return (
-      <div className={`${styles.shell} ${styles.sky} flex min-h-[100dvh] items-center justify-center`}>
+      <div className="flex min-h-[60dvh] items-center justify-center">
         <span className="h-8 w-8 animate-spin rounded-full border-[3px] border-[var(--p-coral)] border-t-transparent" />
       </div>
     );
   }
-  if (!meQuery.data) return <div className={styles.shell} />;
+  if (!meQuery.data) return null;
 
   const { parent } = meQuery.data;
   const child = children.find((c) => c.id === childId) ?? null;
@@ -111,8 +111,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
   const absent = day?.attendance?.status === "ABSENT";
 
   return (
-    <div className={`${styles.shell} ${styles.sky} min-h-[100dvh] pb-10`}>
-      <div className="mx-auto w-full max-w-[520px] px-4 pt-5">
+    <div className="mx-auto w-full max-w-[520px] px-4 pt-5">
         {/* Sarlavha */}
         <header className="flex items-center justify-between gap-3">
           <div className="min-w-0">
@@ -300,10 +299,9 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
           )
         )}
 
-        <p className="mt-8 text-center text-[13px] text-[var(--p-muted)]">
-          Savolingiz bo&apos;lsa — tarbiyachi yoki bog&apos;cha ma&apos;muriyatiga murojaat qiling
-        </p>
-      </div>
+      <p className="mt-8 text-center text-[13px] text-[var(--p-muted)]">
+        Savolingiz bo&apos;lsa — tarbiyachi yoki bog&apos;cha ma&apos;muriyatiga murojaat qiling
+      </p>
     </div>
   );
 }
