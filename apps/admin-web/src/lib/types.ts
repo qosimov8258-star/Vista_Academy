@@ -67,6 +67,40 @@ export type ChildStatus = "ACTIVE" | "INACTIVE" | "QUARANTINED";
 
 export type Gender = "MALE" | "FEMALE";
 
+/** Guruh kartochkasidagi bola (guruh ko'rinishi uchun qisqartirilgan). */
+export interface GroupChild {
+  id: string;
+  publicId: number;
+  fullName: string;
+  gender: Gender | null;
+  birthDate: string | null;
+  status: ChildStatus;
+}
+
+/** `GET /app/groups/:id/overview` javobi. */
+export interface GroupOverview {
+  group: { id: string; name: string; capacity: number; status: GroupStatus; createdAt: string };
+  branch: { id: string; name: string };
+  teachers: { id: string; fullName: string; position: string; isActive: boolean }[];
+  children: {
+    total: number;
+    active: number;
+    boys: number;
+    girls: number;
+    unknownGender: number;
+    items: GroupChild[];
+  };
+}
+
+/** `GET /app/groups/:id/attendance` javobi. */
+export interface GroupAttendanceRange {
+  from: string;
+  to: string;
+  totalChildren: number;
+  days: { date: string; present: number; absent: number; unmarked: number }[];
+  children: { childId: string; fullName: string; present: number; absent: number; rate: number | null }[];
+}
+
 export interface Child {
   id: string;
   organizationId: string;

@@ -111,6 +111,11 @@ export function Sidebar({ slug }: { slug: string }) {
   const rootEntries: NavEntry[] = [
     { href: `/${slug}`, label: "Bosh sahifa", icon: HomeIcon, show: true, exact: true },
     { href: `/${slug}/branches`, label: "Filiallar", icon: BuildingIcon, show: true },
+    // Tarmoq bo'ylab ko'rinishlar: barcha filiallarning guruh va bolalari
+    // bitta ro'yxatda. Filial darajasidagi `/groups`, `/children` sahifalari
+    // bulardan alohida — ular filial xodimlarining kundalik ish joyi.
+    { href: `/${slug}/network/groups`, label: "Guruhlar", icon: GroupIcon, show: true },
+    { href: `/${slug}/network/children`, label: "O'quvchilar", icon: ChildIcon, show: true },
     // Filial bo'yicha to'liq hisobot. Sahifaning o'zida filial tanlanadi,
     // shuning uchun yon panelda bitta havola yetarli.
     { href: `/${slug}/report`, label: "Ma'lumotlar", icon: ChartIcon, show: true },
