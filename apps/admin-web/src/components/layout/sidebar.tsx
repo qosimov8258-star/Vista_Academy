@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useParams } from "next/navigation";
+import { usePathname, useParams, useRouter } from "next/navigation";
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api";
 import clsx from "clsx";
 import type { ComponentType } from "react";
 import { useAuth } from "@/lib/use-auth";
@@ -29,6 +32,7 @@ import {
   NoteIcon,
   PhoneIcon,
   SettingsIcon,
+  LogoutIcon,
   SidebarIcon,
   TeacherIcon,
 } from "@/components/ui/icons";
@@ -83,6 +87,9 @@ function Badge({ value, tone = "warning" }: { value: number; tone?: NavLeaf["bad
 
 export function Sidebar({ slug }: { slug: string }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const [loggingOut, setLoggingOut] = useState(false);
   const { user } = useAuth();
   const [collapsed, toggleCollapsed] = useSidebarCollapsed();
   const [openSections, toggleSection] = useSidebarSections();
@@ -213,6 +220,21 @@ export function Sidebar({ slug }: { slug: string }) {
     ...entries.map((entry) => (isSection(entry) ? entry.items : [entry])),
     [settingsItem],
   ];
+
+  const handleLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      await api.post("/app/auth/logout");
+    } finally {
+      // So'rovlar keshi tozalanmasa, xuddi shu brauzerda boshqa foydalanuvchi
+      // kirganda oldingi filialning raqamlari bir zum ko'rinib qoladi —
+      // kesh kaliti foydalanuvchiga emas, tashkilot slug'iga bog'langan.
+      queryClient.clear();
+      router.push(`/${slug}/login`);
+      router.refresh();
+    }
+  };
 
   const rowBase =
     "group relative flex items-center rounded-[16px] text-[15px] transition-colors duration-150 motion-reduce:transition-none";
@@ -410,12 +432,41 @@ export function Sidebar({ slug }: { slug: string }) {
         )}
       </nav>
 
-      {/* Yig'ilganda kim kirganini bilish uchun avatar pastda qoladi */}
-      {collapsed && (
-        <div className="flex justify-center border-t border-[var(--color-sidebar-line)] py-3">
-          <Avatar user={user} size={32} />
-        </div>
-      )}
+      {/* Chiqish har doim eng pastda — u kundalik amal emas, shuning uchun
+          bo'limlar ro'yxatidan chetda, alohida qismda turadi. */}
+      <div
+        className={clsx(
+          "mt-auto border-t border-[var(--color-sidebar-line)] pb-3 pt-3",
+          collapsed ? "px-3" : "px-3",
+        )}
+      >
+        {collapsed && (
+          <div className="mb-2 flex justify-center">
+            <Avatar user={user} size={32} />
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={handleLogout}
+          disabled={loggingOut}
+          title={collapsed ? "Chiqish" : undefined}
+          aria-label="Tizimdan chiqish"
+          className={clsx(
+            "group flex h-11 w-full cursor-pointer items-center rounded-[16px] text-[15px] font-medium",
+            "text-[var(--color-text-muted)] transition-colors duration-[var(--dur-fast)] ease-[var(--ease-out)]",
+            "hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]",
+            "disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none",
+            collapsed ? "justify-center" : "gap-3 px-3",
+          )}
+        >
+          {loggingOut ? (
+            <span className="h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />
+          ) : (
+            <LogoutIcon className="h-5 w-5 shrink-0" />
+          )}
+          {!collapsed && <span className="truncate">Chiqish</span>}
+        </button>
+      </div>
     </aside>
   );
 }

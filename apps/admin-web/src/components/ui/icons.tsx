@@ -448,6 +448,16 @@ export function WalletIcon(props: IconProps) {
   );
 }
 
+export function LogoutIcon(props: IconProps) {
+  return (
+    <Outline {...props}>
+      <path d="M14.6 3.6h2.8a2.6 2.6 0 0 1 2.6 2.6v11.6a2.6 2.6 0 0 1-2.6 2.6h-2.8" />
+      <path d="M9.8 16.2 14 12 9.8 7.8" />
+      <path d="M14 12H3.6" />
+    </Outline>
+  );
+}
+
 export function EyeIcon(props: IconProps) {
   return (
     <Outline {...props}>
