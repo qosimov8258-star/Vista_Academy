@@ -1,0 +1,241 @@
+/*
+ * Kirish sahifasidagi bog'cha hovlisi — barcha harakatlar faqat transform va
+ * opacity orqali (GPU'da yengil). Statik holat (animatsiya o'chirilganda ham)
+ * to'liq ko'rinishga ega: kamalak chizilgan, sharlar osmonda, bulutlar joyida.
+ */
+.scene {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---------- Quyosh ---------- */
+@keyframes kgSpin {
+  to { transform: rotate(360deg); }
+}
+.rays {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: kgSpin 90s linear infinite;
+}
+@keyframes kgPulse {
+  from { transform: scale(1); opacity: 0.55; }
+  to { transform: scale(1.14); opacity: 0.9; }
+}
+.glow {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: kgPulse 4s ease-in-out infinite alternate;
+}
+@keyframes kgTwinkle {
+  0%, 100% { opacity: 0.15; transform: scale(0.55) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1) rotate(25deg); }
+}
+.sparkle {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: kgTwinkle 2.8s ease-in-out infinite;
+}
+
+/* ---------- Bulutlar va qushlar ---------- */
+@keyframes kgDrift {
+  from { transform: translateX(-1700px); }
+  to { transform: translateX(1700px); }
+}
+.cloud {
+  animation: kgDrift linear infinite;
+}
+@keyframes kgFly {
+  from { transform: translateX(-1100px); }
+  to { transform: translateX(900px); }
+}
+.flock {
+  animation: kgFly 46s linear infinite;
+  animation-delay: -12s;
+}
+@keyframes kgBob {
+  from { transform: translateY(0); }
+  to { transform: translateY(-7px); }
+}
+.bird {
+  animation: kgBob 1.1s ease-in-out infinite alternate;
+}
+@keyframes kgFlap {
+  from { transform: scaleY(1); }
+  to { transform: scaleY(-0.45); }
+}
+.wing {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: kgFlap 0.34s ease-in-out infinite alternate;
+}
+
+/* ---------- Kamalak (yuklanganda chiziladi) ---------- */
+@keyframes kgDraw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+.arc {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: kgDraw 2.4s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* ---------- Sharlar ---------- */
+@keyframes kgRise {
+  from { transform: translateY(660px); }
+  to { transform: translateY(-560px); }
+}
+.balloon {
+  animation: kgRise linear infinite;
+}
+@keyframes kgSway {
+  from { transform: translateX(-14px) rotate(-4deg); }
+  to { transform: translateX(14px) rotate(4deg); }
+}
+.balloonBody {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: kgSway 3s ease-in-out infinite alternate;
+}
+
+/* ---------- Daraxt va arg'imchoq ---------- */
+@keyframes kgTreeSway {
+  from { transform: rotate(-1.6deg); }
+  to { transform: rotate(1.6deg); }
+}
+.canopy {
+  transform-box: view-box;
+  transform-origin: 150px 700px;
+  animation: kgTreeSway 6s ease-in-out infinite alternate;
+}
+@keyframes kgSwing {
+  from { transform: rotate(-14deg); }
+  to { transform: rotate(14deg); }
+}
+.swing {
+  transform-box: view-box;
+  transform-origin: 226px 536px;
+  animation: kgSwing 2.6s ease-in-out infinite alternate;
+}
+
+/* ---------- Tarozi-arg'imchoq, bayroq, kubiklar ---------- */
+@keyframes kgTilt {
+  from { transform: rotate(-8deg); }
+  to { transform: rotate(8deg); }
+}
+.seesaw {
+  transform-box: view-box;
+  transform-origin: 365px 668px;
+  animation: kgTilt 3.4s ease-in-out infinite alternate;
+}
+@keyframes kgWave {
+  from { transform: skewY(-8deg); }
+  to { transform: skewY(8deg); }
+}
+.flag {
+  transform-box: view-box;
+  transform-origin: 611px 366px;
+  animation: kgWave 1.3s ease-in-out infinite alternate;
+}
+@keyframes kgWobble {
+  from { transform: rotate(-3deg); }
+  to { transform: rotate(3deg); }
+}
+.block {
+  transform-box: view-box;
+  transform-origin: 82px 656px;
+  animation: kgWobble 3.2s ease-in-out infinite alternate;
+}
+
+/* ---------- Sirpanchiqdan dumalab tushadigan koptok ---------- */
+@keyframes kgRoll {
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 0; animation-timing-function: ease-out; }
+  6% { transform: translate(0, 0) rotate(0deg); opacity: 1; animation-timing-function: ease-in; }
+  20% { transform: translate(29px, 37px) rotate(120deg); animation-timing-function: linear; }
+  34% { transform: translate(55px, 75px) rotate(260deg); animation-timing-function: linear; }
+  48% { transform: translate(81px, 110px) rotate(420deg); animation-timing-function: linear; }
+  60% { transform: translate(114px, 129px) rotate(600deg); animation-timing-function: ease-out; }
+  78% { transform: translate(174px, 147px) rotate(800deg); opacity: 1; animation-timing-function: linear; }
+  88% { transform: translate(202px, 147px) rotate(880deg); opacity: 0; }
+  100% { transform: translate(202px, 147px) rotate(880deg); opacity: 0; }
+}
+.ball {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: kgRoll 6s infinite;
+}
+
+/* ---------- Gullar va kapalak ---------- */
+@keyframes kgFlowerSway {
+  from { transform: rotate(-5deg); }
+  to { transform: rotate(5deg); }
+}
+.flower {
+  transform-box: view-box;
+  animation: kgFlowerSway 2.8s ease-in-out infinite alternate;
+}
+@keyframes kgFlutterX {
+  from { transform: translateX(0); }
+  to { transform: translateX(110px); }
+}
+.butterfly {
+  animation: kgFlutterX 9s ease-in-out infinite alternate;
+}
+@keyframes kgFlutterY {
+  from { transform: translateY(0); }
+  to { transform: translateY(-30px); }
+}
+.butterflyBob {
+  animation: kgFlutterY 1.7s ease-in-out infinite alternate;
+}
+@keyframes kgWingFold {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0.2); }
+}
+.wingL {
+  transform-box: fill-box;
+  transform-origin: 100% 50%;
+  animation: kgWingFold 0.4s ease-in-out infinite alternate;
+}
+.wingR {
+  transform-box: fill-box;
+  transform-origin: 0% 50%;
+  animation: kgWingFold 0.4s ease-in-out infinite alternate;
+}
+
+/* ---------- Xonqizi ---------- */
+@keyframes kgCrawl {
+  0% { transform: translateX(0) scaleX(1); }
+  49.5% { transform: translateX(480px) scaleX(1); }
+  50.5% { transform: translateX(480px) scaleX(-1); }
+  99.5% { transform: translateX(0) scaleX(-1); }
+  100% { transform: translateX(0) scaleX(1); }
+}
+.ladybug {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: kgCrawl 48s linear infinite;
+}
+
+/* ---------- Sahna elementlarining paydo bo'lishi ---------- */
+@keyframes kgEnter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.enter {
+  animation: kgEnter 0.8s ease-out both;
+}
+@keyframes kgEnterUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.enterUp {
+  animation: kgEnterUp 0.8s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scene * {
+    animation: none !important;
+  }
+}
