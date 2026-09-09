@@ -123,7 +123,7 @@ export function AddGuardianModal({
             onClick={() => setMode("existing")}
             className={clsx(
               "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer",
-              mode === "existing" ? "bg-[var(--color-primary)] text-white" : "text-[var(--color-text-muted)] hover:bg-gray-50",
+              mode === "existing" ? "bg-[var(--color-primary)] text-white" : "text-[var(--color-text-muted)] hover:bg-[var(--color-surface-sunken)]",
             )}
           >
             Mavjud ota-onani biriktirish
@@ -133,7 +133,7 @@ export function AddGuardianModal({
             onClick={() => setMode("new")}
             className={clsx(
               "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer",
-              mode === "new" ? "bg-[var(--color-primary)] text-white" : "text-[var(--color-text-muted)] hover:bg-gray-50",
+              mode === "new" ? "bg-[var(--color-primary)] text-white" : "text-[var(--color-text-muted)] hover:bg-[var(--color-surface-sunken)]",
             )}
           >
             Yangi ota-ona qo'shish
@@ -165,7 +165,7 @@ export function AddGuardianModal({
                     onClick={() => setSelectedGuardian(g)}
                     className={clsx(
                       "block w-full rounded-md px-3 py-2 text-left text-sm cursor-pointer",
-                      selectedGuardian?.id === g.id ? "bg-[var(--color-primary)]/10 text-[var(--color-primary)]" : "hover:bg-gray-50",
+                      selectedGuardian?.id === g.id ? "bg-[var(--color-primary)]/10 text-[var(--color-primary)]" : "hover:bg-[var(--color-surface-sunken)]",
                     )}
                   >
                     <span className="font-medium">{g.fullName}</span>{" "}

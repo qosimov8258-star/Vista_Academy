@@ -7,9 +7,11 @@ import { api, getPaginated, ApiError } from "@/lib/api";
 import type { Child, LedgerEntry, Payment } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
+import { DataTable, THead, TBody, Tr, Th, Td } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
+import { ArrowLeftIcon, WalletIcon } from "@/components/ui/icons";
 import { formatDateTime, formatMoney } from "@/lib/format";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { canWriteMoney } from "@/lib/permissions";
@@ -67,40 +69,59 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
   if (!child) return null;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div>
-        <Link href={financeHref} className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
-          ← Moliya
+        <Link
+          href={financeHref}
+          className="group inline-flex items-center gap-1.5 text-[14px] font-medium text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
+        >
+          <ArrowLeftIcon className="h-4 w-4 transition-transform group-hover:-translate-x-0.5 motion-reduce:transition-none" />
+          Moliya
         </Link>
-        <h1 className="mt-1 text-xl font-semibold text-[var(--color-text)]">{child.fullName}</h1>
-        <p className="text-sm text-[var(--color-text-muted)]">Moliyaviy tarix</p>
+        <h1 className="mt-2 text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
+          {child.fullName}
+        </h1>
+        <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">Moliyaviy tarix</p>
       </div>
 
-      <Card>
+      <Card className="overflow-hidden">
         <CardHeader>
           <CardTitle>To&apos;lovlar</CardTitle>
         </CardHeader>
         <CardBody className="p-0">
           {paymentsQuery.isLoading ? (
-            <LoadingState />
+            <div className="px-5 py-5 sm:px-6">
+              <LoadingState rows={3} />
+            </div>
           ) : paymentsQuery.isError ? (
-            <ErrorState message={(paymentsQuery.error as Error).message} />
+            <div className="px-5 py-5 sm:px-6">
+              <ErrorState message={(paymentsQuery.error as Error).message} />
+            </div>
           ) : !paymentsQuery.data || paymentsQuery.data.data.length === 0 ? (
-            <p className="px-5 py-6 text-sm text-[var(--color-text-muted)]">To&apos;lovlar yo&apos;q</p>
+            <div className="px-5 py-5 sm:px-6">
+              <EmptyState
+                title="To'lovlar yo'q"
+                description="Bu bola uchun hali to'lov qayd etilmagan"
+                icon={<WalletIcon className="h-[26px] w-[26px]" />}
+              />
+            </div>
           ) : (
-            <ul className="divide-y divide-[var(--color-border)]">
+            <ul className="divide-y divide-[var(--color-separator)]">
               {paymentsQuery.data.data.map((payment) => (
-                <li key={payment.id} className="flex items-center justify-between px-5 py-3">
-                  <div>
-                    <p className="text-sm font-medium text-[var(--color-text)]">
+                <li
+                  key={payment.id}
+                  className="flex items-center justify-between gap-3 px-5 py-3 transition-colors hover:bg-[var(--color-surface-hover)] sm:px-6"
+                >
+                  <div className="min-w-0">
+                    <p className="text-[14px] font-medium tabular-nums text-[var(--color-text)]">
                       {formatMoney(payment.amount, payment.currency)} — {METHOD_LABEL[payment.method]}
                     </p>
-                    <p className="text-xs text-[var(--color-text-muted)]">
+                    <p className="text-[12.5px] text-[var(--color-text-muted)]">
                       {formatDateTime(payment.createdAt)}
                       {payment.note ? ` • ${payment.note}` : ""}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex shrink-0 items-center gap-2">
                     <Badge tone={payment.status === "COMPLETED" ? "success" : "neutral"}>
                       {payment.status === "COMPLETED" ? "Amalda" : "Qaytarilgan"}
                     </Badge>
@@ -126,47 +147,52 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
         </CardBody>
       </Card>
 
-      <Card>
+      <Card className="overflow-hidden">
         <CardHeader>
           <CardTitle>Moliyaviy tarix (ledger)</CardTitle>
         </CardHeader>
         <CardBody className="p-0">
           {ledgerQuery.isLoading ? (
-            <LoadingState />
-          ) : ledgerQuery.isError ? (
-            <ErrorState message={(ledgerQuery.error as Error).message} />
-          ) : !ledgerQuery.data || ledgerQuery.data.length === 0 ? (
-            <EmptyState title="Yozuvlar yo'q" />
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="border-b border-[var(--color-border)] bg-gray-50 text-xs uppercase text-[var(--color-text-muted)]">
-                  <tr>
-                    <th className="px-5 py-3 font-medium">Sana</th>
-                    <th className="px-5 py-3 font-medium">Turi</th>
-                    <th className="px-5 py-3 font-medium">Summa</th>
-                    <th className="px-5 py-3 font-medium">Davr</th>
-                    <th className="px-5 py-3 font-medium">Izoh</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--color-border)]">
-                  {ledgerQuery.data.map((entry) => (
-                    <tr key={entry.id}>
-                      <td className="px-5 py-3 text-[var(--color-text-muted)]">{formatDateTime(entry.createdAt)}</td>
-                      <td className="px-5 py-3">{LEDGER_TYPE_LABEL[entry.type]}</td>
-                      <td
-                        className={`px-5 py-3 font-medium ${Number(entry.amount) < 0 ? "text-[var(--color-success)]" : "text-[var(--color-text)]"}`}
-                      >
-                        {Number(entry.amount) > 0 ? "+" : ""}
-                        {formatMoney(entry.amount)}
-                      </td>
-                      <td className="px-5 py-3 text-[var(--color-text-muted)]">{entry.invoice?.period ?? "—"}</td>
-                      <td className="px-5 py-3 text-[var(--color-text-muted)]">{entry.note ?? "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="px-5 py-5 sm:px-6">
+              <LoadingState rows={5} />
             </div>
+          ) : ledgerQuery.isError ? (
+            <div className="px-5 py-5 sm:px-6">
+              <ErrorState message={(ledgerQuery.error as Error).message} />
+            </div>
+          ) : !ledgerQuery.data || ledgerQuery.data.length === 0 ? (
+            <div className="px-5 py-5 sm:px-6">
+              <EmptyState title="Yozuvlar yo'q" />
+            </div>
+          ) : (
+            <DataTable>
+              <THead>
+                <tr>
+                  <Th>Sana</Th>
+                  <Th>Turi</Th>
+                  <Th numeric>Summa</Th>
+                  <Th>Davr</Th>
+                  <Th>Izoh</Th>
+                </tr>
+              </THead>
+              <TBody>
+                {ledgerQuery.data.map((entry) => (
+                  <Tr key={entry.id}>
+                    <Td className="tabular-nums text-[var(--color-text-muted)]">{formatDateTime(entry.createdAt)}</Td>
+                    <Td>{LEDGER_TYPE_LABEL[entry.type]}</Td>
+                    <Td
+                      numeric
+                      className={`font-medium ${Number(entry.amount) < 0 ? "text-[var(--color-success)]" : "text-[var(--color-text)]"}`}
+                    >
+                      {Number(entry.amount) > 0 ? "+" : ""}
+                      {formatMoney(entry.amount)}
+                    </Td>
+                    <Td className="tabular-nums text-[var(--color-text-muted)]">{entry.invoice?.period ?? "—"}</Td>
+                    <Td className="text-[var(--color-text-muted)]">{entry.note ?? "—"}</Td>
+                  </Tr>
+                ))}
+              </TBody>
+            </DataTable>
           )}
         </CardBody>
       </Card>

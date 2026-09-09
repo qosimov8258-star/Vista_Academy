@@ -90,7 +90,6 @@ export function ChildIcon({ filled, ...props }: IconProps) {
   if (filled) {
     return (
       <Solid {...props}>
-        <path d="M6.4 6.6a1.9 1.9 0 1 1 1.5 1.86 5.5 5.5 0 0 1 0-3.72c.28.4.44.88.44 1.4Z" opacity="0" />
         <circle cx="6.6" cy="6.4" r="1.9" />
         <circle cx="17.4" cy="6.4" r="1.9" />
         <path d="M12 3.4a5.4 5.4 0 1 0 0 10.8 5.4 5.4 0 0 0 0-10.8Zm-2.1 5.2a.85.85 0 1 1 1.7 0 .85.85 0 0 1-1.7 0Zm4.5 0a.85.85 0 1 1-1.7 0 .85.85 0 0 1 1.7 0Z" />
@@ -196,7 +195,7 @@ export function SettingsIcon({ filled, ...props }: IconProps) {
   }
   return (
     <Outline {...props}>
-      <path d={gear.replace("M12 2.6c-.62 0-1.17.4-1.36.99", "M11.1 2.6c-.62 0-1.17.4-1.36.99")} />
+      <path d={gear} />
       <circle cx="12.9" cy="12" r="2.9" />
     </Outline>
   );

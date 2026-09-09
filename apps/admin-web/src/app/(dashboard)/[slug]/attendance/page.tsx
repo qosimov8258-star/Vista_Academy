@@ -84,8 +84,8 @@ export default function AttendancePage({ params }: { params: Promise<{ slug: str
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-[var(--color-text)]">Kunlik hisobot — Davomat</h1>
-          <p className="text-sm text-[var(--color-text-muted)]">Bolalarning kunlik qatnashuvini belgilang</p>
+          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">Kunlik hisobot — Davomat</h1>
+          <p className="text-[14px] text-[var(--color-text-muted)]">Bolalarning kunlik qatnashuvini belgilang</p>
         </div>
         <Button variant="outline" loading={exporting} disabled={!date || !branchId} onClick={handleExport}>
           Eksport (CSV)
@@ -103,12 +103,12 @@ export default function AttendancePage({ params }: { params: Promise<{ slug: str
           </Select>
         )}
         <div className="block">
-          <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">Sana</span>
+          <span className="mb-2 block text-[13px] font-medium text-[var(--color-text)]">Sana</span>
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="w-full rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-text)] outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 sm:w-auto"
+            className="h-11 w-full rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-3.5 text-[15px] text-[var(--color-text)] outline-none transition-[border-color,box-shadow] duration-[var(--dur-fast)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/[0.12] sm:w-auto"
           />
         </div>
       </Card>
@@ -127,7 +127,7 @@ export default function AttendancePage({ params }: { params: Promise<{ slug: str
         <EmptyState title="Bu filialda faol bola yo'q" />
       ) : (
         <Card className="overflow-hidden">
-          <ul className="divide-y divide-[var(--color-border)]">
+          <ul className="divide-y divide-[var(--color-separator)]">
             {attendanceQuery.data.children.map((child) => (
               <li key={child.childId} className="flex items-center justify-between px-5 py-3">
                 <div className="min-w-0">

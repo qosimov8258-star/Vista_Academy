@@ -8,7 +8,7 @@ export default function RootPage() {
         <h1 className="text-lg font-semibold text-[var(--color-text)]">Tashkilot havolasi kerak</h1>
         <p className="mt-2 text-sm text-[var(--color-text-muted)]">
           Bu yerga kirish uchun tashkilotingizga tegishli havoladan foydalaning, masalan:{" "}
-          <code className="rounded bg-gray-100 px-1.5 py-0.5 text-xs">/tashkilot-nomi</code>. Havolani Platform Admin
+          <code className="rounded-[var(--radius-xs)] bg-[var(--color-surface-sunken)] px-1.5 py-0.5 text-xs">/tashkilot-nomi</code>. Havolani Platform Admin
           tashkilot yaratganda sizga taqdim etadi.
         </p>
       </div>

@@ -7,16 +7,20 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { BranchReport, InvoiceStatus, Organization } from "@/lib/types";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
+import { DataTable, THead, TBody, Tr, Th, Td } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { LoadingState, ErrorState } from "@/components/ui/states";
+import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { formatDate, formatMoney } from "@/lib/format";
 import {
   BriefcaseIcon,
+  BuildingIcon,
   ChildIcon,
+  GroupIcon,
   KeyIcon,
   MoneyIcon,
   SettingsIcon,
   TeacherIcon,
+  WalletIcon,
 } from "@/components/ui/icons";
 
 const INVOICE_STATUS_LABEL: Record<InvoiceStatus, string> = {
@@ -88,10 +92,10 @@ function StatTile({
   const percent = meter && meter.total > 0 ? Math.round((meter.value / meter.total) * 100) : null;
 
   return (
-    <div className="rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface)] p-[18px] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
+    <div className="rounded-[var(--radius-xl)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] p-[18px] shadow-[var(--shadow-card)]">
       <div className="flex items-center gap-2.5">
         <span
-          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] ${TINT_ICON[tint]}`}
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] ${TINT_ICON[tint]}`}
         >
           <Icon className="h-[18px] w-[18px]" />
         </span>
@@ -99,7 +103,7 @@ function StatTile({
       </div>
 
       <p
-        className={`mt-3.5 text-[32px] font-semibold leading-none tracking-[-0.02em] tabular-nums ${TINT_VALUE[tint]}`}
+        className={`mt-3.5 text-[32px] font-semibold leading-none tracking-[var(--tracking-title)] tabular-nums ${TINT_VALUE[tint]}`}
       >
         {value}
       </p>
@@ -184,7 +188,7 @@ function CapacityRing({
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="mb-2.5 px-0.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+    <h2 className="mb-2.5 px-0.5 text-[15px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
       {children}
     </h2>
   );
@@ -210,17 +214,16 @@ export default function BranchReportPage({ params }: { params: Promise<{ slug: s
     enabled: Boolean(branchId),
   });
 
-  if (orgQuery.isLoading || (branchId && isLoading)) return <LoadingState />;
+  if (orgQuery.isLoading || (branchId && isLoading)) return <LoadingState rows={5} />;
   if (orgQuery.isError) return <ErrorState message={(orgQuery.error as Error).message} />;
   if (isError) return <ErrorState message={(error as Error).message} />;
   if (!branchId) {
     return (
-      <div className="rounded-[20px] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-16 text-center">
-        <p className="text-[15px] font-semibold text-[var(--color-text)]">Filial yo&apos;q</p>
-        <p className="mt-1 text-[13px] text-[var(--color-text-muted)]">
-          Ma&apos;lumotlar chiqishi uchun avval filial oching
-        </p>
-      </div>
+      <EmptyState
+        title="Filial yo'q"
+        description="Ma'lumotlar chiqishi uchun avval filial oching"
+        icon={<BuildingIcon className="h-[26px] w-[26px]" />}
+      />
     );
   }
   if (!data) return null;
@@ -233,7 +236,7 @@ export default function BranchReportPage({ params }: { params: Promise<{ slug: s
       <div className="space-y-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <h1 className="truncate text-[22px] font-semibold tracking-tight text-[var(--color-text)]">
+            <h1 className="truncate text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
               Ma&apos;lumotlar
             </h1>
             <p className="mt-0.5 text-[13px] text-[var(--color-text-muted)]">
@@ -242,7 +245,7 @@ export default function BranchReportPage({ params }: { params: Promise<{ slug: s
           </div>
           <Link
             href={`/${slug}/branches/${branch.id}`}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-1.5 text-[13px] font-medium text-[var(--color-text)] transition-colors hover:bg-[var(--color-surface-hover)]"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-3.5 py-1.5 text-[13px] font-medium text-[var(--color-text)] shadow-[var(--shadow-xs)] transition-colors duration-[var(--dur-fast)] hover:bg-[var(--color-surface-hover)]"
           >
             <SettingsIcon className="h-4 w-4" />
             Filial sozlamalari
@@ -260,10 +263,10 @@ export default function BranchReportPage({ params }: { params: Promise<{ slug: s
                   type="button"
                   onClick={() => setSelectedBranchId(item.id)}
                   aria-pressed={active}
-                  className={`cursor-pointer rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors ${
+                  className={`cursor-pointer rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors ${
                     active
                       ? "bg-[var(--color-primary)] text-white"
-                      : "border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]"
+                      : "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
                   }`}
                 >
                   {item.name}
@@ -316,9 +319,9 @@ export default function BranchReportPage({ params }: { params: Promise<{ slug: s
         <SectionTitle>Guruhlar</SectionTitle>
 
         {/* Umumiy to'lganlik: guruhlar bo'yicha bo'lingan yagona chiziq */}
-        <div className="mb-3 rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface)] p-[18px] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
+        <div className="mb-3 rounded-[var(--radius-xl)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] p-[18px] shadow-[var(--shadow-card)]">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <p className="text-[15px] font-semibold text-[var(--color-text)]">
+            <p className="text-[15px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
               {groups.active} ta faol guruh
               <span className="ml-2 text-[13px] font-normal text-[var(--color-text-muted)]">
                 {groups.capacity} o&apos;rin
@@ -350,9 +353,10 @@ export default function BranchReportPage({ params }: { params: Promise<{ slug: s
         </div>
 
         {groups.items.length === 0 ? (
-          <div className="rounded-[20px] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-12 text-center text-[13px] text-[var(--color-text-muted)]">
-            Bu filialda hali guruh ochilmagan
-          </div>
+          <EmptyState
+            title="Bu filialda hali guruh ochilmagan"
+            icon={<GroupIcon className="h-[26px] w-[26px]" />}
+          />
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {groups.items.map((group, index) => {
@@ -364,7 +368,7 @@ export default function BranchReportPage({ params }: { params: Promise<{ slug: s
               return (
                 <div
                   key={group.id}
-                  className={`rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface)] p-[18px] shadow-[0_1px_2px_rgba(16,24,40,0.05)] ${
+                  className={`rounded-[var(--radius-xl)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] p-[18px] shadow-[var(--shadow-card)] ${
                     group.status === "ACTIVE" ? "" : "opacity-60"
                   }`}
                 >
@@ -372,13 +376,13 @@ export default function BranchReportPage({ params }: { params: Promise<{ slug: s
                     <CapacityRing value={group.childrenCount} total={group.capacity} ringClass={palette.ring} />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-2">
-                        <h3 className="min-w-0 text-[15px] font-semibold leading-tight text-[var(--color-text)]">
+                        <h3 className="min-w-0 text-[15px] font-semibold leading-tight tracking-[var(--tracking-headline)] text-[var(--color-text)]">
                           {group.name}
                         </h3>
                         {group.status !== "ACTIVE" && (
-                          <span className="shrink-0 rounded-full bg-[var(--color-surface-sunken)] px-2 py-0.5 text-[11px] text-[var(--color-text-muted)]">
+                          <Badge tone="neutral" className="shrink-0">
                             Nofaol
-                          </span>
+                          </Badge>
                         )}
                       </div>
 
@@ -401,15 +405,13 @@ export default function BranchReportPage({ params }: { params: Promise<{ slug: s
                             </span>
                           ))
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-warning-bg)] px-2.5 py-1 text-[12px] font-medium text-[var(--color-warning)]">
-                            Tarbiyachi biriktirilmagan
-                          </span>
+                          <Badge tone="warning">Tarbiyachi biriktirilmagan</Badge>
                         )}
                       </div>
                     </div>
                   </div>
 
-                  <p className="mt-3.5 border-t border-[var(--color-separator)] pt-3 text-[12px] text-[var(--color-text-muted)]">
+                  <p className="hairline mt-3.5 border-t border-[var(--color-separator)] pt-3 text-[12.5px] text-[var(--color-text-muted)]">
                     {isFull ? (
                       <span className="font-medium text-[var(--color-text)]">Guruh to&apos;lgan</span>
                     ) : isEmpty ? (
@@ -449,8 +451,8 @@ export default function BranchReportPage({ params }: { params: Promise<{ slug: s
           />
         </div>
         {employees.byPosition.length > 0 && (
-          <Card className="mt-3 rounded-[20px] p-[18px]">
-            <p className="mb-2.5 text-[13px] font-medium text-[var(--color-text)]">Lavozimlar bo&apos;yicha</p>
+          <Card className="mt-3 p-[18px]">
+            <p className="mb-2.5 text-[14px] font-medium text-[var(--color-text)]">Lavozimlar bo&apos;yicha</p>
             <div className="flex flex-wrap gap-2">
               {employees.byPosition.map((row) => (
                 <span
@@ -483,46 +485,43 @@ export default function BranchReportPage({ params }: { params: Promise<{ slug: s
             hint={finance.outstandingDebt > 0 ? "To'lanishi kerak" : "Qarzdorlik yo'q"}
           />
         </div>
-        <Card className="mt-3 overflow-hidden rounded-[20px]">
+        <Card className="mt-3 overflow-hidden">
           <CardHeader>
             <CardTitle>Hisob-fakturalar holati</CardTitle>
           </CardHeader>
           <CardBody className="p-0">
             {finance.invoices.length === 0 ? (
-              <p className="px-5 py-8 text-center text-[13px] text-[var(--color-text-muted)]">
-                Bu filialda hali hisob-faktura yaratilmagan
-              </p>
+              <EmptyState
+                title="Bu filialda hali hisob-faktura yaratilmagan"
+                icon={<WalletIcon className="h-[26px] w-[26px]" />}
+              />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[520px] text-left text-sm">
-                  <thead className="bg-[var(--color-surface-sunken)] text-[11px] uppercase tracking-wider text-[var(--color-text-muted)]">
-                    <tr>
-                      <th className="px-5 py-2.5 font-semibold">Holat</th>
-                      <th className="px-3 py-2.5 text-right font-semibold">Soni</th>
-                      <th className="px-3 py-2.5 text-right font-semibold">Hisoblangan</th>
-                      <th className="px-5 py-2.5 text-right font-semibold">To&apos;langan</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[var(--color-separator)]">
-                    {finance.invoices.map((row) => (
-                      <tr key={row.status}>
-                        <td className="px-5 py-3">
-                          <Badge tone={INVOICE_STATUS_TONE[row.status]}>
-                            {INVOICE_STATUS_LABEL[row.status]}
-                          </Badge>
-                        </td>
-                        <td className="px-3 py-3 text-right tabular-nums text-[var(--color-text)]">{row.count}</td>
-                        <td className="px-3 py-3 text-right tabular-nums text-[var(--color-text)]">
-                          {formatMoney(row.billed)}
-                        </td>
-                        <td className="px-5 py-3 text-right tabular-nums text-[var(--color-success)]">
-                          {formatMoney(row.paid)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable className="min-w-[520px]">
+                <THead>
+                  <tr>
+                    <Th>Holat</Th>
+                    <Th numeric>Soni</Th>
+                    <Th numeric>Hisoblangan</Th>
+                    <Th numeric>To&apos;langan</Th>
+                  </tr>
+                </THead>
+                <TBody>
+                  {finance.invoices.map((row) => (
+                    <Tr key={row.status}>
+                      <Td>
+                        <Badge tone={INVOICE_STATUS_TONE[row.status]}>
+                          {INVOICE_STATUS_LABEL[row.status]}
+                        </Badge>
+                      </Td>
+                      <Td numeric>{row.count}</Td>
+                      <Td numeric>{formatMoney(row.billed)}</Td>
+                      <Td numeric className="text-[var(--color-success)]">
+                        {formatMoney(row.paid)}
+                      </Td>
+                    </Tr>
+                  ))}
+                </TBody>
+              </DataTable>
             )}
           </CardBody>
         </Card>

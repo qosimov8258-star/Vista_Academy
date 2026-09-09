@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import type { DashboardSummary, Organization, TenantUser } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { formatMoney } from "@/lib/format";
 import { ChevronRightIcon, PlusIcon, SettingsIcon } from "@/components/ui/icons";
@@ -66,7 +67,7 @@ function Stat({
       ) : (
         <p
           className={clsx(
-            "mt-1 truncate text-[19px] font-semibold tabular-nums tracking-tight",
+            "mt-1 truncate text-[19px] font-semibold tabular-nums tracking-[var(--tracking-headline)]",
             tone === "success"
               ? "text-[var(--color-success)]"
               : tone === "danger"
@@ -111,17 +112,19 @@ export default function BranchesPage({ params }: { params: Promise<{ slug: strin
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-[22px] font-semibold tracking-tight text-[var(--color-text)]">Filiallar</h1>
-          <p className="mt-0.5 text-sm text-[var(--color-text-muted)]">Tarmoqqa tegishli bog&apos;cha binolari</p>
+          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
+            Filiallar
+          </h1>
+          <p className="mt-0.5 text-[13px] text-[var(--color-text-muted)]">Tarmoqqa tegishli bog&apos;cha binolari</p>
         </div>
-        <Button onClick={() => setCreateOpen(true)} className="gap-1.5 rounded-full">
+        <Button onClick={() => setCreateOpen(true)}>
           <PlusIcon className="h-4 w-4" />
           Filial qo&apos;shish
         </Button>
       </div>
 
       {isLoading ? (
-        <LoadingState />
+        <LoadingState rows={3} />
       ) : isError ? (
         <ErrorState message={(error as Error).message} />
       ) : !org || org.branches.length === 0 ? (
@@ -139,10 +142,7 @@ export default function BranchesPage({ params }: { params: Promise<{ slug: strin
             const palette = BRANCH_PALETTE[i % BRANCH_PALETTE.length];
 
             return (
-              <div
-                key={branch.id}
-                className="group relative overflow-hidden rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_28px_-8px_rgba(16,24,40,0.15)]"
-              >
+              <Card key={branch.id} interactive className="group relative overflow-hidden">
                 {/* Butun karta filialga kirish havolasi; ustidagi tugmalar z-10 bilan tepada turadi */}
                 <Link
                   href={`/${slug}/${branch.slug}`}
@@ -159,7 +159,7 @@ export default function BranchesPage({ params }: { params: Promise<{ slug: strin
                 >
                   <span
                     className={clsx(
-                      "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-[19px] font-semibold",
+                      "flex h-12 w-12 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[19px] font-semibold",
                       palette.mono,
                     )}
                   >
@@ -167,10 +167,10 @@ export default function BranchesPage({ params }: { params: Promise<{ slug: strin
                   </span>
 
                   <div className="min-w-0 flex-1">
-                    <h3 className="truncate text-[17px] font-semibold tracking-tight text-[var(--color-text)]">
+                    <h3 className="truncate text-[17px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
                       {branch.name}
                     </h3>
-                    <p className="mt-0.5 truncate text-[13px] text-[var(--color-text-muted)]">
+                    <p className="mt-0.5 truncate text-[12.5px] text-[var(--color-text-muted)]">
                       {branch.address || "Manzil ko'rsatilmagan"}
                     </p>
                   </div>
@@ -179,7 +179,8 @@ export default function BranchesPage({ params }: { params: Promise<{ slug: strin
                   <div className="hidden shrink-0 items-center gap-2 sm:flex">
                     {manager ? (
                       <span className="inline-flex items-center gap-2 rounded-full bg-[var(--color-surface)]/80 py-1 pl-1 pr-3 text-[13px]">
-                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-[10px] font-semibold text-emerald-700">
+                        {/* Bosh harflar Avatar komponentidagi kabi brend rangida — filial rangi bilan raqobatlashmaydi */}
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--color-primary)]/10 text-[10px] font-semibold text-[var(--color-primary)] ring-1 ring-inset ring-[rgba(16,24,40,0.06)]">
                           {initials(manager.fullName)}
                         </span>
                         <span className="font-medium text-[var(--color-text)]">{manager.fullName}</span>
@@ -194,15 +195,15 @@ export default function BranchesPage({ params }: { params: Promise<{ slug: strin
                       href={`/${slug}/branches/${branch.id}`}
                       title="Filial sozlamalari"
                       aria-label={`${branch.name} sozlamalari`}
-                      className="rounded-full p-2 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
+                      className="rounded-full p-2 text-[var(--color-text-muted)] transition-colors duration-[var(--dur-fast)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
                     >
                       <SettingsIcon className="h-[18px] w-[18px]" />
                     </Link>
-                    <ChevronRightIcon className="h-5 w-5 text-[var(--color-text-muted)]/40 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-[var(--color-primary)]" />
+                    <ChevronRightIcon className="h-5 w-5 text-[var(--color-text-muted)]/40 transition-transform duration-[var(--dur-base)] ease-[var(--ease-out)] group-hover:translate-x-0.5 group-hover:text-[var(--color-primary)] motion-reduce:transition-none" />
                   </div>
                 </div>
 
-                <div className="pointer-events-none relative z-10 grid grid-cols-2 divide-x divide-y divide-[var(--color-separator)] border-t border-[var(--color-separator)] sm:grid-cols-4 sm:divide-y-0">
+                <div className="hairline pointer-events-none relative z-10 grid grid-cols-2 divide-x divide-y divide-[var(--color-separator)] border-t border-[var(--color-separator)] sm:grid-cols-4 sm:divide-y-0">
                   <Stat label="Bolalar" value={num(summary?.childrenCount)} loading={loading} />
                   <Stat label="Guruhlar" value={num(summary?.activeGroupsCount)} loading={loading} />
                   <Stat label="Xodimlar" value={num(summary?.employeesCount)} loading={loading} />
@@ -216,7 +217,7 @@ export default function BranchesPage({ params }: { params: Promise<{ slug: strin
 
                 {/* Qarzdorlik ustun emas, ogohlantirish: u bo'lmasa karta ham tinch turadi */}
                 {hasDebt && (
-                  <div className="pointer-events-none relative z-10 flex items-center gap-2 border-t border-[var(--color-separator)] bg-[var(--color-danger-bg)] px-5 py-2.5">
+                  <div className="hairline pointer-events-none relative z-10 flex items-center gap-2 border-t border-[var(--color-separator)] bg-[var(--color-danger-bg)] px-5 py-2.5">
                     <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-danger)]" />
                     <span className="text-[13px] text-[var(--color-danger)]">
                       To&apos;lanmagan qarzdorlik
@@ -226,7 +227,7 @@ export default function BranchesPage({ params }: { params: Promise<{ slug: strin
                     </span>
                   </div>
                 )}
-              </div>
+              </Card>
             );
           })}
         </div>
