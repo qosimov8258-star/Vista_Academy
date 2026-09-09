@@ -5,14 +5,14 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import { api } from "@/lib/api";
-import type { GroupAttendanceRange, GroupOverview } from "@/lib/types";
+import type { GroupAttendanceDay, GroupAttendanceRange, GroupOverview } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { CapacityRing } from "@/features/network/capacity-ring";
 import { monogram, paletteFor } from "@/features/network/palette";
 import { formatChildId } from "@/lib/format";
-import { ArrowLeftIcon, TeacherIcon } from "@/components/ui/icons";
+import { ArrowLeftIcon, CheckIcon, CloseIcon, ClockIcon, TeacherIcon } from "@/components/ui/icons";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 /** Uzbekcha qisqa kun nomlari — Intl uz-UZ da bular chiroyli chiqmaydi. */
@@ -53,14 +53,24 @@ export default function NetworkGroupDetailPage({
   // Sana mijoz soatiga bog'liq — birinchi renderda emas, effektda hisoblanadi,
   // aks holda server va brauzer HTML'i mos kelmaydi.
   const [range, setRange] = useState<{ from: string; to: string } | null>(null);
+  // Nomli ro'yxat uchun tanlangan kun — sukut bo'yicha bugun
+  const [rosterDate, setRosterDate] = useState<string | null>(null);
 
   useEffect(() => {
-    setRange((current) => current ?? { from: shiftDays(todayDateString(), -13), to: todayDateString() });
+    const today = todayDateString();
+    setRange((current) => current ?? { from: shiftDays(today, -13), to: today });
+    setRosterDate((current) => current ?? today);
   }, []);
 
   const overviewQuery = useQuery({
     queryKey: ["group-overview", groupId],
     queryFn: () => api.get<GroupOverview>(`/app/groups/${groupId}/overview`),
+  });
+
+  const rosterQuery = useQuery({
+    queryKey: ["group-day", groupId, rosterDate],
+    queryFn: () => api.get<GroupAttendanceDay>(`/app/groups/${groupId}/attendance/day?date=${rosterDate}`),
+    enabled: !!rosterDate,
   });
 
   const attendanceQuery = useQuery({
@@ -146,6 +156,88 @@ export default function NetworkGroupDetailPage({
         <StatTile label="Qiz bolalar" value={children.girls} hint={percentHint(children.girls, children.active)} tone="rose" />
         <StatTile label="Bo'sh o'rin" value={Math.max(0, group.capacity - children.active)} hint={`Sig'im ${group.capacity}`} tone="neutral" />
       </div>
+
+      {/* Kunlik nomli ro'yxat: aynan kim keldi, kim kelmadi */}
+      <Card className="overflow-hidden">
+        <div className="hairline flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-separator)] px-5 py-4 sm:px-6">
+          <div>
+            <h2 className="text-[15px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
+              Kim keldi
+            </h2>
+            <p className="text-[12.5px] text-[var(--color-text-muted)]">Tanlangan kun uchun ismma-ism ro&apos;yxat</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {rosterDate &&
+              [
+                { label: "Bugun", value: todayDateString() },
+                { label: "Kecha", value: shiftDays(todayDateString(), -1) },
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setRosterDate(option.value)}
+                  className={clsx(
+                    "cursor-pointer rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors",
+                    rosterDate === option.value
+                      ? "bg-[var(--color-primary)] text-white"
+                      : "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
+                  )}
+                >
+                  {option.label}
+                </button>
+              ))}
+            <DateField
+              label="sana"
+              value={rosterDate ?? ""}
+              max={todayDateString()}
+              onChange={(value) => setRosterDate(value)}
+            />
+          </div>
+        </div>
+
+        {!rosterDate || rosterQuery.isLoading ? (
+          <div className="px-5 py-5 sm:px-6">
+            <LoadingState rows={2} />
+          </div>
+        ) : rosterQuery.isError ? (
+          <div className="px-5 py-5 sm:px-6">
+            <ErrorState message={(rosterQuery.error as Error).message} />
+          </div>
+        ) : (
+          <div className="space-y-4 px-5 py-5 sm:px-6">
+            <div className="grid grid-cols-3 gap-3">
+              <RosterCount label="Keldi" value={rosterQuery.data!.counts.present} tone="success" />
+              <RosterCount label="Kelmadi" value={rosterQuery.data!.counts.absent} tone="danger" />
+              <RosterCount label="Belgilanmagan" value={rosterQuery.data!.counts.unmarked} tone="neutral" />
+            </div>
+
+            {rosterQuery.data!.total === 0 ? (
+              <EmptyState title="Bu guruhda faol bola yo'q" />
+            ) : (
+              <div className="space-y-3.5">
+                <RosterList
+                  title="Keldi"
+                  tone="success"
+                  icon={<CheckIcon className="h-3.5 w-3.5" />}
+                  names={rosterQuery.data!.items.filter((i) => i.status === "PRESENT")}
+                />
+                <RosterList
+                  title="Kelmadi"
+                  tone="danger"
+                  icon={<CloseIcon className="h-3.5 w-3.5" />}
+                  names={rosterQuery.data!.items.filter((i) => i.status === "ABSENT")}
+                />
+                <RosterList
+                  title="Belgilanmagan"
+                  tone="neutral"
+                  icon={<ClockIcon className="h-3.5 w-3.5" />}
+                  names={rosterQuery.data!.items.filter((i) => i.status === null)}
+                />
+              </div>
+            )}
+          </div>
+        )}
+      </Card>
 
       {/* Davomat: sana oralig'i bo'yicha kunlik yig'indi */}
       <Card className="overflow-hidden">
@@ -313,6 +405,68 @@ export default function NetworkGroupDetailPage({
           </ul>
         )}
       </Card>
+    </div>
+  );
+}
+
+const ROSTER_TONE = {
+  success: {
+    count: "text-[var(--color-success)]",
+    well: "bg-[var(--color-success-bg)]",
+    chip: "bg-[var(--color-success-bg)] text-[var(--color-success)]",
+  },
+  danger: {
+    count: "text-[var(--color-danger)]",
+    well: "bg-[var(--color-danger-bg)]",
+    chip: "bg-[var(--color-danger-bg)] text-[var(--color-danger)]",
+  },
+  neutral: {
+    count: "text-[var(--color-text-muted)]",
+    well: "bg-[var(--color-surface-sunken)]",
+    chip: "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)]",
+  },
+} as const;
+
+function RosterCount({ label, value, tone }: { label: string; value: number; tone: keyof typeof ROSTER_TONE }) {
+  const style = ROSTER_TONE[tone];
+  return (
+    <div className={clsx("rounded-[var(--radius-md)] px-4 py-3", style.well)}>
+      <p className={clsx("text-[26px] font-bold leading-none tabular-nums", style.count)}>{value}</p>
+      <p className="mt-1 text-[12.5px] font-medium text-[var(--color-text-muted)]">{label}</p>
+    </div>
+  );
+}
+
+/** Ismlar chip sifatida — jadval qatoridan ko'ra tezroq o'qiladi. */
+function RosterList({
+  title,
+  tone,
+  icon,
+  names,
+}: {
+  title: string;
+  tone: keyof typeof ROSTER_TONE;
+  icon: React.ReactNode;
+  names: { childId: string; fullName: string }[];
+}) {
+  if (names.length === 0) return null;
+  const style = ROSTER_TONE[tone];
+  return (
+    <div>
+      <p className="mb-2 flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.06em] text-[var(--color-text-muted)]">
+        <span className={clsx("flex h-5 w-5 items-center justify-center rounded-full", style.chip)}>{icon}</span>
+        {title} · {names.length}
+      </p>
+      <div className="flex flex-wrap gap-1.5">
+        {names.map((child) => (
+          <span
+            key={child.childId}
+            className={clsx("rounded-full px-3 py-1.5 text-[13px] font-medium", style.chip)}
+          >
+            {child.fullName}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

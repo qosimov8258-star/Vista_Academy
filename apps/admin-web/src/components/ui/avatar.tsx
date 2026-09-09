@@ -39,7 +39,7 @@ export function Avatar({
         alt={label}
         width={size}
         height={size}
-        className={clsx("shrink-0 rounded-full object-cover", className)}
+        className={clsx("shrink-0 rounded-full object-cover ring-1 ring-inset ring-[rgba(16,24,40,0.06)]", className)}
         style={{ width: size, height: size }}
       />
     );
@@ -49,7 +49,7 @@ export function Avatar({
     <span
       aria-hidden
       className={clsx(
-        "flex shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)]/10 font-semibold text-[var(--color-primary)]",
+        "flex shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)]/10 font-semibold text-[var(--color-primary)] ring-1 ring-inset ring-[rgba(16,24,40,0.06)]",
         className,
       )}
       style={{ width: size, height: size, fontSize: Math.round(size * 0.36) }}

@@ -30,14 +30,14 @@ export function ProgressBar({
 
   return (
     <div
-      className={clsx("h-1.5 w-full overflow-hidden rounded-full bg-[var(--color-surface-sunken)]", className)}
+      className={clsx("h-2 w-full overflow-hidden rounded-full bg-[var(--color-surface-sunken)]", className)}
       role="progressbar"
       aria-valuenow={value}
       aria-valuemin={0}
       aria-valuemax={total}
     >
       <div
-        className={clsx("h-full rounded-full transition-[width] duration-500 ease-[var(--ease-out)]", toneClasses[tone])}
+        className={clsx("h-full rounded-full shadow-[inset_0_-1px_0_rgba(255,255,255,0.25)] transition-[width] duration-500 ease-[var(--ease-out)]", toneClasses[tone])}
         style={{ width: `${percent}%` }}
       />
     </div>

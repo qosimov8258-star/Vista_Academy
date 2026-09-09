@@ -27,10 +27,34 @@
   /* Panel ichidagi qatorlar orasidagi chiziq — panel chetidan ochiqroq */
   --color-separator: #eef0f3;
 
-  --radius-lg: 14px;
-  --radius-xl: 18px;
-  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.05);
+  /* Yuza chetlari: iOS da chegara chizig'i emas, yumshoq soya ajratadi.
+     Shuning uchun ramkalar deyarli ko'rinmas, soyalar esa ikki qatlamli —
+     tor "kalit" soyasi shaklni beradi, keng "muhit" soyasi ko'taradi. */
+  --color-border-hair: rgba(16, 24, 40, 0.08);
+
+  /* Burchaklar: bitta izchil narvon. Ilgari har sahifada o'z qiymati bor edi. */
+  --radius-xs: 8px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 22px;
+  --radius-2xl: 28px;
+
+  --shadow-xs: 0 1px 2px rgba(16, 24, 40, 0.04);
+  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 12px -4px rgba(16, 24, 40, 0.06);
+  --shadow-raised: 0 2px 4px rgba(16, 24, 40, 0.05), 0 12px 28px -8px rgba(16, 24, 40, 0.12);
+  --shadow-modal: 0 8px 16px -6px rgba(16, 24, 40, 0.1), 0 32px 64px -12px rgba(16, 24, 40, 0.28);
+  /* Asosiy tugma o'z rangida ko'tariladi — neytral soya unda ko'rinmaydi */
+  --shadow-primary: 0 1px 2px rgba(15, 118, 110, 0.24), 0 6px 16px -6px rgba(15, 118, 110, 0.4);
+
+  /* Sarlavhalar zichroq terilganda qat'iyroq o'qiladi */
+  --tracking-title: -0.022em;
+  --tracking-headline: -0.015em;
+
   --ease-out: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-fast: 150ms;
+  --dur-base: 220ms;
 }
 
 /*
@@ -55,14 +79,60 @@ body {
 
 body {
   font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "SF Pro Text",
+    "Inter",
     ui-sans-serif,
     system-ui,
-    -apple-system,
     "Segoe UI",
     Roboto,
     Helvetica,
     Arial,
     sans-serif;
+  /* Yupqa shriftlar Retina'da qalinlashib ketmasin */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Yarim piksel chiziq — iOS jadvallaridagi ajratkichlar shunday.
+   Faqat zich ekranlarda: oddiy ekranda 0.5px umuman chizilmasligi mumkin. */
+@media (min-resolution: 2dppx) {
+  .hairline {
+    border-width: 0.5px;
+  }
+}
+
+/* Modal ochilishi: fon xiralashadi, oyna sal kattarib joyiga o'tiradi */
+@keyframes overlayIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes sheetIn {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-overlay-in {
+  animation: overlayIn 200ms linear both;
+}
+.animate-sheet-in {
+  animation: sheetIn 260ms var(--ease-spring) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-overlay-in,
+  .animate-sheet-in {
+    animation: none;
+  }
 }
 
 .scrollbar-thin::-webkit-scrollbar {

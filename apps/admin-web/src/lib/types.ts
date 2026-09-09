@@ -49,6 +49,7 @@ export interface GroupTeacherLink {
   groupId: string;
   employeeId: string;
   employee?: { id: string; fullName: string; position: string };
+  branch?: { id: string; name: string };
   group?: { id: string; name: string };
 }
 
@@ -136,6 +137,8 @@ export interface Employee {
   /** Kabineti bo'lmagan xodimda null — u tizimga kirmaydi. */
   tenantUser?: { id: string; email: string; role: TenantUserRole; isActive: boolean } | null;
   teachingGroups?: GroupTeacherLink[];
+  /** Oylik sxemasi — ro'yxat bilan birga keladi, alohida so'rov kerak emas. */
+  salaryScheme?: { ruleType: "FIXED" | "PER_HOUR" | "PER_CHILD"; fixedAmount: string; rate: string } | null;
 }
 
 export type AttendanceStatus = "PRESENT" | "ABSENT";
@@ -439,6 +442,7 @@ export interface PayrollEntry {
   createdAt: string;
   updatedAt: string;
   employee?: { id: string; fullName: string; position: string };
+  branch?: { id: string; name: string };
 }
 
 // ===== Bildirishnomalar =====
@@ -515,4 +519,73 @@ export interface BranchReport {
     outstandingDebt: number;
     invoices: { status: InvoiceStatus; count: number; billed: number; paid: number }[];
   };
+}
+
+/* ------------------------------------------------------------------ */
+/* Tarmoq bo'ylab moliya (Super Admin)                                 */
+/* ------------------------------------------------------------------ */
+
+interface MoneyBucket {
+  billed: number;
+  collected: number;
+  outstanding: number;
+}
+
+/** `GET /app/finance/summary` javobi. Summalar — son, satr emas. */
+export interface FinanceSummary {
+  period: string;
+  totals: MoneyBucket & { collectedInPeriod: number; invoiceCount: number };
+  branches: (MoneyBucket & { branchId: string; branchName: string })[];
+  groups: (MoneyBucket & {
+    groupId: string | null;
+    groupName: string;
+    branchId: string | null;
+    branchName: string;
+  })[];
+  statuses: { status: InvoiceStatus; count: number; billed: number; paid: number }[];
+}
+
+export type FinanceChildStatus = "PAID" | "PARTIAL" | "UNPAID";
+
+/** `GET /app/finance/children` javobi. */
+export interface FinanceChildren {
+  period: string;
+  counts: { total: number; paid: number; partial: number; unpaid: number };
+  items: {
+    childId: string;
+    publicId: number;
+    fullName: string;
+    groupId: string | null;
+    groupName: string | null;
+    branchId: string;
+    branchName: string;
+    billed: number;
+    paid: number;
+    outstanding: number;
+    status: FinanceChildStatus;
+    dueDate: string | null;
+    overdue: boolean;
+  }[];
+}
+
+/** `GET /app/payroll/summary` javobi. */
+export interface PayrollSummary {
+  period: string | null;
+  totals: { entries: number; base: number; bonus: number; penalty: number; total: number; paid: number; unpaid: number };
+  branches: { branchId: string; branchName: string; entries: number; total: number; paid: number; unpaid: number }[];
+}
+
+/** `GET /app/groups/:id/attendance/day` javobi. */
+export interface GroupAttendanceDay {
+  date: string;
+  total: number;
+  counts: { present: number; absent: number; unmarked: number };
+  items: {
+    childId: string;
+    publicId: number;
+    fullName: string;
+    gender: Gender | null;
+    status: AttendanceStatus | null;
+    note: string | null;
+  }[];
 }

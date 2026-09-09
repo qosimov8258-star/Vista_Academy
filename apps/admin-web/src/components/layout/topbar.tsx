@@ -25,16 +25,20 @@ export function Topbar({ slug }: { slug: string }) {
   };
 
   return (
-    <header className="flex shrink-0 items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-3">
+    <header className="hairline flex shrink-0 items-center justify-between border-b border-[var(--color-separator)] bg-[var(--color-surface)]/80 px-6 py-3.5 backdrop-blur-[20px]">
       <div>
-        {user && <p className="text-sm font-medium text-[var(--color-text)]">{user.organizationName}</p>}
+        {user && (
+          <p className="text-[17px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
+            {user.organizationName}
+          </p>
+        )}
       </div>
       <div className="flex items-center gap-4">
         {user && (
           <div className="flex items-center gap-2.5">
-            <div className="text-right">
-              <p className="text-sm font-medium text-[var(--color-text)]">{user.fullName || user.email}</p>
-              <p className="text-xs text-[var(--color-text-muted)]">{ROLE_LABEL[user.role]}</p>
+            <div className="text-right leading-tight">
+              <p className="text-[14px] font-medium text-[var(--color-text)]">{user.fullName || user.email}</p>
+              <p className="text-[12px] text-[var(--color-text-muted)]">{ROLE_LABEL[user.role]}</p>
             </div>
             <Avatar user={user} size={32} />
           </div>

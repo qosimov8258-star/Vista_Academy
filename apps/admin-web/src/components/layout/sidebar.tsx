@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { usePathname, useParams } from "next/navigation";
 import clsx from "clsx";
-import type { ComponentType, SVGProps } from "react";
+import type { ComponentType } from "react";
 import { useAuth } from "@/lib/use-auth";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { useSidebarCollapsed } from "@/lib/use-sidebar-collapsed";
 import { useSidebarSections } from "@/lib/use-sidebar-sections";
 import { ROLE_LABEL, canManageUsers, isTeacher } from "@/lib/permissions";
 import { Avatar } from "@/components/ui/avatar";
+import type { IconProps } from "@/components/ui/icons";
 import {
   ArrowLeftIcon,
   BellIcon,
@@ -32,7 +33,9 @@ import {
   TeacherIcon,
 } from "@/components/ui/icons";
 
-type NavIcon = ComponentType<SVGProps<SVGSVGElement>>;
+// `IconProps` — ikonkalar to'plamining o'z tipi: `filled` bayrog'i ham bor,
+// faol bo'lim to'ldirilgan ikonka bilan belgilanadi.
+type NavIcon = ComponentType<IconProps>;
 
 interface NavLeaf {
   href: string;
@@ -60,9 +63,9 @@ function isSection(entry: NavEntry): entry is NavSection {
 }
 
 const BADGE_TONE: Record<NonNullable<NavLeaf["badgeTone"]>, string> = {
-  warning: "bg-[#f6c9a4] text-[#7c4a03]",
-  success: "bg-[#bce5cd] text-[#12674a]",
-  danger: "bg-[#f8c4c4] text-[#8f1d1d]",
+  warning: "bg-[var(--color-warning-bg)] text-[var(--color-warning)]",
+  success: "bg-[var(--color-success-bg)] text-[var(--color-success)]",
+  danger: "bg-[var(--color-danger-bg)] text-[var(--color-danger)]",
 };
 
 function Badge({ value, tone = "warning" }: { value: number; tone?: NavLeaf["badgeTone"] }) {
@@ -116,6 +119,7 @@ export function Sidebar({ slug }: { slug: string }) {
     // bulardan alohida — ular filial xodimlarining kundalik ish joyi.
     { href: `/${slug}/network/groups`, label: "Guruhlar", icon: GroupIcon, show: true },
     { href: `/${slug}/network/children`, label: "O'quvchilar", icon: ChildIcon, show: true },
+    { href: `/${slug}/network/finance`, label: "Moliya", icon: MoneyIcon, show: true },
     // Filial bo'yicha to'liq hisobot. Sahifaning o'zida filial tanlanadi,
     // shuning uchun yon panelda bitta havola yetarli.
     { href: `/${slug}/report`, label: "Ma'lumotlar", icon: ChartIcon, show: true },
@@ -211,8 +215,8 @@ export function Sidebar({ slug }: { slug: string }) {
   ];
 
   const rowBase =
-    "group relative flex items-center rounded-[14px] text-[15px] transition-colors duration-150 motion-reduce:transition-none";
-  const activeRow = "bg-white text-[var(--color-text)] font-semibold shadow-[0_1px_2px_rgba(16,24,40,0.06),0_2px_6px_rgba(16,24,40,0.08)]";
+    "group relative flex items-center rounded-[16px] text-[15px] transition-colors duration-150 motion-reduce:transition-none";
+  const activeRow = "bg-white text-[var(--color-text)] font-semibold shadow-[var(--shadow-card)]";
   const idleRow = "font-medium text-[var(--color-text-muted)] hover:bg-black/[0.045] hover:text-[var(--color-text)]";
 
   return (
@@ -296,7 +300,8 @@ export function Sidebar({ slug }: { slug: string }) {
                       className={clsx(rowBase, "mb-1 h-11 justify-center", active ? activeRow : idleRow)}
                     >
                       <Icon
-                        className={clsx("h-[19px] w-[19px]", active ? "text-[var(--color-primary)]" : "text-current")}
+                        filled={active}
+                        className={clsx("h-5 w-5", active ? "text-[var(--color-primary)]" : "text-current")}
                       />
                     </Link>
                   );
@@ -315,7 +320,8 @@ export function Sidebar({ slug }: { slug: string }) {
                     className={clsx(rowBase, "mb-1 h-11 gap-3 px-3", active ? activeRow : idleRow)}
                   >
                     <Icon
-                      className={clsx("h-[19px] w-[19px] shrink-0", active ? "text-[var(--color-primary)]" : "text-current")}
+                      filled={active}
+                      className={clsx("h-5 w-5 shrink-0", active ? "text-[var(--color-primary)]" : "text-current")}
                     />
                     <span className="truncate">{entry.label}</span>
                     {entry.badge != null && <Badge value={entry.badge} tone={entry.badgeTone} />}
@@ -337,7 +343,7 @@ export function Sidebar({ slug }: { slug: string }) {
                     aria-expanded={open}
                     className={clsx(rowBase, "h-11 w-full cursor-pointer gap-3 px-3 text-left", idleRow)}
                   >
-                    <Icon className="h-[19px] w-[19px] shrink-0 text-current" />
+                    <Icon className="h-5 w-5 shrink-0 text-current" />
                     <span className="truncate">{entry.label}</span>
                     <ChevronRightIcon
                       className={clsx(
@@ -392,8 +398,9 @@ export function Sidebar({ slug }: { slug: string }) {
               className={clsx(rowBase, "h-11 gap-3 px-3", isActive(settingsItem) ? activeRow : idleRow)}
             >
               <SettingsIcon
+                filled={isActive(settingsItem)}
                 className={clsx(
-                  "h-[19px] w-[19px] shrink-0",
+                  "h-5 w-5 shrink-0",
                   isActive(settingsItem) ? "text-[var(--color-primary)]" : "text-current",
                 )}
               />

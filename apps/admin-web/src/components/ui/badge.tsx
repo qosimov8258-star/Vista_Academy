@@ -1,14 +1,17 @@
 import { HTMLAttributes } from "react";
 import clsx from "clsx";
 
-type Tone = "success" | "warning" | "danger" | "neutral" | "primary";
+type Tone = "success" | "warning" | "danger" | "neutral" | "primary" | "info";
 
+// Barcha ranglar token'lardan. Ilgari `primary` indigo fonda brend rangidagi
+// matn edi — ikki xil rang bir chipda.
 const toneClasses: Record<Tone, string> = {
   success: "bg-[var(--color-success-bg)] text-[var(--color-success)]",
   warning: "bg-[var(--color-warning-bg)] text-[var(--color-warning)]",
   danger: "bg-[var(--color-danger-bg)] text-[var(--color-danger)]",
-  neutral: "bg-gray-100 text-gray-600",
-  primary: "bg-indigo-50 text-[var(--color-primary)]",
+  neutral: "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)]",
+  primary: "bg-[var(--color-primary)]/10 text-[var(--color-primary)]",
+  info: "bg-sky-50 text-sky-700",
 };
 
 export function Badge({
@@ -19,7 +22,7 @@ export function Badge({
   return (
     <span
       className={clsx(
-        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
+        "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-semibold leading-none tracking-[-0.005em]",
         toneClasses[tone],
         className,
       )}
