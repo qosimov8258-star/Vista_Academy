@@ -21,10 +21,10 @@
   --color-text-muted: #6c6c72;
   --color-text-subtle: #9b9ba1;
 
-  /* Brend rangi — iOS system indigo ohangida */
-  --color-primary: #5856d6;
-  --color-primary-hover: #4a48c4;
-  --color-primary-soft: #eeeefc;
+  /* Brend rangi — #831C91 (to'q siyohrang-binafsha) */
+  --color-primary: #831c91;
+  --color-primary-hover: #6d1778;
+  --color-primary-soft: #f3e8f4;
   --color-primary-contrast: #ffffff;
 
   /* Holat ranglari: matn uchun to'q, fon uchun ochiq juftlik */
@@ -149,10 +149,39 @@ h3 {
   animation: ios-pulse 1.6s ease-in-out infinite;
 }
 
+/* LoadingScreen: logotip yuklanish davomida tinmay aylanib turadi */
+@keyframes nyx-logo-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-nyx-logo-spin {
+  animation: nyx-logo-spin 2.4s linear infinite;
+}
+
+/* LoadingScreen: "..." nuqtalari navbat bilan yonib-o'chib turadi */
+@keyframes nyx-dot-blink {
+  0%,
+  80%,
+  100% {
+    opacity: 0.2;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+
+.animate-nyx-dot-blink {
+  animation: nyx-dot-blink 1.4s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-scrim-in,
   .animate-sheet-in,
-  .animate-skeleton {
+  .animate-skeleton,
+  .animate-nyx-logo-spin,
+  .animate-nyx-dot-blink {
     animation: none;
   }
 }

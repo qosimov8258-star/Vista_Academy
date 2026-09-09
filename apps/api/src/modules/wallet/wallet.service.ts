@@ -10,7 +10,7 @@ export class WalletService {
 
   async getByOrganization(organizationId: string) {
     const wallet = await this.prisma.wallet.findUnique({ where: { organizationId } });
-    if (!wallet) throw new NotFoundException("Bu tashkilot uchun hamyon topilmadi");
+    if (!wallet) throw new NotFoundException("Bu bog'cha uchun hamyon topilmadi");
     const transactions = await this.prisma.walletTransaction.findMany({
       where: { walletId: wallet.id },
       orderBy: { createdAt: "desc" },
@@ -44,7 +44,7 @@ export class WalletService {
   ) {
     return this.prisma.$transaction(async (tx) => {
       const wallet = await tx.wallet.findUnique({ where: { organizationId } });
-      if (!wallet) throw new NotFoundException("Bu tashkilot uchun hamyon topilmadi");
+      if (!wallet) throw new NotFoundException("Bu bog'cha uchun hamyon topilmadi");
 
       const balanceAfter = wallet.balance.add(input.amount);
       if (balanceAfter.lessThan(0)) {

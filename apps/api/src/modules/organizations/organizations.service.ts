@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { ConflictException, Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import * as argon2 from "argon2";
 import { PrismaService } from "../../database/prisma.service";
@@ -14,6 +14,11 @@ export class OrganizationsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateOrganizationDto) {
+    const plan = await this.prisma.plan.findUnique({ where: { id: dto.planId } });
+    if (!plan) {
+      throw new BadRequestException("Tanlangan tarif reja topilmadi");
+    }
+
     const slug = await this.generateUniqueSlug(dto.name);
 
     return this.prisma.$transaction(async (tx) => {
@@ -51,23 +56,18 @@ export class OrganizationsService {
         },
       });
 
-      if (dto.planId) {
-        const plan = await tx.plan.findUnique({ where: { id: dto.planId } });
-        if (plan) {
-          const now = new Date();
-          const periodEnd = new Date(now);
-          periodEnd.setMonth(periodEnd.getMonth() + 1);
-          await tx.subscription.create({
-            data: {
-              organizationId: organization.id,
-              planId: plan.id,
-              status: "ACTIVE",
-              currentPeriodStart: now,
-              currentPeriodEnd: periodEnd,
-            },
-          });
-        }
-      }
+      const now = new Date();
+      const periodEnd = new Date(now);
+      periodEnd.setMonth(periodEnd.getMonth() + 1);
+      await tx.subscription.create({
+        data: {
+          organizationId: organization.id,
+          planId: plan.id,
+          status: "ACTIVE",
+          currentPeriodStart: now,
+          currentPeriodEnd: periodEnd,
+        },
+      });
 
       return tx.organization.findUniqueOrThrow({
         where: { id: organization.id },
@@ -107,7 +107,7 @@ export class OrganizationsService {
       include: organizationInclude,
     });
     if (!organization) {
-      throw new NotFoundException("Tashkilot topilmadi");
+      throw new NotFoundException("Bog'cha topilmadi");
     }
     return organization;
   }

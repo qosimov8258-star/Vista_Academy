@@ -29,7 +29,7 @@ export default function SubscriptionsPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Obunalar" description="Barcha tashkilotlarning SaaS obuna holati" />
+      <PageHeader title="Obunalar" description="Barcha bog'chalarning SaaS obuna holati" />
 
       {isLoading ? (
         <Card className="overflow-hidden">
@@ -41,7 +41,7 @@ export default function SubscriptionsPage() {
         <EmptyState
           icon={RefreshIcon}
           title="Obunalar yo'q"
-          description="Tashkilot sahifasidan obuna biriktiring"
+          description="Bog'cha sahifasidan obuna biriktiring"
         />
       ) : (
         <Card className="overflow-hidden">
@@ -49,7 +49,7 @@ export default function SubscriptionsPage() {
             <table className="w-full text-left text-sm">
               <thead className="bg-[var(--color-surface-sunken)] text-[11px] uppercase tracking-wider text-[var(--color-text-subtle)]">
                 <tr>
-                  <th className="px-5 py-2.5 font-semibold">Tashkilot</th>
+                  <th className="px-5 py-2.5 font-semibold">Bog'cha</th>
                   <th className="px-3 py-2.5 font-semibold">Reja</th>
                   <th className="px-3 py-2.5 text-right font-semibold">Narx</th>
                   <th className="px-3 py-2.5 font-semibold">Holat</th>
@@ -61,7 +61,7 @@ export default function SubscriptionsPage() {
                   <tr key={sub.id} className="transition-colors hover:bg-[var(--color-surface-hover)]">
                     <td className="px-5 py-3">
                       <Link
-                        href={`/organizations/${sub.organizationId}`}
+                        href={`/bogchalar/${sub.organizationId}`}
                         className="font-medium text-[var(--color-text)] hover:text-[var(--color-primary)]"
                       >
                         {sub.organization?.name ?? sub.organizationId}
@@ -90,7 +90,7 @@ export default function SubscriptionsPage() {
             {sorted.map((sub) => (
               <li key={sub.id}>
                 <Link
-                  href={`/organizations/${sub.organizationId}`}
+                  href={`/bogchalar/${sub.organizationId}`}
                   className="flex items-center gap-3 px-4 py-3.5 active:bg-[var(--color-surface-hover)]"
                 >
                   <div className="min-w-0 flex-1">

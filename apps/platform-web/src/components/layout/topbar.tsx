@@ -1,36 +1,11 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { useAuth } from "@/lib/use-auth";
-import { api } from "@/lib/api";
-import { Button } from "@/components/ui/button";
-import { LogoutIcon } from "@/components/ui/icons";
-
-const ROLE_LABEL: Record<string, string> = {
-  PLATFORM_SUPER_ADMIN: "Super Admin",
-  PLATFORM_SUPPORT: "Support",
-};
-
-// Ism/emaildan bosh harflarni olamiz — avatar rasm o'rniga
-function initials(name: string): string {
-  const parts = name.trim().split(/[\s@._-]+/).filter(Boolean);
-  return parts.slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("") || "?";
-}
+import { initials, roleLabel } from "@/lib/format";
 
 export function Topbar() {
-  const router = useRouter();
-  const queryClient = useQueryClient();
   const { user } = useAuth();
-
-  const handleLogout = async () => {
-    await api.post("/platform/auth/logout");
-    // Keshni tozalamasak, keyingi kirgan foydalanuvchi bir zum oldingisining
-    // ma'lumotini ko'radi.
-    queryClient.clear();
-    router.push("/login");
-    router.refresh();
-  };
 
   const displayName = user?.fullName || user?.email || "";
 
@@ -47,12 +22,13 @@ export function Topbar() {
 
       <div className="flex items-center gap-3">
         {user && (
-          <div className="flex items-center gap-2.5">
+          <Link
+            href="/profile"
+            className="flex items-center gap-2.5 rounded-full py-1 pl-2 pr-1 transition-colors duration-150 hover:bg-[var(--color-surface-hover)] md:hidden"
+          >
             <div className="hidden text-right sm:block">
               <p className="text-[13px] font-medium leading-tight text-[var(--color-text)]">{displayName}</p>
-              <p className="text-[11px] leading-tight text-[var(--color-text-muted)]">
-                {ROLE_LABEL[user.role] ?? user.role}
-              </p>
+              <p className="text-[11px] leading-tight text-[var(--color-text-muted)]">{roleLabel(user.role)}</p>
             </div>
             <span
               aria-hidden
@@ -60,12 +36,8 @@ export function Topbar() {
             >
               {initials(displayName)}
             </span>
-          </div>
+          </Link>
         )}
-        <Button variant="secondary" size="sm" onClick={handleLogout}>
-          <LogoutIcon className="h-4 w-4" />
-          <span className="hidden sm:inline">Chiqish</span>
-        </Button>
       </div>
     </header>
   );

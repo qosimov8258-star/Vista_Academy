@@ -27,10 +27,9 @@ export class CreateOrganizationDto {
   @IsString()
   contactPhone?: string;
 
-  @ApiPropertyOptional({ description: "Boshlang'ich tarif reja ID (mavjud bo'lsa obuna ochiladi)" })
-  @IsOptional()
+  @ApiProperty({ description: "Tarif reja ID — bog'cha yaratilishi bilan shu tarifga obuna ochiladi" })
   @IsString()
-  planId?: string;
+  planId!: string;
 
   @ApiProperty({ example: "Aziza Karimova", description: "Tashkilotning Super Admin akkaunti to'liq ismi" })
   @IsString()

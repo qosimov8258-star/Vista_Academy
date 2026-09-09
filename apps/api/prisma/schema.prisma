@@ -24,6 +24,10 @@ model PlatformUser {
   email        String           @unique
   passwordHash String           @map("password_hash")
   fullName     String           @map("full_name")
+  firstName    String?          @map("first_name")
+  lastName     String?          @map("last_name")
+  phone        String?          @map("phone")
+  avatarUrl    String?          @map("avatar_url")
   role         PlatformUserRole @default(PLATFORM_SUPER_ADMIN)
   isActive     Boolean          @default(true) @map("is_active")
   createdAt    DateTime         @default(now()) @map("created_at")

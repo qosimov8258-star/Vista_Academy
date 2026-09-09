@@ -1,4 +1,13 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
+const API_ORIGIN = API_URL.replace(/\/api\/v1\/?$/, "");
+
+// API serverdagi statik fayllarga (masalan, avatar rasmlariga) to'liq havola quramiz —
+// backend faqat "/uploads/..." kabi nisbiy yo'l qaytaradi.
+export function assetUrl(path?: string | null): string | null {
+  if (!path) return null;
+  if (/^https?:\/\//.test(path)) return path;
+  return `${API_ORIGIN}${path}`;
+}
 
 export class ApiError extends Error {
   code: string;
@@ -65,12 +74,35 @@ async function request<T>(path: string, options: RequestInit = {}, retry = true)
   return body.data as T;
 }
 
+async function upload<T>(path: string, file: File): Promise<T> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  // Content-Type ni qo'lda qo'ymaymiz — brauzer multipart boundary'ni o'zi qo'shadi.
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+  });
+
+  const isJson = res.headers.get("content-type")?.includes("application/json");
+  const body: Envelope<T> | null = isJson ? await res.json().catch(() => null) : null;
+
+  if (!res.ok || !body?.success) {
+    const error = body?.error;
+    throw new ApiError(res.status, error?.code ?? "ERROR", error?.message ?? res.statusText, error?.details);
+  }
+
+  return body.data as T;
+}
+
 export const api = {
   get: <T>(path: string) => request<T>(path, { method: "GET" }),
   post: <T>(path: string, data?: unknown) =>
     request<T>(path, { method: "POST", body: data !== undefined ? JSON.stringify(data) : undefined }),
   patch: <T>(path: string, data?: unknown) =>
     request<T>(path, { method: "PATCH", body: data !== undefined ? JSON.stringify(data) : undefined }),
+  upload: <T>(path: string, file: File) => upload<T>(path, file),
 };
 
 export interface Paginated<T> {

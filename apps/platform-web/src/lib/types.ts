@@ -4,6 +4,10 @@ export interface AuthenticatedUser {
   id: string;
   email: string;
   fullName: string;
+  firstName: string | null;
+  lastName: string | null;
+  phone: string | null;
+  avatarUrl: string | null;
   role: PlatformUserRole;
 }
 
