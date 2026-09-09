@@ -25,6 +25,7 @@ import {
   CalendarIcon,
   ChecklistIcon,
   GroupIcon,
+  KeyIcon,
   NoteIcon,
   PencilIcon,
   PhoneIcon,
@@ -133,7 +134,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
   const [quarantineOpen, setQuarantineOpen] = useState(false);
   const [guardianOpen, setGuardianOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<ChildGuardian | null>(null);
-  const [cabinetLink, setCabinetLink] = useState<ChildGuardian | null>(null);
+  const [cabinetOpen, setCabinetOpen] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [photoChecking, setPhotoChecking] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -177,6 +178,9 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
     queryKey: ["child-guardians", slug, childId],
     queryFn: () => api.get<ChildGuardian[]>(`/app/children/${childId}/guardians`),
   });
+
+  // Kabinet bolaga bitta: qaysi vasiyning raqami login ekanini shu yerda topamiz
+  const cabinetHolder = guardiansQuery.data?.find((link) => link.guardian.hasCabinet) ?? null;
 
   const photoMutation = useMutation({
     mutationFn: (image: string) => api.put(`/app/children/${childId}/avatar`, { image }),
@@ -386,6 +390,8 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
                       {link.guardian.fullName}
                     </p>
                     {link.isPrimary && <Badge tone="primary">Asosiy</Badge>}
+                    {/* Kabinet bolaga bitta — bu raqam login ekanini bildiradi */}
+                    {link.guardian.hasCabinet && <Badge tone="success">Kabinet logini</Badge>}
                   </div>
                   <p className="text-[12.5px] text-[var(--color-text-muted)]">
                     {GUARDIAN_RELATION_LABEL[link.relation]}
@@ -393,20 +399,6 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
                   </p>
                 </div>
                 <div className="flex items-center gap-1">
-                  {canWrite && (
-                    <button
-                      type="button"
-                      onClick={() => setCabinetLink(link)}
-                      className={clsx(
-                        "cursor-pointer rounded-full px-3 py-1.5 text-[13px] font-semibold transition-colors",
-                        link.guardian.hasCabinet
-                          ? "bg-[var(--color-success-bg)] text-[var(--color-success)] hover:brightness-[0.97]"
-                          : "bg-[var(--color-primary)]/10 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/[0.16]",
-                      )}
-                    >
-                      {link.guardian.hasCabinet ? "Kabinet ochiq" : "Kabinet ochish"}
-                    </button>
-                  )}
                   <a
                     href={`tel:${link.guardian.phone}`}
                     className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-surface-sunken)] px-3 py-1.5 text-[14px] font-medium tabular-nums text-[var(--color-text)] transition-colors hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)]"
@@ -419,6 +411,35 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
               </li>
             ))}
           </ul>
+        )}
+
+        {/* Bitta bolaga — bitta kabinet: ota ham, ona ham shu login bilan kiradi */}
+        {canWrite && guardiansQuery.data && guardiansQuery.data.length > 0 && (
+          <div className="hairline flex flex-wrap items-center gap-3 border-t border-[var(--color-separator)] bg-[var(--color-surface-sunken)]/60 px-5 py-3.5 sm:px-6">
+            <span
+              className={clsx(
+                "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
+                cabinetHolder
+                  ? "bg-[var(--color-success-bg)] text-[var(--color-success)]"
+                  : "bg-[var(--color-primary)]/10 text-[var(--color-primary)]",
+              )}
+            >
+              <KeyIcon className="h-[17px] w-[17px]" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[14px] font-medium text-[var(--color-text)]">
+                {cabinetHolder ? "Kabinet ochiq" : "Kabinet ochilmagan"}
+              </p>
+              <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">
+                {cabinetHolder
+                  ? `Login: ${formatPhone(cabinetHolder.guardian.phone)} · ota-ona ikkalasi shu kabinetdan foydalanadi`
+                  : "Ota-ona davomat, ovqat va mashg'ulotlarni ko'rishi uchun kabinet oching"}
+              </p>
+            </div>
+            <Button size="sm" variant={cabinetHolder ? "outline" : "primary"} onClick={() => setCabinetOpen(true)}>
+              {cabinetHolder ? "Boshqarish" : "Kabinet ochish"}
+            </Button>
+          </div>
         )}
       </Card>
 
@@ -801,13 +822,14 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
         <AddGuardianModal open={guardianOpen} onClose={() => setGuardianOpen(false)} slug={slug} childId={childId} />
       )}
 
-      {canWrite && cabinetLink && (
+      {canWrite && cabinetOpen && (
         <ParentCabinetModal
-          open={!!cabinetLink}
-          onClose={() => setCabinetLink(null)}
+          open={cabinetOpen}
+          onClose={() => setCabinetOpen(false)}
           slug={slug}
           childId={childId}
-          link={cabinetLink}
+          childName={child.fullName}
+          links={guardiansQuery.data ?? []}
         />
       )}
 

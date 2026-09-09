@@ -1,4 +1,10 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantScope, requireOperationalScope } from "../iam/tenant-auth.types";
@@ -105,6 +111,10 @@ export class GuardiansService {
       }
     }
 
+    // Kabineti bor vasiyni biriktirish shu bolada ikkinchi kabinet paydo
+    // qilmasin — aks holda bir bolaga ikki xil login bo'lib qolardi.
+    await this.assertNoSecondCabinet(child.id, guardianId);
+
     try {
       return await this.prisma.childGuardian.create({
         data: {
@@ -154,6 +164,18 @@ export class GuardiansService {
    */
   async openCabinet(scope: TenantScope, guardianId: string) {
     const guardian = await this.requireManageableGuardian(scope, guardianId);
+
+    // Bitta bolaga bitta kabinet: ota ham, ona ham o'sha loginni ishlatadi.
+    // Vasiy bir nechta bolaga biriktirilgan bo'lishi mumkin, shuning uchun
+    // uning har bir bolasini tekshiramiz.
+    const childIds = await this.prisma.childGuardian.findMany({
+      where: { guardianId },
+      select: { childId: true },
+    });
+    for (const { childId } of childIds) {
+      await this.assertNoSecondCabinet(childId, guardianId);
+    }
+
     const password = generateParentPassword();
     const passwordHash = await argon2.hash(password);
 
@@ -193,6 +215,28 @@ export class GuardiansService {
       }),
     ]);
     return { guardianId: guardian.id, hasCabinet: false };
+  }
+
+  /**
+   * Shu bolada boshqa vasiyning ochiq kabineti bormi. Bola uchun kabinet
+   * bitta bo'ladi — ota ham, ona ham o'sha login bilan kiradi.
+   */
+  private async assertNoSecondCabinet(childId: string, guardianId: string) {
+    const holder = await this.prisma.childGuardian.findFirst({
+      where: {
+        childId,
+        guardianId: { not: guardianId },
+        guardian: { passwordHash: { not: null }, isActive: true },
+      },
+      select: { guardian: { select: { fullName: true, phone: true } } },
+    });
+    if (holder) {
+      throw new ConflictException(
+        `Bu bolaning kabineti allaqachon ochiq — login: ${holder.guardian.phone} (${holder.guardian.fullName}). ` +
+          "Ota va ona shu bitta kabinetdan foydalanadi: kerak bo'lsa unga yangi parol yarating " +
+          "yoki avval o'sha kabinetni yoping.",
+      );
+    }
   }
 
   /**
