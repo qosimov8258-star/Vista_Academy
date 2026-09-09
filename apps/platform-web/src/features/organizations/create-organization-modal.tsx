@@ -99,7 +99,7 @@ export function CreateOrganizationModal({ open, onClose }: { open: boolean; onCl
               o'zgarmagandek tuyuladi va foydalanuvchi qayta bosaveradi. */}
           <Button
             type="button"
-            variant="secondary"
+            variant="outline"
             size="sm"
             onClick={async () => {
               await navigator.clipboard?.writeText(url);
@@ -187,7 +187,7 @@ export function CreateOrganizationModal({ open, onClose }: { open: boolean; onCl
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="secondary" onClick={handleClose}>
+          <Button type="button" variant="outline" onClick={handleClose}>
             Bekor qilish
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>

@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import type { MenuEntry, Organization } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { Card } from "@/components/ui/card";
+import { DataTable, THead, TBody, Tr, Th, Td } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/input";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
@@ -77,13 +78,15 @@ export default function NutritionPage({ params }: { params: Promise<{ slug: stri
   const entryByDate = new Map((menuQuery.data ?? []).map((e) => [e.date.slice(0, 10), e]));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-semibold text-[var(--color-text)]">Ovqatlanish</h1>
-        <p className="text-sm text-[var(--color-text-muted)]">Haftalik menyu</p>
+        <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
+          Ovqatlanish
+        </h1>
+        <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">Haftalik menyu</p>
       </div>
 
-      <Card className="flex flex-col gap-3 p-4 sm:flex-row sm:items-end sm:justify-between">
+      <Card className="flex flex-col gap-4 p-5 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex flex-col gap-3 sm:flex-row">
           {!forcedBranchId && branches.length > 1 && (
             <Select label="Filial" value={branchId} onChange={(e) => setBranchId(e.target.value)} className="sm:max-w-xs">
@@ -97,18 +100,18 @@ export default function NutritionPage({ params }: { params: Promise<{ slug: stri
         </div>
         <div className="flex items-center gap-2">
           <Button
-            variant="secondary"
+            variant="outline"
             size="sm"
             disabled={!weekStart}
             onClick={() => setWeekStart((w) => (w ? addDays(w, -7) : w))}
           >
             ← Oldingi hafta
           </Button>
-          <span className="text-sm text-[var(--color-text-muted)]">
+          <span className="whitespace-nowrap text-[14px] tabular-nums text-[var(--color-text-muted)]">
             {weekStart && weekEnd ? `${formatDate(weekStart)} — ${formatDate(weekEnd)}` : "…"}
           </span>
           <Button
-            variant="secondary"
+            variant="outline"
             size="sm"
             disabled={!weekStart}
             onClick={() => setWeekStart((w) => (w ? addDays(w, 7) : w))}
@@ -121,46 +124,44 @@ export default function NutritionPage({ params }: { params: Promise<{ slug: stri
       {!canWrite && <ViewOnlyNote role={user?.role} />}
 
       {!weekStart || !branchId ? (
-        weekStart ? <EmptyState title="Filial mavjud emas" /> : <LoadingState />
+        weekStart ? <EmptyState title="Filial mavjud emas" /> : <LoadingState rows={7} />
       ) : menuQuery.isLoading ? (
-        <LoadingState />
+        <LoadingState rows={7} />
       ) : menuQuery.isError ? (
         <ErrorState message={(menuQuery.error as Error).message} />
       ) : (
         <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-[var(--color-border)] bg-gray-50 text-xs uppercase text-[var(--color-text-muted)]">
-                <tr>
-                  <th className="px-5 py-3 font-medium">Sana</th>
-                  <th className="px-5 py-3 font-medium">Nonushta</th>
-                  <th className="px-5 py-3 font-medium">Tushlik</th>
-                  <th className="px-5 py-3 font-medium">Kechki ovqat / gazak</th>
-                  {canWrite && <th className="px-5 py-3 font-medium"></th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--color-border)]">
-                {days.map((day) => {
-                  const entry = entryByDate.get(day) ?? null;
-                  return (
-                    <tr key={day} className="hover:bg-gray-50">
-                      <td className="px-5 py-3 font-medium text-[var(--color-text)]">{formatDate(day)}</td>
-                      <td className="px-5 py-3 text-[var(--color-text-muted)]">{entry?.breakfast || "—"}</td>
-                      <td className="px-5 py-3 text-[var(--color-text-muted)]">{entry?.lunch || "—"}</td>
-                      <td className="px-5 py-3 text-[var(--color-text-muted)]">{entry?.snack || "—"}</td>
-                      {canWrite && (
-                        <td className="px-5 py-3 text-right">
-                          <Button size="sm" variant="secondary" onClick={() => setEditDate(day)}>
-                            Tahrirlash
-                          </Button>
-                        </td>
-                      )}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <DataTable>
+            <THead>
+              <tr>
+                <Th>Sana</Th>
+                <Th>Nonushta</Th>
+                <Th>Tushlik</Th>
+                <Th>Kechki ovqat / gazak</Th>
+                {canWrite && <Th />}
+              </tr>
+            </THead>
+            <TBody>
+              {days.map((day) => {
+                const entry = entryByDate.get(day) ?? null;
+                return (
+                  <Tr key={day}>
+                    <Td className="whitespace-nowrap font-medium tabular-nums">{formatDate(day)}</Td>
+                    <Td className="text-[var(--color-text-muted)]">{entry?.breakfast || "—"}</Td>
+                    <Td className="text-[var(--color-text-muted)]">{entry?.lunch || "—"}</Td>
+                    <Td className="text-[var(--color-text-muted)]">{entry?.snack || "—"}</Td>
+                    {canWrite && (
+                      <Td className="text-right">
+                        <Button size="sm" variant="outline" onClick={() => setEditDate(day)}>
+                          Tahrirlash
+                        </Button>
+                      </Td>
+                    )}
+                  </Tr>
+                );
+              })}
+            </TBody>
+          </DataTable>
         </Card>
       )}
 

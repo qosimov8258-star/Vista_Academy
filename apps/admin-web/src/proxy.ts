@@ -91,5 +91,8 @@ export function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // `face-model` — public/ dagi statik fayllar (yuzni aniqlash modeli).
+  // Ular chiqarib tashlanmasa, proxy birinchi bo'lakni tashkilot slug'i deb
+  // o'ylab, model so'rovini login sahifasiga yo'naltiradi.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|face-model).*)"],
 };

@@ -1,7 +1,8 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useRef, useState } from "react";
 import Link from "next/link";
+import clsx from "clsx";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
 import type {
@@ -15,11 +16,25 @@ import type {
 } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
+import { DataTable, THead, TBody, Tr, Th, Td } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { LoadingState, ErrorState } from "@/components/ui/states";
+import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
+import {
+  ArrowLeftIcon,
+  CalendarIcon,
+  ChecklistIcon,
+  GroupIcon,
+  NoteIcon,
+  PencilIcon,
+  PhoneIcon,
+} from "@/components/ui/icons";
+import { CopyButton } from "@/components/ui/copy-button";
+import { ChildPhoto } from "@/components/ui/child-photo";
+import { prepareChildPhoto } from "@/lib/child-photo";
+import { initials } from "@/components/ui/avatar";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
-import { formatDate, formatDateTime, formatGender } from "@/lib/format";
+import { formatAge, formatChildId, formatDate, formatDateTime, formatGender, formatPhone } from "@/lib/format";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { EditDevelopmentModal } from "@/features/development/edit-development-modal";
 import { EditHealthProfileModal, BLOOD_TYPE_LABEL } from "@/features/child-health/edit-health-profile-modal";
@@ -61,16 +76,47 @@ const RATING_TONE: Record<string, "danger" | "success" | "primary"> = {
   ABOVE_EXPECTED: "primary",
 };
 
+/** Bolaning bitta fakti — sarlavha ostidagi to'rt katakli qatordan biri. */
+function Fact({
+  label,
+  value,
+  hint,
+  muted,
+  numeric,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  muted?: boolean;
+  numeric?: boolean;
+}) {
+  return (
+    <div className="px-5 py-3.5 sm:px-6">
+      <dt className="text-[12px] font-medium text-[var(--color-text-muted)]">{label}</dt>
+      <dd
+        className={clsx(
+          "mt-1 truncate text-[15px] font-medium",
+          numeric && "tabular-nums",
+          muted ? "text-[var(--color-text-muted)]" : "text-[var(--color-text)]",
+        )}
+      >
+        {value}
+      </dd>
+      {hint && <p className="text-[12px] text-[var(--color-text-muted)]">{hint}</p>}
+    </div>
+  );
+}
+
 function RatingBadge({ label, value }: { label: string; value: string | null }) {
   return (
-    <div>
-      <p className="text-xs text-[var(--color-text-muted)]">{label}</p>
+    <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
+      <p className="text-[12.5px] text-[var(--color-text-muted)]">{label}</p>
       {value ? (
-        <Badge tone={RATING_TONE[value]} className="mt-1">
+        <Badge tone={RATING_TONE[value]} className="mt-1.5">
           {RATING_LABEL[value]}
         </Badge>
       ) : (
-        <p className="mt-1 text-sm text-[var(--color-text-muted)]">—</p>
+        <p className="mt-1.5 text-[14px] font-medium text-[var(--color-text-muted)]">—</p>
       )}
     </div>
   );
@@ -86,6 +132,9 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
   const [quarantineOpen, setQuarantineOpen] = useState(false);
   const [guardianOpen, setGuardianOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<ChildGuardian | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [photoChecking, setPhotoChecking] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
   const canWrite = canWriteOperational(user?.role);
   const queryClient = useQueryClient();
@@ -127,6 +176,46 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
     queryFn: () => api.get<ChildGuardian[]>(`/app/children/${childId}/guardians`),
   });
 
+  const photoMutation = useMutation({
+    mutationFn: (image: string) => api.put(`/app/children/${childId}/avatar`, { image }),
+    onSuccess: () => {
+      setPhotoError(null);
+      queryClient.invalidateQueries({ queryKey: ["child", slug, childId] });
+      queryClient.invalidateQueries({ queryKey: ["children", slug] });
+    },
+    onError: (err) => setPhotoError(err instanceof ApiError ? err.message : "Suratni saqlab bo'lmadi"),
+  });
+
+  const removePhotoMutation = useMutation({
+    mutationFn: () => api.delete(`/app/children/${childId}/avatar`),
+    onSuccess: () => {
+      setPhotoError(null);
+      queryClient.invalidateQueries({ queryKey: ["child", slug, childId] });
+      queryClient.invalidateQueries({ queryKey: ["children", slug] });
+    },
+    onError: (err) => setPhotoError(err instanceof ApiError ? err.message : "Suratni o'chirib bo'lmadi"),
+  });
+
+  const handlePhotoPick = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    // Bir xil faylni qayta tanlash ham hodisa bersin
+    event.target.value = "";
+    if (!file) return;
+    setPhotoError(null);
+    setPhotoChecking(true);
+    try {
+      // Yuz tekshiruvi va kesish shu yerda — natija tayyor bo'lsagina yuboriladi
+      const result = await prepareChildPhoto(file);
+      if (!result.ok) {
+        setPhotoError(result.reason);
+        return;
+      }
+      photoMutation.mutate(result.image);
+    } finally {
+      setPhotoChecking(false);
+    }
+  };
+
   const clearQuarantineMutation = useMutation({
     mutationFn: () => api.delete(`/app/children/${childId}/quarantine`),
     onSuccess: () => {
@@ -143,28 +232,185 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
   const health = healthQuery.data ?? null;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <Link href={childrenHref} className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
-          ← Bolalar
-        </Link>
-        <div className="mt-1 flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-[var(--color-text)]">{child.fullName}</h1>
-          <Badge tone={child.status === "ACTIVE" ? "success" : child.status === "QUARANTINED" ? "danger" : "neutral"}>
-            {child.status === "ACTIVE" ? "Faol" : child.status === "QUARANTINED" ? "Karantinda" : "Nofaol"}
-          </Badge>
+    <div className="space-y-5">
+      <Link
+        href={childrenHref}
+        className="group inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
+      >
+        <ArrowLeftIcon className="h-4 w-4 transition-transform group-hover:-translate-x-0.5 motion-reduce:transition-none" />
+        Bolalar
+      </Link>
+
+      {/* Bolaning asosiy ma'lumotlari — ilgari sarlavha ostidagi bitta kulrang
+          qatorda edi va o'qilmasdi. Endi har bir fakt alohida katakda. */}
+      <Card className="overflow-hidden">
+        <div className="flex flex-wrap items-start gap-4 px-5 py-5 sm:px-6">
+          {/* Suratni almashtirish uchun rasmning o'ziga bosiladi */}
+          <div className="group relative shrink-0">
+            <ChildPhoto child={child} size={72} fallback={initials(child.fullName)} />
+            {canWrite && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => photoInputRef.current?.click()}
+                  disabled={photoChecking || photoMutation.isPending}
+                  aria-label="Bolaning suratini almashtirish"
+                  title="Suratni almashtirish"
+                  className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-full bg-black/45 text-white opacity-0 transition-opacity duration-[var(--dur-fast)] hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none disabled:cursor-wait disabled:opacity-100 motion-reduce:transition-none"
+                >
+                  {photoChecking || photoMutation.isPending ? (
+                    <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  ) : (
+                    <PencilIcon className="h-5 w-5" />
+                  )}
+                </button>
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="hidden"
+                  onChange={handlePhotoPick}
+                />
+              </>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h1 className="text-[24px] font-semibold leading-tight tracking-[var(--tracking-title)] text-[var(--color-text)]">
+                {child.fullName}
+              </h1>
+              <Badge tone={child.status === "ACTIVE" ? "success" : child.status === "QUARANTINED" ? "danger" : "neutral"}>
+                {child.status === "ACTIVE" ? "Faol" : child.status === "QUARANTINED" ? "Karantinda" : "Nofaol"}
+              </Badge>
+            </div>
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              <span className="rounded-full bg-[var(--color-surface-sunken)] px-2.5 py-1 text-[12px] font-semibold tabular-nums text-[var(--color-text-muted)]">
+                {formatChildId(child.publicId)}
+              </span>
+              <CopyButton value={formatChildId(child.publicId)} label="ID nusxalash" />
+              {canWrite && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => photoInputRef.current?.click()}
+                    disabled={photoChecking || photoMutation.isPending}
+                    className="cursor-pointer text-[12.5px] font-medium text-[var(--color-primary)] hover:underline disabled:opacity-60"
+                  >
+                    {photoChecking ? "Tekshirilmoqda..." : child.avatarUpdatedAt ? "Suratni almashtirish" : "Surat qo'yish"}
+                  </button>
+                  {child.avatarUpdatedAt && (
+                    <>
+                      <span className="text-[12.5px] text-[var(--color-text-muted)]">·</span>
+                      <button
+                        type="button"
+                        onClick={() => removePhotoMutation.mutate()}
+                        disabled={removePhotoMutation.isPending}
+                        className="cursor-pointer text-[12.5px] font-medium text-[var(--color-danger)] hover:underline disabled:opacity-60"
+                      >
+                        O&apos;chirish
+                      </button>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+            {photoError && (
+              <p role="alert" className="mt-1.5 max-w-[420px] text-[12.5px] text-[var(--color-danger)]">
+                {photoError}
+              </p>
+            )}
+            {canWrite && !photoError && !child.avatarUpdatedAt && (
+              <p className="mt-1.5 text-[12px] text-[var(--color-text-muted)]">
+                Yuzi ko&apos;rinib turgan surat, 3 MB gacha
+              </p>
+            )}
+          </div>
         </div>
-        <p className="text-sm text-[var(--color-text-muted)]">
-          {child.branch?.name ?? "—"} • {child.group?.name ?? "Guruhsiz"} • {formatGender(child.gender)}
-          {child.birthDate ? ` • ${formatDate(child.birthDate)}` : ""}
-        </p>
-      </div>
+
+        <dl className="grid grid-cols-2 divide-x divide-y divide-[var(--color-separator)] border-t border-[var(--color-separator)] sm:grid-cols-4 sm:divide-y-0">
+          <Fact label="Filial" value={child.branch?.name ?? "—"} />
+          <Fact label="Guruh" value={child.group?.name ?? "Guruhsiz"} muted={!child.group} />
+          <Fact label="Jinsi" value={formatGender(child.gender)} muted={!child.gender} />
+          <Fact
+            label="Tug'ilgan sana"
+            value={child.birthDate ? formatDate(child.birthDate) : "—"}
+            hint={child.birthDate ? formatAge(child.birthDate) : undefined}
+            numeric
+          />
+        </dl>
+      </Card>
+
+      {/* Bog'lanish uchun ota-ona shu yerda — ro'yxatning pastida emas */}
+      <Card className="overflow-hidden">
+        <div className="hairline flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-separator)] px-5 py-4 sm:px-6">
+          <div>
+            <h2 className="text-[15px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
+              Bog&apos;langan ota-ona
+            </h2>
+            <p className="text-[12.5px] text-[var(--color-text-muted)]">Telefon raqamini bosib nusxalang</p>
+          </div>
+          {canWrite && (
+            <Button size="sm" variant="outline" onClick={() => setGuardianOpen(true)}>
+              + Ota-ona qo&apos;shish
+            </Button>
+          )}
+        </div>
+        {guardiansQuery.isLoading ? (
+          <div className="px-5 py-5 sm:px-6">
+            <LoadingState rows={2} />
+          </div>
+        ) : guardiansQuery.isError ? (
+          <div className="px-5 py-5 sm:px-6">
+            <ErrorState message={(guardiansQuery.error as Error).message} />
+          </div>
+        ) : !guardiansQuery.data || guardiansQuery.data.length === 0 ? (
+          <div className="px-5 py-5 sm:px-6">
+            <EmptyState
+              title="Hali ota-ona biriktirilmagan"
+              description={canWrite ? "Bola bilan bog'lanish uchun ota-ona qo'shing" : undefined}
+              icon={<GroupIcon className="h-[26px] w-[26px]" />}
+            />
+          </div>
+        ) : (
+          <ul className="divide-y divide-[var(--color-separator)]">
+            {guardiansQuery.data.map((link) => (
+              <li key={link.id} className="flex flex-wrap items-center gap-3 px-5 py-3.5 sm:px-6">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)]/10 text-[12px] font-semibold text-[var(--color-primary)]">
+                  {initials(link.guardian.fullName)}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <p className="truncate text-[15px] font-medium text-[var(--color-text)]">
+                      {link.guardian.fullName}
+                    </p>
+                    {link.isPrimary && <Badge tone="primary">Asosiy</Badge>}
+                  </div>
+                  <p className="text-[12.5px] text-[var(--color-text-muted)]">
+                    {GUARDIAN_RELATION_LABEL[link.relation]}
+                    {link.canPickup && " · olib ketadi"}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1">
+                  <a
+                    href={`tel:${link.guardian.phone}`}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-surface-sunken)] px-3 py-1.5 text-[14px] font-medium tabular-nums text-[var(--color-text)] transition-colors hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)]"
+                  >
+                    <PhoneIcon className="h-3.5 w-3.5" />
+                    {formatPhone(link.guardian.phone)}
+                  </a>
+                  <CopyButton value={link.guardian.phone} label="Telefon raqamini nusxalash" />
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
 
       {!canWrite && <ViewOnlyNote role={user?.role} />}
 
       {child.status === "QUARANTINED" ? (
-        <Card className="border-[var(--color-danger)]/40">
-          <CardHeader className="flex items-center justify-between">
+        <Card className="border-[var(--color-danger)]/40 shadow-[var(--shadow-raised)]">
+          <CardHeader className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle className="text-[var(--color-danger)]">Bola karantinda</CardTitle>
             {canWrite && (
               <Button size="sm" variant="danger" loading={clearQuarantineMutation.isPending} onClick={() => clearQuarantineMutation.mutate()}>
@@ -172,7 +418,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
               </Button>
             )}
           </CardHeader>
-          <CardBody className="space-y-1 text-sm">
+          <CardBody className="space-y-1.5 text-[14px]">
             <p className="text-[var(--color-text)]">
               <span className="text-[var(--color-text-muted)]">Sabab: </span>
               {child.quarantineReason ?? "—"}
@@ -201,268 +447,300 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
       )}
 
       <Card>
-        <CardHeader className="flex items-center justify-between">
+        <CardHeader className="flex flex-wrap items-center justify-between gap-3">
           <CardTitle>Rivojlanish ({latestAssessment?.period ?? "hali baholanmagan"})</CardTitle>
           {canWrite && (
-            <Button size="sm" variant="secondary" onClick={() => setAssessOpen(true)}>
+            <Button size="sm" variant="outline" onClick={() => setAssessOpen(true)}>
               {latestAssessment ? "Tahrirlash" : "Baholash"}
             </Button>
           )}
         </CardHeader>
-        <CardBody className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <CardBody className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <RatingBadge label="Nutq" value={latestAssessment?.speechRating ?? null} />
           <RatingBadge label="Motorika" value={latestAssessment?.motorRating ?? null} />
           <RatingBadge label="Ijtimoiy ko'nikma" value={latestAssessment?.socialRating ?? null} />
           <RatingBadge label="Bilim / idrok" value={latestAssessment?.cognitiveRating ?? null} />
         </CardBody>
         {latestAssessment?.note && (
-          <CardBody className="pt-0 text-sm text-[var(--color-text-muted)]">{latestAssessment.note}</CardBody>
+          <CardBody className="pt-0 text-[14px] text-[var(--color-text-muted)]">{latestAssessment.note}</CardBody>
         )}
       </Card>
 
-      <Card>
+      <Card className="overflow-hidden">
         <CardHeader>
           <CardTitle>Kundalik hisobotlar tarixi</CardTitle>
         </CardHeader>
         <CardBody className="p-0">
           {reportsQuery.isLoading ? (
-            <LoadingState />
-          ) : reportsQuery.isError ? (
-            <ErrorState message={(reportsQuery.error as Error).message} />
-          ) : !reportsQuery.data || reportsQuery.data.length === 0 ? (
-            <p className="px-5 py-6 text-sm text-[var(--color-text-muted)]">Hali kundalik hisobot yo&apos;q</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="border-b border-[var(--color-border)] bg-gray-50 text-xs uppercase text-[var(--color-text-muted)]">
-                  <tr>
-                    <th className="px-5 py-3 font-medium">Sana</th>
-                    <th className="px-5 py-3 font-medium">Ovqatlanishi</th>
-                    <th className="px-5 py-3 font-medium">Uyqu</th>
-                    <th className="px-5 py-3 font-medium">Kayfiyati</th>
-                    <th className="px-5 py-3 font-medium">Faoliyat</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--color-border)]">
-                  {reportsQuery.data.map((r) => (
-                    <tr key={r.id}>
-                      <td className="px-5 py-3 font-medium text-[var(--color-text)]">{formatDate(r.date)}</td>
-                      <td className="px-5 py-3 text-[var(--color-text-muted)]">
-                        {r.eatingQuality ? EATING_LABEL[r.eatingQuality] : "—"}
-                      </td>
-                      <td className="px-5 py-3 text-[var(--color-text-muted)]">
-                        {r.sleepMinutes != null ? `${r.sleepMinutes} daq` : "—"}
-                      </td>
-                      <td className="px-5 py-3 text-[var(--color-text-muted)]">{r.mood ? MOOD_LABEL[r.mood] : "—"}</td>
-                      <td className="px-5 py-3 text-[var(--color-text-muted)]">{r.activityNotes || "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="px-5 py-5 sm:px-6">
+              <LoadingState rows={4} />
             </div>
+          ) : reportsQuery.isError ? (
+            <div className="px-5 py-5 sm:px-6">
+              <ErrorState message={(reportsQuery.error as Error).message} />
+            </div>
+          ) : !reportsQuery.data || reportsQuery.data.length === 0 ? (
+            <EmptyState
+              title="Hali kundalik hisobot yo'q"
+              description="Tarbiyachi kunlik hisobot kiritgach, shu yerda ko'rinadi"
+              icon={<CalendarIcon className="h-[26px] w-[26px]" />}
+            />
+          ) : (
+            <DataTable>
+              <THead>
+                <tr>
+                  <Th>Sana</Th>
+                  <Th>Ovqatlanishi</Th>
+                  <Th numeric>Uyqu</Th>
+                  <Th>Kayfiyati</Th>
+                  <Th>Faoliyat</Th>
+                </tr>
+              </THead>
+              <TBody>
+                {reportsQuery.data.map((r) => (
+                  <Tr key={r.id}>
+                    <Td className="font-medium tabular-nums">{formatDate(r.date)}</Td>
+                    <Td className="text-[var(--color-text-muted)]">
+                      {r.eatingQuality ? EATING_LABEL[r.eatingQuality] : "—"}
+                    </Td>
+                    <Td numeric className="text-[var(--color-text-muted)]">
+                      {r.sleepMinutes != null ? `${r.sleepMinutes} daq` : "—"}
+                    </Td>
+                    <Td className="text-[var(--color-text-muted)]">{r.mood ? MOOD_LABEL[r.mood] : "—"}</Td>
+                    <Td className="text-[var(--color-text-muted)]">{r.activityNotes || "—"}</Td>
+                  </Tr>
+                ))}
+              </TBody>
+            </DataTable>
           )}
         </CardBody>
       </Card>
 
       <Card>
-        <CardHeader className="flex items-center justify-between">
+        <CardHeader className="flex flex-wrap items-center justify-between gap-3">
           <CardTitle>Sog'liq profili</CardTitle>
           {canWrite && (
-            <Button size="sm" variant="secondary" onClick={() => setHealthOpen(true)}>
+            <Button size="sm" variant="outline" onClick={() => setHealthOpen(true)}>
               {health ? "Tahrirlash" : "To'ldirish"}
             </Button>
           )}
         </CardHeader>
         <CardBody>
           {healthQuery.isLoading ? (
-            <LoadingState />
+            <LoadingState rows={2} />
           ) : healthQuery.isError ? (
             <ErrorState message={(healthQuery.error as Error).message} />
           ) : (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              <div>
-                <p className="text-xs text-[var(--color-text-muted)]">Qon guruhi</p>
-                <p className="mt-1 text-sm text-[var(--color-text)]">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
+                <p className="text-[12.5px] text-[var(--color-text-muted)]">Qon guruhi</p>
+                <p className="mt-1 text-[14px] font-medium text-[var(--color-text)]">
                   {health?.bloodType ? BLOOD_TYPE_LABEL[health.bloodType] : "Hali kiritilmagan"}
                 </p>
               </div>
-              <div>
-                <p className="text-xs text-[var(--color-text-muted)]">Allergiyalar</p>
-                <p className="mt-1 text-sm text-[var(--color-text)]">{health?.allergies || "Hali kiritilmagan"}</p>
+              <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
+                <p className="text-[12.5px] text-[var(--color-text-muted)]">Allergiyalar</p>
+                <p className="mt-1 text-[14px] font-medium text-[var(--color-text)]">{health?.allergies || "Hali kiritilmagan"}</p>
               </div>
-              <div>
-                <p className="text-xs text-[var(--color-text-muted)]">Surunkali kasalliklar</p>
-                <p className="mt-1 text-sm text-[var(--color-text)]">{health?.chronicConditions || "Hali kiritilmagan"}</p>
+              <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
+                <p className="text-[12.5px] text-[var(--color-text-muted)]">Surunkali kasalliklar</p>
+                <p className="mt-1 text-[14px] font-medium text-[var(--color-text)]">{health?.chronicConditions || "Hali kiritilmagan"}</p>
               </div>
-              <div>
-                <p className="text-xs text-[var(--color-text-muted)]">Qo'shimcha izoh</p>
-                <p className="mt-1 text-sm text-[var(--color-text)]">{health?.notes || "Hali kiritilmagan"}</p>
+              <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
+                <p className="text-[12.5px] text-[var(--color-text-muted)]">Qo'shimcha izoh</p>
+                <p className="mt-1 text-[14px] font-medium text-[var(--color-text)]">{health?.notes || "Hali kiritilmagan"}</p>
               </div>
             </div>
           )}
         </CardBody>
       </Card>
 
-      <Card>
-        <CardHeader className="flex items-center justify-between">
+      <Card className="overflow-hidden">
+        <CardHeader className="flex flex-wrap items-center justify-between gap-3">
           <CardTitle>Vaksinatsiyalar</CardTitle>
           {canWrite && (
-            <Button size="sm" variant="secondary" onClick={() => setVaccinationOpen(true)}>
+            <Button size="sm" variant="outline" onClick={() => setVaccinationOpen(true)}>
               + Yangi vaksinatsiya
             </Button>
           )}
         </CardHeader>
         <CardBody className="p-0">
           {vaccinationsQuery.isLoading ? (
-            <LoadingState />
-          ) : vaccinationsQuery.isError ? (
-            <ErrorState message={(vaccinationsQuery.error as Error).message} />
-          ) : !vaccinationsQuery.data || vaccinationsQuery.data.length === 0 ? (
-            <p className="px-5 py-6 text-sm text-[var(--color-text-muted)]">Hali vaksinatsiya yo&apos;q</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="border-b border-[var(--color-border)] bg-gray-50 text-xs uppercase text-[var(--color-text-muted)]">
-                  <tr>
-                    <th className="px-5 py-3 font-medium">Nomi</th>
-                    <th className="px-5 py-3 font-medium">Rejalashtirilgan sana</th>
-                    <th className="px-5 py-3 font-medium">Holati</th>
-                    <th className="px-5 py-3 font-medium">Bajarilgan sana</th>
-                    <th className="px-5 py-3 font-medium">Izoh</th>
-                    {canWrite && <th className="px-5 py-3 font-medium" />}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--color-border)]">
-                  {vaccinationsQuery.data.map((v) => (
-                    <tr key={v.id}>
-                      <td className="px-5 py-3 font-medium text-[var(--color-text)]">{v.name}</td>
-                      <td className="px-5 py-3 text-[var(--color-text-muted)]">{formatDate(v.scheduledDate)}</td>
-                      <td className="px-5 py-3">
-                        <Badge tone={VACCINATION_STATUS_TONE[v.status]}>{VACCINATION_STATUS_LABEL[v.status]}</Badge>
-                      </td>
-                      <td className="px-5 py-3 text-[var(--color-text-muted)]">{v.doneDate ? formatDate(v.doneDate) : "—"}</td>
-                      <td className="px-5 py-3 text-[var(--color-text-muted)]">{v.note || "—"}</td>
-                      {canWrite && (
-                        <td className="px-5 py-3 text-right">
-                          {v.status === "SCHEDULED" && (
-                            <Button size="sm" variant="ghost" onClick={() => setUpdatingVaccination(v)}>
-                              Yangilash
-                            </Button>
-                          )}
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="px-5 py-5 sm:px-6">
+              <LoadingState rows={3} />
             </div>
+          ) : vaccinationsQuery.isError ? (
+            <div className="px-5 py-5 sm:px-6">
+              <ErrorState message={(vaccinationsQuery.error as Error).message} />
+            </div>
+          ) : !vaccinationsQuery.data || vaccinationsQuery.data.length === 0 ? (
+            <EmptyState
+              title="Hali vaksinatsiya yo'q"
+              description={canWrite ? "Yangi vaksinatsiya qo'shish uchun tugmani bosing" : undefined}
+              icon={<ChecklistIcon className="h-[26px] w-[26px]" />}
+            />
+          ) : (
+            <DataTable>
+              <THead>
+                <tr>
+                  <Th>Nomi</Th>
+                  <Th>Rejalashtirilgan sana</Th>
+                  <Th>Holati</Th>
+                  <Th>Bajarilgan sana</Th>
+                  <Th>Izoh</Th>
+                  {canWrite && <Th />}
+                </tr>
+              </THead>
+              <TBody>
+                {vaccinationsQuery.data.map((v) => (
+                  <Tr key={v.id}>
+                    <Td className="font-medium">{v.name}</Td>
+                    <Td className="tabular-nums text-[var(--color-text-muted)]">{formatDate(v.scheduledDate)}</Td>
+                    <Td>
+                      <Badge tone={VACCINATION_STATUS_TONE[v.status]}>{VACCINATION_STATUS_LABEL[v.status]}</Badge>
+                    </Td>
+                    <Td className="tabular-nums text-[var(--color-text-muted)]">{v.doneDate ? formatDate(v.doneDate) : "—"}</Td>
+                    <Td className="text-[var(--color-text-muted)]">{v.note || "—"}</Td>
+                    {canWrite && (
+                      <Td className="text-right">
+                        {v.status === "SCHEDULED" && (
+                          <Button size="sm" variant="ghost" onClick={() => setUpdatingVaccination(v)}>
+                            Yangilash
+                          </Button>
+                        )}
+                      </Td>
+                    )}
+                  </Tr>
+                ))}
+              </TBody>
+            </DataTable>
           )}
         </CardBody>
       </Card>
 
-      <Card>
-        <CardHeader className="flex items-center justify-between">
+      <Card className="overflow-hidden">
+        <CardHeader className="flex flex-wrap items-center justify-between gap-3">
           <CardTitle>Dori-darmon jurnali</CardTitle>
           {canWrite && (
-            <Button size="sm" variant="secondary" onClick={() => setMedicationOpen(true)}>
+            <Button size="sm" variant="outline" onClick={() => setMedicationOpen(true)}>
               + Yangi yozuv
             </Button>
           )}
         </CardHeader>
         <CardBody className="p-0">
           {medicationsQuery.isLoading ? (
-            <LoadingState />
-          ) : medicationsQuery.isError ? (
-            <ErrorState message={(medicationsQuery.error as Error).message} />
-          ) : !medicationsQuery.data || medicationsQuery.data.length === 0 ? (
-            <p className="px-5 py-6 text-sm text-[var(--color-text-muted)]">Hali dori-darmon yozuvi yo&apos;q</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="border-b border-[var(--color-border)] bg-gray-50 text-xs uppercase text-[var(--color-text-muted)]">
-                  <tr>
-                    <th className="px-5 py-3 font-medium">Dori nomi</th>
-                    <th className="px-5 py-3 font-medium">Doza</th>
-                    <th className="px-5 py-3 font-medium">Berilgan vaqti</th>
-                    <th className="px-5 py-3 font-medium">Ota-ona ruxsati</th>
-                    <th className="px-5 py-3 font-medium">Izoh</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--color-border)]">
-                  {medicationsQuery.data.map((m) => (
-                    <tr key={m.id}>
-                      <td className="px-5 py-3 font-medium text-[var(--color-text)]">{m.medicationName}</td>
-                      <td className="px-5 py-3 text-[var(--color-text-muted)]">{m.dose}</td>
-                      <td className="px-5 py-3 text-[var(--color-text-muted)]">{formatDateTime(m.givenAt)}</td>
-                      <td className="px-5 py-3">
-                        <Badge tone={m.parentAuthorized ? "success" : "danger"}>
-                          {m.parentAuthorized ? "Ha" : "Yo'q"}
-                        </Badge>
-                      </td>
-                      <td className="px-5 py-3 text-[var(--color-text-muted)]">{m.note || "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="px-5 py-5 sm:px-6">
+              <LoadingState rows={3} />
             </div>
+          ) : medicationsQuery.isError ? (
+            <div className="px-5 py-5 sm:px-6">
+              <ErrorState message={(medicationsQuery.error as Error).message} />
+            </div>
+          ) : !medicationsQuery.data || medicationsQuery.data.length === 0 ? (
+            <EmptyState
+              title="Hali dori-darmon yozuvi yo'q"
+              description={canWrite ? "Yangi yozuv qo'shish uchun tugmani bosing" : undefined}
+              icon={<NoteIcon className="h-[26px] w-[26px]" />}
+            />
+          ) : (
+            <DataTable>
+              <THead>
+                <tr>
+                  <Th>Dori nomi</Th>
+                  <Th>Doza</Th>
+                  <Th>Berilgan vaqti</Th>
+                  <Th>Ota-ona ruxsati</Th>
+                  <Th>Izoh</Th>
+                </tr>
+              </THead>
+              <TBody>
+                {medicationsQuery.data.map((m) => (
+                  <Tr key={m.id}>
+                    <Td className="font-medium">{m.medicationName}</Td>
+                    <Td className="tabular-nums text-[var(--color-text-muted)]">{m.dose}</Td>
+                    <Td className="tabular-nums text-[var(--color-text-muted)]">{formatDateTime(m.givenAt)}</Td>
+                    <Td>
+                      <Badge tone={m.parentAuthorized ? "success" : "danger"}>
+                        {m.parentAuthorized ? "Ha" : "Yo'q"}
+                      </Badge>
+                    </Td>
+                    <Td className="text-[var(--color-text-muted)]">{m.note || "—"}</Td>
+                  </Tr>
+                ))}
+              </TBody>
+            </DataTable>
           )}
         </CardBody>
       </Card>
 
-      <Card>
-        <CardHeader className="flex items-center justify-between">
-          <CardTitle>Ota-onalar</CardTitle>
-          {canWrite && (
-            <Button size="sm" variant="secondary" onClick={() => setGuardianOpen(true)}>
-              + Ota-ona qo'shish
-            </Button>
-          )}
+      <Card className="overflow-hidden">
+        <CardHeader className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <CardTitle>Ota-ona huquqlari</CardTitle>
+            <p className="text-[12.5px] text-[var(--color-text-muted)]">
+              Kim olib keta oladi, kim moliyani ko&apos;radi, kimga bildirishnoma boradi
+            </p>
+          </div>
         </CardHeader>
         <CardBody className="p-0">
           {guardiansQuery.isLoading ? (
-            <LoadingState />
-          ) : guardiansQuery.isError ? (
-            <ErrorState message={(guardiansQuery.error as Error).message} />
-          ) : !guardiansQuery.data || guardiansQuery.data.length === 0 ? (
-            <p className="px-5 py-6 text-sm text-[var(--color-text-muted)]">Hali ota-ona biriktirilmagan</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="border-b border-[var(--color-border)] bg-gray-50 text-xs uppercase text-[var(--color-text-muted)]">
-                  <tr>
-                    <th className="px-5 py-3 font-medium">Ism</th>
-                    <th className="px-5 py-3 font-medium">Telefon</th>
-                    <th className="px-5 py-3 font-medium">Qarindoshlik</th>
-                    <th className="px-5 py-3 font-medium">Belgilar</th>
-                    {canWrite && <th className="px-5 py-3 font-medium" />}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--color-border)]">
-                  {guardiansQuery.data.map((link) => (
-                    <tr key={link.id}>
-                      <td className="px-5 py-3 font-medium text-[var(--color-text)]">{link.guardian.fullName}</td>
-                      <td className="px-5 py-3 text-[var(--color-text-muted)]">{link.guardian.phone}</td>
-                      <td className="px-5 py-3 text-[var(--color-text-muted)]">{GUARDIAN_RELATION_LABEL[link.relation]}</td>
-                      <td className="px-5 py-3">
-                        <div className="flex flex-wrap gap-1">
-                          {link.isPrimary && <Badge tone="primary">Asosiy</Badge>}
-                          {link.canPickup && <Badge tone="success">Olib ketadi</Badge>}
-                          {link.canViewFinance && <Badge tone="neutral">Moliya</Badge>}
-                          {link.canReceiveNotifications && <Badge tone="neutral">Bildirishnoma</Badge>}
-                        </div>
-                      </td>
-                      {canWrite && (
-                        <td className="px-5 py-3 text-right">
-                          <Button size="sm" variant="ghost" onClick={() => setEditingLink(link)}>
-                            Tahrirlash
-                          </Button>
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="px-5 py-5 sm:px-6">
+              <LoadingState rows={2} />
             </div>
+          ) : guardiansQuery.isError ? (
+            <div className="px-5 py-5 sm:px-6">
+              <ErrorState message={(guardiansQuery.error as Error).message} />
+            </div>
+          ) : !guardiansQuery.data || guardiansQuery.data.length === 0 ? (
+            <div className="px-5 py-5 sm:px-6">
+              <EmptyState title="Hali ota-ona biriktirilmagan" icon={<GroupIcon className="h-[26px] w-[26px]" />} />
+            </div>
+          ) : (
+            <DataTable>
+              <THead>
+                <tr>
+                  <Th>Ism</Th>
+                  <Th>Telefon</Th>
+                  <Th>Qarindoshlik</Th>
+                  <Th>Belgilar</Th>
+                  {canWrite && <Th />}
+                </tr>
+              </THead>
+              <TBody>
+                {guardiansQuery.data.map((link) => (
+                  <Tr key={link.id}>
+                    <Td className="font-medium">{link.guardian.fullName}</Td>
+                    <Td nowrap>
+                      <span className="inline-flex items-center gap-1">
+                        <a
+                          href={`tel:${link.guardian.phone}`}
+                          className="tabular-nums text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-primary)]"
+                        >
+                          {formatPhone(link.guardian.phone)}
+                        </a>
+                        <CopyButton value={link.guardian.phone} label="Telefon raqamini nusxalash" />
+                      </span>
+                    </Td>
+                    <Td className="text-[var(--color-text-muted)]">{GUARDIAN_RELATION_LABEL[link.relation]}</Td>
+                    <Td>
+                      <div className="flex flex-wrap gap-1.5">
+                        {link.isPrimary && <Badge tone="primary">Asosiy</Badge>}
+                        {link.canPickup && <Badge tone="success">Olib ketadi</Badge>}
+                        {link.canViewFinance && <Badge tone="neutral">Moliya</Badge>}
+                        {link.canReceiveNotifications && <Badge tone="neutral">Bildirishnoma</Badge>}
+                      </div>
+                    </Td>
+                    {canWrite && (
+                      <Td className="text-right">
+                        <Button size="sm" variant="ghost" onClick={() => setEditingLink(link)}>
+                          Tahrirlash
+                        </Button>
+                      </Td>
+                    )}
+                  </Tr>
+                ))}
+              </TBody>
+            </DataTable>
           )}
         </CardBody>
       </Card>

@@ -1,5 +1,11 @@
 export type TenantUserRole = "NETWORK_ADMIN" | "BRANCH_ADMIN" | "FINANCE" | "MANAGER" | "TEACHER";
 
+/** Kirish sahifasida ko'rsatiladigan ochiq ma'lumot (token talab qilinmaydi). */
+export interface PublicOrganization {
+  name: string;
+  slug: string;
+}
+
 export interface TenantAuthenticatedUser {
   id: string;
   organizationId: string;
@@ -11,6 +17,8 @@ export interface TenantAuthenticatedUser {
   email: string;
   fullName: string;
   role: TenantUserRole;
+  /** Profil rasmi bor bo'lsa — oxirgi yangilangan vaqti (kesh uchun). */
+  avatarUpdatedAt: string | null;
 }
 
 export type OrganizationStatus = "ACTIVE" | "SUSPENDED";
@@ -24,6 +32,9 @@ export interface Branch {
   timezone: string;
   currency: string;
   createdAt: string;
+  /** Belgisi bor bo'lsa — oxirgi yangilangan vaqti (rasm keshini yangilash uchun). */
+  avatarUpdatedAt: string | null;
+  avatarMimeType: string | null;
 }
 
 export interface Organization {
@@ -41,6 +52,7 @@ export interface GroupTeacherLink {
   groupId: string;
   employeeId: string;
   employee?: { id: string; fullName: string; position: string };
+  branch?: { id: string; name: string };
   group?: { id: string; name: string };
 }
 
@@ -59,6 +71,40 @@ export type ChildStatus = "ACTIVE" | "INACTIVE" | "QUARANTINED";
 
 export type Gender = "MALE" | "FEMALE";
 
+/** Guruh kartochkasidagi bola (guruh ko'rinishi uchun qisqartirilgan). */
+export interface GroupChild {
+  id: string;
+  publicId: number;
+  fullName: string;
+  gender: Gender | null;
+  birthDate: string | null;
+  status: ChildStatus;
+}
+
+/** `GET /app/groups/:id/overview` javobi. */
+export interface GroupOverview {
+  group: { id: string; name: string; capacity: number; status: GroupStatus; createdAt: string };
+  branch: { id: string; name: string };
+  teachers: { id: string; fullName: string; position: string; isActive: boolean }[];
+  children: {
+    total: number;
+    active: number;
+    boys: number;
+    girls: number;
+    unknownGender: number;
+    items: GroupChild[];
+  };
+}
+
+/** `GET /app/groups/:id/attendance` javobi. */
+export interface GroupAttendanceRange {
+  from: string;
+  to: string;
+  totalChildren: number;
+  days: { date: string; present: number; absent: number; unmarked: number }[];
+  children: { childId: string; fullName: string; present: number; absent: number; rate: number | null }[];
+}
+
 export interface Child {
   id: string;
   organizationId: string;
@@ -76,6 +122,8 @@ export interface Child {
   status: ChildStatus;
   quarantineUntil: string | null;
   quarantineReason: string | null;
+  /** Surati bor bo'lsa — oxirgi yangilangan vaqti (rasm keshini yangilash uchun). */
+  avatarUpdatedAt: string | null;
   createdAt: string;
   group?: { id: string; name: string } | null;
   branch?: { id: string; name: string };
@@ -94,6 +142,8 @@ export interface Employee {
   /** Kabineti bo'lmagan xodimda null — u tizimga kirmaydi. */
   tenantUser?: { id: string; email: string; role: TenantUserRole; isActive: boolean } | null;
   teachingGroups?: GroupTeacherLink[];
+  /** Oylik sxemasi — ro'yxat bilan birga keladi, alohida so'rov kerak emas. */
+  salaryScheme?: { ruleType: "FIXED" | "PER_HOUR" | "PER_CHILD"; fixedAmount: string; rate: string } | null;
 }
 
 export type AttendanceStatus = "PRESENT" | "ABSENT";
@@ -397,6 +447,7 @@ export interface PayrollEntry {
   createdAt: string;
   updatedAt: string;
   employee?: { id: string; fullName: string; position: string };
+  branch?: { id: string; name: string };
 }
 
 // ===== Bildirishnomalar =====
@@ -427,4 +478,119 @@ export interface NotificationLog {
   sentAt: string | null;
   createdAt: string;
   child?: { id: string; fullName: string } | null;
+}
+
+/** Super Adminning filial hisoboti (`/app/dashboard/branch-report`). */
+export interface BranchReport {
+  branch: {
+    id: string;
+    name: string;
+    slug: string;
+    address: string | null;
+    timezone: string;
+    currency: string;
+    createdAt: string;
+  };
+  children: {
+    active: number;
+    boys: number;
+    girls: number;
+    /** Migratsiyadan oldin qo'shilgan bolalarda jins ko'rsatilmagan. */
+    unknownGender: number;
+    quarantined: number;
+    inactive: number;
+  };
+  groups: {
+    total: number;
+    active: number;
+    capacity: number;
+    items: {
+      id: string;
+      name: string;
+      capacity: number;
+      status: GroupStatus;
+      childrenCount: number;
+      teachers: string[];
+    }[];
+  };
+  employees: {
+    total: number;
+    active: number;
+    withAccount: number;
+    byPosition: { position: string; count: number }[];
+  };
+  finance: {
+    monthRevenue: number;
+    outstandingDebt: number;
+    invoices: { status: InvoiceStatus; count: number; billed: number; paid: number }[];
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* Tarmoq bo'ylab moliya (Super Admin)                                 */
+/* ------------------------------------------------------------------ */
+
+interface MoneyBucket {
+  billed: number;
+  collected: number;
+  outstanding: number;
+}
+
+/** `GET /app/finance/summary` javobi. Summalar — son, satr emas. */
+export interface FinanceSummary {
+  period: string;
+  totals: MoneyBucket & { collectedInPeriod: number; invoiceCount: number };
+  branches: (MoneyBucket & { branchId: string; branchName: string })[];
+  groups: (MoneyBucket & {
+    groupId: string | null;
+    groupName: string;
+    branchId: string | null;
+    branchName: string;
+  })[];
+  statuses: { status: InvoiceStatus; count: number; billed: number; paid: number }[];
+}
+
+export type FinanceChildStatus = "PAID" | "PARTIAL" | "UNPAID";
+
+/** `GET /app/finance/children` javobi. */
+export interface FinanceChildren {
+  period: string;
+  counts: { total: number; paid: number; partial: number; unpaid: number };
+  items: {
+    childId: string;
+    publicId: number;
+    fullName: string;
+    groupId: string | null;
+    groupName: string | null;
+    branchId: string;
+    branchName: string;
+    billed: number;
+    paid: number;
+    outstanding: number;
+    status: FinanceChildStatus;
+    dueDate: string | null;
+    overdue: boolean;
+  }[];
+}
+
+/** `GET /app/payroll/summary` javobi. */
+export interface PayrollSummary {
+  period: string | null;
+  totals: { entries: number; base: number; bonus: number; penalty: number; total: number; paid: number; unpaid: number };
+  branches: { branchId: string; branchName: string; entries: number; total: number; paid: number; unpaid: number }[];
+}
+
+/** `GET /app/groups/:id/attendance/day` javobi. */
+export interface GroupAttendanceDay {
+  date: string;
+  total: number;
+  counts: { present: number; absent: number; unmarked: number };
+  items: {
+    childId: string;
+    publicId: number;
+    fullName: string;
+    gender: Gender | null;
+    status: AttendanceStatus | null;
+    note: string | null;
+  }[];
 }

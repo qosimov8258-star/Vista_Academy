@@ -8,6 +8,7 @@ import type { Invoice } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { DataTable, THead, TBody, Tr, Th, Td } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
@@ -64,14 +65,14 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-[var(--color-text)]">Moliya</h1>
-          <p className="text-sm text-[var(--color-text-muted)]">Ota-onalar uchun hisob-fakturalar</p>
+          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">Moliya</h1>
+          <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">Ota-onalar uchun hisob-fakturalar</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="secondary" loading={exporting} onClick={handleExport}>
+          <Button variant="outline" loading={exporting} onClick={handleExport}>
             Eksport (CSV)
           </Button>
           {canWrite && <Button onClick={() => setCreateOpen(true)}>+ Yangi hisob-faktura</Button>}
@@ -81,77 +82,81 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
       {!canWrite && <ViewOnlyNote role={user?.role} />}
 
       {invoicesQuery.isLoading ? (
-        <LoadingState />
+        <LoadingState rows={6} />
       ) : invoicesQuery.isError ? (
         <ErrorState message={(invoicesQuery.error as Error).message} />
       ) : !invoicesQuery.data || invoicesQuery.data.data.length === 0 ? (
         <EmptyState title="Hisob-faktura topilmadi" description={canWrite ? "Yangi hisob-faktura yaratish uchun tugmani bosing" : undefined} />
       ) : (
         <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-[var(--color-border)] bg-gray-50 text-xs uppercase text-[var(--color-text-muted)]">
-                <tr>
-                  <th className="px-5 py-3 font-medium">Bola</th>
-                  <th className="px-5 py-3 font-medium">Davr</th>
-                  <th className="px-5 py-3 font-medium">Summa</th>
-                  <th className="px-5 py-3 font-medium">Chegirma</th>
-                  <th className="px-5 py-3 font-medium">To'langan</th>
-                  <th className="px-5 py-3 font-medium">Qoldiq</th>
-                  <th className="px-5 py-3 font-medium">Muddat</th>
-                  <th className="px-5 py-3 font-medium">Holat</th>
-                  <th className="px-5 py-3 font-medium"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--color-border)]">
-                {invoicesQuery.data.data.map((invoice) => {
-                  const net = Number(invoice.amount) - Number(invoice.discountAmount);
-                  const remaining = net - Number(invoice.paidAmount);
-                  return (
-                    <tr key={invoice.id} className="hover:bg-gray-50">
-                      <td className="px-5 py-3 font-medium">
-                        <Link
-                          href={`/${slug}/finance/${invoice.childId}`}
-                          className="text-[var(--color-primary)] hover:underline"
-                        >
-                          {invoice.child?.fullName ?? "—"}
-                        </Link>
-                      </td>
-                      <td className="px-5 py-3 text-[var(--color-text-muted)]">{invoice.period}</td>
-                      <td className="px-5 py-3 text-[var(--color-text)]">{formatMoney(invoice.amount, invoice.currency)}</td>
-                      <td className="px-5 py-3 text-[var(--color-text-muted)]">
-                        {Number(invoice.discountAmount) > 0 ? formatMoney(invoice.discountAmount, invoice.currency) : "—"}
-                      </td>
-                      <td className="px-5 py-3 text-[var(--color-success)]">{formatMoney(invoice.paidAmount, invoice.currency)}</td>
-                      <td className="px-5 py-3 font-medium text-[var(--color-text)]">{formatMoney(remaining, invoice.currency)}</td>
-                      <td className="px-5 py-3 text-[var(--color-text-muted)]">{formatDate(invoice.dueDate)}</td>
-                      <td className="px-5 py-3">
-                        <Badge tone={STATUS_TONE[invoice.status]}>{STATUS_LABEL[invoice.status]}</Badge>
-                      </td>
-                      <td className="px-5 py-3 text-right">
-                        {canWrite && (invoice.status === "PENDING" || invoice.status === "PARTIALLY_PAID" || invoice.status === "OVERDUE") && (
-                          <Button size="sm" variant="secondary" onClick={() => setPayInvoice(invoice)}>
-                            To&apos;lov qabul qilish
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <DataTable>
+            <THead>
+              <tr>
+                <Th>Bola</Th>
+                <Th>Davr</Th>
+                <Th numeric>Summa</Th>
+                <Th numeric>Chegirma</Th>
+                <Th numeric>To'langan</Th>
+                <Th numeric>Qoldiq</Th>
+                <Th>Muddat</Th>
+                <Th>Holat</Th>
+                <Th></Th>
+              </tr>
+            </THead>
+            <TBody>
+              {invoicesQuery.data.data.map((invoice) => {
+                const net = Number(invoice.amount) - Number(invoice.discountAmount);
+                const remaining = net - Number(invoice.paidAmount);
+                return (
+                  <Tr key={invoice.id}>
+                    <Td className="font-medium">
+                      <Link
+                        href={`/${slug}/finance/${invoice.childId}`}
+                        className="text-[var(--color-primary)] hover:underline"
+                      >
+                        {invoice.child?.fullName ?? "—"}
+                      </Link>
+                    </Td>
+                    <Td className="tabular-nums text-[var(--color-text-muted)]">{invoice.period}</Td>
+                    <Td numeric>{formatMoney(invoice.amount, invoice.currency)}</Td>
+                    <Td numeric className="text-[var(--color-text-muted)]">
+                      {Number(invoice.discountAmount) > 0 ? formatMoney(invoice.discountAmount, invoice.currency) : "—"}
+                    </Td>
+                    <Td numeric>
+                      {/* Yashil rang span'da: Td'ning sukut matn rangi utilitalar tartibida
+                          `--color-success` dan keyin turadi va uni bosib ketardi */}
+                      <span className="text-[var(--color-success)]">
+                        {formatMoney(invoice.paidAmount, invoice.currency)}
+                      </span>
+                    </Td>
+                    <Td numeric className="font-medium">{formatMoney(remaining, invoice.currency)}</Td>
+                    <Td className="tabular-nums text-[var(--color-text-muted)]">{formatDate(invoice.dueDate)}</Td>
+                    <Td>
+                      <Badge tone={STATUS_TONE[invoice.status]}>{STATUS_LABEL[invoice.status]}</Badge>
+                    </Td>
+                    <Td className="text-right">
+                      {canWrite && (invoice.status === "PENDING" || invoice.status === "PARTIALLY_PAID" || invoice.status === "OVERDUE") && (
+                        <Button size="sm" variant="outline" onClick={() => setPayInvoice(invoice)}>
+                          To&apos;lov qabul qilish
+                        </Button>
+                      )}
+                    </Td>
+                  </Tr>
+                );
+              })}
+            </TBody>
+          </DataTable>
 
-          <div className="flex items-center justify-between border-t border-[var(--color-border)] px-5 py-3 text-sm text-[var(--color-text-muted)]">
-            <span>
+          <div className="hairline flex items-center justify-between gap-3 border-t border-[var(--color-separator)] px-5 py-3.5 text-[12.5px] text-[var(--color-text-muted)] sm:px-6">
+            <span className="tabular-nums">
               Jami {invoicesQuery.data.meta.total} ta, {invoicesQuery.data.meta.page}-sahifa
             </span>
             <div className="flex gap-2">
-              <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
                 Oldingi
               </Button>
               <Button
-                variant="secondary"
+                variant="outline"
                 size="sm"
                 disabled={page * invoicesQuery.data.meta.limit >= invoicesQuery.data.meta.total}
                 onClick={() => setPage((p) => p + 1)}

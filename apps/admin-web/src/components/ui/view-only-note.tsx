@@ -1,4 +1,5 @@
 import type { TenantUserRole } from "@/lib/types";
+import { InfoIcon } from "./icons";
 
 /**
  * Yozish tugmalari yashirilganda sababini tushuntiradi. Sabab rolga qarab
@@ -8,14 +9,18 @@ import type { TenantUserRole } from "@/lib/types";
 export function ViewOnlyNote({ role }: { role?: TenantUserRole }) {
   const message =
     role === "FINANCE"
-      ? "Bu bo'limni faqat ko'rmoqdasiz — moliyachi Moliya va Ish haqi bo'limlarida o'zgartirish kiritadi."
+      ? "Moliyachi Moliya va Ish haqi bo'limlarida o'zgartirish kiritadi."
       : role === "TEACHER"
-        ? "Bu bo'limni faqat ko'rmoqdasiz — o'qituvchi o'z guruhlarining davomati va kundalik hisobotini yuritadi."
-        : "Siz kuzatuvchi sifatida ko'rmoqdasiz — yozish/qo'shish filial darajasidagi foydalanuvchilar uchun.";
+        ? "O'qituvchi o'z guruhlarining davomati va kundalik hisobotini yuritadi."
+        : "Yozish va qo'shish filial darajasidagi foydalanuvchilar uchun.";
 
   return (
-    <div className="rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface-sunken)] px-3 py-2 text-sm text-[var(--color-text-muted)]">
-      {message}
+    <div className="flex items-start gap-3 rounded-[var(--radius-lg)] bg-[var(--color-primary)]/[0.06] px-4 py-3.5">
+      <InfoIcon className="mt-px h-5 w-5 shrink-0 text-[var(--color-primary)]" />
+      <div>
+        <p className="text-[14px] font-semibold text-[var(--color-text)]">Faqat ko&apos;rish rejimi</p>
+        <p className="text-[14px] text-[var(--color-text-muted)]">{message}</p>
+      </div>
     </div>
   );
 }

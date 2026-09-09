@@ -72,8 +72,8 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-[var(--color-text)]">Xodimlar davomati</h1>
-        <p className="text-sm text-[var(--color-text-muted)]">Tarbiyachi va boshqa xodimlarning kunlik davomati</p>
+        <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">Xodimlar davomati</h1>
+        <p className="text-[14px] text-[var(--color-text-muted)]">Tarbiyachi va boshqa xodimlarning kunlik davomati</p>
       </div>
 
       <Card className="flex flex-col gap-3 p-4 sm:flex-row">
@@ -87,12 +87,12 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
           </Select>
         )}
         <div className="block">
-          <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">Sana</span>
+          <span className="mb-2 block text-[13px] font-medium text-[var(--color-text)]">Sana</span>
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="w-full rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-text)] outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 sm:w-auto"
+            className="h-11 w-full rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-3.5 text-[15px] text-[var(--color-text)] outline-none transition-[border-color,box-shadow] duration-[var(--dur-fast)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/[0.12] sm:w-auto"
           />
         </div>
       </Card>
@@ -111,7 +111,7 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
         <EmptyState title="Bu filialda faol xodim yo'q" />
       ) : (
         <Card className="overflow-hidden">
-          <ul className="divide-y divide-[var(--color-border)]">
+          <ul className="divide-y divide-[var(--color-separator)]">
             {attendanceQuery.data.employees.map((employee) => (
               <li key={employee.employeeId} className="flex items-center justify-between px-5 py-3">
                 <div>
@@ -122,7 +122,7 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
                   <div className="flex gap-2">
                     <Button
                       size="sm"
-                      variant={employee.status === "PRESENT" ? "primary" : "secondary"}
+                      variant={employee.status === "PRESENT" ? "primary" : "tertiary"}
                       className={clsx(employee.status === "PRESENT" && "bg-[var(--color-success)] hover:opacity-90")}
                       loading={
                         mutation.isPending &&
@@ -135,7 +135,7 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
                     </Button>
                     <Button
                       size="sm"
-                      variant={employee.status === "ABSENT" ? "danger" : "secondary"}
+                      variant={employee.status === "ABSENT" ? "danger" : "tertiary"}
                       loading={
                         mutation.isPending &&
                         mutation.variables?.employeeId === employee.employeeId &&

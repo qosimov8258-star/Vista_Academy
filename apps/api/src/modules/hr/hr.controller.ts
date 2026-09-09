@@ -39,6 +39,12 @@ export class HrController {
     return this.hrService.createShift(toTenantScope(user), dto);
   }
 
+  /** Ish haqi jamlanmasi: umumiy fond va filial kesimi. */
+  @Get("payroll/summary")
+  payrollSummary(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query() query: PayrollQueryDto) {
+    return this.hrService.payrollSummary(toTenantScope(user), query);
+  }
+
   @Get("payroll")
   listPayroll(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query() query: PayrollQueryDto) {
     return this.hrService.listPayroll(toTenantScope(user), query);

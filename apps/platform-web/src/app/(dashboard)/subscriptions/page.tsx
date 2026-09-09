@@ -45,7 +45,8 @@ export default function SubscriptionsPage() {
         />
       ) : (
         <Card className="overflow-hidden">
-          <div className="hidden md:block">
+          {/* Tor oynada ustunlar kesilmasin — jadval o'z ichida siljiydi */}
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full text-left text-sm">
               <thead className="bg-[var(--color-surface-sunken)] text-[11px] uppercase tracking-wider text-[var(--color-text-subtle)]">
                 <tr>

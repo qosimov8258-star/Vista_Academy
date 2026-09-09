@@ -10,7 +10,7 @@ import { useAuth } from "@/lib/use-auth";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ui/progress-bar";
-import { LoadingState, ErrorState } from "@/components/ui/states";
+import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { formatDate, formatMoney } from "@/lib/format";
 import { canWriteOperational, canWriteTeaching, isTeacher } from "@/lib/permissions";
 import {
@@ -91,7 +91,7 @@ function TodayCard({
   return (
     <Card className="flex flex-col p-4">
       <div className="flex items-center gap-2.5">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)]">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)]">
           <Icon className="h-[18px] w-[18px]" />
         </span>
         <p className="text-[13px] font-medium text-[var(--color-text-muted)]">{title}</p>
@@ -113,7 +113,7 @@ function TodayCard({
         <div className="mt-3 flex gap-4">
           {breakdown.map((item) => (
             <div key={item.label}>
-              <p className="text-[11px] text-[var(--color-text-muted)]">{item.label}</p>
+              <p className="text-[12px] leading-tight text-[var(--color-text-muted)]">{item.label}</p>
               <p
                 className={`text-[15px] font-semibold tabular-nums ${
                   item.tone === "success" ? "text-[var(--color-success)]" : "text-[var(--color-danger)]"
@@ -156,7 +156,7 @@ function StatTile({
   const content = (
     <>
       <span
-        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] ${
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] ${
           highlight
             ? "bg-[var(--color-warning-bg)] text-[var(--color-warning)]"
             : "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)]"
@@ -175,10 +175,13 @@ function StatTile({
   );
 
   const className =
-    "group flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-3 shadow-[var(--shadow-card)] transition-colors";
+    "group flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-3.5 py-3 shadow-[var(--shadow-card)]";
 
   return href ? (
-    <Link href={href} className={`${className} hover:bg-[var(--color-surface-hover)]`}>
+    <Link
+      href={href}
+      className={`${className} transition-all duration-[var(--dur-base)] ease-[var(--ease-out)] hover:-translate-y-0.5 hover:bg-[var(--color-surface-hover)] hover:shadow-[var(--shadow-raised)] motion-reduce:transition-none motion-reduce:hover:translate-y-0`}
+    >
       {content}
     </Link>
   ) : (
@@ -188,7 +191,7 @@ function StatTile({
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="mb-2.5 px-0.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+    <h2 className="mb-3 px-0.5 text-[15px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
       {children}
     </h2>
   );
@@ -219,7 +222,7 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
     enabled: teacher,
   });
 
-  if (orgQuery.isLoading) return <LoadingState />;
+  if (orgQuery.isLoading) return <LoadingState rows={4} />;
   if (orgQuery.isError) return <ErrorState message={(orgQuery.error as Error).message} />;
   const org = orgQuery.data;
   if (!org) return null;
@@ -239,7 +242,7 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h1 className="text-[22px] font-semibold tracking-tight text-[var(--color-text)]">
+          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
             {user?.branchName ?? org.name}
           </h1>
           <p className="text-[13px] text-[var(--color-text-muted)]">
@@ -270,9 +273,9 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
                 />
                 <StatTile label="Bolalar" value={children} icon={ChildIcon} />
                 <StatTile label="Xodimlar" value={employees} icon={TeacherIcon} />
-                <div className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-3 shadow-[var(--shadow-card)]">
+                <div className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-3.5 py-3 shadow-[var(--shadow-card)]">
                   <div className="min-w-0">
-                    <p className="text-[12px] text-[var(--color-text-muted)]">Holat</p>
+                    <p className="text-[12px] leading-tight text-[var(--color-text-muted)]">Holat</p>
                     <Badge tone={org.status === "ACTIVE" ? "success" : "danger"} className="mt-0.5">
                       {org.status === "ACTIVE" ? "Faol" : "To'xtatilgan"}
                     </Badge>
@@ -284,25 +287,27 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
 
           {notStartedYet ? (
             <Card className="p-5">
-              <p className="text-[15px] font-semibold text-[var(--color-text)]">
+              <p className="text-[17px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
                 {teacher ? "Hozircha ish yo'q" : "Boshlash uchun"}
               </p>
-              <p className="mt-1 text-[13px] text-[var(--color-text-muted)]">
+              <p className="mt-1.5 text-[14px] leading-relaxed text-[var(--color-text-muted)]">
                 {teacher
                   ? "Guruhlaringizda hali bola yo'q. Filial admini bolalarni ro'yxatga olgach, davomat va kundalik hisobot shu yerda paydo bo'ladi."
                   : "Bu filialda hali bola ro'yxatga olinmagan. Guruh ochib, bolalarni qo'shsangiz, davomat va kundalik hisobot shu yerda ko'rina boshlaydi."}
               </p>
               {canWrite && (
                 <div className="mt-4 flex flex-wrap gap-2">
+                  {/* Link'lar tugma bo'la olmaydi, shuning uchun Button'ning
+                      `outline` va `primary` ko'rinishi shu yerda takrorlanadi. */}
                   <Link
                     href={`/${slug}/groups`}
-                    className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-2 text-[13px] font-medium text-[var(--color-text)] transition-colors hover:bg-[var(--color-surface-hover)]"
+                    className="inline-flex h-9 items-center justify-center rounded-full border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-4 text-[14px] font-semibold tracking-[-0.006em] text-[var(--color-text)] shadow-[var(--shadow-xs)] transition-[transform,background-color,box-shadow] duration-[var(--dur-fast)] ease-[var(--ease-out)] hover:bg-[var(--color-surface-hover)] active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100"
                   >
                     Guruh ochish
                   </Link>
                   <Link
                     href={`/${slug}/children`}
-                    className="rounded-[var(--radius-lg)] bg-[var(--color-primary)] px-3.5 py-2 text-[13px] font-medium text-white transition-colors hover:bg-[var(--color-primary-hover)]"
+                    className="inline-flex h-9 items-center justify-center rounded-full bg-[var(--color-primary)] px-4 text-[14px] font-semibold tracking-[-0.006em] text-white shadow-[var(--shadow-primary)] transition-[transform,background-color,box-shadow] duration-[var(--dur-fast)] ease-[var(--ease-out)] hover:bg-[var(--color-primary-hover)] active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100"
                   >
                     Bola qo&apos;shish
                   </Link>
@@ -426,14 +431,14 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
                     <Link
                       key={group.id}
                       href={`/${slug}/attendance`}
-                      className="group flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3.5 shadow-[var(--shadow-card)] transition-colors hover:bg-[var(--color-surface-hover)]"
+                      className="group flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-4 py-3.5 shadow-[var(--shadow-card)] transition-all duration-[var(--dur-base)] ease-[var(--ease-out)] hover:-translate-y-0.5 hover:bg-[var(--color-surface-hover)] hover:shadow-[var(--shadow-raised)] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
                     >
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
                         <GroupIcon className="h-5 w-5" />
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-[15px] font-medium text-[var(--color-text)]">{group.name}</p>
-                        <p className="text-[12px] text-[var(--color-text-muted)]">
+                        <p className="text-[12.5px] tabular-nums text-[var(--color-text-muted)]">
                           {group._count?.children ?? 0} bola
                         </p>
                       </div>
@@ -442,11 +447,11 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
                   ))}
                 </div>
               ) : (
-                <Card className="p-4">
-                  <p className="text-[13px] text-[var(--color-text-muted)]">
-                    Sizga hali guruh biriktirilmagan. Filial admini guruh biriktirgach, shu yerda ko&apos;rinadi.
-                  </p>
-                </Card>
+                <EmptyState
+                  icon={<GroupIcon className="h-[26px] w-[26px]" />}
+                  title="Sizga hali guruh biriktirilmagan"
+                  description="Filial admini guruh biriktirgach, shu yerda ko'rinadi."
+                />
               )}
             </section>
           )}
@@ -461,9 +466,9 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
                     <Link
                       key={action.suffix}
                       href={`/${slug}/${action.suffix}`}
-                      className="group flex flex-col items-center gap-2 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-4 text-center shadow-[var(--shadow-card)] transition-colors hover:bg-[var(--color-surface-hover)]"
+                      className="group flex flex-col items-center gap-2 rounded-[var(--radius-lg)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-3 py-4 text-center shadow-[var(--shadow-card)] transition-all duration-[var(--dur-base)] ease-[var(--ease-out)] hover:-translate-y-0.5 hover:bg-[var(--color-surface-hover)] hover:shadow-[var(--shadow-raised)] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
                     >
-                      <span className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-[var(--color-primary)]/10 text-[var(--color-primary)] transition-colors group-hover:bg-[var(--color-primary)] group-hover:text-white">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-primary)]/10 text-[var(--color-primary)] transition-colors duration-[var(--dur-fast)] group-hover:bg-[var(--color-primary)] group-hover:text-white">
                         <Icon className="h-5 w-5" />
                       </span>
                       <span className="text-[12px] font-medium leading-tight text-[var(--color-text)]">
@@ -491,25 +496,29 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
               </CardHeader>
               <CardBody className="p-0">
                 {org.branches.length === 0 ? (
-                  <p className="px-5 py-6 text-sm text-[var(--color-text-muted)]">Hali filial yo&apos;q</p>
+                  // Kartochka ichida: bo'sh holat ramkasi karta chetiga
+                  // yopishmasligi uchun kichik ichki bo'shliq qoldiriladi.
+                  <div className="p-3">
+                    <EmptyState icon={<BuildingIcon className="h-[26px] w-[26px]" />} title="Hali filial yo'q" />
+                  </div>
                 ) : (
                   <ul className="divide-y divide-[var(--color-separator)]">
                     {org.branches.slice(0, 5).map((branch) => (
                       <li key={branch.id}>
                         <Link
                           href={`/${slug}/branches/${branch.id}`}
-                          className="group flex items-center gap-3 px-5 py-3 transition-colors hover:bg-[var(--color-surface-hover)]"
+                          className="group flex items-center gap-3 px-5 py-3 transition-colors duration-[var(--dur-fast)] ease-[var(--ease-out)] hover:bg-[var(--color-surface-hover)] sm:px-6"
                         >
-                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
                             <BuildingIcon className="h-[18px] w-[18px]" />
                           </span>
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-[14px] font-medium text-[var(--color-text)]">{branch.name}</p>
-                            <p className="truncate text-[12px] text-[var(--color-text-muted)]">
+                            <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">
                               {branch.address || "Manzil ko'rsatilmagan"}
                             </p>
                           </div>
-                          <span className="hidden text-[12px] text-[var(--color-text-muted)] sm:block">
+                          <span className="hidden text-[12.5px] tabular-nums text-[var(--color-text-muted)] sm:block">
                             {formatDate(branch.createdAt)}
                           </span>
                           <ChevronRightIcon className="h-4 w-4 shrink-0 text-[var(--color-text-muted)]/50 transition-transform group-hover:translate-x-0.5" />

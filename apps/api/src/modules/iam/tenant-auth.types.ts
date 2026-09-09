@@ -12,6 +12,8 @@ export interface TenantAuthenticatedUser {
   email: string;
   fullName: string;
   role: TenantUserRole;
+  /** Profil rasmi bor-yo'qligi va brauzer keshini yangilash uchun. */
+  avatarUpdatedAt: string | null;
 }
 
 export interface TenantAccessTokenPayload {

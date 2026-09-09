@@ -9,6 +9,7 @@ import type { Lead, LeadStage, LeadStats } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { DataTable, THead, TBody, Tr, Th, Td } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
@@ -51,26 +52,32 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
   const totalActive = byStage ? byStage.NEW + byStage.TRIAL_DAY_SCHEDULED + byStage.CONTRACT : undefined;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-[var(--color-text)]">Arizalar (CRM)</h1>
-          <p className="text-sm text-[var(--color-text-muted)]">Yangi mijozlar bilan ishlash bosqichlari</p>
+          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
+            Arizalar (CRM)
+          </h1>
+          <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">Yangi mijozlar bilan ishlash bosqichlari</p>
         </div>
         {canWrite && <Button onClick={() => setCreateOpen(true)}>+ Yangi ariza</Button>}
       </div>
 
       {!canWrite && <ViewOnlyNote role={user?.role} />}
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-        <Card className="px-4 py-3">
-          <p className="text-xs text-[var(--color-text-muted)]">Faol arizalar</p>
-          <p className="mt-1 text-lg font-semibold text-[var(--color-text)]">{totalActive ?? "—"}</p>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <Card className="px-4 py-3.5">
+          <p className="text-[12px] leading-tight text-[var(--color-text-muted)]">Faol arizalar</p>
+          <p className="mt-1.5 text-[22px] font-semibold leading-none tabular-nums text-[var(--color-text)]">
+            {totalActive ?? "—"}
+          </p>
         </Card>
         {STAGE_ORDER.map((stage) => (
-          <Card key={stage} className="px-4 py-3">
-            <p className="text-xs text-[var(--color-text-muted)]">{STAGE_LABEL[stage]}</p>
-            <p className="mt-1 text-lg font-semibold text-[var(--color-text)]">{byStage ? byStage[stage] : "—"}</p>
+          <Card key={stage} className="px-4 py-3.5">
+            <p className="text-[12px] leading-tight text-[var(--color-text-muted)]">{STAGE_LABEL[stage]}</p>
+            <p className="mt-1.5 text-[22px] font-semibold leading-none tabular-nums text-[var(--color-text)]">
+              {byStage ? byStage[stage] : "—"}
+            </p>
           </Card>
         ))}
       </div>
@@ -82,10 +89,10 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
             setPage(1);
           }}
           className={clsx(
-            "rounded-full px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer",
+            "cursor-pointer rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors",
             stageFilter === "ALL"
               ? "bg-[var(--color-primary)] text-white"
-              : "bg-gray-100 text-[var(--color-text-muted)] hover:bg-gray-200",
+              : "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
           )}
         >
           Barchasi
@@ -98,10 +105,10 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
               setPage(1);
             }}
             className={clsx(
-              "rounded-full px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer",
+              "cursor-pointer rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors",
               stageFilter === stage
                 ? "bg-[var(--color-primary)] text-white"
-                : "bg-gray-100 text-[var(--color-text-muted)] hover:bg-gray-200",
+                : "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
             )}
           >
             {STAGE_LABEL[stage]}
@@ -110,62 +117,62 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
       </div>
 
       {leadsQuery.isLoading ? (
-        <LoadingState />
+        <LoadingState rows={6} />
       ) : leadsQuery.isError ? (
         <ErrorState message={(leadsQuery.error as Error).message} />
       ) : !leadsQuery.data || leadsQuery.data.data.length === 0 ? (
         <EmptyState title="Ariza topilmadi" description={canWrite ? "Yangi ariza qo'shish uchun tugmani bosing" : undefined} />
       ) : (
         <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-[var(--color-border)] bg-gray-50 text-xs uppercase text-[var(--color-text-muted)]">
-                <tr>
-                  <th className="px-5 py-3 font-medium">Bola</th>
-                  <th className="px-5 py-3 font-medium">Ota-ona</th>
-                  <th className="px-5 py-3 font-medium">Yosh guruhi</th>
-                  <th className="px-5 py-3 font-medium">Manba</th>
-                  <th className="px-5 py-3 font-medium">Bosqich</th>
-                  <th className="px-5 py-3 font-medium">Sana</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--color-border)]">
-                {leadsQuery.data.data.map((lead) => (
-                  <tr key={lead.id} className="hover:bg-gray-50">
-                    <td className="px-5 py-3 font-medium">
-                      <Link href={`/${slug}/crm/${lead.id}`} className="text-[var(--color-primary)] hover:underline">
-                        {lead.childFullName}
-                      </Link>
-                    </td>
-                    <td className="px-5 py-3 text-[var(--color-text-muted)]">
-                      {lead.parentName}
-                      <br />
-                      <span className="text-xs">{lead.parentPhone}</span>
-                    </td>
-                    <td className="px-5 py-3 text-[var(--color-text-muted)]">
-                      {lead.ageGroup ? AGE_GROUP_LABEL[lead.ageGroup] : "—"}
-                    </td>
-                    <td className="px-5 py-3 text-[var(--color-text-muted)]">{SOURCE_LABEL[lead.source]}</td>
-                    <td className="px-5 py-3">
-                      <Badge tone={STAGE_TONE[lead.stage]}>{STAGE_LABEL[lead.stage]}</Badge>
-                    </td>
-                    <td className="px-5 py-3 text-[var(--color-text-muted)]">{formatDate(lead.createdAt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable>
+            <THead>
+              <tr>
+                <Th>Bola</Th>
+                <Th>Ota-ona</Th>
+                <Th>Yosh guruhi</Th>
+                <Th>Manba</Th>
+                <Th>Bosqich</Th>
+                <Th>Sana</Th>
+              </tr>
+            </THead>
+            <TBody>
+              {leadsQuery.data.data.map((lead) => (
+                <Tr key={lead.id}>
+                  <Td className="font-medium">
+                    <Link href={`/${slug}/crm/${lead.id}`} className="text-[var(--color-primary)] hover:underline">
+                      {lead.childFullName}
+                    </Link>
+                  </Td>
+                  <Td>
+                    <span className="font-medium text-[var(--color-text)]">{lead.parentName}</span>
+                    <br />
+                    <span className="text-[12.5px] tabular-nums text-[var(--color-text-muted)]">
+                      {lead.parentPhone}
+                    </span>
+                  </Td>
+                  <Td className="text-[var(--color-text-muted)]">
+                    {lead.ageGroup ? AGE_GROUP_LABEL[lead.ageGroup] : "—"}
+                  </Td>
+                  <Td className="text-[var(--color-text-muted)]">{SOURCE_LABEL[lead.source]}</Td>
+                  <Td>
+                    <Badge tone={STAGE_TONE[lead.stage]}>{STAGE_LABEL[lead.stage]}</Badge>
+                  </Td>
+                  <Td className="tabular-nums text-[var(--color-text-muted)]">{formatDate(lead.createdAt)}</Td>
+                </Tr>
+              ))}
+            </TBody>
+          </DataTable>
 
-          <div className="flex items-center justify-between border-t border-[var(--color-border)] px-5 py-3 text-sm text-[var(--color-text-muted)]">
-            <span>
+          <div className="hairline flex items-center justify-between gap-3 border-t border-[var(--color-separator)] px-5 py-3.5 text-[12.5px] text-[var(--color-text-muted)] sm:px-6">
+            <span className="tabular-nums">
               Jami {leadsQuery.data.meta.total} ta, {leadsQuery.data.meta.page}-sahifa
             </span>
             <div className="flex gap-2">
-              <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
                 Oldingi
               </Button>
               <Button
-                variant="secondary"
+                variant="outline"
                 size="sm"
                 disabled={page * leadsQuery.data.meta.limit >= leadsQuery.data.meta.total}
                 onClick={() => setPage((p) => p + 1)}
