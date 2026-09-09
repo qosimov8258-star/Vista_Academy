@@ -84,18 +84,20 @@
   animation: pGreet 0.65s cubic-bezier(0.34, 1.4, 0.64, 1) both;
 }
 
-/* Parol xato bo'lsa quyosh yuzini burishtiradi — bir siltanib, o'ziga keladi */
-@keyframes pWince {
-  0% { transform: rotate(0) scale(1); }
-  18% { transform: rotate(-8deg) scale(0.92); }
-  42% { transform: rotate(7deg) scale(0.95); }
-  66% { transform: rotate(-4deg) scale(0.98); }
-  100% { transform: rotate(0) scale(1); }
+/*
+ * Parol xato bo'lsa quyosh xafa bo'ladi: yuzi sal pastga cho'kib, bir
+ * tomonga qiyshayadi va shu holatda qoladi (`both`). Ataylab silkinish
+ * emas — tez chapga-o'ngga siltanish jahl chiqqandek ko'rinadi.
+ */
+@keyframes pDroop {
+  0% { transform: translateY(-1px) rotate(0deg) scale(1); }
+  55% { transform: translateY(3px) rotate(-7deg) scale(0.96); }
+  100% { transform: translateY(1.5px) rotate(-4deg) scale(0.98); }
 }
-.wince {
+.droop {
   transform-box: fill-box;
   transform-origin: center;
-  animation: pWince 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+  animation: pDroop 0.75s cubic-bezier(0.32, 0.72, 0, 1) both;
 }
 
 /* Xafa bo'lganda nurlar aylanishdan to'xtaydi va so'nadi */
@@ -108,7 +110,7 @@
   .sunRays,
   .sunGlow,
   .greet,
-  .wince {
+  .droop {
     animation: none;
   }
 }

@@ -187,20 +187,25 @@ function SmilingSun({ sad = false }: { sad?: boolean }) {
         ))}
       </g>
 
-      <g className={sad ? styles.wince : undefined}>
+      <g className={sad ? styles.droop : undefined}>
         <circle cx="32" cy="32" r="17" fill={sad ? "#f0cf7a" : "#ffc93c"} />
 
         {sad ? (
           <>
-            {/* Qisilgan ko'zlar va ichkariga qiya qoshlar — burishgan yuz */}
-            <path d="M23.5 30.5a3.6 3.6 0 0 1 6 0" stroke="#8a5a00" strokeWidth="2.2" fill="none" strokeLinecap="round" />
-            <path d="M34.5 30.5a3.6 3.6 0 0 1 6 0" stroke="#8a5a00" strokeWidth="2.2" fill="none" strokeLinecap="round" />
-            <path d="M22.5 25.5 28 27.4" stroke="#8a5a00" strokeWidth="2" strokeLinecap="round" />
-            <path d="M41.5 25.5 36 27.4" stroke="#8a5a00" strokeWidth="2" strokeLinecap="round" />
-            <circle cx="22.5" cy="35.5" r="2.4" fill="#ff8a7a" opacity="0.4" />
-            <circle cx="41.5" cy="35.5" r="2.4" fill="#ff8a7a" opacity="0.4" />
-            {/* Pastga qaragan og'iz */}
-            <path d="M27 40.5a6 6 0 0 1 10 0" stroke="#8a5a00" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+            {/*
+              Qoshlarning ichki uchi YUQORIDA, tashqi uchi pastda — bu
+              g'amginlik belgisi. Teskarisi (ichki uchi pastda) jahl
+              chiqqandek ko'rinadi.
+            */}
+            <path d="M22.6 28.2 28.4 25.4" stroke="#8a5a00" strokeWidth="2" strokeLinecap="round" />
+            <path d="M41.4 28.2 35.6 25.4" stroke="#8a5a00" strokeWidth="2" strokeLinecap="round" />
+            {/* Ko'zlar ochiq, lekin pastga qaragan — qisilgan ko'z jahlga o'xshaydi */}
+            <circle cx="26.5" cy="31.2" r="2" fill="#8a5a00" />
+            <circle cx="37.5" cy="31.2" r="2" fill="#8a5a00" />
+            <circle cx="23" cy="35.6" r="2.4" fill="#ff8a7a" opacity="0.45" />
+            <circle cx="41" cy="35.6" r="2.4" fill="#ff8a7a" opacity="0.45" />
+            {/* Kichik, yumshoq pastga qaragan og'iz */}
+            <path d="M28.6 40.2a4 4 0 0 1 6.8 0" stroke="#8a5a00" strokeWidth="2.2" fill="none" strokeLinecap="round" />
           </>
         ) : (
           <>
