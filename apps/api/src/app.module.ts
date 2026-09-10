@@ -7,6 +7,7 @@ import { RolesGuard } from "./common/guards/roles.guard";
 import { HealthModule } from "./modules/health/health.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { IamModule } from "./modules/iam/iam.module";
+import { WebAuthnModule } from "./modules/webauthn/webauthn.module";
 import { OrganizationsModule } from "./modules/organizations/organizations.module";
 import { PlansModule } from "./modules/plans/plans.module";
 import { SubscriptionsModule } from "./modules/subscriptions/subscriptions.module";
@@ -15,6 +16,8 @@ import { DashboardModule } from "./modules/dashboard/dashboard.module";
 import { GroupsModule } from "./modules/groups/groups.module";
 import { ChildrenModule } from "./modules/children/children.module";
 import { EmployeesModule } from "./modules/employees/employees.module";
+import { PositionsModule } from "./modules/positions/positions.module";
+import { SubjectsModule } from "./modules/subjects/subjects.module";
 import { AttendanceModule } from "./modules/attendance/attendance.module";
 import { StaffAttendanceModule } from "./modules/staff-attendance/staff-attendance.module";
 import { NutritionModule } from "./modules/nutrition/nutrition.module";
@@ -38,6 +41,7 @@ import { ExportsModule } from "./modules/exports/exports.module";
     HealthModule,
     AuthModule,
     IamModule,
+    WebAuthnModule,
     OrganizationsModule,
     PlansModule,
     SubscriptionsModule,
@@ -46,6 +50,8 @@ import { ExportsModule } from "./modules/exports/exports.module";
     GroupsModule,
     ChildrenModule,
     EmployeesModule,
+    PositionsModule,
+    SubjectsModule,
     AttendanceModule,
     StaffAttendanceModule,
     NutritionModule,

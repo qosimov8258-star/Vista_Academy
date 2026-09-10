@@ -18,6 +18,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   ExternalLinkIcon,
+  PencilIcon,
   PlusIcon,
 } from "@/components/ui/icons";
 import { formatDate, formatMoney } from "@/lib/format";
@@ -231,16 +232,18 @@ export default function BogchalarPage() {
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="outline"
-                          size="sm"
+                        <button
+                          type="button"
+                          aria-label="Tahrirlash"
+                          title="Tahrirlash"
                           onClick={(e) => {
                             e.stopPropagation();
                             setEditOrg(org);
                           }}
+                          className="inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[var(--color-primary)]/70 text-white transition-all duration-150 hover:bg-[var(--color-primary)] active:scale-90 motion-reduce:active:scale-100"
                         >
-                          Tahrirlash
-                        </Button>
+                          <PencilIcon className="h-3.5 w-3.5" />
+                        </button>
                         <ChevronRightIcon className="h-4 w-4 shrink-0 text-[var(--color-text-subtle)] transition-transform duration-150 group-hover:translate-x-0.5" />
                       </div>
                     </td>

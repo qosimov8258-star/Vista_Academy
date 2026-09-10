@@ -15,8 +15,8 @@ interface ModalProps {
 }
 
 /**
- * iOS "sheet" uslubidagi oyna: fon qorayadi, panel esa pastdan yengil
- * ko'tarilib chiqadi. Blur/glass ishlatilmaydi — panel qattiq oq yuza.
+ * iOS "sheet" uslubidagi oyna: fon xiralashadi, panel esa pastdan yengil
+ * ko'tarilib chiqadi. Panel qattiq oq yuza — glass faqat fon qatlamida.
  */
 export function Modal({
   open,
@@ -48,7 +48,7 @@ export function Modal({
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
-      <div className="animate-scrim-in absolute inset-0 bg-black/30" onClick={onClose} />
+      <div className="animate-scrim-in absolute inset-0 bg-black/3 backdrop-blur-[7px]" onClick={onClose} />
       <div
         ref={panelRef}
         role="dialog"

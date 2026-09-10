@@ -2,6 +2,8 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { Prisma } from "@prisma/client";
 import * as argon2 from "argon2";
 import { PrismaService } from "../../database/prisma.service";
+import { DEFAULT_POSITIONS } from "../../common/constants/default-positions";
+import { DEFAULT_SUBJECTS } from "../../common/constants/default-subjects";
 import { CreateOrganizationDto } from "./dto/create-organization.dto";
 import { UpdateOrganizationDto } from "./dto/update-organization.dto";
 import { OrganizationQueryDto } from "./dto/organization-query.dto";
@@ -47,6 +49,16 @@ export class OrganizationsService {
 
       await tx.wallet.create({
         data: { organizationId: organization.id, balance: 0 },
+      });
+
+      // Xodim qo'shishda tanlash uchun odatiy lavozimlar to'plami tayyor tursin
+      await tx.position.createMany({
+        data: DEFAULT_POSITIONS.map((name) => ({ organizationId: organization.id, name })),
+      });
+
+      // Fan o'qituvchisi uchun tanlash uchun odatiy fanlar to'plami tayyor tursin
+      await tx.subject.createMany({
+        data: DEFAULT_SUBJECTS.map((name) => ({ organizationId: organization.id, name })),
       });
 
       const adminPasswordHash = await argon2.hash(dto.adminPassword);

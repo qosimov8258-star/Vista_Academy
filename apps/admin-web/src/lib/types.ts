@@ -135,15 +135,46 @@ export interface Employee {
   id: string;
   organizationId: string;
   branchId: string;
+  firstName: string;
+  lastName: string;
   fullName: string;
+  phone: string | null;
   position: string;
+  /** Faqat "Fan o'qituvchisi" lavozimida to'ldiriladi. */
+  subjects: string[];
   isActive: boolean;
   createdAt: string;
+  avatarUpdatedAt: string | null;
   /** Kabineti bo'lmagan xodimda null — u tizimga kirmaydi. */
   tenantUser?: { id: string; email: string; role: TenantUserRole; isActive: boolean } | null;
   teachingGroups?: GroupTeacherLink[];
   /** Oylik sxemasi — ro'yxat bilan birga keladi, alohida so'rov kerak emas. */
   salaryScheme?: { ruleType: "FIXED" | "PER_HOUR" | "PER_CHILD"; fixedAmount: string; rate: string } | null;
+}
+
+export interface Position {
+  id: string;
+  organizationId: string;
+  name: string;
+  createdAt: string;
+}
+
+export interface Subject {
+  id: string;
+  organizationId: string;
+  name: string;
+  createdAt: string;
+}
+
+/** Kabinet ochilganda login/parol avtomatik generatsiya qilinadi — faqat shu javobda bir marta keladi. */
+export interface EmployeeCredentials {
+  login: string;
+  password: string;
+}
+
+export interface CreateEmployeeResult {
+  employee: Employee;
+  credentials: EmployeeCredentials | null;
 }
 
 export type AttendanceStatus = "PRESENT" | "ABSENT";

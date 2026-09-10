@@ -282,3 +282,12 @@ export function LogoutIcon(props: IconProps) {
     </Icon>
   );
 }
+
+export function PencilIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7.5 18.5 3 20l1.5-4.5Z" />
+      <path d="m14.5 5.5 4 4" />
+    </Icon>
+  );
+}

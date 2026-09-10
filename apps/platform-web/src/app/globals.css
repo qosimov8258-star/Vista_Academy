@@ -160,15 +160,18 @@ h3 {
   animation: nyx-logo-spin 2.4s linear infinite;
 }
 
-/* LoadingScreen: "..." nuqtalari navbat bilan yonib-o'chib turadi */
+/* LoadingScreen: "..." nuqtalari navbat bilan kichraygan-ochiq holatdan
+   kattalashgan-to'q holatga o'tib turadi */
 @keyframes nyx-dot-blink {
   0%,
   80%,
   100% {
-    opacity: 0.2;
+    opacity: 0.3;
+    transform: scale(0.6);
   }
   40% {
     opacity: 1;
+    transform: scale(1);
   }
 }
 
