@@ -486,3 +486,4 @@ export function ClockIcon(props: IconProps) {
     </Outline>
   );
 }
+

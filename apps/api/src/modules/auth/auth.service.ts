@@ -1,9 +1,10 @@
-import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService, JwtSignOptions } from "@nestjs/jwt";
 import * as argon2 from "argon2";
 import { createHash, randomBytes } from "crypto";
 import { PrismaService } from "../../database/prisma.service";
-import { AccessTokenPayload, AuthenticatedUser } from "./auth.types";
+import { AccessTokenPayload, AuthenticatedUser, toAuthenticatedUser } from "./auth.types";
+import { UpdateProfileDto } from "./dto/update-profile.dto";
 
 export interface IssuedTokens {
   accessToken: string;
@@ -35,7 +36,7 @@ export class AuthService {
     if (!passwordValid) {
       throw new UnauthorizedException("Email yoki parol noto'g'ri");
     }
-    return { id: user.id, email: user.email, role: user.role, fullName: user.fullName };
+    return toAuthenticatedUser(user);
   }
 
   async issueTokens(user: AuthenticatedUser, meta: RequestMeta): Promise<IssuedTokens> {
@@ -83,12 +84,7 @@ export class AuthService {
       throw new UnauthorizedException("Foydalanuvchi faol emas");
     }
 
-    const user: AuthenticatedUser = {
-      id: existing.user.id,
-      email: existing.user.email,
-      role: existing.user.role,
-      fullName: existing.user.fullName,
-    };
+    const user = toAuthenticatedUser(existing.user);
 
     const issued = await this.issueTokens(user, meta);
 
@@ -106,6 +102,41 @@ export class AuthService {
       where: { tokenHash, revokedAt: null },
       data: { revokedAt: new Date() },
     });
+  }
+
+  async updateProfile(userId: string, dto: UpdateProfileDto): Promise<AuthenticatedUser> {
+    const current = await this.prisma.platformUser.findUniqueOrThrow({ where: { id: userId } });
+    const firstName = dto.firstName?.trim() ?? current.firstName ?? "";
+    const lastName = dto.lastName?.trim() ?? current.lastName ?? "";
+    const fullName = [firstName, lastName].filter(Boolean).join(" ") || current.fullName;
+
+    let email: string | undefined;
+    if (dto.email !== undefined) {
+      email = dto.email.trim().toLowerCase();
+      if (email !== current.email) {
+        const existing = await this.prisma.platformUser.findUnique({ where: { email } });
+        if (existing) {
+          throw new ConflictException("Bu email allaqachon band");
+        }
+      }
+    }
+
+    const user = await this.prisma.platformUser.update({
+      where: { id: userId },
+      data: {
+        email,
+        firstName: dto.firstName !== undefined ? dto.firstName.trim() : undefined,
+        lastName: dto.lastName !== undefined ? dto.lastName.trim() : undefined,
+        phone: dto.phone !== undefined ? dto.phone.trim() : undefined,
+        fullName,
+      },
+    });
+    return toAuthenticatedUser(user);
+  }
+
+  async updateAvatar(userId: string, avatarUrl: string): Promise<AuthenticatedUser> {
+    const user = await this.prisma.platformUser.update({ where: { id: userId }, data: { avatarUrl } });
+    return toAuthenticatedUser(user);
   }
 }
 

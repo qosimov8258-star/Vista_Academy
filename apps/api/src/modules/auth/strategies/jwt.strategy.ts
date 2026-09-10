@@ -3,7 +3,7 @@ import { PassportStrategy } from "@nestjs/passport";
 import { ExtractJwt, Strategy } from "passport-jwt";
 import type { Request } from "express";
 import { PrismaService } from "../../../database/prisma.service";
-import { AccessTokenPayload, AuthenticatedUser } from "../auth.types";
+import { AccessTokenPayload, AuthenticatedUser, toAuthenticatedUser } from "../auth.types";
 
 function extractFromCookie(req: Request): string | null {
   return (req?.cookies?.bogcha_at as string | undefined) ?? null;
@@ -35,6 +35,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (!user || !user.isActive) {
       throw new UnauthorizedException("User not found or inactive");
     }
-    return { id: user.id, email: user.email, role: user.role, fullName: user.fullName };
+    return toAuthenticatedUser(user);
   }
 }

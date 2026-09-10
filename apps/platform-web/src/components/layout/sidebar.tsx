@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
-import type { ComponentType, SVGProps } from "react";
-import { BuildingIcon, CardIcon, DashboardIcon, RefreshIcon } from "@/components/ui/icons";
+import { useRef, useState, type ComponentType, type SVGProps, type SyntheticEvent } from "react";
+import { useAuth } from "@/lib/use-auth";
+import { roleLabel } from "@/lib/format";
+import { BuildingIcon, CardIcon, DashboardIcon, RefreshIcon, UserIcon } from "@/components/ui/icons";
 
 type NavIcon = ComponentType<SVGProps<SVGSVGElement>>;
 
@@ -13,68 +15,99 @@ interface NavItem {
   label: string;
   icon: NavIcon;
   exact?: boolean;
-  group?: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Dashboard", icon: DashboardIcon, exact: true },
-  { href: "/organizations", label: "Tashkilotlar", icon: BuildingIcon, group: "Mijozlar" },
-  { href: "/plans", label: "Tarif rejalar", icon: CardIcon, group: "Sotuv" },
+  { href: "/bogchalar", label: "Bog'chalar", icon: BuildingIcon },
+  { href: "/plans", label: "Tarif rejalar", icon: CardIcon },
   { href: "/subscriptions", label: "Obunalar", icon: RefreshIcon },
+  { href: "/profile", label: "Profil", icon: UserIcon },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { user } = useAuth();
+
+  const navRef = useRef<HTMLElement>(null);
+  const [hoverRect, setHoverRect] = useState<{ top: number; height: number } | null>(null);
+
+  const trackHover = (event: SyntheticEvent<HTMLAnchorElement>) => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const itemRect = event.currentTarget.getBoundingClientRect();
+    const navRect = nav.getBoundingClientRect();
+    setHoverRect({
+      top: itemRect.top - navRect.top + nav.scrollTop,
+      height: itemRect.height,
+    });
+  };
+
+  const clearHover = () => setHoverRect(null);
 
   return (
     <aside className="hidden w-[248px] shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)] md:flex">
-      <div className="flex items-center gap-2.5 px-4 py-4">
-        <div className="flex h-9 w-9 items-center justify-center rounded-[12px] bg-[var(--color-primary)] text-[15px] font-bold text-white">
-          B
-        </div>
+      <Link
+        href="/"
+        className="mx-2.5 mt-3 flex items-center gap-2.5 rounded-[10px] px-2 py-2.5 transition-colors duration-150 hover:bg-[var(--color-surface-hover)]"
+      >
+        <img
+          src="/logo.png"
+          alt="Nyxo"
+          className="h-9 w-9 shrink-0 rounded-[12px] object-cover"
+        />
         <div className="min-w-0">
-          <p className="text-[14px] font-semibold leading-tight text-[var(--color-text)]">Platform Admin</p>
+          <img src="/nyxo_logo.png" alt="Nyxo" className="h-7 w-auto object-contain" />
           <p className="truncate text-[12px] leading-tight text-[var(--color-text-muted)]">
-            Bog&apos;chalar tarmog&apos;i
+            {user ? `${roleLabel(user.role)} paneli` : "Bog'chalar tarmog'i"}
           </p>
         </div>
-      </div>
+      </Link>
 
-      <nav className="flex-1 overflow-y-auto scrollbar-thin px-2.5 pb-4">
+      <nav
+        ref={navRef}
+        onMouseLeave={clearHover}
+        className="relative flex-1 overflow-y-auto scrollbar-thin px-2.5 pb-4"
+      >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-2.5 z-0 rounded-[10px] bg-[var(--color-surface-hover)] transition-[transform,height,opacity] duration-200 ease-out"
+          style={{
+            transform: `translateY(${hoverRect?.top ?? 0}px)`,
+            height: hoverRect?.height ?? 0,
+            opacity: hoverRect ? 1 : 0,
+          }}
+        />
         {NAV_ITEMS.map((item) => {
           const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
           const Icon = item.icon;
           return (
-            <div key={item.href}>
-              {item.group && (
-                <p className="mt-5 mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-[var(--color-text-subtle)]">
-                  {item.group}
-                </p>
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={active ? "page" : undefined}
+              onMouseEnter={trackHover}
+              onFocus={trackHover}
+              onBlur={clearHover}
+              className={clsx(
+                "relative z-10 mb-0.5 flex items-center gap-3 rounded-[10px] px-3 py-2 text-[14px] font-medium transition-colors duration-150",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2",
+                active
+                  ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
+                  : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
               )}
-              <Link
-                href={item.href}
-                aria-current={active ? "page" : undefined}
+            >
+              <Icon
                 className={clsx(
-                  "mb-0.5 flex items-center gap-3 rounded-[10px] px-3 py-2 text-[14px] font-medium transition-colors duration-150",
-                  active
-                    ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
-                    : "text-[var(--color-text-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)]",
+                  "h-[18px] w-[18px] shrink-0",
+                  active ? "text-[var(--color-primary)]" : "text-[var(--color-text-subtle)]",
                 )}
-              >
-                <Icon
-                  className={clsx(
-                    "h-[18px] w-[18px] shrink-0",
-                    active ? "text-[var(--color-primary)]" : "text-[var(--color-text-subtle)]",
-                  )}
-                />
-                <span className="truncate">{item.label}</span>
-              </Link>
-            </div>
+              />
+              <span className="truncate">{item.label}</span>
+            </Link>
           );
         })}
       </nav>
-
-      <p className="px-4 py-3 text-[11px] text-[var(--color-text-subtle)]">Super Admin paneli</p>
     </aside>
   );
 }

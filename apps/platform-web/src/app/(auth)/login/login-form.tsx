@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { api, ApiError } from "@/lib/api";
+import { usePostLoginLoading } from "@/lib/post-login-loading";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { AlertIcon } from "@/components/ui/icons";
@@ -22,6 +23,7 @@ export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [serverError, setServerError] = useState<string | null>(null);
+  const { startPostLoginLoading } = usePostLoginLoading();
 
   const {
     register,
@@ -33,6 +35,9 @@ export function LoginForm() {
     setServerError(null);
     try {
       await api.post<{ user: AuthenticatedUser }>("/platform/auth/login", values);
+      // Dashboard va uning boshlang'ich ma'lumotlari tayyor bo'lgunicha
+      // LoadingScreen'ni ko'rsatamiz — uni dashboard sahifasi o'zi yashiradi.
+      startPostLoginLoading();
       const next = searchParams.get("next") ?? "/";
       router.push(next);
       router.refresh();

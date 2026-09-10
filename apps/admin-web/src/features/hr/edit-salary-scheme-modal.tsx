@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -9,9 +9,16 @@ import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { SalaryScheme } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
-import { Input, Select } from "@/components/ui/input";
+import { AmountInput } from "@/components/ui/amount-input";
+import { SelectMenu } from "@/components/ui/select-menu";
 import { Button } from "@/components/ui/button";
 import { LoadingState, ErrorState } from "@/components/ui/states";
+
+const RULE_TYPE_OPTIONS = [
+  { value: "FIXED", label: "Belgilangan (oylik summa)" },
+  { value: "PER_HOUR", label: "Soatiga (ish soatlari asosida)" },
+  { value: "PER_CHILD", label: "Boladan (faol bolalar soni asosida)" },
+];
 
 const schema = z
   .object({
@@ -57,7 +64,7 @@ export function EditSalarySchemeModal({
   const realError = schemeQuery.isError && !notFound;
 
   const {
-    register,
+    control,
     handleSubmit,
     reset,
     watch,
@@ -99,7 +106,12 @@ export function EditSalarySchemeModal({
   });
 
   return (
-    <Modal open={open} onClose={onClose} title={employeeName ? `Maosh sxemasi — ${employeeName}` : "Maosh sxemasi"}>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={employeeName ? `Maosh sxemasi — ${employeeName}` : "Maosh sxemasi"}
+      widthClassName="max-w-md"
+    >
       {schemeQuery.isLoading ? (
         <LoadingState />
       ) : realError ? (
@@ -111,27 +123,47 @@ export function EditSalarySchemeModal({
               {serverError}
             </div>
           )}
-          <Select label="Hisoblash turi" error={errors.ruleType?.message} {...register("ruleType")}>
-            <option value="FIXED">Belgilangan (oylik summa)</option>
-            <option value="PER_HOUR">Soatiga (ish soatlari asosida)</option>
-            <option value="PER_CHILD">Boladan (faol bolalar soni asosida)</option>
-          </Select>
+          <Controller
+            control={control}
+            name="ruleType"
+            render={({ field }) => (
+              <SelectMenu
+                label="Hisoblash turi"
+                options={RULE_TYPE_OPTIONS}
+                value={field.value}
+                onChange={field.onChange}
+                error={errors.ruleType?.message}
+              />
+            )}
+          />
 
           {ruleType === "FIXED" ? (
-            <Input
-              label="Oylik summa (UZS)"
-              type="number"
-              placeholder="2500000"
-              error={errors.fixedAmount?.message}
-              {...register("fixedAmount")}
+            <Controller
+              control={control}
+              name="fixedAmount"
+              render={({ field }) => (
+                <AmountInput
+                  label="Oylik summa (UZS)"
+                  placeholder="2 500 000"
+                  value={field.value}
+                  onChange={field.onChange}
+                  error={errors.fixedAmount?.message}
+                />
+              )}
             />
           ) : (
-            <Input
-              label={ruleType === "PER_HOUR" ? "Bir soat narxi (UZS)" : "Bir bola uchun narx (UZS)"}
-              type="number"
-              placeholder="15000"
-              error={errors.rate?.message}
-              {...register("rate")}
+            <Controller
+              control={control}
+              name="rate"
+              render={({ field }) => (
+                <AmountInput
+                  label={ruleType === "PER_HOUR" ? "Bir soat narxi (UZS)" : "Bir bola uchun narx (UZS)"}
+                  placeholder="15 000"
+                  value={field.value}
+                  onChange={field.onChange}
+                  error={errors.rate?.message}
+                />
+              )}
             />
           )}
 

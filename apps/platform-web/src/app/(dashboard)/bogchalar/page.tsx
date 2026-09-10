@@ -18,6 +18,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   ExternalLinkIcon,
+  PencilIcon,
   PlusIcon,
 } from "@/components/ui/icons";
 import { formatDate, formatMoney } from "@/lib/format";
@@ -42,7 +43,7 @@ function initial(name: string): string {
   return name.trim()[0]?.toUpperCase() ?? "?";
 }
 
-export default function OrganizationsPage() {
+export default function BogchalarPage() {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("");
@@ -73,12 +74,12 @@ export default function OrganizationsPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Tashkilotlar"
+        title="Bog'chalar"
         description="Bog'chalar tarmoqlari (tenant)"
         actions={
           <Button onClick={() => setCreateOpen(true)}>
             <PlusIcon className="h-4 w-4" />
-            Yangi tashkilot
+            Yangi bog&apos;cha
           </Button>
         }
       />
@@ -92,7 +93,7 @@ export default function OrganizationsPage() {
             setSearch(value);
           }}
           placeholder="Nomi bo'yicha qidirish"
-          aria-label="Tashkilot nomi bo'yicha qidirish"
+          aria-label="Bog'cha nomi bo'yicha qidirish"
           className="sm:max-w-xs sm:flex-1"
         />
         <Segmented
@@ -116,7 +117,7 @@ export default function OrganizationsPage() {
       ) : !data || data.data.length === 0 ? (
         <EmptyState
           icon={BuildingIcon}
-          title={isFiltered ? "Mos tashkilot topilmadi" : "Hali tashkilot yo'q"}
+          title={isFiltered ? "Mos bog'cha topilmadi" : "Hali bog'cha yo'q"}
           description={
             isFiltered
               ? "Qidiruv so'zini yoki holat filtrini o'zgartirib ko'ring"
@@ -138,7 +139,7 @@ export default function OrganizationsPage() {
             ) : (
               <Button size="sm" onClick={() => setCreateOpen(true)}>
                 <PlusIcon className="h-4 w-4" />
-                Yangi tashkilot
+                Yangi bog&apos;cha
               </Button>
             )
           }
@@ -153,7 +154,7 @@ export default function OrganizationsPage() {
             <table className="w-full text-left text-sm">
               <thead className="bg-[var(--color-surface-sunken)] text-[11px] uppercase tracking-wider text-[var(--color-text-subtle)]">
                 <tr>
-                  <th className="px-5 py-2.5 font-semibold">Tashkilot</th>
+                  <th className="px-5 py-2.5 font-semibold">Bog&apos;cha</th>
                   <th className="px-3 py-2.5 text-right font-semibold">Filiallar</th>
                   <th className="px-3 py-2.5 font-semibold">Obuna</th>
                   <th className="px-3 py-2.5 text-right font-semibold">Hamyon</th>
@@ -168,7 +169,7 @@ export default function OrganizationsPage() {
                     key={org.id}
                     // Qator butunlay bosiladigan — nomga aniq tegish shart emas.
                     // Ichkaridagi havola/tugmalar o'z bosilishini to'xtatadi.
-                    onClick={() => router.push(`/organizations/${org.id}`)}
+                    onClick={() => router.push(`/bogchalar/${org.id}`)}
                     className="group cursor-pointer transition-colors hover:bg-[var(--color-surface-hover)]"
                   >
                     <td className="px-5 py-3">
@@ -181,7 +182,7 @@ export default function OrganizationsPage() {
                         </span>
                         <div className="min-w-0">
                           <Link
-                            href={`/organizations/${org.id}`}
+                            href={`/bogchalar/${org.id}`}
                             onClick={(e) => e.stopPropagation()}
                             className="block truncate text-[14px] font-medium text-[var(--color-text)] hover:text-[var(--color-primary)]"
                           >
@@ -196,7 +197,7 @@ export default function OrganizationsPage() {
                               target="_blank"
                               rel="noreferrer"
                               onClick={(e) => e.stopPropagation()}
-                              title="Tashkilot paneliga kirish"
+                              title="Bog'cha paneliga kirish"
                               className="inline-flex shrink-0 items-center gap-1 text-[var(--color-primary)] hover:underline"
                             >
                               /{org.slug}
@@ -215,7 +216,7 @@ export default function OrganizationsPage() {
                           {subscriptionStatusLabel(org.subscription.status)}
                         </Badge>
                       ) : (
-                        <Badge tone="neutral">Obunasiz</Badge>
+                        <Badge tone="neutral">Tarifsiz</Badge>
                       )}
                     </td>
                     <td className="px-3 py-3 text-right tabular-nums text-[var(--color-text)]">
@@ -231,16 +232,18 @@ export default function OrganizationsPage() {
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="outline"
-                          size="sm"
+                        <button
+                          type="button"
+                          aria-label="Tahrirlash"
+                          title="Tahrirlash"
                           onClick={(e) => {
                             e.stopPropagation();
                             setEditOrg(org);
                           }}
+                          className="inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[var(--color-primary)]/70 text-white transition-all duration-150 hover:bg-[var(--color-primary)] active:scale-90 motion-reduce:active:scale-100"
                         >
-                          Tahrirlash
-                        </Button>
+                          <PencilIcon className="h-3.5 w-3.5" />
+                        </button>
                         <ChevronRightIcon className="h-4 w-4 shrink-0 text-[var(--color-text-subtle)] transition-transform duration-150 group-hover:translate-x-0.5" />
                       </div>
                     </td>
@@ -255,7 +258,7 @@ export default function OrganizationsPage() {
             {data.data.map((org) => (
               <li key={org.id}>
                 <Link
-                  href={`/organizations/${org.id}`}
+                  href={`/bogchalar/${org.id}`}
                   className="flex items-center gap-3 px-4 py-3.5 active:bg-[var(--color-surface-hover)]"
                 >
                   <span

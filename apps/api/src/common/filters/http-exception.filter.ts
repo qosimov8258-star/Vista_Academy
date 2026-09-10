@@ -57,6 +57,9 @@ function normalize(
   if (typeof body === "string") {
     return { code: "ERROR", message: body, details: {} };
   }
-  const message = exception instanceof Error ? exception.message : "Unexpected error";
-  return { code: "INTERNAL_ERROR", message, details: {} };
+  return {
+    code: "INTERNAL_ERROR",
+    message: "Serverda kutilmagan xatolik yuz berdi. Birozdan so'ng qayta urinib ko'ring.",
+    details: {},
+  };
 }

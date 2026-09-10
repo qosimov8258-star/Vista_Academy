@@ -20,9 +20,9 @@ export class SubscriptionsService {
       this.prisma.plan.findUnique({ where: { id: dto.planId } }),
       this.prisma.subscription.findUnique({ where: { organizationId: dto.organizationId } }),
     ]);
-    if (!organization) throw new NotFoundException("Tashkilot topilmadi");
+    if (!organization) throw new NotFoundException("Bog'cha topilmadi");
     if (!plan) throw new NotFoundException("Reja topilmadi");
-    if (existing) throw new ConflictException("Tashkilotda obuna allaqachon mavjud, reja o'zgartirishdan foydalaning");
+    if (existing) throw new ConflictException("Bog'chada obuna allaqachon mavjud, reja o'zgartirishdan foydalaning");
 
     const now = new Date();
     const periodEnd = new Date(now);
@@ -63,7 +63,7 @@ export class SubscriptionsService {
 
   private async requireByOrganization(organizationId: string) {
     const subscription = await this.prisma.subscription.findUnique({ where: { organizationId } });
-    if (!subscription) throw new NotFoundException("Bu tashkilot uchun obuna topilmadi");
+    if (!subscription) throw new NotFoundException("Bu bog'cha uchun obuna topilmadi");
     return subscription;
   }
 }

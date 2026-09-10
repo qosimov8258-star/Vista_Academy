@@ -1,8 +1,9 @@
-import {
-  BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import * as argon2 from "argon2";
 import { PrismaService } from "../../database/prisma.service";
+import { DEFAULT_POSITIONS } from "../../common/constants/default-positions";
+import { DEFAULT_SUBJECTS } from "../../common/constants/default-subjects";
 import { CreateOrganizationDto } from "./dto/create-organization.dto";
 import { UpdateOrganizationDto } from "./dto/update-organization.dto";
 import { OrganizationQueryDto } from "./dto/organization-query.dto";
@@ -19,6 +20,11 @@ export class OrganizationsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateOrganizationDto) {
+    const plan = await this.prisma.plan.findUnique({ where: { id: dto.planId } });
+    if (!plan) {
+      throw new BadRequestException("Tanlangan tarif reja topilmadi");
+    }
+
     const slug = await this.generateUniqueSlug(dto.name);
 
     return this.prisma.$transaction(async (tx) => {
@@ -45,6 +51,16 @@ export class OrganizationsService {
         data: { organizationId: organization.id, balance: 0 },
       });
 
+      // Xodim qo'shishda tanlash uchun odatiy lavozimlar to'plami tayyor tursin
+      await tx.position.createMany({
+        data: DEFAULT_POSITIONS.map((name) => ({ organizationId: organization.id, name })),
+      });
+
+      // Fan o'qituvchisi uchun tanlash uchun odatiy fanlar to'plami tayyor tursin
+      await tx.subject.createMany({
+        data: DEFAULT_SUBJECTS.map((name) => ({ organizationId: organization.id, name })),
+      });
+
       const adminPasswordHash = await argon2.hash(dto.adminPassword);
       await tx.tenantUser.create({
         data: {
@@ -56,23 +72,18 @@ export class OrganizationsService {
         },
       });
 
-      if (dto.planId) {
-        const plan = await tx.plan.findUnique({ where: { id: dto.planId } });
-        if (plan) {
-          const now = new Date();
-          const periodEnd = new Date(now);
-          periodEnd.setMonth(periodEnd.getMonth() + 1);
-          await tx.subscription.create({
-            data: {
-              organizationId: organization.id,
-              planId: plan.id,
-              status: "ACTIVE",
-              currentPeriodStart: now,
-              currentPeriodEnd: periodEnd,
-            },
-          });
-        }
-      }
+      const now = new Date();
+      const periodEnd = new Date(now);
+      periodEnd.setMonth(periodEnd.getMonth() + 1);
+      await tx.subscription.create({
+        data: {
+          organizationId: organization.id,
+          planId: plan.id,
+          status: "ACTIVE",
+          currentPeriodStart: now,
+          currentPeriodEnd: periodEnd,
+        },
+      });
 
       return tx.organization.findUniqueOrThrow({
         where: { id: organization.id },
@@ -117,7 +128,7 @@ export class OrganizationsService {
       include: organizationInclude,
     });
     if (!organization) {
-      throw new NotFoundException("Tashkilot topilmadi");
+      throw new NotFoundException("Bog'cha topilmadi");
     }
     return organization;
   }

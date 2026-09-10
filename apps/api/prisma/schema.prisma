@@ -24,6 +24,10 @@ model PlatformUser {
   email        String           @unique
   passwordHash String           @map("password_hash")
   fullName     String           @map("full_name")
+  firstName    String?          @map("first_name")
+  lastName     String?          @map("last_name")
+  phone        String?          @map("phone")
+  avatarUrl    String?          @map("avatar_url")
   role         PlatformUserRole @default(PLATFORM_SUPER_ADMIN)
   isActive     Boolean          @default(true) @map("is_active")
   createdAt    DateTime         @default(now()) @map("created_at")
@@ -78,6 +82,8 @@ model Organization {
   tenantUsers            TenantUser[]
   children               Child[]
   employees              Employee[]
+  positions              Position[]
+  subjects               Subject[]
   invoices               Invoice[]
   payments               Payment[]
   ledgerEntries          LedgerEntry[]
@@ -108,23 +114,30 @@ enum TenantUserRole {
 }
 
 model TenantUser {
-  id             String         @id @default(uuid())
-  organizationId String         @map("organization_id")
-  branchId       String?        @map("branch_id")
-  email          String
-  passwordHash   String         @map("password_hash")
-  fullName       String         @map("full_name")
-  role           TenantUserRole @default(NETWORK_ADMIN)
+  id              String         @id @default(uuid())
+  organizationId  String         @map("organization_id")
+  branchId        String?        @map("branch_id")
+  email           String
+  passwordHash    String         @map("password_hash")
+  // Xodim kabineti paroli "Parolni ko'rsatish" funksiyasi uchun qaytarib
+  // olinadigan (AES-256-GCM) shaklda ham saqlanadi — auth esa faqat
+  // `passwordHash` orqali. Faqat admin tomonidan WebAuthn bilan tasdiqlangach
+  // ochiladi (`WebAuthnCredential`). Admin akkountlarida (login/parolni o'zi
+  // biladi) bo'sh qoladi — faqat avtomatik generatsiya qilingan xodim
+  // parollarida to'ldiriladi.
+  passwordEncrypted Bytes?       @map("password_encrypted")
+  fullName        String         @map("full_name")
+  role            TenantUserRole @default(NETWORK_ADMIN)
   // Profil rasmi bazada saqlanadi: fayl xotirasi sozlanmagan va avatar
   // kichik (256x256 gacha siqiladi), shuning uchun alohida saqlash
   // xizmatiga bog'lanishdan ko'ra shu soddaroq va deploy'dan keyin
   // yo'qolmaydi. `avatarUpdatedAt` brauzer keshini yangilash uchun.
-  avatar          Bytes?    @map("avatar")
-  avatarMimeType  String?   @map("avatar_mime_type")
-  avatarUpdatedAt DateTime? @map("avatar_updated_at")
-  isActive       Boolean        @default(true) @map("is_active")
-  createdAt      DateTime       @default(now()) @map("created_at")
-  updatedAt      DateTime       @updatedAt @map("updated_at")
+  avatar          Bytes?         @map("avatar")
+  avatarMimeType  String?        @map("avatar_mime_type")
+  avatarUpdatedAt DateTime?      @map("avatar_updated_at")
+  isActive        Boolean        @default(true) @map("is_active")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
 
   organization      Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   branch            Branch?              @relation(fields: [branchId], references: [id], onDelete: Cascade)
@@ -135,10 +148,33 @@ model TenantUser {
   medicationLogs    MedicationLog[]
   sentNotifications NotificationLog[]    @relation("NotificationSentBy")
   employee          Employee?
+  webauthnCredentials WebAuthnCredential[]
 
   @@unique([organizationId, email])
   @@index([branchId])
   @@map("tenant_users")
+}
+
+/**
+ * Admin qurilmasiga bog'langan passkey (Face ID / Windows Hello / qurilma
+ * PIN kodi). Xodim parolini "ko'rsatish" tugmasi shu bilan tasdiqlanadi —
+ * ro'yxatdan o'tgan qurilmasiz parol hech qachon ochilmaydi.
+ */
+model WebAuthnCredential {
+  id           String    @id @default(uuid())
+  tenantUserId String    @map("tenant_user_id")
+  credentialId String    @unique @map("credential_id")
+  publicKey    Bytes     @map("public_key")
+  counter      BigInt    @default(0)
+  transports   String[]  @default([])
+  deviceName   String?   @map("device_name")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  lastUsedAt   DateTime? @map("last_used_at")
+
+  tenantUser TenantUser @relation(fields: [tenantUserId], references: [id], onDelete: Cascade)
+
+  @@index([tenantUserId])
+  @@map("webauthn_credentials")
 }
 
 model TenantRefreshToken {
@@ -159,13 +195,13 @@ model TenantRefreshToken {
 }
 
 model Branch {
-  id             String   @id @default(uuid())
-  organizationId String   @map("organization_id")
-  name           String
-  slug           String
-  address        String?
-  timezone       String   @default("Asia/Tashkent")
-  currency       String   @default("UZS")
+  id              String    @id @default(uuid())
+  organizationId  String    @map("organization_id")
+  name            String
+  slug            String
+  address         String?
+  timezone        String    @default("Asia/Tashkent")
+  currency        String    @default("UZS")
   // Filial belgisi (logotip). TenantUser avatari bilan bir xil yondashuv:
   // rasm 256x256 gacha kichraytiriladi va bevosita bazada saqlanadi.
   // Blob har bir filial so'roviga tushib ketmasligi uchun Prisma mijozida
@@ -173,8 +209,8 @@ model Branch {
   avatar          Bytes?    @map("avatar")
   avatarMimeType  String?   @map("avatar_mime_type")
   avatarUpdatedAt DateTime? @map("avatar_updated_at")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
   organization           Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   tenantUsers            TenantUser[]
@@ -244,15 +280,15 @@ enum ChildStatus {
 }
 
 model Child {
-  id             String @id @default(uuid())
-  organizationId String @map("organization_id")
+  id               String      @id @default(uuid())
+  organizationId   String      @map("organization_id")
   // Xodimlar va ota-onalar og'zaki ishlatadigan qisqa raqam ("id12345").
   // Tashkilot ichida unikal, UUID esa ichki identifikator bo'lib qoladi.
-  publicId  Int    @map("public_id")
-  branchId  String @map("branch_id")
-  groupId   String? @map("group_id")
-  firstName String @map("first_name")
-  lastName  String @map("last_name")
+  publicId         Int         @map("public_id")
+  branchId         String      @map("branch_id")
+  groupId          String?     @map("group_id")
+  firstName        String      @map("first_name")
+  lastName         String      @map("last_name")
   // Familiya + ism birlashmasi. Ikki qismdan hosil qilinadi, lekin ustun
   // sifatida saqlanadi: qidiruv, eksport, hisob-faktura va davomat
   // ro'yxatlari bola nomini shu yagona maydondan oladi.
@@ -382,14 +418,27 @@ model GroupTeacher {
 }
 
 model Employee {
-  id             String   @id @default(uuid())
-  organizationId String   @map("organization_id")
-  branchId       String   @map("branch_id")
-  fullName       String   @map("full_name")
-  position       String
-  isActive       Boolean  @default(true) @map("is_active")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id              String    @id @default(uuid())
+  organizationId  String    @map("organization_id")
+  branchId        String    @map("branch_id")
+  firstName       String    @map("first_name")
+  lastName        String    @map("last_name")
+  // Familiya + ism birlashmasi. Bolalardagi kabi ikki qismdan hosil qilinadi,
+  // lekin ustun sifatida saqlanadi — ro'yxatlar va eksportlar shundan oladi.
+  fullName        String    @map("full_name")
+  phone           String?
+  position        String
+  // Faqat "Fan o'qituvchisi" lavozimi uchun to'ldiriladi — qaysi fanlarni
+  // o'qitishini belgilaydi. Boshqa lavozimlarda bo'sh massiv.
+  subjects        String[]  @default([])
+  isActive        Boolean   @default(true) @map("is_active")
+  // Xodim surati. Bolalar/filial/foydalanuvchi rasmlari bilan bir xil
+  // yondashuv: brauzerda kichraytirilib, bevosita bazada saqlanadi.
+  avatar          Bytes?    @map("avatar")
+  avatarMimeType  String?   @map("avatar_mime_type")
+  avatarUpdatedAt DateTime? @map("avatar_updated_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
   // Xodimning kabineti (login). Hamma xodimga ham kerak emas — oshpaz yoki
   // farrosh tizimga kirmaydi, shuning uchun bog'lanish ixtiyoriy.
@@ -406,6 +455,44 @@ model Employee {
 
   @@index([organizationId, branchId])
   @@map("employees")
+}
+
+/**
+ * Tashkilot bo'ylab qayta ishlatiladigan lavozimlar katalogi. Yangi tashkilot
+ * ochilganda odatiy to'plam (tarbiyachi, kassir, oshpaz va h.k.) avtomatik
+ * yaratiladi; xodim qo'shishda ro'yxatda yo'q lavozim kiritilsa, shu yerga
+ * qo'shilib, keyingi safar ham tanlash mumkin bo'ladi.
+ */
+model Position {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  name           String
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@map("positions")
+}
+
+/**
+ * Tashkilot bo'ylab qayta ishlatiladigan fanlar katalogi — Position bilan
+ * bir xil andoza. Yangi tashkilot ochilganda odatiy to'plam avtomatik
+ * yaratiladi; "Fan o'qituvchisi" uchun fan tanlashda ro'yxatda yo'q fan
+ * kiritilsa, shu yerga qo'shilib, keyingi safar ham tanlash mumkin bo'ladi.
+ */
+model Subject {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  name           String
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@map("subjects")
 }
 
 enum EmployeeAttendanceStatus {

@@ -45,7 +45,7 @@ export function Segmented<T extends string>({
       {/* Sirg'aluvchi indikator — tanlangan bandning ostiga suriladi */}
       <span
         aria-hidden
-        className="absolute inset-y-1 rounded-full bg-[var(--color-surface)] shadow-[var(--shadow-card)] transition-[left] duration-300 ease-[var(--ease-ios)] motion-reduce:transition-none"
+        className="absolute inset-y-1 rounded-full bg-[var(--color-primary)] shadow-[var(--shadow-card)] transition-[left] duration-300 ease-[var(--ease-ios)] motion-reduce:transition-none"
         style={{
           width: `calc((100% - 0.5rem) / ${options.length})`,
           left: `calc(0.25rem + (100% - 0.5rem) / ${options.length} * ${activeIndex})`,
@@ -62,7 +62,9 @@ export function Segmented<T extends string>({
             onClick={() => onChange(option.value)}
             className={clsx(
               "relative z-10 flex-1 cursor-pointer whitespace-nowrap rounded-full px-4 py-1.5 text-[13px] font-medium transition-colors duration-200",
-              active ? "text-[var(--color-text)]" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
+              active
+                ? "text-[var(--color-primary-contrast)]"
+                : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
             )}
           >
             {option.label}

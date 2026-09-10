@@ -31,7 +31,7 @@ export function Modal({ open, onClose, title, children, widthClassName = "max-w-
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={title}>
       {/* Xiralashgan fon — ostidagi sahifa yo'qolmaydi, faqat orqaga chekinadi */}
-      <div className="animate-overlay-in absolute inset-0 bg-black/25 backdrop-blur-[20px]" onClick={onClose} />
+      <div className="animate-overlay-in absolute inset-0 bg-black/3 backdrop-blur-[7px]" onClick={onClose} />
       <div
         className={`animate-sheet-in relative w-full ${widthClassName} max-h-[90vh] overflow-y-auto scrollbar-thin rounded-[var(--radius-2xl)] bg-[var(--color-surface)] shadow-[var(--shadow-modal)]`}
       >
