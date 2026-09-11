@@ -9,6 +9,7 @@ import { PARENT_API_URL, parentApi } from "@/lib/parent-api";
 import type { ParentAccount, ParentAttendanceStrip, ParentChild, ParentDay } from "@/lib/types";
 import { initials } from "@/components/ui/avatar";
 import styles from "../parent.module.css";
+import { CardFx } from "./card-fx";
 
 const WEEKDAY = ["Yak", "Du", "Se", "Cho", "Pay", "Ju", "Sha"];
 /** Kalendar ustunlari — hafta dushanbadan boshlanadi */
@@ -140,6 +141,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
         {/* Bola kartochkasi */}
         {child && (
           <section className={`${styles.pop} ${styles.childCard} mt-5 rounded-[var(--p-radius)] p-5 shadow-[var(--p-shadow)]`}>
+            <CardFx rainbow />
             <div className="flex items-center gap-4">
               <div className={styles.float}>
                 {child.avatarUpdatedAt ? (

@@ -204,35 +204,178 @@
 /* ---------------------------------------------------------------------------
  * Bola kartochkasi — kabinetning yuzi
  *
- * Oq to'rtburchak o'rniga iliq bog'cha foni: yuqori o'ng burchakda quyosh
- * yog'dusi, pastda maysa yashilligi, ustidan sezilar-sezilmas konfetti.
- * Hammasi CSS gradientlari — qo'shimcha rasm yuklanmaydi.
+ * Fonning o'zi tinch: iliq krem rangdan oqqa o'tadigan yoyilma. Ranglar va
+ * harakat ustidagi `.cardFx` qatlamidan keladi (card-fx.tsx): u karta bilan
+ * bir xil burchakka kesilgan va matn ostida turadi.
  * ------------------------------------------------------------------------ */
 .childCard {
   position: relative;
   isolation: isolate;
-  background:
-    radial-gradient(85% 70% at 92% -6%, rgba(255, 183, 3, 0.26) 0%, rgba(255, 183, 3, 0) 62%),
-    radial-gradient(70% 60% at 4% 104%, rgba(63, 191, 155, 0.2) 0%, rgba(63, 191, 155, 0) 60%),
-    radial-gradient(60% 55% at 100% 100%, rgba(86, 180, 245, 0.16) 0%, rgba(86, 180, 245, 0) 60%),
-    linear-gradient(168deg, #fffdf8 0%, #ffffff 55%);
-  border: 1px solid rgba(255, 183, 3, 0.16);
+  background: linear-gradient(168deg, #fffbf3 0%, #ffffff 60%);
+  border: 1px solid rgba(255, 183, 3, 0.18);
 }
 
-/* Konfetti: uchta rangdagi mayda nuqtalar, faqat yuqori qismda */
-.childCard::before {
-  content: "";
+/* ---------- Karta orqasidagi jonli osmon ---------- */
+.cardFx {
   position: absolute;
   inset: 0;
   z-index: -1;
+  overflow: hidden;
   border-radius: inherit;
-  background-image:
-    radial-gradient(circle, rgba(255, 122, 102, 0.5) 42%, transparent 44%),
-    radial-gradient(circle, rgba(86, 180, 245, 0.45) 42%, transparent 44%),
-    radial-gradient(circle, rgba(167, 139, 250, 0.42) 42%, transparent 44%);
-  background-size: 6px 6px, 5px 5px, 5px 5px;
-  /* O'ng tomonda — chapda bola rasmi turadi, u yerga tushsa ko'rinmaydi */
-  background-position: right 26px top 18px, right 14px top 46px, right 44px top 34px;
-  background-repeat: no-repeat;
+  pointer-events: none;
+  /* Ko'tariluvchi narsalar karta balandligini `cqh` orqali biladi */
+  container-type: size;
+}
+
+/* Nafas olayotgan rangli yog'dular — blur emas, radial gradient: telefonda yengil */
+.blobFx {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--c) 0%, transparent 68%);
+  animation: pBlob var(--d, 16s) ease-in-out infinite alternate;
+  animation-delay: var(--delay, 0s);
+}
+@keyframes pBlob {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(-22px, 16px, 0) scale(1.14); }
+  100% { transform: translate3d(16px, -14px, 0) scale(0.94); }
+}
+
+/* Quyosh: o'ng yuqori burchakdan mo'ralaydi, nurlari sekin aylanadi */
+.sunFx {
+  position: absolute;
+  top: -40px;
+  right: -36px;
+  width: 140px;
+  height: 140px;
+  opacity: 0.6;
+}
+.sunRaysFx {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pSpin 70s linear infinite;
+}
+@keyframes pSunBreath {
+  from { transform: scale(1); }
+  to { transform: scale(1.07); }
+}
+.sunDiscFx {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pSunBreath 3.6s ease-in-out infinite alternate;
+}
+
+/* Kamalak: bola rasmi ortida, yuklanganda tashqaridan ichkariga chiziladi */
+.rainbowFx {
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  width: 132px;
+  height: 132px;
+  opacity: 0.6;
+}
+@keyframes pDraw {
+  from { stroke-dasharray: 1; stroke-dashoffset: 1; }
+  to { stroke-dasharray: 1; stroke-dashoffset: 0; }
+}
+.rainbowArcFx {
+  animation: pDraw 1.3s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+/* Bulutchalar — chapdan o'ngga suzadi, kartaning eniga `cqw` orqali moslashadi */
+.cloudFx {
+  position: absolute;
+  top: var(--y);
+  left: 0;
+  width: var(--w);
   opacity: 0.9;
+  filter: drop-shadow(0 2px 3px rgba(120, 90, 70, 0.08));
+  animation: pDriftFx var(--d) linear infinite;
+  animation-delay: var(--delay);
+}
+@keyframes pDriftFx {
+  from { transform: translate3d(-70px, 0, 0); }
+  to { transform: translate3d(calc(100cqw + 24px), 0, 0); }
+}
+
+/*
+ * Ko'tariluvchi narsalar (sharlar, yulduzcha, yurakcha, pufakcha).
+ * Tashqi qatlam pastdan tepaga ko'taradi, ichkisi chapga-o'ngga tebratadi —
+ * ikkalasi qo'shilib, havoda suzayotgandek yo'l chiqadi.
+ */
+.floaterFx {
+  position: absolute;
+  bottom: -32px;
+  left: var(--x);
+  width: var(--s);
+  height: var(--h, var(--s));
+  opacity: 0;
+  animation: pRise var(--d) linear infinite;
+  animation-delay: var(--delay);
+}
+@keyframes pRise {
+  0% { transform: translate3d(0, 0, 0); opacity: 0; }
+  7% { opacity: var(--o, 0.5); }
+  88% { opacity: var(--o, 0.5); }
+  100% { transform: translate3d(0, calc(-100cqh - 64px), 0); opacity: 0; }
+}
+.swayFx {
+  display: block;
+  width: 100%;
+  height: 100%;
+  animation: pSway var(--sd, 3s) ease-in-out infinite alternate;
+  animation-delay: var(--delay);
+}
+@keyframes pSway {
+  from { transform: translateX(calc(var(--sway, 10px) * -1)) rotate(calc(var(--spin, 0deg) * -1)); }
+  to { transform: translateX(var(--sway, 10px)) rotate(var(--spin, 0deg)); }
+}
+
+/* Uchqunlar — miltillab yonib-o'chadi */
+.sparkleFx {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: 14px;
+  height: 14px;
+  opacity: 0;
+  transform-origin: center;
+  animation: pTwinkleFx var(--d, 3s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
+@keyframes pTwinkleFx {
+  0%, 100% { opacity: 0; transform: scale(0.3) rotate(0deg); }
+  50% { opacity: 0.95; transform: scale(1) rotate(35deg); }
+}
+
+/* Yaltiroq: har 11 soniyada bir marta karta bo'ylab o'tadigan yorug' tasma */
+.shineFx {
+  position: absolute;
+  inset: -30% -60%;
+  background: linear-gradient(100deg, transparent 44%, rgba(255, 255, 255, 0.55) 50%, transparent 56%);
+  transform: translate3d(-40%, 0, 0);
+  animation: pShineFx 11s ease-in-out infinite;
+  animation-delay: 2s;
+}
+@keyframes pShineFx {
+  0%, 72% { transform: translate3d(-40%, 0, 0); }
+  100% { transform: translate3d(40%, 0, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blobFx,
+  .sunRaysFx,
+  .sunDiscFx,
+  .rainbowArcFx,
+  .cloudFx,
+  .floaterFx,
+  .swayFx,
+  .sparkleFx,
+  .shineFx {
+    animation: none;
+  }
+  /* Harakatsiz holatda ham ko'rinib tursin: uchqunlar yonib, bulutlar joyida */
+  .sparkleFx { opacity: 0.7; transform: scale(0.8); }
+  .cloudFx { transform: translate3d(30%, 0, 0); }
+  .shineFx { display: none; }
 }
