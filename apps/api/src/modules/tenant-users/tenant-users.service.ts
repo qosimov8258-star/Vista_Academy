@@ -3,6 +3,7 @@ import { Prisma, TenantUserRole } from "@prisma/client";
 import * as argon2 from "argon2";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantAuthenticatedUser } from "../iam/tenant-auth.types";
+import { AuditLogService } from "../audit-log/audit-log.service";
 import { CreateTenantUserDto, SuperAdminCreatableRole } from "./dto/create-tenant-user.dto";
 import { SetTenantUserStatusDto, UpdateTenantUserDto } from "./dto/update-tenant-user.dto";
 
@@ -14,19 +15,24 @@ const SAFE_SELECT = {
   branchId: true,
   isActive: true,
   createdAt: true,
+  lastLoginAt: true,
   branch: { select: { id: true, name: true, slug: true } },
 } satisfies Prisma.TenantUserSelect;
 
 @Injectable()
 export class TenantUsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditLog: AuditLogService,
+  ) {}
 
   async create(caller: TenantAuthenticatedUser, dto: CreateTenantUserDto) {
     const { role: targetRole, branchId } = await this.resolveTarget(caller, dto.branchId, dto.role);
 
     const passwordHash = await argon2.hash(dto.password);
+    let created;
     try {
-      return await this.prisma.tenantUser.create({
+      created = await this.prisma.tenantUser.create({
         data: {
           organizationId: caller.organizationId,
           branchId,
@@ -43,6 +49,14 @@ export class TenantUsersService {
       }
       throw err;
     }
+    await this.auditLog.logFromUser(caller, {
+      action: "user.create",
+      entityType: "TenantUser",
+      entityId: created.id,
+      branchId,
+      summary: `${created.fullName} (${created.login}) uchun ${targetRole} huquqi bilan hisob yaratildi`,
+    });
+    return created;
   }
 
   findAll(caller: TenantAuthenticatedUser) {
@@ -89,6 +103,19 @@ export class TenantUsersService {
     if (dto.password) {
       await this.revokeSessions(id);
     }
+
+    const changes = [
+      dto.fullName ? "ism" : null,
+      dto.role && caller.role === "NETWORK_ADMIN" ? `rol -> ${dto.role}` : null,
+      dto.password ? "parol" : null,
+    ].filter(Boolean);
+    await this.auditLog.logFromUser(caller, {
+      action: "user.update",
+      entityType: "TenantUser",
+      entityId: id,
+      branchId: target.branchId,
+      summary: `${updated.fullName} hisobi tahrirlandi (${changes.join(", ") || "o'zgarishsiz"})`,
+    });
     return updated;
   }
 
@@ -98,7 +125,7 @@ export class TenantUsersService {
    * shuning uchun qo'lidagi amaldagi token ham ishlamay qoladi.
    */
   async setStatus(caller: TenantAuthenticatedUser, id: string, dto: SetTenantUserStatusDto) {
-    await this.assertManageable(caller, id);
+    const target = await this.assertManageable(caller, id);
     const updated = await this.prisma.tenantUser.update({
       where: { id },
       data: { isActive: dto.isActive },
@@ -107,6 +134,13 @@ export class TenantUsersService {
     if (!dto.isActive) {
       await this.revokeSessions(id);
     }
+    await this.auditLog.logFromUser(caller, {
+      action: dto.isActive ? "user.activate" : "user.block",
+      entityType: "TenantUser",
+      entityId: id,
+      branchId: target.branchId,
+      summary: `${updated.fullName} hisobi ${dto.isActive ? "blokdan chiqarildi" : "bloklandi"}`,
+    });
     return updated;
   }
 
@@ -115,8 +149,15 @@ export class TenantUsersService {
    * `onDelete: SetNull`, ya'ni xodim ro'yxatda qoladi, faqat kabinetsiz.
    */
   async remove(caller: TenantAuthenticatedUser, id: string) {
-    await this.assertManageable(caller, id);
-    await this.prisma.tenantUser.delete({ where: { id } });
+    const target = await this.assertManageable(caller, id);
+    const deleted = await this.prisma.tenantUser.delete({ where: { id }, select: SAFE_SELECT });
+    await this.auditLog.logFromUser(caller, {
+      action: "user.delete",
+      entityType: "TenantUser",
+      entityId: id,
+      branchId: target.branchId,
+      summary: `${deleted.fullName} (${deleted.login}) hisobi o'chirildi`,
+    });
     return { id };
   }
 

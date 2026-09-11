@@ -80,6 +80,8 @@ export function AddGuardianModal({
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["child-guardians", slug, childId] });
+      // Ro'yxatdagi ustun asosiy vasiyni ko'rsatadi — shu ham yangilansin.
+      queryClient.invalidateQueries({ queryKey: ["children", slug] });
       reset();
       setSelectedGuardian(null);
       setSearch("");

@@ -11,6 +11,8 @@ import { JwtService } from "@nestjs/jwt";
 import { PrismaService } from "../../database/prisma.service";
 import { DEFAULT_POSITIONS } from "../../common/constants/default-positions";
 import { DEFAULT_SUBJECTS } from "../../common/constants/default-subjects";
+import { TenantAuthenticatedUser } from "../iam/tenant-auth.types";
+import { AuditLogService } from "../audit-log/audit-log.service";
 import { encryptSecret, decryptSecret } from "../../common/crypto/reversible-secret";
 import { verifyPlatformRevealToken } from "../platform-webauthn/platform-reveal-token";
 import { CreateOrganizationDto } from "./dto/create-organization.dto";
@@ -29,6 +31,7 @@ const MAX_BRANCH_AVATAR_BYTES = 300 * 1024;
 export class OrganizationsService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly auditLog: AuditLogService,
     private readonly jwt: JwtService,
   ) {}
 
@@ -321,12 +324,23 @@ export class OrganizationsService {
     });
   }
 
-  async updateBranch(organizationId: string, branchId: string, dto: UpdateBranchDto) {
-    await this.getBranch(organizationId, branchId);
+  async updateBranch(caller: TenantAuthenticatedUser, branchId: string, dto: UpdateBranchDto) {
+    await this.getBranch(caller.organizationId, branchId);
+    let updated;
     try {
-      return await this.prisma.branch.update({
+      updated = await this.prisma.branch.update({
         where: { id: branchId },
-        data: dto,
+        // Har bir maydon alohida: `data: dto` bilan spread qilish xavfli —
+        // `defaultTuitionAmount`dagi `@Type(() => Number)` `null`ni `0`ga
+        // aylantirib yuborishi mumkin edi, ya'ni maydonni tozalash o'rniga
+        // uni "0 so'm"ga o'rnatib qo'yardi.
+        data: {
+          name: dto.name,
+          address: dto.address,
+          openTime: dto.openTime,
+          closeTime: dto.closeTime,
+          defaultTuitionAmount: dto.defaultTuitionAmount === null ? null : dto.defaultTuitionAmount,
+        },
       });
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
@@ -334,6 +348,14 @@ export class OrganizationsService {
       }
       throw err;
     }
+    await this.auditLog.logFromUser(caller, {
+      action: "branch.update",
+      entityType: "Branch",
+      entityId: branchId,
+      branchId,
+      summary: `"${updated.name}" filiali ma'lumotlari tahrirlandi`,
+    });
+    return updated;
   }
 
   private async generateUniqueSlug(name: string): Promise<string> {

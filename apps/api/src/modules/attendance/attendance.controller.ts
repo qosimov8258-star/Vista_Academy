@@ -7,6 +7,7 @@ import { TenantAuthenticatedUser, toTenantScope } from "../iam/tenant-auth.types
 import { AttendanceService } from "./attendance.service";
 import { MarkAttendanceDto } from "./dto/mark-attendance.dto";
 import { AttendanceQueryDto } from "./dto/attendance-query.dto";
+import { AttendanceRangeQueryDto } from "./dto/attendance-range-query.dto";
 
 @ApiBearerAuth()
 @ApiTags("Tenant Attendance")
@@ -19,6 +20,18 @@ export class AttendanceController {
   @Get()
   findByBranchAndDate(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query() query: AttendanceQueryDto) {
     return this.attendanceService.findByBranchAndDate(toTenantScope(user), query);
+  }
+
+  /** So'nggi kunlar bo'yicha kunlik statistika (filial darajasida). */
+  @Get("summary")
+  rangeSummary(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query() query: AttendanceRangeQueryDto) {
+    return this.attendanceService.rangeSummary(toTenantScope(user), query);
+  }
+
+  /** Ketma-ket 3+ kun kelmagan yoki to'lov muddati o'tgan-va-bugun kelmagan bolalar. */
+  @Get("chronic-absences")
+  chronicAbsences(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query("branchId") branchId: string | undefined) {
+    return this.attendanceService.chronicAbsenceFlags(toTenantScope(user), branchId);
   }
 
   @Post()

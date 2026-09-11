@@ -43,7 +43,7 @@ export class EmployeesController {
 
   @Post()
   create(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: CreateEmployeeDto) {
-    return this.employeesService.create(toTenantScope(user), dto);
+    return this.employeesService.create(user, dto);
   }
 
   @Post(":id/account")
@@ -52,7 +52,7 @@ export class EmployeesController {
     @Param("id") id: string,
     @Body() dto: EmployeeAccountDto,
   ) {
-    return this.employeesService.openAccount(toTenantScope(user), id, dto);
+    return this.employeesService.openAccount(user, id, dto);
   }
 
   @Patch(":id/groups")
@@ -67,7 +67,7 @@ export class EmployeesController {
   /** Xodimga yangi (avtomatik generatsiya qilingan) parol beradi — bir martalik javobda qaytadi. */
   @Post(":id/password/regenerate")
   regeneratePassword(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string) {
-    return this.employeesService.regeneratePassword(toTenantScope(user), id);
+    return this.employeesService.regeneratePassword(user, id);
   }
 
   /**
@@ -146,7 +146,7 @@ export class EmployeesController {
     if (!revealToken) {
       throw new BadRequestException("Reveal token kerak");
     }
-    return this.employeesService.remove(toTenantScope(user), id, revealToken);
+    return this.employeesService.remove(user, id, revealToken);
   }
 
   /**

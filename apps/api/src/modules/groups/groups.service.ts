@@ -1,12 +1,22 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
-import { TenantScope, requireOperationalScope } from "../iam/tenant-auth.types";
+import { TenantAuthenticatedUser, TenantScope, requireOperationalScope, toTenantScope } from "../iam/tenant-auth.types";
 import { resolveTeacherGroupIds } from "../iam/teacher-scope";
+import { AuditLogService } from "../audit-log/audit-log.service";
 import { CreateGroupDto } from "./dto/create-group.dto";
+import { UpdateGroupDto } from "./dto/update-group.dto";
 import { GroupQueryDto } from "./dto/group-query.dto";
 import { GroupAttendanceQueryDto } from "./dto/group-attendance-query.dto";
 import { GroupDayQueryDto } from "./dto/group-day-query.dto";
+
+/**
+ * Guruhning "band o'rinlari" har doim faqat FAOL bolalar bilan
+ * hisoblanadi — nofaol/karantindagi bola sig'imni band qilmaydi.
+ * `_count.children` shu filtr bilan qaytadi (masalan "12/15" ko'rinishida
+ * ko'rsatilganda 12 — faqat faol bolalar soni).
+ */
+const ACTIVE_CHILDREN_COUNT_SELECT = { select: { children: { where: { status: "ACTIVE" as const } } } };
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 /** Sana oralig'i cheksiz bo'lib ketmasin — bir yildan uzunini so'ramaymiz. */
@@ -33,12 +43,17 @@ function addDays(value: Date, days: number): Date {
 
 @Injectable()
 export class GroupsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditLog: AuditLogService,
+  ) {}
 
-  async create(scope: TenantScope, dto: CreateGroupDto) {
+  async create(caller: TenantAuthenticatedUser, dto: CreateGroupDto) {
+    const scope = toTenantScope(caller);
     const branchId = requireOperationalScope(scope);
+    let created;
     try {
-      return await this.prisma.group.create({
+      created = await this.prisma.group.create({
         data: { branchId, name: dto.name, capacity: dto.capacity },
       });
     } catch (err) {
@@ -47,6 +62,14 @@ export class GroupsService {
       }
       throw err;
     }
+    await this.auditLog.logFromUser(caller, {
+      action: "group.create",
+      entityType: "Group",
+      entityId: created.id,
+      branchId,
+      summary: `"${created.name}" guruhi yaratildi (sig'im ${created.capacity})`,
+    });
+    return created;
   }
 
   async findAll(scope: TenantScope, query: GroupQueryDto) {
@@ -59,7 +82,7 @@ export class GroupsService {
     return this.prisma.group.findMany({
       where,
       include: {
-        _count: { select: { children: true } },
+        _count: ACTIVE_CHILDREN_COUNT_SELECT,
         // Guruh kartochkasida kim tarbiyachi ekani ko'rinib tursin
         teachers: { include: { employee: { select: { id: true, fullName: true, position: true } } } },
       },
@@ -71,8 +94,44 @@ export class GroupsService {
     await this.assertAccess(scope, id);
     return this.prisma.group.findUniqueOrThrow({
       where: { id },
-      include: { _count: { select: { children: true } } },
+      include: { _count: ACTIVE_CHILDREN_COUNT_SELECT },
     });
+  }
+
+  async update(caller: TenantAuthenticatedUser, id: string, dto: UpdateGroupDto) {
+    const scope = toTenantScope(caller);
+    const group = await this.assertAccess(scope, id);
+    if (dto.capacity !== undefined) {
+      // Faqat faol bolalar joy band qiladi — nofaol/karantindagi bola
+      // sig'imni kamaytirishga to'sqinlik qilmasligi kerak.
+      const enrolled = await this.prisma.child.count({ where: { groupId: id, status: "ACTIVE" } });
+      if (dto.capacity < enrolled) {
+        throw new BadRequestException(
+          `Sig'imni ${enrolled} dan kam qilib bo'lmaydi — guruhda hozir shuncha faol bola bor`,
+        );
+      }
+    }
+    let updated;
+    try {
+      updated = await this.prisma.group.update({
+        where: { id },
+        data: { name: dto.name, capacity: dto.capacity, status: dto.status },
+        include: { _count: ACTIVE_CHILDREN_COUNT_SELECT },
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+        throw new ConflictException("Bu nom bilan guruh allaqachon mavjud");
+      }
+      throw err;
+    }
+    await this.auditLog.logFromUser(caller, {
+      action: "group.update",
+      entityType: "Group",
+      entityId: id,
+      branchId: group.branchId,
+      summary: `"${updated.name}" guruhi tahrirlandi`,
+    });
+    return updated;
   }
 
   /**
@@ -257,6 +316,43 @@ export class GroupsService {
       throw new ForbiddenException("Bu guruh sizga biriktirilmagan");
     }
     return group;
+  }
+
+  /** Bosh sahifadagi "guruh to'lganligi" vidjeti uchun — eng to'lganlaridan boshlab. */
+  async capacityOverview(scope: TenantScope) {
+    const branchId = scope.branchId;
+    if (!branchId) {
+      return { totalCapacity: 0, totalActive: 0, groups: [] };
+    }
+    const groups = await this.prisma.group.findMany({
+      where: { branchId, status: "ACTIVE" },
+      select: { id: true, name: true, capacity: true },
+    });
+    const counts = groups.length
+      ? await this.prisma.child.groupBy({
+          by: ["groupId"],
+          where: { branchId, status: "ACTIVE", groupId: { in: groups.map((g) => g.id) } },
+          _count: { _all: true },
+        })
+      : [];
+    const countByGroup = new Map(counts.map((c) => [c.groupId, c._count._all]));
+    const items = groups
+      .map((g) => {
+        const active = countByGroup.get(g.id) ?? 0;
+        return {
+          id: g.id,
+          name: g.name,
+          capacity: g.capacity,
+          active,
+          percent: g.capacity > 0 ? Math.round((active / g.capacity) * 100) : 0,
+        };
+      })
+      .sort((a, b) => b.percent - a.percent);
+    return {
+      totalCapacity: groups.reduce((sum, g) => sum + g.capacity, 0),
+      totalActive: items.reduce((sum, g) => sum + g.active, 0),
+      groups: items,
+    };
   }
 
   async countActive(scope: TenantScope) {

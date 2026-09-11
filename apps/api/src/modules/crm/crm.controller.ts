@@ -10,6 +10,8 @@ import { LeadQueryDto } from "./dto/lead-query.dto";
 import { UpdateLeadStageDto } from "./dto/update-lead-stage.dto";
 import { CreateLeadActivityDto } from "./dto/create-lead-activity.dto";
 import { ConvertLeadDto } from "./dto/convert-lead.dto";
+import { AssignLeadDto } from "./dto/assign-lead.dto";
+import { UpdateLeadDetailsDto } from "./dto/update-lead-details.dto";
 
 @ApiBearerAuth()
 @ApiTags("Tenant CRM")
@@ -25,8 +27,8 @@ export class CrmController {
   }
 
   @Get("stats")
-  stats(@CurrentTenantUser() user: TenantAuthenticatedUser) {
-    return this.crmService.stats(toTenantScope(user));
+  stats(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query("branchId") branchId?: string) {
+    return this.crmService.stats(toTenantScope(user), branchId);
   }
 
   @Post()
@@ -42,6 +44,20 @@ export class CrmController {
   @Patch(":id/stage")
   updateStage(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string, @Body() dto: UpdateLeadStageDto) {
     return this.crmService.updateStage(user, id, dto);
+  }
+
+  @Patch(":id/assign")
+  assign(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string, @Body() dto: AssignLeadDto) {
+    return this.crmService.assign(user, id, dto);
+  }
+
+  @Patch(":id/details")
+  updateDetails(
+    @CurrentTenantUser() user: TenantAuthenticatedUser,
+    @Param("id") id: string,
+    @Body() dto: UpdateLeadDetailsDto,
+  ) {
+    return this.crmService.updateDetails(toTenantScope(user), id, dto);
   }
 
   @Post(":id/activities")

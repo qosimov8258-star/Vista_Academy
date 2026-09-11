@@ -22,6 +22,8 @@ import { SubjectsModule } from "./modules/subjects/subjects.module";
 import { AttendanceModule } from "./modules/attendance/attendance.module";
 import { StaffAttendanceModule } from "./modules/staff-attendance/staff-attendance.module";
 import { NutritionModule } from "./modules/nutrition/nutrition.module";
+import { DishesModule } from "./modules/dishes/dishes.module";
+import { AuditLogModule } from "./modules/audit-log/audit-log.module";
 import { DailyReportsModule } from "./modules/daily-reports/daily-reports.module";
 import { RoomsModule } from "./modules/rooms/rooms.module";
 import { LessonScheduleModule } from "./modules/lesson-schedule/lesson-schedule.module";
@@ -62,6 +64,8 @@ import { ParentModule } from "./modules/parent/parent.module";
     AttendanceModule,
     StaffAttendanceModule,
     NutritionModule,
+    DishesModule,
+    AuditLogModule,
     DailyReportsModule,
     RoomsModule,
     LessonScheduleModule,

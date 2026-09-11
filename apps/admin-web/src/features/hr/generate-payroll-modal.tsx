@@ -29,6 +29,7 @@ const schema = z.object({
   period: z.string().regex(/^\d{4}-\d{2}$/, "YYYY-MM formatida"),
   bonusAmount: z.coerce.number().min(0).optional(),
   penaltyAmount: z.coerce.number().min(0).optional(),
+  deductionAmount: z.coerce.number().min(0).optional(),
   note: z.string().optional(),
 });
 
@@ -39,8 +40,9 @@ export function GeneratePayrollModal({ open, onClose, slug }: { open: boolean; o
   const [serverError, setServerError] = useState<string | null>(null);
 
   const { data: employees } = useQuery({
-    queryKey: ["employees", slug],
-    queryFn: () => api.get<Employee[]>("/app/employees"),
+    // Ishdan bo'shagan xodimga oylik hisoblanmasin.
+    queryKey: ["employees", slug, "active"],
+    queryFn: () => api.get<Employee[]>("/app/employees?isActive=true"),
     enabled: open,
   });
 
@@ -51,14 +53,14 @@ export function GeneratePayrollModal({ open, onClose, slug }: { open: boolean; o
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { employeeId: "", period: "", bonusAmount: 0, penaltyAmount: 0, note: "" },
+    defaultValues: { employeeId: "", period: "", bonusAmount: 0, penaltyAmount: 0, deductionAmount: 0, note: "" },
   });
 
   // Seed the current period only after mount (client-side) to avoid a
   // server/client hydration mismatch on the initial render.
   useEffect(() => {
     if (open) {
-      reset({ employeeId: "", period: currentPeriodString(), bonusAmount: 0, penaltyAmount: 0, note: "" });
+      reset({ employeeId: "", period: currentPeriodString(), bonusAmount: 0, penaltyAmount: 0, deductionAmount: 0, note: "" });
       setServerError(null);
     }
   }, [open, reset]);
@@ -69,6 +71,7 @@ export function GeneratePayrollModal({ open, onClose, slug }: { open: boolean; o
         ...values,
         bonusAmount: values.bonusAmount || undefined,
         penaltyAmount: values.penaltyAmount || undefined,
+        deductionAmount: values.deductionAmount || undefined,
         note: values.note || undefined,
       }),
     onSuccess: () => {
@@ -115,6 +118,14 @@ export function GeneratePayrollModal({ open, onClose, slug }: { open: boolean; o
             {...register("penaltyAmount")}
           />
         </div>
+        <Input
+          label="Soliq/ushlab qolish (ixtiyoriy)"
+          type="number"
+          placeholder="0"
+          hint="Soliq, sug'urta, avans kabi rasmiy ushlab qolish — jarimadan alohida"
+          error={errors.deductionAmount?.message}
+          {...register("deductionAmount")}
+        />
         <Input label="Izoh (ixtiyoriy)" {...register("note")} />
 
         <div className="flex justify-end gap-2 pt-2">

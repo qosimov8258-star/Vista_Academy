@@ -7,6 +7,7 @@ import { TenantAuthenticatedUser, toTenantScope } from "../iam/tenant-auth.types
 import { StaffAttendanceService } from "./staff-attendance.service";
 import { MarkStaffAttendanceDto } from "./dto/mark-staff-attendance.dto";
 import { StaffAttendanceQueryDto } from "./dto/staff-attendance-query.dto";
+import { StaffAttendanceSummaryQueryDto } from "./dto/staff-attendance-summary-query.dto";
 
 @ApiBearerAuth()
 @ApiTags("Tenant Staff Attendance")
@@ -19,6 +20,15 @@ export class StaffAttendanceController {
   @Get()
   findByBranchAndDate(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query() query: StaffAttendanceQueryDto) {
     return this.staffAttendanceService.findByBranchAndDate(toTenantScope(user), query);
+  }
+
+  /** Oylik jamlanma: har xodim uchun kelgan/kelmagan kunlar soni. */
+  @Get("summary")
+  monthlySummary(
+    @CurrentTenantUser() user: TenantAuthenticatedUser,
+    @Query() query: StaffAttendanceSummaryQueryDto,
+  ) {
+    return this.staffAttendanceService.monthlySummary(toTenantScope(user), query);
   }
 
   @Post()

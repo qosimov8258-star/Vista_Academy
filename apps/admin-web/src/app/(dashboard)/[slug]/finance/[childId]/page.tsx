@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, getPaginated, ApiError } from "@/lib/api";
@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { ArrowLeftIcon, WalletIcon } from "@/components/ui/icons";
 import { formatDateTime, formatMoney } from "@/lib/format";
+import { downloadCsv } from "@/lib/download";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { canWriteMoney } from "@/lib/permissions";
 
@@ -36,6 +37,20 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
   const canWrite = canWriteMoney(user?.role);
   const { branchSlug } = useBranchContext(slug);
   const financeHref = branchSlug ? `/${slug}/${branchSlug}/finance` : `/${slug}/finance`;
+  const [downloadingReceiptId, setDownloadingReceiptId] = useState<string | null>(null);
+  const [receiptError, setReceiptError] = useState<string | null>(null);
+
+  const handleReceipt = async (paymentId: string) => {
+    setDownloadingReceiptId(paymentId);
+    setReceiptError(null);
+    try {
+      await downloadCsv(`/app/exports/payments/${paymentId}/pdf`, `tolov-kvitansiyasi-${paymentId}.pdf`);
+    } catch {
+      setReceiptError("Kvitansiya yuklab bo'lmadi — qayta urinib ko'ring");
+    } finally {
+      setDownloadingReceiptId(null);
+    }
+  };
 
   const childQuery = useQuery({
     queryKey: ["child", slug, childId],
@@ -84,6 +99,12 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
         <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">Moliyaviy tarix</p>
       </div>
 
+      {receiptError && (
+        <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
+          {receiptError}
+        </div>
+      )}
+
       <Card className="overflow-hidden">
         <CardHeader>
           <CardTitle>To&apos;lovlar</CardTitle>
@@ -125,6 +146,14 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
                     <Badge tone={payment.status === "COMPLETED" ? "success" : "neutral"}>
                       {payment.status === "COMPLETED" ? "Amalda" : "Qaytarilgan"}
                     </Badge>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      loading={downloadingReceiptId === payment.id}
+                      onClick={() => handleReceipt(payment.id)}
+                    >
+                      Kvitansiya
+                    </Button>
                     {canWrite && payment.status === "COMPLETED" && (
                       <Button
                         size="sm"

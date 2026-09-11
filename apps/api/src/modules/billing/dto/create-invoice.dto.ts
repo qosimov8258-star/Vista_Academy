@@ -24,9 +24,4 @@ export class CreateInvoiceDto {
   @ApiProperty({ example: "2026-09-10" })
   @IsDateString()
   dueDate!: string;
-
-  @ApiPropertyOptional({ default: "UZS" })
-  @IsOptional()
-  @IsString()
-  currency?: string;
 }

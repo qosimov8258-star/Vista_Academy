@@ -35,6 +35,8 @@ export const SOURCE_LABEL: Record<LeadSource, string> = {
   OTHER: "Boshqa",
 };
 
+export const SOURCE_ORDER: LeadSource[] = ["WEBSITE", "REFERRAL", "SOCIAL_MEDIA", "WALK_IN", "OTHER"];
+
 export const ACTIVITY_LABEL: Record<LeadActivityType, string> = {
   CALL: "Qo'ng'iroq",
   MESSAGE: "Xabar",

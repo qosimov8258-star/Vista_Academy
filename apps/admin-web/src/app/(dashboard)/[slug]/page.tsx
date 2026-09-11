@@ -356,6 +356,128 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
             </section>
           )}
 
+          {!isNetworkAdmin && !teacher && summary && (
+            <section>
+              <SectionTitle>Diqqat talab qiladi</SectionTitle>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                <Card className="p-4">
+                  <p className="text-[13px] font-medium text-[var(--color-text-muted)]">Bugun belgilanmagan</p>
+                  {summary.attention.unmarkedAttendance.length === 0 &&
+                  summary.attention.missingDailyReport.length === 0 ? (
+                    <p className="mt-2 text-[13.5px] text-[var(--color-success)]">Hammasi belgilangan</p>
+                  ) : (
+                    <div className="mt-2 space-y-2">
+                      {summary.attention.unmarkedAttendance.length > 0 && (
+                        <p className="text-[12.5px] text-[var(--color-text-muted)]">
+                          Davomat:{" "}
+                          <span className="font-medium text-[var(--color-text)]">
+                            {summary.attention.unmarkedAttendance
+                              .slice(0, 3)
+                              .map((c) => c.fullName)
+                              .join(", ")}
+                            {summary.attention.unmarkedAttendance.length > 3 &&
+                              ` +${summary.attention.unmarkedAttendance.length - 3}`}
+                          </span>
+                        </p>
+                      )}
+                      {summary.attention.missingDailyReport.length > 0 && (
+                        <p className="text-[12.5px] text-[var(--color-text-muted)]">
+                          Kundalik hisobot:{" "}
+                          <span className="font-medium text-[var(--color-text)]">
+                            {summary.attention.missingDailyReport
+                              .slice(0, 3)
+                              .map((c) => c.fullName)
+                              .join(", ")}
+                            {summary.attention.missingDailyReport.length > 3 &&
+                              ` +${summary.attention.missingDailyReport.length - 3}`}
+                          </span>
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </Card>
+
+                <Card className="p-4">
+                  <p className="text-[13px] font-medium text-[var(--color-text-muted)]">Vaksinatsiya muddati o&apos;tgan</p>
+                  {summary.attention.overdueVaccinations.length === 0 ? (
+                    <p className="mt-2 text-[13.5px] text-[var(--color-success)]">Yo&apos;q</p>
+                  ) : (
+                    <ul className="mt-2 space-y-1">
+                      {summary.attention.overdueVaccinations.slice(0, 3).map((v) => (
+                        <li key={`${v.childId}-${v.vaccineName}`} className="text-[12.5px] text-[var(--color-text)]">
+                          {v.fullName} <span className="text-[var(--color-text-muted)]">— {v.vaccineName}</span>
+                        </li>
+                      ))}
+                      {summary.attention.overdueVaccinations.length > 3 && (
+                        <li className="text-[12.5px] text-[var(--color-text-muted)]">
+                          +{summary.attention.overdueVaccinations.length - 3} ta
+                        </li>
+                      )}
+                    </ul>
+                  )}
+                </Card>
+
+                <Card className="p-4">
+                  <p className="text-[13px] font-medium text-[var(--color-text-muted)]">Tug&apos;ilgan kunlar (7 kun)</p>
+                  {summary.upcomingBirthdays.length === 0 ? (
+                    <p className="mt-2 text-[13.5px] text-[var(--color-text-muted)]">Yaqin kunlarda yo&apos;q</p>
+                  ) : (
+                    <ul className="mt-2 space-y-1">
+                      {summary.upcomingBirthdays.slice(0, 3).map((b) => (
+                        <li key={b.childId} className="text-[12.5px] text-[var(--color-text)]">
+                          {b.fullName}{" "}
+                          <span className="text-[var(--color-text-muted)]">
+                            — {b.daysUntil === 0 ? "bugun" : `${b.daysUntil} kundan keyin`}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </Card>
+
+                <Card className="p-4">
+                  <p className="text-[13px] font-medium text-[var(--color-text-muted)]">Guruhlar to&apos;lganligi</p>
+                  <p className="mt-1.5 text-[20px] font-semibold leading-none tabular-nums text-[var(--color-text)]">
+                    {summary.groupCapacity.totalCapacity > 0
+                      ? `${Math.round((summary.groupCapacity.totalActive / summary.groupCapacity.totalCapacity) * 100)}%`
+                      : "—"}
+                  </p>
+                  <p className="mt-1 text-[12px] text-[var(--color-text-muted)]">
+                    {summary.groupCapacity.totalActive} / {summary.groupCapacity.totalCapacity}
+                  </p>
+                  {summary.groupCapacity.groups.some((g) => g.percent >= 90) && (
+                    <p className="mt-1.5 text-[12px] text-[var(--color-danger)]">
+                      {summary.groupCapacity.groups.filter((g) => g.percent >= 90).map((g) => g.name).join(", ")} —
+                      to&apos;lib bo&apos;lgan
+                    </p>
+                  )}
+                </Card>
+
+                <Card className="p-4">
+                  <p className="text-[13px] font-medium text-[var(--color-text-muted)]">Eng ko&apos;p qarzdorlar</p>
+                  {summary.topDebtors.length === 0 ? (
+                    <p className="mt-2 text-[13.5px] text-[var(--color-success)]">Qarzdor yo&apos;q</p>
+                  ) : (
+                    <ul className="mt-2 space-y-1">
+                      {summary.topDebtors.slice(0, 3).map((d) => (
+                        <li key={d.childId} className="flex items-center justify-between gap-2 text-[12.5px]">
+                          <span className="truncate text-[var(--color-text)]">{d.fullName}</span>
+                          <span className="shrink-0 tabular-nums text-[var(--color-danger)]">{formatMoney(d.balance)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <Link
+                    href={`/${slug}/finance`}
+                    className="mt-2 inline-block text-[12.5px] font-medium text-[var(--color-primary)] hover:underline"
+                  >
+                    Moliya →
+                  </Link>
+                </Card>
+              </div>
+            </section>
+          )}
+
           {!teacher && (
           <section>
             <SectionTitle>Moliya</SectionTitle>
@@ -365,6 +487,21 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
                 <p className="mt-1.5 text-[26px] font-semibold leading-none tabular-nums text-[var(--color-success)]">
                   {formatMoney(summary?.monthRevenue ?? 0)}
                 </p>
+                {summary && summary.previousMonthRevenue > 0 && (
+                  <p className="mt-1.5 text-[12.5px] text-[var(--color-text-muted)]">
+                    {(() => {
+                      const change = Math.round(
+                        ((summary.monthRevenue - summary.previousMonthRevenue) / summary.previousMonthRevenue) * 100,
+                      );
+                      return (
+                        <span className={change >= 0 ? "text-[var(--color-success)]" : "text-[var(--color-danger)]"}>
+                          {change >= 0 ? "▲" : "▼"} {Math.abs(change)}%
+                        </span>
+                      );
+                    })()}{" "}
+                    o&apos;tgan oyga nisbatan
+                  </p>
+                )}
               </Card>
               <Card className={`p-4 ${debt > 0 ? "border-[var(--color-danger)]/25" : ""}`}>
                 <div className="flex items-start justify-between gap-3">
@@ -378,6 +515,11 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
                 >
                   {formatMoney(debt)}
                 </p>
+                {!isNetworkAdmin && !!summary?.overdueInvoicesCount && (
+                  <p className="mt-1.5 text-[12.5px] text-[var(--color-danger)]">
+                    {summary.overdueInvoicesCount} ta hisob-faktura muddati o&apos;tgan
+                  </p>
+                )}
                 {!isNetworkAdmin && debt > 0 && (
                   <Link
                     href={`/${slug}/finance`}

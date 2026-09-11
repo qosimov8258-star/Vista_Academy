@@ -3,10 +3,10 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { api, ApiError } from "@/lib/api";
-import type { NotificationEventType, NotificationLog } from "@/lib/types";
+import { api, ApiError, getPaginated } from "@/lib/api";
+import type { Child, NotificationEventType, NotificationLog } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Input, Textarea, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,7 @@ const schema = z.object({
     "LEAD_FOLLOW_UP",
     "CUSTOM",
   ]),
+  childId: z.string().optional(),
   recipientName: z.string().min(2, "Qabul qiluvchi ismi kamida 2 belgi"),
   recipientContact: z.string().optional(),
   message: z.string().min(2, "Xabar matni kamida 2 belgi"),
@@ -44,15 +45,32 @@ export function CreateNotificationModal({ open, onClose, slug }: { open: boolean
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
 
+  const childrenQuery = useQuery({
+    queryKey: ["children-for-notification", slug],
+    queryFn: () => getPaginated<Child>("/app/children?limit=200"),
+    enabled: open,
+  });
+
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { eventType: "CUSTOM" },
   });
+
+  const handleChildSelect = (childId: string) => {
+    setValue("childId", childId || undefined);
+    const child = childrenQuery.data?.data.find((c) => c.id === childId);
+    const primaryGuardian = child?.guardians?.[0]?.guardian;
+    if (primaryGuardian) {
+      setValue("recipientName", primaryGuardian.fullName);
+      setValue("recipientContact", primaryGuardian.phone);
+    }
+  };
 
   const mutation = useMutation({
     mutationFn: (values: FormValues) => api.post<NotificationLog>("/app/notifications", values),
@@ -84,6 +102,18 @@ export function CreateNotificationModal({ open, onClose, slug }: { open: boolean
           {eventTypeOptions.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
+            </option>
+          ))}
+        </Select>
+        <Select
+          label="Bola (ixtiyoriy)"
+          defaultValue=""
+          onChange={(e) => handleChildSelect(e.target.value)}
+        >
+          <option value="">Tanlanmagan</option>
+          {childrenQuery.data?.data.map((child) => (
+            <option key={child.id} value={child.id}>
+              {child.fullName}
             </option>
           ))}
         </Select>

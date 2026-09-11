@@ -56,6 +56,8 @@ export function EditGuardianLinkModal({
     mutationFn: (values: FormValues) => api.patch(`/app/child-guardians/${link.id}`, values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["child-guardians", slug, childId] });
+      // Ro'yxatdagi ustun asosiy vasiyni ko'rsatadi — shu ham yangilansin.
+      queryClient.invalidateQueries({ queryKey: ["children", slug] });
       onClose();
     },
     onError: (err) => {

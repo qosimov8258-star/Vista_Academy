@@ -64,8 +64,8 @@ export class TenantOrganizationsController {
     @Param("branchId") branchId: string,
     @Body() dto: UpdateBranchDto,
   ) {
-    this.requireBranchAccess(user, branchId);
-    return this.organizationsService.updateBranch(user.organizationId, branchId, dto);
+    this.requireBranchWriteAccess(user, branchId);
+    return this.organizationsService.updateBranch(user, branchId, dto);
   }
 
   /** Filial belgisini yuklash. Filial admini o'z filialiga qo'ya oladi. */
@@ -75,13 +75,13 @@ export class TenantOrganizationsController {
     @Param("branchId") branchId: string,
     @Body() dto: UpdateBranchAvatarDto,
   ) {
-    this.requireBranchAccess(user, branchId);
+    this.requireBranchWriteAccess(user, branchId);
     return this.organizationsService.updateBranchAvatar(user.organizationId, branchId, dto);
   }
 
   @Delete("me/branches/:branchId/avatar")
   removeBranchAvatar(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("branchId") branchId: string) {
-    this.requireBranchAccess(user, branchId);
+    this.requireBranchWriteAccess(user, branchId);
     return this.organizationsService.removeBranchAvatar(user.organizationId, branchId);
   }
 
@@ -108,6 +108,20 @@ export class TenantOrganizationsController {
   private requireBranchAccess(user: TenantAuthenticatedUser, branchId: string) {
     if (user.branchId && user.branchId !== branchId) {
       throw new ForbiddenException("Bu filialga kirish huquqingiz yo'q");
+    }
+  }
+
+  /**
+   * Filial ma'lumotlarini o'zgartirish — frontendda `canWriteOperational`
+   * bilan bir xil rol to'plami (Moliyachi va O'qituvchi faqat ko'radi).
+   * Ilgari bu yerda faqat filial mosligi tekshirilardi, rol umuman
+   * tekshirilmasdi — ya'ni Moliyachi yoki O'qituvchi ham to'g'ridan-to'g'ri
+   * so'rov bilan filial nomini/ish vaqtini o'zgartira olardi.
+   */
+  private requireBranchWriteAccess(user: TenantAuthenticatedUser, branchId: string) {
+    this.requireBranchAccess(user, branchId);
+    if (user.role === "FINANCE" || user.role === "TEACHER") {
+      throw new ForbiddenException("Filial ma'lumotlarini o'zgartirish huquqingiz yo'q");
     }
   }
 }

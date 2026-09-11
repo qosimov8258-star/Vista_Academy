@@ -1,7 +1,8 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
-import { TenantScope, requireMoneyScope } from "../iam/tenant-auth.types";
+import { TenantAuthenticatedUser, TenantScope, requireMoneyScope, toTenantScope } from "../iam/tenant-auth.types";
+import { AuditLogService } from "../audit-log/audit-log.service";
 import { UpsertSalarySchemeDto } from "./dto/upsert-salary-scheme.dto";
 import { CreateShiftDto } from "./dto/create-shift.dto";
 import { ShiftQueryDto } from "./dto/shift-query.dto";
@@ -20,7 +21,10 @@ function periodRange(period: string): { start: Date; end: Date } {
 
 @Injectable()
 export class HrService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditLog: AuditLogService,
+  ) {}
 
   private async requireEmployee(scope: TenantScope, employeeId: string) {
     const employee = await this.prisma.employee.findFirst({ where: { id: employeeId, organizationId: scope.organizationId } });
@@ -34,6 +38,13 @@ export class HrService {
   }
 
   async getSalaryScheme(scope: TenantScope, employeeId: string) {
+    // Ilgari bu yerda rol umuman tekshirilmasdi — O'qituvchi ham
+    // hamkasabasining maosh sxemasini to'g'ridan-to'g'ri so'rov bilan
+    // o'qiy olardi. Yozish huquqi (`upsertSalaryScheme`) bilan bir xil
+    // qatorda — u yerga umuman kirmasligi kerak.
+    if (scope.role === "TEACHER") {
+      throw new ForbiddenException("O'qituvchi maosh sxemasini ko'ra olmaydi");
+    }
     await this.requireEmployee(scope, employeeId);
     return this.prisma.salaryScheme.findUnique({ where: { employeeId } });
   }
@@ -75,7 +86,8 @@ export class HrService {
     });
   }
 
-  async generatePayroll(scope: TenantScope, dto: GeneratePayrollDto) {
+  async generatePayroll(caller: TenantAuthenticatedUser, dto: GeneratePayrollDto) {
+    const scope = toTenantScope(caller);
     const branchId = requireMoneyScope(scope);
     const employee = await this.requireEmployee(scope, dto.employeeId);
     const scheme = await this.prisma.salaryScheme.findUnique({ where: { employeeId: dto.employeeId } });
@@ -100,9 +112,10 @@ export class HrService {
 
     const bonusAmount = dto.bonusAmount ?? 0;
     const penaltyAmount = dto.penaltyAmount ?? 0;
-    const totalAmount = baseAmount + bonusAmount - penaltyAmount;
+    const deductionAmount = dto.deductionAmount ?? 0;
+    const totalAmount = baseAmount + bonusAmount - penaltyAmount - deductionAmount;
 
-    return this.prisma.payrollEntry.upsert({
+    const entry = await this.prisma.payrollEntry.upsert({
       where: { employeeId_period: { employeeId: dto.employeeId, period: dto.period } },
       create: {
         employeeId: dto.employeeId,
@@ -111,20 +124,44 @@ export class HrService {
         baseAmount,
         bonusAmount,
         penaltyAmount,
+        deductionAmount,
         totalAmount,
         note: dto.note,
       },
-      update: { baseAmount, bonusAmount, penaltyAmount, totalAmount, note: dto.note },
+      update: { baseAmount, bonusAmount, penaltyAmount, deductionAmount, totalAmount, note: dto.note },
     });
+    await this.auditLog.logFromUser(caller, {
+      action: "payroll.generate",
+      entityType: "PayrollEntry",
+      entityId: entry.id,
+      branchId,
+      summary: `${employee.fullName} uchun ${dto.period} oyi maoshi hisoblandi (${totalAmount})`,
+    });
+    return entry;
   }
 
-  async markPayrollPaid(scope: TenantScope, id: string) {
+  async markPayrollPaid(caller: TenantAuthenticatedUser, id: string) {
+    const scope = toTenantScope(caller);
     const branchId = requireMoneyScope(scope);
-    const entry = await this.prisma.payrollEntry.findFirst({ where: { id } });
+    const entry = await this.prisma.payrollEntry.findFirst({
+      where: { id },
+      include: { employee: { select: { fullName: true } } },
+    });
     if (!entry || entry.branchId !== branchId) {
       throw new NotFoundException("Payroll yozuvi topilmadi");
     }
-    return this.prisma.payrollEntry.update({ where: { id }, data: { status: "PAID", paidAt: new Date() } });
+    const updated = await this.prisma.payrollEntry.update({
+      where: { id },
+      data: { status: "PAID", paidAt: new Date() },
+    });
+    await this.auditLog.logFromUser(caller, {
+      action: "payroll.mark_paid",
+      entityType: "PayrollEntry",
+      entityId: id,
+      branchId,
+      summary: `${entry.employee.fullName}ning ${entry.period} oyi maoshi to'landi deb belgilandi`,
+    });
+    return updated;
   }
 
   async listPayroll(scope: TenantScope, query: PayrollQueryDto) {
@@ -167,7 +204,7 @@ export class HrService {
       this.prisma.payrollEntry.groupBy({
         by: ["branchId", "status"],
         where,
-        _sum: { baseAmount: true, bonusAmount: true, penaltyAmount: true, totalAmount: true },
+        _sum: { baseAmount: true, bonusAmount: true, penaltyAmount: true, deductionAmount: true, totalAmount: true },
         _count: { _all: true },
       }),
       this.prisma.branch.findMany({
@@ -177,7 +214,7 @@ export class HrService {
       }),
     ]);
 
-    const totals = { entries: 0, base: 0, bonus: 0, penalty: 0, total: 0, paid: 0, unpaid: 0 };
+    const totals = { entries: 0, base: 0, bonus: 0, penalty: 0, deduction: 0, total: 0, paid: 0, unpaid: 0 };
     const perBranch = new Map<string, { entries: number; total: number; paid: number; unpaid: number }>();
 
     for (const row of rows) {
@@ -186,6 +223,7 @@ export class HrService {
       totals.base += Number(row._sum.baseAmount ?? 0);
       totals.bonus += Number(row._sum.bonusAmount ?? 0);
       totals.penalty += Number(row._sum.penaltyAmount ?? 0);
+      totals.deduction += Number(row._sum.deductionAmount ?? 0);
       totals.total += total;
       if (row.status === "PAID") totals.paid += total;
       else totals.unpaid += total;

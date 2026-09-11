@@ -22,6 +22,12 @@ export class GeneratePayrollDto {
   @Min(0)
   penaltyAmount?: number;
 
+  @ApiPropertyOptional({ default: 0, description: "Soliq, sug'urta, avans kabi rasmiy ushlab qolish" })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  deductionAmount?: number;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

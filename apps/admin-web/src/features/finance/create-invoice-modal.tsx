@@ -4,9 +4,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api, getPaginated, ApiError } from "@/lib/api";
-import type { Child, Invoice } from "@/lib/types";
+import type { Branch, Child, Invoice } from "@/lib/types";
+import { useAuth } from "@/lib/use-auth";
 import { Modal } from "@/components/ui/modal";
 import { Input, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ function currentPeriod(): string {
 export function CreateInvoiceModal({ open, onClose, slug }: { open: boolean; onClose: () => void; slug: string }) {
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
+  const { user } = useAuth();
 
   const { data: children } = useQuery({
     queryKey: ["children", slug, "all"],
@@ -41,15 +43,31 @@ export function CreateInvoiceModal({ open, onClose, slug }: { open: boolean; onC
     enabled: open,
   });
 
+  const { data: branch } = useQuery({
+    queryKey: ["branch", slug, user?.branchId],
+    queryFn: () => api.get<Branch>(`/app/organizations/me/branches/${user!.branchId}`),
+    enabled: open && !!user?.branchId,
+  });
+
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { period: currentPeriod() },
   });
+
+  // Filialning standart to'lov summasi qo'yilgan bo'lsa — foydalanuvchi hali
+  // qo'lda hech narsa kiritmagan bo'lsa, shuni taklif qilamiz.
+  useEffect(() => {
+    if (open && branch?.defaultTuitionAmount && !getValues("amount")) {
+      setValue("amount", Number(branch.defaultTuitionAmount));
+    }
+  }, [open, branch, setValue, getValues]);
 
   const mutation = useMutation({
     mutationFn: (values: FormValues) =>

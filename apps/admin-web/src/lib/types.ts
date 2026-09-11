@@ -35,6 +35,9 @@ export interface Branch {
   address: string | null;
   timezone: string;
   currency: string;
+  openTime: string | null;
+  closeTime: string | null;
+  defaultTuitionAmount: string | null;
   createdAt: string;
   /** Belgisi bor bo'lsa — oxirgi yangilangan vaqti (rasm keshini yangilash uchun). */
   avatarUpdatedAt: string | null;
@@ -181,7 +184,7 @@ export interface CreateEmployeeResult {
   credentials: EmployeeCredentials | null;
 }
 
-export type AttendanceStatus = "PRESENT" | "ABSENT";
+export type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "SICK";
 
 export interface AttendanceChild {
   childId: string;
@@ -194,6 +197,22 @@ export interface AttendanceChild {
 export interface AttendanceDay {
   date: string;
   children: AttendanceChild[];
+}
+
+/** `GET /app/attendance/chronic-absences` javobi — Davomat sahifasidagi ogohlantirish uchun. */
+export interface ChronicAbsenceFlag {
+  childId: string;
+  fullName: string;
+  consecutiveAbsentDays: number;
+  overdueAndAbsentToday: boolean;
+}
+
+/** `GET /app/attendance/summary` javobi — filial darajasidagi kunlik statistika. */
+export interface AttendanceRangeSummary {
+  from: string;
+  to: string;
+  totalChildren: number;
+  days: { date: string; present: number; absent: number; unmarked: number }[];
 }
 
 export type InvoiceStatus = "PENDING" | "PARTIALLY_PAID" | "PAID" | "OVERDUE" | "CANCELLED";
@@ -213,6 +232,8 @@ export interface Invoice {
   paidAt: string | null;
   createdAt: string;
   child?: { id: string; fullName: string };
+  /** Status bazada OVERDUE bo'lib yozilmaydi — server har safar hisoblab qo'shadi. */
+  overdue: boolean;
 }
 
 export type PaymentMethod = "CASH" | "BANK_TRANSFER";
@@ -254,6 +275,7 @@ export interface TenantUser {
   branchId: string | null;
   isActive: boolean;
   createdAt: string;
+  lastLoginAt: string | null;
   branch: { id: string; name: string; slug: string } | null;
 }
 
@@ -262,12 +284,54 @@ export interface DashboardSummary {
   activeGroupsCount: number;
   employeesCount: number;
   monthRevenue: number;
+  previousMonthRevenue: number;
   outstandingDebt: number;
+  overdueInvoicesCount: number;
   todayAttendance: { present: number; absent: number };
   todayStaffAttendance: { present: number; absent: number };
   todayDailyReportsFilled: number;
   activeLeadsCount: number;
   pendingNotificationsCount: number;
+  attention: {
+    unmarkedAttendance: { childId: string; fullName: string; groupName: string | null }[];
+    missingDailyReport: { childId: string; fullName: string; groupName: string | null }[];
+    overdueVaccinations: { childId: string; fullName: string; vaccineName: string; scheduledDate: string }[];
+  };
+  upcomingBirthdays: { childId: string; fullName: string; birthDate: string; daysUntil: number }[];
+  groupCapacity: {
+    totalCapacity: number;
+    totalActive: number;
+    groups: { id: string; name: string; capacity: number; active: number; percent: number }[];
+  };
+  topDebtors: { childId: string; fullName: string; balance: number }[];
+}
+
+/** `GET /app/health/allergies` javobi — Ovqatlanish sahifasidagi ogohlantirish uchun. */
+export interface ChildAllergy {
+  allergies: string;
+  child: { id: string; fullName: string };
+}
+
+export interface AuditLogEntry {
+  id: string;
+  organizationId: string;
+  branchId: string | null;
+  actorUserId: string | null;
+  actorName: string;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  summary: string;
+  createdAt: string;
+}
+
+export interface Dish {
+  id: string;
+  organizationId: string;
+  name: string;
+  calories: number | null;
+  allergens: string | null;
+  createdAt: string;
 }
 
 export interface MenuEntry {
@@ -279,7 +343,7 @@ export interface MenuEntry {
   snack: string | null;
 }
 
-export type StaffAttendanceStatus = "PRESENT" | "ABSENT";
+export type StaffAttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "SICK" | "ON_LEAVE";
 
 export interface StaffAttendanceEmployee {
   employeeId: string;
@@ -287,11 +351,30 @@ export interface StaffAttendanceEmployee {
   position: string;
   status: StaffAttendanceStatus | null;
   note: string | null;
+  checkInTime: string | null;
+  checkOutTime: string | null;
 }
 
 export interface StaffAttendanceDay {
   date: string;
   employees: StaffAttendanceEmployee[];
+}
+
+/** `GET /app/staff-attendance/summary` javobi — oylik jamlanma. */
+export interface StaffAttendanceSummary {
+  period: string;
+  totals: { present: number; absent: number; late: number; sick: number; onLeave: number };
+  employees: {
+    employeeId: string;
+    fullName: string;
+    position: string;
+    present: number;
+    absent: number;
+    late: number;
+    sick: number;
+    onLeave: number;
+    rate: number | null;
+  }[];
 }
 
 export type EatingQuality = "GOOD" | "AVERAGE" | "POOR";
@@ -355,8 +438,13 @@ export interface Lead {
   lostReason: string | null;
   assignedToUserId: string | null;
   convertedChildId: string | null;
+  followUpDate: string | null;
+  trialDate: string | null;
+  contractDate: string | null;
+  contractNote: string | null;
   createdAt: string;
   updatedAt: string;
+  assignedTo?: { id: string; fullName: string } | null;
 }
 
 export interface LeadActivity {
@@ -371,6 +459,7 @@ export interface LeadActivity {
 export interface LeadStats {
   totalActive: number;
   byStage: Record<LeadStage, number>;
+  bySource: Record<LeadSource, number>;
 }
 
 // ===== Sog'liq / Tibbiyot =====
@@ -489,6 +578,7 @@ export interface PayrollEntry {
   baseAmount: string;
   bonusAmount: string;
   penaltyAmount: string;
+  deductionAmount: string;
   totalAmount: string;
   status: PayrollStatus;
   paidAt: string | null;
@@ -597,6 +687,7 @@ export interface FinanceSummary {
     branchName: string;
   })[];
   statuses: { status: InvoiceStatus; count: number; billed: number; paid: number }[];
+  byMethod: { CASH: { amount: number; count: number }; BANK_TRANSFER: { amount: number; count: number } };
 }
 
 export type FinanceChildStatus = "PAID" | "PARTIAL" | "UNPAID";
@@ -625,7 +716,16 @@ export interface FinanceChildren {
 /** `GET /app/payroll/summary` javobi. */
 export interface PayrollSummary {
   period: string | null;
-  totals: { entries: number; base: number; bonus: number; penalty: number; total: number; paid: number; unpaid: number };
+  totals: {
+    entries: number;
+    base: number;
+    bonus: number;
+    penalty: number;
+    deduction: number;
+    total: number;
+    paid: number;
+    unpaid: number;
+  };
   branches: { branchId: string; branchName: string; entries: number; total: number; paid: number; unpaid: number }[];
 }
 

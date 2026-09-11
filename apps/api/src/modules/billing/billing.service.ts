@@ -1,8 +1,11 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { InvoiceStatus, Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
-import { TenantScope, requireMoneyScope } from "../iam/tenant-auth.types";
+import { TenantAuthenticatedUser, TenantScope, requireMoneyScope, toTenantScope } from "../iam/tenant-auth.types";
+import { AuditLogService } from "../audit-log/audit-log.service";
+import { NotificationsService } from "../notifications/notifications.service";
 import { CreateInvoiceDto } from "./dto/create-invoice.dto";
+import { BulkCreateInvoiceDto } from "./dto/bulk-create-invoice.dto";
 import { InvoiceQueryDto } from "./dto/invoice-query.dto";
 import { RecordPaymentDto } from "./dto/record-payment.dto";
 import { PaymentQueryDto } from "./dto/payment-query.dto";
@@ -12,11 +15,19 @@ const EPSILON = 0.01;
 
 @Injectable()
 export class BillingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditLog: AuditLogService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
-  async create(scope: TenantScope, dto: CreateInvoiceDto) {
+  async create(caller: TenantAuthenticatedUser, dto: CreateInvoiceDto) {
+    const scope = toTenantScope(caller);
     const branchId = requireMoneyScope(scope);
-    const child = await this.prisma.child.findFirst({ where: { id: dto.childId, organizationId: scope.organizationId } });
+    const [child, branch] = await Promise.all([
+      this.prisma.child.findFirst({ where: { id: dto.childId, organizationId: scope.organizationId } }),
+      this.prisma.branch.findUniqueOrThrow({ where: { id: branchId }, select: { currency: true } }),
+    ]);
     if (!child) {
       throw new NotFoundException("Bola topilmadi");
     }
@@ -37,7 +48,10 @@ export class BillingService {
           childId: child.id,
           amount: dto.amount,
           discountAmount,
-          currency: dto.currency ?? "UZS",
+          // Frontenddan kelgan `currency` ishlatilmaydi — filialning o'zida
+          // sozlangan valyuta olinadi, shunda "UZS"ga qattiq qolib ketish
+          // xatosi umuman takrorlanmaydi.
+          currency: branch.currency,
           period: dto.period,
           dueDate: new Date(dto.dueDate),
         },
@@ -70,15 +84,91 @@ export class BillingService {
       }
 
       return invoice;
+    }).then(async (invoice) => {
+      await this.auditLog.logFromUser(caller, {
+        action: "invoice.create",
+        entityType: "Invoice",
+        entityId: invoice.id,
+        branchId,
+        summary: `${child.fullName} uchun ${dto.period} davri uchun hisob-faktura yaratildi (${dto.amount} ${branch.currency})`,
+      });
+      return invoice;
     });
   }
 
+  /**
+   * Guruh yoki butun filial bo'yicha bir xil summada hisob-faktura yaratadi
+   * — o'quv yili/oy boshida bittalab yaratishning o'rnini bosadi. Shu davr
+   * uchun allaqachon hisob-fakturasi bor bola tashlab ketiladi (qayta
+   * bosilsa ikki marta yaratilmasin).
+   */
+  async bulkCreate(caller: TenantAuthenticatedUser, dto: BulkCreateInvoiceDto) {
+    const scope = toTenantScope(caller);
+    const branchId = requireMoneyScope(scope);
+
+    if (dto.groupId) {
+      const group = await this.prisma.group.findFirst({ where: { id: dto.groupId, branchId } });
+      if (!group) {
+        throw new NotFoundException("Guruh topilmadi");
+      }
+    }
+
+    const children = await this.prisma.child.findMany({
+      where: {
+        branchId,
+        status: "ACTIVE",
+        ...(dto.groupId ? { groupId: dto.groupId } : {}),
+      },
+      select: { id: true },
+    });
+    if (children.length === 0) {
+      throw new BadRequestException("Bu tanlovda faol bola yo'q");
+    }
+
+    // Bekor qilingan (CANCELLED) hisob-faktura hisobga olinmaydi — aks holda
+    // xato bosilib bekor qilingan bola shu davr uchun umuman qayta hisob-
+    // faktura ololmay qolardi.
+    const existing = await this.prisma.invoice.findMany({
+      where: {
+        branchId,
+        period: dto.period,
+        childId: { in: children.map((c) => c.id) },
+        status: { not: InvoiceStatus.CANCELLED },
+      },
+      select: { childId: true },
+    });
+    const alreadyInvoiced = new Set(existing.map((i) => i.childId));
+    const targets = children.filter((c) => !alreadyInvoiced.has(c.id));
+
+    const created = [];
+    for (const child of targets) {
+      created.push(
+        await this.create(caller, {
+          childId: child.id,
+          amount: dto.amount,
+          discountAmount: dto.discountAmount,
+          period: dto.period,
+          dueDate: dto.dueDate,
+        }),
+      );
+    }
+
+    return { createdCount: created.length, skippedCount: children.length - targets.length };
+  }
+
   async findAll(scope: TenantScope, query: InvoiceQueryDto) {
+    assertMoneyReader(scope);
+    const now = new Date();
     const where: Prisma.InvoiceWhereInput = {
       organizationId: scope.organizationId,
       branchId: scope.branchId ?? query.branchId,
       ...(query.childId ? { childId: query.childId } : {}),
       ...(query.status ? { status: query.status } : {}),
+      ...(query.period ? { period: query.period } : {}),
+      ...(query.search ? { child: { fullName: { contains: query.search, mode: "insensitive" } } } : {}),
+      ...(query.overdueOnly
+        ? { status: { in: [InvoiceStatus.PENDING, InvoiceStatus.PARTIALLY_PAID] }, dueDate: { lt: now } }
+        : {}),
     };
 
     const [items, total] = await this.prisma.$transaction([
@@ -92,10 +182,21 @@ export class BillingService {
       this.prisma.invoice.count({ where }),
     ]);
 
-    return { data: items, meta: { page: query.page, limit: query.limit, total } };
+    // `status` bazada hech qachon OVERDUE bo'lib yozilmaydi (pastga qarang) —
+    // shuning uchun har bir yozuvga kechikkanini alohida hisoblab qo'shamiz.
+    const data = items.map((item) => ({
+      ...item,
+      overdue:
+        (item.status === InvoiceStatus.PENDING || item.status === InvoiceStatus.PARTIALLY_PAID) &&
+        item.dueDate < now,
+    }));
+
+    return { data, meta: { page: query.page, limit: query.limit, total } };
   }
 
-  async recordPayment(scope: TenantScope, recordedByUserId: string, dto: RecordPaymentDto) {
+  async recordPayment(caller: TenantAuthenticatedUser, dto: RecordPaymentDto) {
+    const scope = toTenantScope(caller);
+    const recordedByUserId = caller.id;
     const branchId = requireMoneyScope(scope);
     const invoice = await this.prisma.invoice.findFirst({
       where: { id: dto.invoiceId, organizationId: scope.organizationId },
@@ -163,10 +264,20 @@ export class BillingService {
       });
 
       return { payment, invoice: updatedInvoice };
+    }).then(async (result) => {
+      await this.auditLog.logFromUser(caller, {
+        action: "payment.record",
+        entityType: "Payment",
+        entityId: result.payment.id,
+        branchId,
+        summary: `Hisob-faktura (${invoice.period}) uchun ${amount} ${invoice.currency} to'lov qabul qilindi`,
+      });
+      return result;
     });
   }
 
-  async refundPayment(scope: TenantScope, paymentId: string) {
+  async refundPayment(caller: TenantAuthenticatedUser, paymentId: string) {
+    const scope = toTenantScope(caller);
     const branchId = requireMoneyScope(scope);
     const payment = await this.prisma.payment.findFirst({
       where: { id: paymentId, organizationId: scope.organizationId },
@@ -222,10 +333,20 @@ export class BillingService {
       });
 
       return updatedPayment;
+    }).then(async (updatedPayment) => {
+      await this.auditLog.logFromUser(caller, {
+        action: "payment.refund",
+        entityType: "Payment",
+        entityId: updatedPayment.id,
+        branchId,
+        summary: `${payment.amount} ${payment.currency} to'lov qaytarildi`,
+      });
+      return updatedPayment;
     });
   }
 
   async findPayments(scope: TenantScope, query: PaymentQueryDto) {
+    assertMoneyReader(scope);
     const where: Prisma.PaymentWhereInput = {
       organizationId: scope.organizationId,
       branchId: scope.branchId ?? query.branchId,
@@ -247,6 +368,7 @@ export class BillingService {
   }
 
   async childLedger(scope: TenantScope, childId: string) {
+    assertMoneyReader(scope);
     const child = await this.prisma.child.findFirst({ where: { id: childId, organizationId: scope.organizationId } });
     if (!child) {
       throw new NotFoundException("Bola topilmadi");
@@ -279,6 +401,118 @@ export class BillingService {
     return Number(result._sum.amount ?? 0);
   }
 
+  /** O'tgan oyning daromadi — joriy oy bilan taqqoslash uchun. */
+  async previousMonthRevenue(scope: TenantScope): Promise<number> {
+    const { start, end } = previousMonthRange();
+    const result = await this.prisma.payment.aggregate({
+      where: {
+        organizationId: scope.organizationId,
+        branchId: scope.branchId ?? undefined,
+        status: "COMPLETED",
+        createdAt: { gte: start, lt: end },
+      },
+      _sum: { amount: true },
+    });
+    return Number(result._sum.amount ?? 0);
+  }
+
+  /** Muddati o'tgan fakturalar soni — Bosh sahifadagi ogohlantirish uchun. */
+  async overdueInvoicesCount(scope: TenantScope): Promise<number> {
+    return this.prisma.invoice.count({
+      where: {
+        organizationId: scope.organizationId,
+        branchId: scope.branchId ?? undefined,
+        status: { in: [InvoiceStatus.PENDING, InvoiceStatus.PARTIALLY_PAID] },
+        dueDate: { lt: new Date() },
+      },
+    });
+  }
+
+  /**
+   * Muddati o'tgan fakturalar uchun `PAYMENT_OVERDUE` bildirishnomasi.
+   * `status` bazada OVERDUE bo'lib yozilmaydi (yuqoriga qarang), shuning
+   * uchun alohida "muddati o'tganda darhol yoziladigan" hodisa yo'q —
+   * Bosh sahifa ochilganda shu yerdan chaqirib, kun ichida bir marta
+   * (bola boshiga) yetishmayotgan bildirishnomani to'ldiramiz.
+   */
+  async syncOverdueNotifications(scope: TenantScope): Promise<void> {
+    const overdue = await this.prisma.invoice.findMany({
+      where: {
+        organizationId: scope.organizationId,
+        branchId: scope.branchId ?? undefined,
+        status: { in: [InvoiceStatus.PENDING, InvoiceStatus.PARTIALLY_PAID] },
+        dueDate: { lt: new Date() },
+      },
+      select: { branchId: true, childId: true, dueDate: true, child: { select: { fullName: true } } },
+    });
+    if (overdue.length === 0) return;
+
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const alreadyNotified = await this.prisma.notificationLog.findMany({
+      where: {
+        childId: { in: overdue.map((invoice) => invoice.childId) },
+        eventType: "PAYMENT_OVERDUE",
+        createdAt: { gte: todayStart },
+      },
+      select: { childId: true },
+    });
+    const notified = new Set(alreadyNotified.map((n) => n.childId));
+
+    for (const invoice of overdue) {
+      if (notified.has(invoice.childId)) continue;
+      notified.add(invoice.childId);
+      const link = await this.prisma.childGuardian.findFirst({
+        where: { childId: invoice.childId, canReceiveNotifications: true },
+        include: { guardian: true },
+        orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+      });
+      await this.notifications.logSystemEvent({
+        organizationId: scope.organizationId,
+        branchId: invoice.branchId,
+        childId: invoice.childId,
+        eventType: "PAYMENT_OVERDUE",
+        recipientName: link?.guardian.fullName ?? "Ota-ona",
+        message: `${invoice.child.fullName} uchun hisob-faktura muddati o'tdi (${invoice.dueDate.toISOString().slice(0, 10)}).`,
+      });
+    }
+  }
+
+  /** Bosh sahifadagi "eng ko'p qarzdorlar" vidjeti uchun. */
+  async topDebtors(scope: TenantScope, limit = 5) {
+    const branchId = scope.branchId;
+    if (!branchId) return [];
+    const invoices = await this.prisma.invoice.findMany({
+      where: {
+        organizationId: scope.organizationId,
+        branchId,
+        status: { in: [InvoiceStatus.PENDING, InvoiceStatus.PARTIALLY_PAID, InvoiceStatus.OVERDUE] },
+      },
+      select: {
+        amount: true,
+        discountAmount: true,
+        paidAmount: true,
+        childId: true,
+        child: { select: { fullName: true } },
+      },
+    });
+    const byChild = new Map<string, { childId: string; fullName: string; balance: number }>();
+    for (const invoice of invoices) {
+      const remaining = Number(invoice.amount) - Number(invoice.discountAmount) - Number(invoice.paidAmount);
+      const existing = byChild.get(invoice.childId) ?? {
+        childId: invoice.childId,
+        fullName: invoice.child.fullName,
+        balance: 0,
+      };
+      existing.balance += remaining;
+      byChild.set(invoice.childId, existing);
+    }
+    return [...byChild.values()]
+      .filter((d) => d.balance > 0.01)
+      .sort((a, b) => b.balance - a.balance)
+      .slice(0, limit);
+  }
+
   async outstandingDebt(scope: TenantScope): Promise<number> {
     const invoices = await this.prisma.invoice.findMany({
       where: {
@@ -306,7 +540,7 @@ export class BillingService {
     const period = query.period ?? currentPeriodString();
     const branchId = scope.branchId ?? query.branchId;
 
-    const [invoices, branches, groups, collectedThisPeriod] = await Promise.all([
+    const [invoices, branches, groups, collectedThisPeriod, byMethodGrouped] = await Promise.all([
       this.prisma.invoice.findMany({
         where: { organizationId: scope.organizationId, branchId, period },
         select: {
@@ -336,7 +570,24 @@ export class BillingService {
         },
         _sum: { amount: true },
       }),
+      // Naqd vs o'tkazma bo'linishi — kassani solishtirish uchun.
+      this.prisma.payment.groupBy({
+        by: ["method"],
+        where: {
+          organizationId: scope.organizationId,
+          branchId,
+          status: "COMPLETED",
+          ...periodRange(period),
+        },
+        _sum: { amount: true },
+        _count: { _all: true },
+      }),
     ]);
+
+    const byMethod = { CASH: { amount: 0, count: 0 }, BANK_TRANSFER: { amount: 0, count: 0 } };
+    for (const row of byMethodGrouped) {
+      byMethod[row.method] = { amount: Number(row._sum.amount ?? 0), count: row._count._all };
+    }
 
     const branchName = new Map(branches.map((b) => [b.id, b.name]));
     const groupInfo = new Map(groups.map((g) => [g.id, g]));
@@ -370,6 +621,7 @@ export class BillingService {
         collectedInPeriod: Number(collectedThisPeriod._sum.amount ?? 0),
         invoiceCount: invoices.length,
       },
+      byMethod,
       branches: branches.map((branch) => ({
         branchId: branch.id,
         branchName: branch.name,
@@ -568,6 +820,19 @@ function bucketToMajor(bucket: Bucket) {
  * chaqiradi va filialsiz Super Adminni rad etadi — ya'ni hisobotni aynan
  * ko'rishi kerak bo'lgan rol uchun 403 qaytarardi.
  */
+/**
+ * Filial darajasidagi moliya ma'lumotlarini (hisob-fakturalar, to'lovlar,
+ * bola tarixi, PDF) o'qish huquqi — `requireMoneyScope` bilan bir xil rol
+ * to'plami (yozish huquqiga ega bo'lganlar o'qiy ham oladi), faqat bu yerda
+ * filial talab qilinmaydi — Super Admin `branchId` so'rov parametri orqali
+ * istalgan filialni ko'radi. O'qituvchi — yagona butunlay man etilgan rol.
+ */
+export function assertMoneyReader(scope: TenantScope) {
+  if (scope.role === "TEACHER") {
+    throw new ForbiddenException("O'qituvchi moliya bo'limlarida ishlay olmaydi");
+  }
+}
+
 function assertFinanceReader(scope: TenantScope) {
   if (scope.role !== "NETWORK_ADMIN" && scope.role !== "BRANCH_ADMIN" && scope.role !== "FINANCE") {
     throw new ForbiddenException("Bu bo'limni faqat Super Admin, filial admini va moliyachi ko'ra oladi");
@@ -606,5 +871,20 @@ function currentMonthRange(): { start: Date; end: Date } {
 
   const start = new Date(Date.UTC(year, month - 1, 1) - offsetMs);
   const end = new Date(Date.UTC(year, month, 1) - offsetMs);
+  return { start, end };
+}
+
+function previousMonthRange(): { start: Date; end: Date } {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Tashkent",
+    year: "numeric",
+    month: "numeric",
+  }).formatToParts(new Date());
+  const year = Number(parts.find((p) => p.type === "year")!.value);
+  const month = Number(parts.find((p) => p.type === "month")!.value);
+  const offsetMs = DEFAULT_TIMEZONE_UTC_OFFSET_HOURS * 60 * 60 * 1000;
+
+  const start = new Date(Date.UTC(year, month - 2, 1) - offsetMs);
+  const end = new Date(Date.UTC(year, month - 1, 1) - offsetMs);
   return { start, end };
 }

@@ -1,11 +1,12 @@
 "use client";
 
 import { use, useRef, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { api, ApiError } from "@/lib/api";
+import type { Branch } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,8 +14,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
 import { LoadingState } from "@/components/ui/states";
-import { ROLE_LABEL } from "@/lib/permissions";
+import { ROLE_LABEL, canWriteOperational } from "@/lib/permissions";
 import { MAX_UPLOAD_BYTES, resizeToSquare } from "@/lib/resize-image";
+import { EditBranchModal } from "@/features/branches/edit-branch-modal";
 
 const profileSchema = z.object({
   fullName: z.string().min(2, "To'liq ism kamida 2 belgi"),
@@ -36,17 +38,23 @@ type PasswordValues = z.infer<typeof passwordSchema>;
 
 
 export default function SettingsPage({ params }: { params: Promise<{ slug: string }> }) {
-  // Sahifa faqat o'z hisobi bilan ishlaydi — slug marshrutdan keladi, lekin
-  // so'rovlarda kerak emas: server foydalanuvchini tokendan aniqlaydi.
-  use(params);
+  const { slug } = use(params);
   const queryClient = useQueryClient();
   const { user, isLoading } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const canEditBranch = canWriteOperational(user?.role) && !!user?.branchId;
 
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
   const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [editBranchOpen, setEditBranchOpen] = useState(false);
+
+  const branchQuery = useQuery({
+    queryKey: ["branch", slug, user?.branchId],
+    queryFn: () => api.get<Branch>(`/app/organizations/me/branches/${user!.branchId}`),
+    enabled: !!user?.branchId,
+  });
 
   const profileForm = useForm<ProfileValues>({
     resolver: zodResolver(profileSchema),
@@ -256,6 +264,68 @@ export default function SettingsPage({ params }: { params: Promise<{ slug: strin
           </form>
         </CardBody>
       </Card>
+
+      {user.branchId && (
+        <Card>
+          <CardHeader className="flex items-center justify-between gap-3">
+            <CardTitle>Filial ma&apos;lumotlari</CardTitle>
+            {canEditBranch && (
+              <Button type="button" size="sm" variant="outline" onClick={() => setEditBranchOpen(true)}>
+                Tahrirlash
+              </Button>
+            )}
+          </CardHeader>
+          <CardBody>
+            {branchQuery.isLoading ? (
+              <LoadingState rows={2} />
+            ) : branchQuery.data ? (
+              <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <dt className="text-[12px] font-medium text-[var(--color-text-muted)]">Nomi</dt>
+                  <dd className="mt-0.5 text-[14px] text-[var(--color-text)]">{branchQuery.data.name}</dd>
+                </div>
+                <div>
+                  <dt className="text-[12px] font-medium text-[var(--color-text-muted)]">Manzil</dt>
+                  <dd className="mt-0.5 text-[14px] text-[var(--color-text)]">{branchQuery.data.address || "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-[12px] font-medium text-[var(--color-text-muted)]">Vaqt zonasi</dt>
+                  <dd className="mt-0.5 text-[14px] text-[var(--color-text)]">{branchQuery.data.timezone}</dd>
+                </div>
+                <div>
+                  <dt className="text-[12px] font-medium text-[var(--color-text-muted)]">Valyuta</dt>
+                  <dd className="mt-0.5 text-[14px] text-[var(--color-text)]">{branchQuery.data.currency}</dd>
+                </div>
+                <div>
+                  <dt className="text-[12px] font-medium text-[var(--color-text-muted)]">Ish vaqti</dt>
+                  <dd className="mt-0.5 text-[14px] text-[var(--color-text)]">
+                    {branchQuery.data.openTime && branchQuery.data.closeTime
+                      ? `${branchQuery.data.openTime} — ${branchQuery.data.closeTime}`
+                      : "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[12px] font-medium text-[var(--color-text-muted)]">Standart oylik to&apos;lov</dt>
+                  <dd className="mt-0.5 text-[14px] text-[var(--color-text)]">
+                    {branchQuery.data.defaultTuitionAmount
+                      ? `${Number(branchQuery.data.defaultTuitionAmount).toLocaleString("uz-UZ")} ${branchQuery.data.currency}`
+                      : "—"}
+                  </dd>
+                </div>
+              </dl>
+            ) : null}
+          </CardBody>
+        </Card>
+      )}
+
+      {canEditBranch && editBranchOpen && branchQuery.data && (
+        <EditBranchModal
+          open={editBranchOpen}
+          onClose={() => setEditBranchOpen(false)}
+          slug={slug}
+          branch={branchQuery.data}
+        />
+      )}
     </div>
   );
 }

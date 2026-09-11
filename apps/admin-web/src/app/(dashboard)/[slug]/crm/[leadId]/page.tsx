@@ -15,6 +15,8 @@ import { formatDate, formatDateTime } from "@/lib/format";
 import { ACTIVITY_LABEL, AGE_GROUP_LABEL, SOURCE_LABEL, STAGE_LABEL, STAGE_TONE } from "@/features/crm/labels";
 import { ChangeStageModal } from "@/features/crm/change-stage-modal";
 import { ConvertLeadModal } from "@/features/crm/convert-lead-modal";
+import { AssignLeadModal } from "@/features/crm/assign-lead-modal";
+import { EditLeadDetailsModal } from "@/features/crm/edit-lead-details-modal";
 import { LeadActivityForm } from "@/features/crm/lead-activity-form";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { canWriteOperational } from "@/lib/permissions";
@@ -29,6 +31,8 @@ export default function LeadDetailPage({ params }: { params: Promise<{ slug: str
   const { slug, leadId } = use(params);
   const [stageModalOpen, setStageModalOpen] = useState(false);
   const [convertModalOpen, setConvertModalOpen] = useState(false);
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const { user } = useAuth();
   const canWrite = canWriteOperational(user?.role);
   const { branchSlug } = useBranchContext(slug);
@@ -62,7 +66,9 @@ export default function LeadDetailPage({ params }: { params: Promise<{ slug: str
           {lead.parentName} • {lead.parentPhone}
           {lead.ageGroup ? ` • ${AGE_GROUP_LABEL[lead.ageGroup]}` : ""} • {SOURCE_LABEL[lead.source]}
         </p>
-        <p className="text-xs text-[var(--color-text-muted)]">Yaratildi: {formatDate(lead.createdAt)}</p>
+        <p className="text-xs text-[var(--color-text-muted)]">
+          Yaratildi: {formatDate(lead.createdAt)} • Mas&apos;ul: {lead.assignedTo?.fullName ?? "—"}
+        </p>
       </div>
 
       {!canWrite && <ViewOnlyNote role={user?.role} />}
@@ -93,12 +99,58 @@ export default function LeadDetailPage({ params }: { params: Promise<{ slug: str
             <Button variant="outline" onClick={() => setStageModalOpen(true)}>
               Bosqichni o&apos;zgartirish
             </Button>
+            <Button variant="outline" onClick={() => setAssignModalOpen(true)}>
+              Mas&apos;ulni belgilash
+            </Button>
             {!isFinal && (
               <Button onClick={() => setConvertModalOpen(true)}>Bolaga aylantirish</Button>
             )}
           </CardBody>
         </Card>
       )}
+
+      <Card>
+        <CardHeader className="flex items-center justify-between gap-3">
+          <CardTitle>Tafsilotlar</CardTitle>
+          {canWrite && (
+            <Button size="sm" variant="outline" onClick={() => setDetailsModalOpen(true)}>
+              Tahrirlash
+            </Button>
+          )}
+        </CardHeader>
+        <CardBody className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
+            <p className="text-[12.5px] text-[var(--color-text-muted)]">Keyingi bog&apos;lanish</p>
+            <p
+              className={`mt-1 text-[14px] font-medium ${
+                lead.followUpDate && !isFinal && new Date(lead.followUpDate) < new Date()
+                  ? "text-[var(--color-danger)]"
+                  : "text-[var(--color-text)]"
+              }`}
+            >
+              {lead.followUpDate ? formatDate(lead.followUpDate) : "Belgilanmagan"}
+            </p>
+          </div>
+          <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
+            <p className="text-[12.5px] text-[var(--color-text-muted)]">Sinov kuni</p>
+            <p className="mt-1 text-[14px] font-medium text-[var(--color-text)]">
+              {lead.trialDate ? formatDate(lead.trialDate) : "Belgilanmagan"}
+            </p>
+          </div>
+          <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
+            <p className="text-[12.5px] text-[var(--color-text-muted)]">Shartnoma sanasi</p>
+            <p className="mt-1 text-[14px] font-medium text-[var(--color-text)]">
+              {lead.contractDate ? formatDate(lead.contractDate) : "Belgilanmagan"}
+            </p>
+          </div>
+          {lead.contractNote && (
+            <div className="col-span-2 rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3 sm:col-span-3">
+              <p className="text-[12.5px] text-[var(--color-text-muted)]">Shartnoma izohi</p>
+              <p className="mt-1 text-[14px] text-[var(--color-text)]">{lead.contractNote}</p>
+            </div>
+          )}
+        </CardBody>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -143,6 +195,24 @@ export default function LeadDetailPage({ params }: { params: Promise<{ slug: str
       )}
       {canWrite && (
         <ConvertLeadModal open={convertModalOpen} onClose={() => setConvertModalOpen(false)} slug={slug} leadId={leadId} />
+      )}
+      {canWrite && (
+        <AssignLeadModal
+          open={assignModalOpen}
+          onClose={() => setAssignModalOpen(false)}
+          slug={slug}
+          leadId={leadId}
+          currentAssignedToUserId={lead.assignedTo?.id}
+        />
+      )}
+      {canWrite && detailsModalOpen && (
+        <EditLeadDetailsModal
+          open={detailsModalOpen}
+          onClose={() => setDetailsModalOpen(false)}
+          slug={slug}
+          leadId={leadId}
+          lead={lead}
+        />
       )}
     </div>
   );

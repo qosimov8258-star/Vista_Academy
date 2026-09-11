@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { Public } from "../../common/decorators/public.decorator";
 import { TenantJwtAuthGuard } from "../iam/guards/tenant-jwt-auth.guard";
@@ -24,6 +24,12 @@ export class ChildHealthController {
     return this.childHealthService.getProfile(toTenantScope(user), id);
   }
 
+  /** Allergiyasi bor faol bolalar — Ovqatlanish sahifasidagi ogohlantirish uchun. */
+  @Get("health/allergies")
+  listAllergies(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query("branchId") branchId?: string) {
+    return this.childHealthService.listAllergies(toTenantScope(user), branchId);
+  }
+
   @Post("children/:id/health")
   upsertProfile(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string, @Body() dto: UpsertHealthProfileDto) {
     return this.childHealthService.upsertProfile(toTenantScope(user), id, dto);
@@ -36,12 +42,12 @@ export class ChildHealthController {
 
   @Post("children/:id/vaccinations")
   createVaccination(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string, @Body() dto: CreateVaccinationDto) {
-    return this.childHealthService.createVaccination(toTenantScope(user), id, dto);
+    return this.childHealthService.createVaccination(user, id, dto);
   }
 
   @Patch("vaccinations/:id")
   updateVaccination(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string, @Body() dto: UpdateVaccinationDto) {
-    return this.childHealthService.updateVaccination(toTenantScope(user), id, dto);
+    return this.childHealthService.updateVaccination(user, id, dto);
   }
 
   @Get("children/:id/medications")

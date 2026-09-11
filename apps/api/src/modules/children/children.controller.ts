@@ -6,6 +6,7 @@ import {
   Header,
   NotFoundException,
   Param,
+  Patch,
   Post,
   Put,
   Query,
@@ -20,6 +21,7 @@ import { CurrentTenantUser } from "../iam/decorators/current-tenant-user.decorat
 import { TenantAuthenticatedUser, toTenantScope } from "../iam/tenant-auth.types";
 import { ChildrenService } from "./children.service";
 import { CreateChildDto } from "./dto/create-child.dto";
+import { UpdateChildDto } from "./dto/update-child.dto";
 import { ChildQueryDto } from "./dto/child-query.dto";
 import { UpdateChildAvatarDto } from "./dto/update-child-avatar.dto";
 
@@ -38,12 +40,21 @@ export class ChildrenController {
 
   @Post()
   create(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: CreateChildDto) {
-    return this.childrenService.create(toTenantScope(user), dto);
+    return this.childrenService.create(user, dto);
   }
 
   @Get(":id")
   findOne(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string) {
     return this.childrenService.findOne(toTenantScope(user), id);
+  }
+
+  @Patch(":id")
+  update(
+    @CurrentTenantUser() user: TenantAuthenticatedUser,
+    @Param("id") id: string,
+    @Body() dto: UpdateChildDto,
+  ) {
+    return this.childrenService.update(user, id, dto);
   }
 
   /** Bola suratini yuklash. */
