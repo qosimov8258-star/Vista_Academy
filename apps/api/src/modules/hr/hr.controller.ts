@@ -52,11 +52,11 @@ export class HrController {
 
   @Post("payroll")
   generatePayroll(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: GeneratePayrollDto) {
-    return this.hrService.generatePayroll(toTenantScope(user), dto);
+    return this.hrService.generatePayroll(user, dto);
   }
 
   @Patch("payroll/:id/mark-paid")
   markPayrollPaid(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string) {
-    return this.hrService.markPayrollPaid(toTenantScope(user), id);
+    return this.hrService.markPayrollPaid(user, id);
   }
 }

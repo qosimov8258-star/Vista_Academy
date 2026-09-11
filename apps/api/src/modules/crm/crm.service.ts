@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantAuthenticatedUser, TenantScope, requireOperationalScope, toTenantScope } from "../iam/tenant-auth.types";
 import { createChildWithGuardian, withPublicIdRetry } from "../children/child-creation";
+import { AuditLogService } from "../audit-log/audit-log.service";
 
 /** "Umaraliyev Usmon" -> { lastName: "Umaraliyev", firstName: "Usmon" } */
 function splitLeadChildName(value: string): { lastName: string; firstName: string } {
@@ -14,6 +15,8 @@ import { LeadQueryDto } from "./dto/lead-query.dto";
 import { UpdateLeadStageDto } from "./dto/update-lead-stage.dto";
 import { CreateLeadActivityDto } from "./dto/create-lead-activity.dto";
 import { ConvertLeadDto } from "./dto/convert-lead.dto";
+import { AssignLeadDto } from "./dto/assign-lead.dto";
+import { UpdateLeadDetailsDto } from "./dto/update-lead-details.dto";
 
 const leadInclude = {
   assignedTo: { select: { id: true, fullName: true } },
@@ -22,7 +25,10 @@ const leadInclude = {
 
 @Injectable()
 export class CrmService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditLog: AuditLogService,
+  ) {}
 
   async create(user: TenantAuthenticatedUser, dto: CreateLeadDto) {
     const scope = toTenantScope(user);
@@ -118,6 +124,58 @@ export class CrmService {
     });
   }
 
+  async assign(user: TenantAuthenticatedUser, id: string, dto: AssignLeadDto) {
+    const scope = toTenantScope(user);
+    const branchId = requireOperationalScope(scope);
+    const lead = await this.prisma.lead.findFirst({ where: { id, organizationId: scope.organizationId } });
+    if (!lead) {
+      throw new NotFoundException("Ariza topilmadi");
+    }
+    if (lead.branchId !== branchId) {
+      throw new ForbiddenException("Bu arizaga kirish huquqingiz yo'q");
+    }
+    const nextUser = await this.prisma.tenantUser.findFirst({
+      where: { id: dto.assignedToUserId, organizationId: scope.organizationId },
+    });
+    if (!nextUser) {
+      throw new NotFoundException("Xodim topilmadi");
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.lead.update({
+        where: { id },
+        data: { assignedToUserId: dto.assignedToUserId },
+        include: leadInclude,
+      });
+      await tx.leadActivity.create({
+        data: { leadId: id, type: "NOTE", note: `Mas'ul: ${nextUser.fullName}`, createdByUserId: user.id },
+      });
+      return updated;
+    });
+  }
+
+  /** Eslatma sanasi, sinov kuni sanasi va shartnoma ma'lumotlarini tahrirlash. */
+  async updateDetails(scope: TenantScope, id: string, dto: UpdateLeadDetailsDto) {
+    const branchId = requireOperationalScope(scope);
+    const lead = await this.prisma.lead.findFirst({ where: { id, organizationId: scope.organizationId } });
+    if (!lead) {
+      throw new NotFoundException("Ariza topilmadi");
+    }
+    if (lead.branchId !== branchId) {
+      throw new ForbiddenException("Bu arizaga kirish huquqingiz yo'q");
+    }
+    return this.prisma.lead.update({
+      where: { id },
+      data: {
+        followUpDate: dto.followUpDate === undefined ? undefined : dto.followUpDate ? new Date(dto.followUpDate) : null,
+        trialDate: dto.trialDate === undefined ? undefined : dto.trialDate ? new Date(dto.trialDate) : null,
+        contractDate: dto.contractDate === undefined ? undefined : dto.contractDate ? new Date(dto.contractDate) : null,
+        contractNote: dto.contractNote,
+      },
+      include: leadInclude,
+    });
+  }
+
   async addActivity(user: TenantAuthenticatedUser, id: string, dto: CreateLeadActivityDto) {
     const scope = toTenantScope(user);
     const branchId = requireOperationalScope(scope);
@@ -185,17 +243,33 @@ export class CrmService {
         });
         return { lead: updatedLead, child };
       }),
-    );
+    ).then(async (result) => {
+      await this.auditLog.logFromUser(user, {
+        action: "lead.convert",
+        entityType: "Child",
+        entityId: result.child.id,
+        branchId,
+        summary: `Ariza "${lead.childFullName}" bolaga aylantirildi`,
+      });
+      return result;
+    });
   }
 
-  async stats(scope: TenantScope) {
-    const where: Prisma.LeadWhereInput = { organizationId: scope.organizationId, branchId: scope.branchId ?? undefined };
-    const grouped = await this.prisma.lead.groupBy({ by: ["stage"], where, _count: true });
+  async stats(scope: TenantScope, branchId?: string) {
+    const where: Prisma.LeadWhereInput = { organizationId: scope.organizationId, branchId: scope.branchId ?? branchId };
+    const [byStageGrouped, bySourceGrouped] = await Promise.all([
+      this.prisma.lead.groupBy({ by: ["stage"], where, _count: true }),
+      this.prisma.lead.groupBy({ by: ["source"], where, _count: true }),
+    ]);
     const byStage: Record<string, number> = { NEW: 0, TRIAL_DAY_SCHEDULED: 0, CONTRACT: 0, WON: 0, LOST: 0 };
-    for (const row of grouped) {
+    for (const row of byStageGrouped) {
       byStage[row.stage] = row._count;
     }
-    return { byStage };
+    const bySource: Record<string, number> = { WEBSITE: 0, REFERRAL: 0, SOCIAL_MEDIA: 0, WALK_IN: 0, OTHER: 0 };
+    for (const row of bySourceGrouped) {
+      bySource[row.source] = row._count;
+    }
+    return { byStage, bySource };
   }
 
   countActive(scope: TenantScope) {

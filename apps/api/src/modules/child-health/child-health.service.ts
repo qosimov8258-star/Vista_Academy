@@ -1,6 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantAuthenticatedUser, TenantScope, requireOperationalScope, toTenantScope } from "../iam/tenant-auth.types";
+import { AuditLogService } from "../audit-log/audit-log.service";
 import { UpsertHealthProfileDto } from "./dto/upsert-health-profile.dto";
 import { CreateVaccinationDto } from "./dto/create-vaccination.dto";
 import { UpdateVaccinationDto } from "./dto/update-vaccination.dto";
@@ -9,7 +10,10 @@ import { SetQuarantineDto } from "./dto/quarantine.dto";
 
 @Injectable()
 export class ChildHealthService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditLog: AuditLogService,
+  ) {}
 
   private async requireChild(scope: TenantScope, childId: string) {
     const child = await this.prisma.child.findFirst({ where: { id: childId, organizationId: scope.organizationId } });
@@ -25,6 +29,23 @@ export class ChildHealthService {
   async getProfile(scope: TenantScope, childId: string) {
     await this.requireChild(scope, childId);
     return this.prisma.healthProfile.findUnique({ where: { childId } });
+  }
+
+  /**
+   * Allergiyasi bor faol bolalar ro'yxati — Ovqatlanish sahifasida
+   * ogohlantirish uchun. Bo'sh/matnsiz allergiya maydoni chiqarib tashlanadi.
+   */
+  async listAllergies(scope: TenantScope, branchId?: string) {
+    const resolvedBranchId = scope.branchId ?? branchId;
+    return this.prisma.healthProfile.findMany({
+      where: {
+        organizationId: scope.organizationId,
+        branchId: resolvedBranchId,
+        allergies: { not: null, notIn: [""] },
+        child: { status: "ACTIVE" },
+      },
+      select: { allergies: true, child: { select: { id: true, fullName: true } } },
+    });
   }
 
   async upsertProfile(scope: TenantScope, childId: string, dto: UpsertHealthProfileDto) {
@@ -55,10 +76,11 @@ export class ChildHealthService {
     return this.prisma.vaccination.findMany({ where: { childId }, orderBy: { scheduledDate: "desc" } });
   }
 
-  async createVaccination(scope: TenantScope, childId: string, dto: CreateVaccinationDto) {
+  async createVaccination(caller: TenantAuthenticatedUser, childId: string, dto: CreateVaccinationDto) {
+    const scope = toTenantScope(caller);
     const branchId = requireOperationalScope(scope);
     const child = await this.requireChild(scope, childId);
-    return this.prisma.vaccination.create({
+    const created = await this.prisma.vaccination.create({
       data: {
         childId,
         organizationId: child.organizationId,
@@ -68,12 +90,22 @@ export class ChildHealthService {
         note: dto.note,
       },
     });
+    await this.auditLog.logFromUser(caller, {
+      action: "vaccination.create",
+      entityType: "Vaccination",
+      entityId: created.id,
+      branchId,
+      summary: `${child.fullName} uchun "${created.name}" vaksinatsiyasi rejalashtirildi`,
+    });
+    return created;
   }
 
-  async updateVaccination(scope: TenantScope, vaccinationId: string, dto: UpdateVaccinationDto) {
+  async updateVaccination(caller: TenantAuthenticatedUser, vaccinationId: string, dto: UpdateVaccinationDto) {
+    const scope = toTenantScope(caller);
     const branchId = requireOperationalScope(scope);
     const vaccination = await this.prisma.vaccination.findFirst({
       where: { id: vaccinationId, organizationId: scope.organizationId },
+      include: { child: { select: { fullName: true } } },
     });
     if (!vaccination) {
       throw new NotFoundException("Vaksinatsiya topilmadi");
@@ -81,7 +113,7 @@ export class ChildHealthService {
     if (vaccination.branchId !== branchId) {
       throw new ForbiddenException("Bu yozuvga kirish huquqingiz yo'q");
     }
-    return this.prisma.vaccination.update({
+    const updated = await this.prisma.vaccination.update({
       where: { id: vaccinationId },
       data: {
         status: dto.status,
@@ -89,6 +121,14 @@ export class ChildHealthService {
         note: dto.note,
       },
     });
+    await this.auditLog.logFromUser(caller, {
+      action: "vaccination.update",
+      entityType: "Vaccination",
+      entityId: vaccinationId,
+      branchId,
+      summary: `${vaccination.child.fullName}ning "${vaccination.name}" vaksinatsiyasi yangilandi${dto.status ? ` (${dto.status})` : ""}`,
+    });
+    return updated;
   }
 
   async listMedicationLogs(scope: TenantScope, childId: string) {

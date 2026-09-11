@@ -6,6 +6,7 @@ import { CurrentTenantUser } from "../iam/decorators/current-tenant-user.decorat
 import { TenantAuthenticatedUser, toTenantScope } from "../iam/tenant-auth.types";
 import { BillingService } from "./billing.service";
 import { CreateInvoiceDto } from "./dto/create-invoice.dto";
+import { BulkCreateInvoiceDto } from "./dto/bulk-create-invoice.dto";
 import { InvoiceQueryDto } from "./dto/invoice-query.dto";
 import { RecordPaymentDto } from "./dto/record-payment.dto";
 import { PaymentQueryDto } from "./dto/payment-query.dto";
@@ -38,7 +39,13 @@ export class BillingController {
 
   @Post("invoices")
   create(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: CreateInvoiceDto) {
-    return this.billingService.create(toTenantScope(user), dto);
+    return this.billingService.create(user, dto);
+  }
+
+  /** Guruh yoki butun filial bo'yicha bir xil summada ommaviy hisob-faktura. */
+  @Post("invoices/bulk")
+  bulkCreate(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: BulkCreateInvoiceDto) {
+    return this.billingService.bulkCreate(user, dto);
   }
 
   @Get("payments")
@@ -48,12 +55,12 @@ export class BillingController {
 
   @Post("payments")
   recordPayment(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: RecordPaymentDto) {
-    return this.billingService.recordPayment(toTenantScope(user), user.id, dto);
+    return this.billingService.recordPayment(user, dto);
   }
 
   @Post("payments/:id/refund")
   refundPayment(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string) {
-    return this.billingService.refundPayment(toTenantScope(user), id);
+    return this.billingService.refundPayment(user, id);
   }
 
   @Get("children/:id/ledger")

@@ -7,8 +7,9 @@ import { normalizePhone } from "../../common/phone";
 import { encryptSecret, decryptSecret } from "../../common/crypto/reversible-secret";
 import { generateEmployeeLogin, generateEmployeePassword } from "../../common/text/generate-credentials";
 import { DEFAULT_POSITIONS } from "../../common/constants/default-positions";
-import { TenantScope, requireOperationalScope } from "../iam/tenant-auth.types";
+import { TenantAuthenticatedUser, TenantScope, requireOperationalScope, toTenantScope } from "../iam/tenant-auth.types";
 import { verifyRevealToken } from "../webauthn/reveal-token";
+import { AuditLogService } from "../audit-log/audit-log.service";
 import { CreateEmployeeDto, EmployeeAccountDto } from "./dto/create-employee.dto";
 import { UpdateEmployeeGroupsDto } from "./dto/update-employee-groups.dto";
 import { UpdateEmployeeAvatarDto } from "./dto/update-employee-avatar.dto";
@@ -43,9 +44,11 @@ export class EmployeesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
+    private readonly auditLog: AuditLogService,
   ) {}
 
-  async create(scope: TenantScope, dto: CreateEmployeeDto) {
+  async create(caller: TenantAuthenticatedUser, dto: CreateEmployeeDto) {
+    const scope = toTenantScope(caller);
     const branchId = requireOperationalScope(scope);
     const fullName = composeEmployeeFullName(dto.lastName, dto.firstName);
     const phone = dto.phone ? normalizePhone(dto.phone) : null;
@@ -77,6 +80,13 @@ export class EmployeesService {
           subjects,
         },
         include: employeeInclude,
+      });
+      await this.auditLog.logFromUser(caller, {
+        action: "employee.create",
+        entityType: "Employee",
+        entityId: employee.id,
+        branchId,
+        summary: `${fullName} xodim sifatida qo'shildi (${dto.position})`,
       });
       return { employee, credentials: null };
     }
@@ -121,6 +131,13 @@ export class EmployeesService {
           include: employeeInclude,
         });
       });
+      await this.auditLog.logFromUser(caller, {
+        action: "employee.create",
+        entityType: "Employee",
+        entityId: employee.id,
+        branchId,
+        summary: `${fullName} xodim sifatida qo'shildi va kabinet ochildi (${login})`,
+      });
       return { employee, credentials: { login, password } };
     } catch (err) {
       throw this.translateEmailConflict(err);
@@ -162,6 +179,7 @@ export class EmployeesService {
     const where: Prisma.EmployeeWhereInput = {
       organizationId: scope.organizationId,
       branchId: scope.branchId ?? query.branchId,
+      ...(query.isActive !== undefined ? { isActive: query.isActive } : {}),
     };
     return this.prisma.employee.findMany({
       where,
@@ -193,7 +211,8 @@ export class EmployeesService {
   }
 
   /** Kabineti bo'lmagan xodimga keyinchalik login ochish. Login/parol avtomatik generatsiya qilinadi. */
-  async openAccount(scope: TenantScope, employeeId: string, dto: EmployeeAccountDto) {
+  async openAccount(caller: TenantAuthenticatedUser, employeeId: string, dto: EmployeeAccountDto) {
+    const scope = toTenantScope(caller);
     const branchId = requireOperationalScope(scope);
     const employee = await this.prisma.employee.findFirst({
       where: { id: employeeId, organizationId: scope.organizationId, branchId },
@@ -236,6 +255,13 @@ export class EmployeesService {
           include: employeeInclude,
         });
       });
+      await this.auditLog.logFromUser(caller, {
+        action: "employee.account_open",
+        entityType: "Employee",
+        entityId: employeeId,
+        branchId,
+        summary: `${employee.fullName} uchun kabinet ochildi (${login})`,
+      });
       return { employee: updated, credentials: { login, password } };
     } catch (err) {
       throw this.translateEmailConflict(err);
@@ -247,11 +273,12 @@ export class EmployeesService {
    * Bu yerda WebAuthn talab qilinmaydi — admin hozir shu sessiyada, o'zi
    * turib yangi parol yaratmoqda. Eski seanslar darhol yopiladi.
    */
-  async regeneratePassword(scope: TenantScope, id: string) {
+  async regeneratePassword(caller: TenantAuthenticatedUser, id: string) {
+    const scope = toTenantScope(caller);
     const branchId = requireOperationalScope(scope);
     const employee = await this.prisma.employee.findFirst({
       where: { id, organizationId: scope.organizationId, branchId },
-      select: { id: true, tenantUserId: true },
+      select: { id: true, fullName: true, tenantUserId: true },
     });
     if (!employee) {
       throw new NotFoundException("Xodim topilmadi");
@@ -272,6 +299,13 @@ export class EmployeesService {
     await this.prisma.tenantRefreshToken.updateMany({
       where: { tenantUserId: employee.tenantUserId, revokedAt: null },
       data: { revokedAt: new Date() },
+    });
+    await this.auditLog.logFromUser(caller, {
+      action: "employee.password_regenerate",
+      entityType: "Employee",
+      entityId: id,
+      branchId,
+      summary: `${employee.fullName} uchun yangi parol generatsiya qilindi`,
     });
     return { password };
   }
@@ -308,14 +342,15 @@ export class EmployeesService {
    * bo'lmaydigan amal, shuning uchun parolni ko'rsatishdagi kabi WebAuthn
    * bilan tasdiqlangan qisqa umrli "reveal token" talab qilinadi.
    */
-  async remove(scope: TenantScope, id: string, revealToken: string) {
+  async remove(caller: TenantAuthenticatedUser, id: string, revealToken: string) {
+    const scope = toTenantScope(caller);
     if (!verifyRevealToken(this.jwt, revealToken, scope.userId)) {
       throw new UnauthorizedException("Qurilma tasdiqlanmagan yoki muddati tugagan");
     }
     const branchId = requireOperationalScope(scope);
     const employee = await this.prisma.employee.findFirst({
       where: { id, organizationId: scope.organizationId, branchId },
-      select: { id: true, tenantUserId: true },
+      select: { id: true, fullName: true, tenantUserId: true },
     });
     if (!employee) {
       throw new NotFoundException("Xodim topilmadi");
@@ -326,6 +361,13 @@ export class EmployeesService {
         // Kabinet xodimsiz ma'nosiz — birga o'chadi (refresh tokenlar cascade bilan ketadi).
         await tx.tenantUser.delete({ where: { id: employee.tenantUserId } });
       }
+    });
+    await this.auditLog.logFromUser(caller, {
+      action: "employee.delete",
+      entityType: "Employee",
+      entityId: id,
+      branchId,
+      summary: `${employee.fullName} xodimi o'chirildi`,
     });
     return { id: employee.id };
   }

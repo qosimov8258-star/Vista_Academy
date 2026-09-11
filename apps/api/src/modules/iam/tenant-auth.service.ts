@@ -44,6 +44,12 @@ export class TenantAuthService {
       throw new UnauthorizedException("Email yoki parol noto'g'ri");
     }
 
+    // Administratorlar ro'yxatida "oxirgi kirish" ko'rsatish uchun — bu
+    // login oqimini sekinlashtirmasligi kerak, shuning uchun kutilmaydi.
+    this.prisma.tenantUser
+      .update({ where: { id: tenantUser.id }, data: { lastLoginAt: new Date() } })
+      .catch(() => undefined);
+
     return this.toAuthenticatedUser(tenantUser, organization);
   }
 

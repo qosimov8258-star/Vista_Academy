@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { Public } from "../../common/decorators/public.decorator";
 import { TenantJwtAuthGuard } from "../iam/guards/tenant-jwt-auth.guard";
@@ -6,6 +6,7 @@ import { CurrentTenantUser } from "../iam/decorators/current-tenant-user.decorat
 import { TenantAuthenticatedUser, toTenantScope } from "../iam/tenant-auth.types";
 import { GroupsService } from "./groups.service";
 import { CreateGroupDto } from "./dto/create-group.dto";
+import { UpdateGroupDto } from "./dto/update-group.dto";
 import { GroupQueryDto } from "./dto/group-query.dto";
 import { GroupAttendanceQueryDto } from "./dto/group-attendance-query.dto";
 import { GroupDayQueryDto } from "./dto/group-day-query.dto";
@@ -25,12 +26,21 @@ export class GroupsController {
 
   @Post()
   create(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: CreateGroupDto) {
-    return this.groupsService.create(toTenantScope(user), dto);
+    return this.groupsService.create(user, dto);
   }
 
   @Get(":id")
   findOne(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string) {
     return this.groupsService.findOne(toTenantScope(user), id);
+  }
+
+  @Patch(":id")
+  update(
+    @CurrentTenantUser() user: TenantAuthenticatedUser,
+    @Param("id") id: string,
+    @Body() dto: UpdateGroupDto,
+  ) {
+    return this.groupsService.update(user, id, dto);
   }
 
   /** Guruh kartochkasi: tarbiyachilar, bolalar ro'yxati va jins taqsimoti. */

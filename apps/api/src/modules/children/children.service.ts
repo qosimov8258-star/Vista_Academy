@@ -1,12 +1,14 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
-import { TenantScope, requireOperationalScope } from "../iam/tenant-auth.types";
+import { TenantAuthenticatedUser, TenantScope, requireOperationalScope, toTenantScope } from "../iam/tenant-auth.types";
 import { assertTeacherOwnsChild, resolveTeacherGroupIds, teacherChildWhere } from "../iam/teacher-scope";
+import { AuditLogService } from "../audit-log/audit-log.service";
 import { CreateChildDto } from "./dto/create-child.dto";
+import { UpdateChildDto } from "./dto/update-child.dto";
 import { ChildQueryDto } from "./dto/child-query.dto";
 import { UpdateChildAvatarDto } from "./dto/update-child-avatar.dto";
-import { createChildWithGuardian, withPublicIdRetry } from "./child-creation";
+import { createChildWithGuardian, withPublicIdRetry, composeChildFullName } from "./child-creation";
 
 /** Ro'yxatda ota-ona telefoni ko'rinishi uchun asosiy vasiy ham olinadi. */
 const childInclude = {
@@ -23,15 +25,19 @@ const MAX_CHILD_AVATAR_BYTES = 600 * 1024;
 
 @Injectable()
 export class ChildrenService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditLog: AuditLogService,
+  ) {}
 
-  async create(scope: TenantScope, dto: CreateChildDto) {
+  async create(caller: TenantAuthenticatedUser, dto: CreateChildDto) {
+    const scope = toTenantScope(caller);
     const branchId = requireOperationalScope(scope);
     if (dto.groupId) {
       await this.requireGroup(branchId, dto.groupId);
     }
 
-    return withPublicIdRetry(() =>
+    const created = await withPublicIdRetry(() =>
       this.prisma.$transaction((tx) =>
         createChildWithGuardian(
           tx,
@@ -53,6 +59,14 @@ export class ChildrenService {
         ),
       ),
     );
+    await this.auditLog.logFromUser(caller, {
+      action: "child.create",
+      entityType: "Child",
+      entityId: created.id,
+      branchId,
+      summary: `${created.fullName} ro'yxatga olindi`,
+    });
+    return created;
   }
 
   async findAll(scope: TenantScope, query: ChildQueryDto) {
@@ -92,6 +106,61 @@ export class ChildrenService {
     }
     await assertTeacherOwnsChild(this.prisma, scope, child);
     return child;
+  }
+
+  /**
+   * Bola ma'lumotlarini tahrirlash: ism, jins, tug'ilgan sana, guruh, holat
+   * (faol/nofaol). Karantin bu yerdan qo'yilmaydi — alohida endpoint bor.
+   */
+  async update(caller: TenantAuthenticatedUser, id: string, dto: UpdateChildDto) {
+    const scope = toTenantScope(caller);
+    const branchId = requireOperationalScope(scope);
+    const existing = await this.prisma.child.findFirst({
+      where: { id, organizationId: scope.organizationId },
+      select: { id: true, branchId: true, groupId: true, firstName: true, lastName: true, status: true },
+    });
+    if (!existing) {
+      throw new NotFoundException("Bola topilmadi");
+    }
+    if (existing.branchId !== branchId) {
+      throw new ForbiddenException("Bu bolaga kirish huquqingiz yo'q");
+    }
+    await assertTeacherOwnsChild(this.prisma, scope, existing);
+
+    // Faqat guruh haqiqatan almashtirilayotganda tekshiramiz — aks holda
+    // bola allaqachon (boshqa sababdan) nofaol guruhda bo'lsa, uni boshqa
+    // maydonlar bo'yicha tahrirlash imkoni yo'qolib qolardi.
+    if (dto.groupId && dto.groupId !== existing.groupId) {
+      await this.requireGroup(branchId, dto.groupId);
+    }
+    if (dto.status && existing.status === "QUARANTINED") {
+      throw new BadRequestException("Karantindagi bolaning holatini avval karantinni yopib, keyin o'zgartiring");
+    }
+
+    const firstName = dto.firstName ?? existing.firstName;
+    const lastName = dto.lastName ?? existing.lastName;
+
+    const updated = await this.prisma.child.update({
+      where: { id },
+      data: {
+        firstName,
+        lastName,
+        fullName: composeChildFullName(lastName, firstName),
+        gender: dto.gender,
+        birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
+        groupId: dto.groupId === undefined ? undefined : dto.groupId,
+        status: dto.status,
+      },
+      include: childInclude,
+    });
+    await this.auditLog.logFromUser(caller, {
+      action: "child.update",
+      entityType: "Child",
+      entityId: updated.id,
+      branchId,
+      summary: `${updated.fullName} ma'lumotlari tahrirlandi`,
+    });
+    return updated;
   }
 
   /**
@@ -176,6 +245,9 @@ export class ChildrenService {
     const group = await this.prisma.group.findFirst({ where: { id: groupId, branchId } });
     if (!group) {
       throw new NotFoundException("Guruh topilmadi");
+    }
+    if (group.status !== "ACTIVE") {
+      throw new BadRequestException("Bu guruh nofaol — bolani faol guruhga biriktiring");
     }
     return group;
   }

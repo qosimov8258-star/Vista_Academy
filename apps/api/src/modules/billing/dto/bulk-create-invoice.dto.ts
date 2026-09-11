@@ -1,17 +1,18 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { IsDateString, IsNumber, IsOptional, IsPositive, IsString, Matches, Min } from "class-validator";
 
-export class CreateInvoiceDto {
-  @ApiProperty()
+export class BulkCreateInvoiceDto {
+  @ApiPropertyOptional({ description: "Berilsa — faqat shu guruhdagi bolalar, bo'lmasa — butun filial" })
+  @IsOptional()
   @IsString()
-  childId!: string;
+  groupId?: string;
 
-  @ApiProperty({ example: 850000, description: "Chegirmadan oldingi to'liq summa" })
+  @ApiProperty({ example: 850000, description: "Chegirmadan oldingi to'liq summa — har bir bolaga bir xil" })
   @IsNumber()
   @IsPositive()
   amount!: number;
 
-  @ApiPropertyOptional({ example: 85000, description: "Chegirma summasi (masalan ko'p farzandli oila uchun)" })
+  @ApiPropertyOptional({ example: 85000 })
   @IsOptional()
   @IsNumber()
   @Min(0)
