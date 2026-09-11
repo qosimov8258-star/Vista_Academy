@@ -496,3 +496,41 @@ export function ClockIcon(props: IconProps) {
     </Outline>
   );
 }
+
+export function BookIcon(props: IconProps) {
+  return (
+    <Outline {...props}>
+      <path d="M4.6 5.6a2 2 0 0 1 2-2H12v16.8H6.6a2 2 0 0 1-2-2Z" />
+      <path d="M19.4 5.6a2 2 0 0 0-2-2H12v16.8h5.4a2 2 0 0 0 2-2Z" />
+      <path d="M12 6.6v13.8" />
+    </Outline>
+  );
+}
+
+export function QuestionIcon(props: IconProps) {
+  return (
+    <Outline {...props}>
+      <circle cx="12" cy="12" r="8.6" />
+      <path d="M9.4 9.6a2.6 2.6 0 1 1 3.6 2.4c-.7.4-1 .8-1 1.6v.2" />
+      <path d="M12 16.9h.01" />
+    </Outline>
+  );
+}
+
+export function StarIcon(props: IconProps) {
+  return (
+    <Outline {...props}>
+      <path d="m12 3.6 2.4 5.1 5.6.7-4.1 3.9 1 5.6L12 16l-4.9 2.9 1-5.6-4.1-3.9 5.6-.7Z" />
+    </Outline>
+  );
+}
+
+export function DoorIcon(props: IconProps) {
+  return (
+    <Outline {...props}>
+      <rect x="6" y="3.4" width="12" height="17.2" rx="1.6" />
+      <path d="M14.4 12h.01" />
+    </Outline>
+  );
+}
+

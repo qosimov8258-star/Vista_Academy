@@ -6,13 +6,14 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { api, ApiError } from "@/lib/api";
+import { usePostLoginLoading } from "@/lib/post-login-loading";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { AlertIcon } from "@/components/ui/icons";
 import type { AuthenticatedUser } from "@/lib/types";
 
 const schema = z.object({
-  email: z.string().email("Email formati noto'g'ri"),
+  login: z.string().min(1, "Login kiritilishi shart"),
   password: z.string().min(8, "Kamida 8 belgi"),
 });
 
@@ -22,6 +23,7 @@ export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [serverError, setServerError] = useState<string | null>(null);
+  const { startPostLoginLoading } = usePostLoginLoading();
 
   const {
     register,
@@ -33,6 +35,9 @@ export function LoginForm() {
     setServerError(null);
     try {
       await api.post<{ user: AuthenticatedUser }>("/platform/auth/login", values);
+      // Dashboard va uning boshlang'ich ma'lumotlari tayyor bo'lgunicha
+      // LoadingScreen'ni ko'rsatamiz — uni dashboard sahifasi o'zi yashiradi.
+      startPostLoginLoading();
       const next = searchParams.get("next") ?? "/";
       router.push(next);
       router.refresh();
@@ -60,13 +65,13 @@ export function LoginForm() {
         </div>
       )}
       <Input
-        id="email"
-        label="Email"
-        type="email"
-        placeholder="admin@bogcha.uz"
+        id="login"
+        label="Login"
+        type="text"
+        placeholder="platform_admin"
         autoComplete="username"
-        error={errors.email?.message}
-        {...register("email")}
+        error={errors.login?.message}
+        {...register("login")}
       />
       <Input
         id="password"

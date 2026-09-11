@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
+    "@simplewebauthn/browser": "^14.0.0",
     "@tanstack/react-query": "^5.102.8",
     "@vladmandic/face-api": "^1.7.15",
     "clsx": "^2.1.1",

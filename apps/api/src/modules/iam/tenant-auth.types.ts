@@ -9,11 +9,15 @@ export interface TenantAuthenticatedUser {
   branchId: string | null;
   branchSlug: string | null;
   branchName: string | null;
-  email: string;
+  login: string;
   fullName: string;
   role: TenantUserRole;
   /** Profil rasmi bor-yo'qligi va brauzer keshini yangilash uchun. */
   avatarUpdatedAt: string | null;
+  /** Bog'langan xodim kartochkasidagi lavozim (masalan "Fan o'qituvchisi", "Oshpaz"). Xodimga bog'lanmagan hisoblarda (Super Admin, moliyachi) — null. */
+  position: string | null;
+  /** "Fan o'qituvchisi" lavozimida tanlangan fan(lar). Boshqa lavozimlarda/bog'lanmagan hisoblarda — bo'sh massiv. */
+  subjects: string[];
 }
 
 export interface TenantAccessTokenPayload {
@@ -23,7 +27,7 @@ export interface TenantAccessTokenPayload {
   organizationSlug: string;
   branchSlug: string | null;
   branchId: string | null;
-  email: string;
+  login: string;
   role: TenantUserRole;
 }
 

@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { usePostLoginLoading } from "@/lib/post-login-loading";
 import type { DashboardSummary } from "@/lib/types";
 import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardBody, CardHeader, CardTitle, SectionLabel } from "@/components/ui/card";
@@ -11,10 +13,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import {
   BuildingIcon,
-  ChartIcon,
   CheckCircleIcon,
   ChevronRightIcon,
-  ClockIcon,
   PauseCircleIcon,
   WalletIcon,
 } from "@/components/ui/icons";
@@ -27,12 +27,19 @@ export default function DashboardPage() {
     queryFn: () => api.get<DashboardSummary>("/platform/dashboard/summary"),
   });
 
+  // Boshlang'ich ma'lumot tayyor bo'lgach (muvaffaqiyatli yoki xato bilan),
+  // sign-in'dan keyin ko'rsatilgan global LoadingScreen'ni yashiramiz.
+  const { stopPostLoginLoading } = usePostLoginLoading();
+  useEffect(() => {
+    if (!isLoading) stopPostLoginLoading();
+  }, [isLoading, stopPostLoginLoading]);
+
   if (isLoading) return <LoadingState />;
   if (isError) return <ErrorState message={(error as Error).message} />;
   if (!data) return null;
 
   // Diqqat talab qiladigan obunalar bo'lsagina pastki blok ko'rsatiladi
-  const needsAttention = data.graceSubscriptions > 0 || data.suspendedSubscriptions > 0;
+  const needsAttention = data.suspendedSubscriptions > 0;
 
   return (
     <div className="space-y-6">
@@ -40,19 +47,13 @@ export default function DashboardPage() {
 
       <section>
         <SectionLabel>Umumiy holat</SectionLabel>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <StatCard
-            label="Tashkilotlar"
+            label="Bog'chalar"
             value={String(data.totalOrganizations)}
             hint={`${data.activeOrganizations} tasi faol`}
             icon={BuildingIcon}
             tone="primary"
-          />
-          <StatCard
-            label="Filiallar"
-            value={String(data.totalBranches)}
-            icon={ChartIcon}
-            tone="default"
           />
           <StatCard
             label="Faol obunalar"
@@ -72,18 +73,11 @@ export default function DashboardPage() {
 
       <section>
         <SectionLabel>Moliya va e&apos;tibor talab qiladiganlar</SectionLabel>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <StatCard
             label="Umumiy hamyon balansi"
             value={formatMoney(data.totalWalletBalance)}
             icon={WalletIcon}
-          />
-          <StatCard
-            label="Grace davridagi obunalar"
-            value={String(data.graceSubscriptions)}
-            tone="warning"
-            icon={ClockIcon}
-            hint={data.graceSubscriptions > 0 ? "To'lov muddati o'tgan" : "Hammasi joyida"}
           />
           <StatCard
             label="To'xtatilgan obunalar"
@@ -108,9 +102,9 @@ export default function DashboardPage() {
         <SectionLabel>So&apos;nggi qo&apos;shilganlar</SectionLabel>
         <Card className="overflow-hidden">
           <CardHeader className="flex items-center justify-between">
-            <CardTitle>Yaqinda qo&apos;shilgan tashkilotlar</CardTitle>
+            <CardTitle>Yaqinda qo&apos;shilgan bog&apos;chalar</CardTitle>
             <Link
-              href="/organizations"
+              href="/bogchalar"
               className="inline-flex items-center gap-0.5 text-[13px] font-medium text-[var(--color-primary)] hover:underline"
             >
               Barchasi
@@ -122,15 +116,15 @@ export default function DashboardPage() {
               <EmptyState
                 compact
                 icon={BuildingIcon}
-                title="Hali tashkilot yo'q"
-                description="Birinchi bog'chalar tarmog'ini yaratish uchun Tashkilotlar bo'limiga o'ting"
+                title="Hali bog'cha yo'q"
+                description="Birinchi bog'chani yaratish uchun Bog'chalar bo'limiga o'ting"
               />
             ) : (
               <ul className="divide-y divide-[var(--color-separator)]">
                 {data.recentOrganizations.map((org) => (
                   <li key={org.id}>
                     <Link
-                      href={`/organizations/${org.id}`}
+                      href={`/bogchalar/${org.id}`}
                       className="group flex items-center gap-3 px-5 py-3 transition-colors hover:bg-[var(--color-surface-hover)]"
                     >
                       <span

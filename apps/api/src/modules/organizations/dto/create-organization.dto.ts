@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsEmail, IsOptional, IsString, MinLength } from "class-validator";
+import { IsEmail, IsOptional, IsString, Matches, MinLength } from "class-validator";
+import { LOGIN_PATTERN, LOGIN_PATTERN_MESSAGE } from "../../../common/validators/login";
 
 export class CreateOrganizationDto {
   @ApiProperty({ example: "Quyoshcha bog'chalar tarmog'i" })
@@ -27,19 +28,19 @@ export class CreateOrganizationDto {
   @IsString()
   contactPhone?: string;
 
-  @ApiPropertyOptional({ description: "Boshlang'ich tarif reja ID (mavjud bo'lsa obuna ochiladi)" })
-  @IsOptional()
+  @ApiProperty({ description: "Tarif reja ID — bog'cha yaratilishi bilan shu tarifga obuna ochiladi" })
   @IsString()
-  planId?: string;
+  planId!: string;
 
   @ApiProperty({ example: "Aziza Karimova", description: "Tashkilotning Super Admin akkaunti to'liq ismi" })
   @IsString()
   @MinLength(2)
   adminFullName!: string;
 
-  @ApiProperty({ example: "admin@quyoshcha.uz", description: "Super Admin login emaili (tashkilot doirasida unikal)" })
-  @IsEmail()
-  adminEmail!: string;
+  @ApiProperty({ example: "admin_quyoshcha", description: "Super Admin login (tashkilot doirasida unikal)" })
+  @IsString()
+  @Matches(LOGIN_PATTERN, { message: LOGIN_PATTERN_MESSAGE })
+  adminLogin!: string;
 
   @ApiProperty({ example: "ChangeMe123!", description: "Super Admin login paroli" })
   @IsString()

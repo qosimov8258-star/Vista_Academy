@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -9,19 +10,22 @@ import { organizationAccessUrl } from "@/lib/admin-web";
 import type { Organization, Plan } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Input, Select } from "@/components/ui/input";
+import { PasswordVeilInput } from "@/components/ui/password-veil-input";
 import { Button } from "@/components/ui/button";
 import { CheckCircleIcon } from "@/components/ui/icons";
-import { useState } from "react";
+import { formatMoney } from "@/lib/format";
+
+const LOGIN_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{1,30}[A-Za-z0-9]$/;
+const LOGIN_MESSAGE = "Login lotin harf, raqam, . _ - dan iborat bo'lishi va kamida 3 belgi bo'lishi kerak";
 
 const schema = z.object({
   name: z.string().min(2, "Nomi kamida 2 belgi"),
-  firstBranchName: z.string().optional(),
   contactName: z.string().optional(),
   contactEmail: z.union([z.string().email("Email formati noto'g'ri"), z.literal("")]).optional(),
   contactPhone: z.string().optional(),
-  planId: z.string().optional(),
+  planId: z.string().min(1, "Tarif tanlang"),
   adminFullName: z.string().min(2, "To'liq ism kamida 2 belgi"),
-  adminEmail: z.string().email("Email formati noto'g'ri"),
+  adminLogin: z.string().regex(LOGIN_PATTERN, LOGIN_MESSAGE),
   adminPassword: z.string().min(8, "Kamida 8 belgi"),
 });
 
@@ -46,12 +50,18 @@ export function CreateOrganizationModal({ open, onClose }: { open: boolean; onCl
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
+  useEffect(() => {
+    if (open) {
+      reset({ name: "", contactName: "", contactEmail: "", contactPhone: "", planId: "" });
+      setServerError(null);
+    }
+  }, [open, reset]);
+
   const mutation = useMutation({
     mutationFn: (values: FormValues) =>
       api.post<Organization>("/platform/organizations", {
         ...values,
         contactEmail: values.contactEmail || undefined,
-        planId: values.planId || undefined,
       }),
     onSuccess: (organization) => {
       queryClient.invalidateQueries({ queryKey: ["organizations"] });
@@ -121,7 +131,7 @@ export function CreateOrganizationModal({ open, onClose }: { open: boolean; onCl
   }
 
   return (
-    <Modal open={open} onClose={handleClose} title="Yangi bog'chalar tarmog'i">
+    <Modal open={open} onClose={handleClose} title="Yangi bog'cha">
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div
@@ -131,29 +141,25 @@ export function CreateOrganizationModal({ open, onClose }: { open: boolean; onCl
             {serverError}
           </div>
         )}
-        <Input label="Tashkilot nomi" placeholder="Quyoshcha bog'chalar tarmog'i" error={errors.name?.message} {...register("name")} />
-        <Input
-          label="Birinchi filial nomi"
-          placeholder="Bosh filial"
-          hint="Bo'sh qoldirilsa 'Bosh filial' deb yaratiladi"
-          {...register("firstBranchName")}
-        />
+        <Input label="Bog'cha nomi" placeholder="Quyoshcha bog'chasi" error={errors.name?.message} {...register("name")} />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input label="Aloqa shaxsi" placeholder="Aziza Karimova" {...register("contactName")} />
-          <Input label="Telefon" placeholder="+998901234567" {...register("contactPhone")} />
+          <Input label="Ism" placeholder="Aziza Karimova" {...register("contactName")} />
+          <Input label="Telefon raqami" placeholder="+998901234567" {...register("contactPhone")} />
         </div>
         <Input
           label="Email"
           type="email"
-          placeholder="info@tarmoq.uz"
+          placeholder="info@bogcha.uz"
           error={errors.contactEmail?.message}
           {...register("contactEmail")}
         />
-        <Select label="Boshlang'ich tarif reja (ixtiyoriy)" defaultValue="" {...register("planId")}>
-          <option value="">Tanlanmagan — keyinroq biriktiriladi</option>
+        <Select label="Tarif" defaultValue="" error={errors.planId?.message} {...register("planId")}>
+          <option value="" disabled>
+            Tarif tanlang...
+          </option>
           {plans?.map((plan) => (
             <option key={plan.id} value={plan.id}>
-              {plan.name} — {Number(plan.priceMonthly).toLocaleString("uz-UZ")} {plan.currency}/oy
+              {plan.name} — {formatMoney(plan.priceMonthly, plan.currency)}/oy
             </option>
           ))}
         </Select>
@@ -168,15 +174,14 @@ export function CreateOrganizationModal({ open, onClose }: { open: boolean; onCl
               {...register("adminFullName")}
             />
             <Input
-              label="Login email"
-              type="email"
-              placeholder="admin@tarmoq.uz"
-              error={errors.adminEmail?.message}
-              {...register("adminEmail")}
+              label="Login"
+              type="text"
+              placeholder="admin_tarmoq"
+              error={errors.adminLogin?.message}
+              {...register("adminLogin")}
             />
-            <Input
+            <PasswordVeilInput
               label="Parol"
-              type="password"
               placeholder="Kamida 8 belgi"
               error={errors.adminPassword?.message}
               {...register("adminPassword")}

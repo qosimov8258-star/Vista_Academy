@@ -2,8 +2,12 @@ export type PlatformUserRole = "PLATFORM_SUPER_ADMIN" | "PLATFORM_SUPPORT";
 
 export interface AuthenticatedUser {
   id: string;
-  email: string;
+  login: string;
   fullName: string;
+  firstName: string | null;
+  lastName: string | null;
+  phone: string | null;
+  avatarUrl: string | null;
   role: PlatformUserRole;
 }
 
@@ -65,7 +69,7 @@ export interface WalletTransaction {
   balanceAfter: string;
   note: string | null;
   createdAt: string;
-  createdByUser?: { id: string; fullName: string; email: string } | null;
+  createdByUser?: { id: string; fullName: string; login: string } | null;
 }
 
 export interface Organization {

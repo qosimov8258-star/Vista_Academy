@@ -65,7 +65,11 @@ function normalize(
   // fayl yo'llari va kod satrlari bo'ladi, ular tashqariga sizmasligi kerak.
   // To'liq xato serverda jurnalga yozilgan.
   void exception;
-  return { code: "INTERNAL_ERROR", message: "Serverda kutilmagan xatolik yuz berdi", details: {} };
+  return {
+    code: "INTERNAL_ERROR",
+    message: "Serverda kutilmagan xatolik yuz berdi. Birozdan so'ng qayta urinib ko'ring.",
+    details: {},
+  };
 }
 
 /**

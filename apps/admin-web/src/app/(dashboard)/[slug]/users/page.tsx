@@ -77,7 +77,7 @@ function PersonRow({ person, isSelf }: { person: TenantUser; isSelf: boolean }) 
           {isSelf && <Badge tone="neutral">Siz</Badge>}
           {!person.isActive && <Badge tone="neutral">Nofaol</Badge>}
         </div>
-        <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">{person.email}</p>
+        <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">{person.login}</p>
       </div>
 
       <span className={`hidden shrink-0 rounded-full px-2.5 py-1 text-[12px] font-medium sm:block ${style.chip}`}>
@@ -127,7 +127,7 @@ export default function UsersPage({ params }: { params: Promise<{ slug: string }
       if (roleFilter !== "ALL" && person.role !== roleFilter) return false;
       if (!needle) return true;
       return (
-        person.fullName.toLowerCase().includes(needle) || person.email.toLowerCase().includes(needle)
+        person.fullName.toLowerCase().includes(needle) || person.login.toLowerCase().includes(needle)
       );
     });
   }, [people, roleFilter, search]);
@@ -226,7 +226,7 @@ export default function UsersPage({ params }: { params: Promise<{ slug: string }
                 type="search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Ism yoki email"
+                placeholder="Ism yoki login"
                 aria-label="Xodim qidirish"
                 className="h-11 w-full rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] pl-10 pr-3.5 text-[15px] text-[var(--color-text)] outline-none transition-[border-color,box-shadow] duration-[var(--dur-fast)] ease-[var(--ease-out)] placeholder:text-[var(--color-text-muted)]/60 focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/[0.12] [&::-webkit-search-cancel-button]:appearance-none"
               />

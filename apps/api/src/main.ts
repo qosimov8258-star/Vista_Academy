@@ -7,9 +7,11 @@ import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
 import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
 import { ResponseInterceptor } from "./common/interceptors/response.interceptor";
+import { UPLOADS_ROOT } from "./common/constants/uploads";
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  app.useStaticAssets(UPLOADS_ROOT, { prefix: "/uploads" });
 
   // Profil rasmi so'rov tanasida base64 ko'rinishida keladi. Express'ning
   // standart 100kb chegarasi 256x256 avatar uchun ham tor bo'lib qolishi

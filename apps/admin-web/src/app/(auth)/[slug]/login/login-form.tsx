@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import type { TenantAuthenticatedUser } from "@/lib/types";
 
 const schema = z.object({
-  email: z.string().email("Email formati noto'g'ri"),
+  login: z.string().min(1, "Login kiritilishi shart"),
   password: z.string().min(8, "Kamida 8 belgi"),
 });
 
@@ -56,14 +56,14 @@ export function LoginForm({ slug }: { slug: string }) {
         </div>
       )}
       <Input
-        id="email"
-        label="Email"
-        type="email"
-        placeholder="admin@tarmoq.uz"
+        id="login"
+        label="Login"
+        type="text"
+        placeholder="admin_tarmoq"
         autoComplete="username"
         className="h-11 rounded-xl px-3.5"
-        error={errors.email?.message}
-        {...register("email")}
+        error={errors.login?.message}
+        {...register("login")}
       />
       <Input
         id="password"
