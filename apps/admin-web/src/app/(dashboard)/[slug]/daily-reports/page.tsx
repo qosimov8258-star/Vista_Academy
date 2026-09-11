@@ -1,10 +1,10 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { DailyReportDay, Organization } from "@/lib/types";
+import type { ChildAllergy, DailyReportDay, EatingQuality, MoodStatus, Organization } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ const MOOD_LABEL: Record<string, string> = { HAPPY: "Xursand", NEUTRAL: "Oddiy",
 
 export default function DailyReportsPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
+  const queryClient = useQueryClient();
   const { branchId: forcedBranchId } = useBranchContext(slug);
   const [branchId, setBranchId] = useState("");
   // "Today" depends on the viewer's clock, which can differ between the
@@ -63,6 +64,69 @@ export default function DailyReportsPage({ params }: { params: Promise<{ slug: s
     queryFn: () => api.get<DailyReportDay>(`/app/daily-reports?branchId=${branchId}&date=${date}`),
     enabled: !!branchId && !!date,
   });
+
+  // Tarbiyachi ro'yxatni ko'rib chiqayotganda (hali hech kimni ochmasdan)
+  // allergiyasi bor bolani darhol ko'rishi kerak — ovqatlanish bilan
+  // bog'liq bo'lgani uchun bu yerda ham muhim.
+  const allergiesQuery = useQuery({
+    queryKey: ["child-allergies", slug, branchId],
+    queryFn: () => api.get<ChildAllergy[]>(`/app/health/allergies?branchId=${branchId}`),
+    enabled: !!branchId,
+  });
+  const allergyByChildId = new Map((allergiesQuery.data ?? []).map((a) => [a.child.id, a.allergies]));
+
+  // Tez to'ldirish: sahifa ochilganda har bir bola "Yaxshi ovqatlandi" /
+  // "Xursand" deb belgilanadi (hali saqlanmagan) — Davomat sahifasidagi
+  // "hammasi Keldi" naqshi bilan bir xil. Tarbiyachi faqat istisnolarni
+  // o'zgartiradi va bitta "Hammasini saqlash" bosadi. Uyqu/tualet/faoliyat
+  // kabi tafsilotlar bu yerda tegilmaydi — ular alohida modalda saqlanadi
+  // va bu yerdan yuborilmagani uchun ular o'zgarishsiz qoladi.
+  const [localEating, setLocalEating] = useState<Record<string, EatingQuality>>({});
+  const [localMood, setLocalMood] = useState<Record<string, MoodStatus>>({});
+  // Faqat filial+sana haqiqatan almashganda tozalanadi — bittagina bolaning
+  // "Tafsilotlar" oynasidan saqlashi ham shu so'rovni qayta yuklaydi
+  // (invalidateQueries bir xil kalit bilan), aks holda o'sha fon-yangilanish
+  // hali saqlanmagan boshqa bolalarning tanlovlarini jimgina o'chirib yuborardi.
+  const initializedForRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!reportsQuery.data || reportsQuery.data.date !== date) return;
+    const key = `${branchId}_${date}`;
+    if (initializedForRef.current === key) return;
+    initializedForRef.current = key;
+    setLocalEating(
+      Object.fromEntries(reportsQuery.data.children.map((c) => [c.childId, c.report?.eatingQuality ?? "GOOD"])),
+    );
+    setLocalMood(
+      Object.fromEntries(reportsQuery.data.children.map((c) => [c.childId, c.report?.mood ?? "HAPPY"])),
+    );
+  }, [reportsQuery.data, date, branchId]);
+
+  const bulkSaveMutation = useMutation({
+    mutationFn: async () => {
+      if (!reportsQuery.data) return;
+      await Promise.all(
+        reportsQuery.data.children.map((c) =>
+          api.post("/app/daily-reports", {
+            childId: c.childId,
+            date,
+            eatingQuality: localEating[c.childId] ?? "GOOD",
+            mood: localMood[c.childId] ?? "HAPPY",
+          }),
+        ),
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["daily-reports", slug, branchId, date] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-summary", slug] });
+    },
+  });
+
+  // Sana yoki filial almashtirilganda oldingi urinishning xabari yangi
+  // kunga osilib qolmasin.
+  useEffect(() => {
+    bulkSaveMutation.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [date, branchId]);
 
   return (
     <div className="space-y-6">
@@ -106,34 +170,84 @@ export default function DailyReportsPage({ params }: { params: Promise<{ slug: s
         <EmptyState title="Bu filialda faol bola yo'q" />
       ) : (
         <Card className="overflow-hidden">
+          <div className="hairline flex items-center justify-between border-b border-[var(--color-separator)] px-5 py-3 text-[12.5px] text-[var(--color-text-muted)] sm:px-6">
+            <span className="tabular-nums">
+              {reportsQuery.data.children.filter((c) => c.report).length} / {reportsQuery.data.children.length} to&apos;ldirildi
+            </span>
+          </div>
           <ul className="divide-y divide-[var(--color-separator)]">
             {reportsQuery.data.children.map((c) => (
-              <li key={c.childId} className="flex items-center justify-between px-5 py-3">
-                <div>
+              <li key={c.childId} className="flex flex-wrap items-center justify-between gap-2.5 px-5 py-3">
+                <div className="min-w-0">
                   <Link href={`/${slug}/children/${c.childId}`} className="text-sm font-medium text-[var(--color-primary)] hover:underline">
                     {c.fullName}
                   </Link>
+                  {allergyByChildId.has(c.childId) && (
+                    <Badge tone="danger" className="ml-2">
+                      Allergiya: {allergyByChildId.get(c.childId)}
+                    </Badge>
+                  )}
                   {/* Bir necha guruhli tarbiyachi uchun guruh nomi */}
                   {c.groupName && <p className="text-xs text-[var(--color-text-muted)]">{c.groupName}</p>}
                   {c.report && (
                     <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
-                      {c.report.eatingQuality && `Ovqat: ${EATING_LABEL[c.report.eatingQuality]}`}
-                      {c.report.mood && ` • Kayfiyat: ${MOOD_LABEL[c.report.mood]}`}
-                      {c.report.sleepMinutes != null && ` • Uyqu: ${c.report.sleepMinutes} daq`}
+                      {c.report.sleepMinutes != null && `Uyqu: ${c.report.sleepMinutes} daq`}
+                      {c.report.toiletNotes && ` • Tualet: ${c.report.toiletNotes}`}
+                      {c.report.activityNotes && ` • Faoliyat: ${c.report.activityNotes}`}
                     </p>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge tone={c.report ? "success" : "neutral"}>{c.report ? "To'ldirilgan" : "To'ldirilmagan"}</Badge>
+                <div className="flex flex-wrap items-center gap-2">
+                  {canWrite ? (
+                    <>
+                      <Select
+                        aria-label="Ovqatlanishi"
+                        value={localEating[c.childId] ?? "GOOD"}
+                        onChange={(e) =>
+                          setLocalEating((s) => ({ ...s, [c.childId]: e.target.value as EatingQuality }))
+                        }
+                        className="h-9 w-32 py-0 text-[13px]"
+                      >
+                        <option value="GOOD">{EATING_LABEL.GOOD}</option>
+                        <option value="AVERAGE">{EATING_LABEL.AVERAGE}</option>
+                        <option value="POOR">{EATING_LABEL.POOR}</option>
+                      </Select>
+                      <Select
+                        aria-label="Kayfiyati"
+                        value={localMood[c.childId] ?? "HAPPY"}
+                        onChange={(e) => setLocalMood((s) => ({ ...s, [c.childId]: e.target.value as MoodStatus }))}
+                        className="h-9 w-28 py-0 text-[13px]"
+                      >
+                        <option value="HAPPY">{MOOD_LABEL.HAPPY}</option>
+                        <option value="NEUTRAL">{MOOD_LABEL.NEUTRAL}</option>
+                        <option value="UPSET">{MOOD_LABEL.UPSET}</option>
+                      </Select>
+                    </>
+                  ) : (
+                    <Badge tone={c.report ? "success" : "neutral"}>{c.report ? "To'ldirilgan" : "To'ldirilmagan"}</Badge>
+                  )}
                   {canWrite && (
                     <Button size="sm" variant="outline" onClick={() => setEditChild({ childId: c.childId, fullName: c.fullName })}>
-                      {c.report ? "Tahrirlash" : "To'ldirish"}
+                      Tafsilotlar
                     </Button>
                   )}
                 </div>
               </li>
             ))}
           </ul>
+          {canWrite && (
+            <div className="hairline flex items-center justify-between gap-3 border-t border-[var(--color-separator)] px-5 py-3.5 sm:px-6">
+              {bulkSaveMutation.isError && (
+                <span className="text-[13px] text-[var(--color-danger)]">Saqlashda xatolik yuz berdi</span>
+              )}
+              {bulkSaveMutation.isSuccess && !bulkSaveMutation.isPending && (
+                <span className="text-[13px] text-[var(--color-success)]">Saqlandi</span>
+              )}
+              <Button className="ml-auto" loading={bulkSaveMutation.isPending} onClick={() => bulkSaveMutation.mutate()}>
+                Hammasini saqlash
+              </Button>
+            </div>
+          )}
         </Card>
       )}
 

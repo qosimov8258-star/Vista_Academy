@@ -3,10 +3,10 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
-import type { DailyReport } from "@/lib/types";
+import type { DailyReport, HealthProfile } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Select, Input, Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,14 @@ export function EditDailyReportModal({
 }) {
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
+
+  const healthQuery = useQuery({
+    queryKey: ["child-health", slug, childId],
+    queryFn: () => api.get<HealthProfile | null>(`/app/children/${childId}/health`),
+    enabled: open,
+  });
+  const health = healthQuery.data;
+  const hasWarning = !!(health?.allergies || health?.chronicConditions);
 
   const {
     register,
@@ -85,6 +93,12 @@ export function EditDailyReportModal({
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
             {serverError}
+          </div>
+        )}
+        {hasWarning && (
+          <div className="space-y-0.5 rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
+            {health?.allergies && <p>Allergiya: {health.allergies}</p>}
+            {health?.chronicConditions && <p>Surunkali kasallik: {health.chronicConditions}</p>}
           </div>
         )}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

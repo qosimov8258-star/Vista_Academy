@@ -3,7 +3,7 @@
 import { use, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, getPaginated, ApiError } from "@/lib/api";
-import type { Employee, PayrollEntry, Shift } from "@/lib/types";
+import type { Employee, PayrollEntry, PayrollSummary, Shift } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardBody, CardTitle } from "@/components/ui/card";
@@ -16,6 +16,7 @@ import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { formatDate, formatMoney } from "@/lib/format";
 import { LogShiftModal } from "@/features/hr/log-shift-modal";
 import { GeneratePayrollModal } from "@/features/hr/generate-payroll-modal";
+import { EditSalarySchemeModal } from "@/features/hr/edit-salary-scheme-modal";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { canWriteMoney } from "@/lib/permissions";
 
@@ -52,6 +53,7 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
   const [payrollPage, setPayrollPage] = useState(1);
   const [logShiftOpen, setLogShiftOpen] = useState(false);
   const [generatePayrollOpen, setGeneratePayrollOpen] = useState(false);
+  const [salarySchemeEmployee, setSalarySchemeEmployee] = useState<Employee | null>(null);
 
   useEffect(() => {
     setPeriod((current) => current || currentPeriodString());
@@ -97,7 +99,15 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
     mutationFn: (id: string) => api.patch(`/app/payroll/${id}/mark-paid`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["payroll", slug] });
+      queryClient.invalidateQueries({ queryKey: ["payroll-summary", slug] });
     },
+  });
+
+  const payrollSummaryQuery = useQuery({
+    queryKey: ["payroll-summary", slug, period, forcedBranchId],
+    queryFn: () =>
+      api.get<PayrollSummary>(`/app/payroll/summary?period=${period}${forcedBranchId ? `&branchId=${forcedBranchId}` : ""}`),
+    enabled: !!period,
   });
 
   return (
@@ -138,6 +148,39 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
             </option>
           ))}
         </Select>
+      </Card>
+
+      <Card className="overflow-hidden">
+        <CardHeader>
+          <CardTitle>Xodimlar va maosh sxemasi</CardTitle>
+        </CardHeader>
+        <CardBody className="p-0">
+          {employeesQuery.isLoading ? (
+            <div className="px-5 py-5 sm:px-6">
+              <LoadingState rows={3} />
+            </div>
+          ) : !employeesQuery.data || employeesQuery.data.length === 0 ? (
+            <div className="px-5 py-5 sm:px-6">
+              <EmptyState title="Xodim topilmadi" />
+            </div>
+          ) : (
+            <ul className="divide-y divide-[var(--color-separator)]">
+              {employeesQuery.data.map((employee) => (
+                <li key={employee.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 sm:px-6">
+                  <div className="min-w-0">
+                    <p className="truncate text-[14px] font-medium text-[var(--color-text)]">{employee.fullName}</p>
+                    <p className="text-[12.5px] text-[var(--color-text-muted)]">{employee.position}</p>
+                  </div>
+                  {canWrite && (
+                    <Button size="sm" variant="outline" onClick={() => setSalarySchemeEmployee(employee)}>
+                      Maosh sxemasi
+                    </Button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardBody>
       </Card>
 
       <Card className="overflow-hidden">
@@ -195,6 +238,34 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
             </Button>
           )}
         </CardHeader>
+        {payrollSummaryQuery.data && payrollSummaryQuery.data.totals.entries > 0 && (
+          <div className="grid grid-cols-2 gap-px border-b border-[var(--color-separator)] bg-[var(--color-separator)] sm:grid-cols-4">
+            <div className="bg-[var(--color-surface)] px-5 py-3.5 sm:px-6">
+              <p className="text-[12px] font-medium text-[var(--color-text-muted)]">Umumiy fond</p>
+              <p className="mt-1 text-[15px] font-medium tabular-nums text-[var(--color-text)]">
+                {formatMoney(payrollSummaryQuery.data.totals.total)}
+              </p>
+            </div>
+            <div className="bg-[var(--color-surface)] px-5 py-3.5 sm:px-6">
+              <p className="text-[12px] font-medium text-[var(--color-text-muted)]">To&apos;langan</p>
+              <p className="mt-1 text-[15px] font-medium tabular-nums text-[var(--color-success)]">
+                {formatMoney(payrollSummaryQuery.data.totals.paid)}
+              </p>
+            </div>
+            <div className="bg-[var(--color-surface)] px-5 py-3.5 sm:px-6">
+              <p className="text-[12px] font-medium text-[var(--color-text-muted)]">To&apos;lanmagan</p>
+              <p className="mt-1 text-[15px] font-medium tabular-nums text-[var(--color-danger)]">
+                {formatMoney(payrollSummaryQuery.data.totals.unpaid)}
+              </p>
+            </div>
+            <div className="bg-[var(--color-surface)] px-5 py-3.5 sm:px-6">
+              <p className="text-[12px] font-medium text-[var(--color-text-muted)]">Yozuvlar soni</p>
+              <p className="mt-1 text-[15px] font-medium tabular-nums text-[var(--color-text)]">
+                {payrollSummaryQuery.data.totals.entries}
+              </p>
+            </div>
+          </div>
+        )}
         <CardBody className="p-0">
           {!period || payrollQuery.isLoading ? (
             <div className="px-5 py-5 sm:px-6">
@@ -221,6 +292,7 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
                     <Th numeric>Asosiy</Th>
                     <Th numeric>Mukofot</Th>
                     <Th numeric>Jarima</Th>
+                    <Th numeric>Ushlab qolish</Th>
                     <Th numeric>Jami</Th>
                     <Th>Holat</Th>
                     <Th>To&apos;langan sana</Th>
@@ -239,6 +311,7 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
                       </Td>
                       <Td numeric className="text-[var(--color-success)]">{formatMoney(entry.bonusAmount)}</Td>
                       <Td numeric className="text-[var(--color-danger)]">{formatMoney(entry.penaltyAmount)}</Td>
+                      <Td numeric className="text-[var(--color-danger)]">{formatMoney(entry.deductionAmount)}</Td>
                       <Td numeric className="font-medium">{formatMoney(entry.totalAmount)}</Td>
                       <Td>
                         <Badge tone={entry.status === "PAID" ? "success" : "warning"}>
@@ -304,6 +377,15 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
       {canWrite && <LogShiftModal open={logShiftOpen} onClose={() => setLogShiftOpen(false)} slug={slug} />}
       {canWrite && (
         <GeneratePayrollModal open={generatePayrollOpen} onClose={() => setGeneratePayrollOpen(false)} slug={slug} />
+      )}
+      {canWrite && salarySchemeEmployee && (
+        <EditSalarySchemeModal
+          open={!!salarySchemeEmployee}
+          onClose={() => setSalarySchemeEmployee(null)}
+          slug={slug}
+          employeeId={salarySchemeEmployee.id}
+          employeeName={salarySchemeEmployee.fullName}
+        />
       )}
     </div>
   );

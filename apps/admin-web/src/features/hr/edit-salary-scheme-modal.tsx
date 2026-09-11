@@ -74,18 +74,23 @@ export function EditSalarySchemeModal({
     defaultValues: { ruleType: "FIXED", fixedAmount: 0, rate: 0 },
   });
 
+  // Backend sxema topilmasa 404 emas, `data: null` bilan 200 qaytaradi —
+  // shuning uchun bu yerda `notFound`ga emas, `isSuccess`ga qarab tekshiramiz.
+  // Aks holda: bir xodimning sxemasini ochib, keyin sxemasi yo'q boshqa
+  // xodimga o'tsangiz, avvalgisining qiymatlari formada qolib ketardi —
+  // saqlasangiz noto'g'ri xodimga noto'g'ri sxema yozilib qolardi.
   useEffect(() => {
-    if (!open) return;
+    if (!open || !schemeQuery.isSuccess) return;
     if (schemeQuery.data) {
       reset({
         ruleType: schemeQuery.data.ruleType,
         fixedAmount: Number(schemeQuery.data.fixedAmount),
         rate: Number(schemeQuery.data.rate),
       });
-    } else if (notFound) {
+    } else {
       reset({ ruleType: "FIXED", fixedAmount: 0, rate: 0 });
     }
-  }, [open, schemeQuery.data, notFound, reset]);
+  }, [open, schemeQuery.isSuccess, schemeQuery.data, reset]);
 
   const ruleType = watch("ruleType");
 

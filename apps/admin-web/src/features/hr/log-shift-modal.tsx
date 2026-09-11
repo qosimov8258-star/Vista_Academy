@@ -31,8 +31,9 @@ export function LogShiftModal({ open, onClose, slug }: { open: boolean; onClose:
   const [serverError, setServerError] = useState<string | null>(null);
 
   const { data: employees } = useQuery({
-    queryKey: ["employees", slug],
-    queryFn: () => api.get<Employee[]>("/app/employees"),
+    // Ishdan bo'shagan xodim uchun smena qayd etilmasin.
+    queryKey: ["employees", slug, "active"],
+    queryFn: () => api.get<Employee[]>("/app/employees?isActive=true"),
     enabled: open,
   });
 
