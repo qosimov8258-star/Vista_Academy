@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
 import { parentApi } from "@/lib/parent-api";
 import type { ParentAccount, PublicOrganization } from "@/lib/types";
-import { KindergartenScene } from "@/components/brand/kindergarten-scene";
+import { KindergartenBackdrop } from "@/components/brand/kindergarten-backdrop";
 import { EyeIcon, EyeOffIcon } from "@/components/ui/icons";
 import styles from "../parent.module.css";
 
@@ -59,7 +59,7 @@ export default function ParentLoginPage({ params }: { params: Promise<{ slug: st
   return (
     <div className={`${styles.shell} ${styles.sky} flex min-h-[100dvh] flex-col`}>
       <div className="relative h-[34vh] min-h-[220px] overflow-hidden">
-        <KindergartenScene name={orgQuery.data?.name ?? null} />
+        <KindergartenBackdrop name={orgQuery.data?.name ?? null} />
       </div>
 
       <div className="relative -mt-8 flex-1 rounded-t-[32px] bg-[var(--p-card)] px-5 pb-10 pt-7 shadow-[var(--p-shadow)] sm:mx-auto sm:w-full sm:max-w-[440px] sm:rounded-[var(--p-radius)]">

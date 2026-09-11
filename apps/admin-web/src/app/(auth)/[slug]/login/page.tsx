@@ -42,7 +42,7 @@ export default function LoginPage({ params }: { params: Promise<{ slug: string }
         className="absolute inset-x-0 top-0 h-[46vh] min-h-[300px] max-h-[440px] overflow-hidden rounded-b-[28px] lg:inset-0 lg:h-auto lg:min-h-0 lg:max-h-none lg:rounded-none"
         aria-hidden="true"
       >
-        <KindergartenBackdrop name={orgQuery.isPending ? null : (orgName ?? slug)} />
+        <KindergartenBackdrop focus="left" name={orgQuery.isPending ? null : (orgName ?? slug)} />
       </div>
 
       <div className={`${styles.brand} absolute right-4 top-4 z-20 flex items-center gap-2.5 lg:left-8 lg:right-auto lg:top-7`}>

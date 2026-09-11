@@ -39,10 +39,19 @@ function canRender3D(): boolean {
   }
 }
 
-export function KindergartenBackdrop({ name }: { name: string | null }) {
+export function KindergartenBackdrop({
+  name,
+  focus = "center",
+}: {
+  name: string | null;
+  /** Bino qayerda tursin: karta keng ekranda o'ngda bo'lsa "left". */
+  focus?: "left" | "center";
+}) {
   const hostRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<KindergartenSceneHandle | null>(null);
   const nameRef = useRef(name);
+  // Kompozitsiya sahifaga bog'liq va o'zgarmaydi — sahna qurilganda o'qiladi
+  const focusRef = useRef(focus);
   const [stage, setStage] = useState<Stage>("flat");
 
   // Nom keyinroq yuklanadi — 3D lavhani ham yangilaymiz
@@ -62,6 +71,7 @@ export function KindergartenBackdrop({ name }: { name: string | null }) {
           if (cancelled || !hostRef.current) return;
           handleRef.current = mountKindergarten3D(hostRef.current, {
             name: nameRef.current,
+            focus: focusRef.current,
             reducedMotion,
             onReady: () => {
               if (!cancelled) setStage("revealing");

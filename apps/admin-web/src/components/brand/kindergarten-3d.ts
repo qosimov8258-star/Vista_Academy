@@ -73,6 +73,11 @@ export interface KindergartenSceneOptions {
   onReady: () => void;
   /** Qurilma sahnani tortolmayapti — tekis rasmga qaytish kerak. */
   onSlow: () => void;
+  /**
+   * Bino qayerda tursin. Kirish kartasi keng ekranda o'ng yarmida turgan
+   * sahifada — "left", karta pastda yoki markazda bo'lsa — "center".
+   */
+  focus?: "left" | "center";
 }
 
 export interface KindergartenSceneHandle {
@@ -1218,6 +1223,10 @@ export function mountKindergarten3D(host: HTMLElement, options: KindergartenScen
     scatter(12, 4.5, 9.5, -1.2, 3.2);
     scatter(8, -1.2, 2.0, 3.2, 6.5);
     scatter(6, -7.5, -5.2, 4.0, 7.0);
+    if (!narrow) {
+      scatter(10, -13.5, -8, -1.5, 4.5);
+      scatter(10, 10, 15.5, -1.5, 4.5);
+    }
 
     const stems = new InstancedMesh(new CylinderGeometry(0.012, 0.016, 1, 5, 1).translate(0, 0.5, 0), std(0x4aa957, 0.8), flowers.length);
     const petalParts: BufferGeometry[] = [];
@@ -1302,14 +1311,17 @@ export function mountKindergarten3D(host: HTMLElement, options: KindergartenScen
         .replace("#include <common>", "#include <common>\nvarying float vBladeH;")
         .replace("#include <color_fragment>", "#include <color_fragment>\ndiffuseColor.rgb *= mix(0.55, 1.1, vBladeH);");
     };
-    const count = narrow ? 1100 : 2600;
+    const count = narrow ? 1100 : 3600;
+    // Telefonda kadr tor — maysa ko'rinadigan joyga zichroq ekiladi;
+    // kompyuterdagi keng tasmada esa chetlar ham bo'sh qolmasin
+    const [gx0, gx1] = narrow ? [-8, 9] : [-14, 16];
     const grass = new InstancedMesh(blade, material, count);
     const dummy = new Object3D();
     const tint = new Color();
     const shades = [0x4fa845, 0x63b957, 0x78c86a, 0x8ad37a];
     let placed = 0;
     for (let tries = 0; placed < count && tries < count * 6; tries++) {
-      const x = MathUtils.lerp(-10, 12, rng());
+      const x = MathUtils.lerp(gx0, gx1, rng());
       // Kameraga yaqin joyda zichroq — uzoqdagisi baribir ko'rinmaydi
       const z = -4 + 14 * Math.sqrt(rng());
       if (blocked(x, z, 0.04)) continue;
@@ -1349,10 +1361,14 @@ export function mountKindergarten3D(host: HTMLElement, options: KindergartenScen
     const daisyGeometry = mergeGeometries(parts);
     parts.forEach((p) => p.dispose());
     if (daisyGeometry) {
-      const daisies = new InstancedMesh(daisyGeometry, new MeshStandardMaterial({ vertexColors: true, roughness: 0.7 }), 90);
+      const daisies = new InstancedMesh(
+        daisyGeometry,
+        new MeshStandardMaterial({ vertexColors: true, roughness: 0.7 }),
+        narrow ? 70 : 120,
+      );
       let n = 0;
-      for (let tries = 0; n < daisies.count && tries < 900; tries++) {
-        const x = MathUtils.lerp(-8, 10, rng());
+      for (let tries = 0; n < daisies.count && tries < 1500; tries++) {
+        const x = MathUtils.lerp(narrow ? -7 : -13, narrow ? 8 : 15, rng());
         const z = MathUtils.lerp(2.4, 9, rng());
         if (blocked(x, z, 0.08)) continue;
         dummy.position.set(x, groundHeight(x, z), z);
@@ -1555,14 +1571,27 @@ export function mountKindergarten3D(host: HTMLElement, options: KindergartenScen
     const aspect = w / h;
     camera.aspect = aspect;
     const tanHalf = Math.tan(MathUtils.degToRad(camera.fov / 2));
-    // Bino tekisligida kamida ~9.2 birlik balandlik va ~10.5 kenglik ko'rinsin
-    const distance = Math.max(9.2 / (2 * tanHalf), 10.5 / (2 * tanHalf * aspect));
+    // Bino tekisligida kamida ~9.2 birlik balandlik va ~10.5 kenglik ko'rinsin.
+    // Juda keng va past tasmada (masalan, kompyuterdagi ota-ona kirishi)
+    // balandlikni to'liq sig'dirsak, kamera shunchalik uzoqlashadiki, chetlarda
+    // bo'm-bo'sh maydon ko'rinadi. Shuning uchun kenglik ~30 birlik bilan
+    // cheklanadi, tepa-pastdan esa biroz kesiladi — SVG'dagi `slice` kabi.
+    // Lekin kadr hech qachon ~5.6 birlikdan past bo'lmaydi: bino tomi va
+    // bayrog'i doim sig'sin.
+    const fitHeight = 9.2 / (2 * tanHalf);
+    const minHeight = 5.6 / (2 * tanHalf);
+    const fitWidth = 10.5 / (2 * tanHalf * aspect);
+    const widthCap = 30 / (2 * tanHalf * aspect);
+    const distance = Math.max(fitWidth, Math.min(fitHeight, Math.max(widthCap, minHeight)));
     const visibleWidth = 2 * distance * tanHalf * aspect;
-    // Keng ekranda o'ng yarmida kirish kartasi turadi — bino chapga suriladi
+    // Kesilgan kadrda nigoh biroz pastga: bino tomi va bayrog'i sig'sin
+    const cropped = Math.max(0, 9.2 - 2 * distance * tanHalf);
+    const targetY = 2.25 - cropped * 0.08;
+    // Kirish kartasi o'ng yarmida turgan sahifada bino chapga suriladi
     const wide = w >= 1024 && aspect > 1.25;
-    const shift = wide ? 0.14 * visibleWidth : 0.25;
-    baseCamera.set(shift, 3.0, distance);
-    baseTarget.set(shift, 2.25, 0);
+    const shift = options.focus === "left" && wide ? 0.14 * visibleWidth : 0.25;
+    baseCamera.set(shift, targetY + 0.75, distance);
+    baseTarget.set(shift, targetY, 0);
     camera.updateProjectionMatrix();
   };
 
