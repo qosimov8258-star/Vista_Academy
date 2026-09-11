@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import { useId, type CSSProperties } from "react";
 import type { SkyPhase, SkyState } from "@/lib/sky";
 import styles from "../parent.module.css";
 import { useCabinetTheme } from "./theme";
@@ -255,32 +255,239 @@ function Sun({ phase }: { phase: SkyPhase }) {
   );
 }
 
+const MOON_CX = 70;
+const MOON_CY = 68;
+const MOON_R = 35;
+
+/**
+ * Oy dengizlari — Yerdan ko'rinadigan yuzidagi qora dog'lar, haqiqiy
+ * joylashuvi bo'yicha (shimol tepada). Koordinatalar oy markaziga nisbatan,
+ * radius birligida. Bir-birini qoplagan ellipslar xiralashtirilgach notekis,
+ * tabiiy dog'larga aylanadi.
+ */
+const MARIA: ReadonlyArray<{ x: number; y: number; rx: number; ry: number; rot: number; o: number }> = [
+  // Bo'ronlar okeani — chap tomondagi katta, notekis dog'
+  { x: -0.58, y: -0.05, rx: 0.26, ry: 0.42, rot: 10, o: 0.6 },
+  { x: -0.7, y: 0.22, rx: 0.15, ry: 0.2, rot: 0, o: 0.55 },
+  { x: -0.42, y: 0.14, rx: 0.14, ry: 0.18, rot: -20, o: 0.52 },
+  // Yomg'irlar dengizi
+  { x: -0.28, y: -0.38, rx: 0.27, ry: 0.23, rot: -12, o: 0.68 },
+  // Tiniqlik dengizi
+  { x: 0.18, y: -0.36, rx: 0.17, ry: 0.16, rot: 0, o: 0.7 },
+  // Sokinlik dengizi
+  { x: 0.3, y: -0.06, rx: 0.2, ry: 0.16, rot: 22, o: 0.66 },
+  // Inqirozlar dengizi
+  { x: 0.68, y: -0.27, rx: 0.13, ry: 0.1, rot: -8, o: 0.72 },
+  // Serhosillik va Nektar dengizlari
+  { x: 0.5, y: 0.2, rx: 0.11, ry: 0.17, rot: -15, o: 0.58 },
+  { x: 0.28, y: 0.3, rx: 0.1, ry: 0.08, rot: 0, o: 0.52 },
+  // Bulutlar va Namlik dengizlari
+  { x: -0.2, y: 0.36, rx: 0.17, ry: 0.12, rot: 12, o: 0.54 },
+  { x: -0.47, y: 0.42, rx: 0.09, ry: 0.08, rot: 0, o: 0.55 },
+  // Sovuq dengizi — shimoldagi ingichka tasma
+  { x: -0.04, y: -0.7, rx: 0.4, ry: 0.055, rot: 3, o: 0.48 },
+  // Bug'lar dengizi
+  { x: -0.02, y: -0.14, rx: 0.08, ry: 0.06, rot: 0, o: 0.5 },
+];
+
+/** Kraterlar. `bright` — atrofi oqargan yosh kraterlar (Tycho, Copernicus...). */
+const CRATERS: ReadonlyArray<{ x: number; y: number; r: number; bright?: boolean; dark?: boolean }> = [
+  { x: -0.1, y: 0.72, r: 0.055, bright: true }, // Tycho — nurlari bor
+  { x: -0.26, y: -0.05, r: 0.06, bright: true }, // Copernicus
+  { x: -0.52, y: -0.04, r: 0.035, bright: true }, // Kepler
+  { x: -0.63, y: -0.3, r: 0.028, bright: true }, // Aristarchus — eng yorqini
+  { x: -0.12, y: -0.66, r: 0.05, dark: true }, // Plato — tubi qorong'i
+  { x: 0.8, y: 0.12, r: 0.05 }, // Langrenus
+  { x: 0.12, y: 0.55, r: 0.045 },
+  { x: 0.36, y: 0.6, r: 0.04 },
+  { x: -0.42, y: 0.62, r: 0.04 },
+  { x: 0.56, y: 0.48, r: 0.035 },
+  { x: 0.05, y: 0.82, r: 0.035 },
+  { x: -0.28, y: 0.84, r: 0.03 },
+  { x: 0.62, y: -0.55, r: 0.035 },
+  { x: 0.25, y: -0.62, r: 0.03 },
+];
+
+/** Tycho'dan tarqaladigan yorug' nurlar: burchak (°, 0 — o'ngga, -90 — tepaga) va uzunlik (r). */
+const TYCHO_RAYS: ReadonlyArray<{ a: number; l: number }> = [
+  { a: -95, l: 0.72 },
+  { a: -72, l: 0.55 },
+  { a: -48, l: 0.62 },
+  { a: -122, l: 0.5 },
+  { a: -150, l: 0.38 },
+  { a: -22, l: 0.45 },
+  { a: 18, l: 0.18 },
+  { a: 165, l: 0.22 },
+];
+
+/**
+ * Soyadagi qism uchun "Yer nuri": yangi oy atrofida oyning qorong'i qismi
+ * ham xira ko'rinib turadi — Yerdan qaytgan yorug'lik. Qorong'i kartada
+ * to'q ko'kimtir, yorug' kartada och siyohrang (oq fonda ko'rinsin).
+ */
+const EARTHSHINE = {
+  dark: "0.24 0 0 0 0.02  0 0.26 0 0 0.03  0 0 0.34 0 0.09  0 0 0 1 0",
+  light: "0.35 0 0 0 0.52  0 0.35 0 0 0.52  0 0 0.3 0 0.64  0 0 0 1 0",
+};
+
+/**
+ * Realistik oy. Qatlamlar:
+ * 1. Sirt — shar kabi soyalangan tagrang (yorug' tomonda yorqin, chekkada
+ *    qorayadi), oy dengizlari, kraterlar va Tycho nurlari; ustidan
+ *    `feTurbulence` + `feDiffuseLighting` bilan mayda relyef — quyosh
+ *    tomondan yoritilgan notekisliklar.
+ * 2. Shu sirt Yer nuri bilan xira bo'yalgan holda — butun disk.
+ * 3. Shu sirt to'liq yorug'likda — faza niqobi orqali. Niqob chegarasi
+ *    (terminator) xiralashtirilgan: haqiqiy oydagi kabi yorug'likdan
+ *    qorong'ilikka silliq o'tadi. Tashqi chekkasi esa diskka kesilgani
+ *    uchun tiniq qoladi.
+ *
+ * Hammasi statik: filtrlar bir marta chiziladi. Harakat (suzish, yog'du
+ * nafasi) tashqi HTML qatlamlarda — telefon oyni har kadrda qayta
+ * hisoblamaydi.
+ */
 function Moon({ phase, dark }: { phase: number; dark: boolean }) {
-  const lit = moonLitPath(phase, 70, 70, 34);
+  // Filtr va niqob identifikatorlari sahifada yagona bo'lsin
+  const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
+  const id = (name: string) => `moon${uid}${name}`;
+  const url = (name: string) => `url(#${id(name)})`;
+
+  const p = Math.min(0.91, Math.max(0.09, phase));
+  const litRight = p <= 0.5;
+  const cos = Math.cos(2 * Math.PI * p);
+  // 0 — yangi oy, 1 — to'lin oy
+  const litFraction = (1 - cos) / 2;
+  const lit = moonLitPath(phase, MOON_CX, MOON_CY, MOON_R);
+  // Yorqinlik markazi yorug' tomonga siljiydi; to'lin oyda — o'rtada
+  const shift = 8 * ((1 + cos) / 2);
+  const shadeCx = `${fixed(50 + (litRight ? shift : -shift))}%`;
+  // Hilol ingichka bo'lganda soya chegarasi kamroq xiralashadi — aks holda yo'qolib qoladi
+  const blur = fixed(0.9 + 1.4 * (1 - Math.abs(cos)));
+  // Relyef va kraterlar yorug'lik tushgan tomondan yoritiladi
+  const azimuth = litRight ? 340 : 200;
+  const craterFx = litRight ? 0.36 : 0.64;
+  const X = (u: number) => fixed(MOON_CX + u * MOON_R);
+  const Y = (v: number) => fixed(MOON_CY + v * MOON_R);
+  const tycho = CRATERS[0];
+  const glow: FxStyle = { "--glow": `rgba(255, 244, 210, ${fixed((dark ? 0.3 : 0.22) + 0.4 * litFraction)})` };
+
   return (
-    <svg viewBox="0 0 140 140" className={styles.moonFx}>
-      <defs>
-        <radialGradient id="cfx-moonglow">
-          <stop offset="0" stopColor="#fff6c9" stopOpacity="0.9" />
-          <stop offset="0.55" stopColor="#fff1b8" stopOpacity="0.35" />
-          <stop offset="1" stopColor="#fff1b8" stopOpacity="0" />
-        </radialGradient>
-        <clipPath id="cfx-moonlit">
-          <path d={lit} />
-        </clipPath>
-      </defs>
-      <circle className={styles.moonGlowFx} cx="70" cy="70" r="66" fill="url(#cfx-moonglow)" />
-      {/* Soyadagi qism — yorug' kartada och siyohrang, qorong'ida to'q */}
-      <circle cx="70" cy="70" r="34" fill={dark ? "#3b3a66" : "#e3e6fb"} />
-      <path d={lit} fill="#fff1b8" />
-      {/* Kraterlar — faqat yorug' qismda */}
-      <g clipPath="url(#cfx-moonlit)" fill="#efd98f" opacity="0.6">
-        <circle cx="80" cy="58" r="5" />
-        <circle cx="61" cy="76" r="3.5" />
-        <circle cx="84" cy="84" r="4" />
-        <circle cx="70" cy="92" r="2.5" />
-      </g>
-    </svg>
+    <div className={styles.moonFx}>
+      <span className={styles.moonGlowFx} style={glow} />
+      <svg viewBox="0 0 140 140" aria-hidden="true">
+        <defs>
+          <radialGradient id={id("shade")} cx={shadeCx} cy="44%" r="60%">
+            <stop offset="0" stopColor="#fffbf1" />
+            <stop offset="0.5" stopColor="#f4eddb" />
+            <stop offset="0.82" stopColor="#dfd6c1" />
+            <stop offset="1" stopColor="#c6bca6" />
+          </radialGradient>
+          {/* Krater kosasi: tubi qoramtir, yorug'lik tushgan ichki devori va qirrasi oqish */}
+          <radialGradient id={id("crater")} fx={craterFx} fy="0.4">
+            <stop offset="0" stopColor="#7f7768" stopOpacity="0.6" />
+            <stop offset="0.6" stopColor="#9d9483" stopOpacity="0.4" />
+            <stop offset="0.82" stopColor="#fffbf0" stopOpacity="0.8" />
+            <stop offset="1" stopColor="#fffbf0" stopOpacity="0" />
+          </radialGradient>
+          <clipPath id={id("disc")}>
+            <circle cx={MOON_CX} cy={MOON_CY} r={MOON_R} />
+          </clipPath>
+          <filter id={id("soft")} x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="0.95" />
+          </filter>
+          <filter
+            id={id("relief")}
+            x="0"
+            y="0"
+            width="140"
+            height="140"
+            filterUnits="userSpaceOnUse"
+            colorInterpolationFilters="sRGB"
+          >
+            {/* Yirik dog'lar: tog'liklar ham bir tekis emas — yorug'lik qaytarishi joy-joyda farq qiladi */}
+            <feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves={3} seed={3} result="mottleNoise" />
+            <feColorMatrix
+              in="mottleNoise"
+              type="matrix"
+              values="0.36 0 0 0 0.8  0.36 0 0 0 0.8  0.36 0 0 0 0.8  0 0 0 0 1"
+              result="mottle"
+            />
+            {/* Mayda relyef: quyosh tomondan yoritilgan notekisliklar — sezilar-sezilmas */}
+            <feTurbulence type="fractalNoise" baseFrequency="0.5" numOctaves={3} seed={7} result="noise" />
+            <feDiffuseLighting in="noise" surfaceScale={0.55} diffuseConstant={1} lightingColor="#ffffff" result="light">
+              <feDistantLight azimuth={azimuth} elevation={50} />
+            </feDiffuseLighting>
+            {/* Relyefni rang ustiga ko'paytiramiz — o'rtacha yorqinlik o'zgarmaydi */}
+            <feComposite in="light" in2="SourceGraphic" operator="arithmetic" k1={0.35} k2={0} k3={0.73} k4={0} result="relief" />
+            <feComposite in="relief" in2="mottle" operator="arithmetic" k1={1} k2={0} k3={0} k4={0} result="tex" />
+            <feComposite in="tex" in2="SourceGraphic" operator="in" />
+          </filter>
+          <filter id={id("earth")} colorInterpolationFilters="sRGB">
+            <feColorMatrix type="matrix" values={dark ? EARTHSHINE.dark : EARTHSHINE.light} />
+          </filter>
+          <filter id={id("term")} x="-10%" y="-10%" width="120%" height="120%">
+            <feGaussianBlur stdDeviation={blur} />
+          </filter>
+          <mask id={id("phase")} maskUnits="userSpaceOnUse" x="0" y="0" width="140" height="140">
+            <path d={lit} fill="#fff" filter={url("term")} />
+          </mask>
+
+          <g id={id("surface")} clipPath={url("disc")} filter={url("relief")}>
+            <circle cx={MOON_CX} cy={MOON_CY} r={MOON_R} fill={url("shade")} />
+            <g fill="#8c8677" filter={url("soft")}>
+              {MARIA.map((m, i) => (
+                <ellipse
+                  key={i}
+                  cx={X(m.x)}
+                  cy={Y(m.y)}
+                  rx={fixed(m.rx * MOON_R)}
+                  ry={fixed(m.ry * MOON_R)}
+                  opacity={m.o}
+                  transform={`rotate(${m.rot} ${X(m.x)} ${Y(m.y)})`}
+                />
+              ))}
+            </g>
+            <g stroke="#fffaf0" strokeWidth="0.5" strokeLinecap="round" opacity="0.3">
+              {TYCHO_RAYS.map((ray, i) => {
+                const a = (ray.a * Math.PI) / 180;
+                return (
+                  <line
+                    key={i}
+                    x1={X(tycho.x)}
+                    y1={Y(tycho.y)}
+                    x2={X(tycho.x + Math.cos(a) * ray.l)}
+                    y2={Y(tycho.y + Math.sin(a) * ray.l)}
+                  />
+                );
+              })}
+            </g>
+            {CRATERS.map((c, i) => (
+              <g key={i}>
+                {c.bright && (
+                  <circle cx={X(c.x)} cy={Y(c.y)} r={fixed(c.r * MOON_R * 1.9)} fill="#fffdf4" opacity="0.55" filter={url("soft")} />
+                )}
+                <circle
+                  cx={X(c.x)}
+                  cy={Y(c.y)}
+                  r={fixed(c.r * MOON_R)}
+                  fill={c.dark ? "#8d8676" : url("crater")}
+                  opacity={c.dark ? 0.6 : 1}
+                />
+              </g>
+            ))}
+          </g>
+        </defs>
+
+        {/* Soyadagi qism — Yer nuri */}
+        <use href={`#${id("surface")}`} filter={url("earth")} />
+        {/* Yorug' qism — faza niqobi orqali */}
+        <use href={`#${id("surface")}`} mask={url("phase")} />
+        {/* Yorug' kartada disk chegarasi yo'qolib ketmasin */}
+        {!dark && (
+          <circle cx={MOON_CX} cy={MOON_CY} r={MOON_R + 0.3} fill="none" stroke="rgba(110, 100, 170, 0.22)" strokeWidth="0.8" />
+        )}
+      </svg>
+    </div>
   );
 }
 

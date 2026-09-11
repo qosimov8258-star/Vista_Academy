@@ -14,7 +14,7 @@ const PREVIEW_PHASES: SkyPhase[] = ["kun", "shafaq", "tun"];
  * qayta hisoblaydi.
  *
  * Ko'rib chiqish uchun: `?osmon=kun|shafaq|tun` — haqiqiy vaqtdan qat'i nazar
- * shu holatni ko'rsatadi (oy fazasi baribir haqiqiy).
+ * shu holatni ko'rsatadi; `?oyfaza=0.25` — oy fazasini (0 yangi, 0.5 to'lin).
  */
 export function useSky(...locationTexts: Array<string | null | undefined>): SkyState | null {
   const [sky, setSky] = useState<SkyState | null>(null);
@@ -22,13 +22,16 @@ export function useSky(...locationTexts: Array<string | null | undefined>): SkyS
 
   useEffect(() => {
     const coords = resolveCoords(...locationKey.split("|"));
-    const preview = new URLSearchParams(window.location.search).get("osmon");
+    const params = new URLSearchParams(window.location.search);
+    const preview = params.get("osmon");
     const forced = PREVIEW_PHASES.find((phase) => phase === preview) ?? null;
+    const moonParam = params.get("oyfaza");
+    const forcedMoon = moonParam !== null && Number.isFinite(Number(moonParam)) ? ((Number(moonParam) % 1) + 1) % 1 : null;
 
     let timer = 0;
     const tick = () => {
       const state = computeSky(Date.now(), coords);
-      setSky(forced ? { ...state, phase: forced } : state);
+      setSky({ ...state, phase: forced ?? state.phase, moonPhase: forcedMoon ?? state.moonPhase });
       // Keyingi o'zgarishda uyg'onamiz; har holda soatda bir marta tekshiramiz
       const wait = Math.min(Math.max(state.nextChange - Date.now(), 1_000), 60 * 60_000);
       timer = window.setTimeout(tick, wait);
