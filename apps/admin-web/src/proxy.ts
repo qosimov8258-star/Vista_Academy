@@ -93,8 +93,10 @@ export function proxy(req: NextRequest) {
 }
 
 export const config = {
+  // `ota-ona` — ota-ona kabineti: u o'z autentifikatsiyasiga ega va xodimlar
+  // seansiga bog'liq emas, shuning uchun bu proxy unga umuman tegmaydi.
   // `face-model` — public/ dagi statik fayllar (yuzni aniqlash modeli).
   // Ular chiqarib tashlanmasa, proxy birinchi bo'lakni tashkilot slug'i deb
   // o'ylab, model so'rovini login sahifasiga yo'naltiradi.
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|face-model).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|face-model|ota-ona).*)"],
 };

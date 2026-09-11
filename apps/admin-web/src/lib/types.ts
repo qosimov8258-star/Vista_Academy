@@ -430,6 +430,15 @@ export interface Guardian {
   createdAt: string;
 }
 
+export interface GuardianCabinetCredentials {
+  guardianId: string;
+  fullName: string;
+  /** Login — telefon raqami. */
+  login: string;
+  /** Parol faqat shu javobda keladi: bazada xesh saqlanadi. */
+  password: string;
+}
+
 export interface ChildGuardian {
   id: string;
   childId: string;
@@ -440,7 +449,12 @@ export interface ChildGuardian {
   canViewFinance: boolean;
   canReceiveNotifications: boolean;
   createdAt: string;
-  guardian: Guardian;
+  guardian: Guardian & {
+    isActive?: boolean;
+    lastLoginAt?: string | null;
+    /** Kabinet ochilganmi — paroli bormi degani. */
+    hasCabinet?: boolean;
+  };
 }
 
 // ===== HR / Payroll =====
@@ -628,6 +642,56 @@ export interface GroupAttendanceDay {
     status: AttendanceStatus | null;
     note: string | null;
   }[];
+}
+
+/* ------------------------------------------------------------------ */
+/* Ota-ona kabineti                                                    */
+/* ------------------------------------------------------------------ */
+
+export interface ParentAccount {
+  id: string;
+  organizationId: string;
+  organizationSlug: string;
+  organizationName: string;
+  fullName: string;
+  phone: string;
+}
+
+export interface ParentChild {
+  id: string;
+  publicId: number;
+  fullName: string;
+  gender: Gender | null;
+  birthDate: string | null;
+  status: ChildStatus;
+  avatarUpdatedAt: string | null;
+  group: { id: string; name: string } | null;
+  /** Manzil osmon holatini (quyosh botishi) hisoblash uchun kerak — qarang: lib/sky.ts */
+  branch: { id: string; name: string; address?: string | null };
+  relation: GuardianRelation;
+}
+
+/** `GET /app/parent/children/:id/day` javobi. */
+export interface ParentDay {
+  date: string;
+  child: { id: string; fullName: string; groupName: string | null; avatarUpdatedAt: string | null };
+  attendance: { status: AttendanceStatus; note: string | null } | null;
+  report: {
+    eatingQuality: "GOOD" | "AVERAGE" | "POOR" | null;
+    sleepMinutes: number | null;
+    mood: "HAPPY" | "NEUTRAL" | "UPSET" | null;
+    toiletNotes: string | null;
+    activityNotes: string | null;
+    updatedAt: string;
+  } | null;
+  menu: { breakfast: string | null; lunch: string | null; snack: string | null } | null;
+}
+
+export interface ParentAttendanceStrip {
+  items: { date: string; status: AttendanceStatus | null }[];
+  present: number;
+  absent: number;
+  marked: number;
 }
 
 /* ------------------------------------------------------------------ */

@@ -38,6 +38,7 @@ import { GuardiansModule } from "./modules/guardians/guardians.module";
 import { HrModule } from "./modules/hr/hr.module";
 import { NotificationsModule } from "./modules/notifications/notifications.module";
 import { ExportsModule } from "./modules/exports/exports.module";
+import { ParentModule } from "./modules/parent/parent.module";
 
 @Module({
   imports: [
@@ -77,6 +78,7 @@ import { ExportsModule } from "./modules/exports/exports.module";
     HrModule,
     NotificationsModule,
     ExportsModule,
+    ParentModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

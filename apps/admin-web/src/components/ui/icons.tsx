@@ -478,6 +478,16 @@ export function EyeOffIcon(props: IconProps) {
   );
 }
 
+export function BulbIcon(props: IconProps) {
+  return (
+    <Outline {...props}>
+      <path d="M9.2 17.2a7 7 0 1 1 5.6 0" />
+      <path d="M9.4 17.4h5.2v1.8a2.6 2.6 0 0 1-2.6 2.6 2.6 2.6 0 0 1-2.6-2.6z" />
+      <path d="M10.6 19.6h2.8" />
+    </Outline>
+  );
+}
+
 export function ClockIcon(props: IconProps) {
   return (
     <Outline {...props}>

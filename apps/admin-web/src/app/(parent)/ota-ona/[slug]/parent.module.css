@@ -1,0 +1,610 @@
+/*
+ * Ota-ona kabineti — bog'chaga mos iliq palitra. Boshqaruv panelidagi
+ * to'q yashil brend rangi bu yerda ishlatilmaydi: ota-ona kuniga bir marta
+ * kiradigan, bolasi haqida yaxshi xabar oladigan joy, ish quroli emas.
+ */
+.shell {
+  --p-bg: #fff8f0;
+  --p-card: #ffffff;
+  --p-ink: #2c2320;
+  --p-muted: #8a7d75;
+  --p-line: rgba(120, 90, 70, 0.1);
+
+  --p-sun: #ffb703;
+  --p-coral: #ff7a66;
+  --p-mint: #3fbf9b;
+  --p-sky: #56b4f5;
+  --p-lilac: #a78bfa;
+
+  --p-radius: 26px;
+  --p-shadow: 0 2px 4px rgba(120, 90, 70, 0.05), 0 12px 28px -10px rgba(120, 90, 70, 0.18);
+
+  /* Ichki panellar va rang bo'yicha matnlar — ikkala rejimda ham o'qiladigan */
+  --p-sunken: rgba(0, 0, 0, 0.045);
+  --p-panel: rgba(255, 255, 255, 0.7);
+  --p-sun-ink: #a8720a;
+  --p-sky-ink: #2b7fb8;
+  --p-lilac-ink: #7c5cd6;
+  --p-card-border: rgba(255, 183, 3, 0.18);
+
+  min-height: 100dvh;
+  background: var(--p-bg);
+  color: var(--p-ink);
+}
+
+/*
+ * Qorong'i rejim — quyosh botganda o'zi yonadi (qarang: theme.tsx).
+ * Qora emas, to'q siyohrang-binafsha: bog'chaning iliq ohangi tunda ham qolsin.
+ */
+.shell[data-theme="dark"] {
+  --p-bg: #1b1a2c;
+  --p-card: #272541;
+  --p-ink: #f5f0e8;
+  --p-muted: #aca6bd;
+  --p-line: rgba(255, 255, 255, 0.09);
+  --p-shadow: 0 2px 4px rgba(0, 0, 0, 0.28), 0 12px 28px -10px rgba(0, 0, 0, 0.55);
+  --p-sunken: rgba(255, 255, 255, 0.07);
+  --p-panel: rgba(255, 255, 255, 0.06);
+  --p-sun-ink: #ffd166;
+  --p-sky-ink: #8ccdff;
+  --p-lilac-ink: #cabdff;
+  --p-card-border: rgba(255, 255, 255, 0.09);
+  color-scheme: dark;
+}
+
+/* Yuqoridagi iliq yoyilma — sahifa "quyoshli" boshlanadi */
+.sky {
+  background:
+    radial-gradient(120% 90% at 15% 0%, rgba(255, 183, 3, 0.28) 0%, rgba(255, 183, 3, 0) 60%),
+    radial-gradient(110% 80% at 90% 5%, rgba(86, 180, 245, 0.25) 0%, rgba(86, 180, 245, 0) 55%),
+    var(--p-bg);
+}
+/* Tunda yoyilma xiraroq — oy nuri kabi */
+.shell[data-theme="dark"].sky {
+  background:
+    radial-gradient(120% 90% at 15% 0%, rgba(255, 183, 3, 0.09) 0%, rgba(255, 183, 3, 0) 60%),
+    radial-gradient(110% 80% at 90% 5%, rgba(86, 180, 245, 0.13) 0%, rgba(86, 180, 245, 0) 55%),
+    var(--p-bg);
+}
+
+@keyframes pFloat {
+  from { transform: translateY(0); }
+  to { transform: translateY(-6px); }
+}
+.float {
+  animation: pFloat 3.2s ease-in-out infinite alternate;
+}
+
+@keyframes pPop {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+.pop {
+  animation: pPop 0.5s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .float,
+  .pop {
+    animation: none;
+  }
+}
+
+/* Salomlashish quyoshi: nurlari sekin aylanadi, o'zi nafas olgandek */
+@keyframes pSpin {
+  to { transform: rotate(360deg); }
+}
+.sunRays {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pSpin 26s linear infinite;
+}
+
+@keyframes pBeam {
+  from { transform: scale(1); opacity: 0.5; }
+  to { transform: scale(1.12); opacity: 0.85; }
+}
+.sunGlow {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pBeam 3s ease-in-out infinite alternate;
+}
+
+/* Salom yozuvi biroz sakrab chiqadi */
+@keyframes pGreet {
+  0% { opacity: 0; transform: translateY(10px) scale(0.96); }
+  60% { transform: translateY(-2px) scale(1.01); }
+  100% { opacity: 1; transform: none; }
+}
+.greet {
+  animation: pGreet 0.65s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+
+/*
+ * Parol xato bo'lsa quyosh xafa bo'ladi: yuzi sal pastga cho'kib, bir
+ * tomonga qiyshayadi va shu holatda qoladi (`both`). Ataylab silkinish
+ * emas — tez chapga-o'ngga siltanish jahl chiqqandek ko'rinadi.
+ */
+@keyframes pDroop {
+  0% { transform: translateY(-1px) rotate(0deg) scale(1); }
+  55% { transform: translateY(3px) rotate(-7deg) scale(0.96); }
+  100% { transform: translateY(1.5px) rotate(-4deg) scale(0.98); }
+}
+.droop {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pDroop 0.75s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+/* Xafa bo'lganda nurlar aylanishdan to'xtaydi va so'nadi */
+.raysSad {
+  animation: none;
+  opacity: 0.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sunRays,
+  .sunGlow,
+  .greet,
+  .droop {
+    animation: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Bo'limdan bo'limga o'tish
+ *
+ * Surilish gorizontal bo'lgani uchun kirib kelayotgan mazmun bir lahza
+ * ramkadan chiqib turadi. `clip` uni kesadi va — `hidden` dan farqli —
+ * yon tomonga aylantirish maydonini yaratmaydi, ya'ni sahifa o'z
+ * yopishqoq elementlarini va tabiiy aylanishini yo'qotmaydi.
+ * ------------------------------------------------------------------------ */
+.pageWrap {
+  overflow-x: clip;
+}
+
+/*
+ * Yengil bo'lishi kerak: masofa kichik (18px), davomiylik qisqa, egri
+ * chiziq oxirida sekinlashadi — iOS'dagi varaq o'tishiga yaqin his.
+ */
+@keyframes pEnterRight {
+  from { opacity: 0; transform: translate3d(18px, 0, 0); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pEnterLeft {
+  from { opacity: 0; transform: translate3d(-18px, 0, 0); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pEnterSoft {
+  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+  to { opacity: 1; transform: none; }
+}
+
+.enterRight,
+.enterLeft,
+.enterSoft {
+  animation-duration: 0.3s;
+  animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+  animation-fill-mode: both;
+  /* Faqat o'tish paytida qatlamga ko'chiriladi, keyin xotira bo'shaydi */
+  will-change: opacity, transform;
+}
+.enterRight { animation-name: pEnterRight; }
+.enterLeft { animation-name: pEnterLeft; }
+.enterSoft { animation-name: pEnterSoft; }
+
+/*
+ * Pastki menyudagi faol tamg'a. Har bir bo'lim uchun alohida fon o'rniga
+ * bitta tamg'a suriladi — ko'z uni kuzatib boradi va o'tish uzluksiz
+ * ko'rinadi. O'lcham: to'rt bo'lim, oraliqlari 4px, qobiq ichi 8px.
+ */
+.tabPill {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 8px;
+  width: calc((100% - 16px - 12px) / 4);
+  border-radius: 999px;
+  background: rgba(255, 183, 3, 0.16);
+  /*
+   * `transform` ataylab shu yerda emas, React tomonidan qatorga yoziladi:
+   * uni CSS o'zgaruvchisiga bog'lab qo'yilsa, o'zgaruvchi almashganda
+   * brauzer `transform` ni qayta hisoblamay, tamg'a joyida qotib qoladi.
+   * Qadam = tamg'a eni (25% - 7px) + oraliq (4px).
+   */
+  transition: transform 0.34s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Faol ikonka bir lahza "nafas oladi" — bosilgani seziladi */
+@keyframes pTabPop {
+  0% { transform: scale(0.86); }
+  60% { transform: scale(1.06); }
+  100% { transform: none; }
+}
+.tabIconActive {
+  animation: pTabPop 0.34s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .enterRight,
+  .enterLeft,
+  .enterSoft,
+  .tabIconActive {
+    animation: none;
+  }
+  .tabPill {
+    transition: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Bola kartochkasi — kabinetning yuzi
+ *
+ * Fonning o'zi tinch: iliq krem rangdan oqqa o'tadigan yoyilma. Ranglar va
+ * harakat ustidagi `.cardFx` qatlamidan keladi (card-fx.tsx): u karta bilan
+ * bir xil burchakka kesilgan va matn ostida turadi.
+ * ------------------------------------------------------------------------ */
+.childCard {
+  position: relative;
+  isolation: isolate;
+  background: var(--p-card);
+  border: 1px solid var(--p-card-border);
+}
+
+/* ---------- Karta orqasidagi jonli osmon ---------- */
+.cardFx {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+  /* Ko'tariluvchi narsalar karta balandligini `cqh` orqali biladi */
+  container-type: size;
+}
+
+/* Osmon holatiga qarab tagfon: kunduz krem, shafaqda qizg'ish, tunda ko'kimtir */
+.baseFx {
+  position: absolute;
+  inset: 0;
+}
+/* Tunda tepadan tushadigan siyohrang shu'la — osmon chuqurroq ko'rinsin */
+.nightBandFx {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 70% at 50% -20%, rgba(79, 70, 229, 0.17) 0%, transparent 60%);
+}
+
+/* Nafas olayotgan rangli yog'dular — blur emas, radial gradient: telefonda yengil */
+.blobFx {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--c) 0%, transparent 68%);
+  animation: pBlob var(--d, 16s) ease-in-out infinite alternate;
+  animation-delay: var(--delay, 0s);
+}
+@keyframes pBlob {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(-22px, 16px, 0) scale(1.14); }
+  100% { transform: translate3d(16px, -14px, 0) scale(0.94); }
+}
+
+/* Quyosh: o'ng yuqori burchakdan mo'ralaydi, nurlari sekin aylanadi */
+.sunFx {
+  position: absolute;
+  top: -40px;
+  right: -36px;
+  width: 140px;
+  height: 140px;
+  opacity: 0.6;
+}
+.sunRaysFx {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pSpin 70s linear infinite;
+}
+@keyframes pSunBreath {
+  from { transform: scale(1); }
+  to { transform: scale(1.07); }
+}
+.sunDiscFx {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pSunBreath 3.6s ease-in-out infinite alternate;
+}
+
+/*
+ * Oy: quyoshning o'rnida, sekin suzib turadi. Harakat tashqi qatlamda —
+ * ichidagi SVG (relyef filtrlari bilan) bir marta chizilib, keyin faqat
+ * suriladi; har kadrda qayta hisoblanmaydi.
+ */
+.moonFx {
+  position: absolute;
+  top: -30px;
+  right: -28px;
+  width: 140px;
+  height: 140px;
+  animation: pMoonFloat 6s ease-in-out infinite alternate;
+}
+.moonFx > svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+@keyframes pMoonFloat {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(0, 4px, 0); }
+}
+/* Yog'du — alohida HTML qatlam: nafas olganda oy qayta chizilmasin */
+.moonGlowFx {
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 48.5%,
+    var(--glow, rgba(255, 244, 210, 0.5)) 0%,
+    rgba(255, 241, 190, 0.14) 45%,
+    transparent 70%
+  );
+  animation: pSunBreath 4.5s ease-in-out infinite alternate;
+}
+
+/* Tungi yulduzlar — har biri o'z ritmida miltillaydi */
+.starFx {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: var(--s);
+  height: var(--s);
+  opacity: 0;
+  transform-origin: center;
+  animation: pStarFx var(--d, 3s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
+@keyframes pStarFx {
+  0%, 100% { opacity: 0.25; transform: scale(0.6); }
+  50% { opacity: 0.95; transform: scale(1); }
+}
+
+/* Uchar yulduz: o'ng yuqoridan chap pastga, har 9 soniyada bir marta */
+.shootFx {
+  position: absolute;
+  top: 14%;
+  right: 16%;
+  width: 110px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, rgba(255, 224, 138, 0.95) 0%, rgba(255, 224, 138, 0) 100%);
+  transform-origin: left center;
+  opacity: 0;
+  animation: pShootFx 9s linear infinite;
+  animation-delay: 1.5s;
+}
+@keyframes pShootFx {
+  0%, 78% { opacity: 0; transform: rotate(-24deg) translate3d(0, 0, 0); }
+  80% { opacity: 1; }
+  90%, 100% { opacity: 0; transform: rotate(-24deg) translate3d(-240px, 0, 0); }
+}
+
+/* Kamalak: bola rasmi ortida, yuklanganda tashqaridan ichkariga chiziladi */
+.rainbowFx {
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  width: 132px;
+  height: 132px;
+  opacity: 0.6;
+}
+@keyframes pDraw {
+  from { stroke-dasharray: 1; stroke-dashoffset: 1; }
+  to { stroke-dasharray: 1; stroke-dashoffset: 0; }
+}
+.rainbowArcFx {
+  animation: pDraw 1.3s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+/* Bulutchalar — chapdan o'ngga suzadi, kartaning eniga `cqw` orqali moslashadi */
+.cloudFx {
+  position: absolute;
+  top: var(--y);
+  left: 0;
+  width: var(--w);
+  opacity: 0.9;
+  filter: drop-shadow(0 2px 3px rgba(120, 90, 70, 0.08));
+  animation: pDriftFx var(--d) linear infinite;
+  animation-delay: var(--delay);
+}
+@keyframes pDriftFx {
+  from { transform: translate3d(-70px, 0, 0); }
+  to { transform: translate3d(calc(100cqw + 24px), 0, 0); }
+}
+
+/*
+ * Ko'tariluvchi narsalar (sharlar, yulduzcha, yurakcha, pufakcha).
+ * Tashqi qatlam pastdan tepaga ko'taradi, ichkisi chapga-o'ngga tebratadi —
+ * ikkalasi qo'shilib, havoda suzayotgandek yo'l chiqadi.
+ */
+.floaterFx {
+  position: absolute;
+  bottom: -32px;
+  left: var(--x);
+  width: var(--s);
+  height: var(--h, var(--s));
+  opacity: 0;
+  animation: pRise var(--d) linear infinite;
+  animation-delay: var(--delay);
+}
+@keyframes pRise {
+  0% { transform: translate3d(0, 0, 0); opacity: 0; }
+  7% { opacity: var(--o, 0.5); }
+  88% { opacity: var(--o, 0.5); }
+  100% { transform: translate3d(0, calc(-100cqh - 64px), 0); opacity: 0; }
+}
+.swayFx {
+  display: block;
+  width: 100%;
+  height: 100%;
+  animation: pSway var(--sd, 3s) ease-in-out infinite alternate;
+  animation-delay: var(--delay);
+}
+@keyframes pSway {
+  from { transform: translateX(calc(var(--sway, 10px) * -1)) rotate(calc(var(--spin, 0deg) * -1)); }
+  to { transform: translateX(var(--sway, 10px)) rotate(var(--spin, 0deg)); }
+}
+
+/* Uchqunlar — miltillab yonib-o'chadi */
+.sparkleFx {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: 14px;
+  height: 14px;
+  opacity: 0;
+  transform-origin: center;
+  animation: pTwinkleFx var(--d, 3s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
+@keyframes pTwinkleFx {
+  0%, 100% { opacity: 0; transform: scale(0.3) rotate(0deg); }
+  50% { opacity: 0.95; transform: scale(1) rotate(35deg); }
+}
+
+/* Yaltiroq: har 11 soniyada bir marta karta bo'ylab o'tadigan yorug' tasma */
+.shineFx {
+  position: absolute;
+  inset: -30% -60%;
+  background: linear-gradient(100deg, transparent 44%, var(--p-shine, rgba(255, 255, 255, 0.55)) 50%, transparent 56%);
+  transform: translate3d(-40%, 0, 0);
+  animation: pShineFx 11s ease-in-out infinite;
+  animation-delay: 2s;
+}
+@keyframes pShineFx {
+  0%, 72% { transform: translate3d(-40%, 0, 0); }
+  100% { transform: translate3d(40%, 0, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blobFx,
+  .sunRaysFx,
+  .sunDiscFx,
+  .moonFx,
+  .moonGlowFx,
+  .rainbowArcFx,
+  .cloudFx,
+  .floaterFx,
+  .swayFx,
+  .sparkleFx,
+  .starFx,
+  .shootFx,
+  .shineFx {
+    animation: none;
+  }
+  /* Harakatsiz holatda ham ko'rinib tursin: uchqunlar yonib, bulutlar joyida */
+  .sparkleFx { opacity: 0.7; transform: scale(0.8); }
+  .starFx { opacity: 0.8; transform: scale(0.9); }
+  .cloudFx { transform: translate3d(30%, 0, 0); }
+  .shootFx,
+  .shineFx { display: none; }
+}
+
+/* ---------------------------------------------------------------------------
+ * Foydali bo'limi: she'rlar, maqollar, ertaklar
+ * ------------------------------------------------------------------------ */
+
+/* Yumaloq shrift — sarlavha va she'rlar bolalarcha, iliq ko'rinsin */
+.roundedFont {
+  font-family: ui-rounded, "SF Pro Rounded", "Nunito", "Segoe UI", system-ui, sans-serif;
+}
+
+/* Qatorma-qator rejimida yangi qator pastdan chiqib keladi */
+@keyframes pLineIn {
+  from { opacity: 0; transform: translate3d(0, 12px, 0) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+.lineIn {
+  animation: pLineIn 0.45s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+/* So'z o'yinida topilgan so'z "sakrab" ochiladi */
+@keyframes pReveal {
+  0% { opacity: 0; transform: scale(0.8); }
+  60% { opacity: 1; transform: scale(1.08); }
+  100% { transform: none; }
+}
+.reveal {
+  display: inline-block;
+  animation: pReveal 0.35s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+
+/* "Yodladik!" yulduzchasi */
+@keyframes pStarPop {
+  0% { transform: scale(0.4) rotate(-30deg); }
+  60% { transform: scale(1.25) rotate(8deg); }
+  100% { transform: none; }
+}
+.starPop {
+  animation: pStarPop 0.55s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+
+/* Konfetti: har bo'lak o'z yo'nalishiga uchib, aylanib, so'nadi */
+.confettiPiece {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 8px;
+  height: 12px;
+  border-radius: 2px;
+  background: var(--c);
+  opacity: 0;
+  animation: pConfetti 0.95s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+  animation-delay: var(--delay, 0s);
+}
+@keyframes pConfetti {
+  0% { opacity: 1; transform: translate(-50%, -50%) rotate(0deg) scale(0.6); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(var(--rot)) scale(1); }
+}
+
+/* Ertakning birinchi harfi — kitobdagidek katta */
+.dropCap::first-letter {
+  float: left;
+  margin: 0.06em 0.1em 0 0;
+  font-family: ui-rounded, "SF Pro Rounded", "Nunito", system-ui, sans-serif;
+  font-size: 3.1em;
+  font-weight: 800;
+  line-height: 0.9;
+  color: var(--p-coral);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lineIn,
+  .reveal,
+  .starPop {
+    animation: none;
+  }
+  .confettiPiece {
+    display: none;
+  }
+}
+
+/* Rasmni saqlash oynasi — pastdan chiqadi, orqa fon asta qorayadi */
+@keyframes pSheetIn {
+  from { transform: translate3d(0, 100%, 0); }
+  to { transform: none; }
+}
+.sheetIn {
+  animation: pSheetIn 0.42s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+@keyframes pFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.fadeIn {
+  animation: pFadeIn 0.3s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sheetIn,
+  .fadeIn {
+    animation: none;
+  }
+}
