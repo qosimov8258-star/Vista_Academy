@@ -15,7 +15,7 @@ export class WalletService {
       where: { walletId: wallet.id },
       orderBy: { createdAt: "desc" },
       take: 50,
-      include: { createdByUser: { select: { id: true, fullName: true, email: true } } },
+      include: { createdByUser: { select: { id: true, fullName: true, login: true } } },
     });
     return { wallet, transactions };
   }

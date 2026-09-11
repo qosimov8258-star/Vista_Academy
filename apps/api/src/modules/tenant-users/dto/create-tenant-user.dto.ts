@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsEmail, IsIn, IsOptional, IsString, MinLength } from "class-validator";
+import { IsIn, IsOptional, IsString, Matches, MinLength } from "class-validator";
+import { LOGIN_PATTERN, LOGIN_PATTERN_MESSAGE } from "../../../common/validators/login";
 
 /** Super Admin faqat shu ikki rolni yarata oladi. */
 export const SUPER_ADMIN_CREATABLE_ROLES = ["BRANCH_ADMIN", "FINANCE"] as const;
@@ -25,9 +26,10 @@ export class CreateTenantUserDto {
   @MinLength(2)
   fullName!: string;
 
-  @ApiProperty({ example: "director@kids.uz" })
-  @IsEmail()
-  email!: string;
+  @ApiProperty({ example: "aziz_rahimov" })
+  @IsString()
+  @Matches(LOGIN_PATTERN, { message: LOGIN_PATTERN_MESSAGE })
+  login!: string;
 
   @ApiProperty({ example: "ChangeMe123!" })
   @IsString()

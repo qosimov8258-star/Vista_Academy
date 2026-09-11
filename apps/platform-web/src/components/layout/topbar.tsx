@@ -7,7 +7,7 @@ import { initials, roleLabel } from "@/lib/format";
 export function Topbar() {
   const { user } = useAuth();
 
-  const displayName = user?.fullName || user?.email || "";
+  const displayName = user?.fullName || user?.login || "";
 
   return (
     <header className="sticky top-0 z-20 flex h-14 items-center justify-between gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 sm:px-6">

@@ -31,7 +31,7 @@ export class TenantAuthController {
   @Post("login")
   @HttpCode(HttpStatus.OK)
   async login(@Body() dto: TenantLoginDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const user = await this.authService.validateCredentials(dto.orgSlug, dto.email, dto.password);
+    const user = await this.authService.validateCredentials(dto.orgSlug, dto.login, dto.password);
     const tokens = await this.authService.issueTokens(user, requestMeta(req));
     setAuthCookies(res, tokens);
     return { user };

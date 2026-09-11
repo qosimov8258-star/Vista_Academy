@@ -17,7 +17,7 @@ export class ProfileService {
     const updated = await this.prisma.tenantUser.update({
       where: { id: user.id },
       data: { fullName: dto.fullName.trim() },
-      select: { id: true, fullName: true, email: true },
+      select: { id: true, fullName: true, login: true },
     });
     return updated;
   }

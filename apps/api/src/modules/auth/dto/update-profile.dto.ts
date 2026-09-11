@@ -1,12 +1,14 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsEmail, IsOptional, IsString, MaxLength } from "class-validator";
+import { IsOptional, IsString, Matches, MaxLength } from "class-validator";
+import { LOGIN_PATTERN, LOGIN_PATTERN_MESSAGE } from "../../../common/validators/login";
 
 export class UpdateProfileDto {
-  @ApiProperty({ required: false, example: "aziza@example.com" })
+  @ApiProperty({ required: false, example: "aziza_karimova" })
   @IsOptional()
-  @IsEmail()
+  @IsString()
   @MaxLength(255)
-  email?: string;
+  @Matches(LOGIN_PATTERN, { message: LOGIN_PATTERN_MESSAGE })
+  login?: string;
 
   @ApiProperty({ required: false, example: "Aziza" })
   @IsOptional()

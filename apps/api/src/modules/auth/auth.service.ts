@@ -27,20 +27,20 @@ export class AuthService {
     private readonly jwt: JwtService,
   ) {}
 
-  async validateCredentials(email: string, password: string): Promise<AuthenticatedUser> {
-    const user = await this.prisma.platformUser.findUnique({ where: { email: email.toLowerCase() } });
+  async validateCredentials(login: string, password: string): Promise<AuthenticatedUser> {
+    const user = await this.prisma.platformUser.findUnique({ where: { login: login.toLowerCase() } });
     if (!user || !user.isActive) {
-      throw new UnauthorizedException("Email yoki parol noto'g'ri");
+      throw new UnauthorizedException("Login yoki parol noto'g'ri");
     }
     const passwordValid = await argon2.verify(user.passwordHash, password);
     if (!passwordValid) {
-      throw new UnauthorizedException("Email yoki parol noto'g'ri");
+      throw new UnauthorizedException("Login yoki parol noto'g'ri");
     }
     return toAuthenticatedUser(user);
   }
 
   async issueTokens(user: AuthenticatedUser, meta: RequestMeta): Promise<IssuedTokens> {
-    const payload: AccessTokenPayload = { sub: user.id, email: user.email, role: user.role };
+    const payload: AccessTokenPayload = { sub: user.id, login: user.login, role: user.role };
     const accessTtl = process.env.JWT_ACCESS_TTL ?? "15m";
     const accessToken = this.jwt.sign(payload, {
       secret: process.env.JWT_ACCESS_SECRET,
@@ -110,13 +110,13 @@ export class AuthService {
     const lastName = dto.lastName?.trim() ?? current.lastName ?? "";
     const fullName = [firstName, lastName].filter(Boolean).join(" ") || current.fullName;
 
-    let email: string | undefined;
-    if (dto.email !== undefined) {
-      email = dto.email.trim().toLowerCase();
-      if (email !== current.email) {
-        const existing = await this.prisma.platformUser.findUnique({ where: { email } });
+    let login: string | undefined;
+    if (dto.login !== undefined) {
+      login = dto.login.trim().toLowerCase();
+      if (login !== current.login) {
+        const existing = await this.prisma.platformUser.findUnique({ where: { login } });
         if (existing) {
-          throw new ConflictException("Bu email allaqachon band");
+          throw new ConflictException("Bu login allaqachon band");
         }
       }
     }
@@ -124,7 +124,7 @@ export class AuthService {
     const user = await this.prisma.platformUser.update({
       where: { id: userId },
       data: {
-        email,
+        login,
         firstName: dto.firstName !== undefined ? dto.firstName.trim() : undefined,
         lastName: dto.lastName !== undefined ? dto.lastName.trim() : undefined,
         phone: dto.phone !== undefined ? dto.phone.trim() : undefined,

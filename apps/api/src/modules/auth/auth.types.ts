@@ -2,7 +2,7 @@ import { PlatformUser, PlatformUserRole } from "@prisma/client";
 
 export interface AuthenticatedUser {
   id: string;
-  email: string;
+  login: string;
   fullName: string;
   firstName: string | null;
   lastName: string | null;
@@ -13,14 +13,14 @@ export interface AuthenticatedUser {
 
 export interface AccessTokenPayload {
   sub: string;
-  email: string;
+  login: string;
   role: PlatformUserRole;
 }
 
 export function toAuthenticatedUser(user: PlatformUser): AuthenticatedUser {
   return {
     id: user.id,
-    email: user.email,
+    login: user.login,
     fullName: user.fullName,
     firstName: user.firstName,
     lastName: user.lastName,

@@ -63,7 +63,7 @@ export class WebAuthnService {
     const options = await generateRegistrationOptions({
       rpName: rpName(),
       rpID: rpID(),
-      userName: user.email,
+      userName: user.login,
       userDisplayName: user.fullName,
       attestationType: "none",
       excludeCredentials: existing.map((cred) => ({ id: cred.credentialId, transports: cred.transports })),

@@ -13,7 +13,7 @@ import { AlertIcon } from "@/components/ui/icons";
 import type { AuthenticatedUser } from "@/lib/types";
 
 const schema = z.object({
-  email: z.string().email("Email formati noto'g'ri"),
+  login: z.string().min(1, "Login kiritilishi shart"),
   password: z.string().min(8, "Kamida 8 belgi"),
 });
 
@@ -65,13 +65,13 @@ export function LoginForm() {
         </div>
       )}
       <Input
-        id="email"
-        label="Email"
-        type="email"
-        placeholder="admin@bogcha.uz"
+        id="login"
+        label="Login"
+        type="text"
+        placeholder="platform_admin"
         autoComplete="username"
-        error={errors.email?.message}
-        {...register("email")}
+        error={errors.login?.message}
+        {...register("login")}
       />
       <Input
         id="password"

@@ -10,6 +10,7 @@ import { DEFAULT_POSITIONS } from "../../common/constants/default-positions";
 import { TenantScope, requireOperationalScope } from "../iam/tenant-auth.types";
 import { verifyRevealToken } from "../webauthn/reveal-token";
 import { CreateEmployeeDto, EmployeeAccountDto } from "./dto/create-employee.dto";
+import { CreateEmployeeTopicDto } from "./dto/create-employee-topic.dto";
 import { UpdateEmployeeGroupsDto } from "./dto/update-employee-groups.dto";
 import { UpdateEmployeeAvatarDto } from "./dto/update-employee-avatar.dto";
 import { EmployeeQueryDto } from "./dto/employee-query.dto";
@@ -31,7 +32,7 @@ const SUBJECT_TEACHER_POSITION = normalizePosition(DEFAULT_POSITIONS[0]);
 
 /** Ro'yxatda kabinet holati va biriktirilgan guruhlar ham ko'rinadi. */
 const employeeInclude = {
-  tenantUser: { select: { id: true, email: true, role: true, isActive: true } },
+  tenantUser: { select: { id: true, login: true, role: true, isActive: true } },
   teachingGroups: { include: { group: { select: { id: true, name: true } } } },
   // Oylik sxemasi ro'yxat bilan birga keladi: aks holda tarmoq bo'ylab
   // oyliklarni ko'rsatish uchun har bir xodimga alohida so'rov ketardi.
@@ -98,7 +99,7 @@ export class EmployeesService {
           data: {
             organizationId: scope.organizationId,
             branchId,
-            email: login,
+            login,
             passwordHash,
             passwordEncrypted,
             fullName,
@@ -123,7 +124,7 @@ export class EmployeesService {
       });
       return { employee, credentials: { login, password } };
     } catch (err) {
-      throw this.translateEmailConflict(err);
+      throw this.translateLoginConflict(err);
     }
   }
 
@@ -145,7 +146,7 @@ export class EmployeesService {
       ? customLogin.trim().toLowerCase()
       : await generateEmployeeLogin(firstName, lastName, async (candidate) => {
           const existing = await this.prisma.tenantUser.findUnique({
-            where: { organizationId_email: { organizationId, email: candidate } },
+            where: { organizationId_login: { organizationId, login: candidate } },
             select: { id: true },
           });
           return !!existing;
@@ -219,7 +220,7 @@ export class EmployeesService {
           data: {
             organizationId: scope.organizationId,
             branchId,
-            email: login,
+            login,
             passwordHash,
             passwordEncrypted,
             fullName: employee.fullName,
@@ -238,7 +239,7 @@ export class EmployeesService {
       });
       return { employee: updated, credentials: { login, password } };
     } catch (err) {
-      throw this.translateEmailConflict(err);
+      throw this.translateLoginConflict(err);
     }
   }
 
@@ -288,7 +289,7 @@ export class EmployeesService {
     const branchId = requireOperationalScope(scope);
     const employee = await this.prisma.employee.findFirst({
       where: { id, organizationId: scope.organizationId, branchId },
-      select: { tenantUser: { select: { email: true, passwordEncrypted: true } } },
+      select: { tenantUser: { select: { login: true, passwordEncrypted: true } } },
     });
     if (!employee?.tenantUser) {
       throw new NotFoundException("Xodimning kabineti yo'q");
@@ -297,7 +298,7 @@ export class EmployeesService {
       throw new BadRequestException("Bu xodim uchun parol saqlanmagan — yangi parol generatsiya qiling");
     }
     return {
-      login: employee.tenantUser.email,
+      login: employee.tenantUser.login,
       password: decryptSecret(Buffer.from(employee.tenantUser.passwordEncrypted)),
     };
   }
@@ -379,6 +380,45 @@ export class EmployeesService {
     });
   }
 
+  /** Xodim tafsilot oynasidagi "Mavzu qo'shasizmi?" ro'yxati. */
+  async listTopics(scope: TenantScope, employeeId: string) {
+    await this.requireWritableEmployee(scope, employeeId);
+    return this.prisma.employeeTopic.findMany({
+      where: { employeeId },
+      orderBy: { createdAt: "asc" },
+    });
+  }
+
+  /**
+   * Mavzu inputidagi tavsiyalar — xodimning o'ziga tegishli dars
+   * jadvalidagi fan nomlari (takrorlanmagan holda).
+   */
+  async listTopicSuggestions(scope: TenantScope, employeeId: string) {
+    await this.requireWritableEmployee(scope, employeeId);
+    const rows = await this.prisma.lessonSchedule.findMany({
+      where: { employeeId, subject: { not: null } },
+      distinct: ["subject"],
+      select: { subject: true },
+    });
+    return rows.map((row) => row.subject).filter((subject): subject is string => !!subject);
+  }
+
+  async addTopic(scope: TenantScope, employeeId: string, dto: CreateEmployeeTopicDto) {
+    await this.requireWritableEmployee(scope, employeeId);
+    return this.prisma.employeeTopic.create({
+      data: { employeeId, title: dto.title.trim() },
+    });
+  }
+
+  async removeTopic(scope: TenantScope, employeeId: string, topicId: string) {
+    await this.requireWritableEmployee(scope, employeeId);
+    const topic = await this.prisma.employeeTopic.findFirst({ where: { id: topicId, employeeId } });
+    if (!topic) {
+      throw new NotFoundException("Mavzu topilmadi");
+    }
+    await this.prisma.employeeTopic.delete({ where: { id: topicId } });
+  }
+
   /** Yozish uchun: xodim shu tashkilot/filialda. */
   private async requireWritableEmployee(scope: TenantScope, id: string) {
     const branchId = requireOperationalScope(scope);
@@ -406,7 +446,7 @@ export class EmployeesService {
     }
   }
 
-  private translateEmailConflict(err: unknown): unknown {
+  private translateLoginConflict(err: unknown): unknown {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
       return new ConflictException("Bu login band — boshqasini tanlang");
     }
