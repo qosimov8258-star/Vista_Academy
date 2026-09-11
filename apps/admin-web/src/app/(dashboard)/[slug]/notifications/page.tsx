@@ -126,6 +126,7 @@ export default function NotificationsPage({ params }: { params: Promise<{ slug: 
                     <td className="px-5 py-3 text-[var(--color-text-muted)]">
                       <div className="font-medium text-[var(--color-text)]">{n.recipientName}</div>
                       {n.recipientContact && <div className="text-xs">{n.recipientContact}</div>}
+                      {n.child && <div className="text-xs">Bola: {n.child.fullName}</div>}
                     </td>
                     <td className="px-5 py-3 text-[var(--color-text-muted)]">
                       <span className="block max-w-xs truncate" title={n.message}>

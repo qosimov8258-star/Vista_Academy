@@ -14,8 +14,9 @@ import { Badge } from "@/components/ui/badge";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { formatDate } from "@/lib/format";
+import { downloadCsv } from "@/lib/download";
 import { CreateLeadModal } from "@/features/crm/create-lead-modal";
-import { AGE_GROUP_LABEL, SOURCE_LABEL, STAGE_LABEL, STAGE_ORDER, STAGE_TONE } from "@/features/crm/labels";
+import { AGE_GROUP_LABEL, SOURCE_LABEL, SOURCE_ORDER, STAGE_LABEL, STAGE_ORDER, STAGE_TONE } from "@/features/crm/labels";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { canWriteOperational } from "@/lib/permissions";
 
@@ -26,17 +27,27 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
   const [page, setPage] = useState(1);
   const [stageFilter, setStageFilter] = useState<StageFilter>("ALL");
   const [createOpen, setCreateOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const { user } = useAuth();
   const canWrite = canWriteOperational(user?.role);
   const { branchId: forcedBranchId } = useBranchContext(slug);
 
-  // NOTE: /app/leads/stats does not currently accept a branchId filter (backend
-  // limitation, out of scope for this frontend-only change), so these stat
-  // cards stay network-wide even inside a branch's panel. The leads list table
-  // below IS correctly branch-filtered, which is the primary correctness need.
+  const handleExport = async () => {
+    setExporting(true);
+    setExportError(null);
+    try {
+      await downloadCsv(`/app/exports/leads${forcedBranchId ? `?branchId=${forcedBranchId}` : ""}`, "arizalar.csv");
+    } catch {
+      setExportError("Eksport qilib bo'lmadi — qayta urinib ko'ring");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const statsQuery = useQuery({
-    queryKey: ["lead-stats", slug],
-    queryFn: () => api.get<LeadStats>("/app/leads/stats"),
+    queryKey: ["lead-stats", slug, forcedBranchId],
+    queryFn: () => api.get<LeadStats>(`/app/leads/stats${forcedBranchId ? `?branchId=${forcedBranchId}` : ""}`),
   });
 
   const leadsQuery = useQuery({
@@ -60,8 +71,19 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
           </h1>
           <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">Yangi mijozlar bilan ishlash bosqichlari</p>
         </div>
-        {canWrite && <Button onClick={() => setCreateOpen(true)}>+ Yangi ariza</Button>}
+        <div className="flex gap-2">
+          <Button variant="outline" loading={exporting} onClick={handleExport}>
+            Eksport (CSV)
+          </Button>
+          {canWrite && <Button onClick={() => setCreateOpen(true)}>+ Yangi ariza</Button>}
+        </div>
       </div>
+
+      {exportError && (
+        <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
+          {exportError}
+        </div>
+      )}
 
       {!canWrite && <ViewOnlyNote role={user?.role} />}
 
@@ -77,6 +99,17 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
             <p className="text-[12px] leading-tight text-[var(--color-text-muted)]">{STAGE_LABEL[stage]}</p>
             <p className="mt-1.5 text-[22px] font-semibold leading-none tabular-nums text-[var(--color-text)]">
               {byStage ? byStage[stage] : "—"}
+            </p>
+          </Card>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        {SOURCE_ORDER.map((source) => (
+          <Card key={source} className="px-4 py-3.5">
+            <p className="text-[12px] leading-tight text-[var(--color-text-muted)]">{SOURCE_LABEL[source]}</p>
+            <p className="mt-1.5 text-[18px] font-semibold leading-none tabular-nums text-[var(--color-text)]">
+              {statsQuery.data ? statsQuery.data.bySource[source] : "—"}
             </p>
           </Card>
         ))}
@@ -132,6 +165,8 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
                 <Th>Yosh guruhi</Th>
                 <Th>Manba</Th>
                 <Th>Bosqich</Th>
+                <Th>Mas&apos;ul</Th>
+                <Th>Eslatma</Th>
                 <Th>Sana</Th>
               </tr>
             </THead>
@@ -156,6 +191,22 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
                   <Td className="text-[var(--color-text-muted)]">{SOURCE_LABEL[lead.source]}</Td>
                   <Td>
                     <Badge tone={STAGE_TONE[lead.stage]}>{STAGE_LABEL[lead.stage]}</Badge>
+                  </Td>
+                  <Td className="text-[var(--color-text-muted)]">{lead.assignedTo?.fullName ?? "—"}</Td>
+                  <Td className="tabular-nums">
+                    {lead.followUpDate ? (
+                      <span
+                        className={
+                          lead.stage !== "WON" && lead.stage !== "LOST" && new Date(lead.followUpDate) < new Date()
+                            ? "font-medium text-[var(--color-danger)]"
+                            : "text-[var(--color-text-muted)]"
+                        }
+                      >
+                        {formatDate(lead.followUpDate)}
+                      </span>
+                    ) : (
+                      <span className="text-[var(--color-text-muted)]">—</span>
+                    )}
                   </Td>
                   <Td className="tabular-nums text-[var(--color-text-muted)]">{formatDate(lead.createdAt)}</Td>
                 </Tr>

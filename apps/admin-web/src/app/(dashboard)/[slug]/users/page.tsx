@@ -1,18 +1,21 @@
 "use client";
 
 import { use, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import Link from "next/link";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api, ApiError } from "@/lib/api";
 import type { Organization, TenantUser, TenantUserRole } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
-import { formatDate } from "@/lib/format";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { formatDate, formatDateTime } from "@/lib/format";
 import { CreateTenantUserModal } from "@/features/users/create-tenant-user-modal";
-import { ROLE_LABEL, canManageUsers } from "@/lib/permissions";
-import { BuildingIcon, KeyIcon, SearchIcon } from "@/components/ui/icons";
+import { EditTenantUserModal } from "@/features/users/edit-tenant-user-modal";
+import { ROLE_LABEL, canManageUser, canManageUsers } from "@/lib/permissions";
+import { BuildingIcon, KeyIcon, LockIcon, PencilIcon, SearchIcon, TrashIcon, UnlockIcon } from "@/components/ui/icons";
 
 /**
  * Har bir rol o'z rangida — ro'yxatda kim kimligi bir qarashda ko'rinadi,
@@ -59,7 +62,21 @@ function initials(fullName: string): string {
   );
 }
 
-function PersonRow({ person, isSelf }: { person: TenantUser; isSelf: boolean }) {
+function PersonRow({
+  person,
+  isSelf,
+  canManage,
+  onEdit,
+  onToggleStatus,
+  onDelete,
+}: {
+  person: TenantUser;
+  isSelf: boolean;
+  canManage: boolean;
+  onEdit: () => void;
+  onToggleStatus: () => void;
+  onDelete: () => void;
+}) {
   const style = ROLE_STYLE[person.role];
 
   return (
@@ -78,6 +95,9 @@ function PersonRow({ person, isSelf }: { person: TenantUser; isSelf: boolean }) 
           {!person.isActive && <Badge tone="neutral">Nofaol</Badge>}
         </div>
         <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">{person.email}</p>
+        <p className="truncate text-[12px] text-[var(--color-text-muted)]/80">
+          {person.lastLoginAt ? `Oxirgi kirish: ${formatDateTime(person.lastLoginAt)}` : "Hali kirmagan"}
+        </p>
       </div>
 
       <span className={`hidden shrink-0 rounded-full px-2.5 py-1 text-[12px] font-medium sm:block ${style.chip}`}>
@@ -86,6 +106,35 @@ function PersonRow({ person, isSelf }: { person: TenantUser; isSelf: boolean }) 
       <span className="hidden shrink-0 text-[12px] tabular-nums text-[var(--color-text-muted)] lg:block">
         {formatDate(person.createdAt)}
       </span>
+
+      {canManage && (
+        <div className="flex shrink-0 items-center gap-1">
+          <Button size="sm" variant="ghost" isIconOnly aria-label="Tahrirlash" title="Tahrirlash" onClick={onEdit}>
+            <PencilIcon className="h-4 w-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            isIconOnly
+            aria-label={person.isActive ? "Bloklash" : "Blokdan chiqarish"}
+            title={person.isActive ? "Bloklash" : "Blokdan chiqarish"}
+            onClick={onToggleStatus}
+          >
+            {person.isActive ? <LockIcon className="h-4 w-4" /> : <UnlockIcon className="h-4 w-4" />}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            isIconOnly
+            aria-label="O'chirish"
+            title="O'chirish"
+            className="hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]"
+            onClick={onDelete}
+          >
+            <TrashIcon className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
     </li>
   );
 }
@@ -95,7 +144,12 @@ export default function UsersPage({ params }: { params: Promise<{ slug: string }
   const [createOpen, setCreateOpen] = useState(false);
   const [roleFilter, setRoleFilter] = useState<TenantUserRole | "ALL">("ALL");
   const [search, setSearch] = useState("");
+  const [editPerson, setEditPerson] = useState<TenantUser | null>(null);
+  const [statusTarget, setStatusTarget] = useState<TenantUser | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<TenantUser | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const { user: currentUser } = useAuth();
+  const queryClient = useQueryClient();
 
   const orgQuery = useQuery({
     queryKey: ["org", slug],
@@ -105,6 +159,34 @@ export default function UsersPage({ params }: { params: Promise<{ slug: string }
   const usersQuery = useQuery({
     queryKey: ["tenant-users", slug],
     queryFn: () => api.get<TenantUser[]>("/app/users"),
+  });
+
+  const invalidateTeam = () => {
+    queryClient.invalidateQueries({ queryKey: ["tenant-users", slug] });
+    queryClient.invalidateQueries({ queryKey: ["employees", slug] });
+  };
+
+  const toggleStatusMutation = useMutation({
+    mutationFn: (person: TenantUser) =>
+      api.patch<TenantUser>(`/app/users/${person.id}/status`, { isActive: !person.isActive }),
+    onSuccess: () => {
+      invalidateTeam();
+      setStatusTarget(null);
+    },
+    onError: (err) => {
+      setActionError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (person: TenantUser) => api.delete(`/app/users/${person.id}`),
+    onSuccess: () => {
+      invalidateTeam();
+      setDeleteTarget(null);
+    },
+    onError: (err) => {
+      setActionError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+    },
   });
 
   const isSuperAdmin = currentUser?.role === "NETWORK_ADMIN";
@@ -175,10 +257,15 @@ export default function UsersPage({ params }: { params: Promise<{ slug: string }
           <p className="mt-0.5 text-[13px] text-[var(--color-text-muted)]">
             {isSuperAdmin
               ? "Tizimga kira oladigan xodimlar — filiallar bo'yicha"
-              : "O'z filialingiz administratorlari"}
+              : "Tizimga kirish huquqi (login) bor hisoblar — xodimning to'liq kartochkasi \"Xodimlar\" bo'limida"}
           </p>
         </div>
-        {canCreate && <Button onClick={() => setCreateOpen(true)}>{createLabel}</Button>}
+        <div className="flex gap-2">
+          <Link href={`/${slug}/audit-logs`}>
+            <Button variant="outline">Faoliyat jurnali</Button>
+          </Link>
+          {canCreate && <Button onClick={() => setCreateOpen(true)}>{createLabel}</Button>}
+        </div>
       </div>
 
       {usersQuery.isLoading ? (
@@ -266,7 +353,21 @@ export default function UsersPage({ params }: { params: Promise<{ slug: string }
                   ) : (
                     <ul className="divide-y divide-[var(--color-separator)]">
                       {section.people.map((person) => (
-                        <PersonRow key={person.id} person={person} isSelf={person.id === currentUser?.id} />
+                        <PersonRow
+                          key={person.id}
+                          person={person}
+                          isSelf={person.id === currentUser?.id}
+                          canManage={canManageUser(currentUser, person)}
+                          onEdit={() => setEditPerson(person)}
+                          onToggleStatus={() => {
+                            setActionError(null);
+                            setStatusTarget(person);
+                          }}
+                          onDelete={() => {
+                            setActionError(null);
+                            setDeleteTarget(person);
+                          }}
+                        />
                       ))}
                     </ul>
                   )}
@@ -288,7 +389,21 @@ export default function UsersPage({ params }: { params: Promise<{ slug: string }
                   </div>
                   <ul className="divide-y divide-[var(--color-separator)]">
                     {sections.networkLevel.map((person) => (
-                      <PersonRow key={person.id} person={person} isSelf={person.id === currentUser?.id} />
+                      <PersonRow
+                        key={person.id}
+                        person={person}
+                        isSelf={person.id === currentUser?.id}
+                        canManage={canManageUser(currentUser, person)}
+                        onEdit={() => setEditPerson(person)}
+                        onToggleStatus={() => {
+                          setActionError(null);
+                          setStatusTarget(person);
+                        }}
+                        onDelete={() => {
+                          setActionError(null);
+                          setDeleteTarget(person);
+                        }}
+                      />
                     ))}
                   </ul>
                 </Card>
@@ -307,6 +422,60 @@ export default function UsersPage({ params }: { params: Promise<{ slug: string }
           branches={orgQuery.data?.branches ?? []}
         />
       )}
+
+      {currentUser && (
+        <EditTenantUserModal
+          open={!!editPerson}
+          onClose={() => setEditPerson(null)}
+          slug={slug}
+          currentUser={currentUser}
+          user={editPerson}
+        />
+      )}
+
+      <ConfirmDialog
+        open={!!statusTarget}
+        onClose={() => setStatusTarget(null)}
+        title={statusTarget?.isActive ? "Hisobni bloklash" : "Blokdan chiqarish"}
+        confirmLabel={statusTarget?.isActive ? "Bloklash" : "Blokdan chiqarish"}
+        tone={statusTarget?.isActive ? "danger" : "default"}
+        loading={toggleStatusMutation.isPending}
+        error={actionError}
+        description={
+          statusTarget?.isActive ? (
+            <>
+              <b className="text-[var(--color-text)]">{statusTarget?.fullName}</b> tizimga kira olmaydi va ochiq
+              seanslari darhol yopiladi. Ma&apos;lumotlari saqlanib qoladi — istalgan vaqtda blokdan chiqarasiz.
+            </>
+          ) : (
+            <>
+              <b className="text-[var(--color-text)]">{statusTarget?.fullName}</b> yana tizimga kira oladi.
+            </>
+          )
+        }
+        onConfirm={() => statusTarget && toggleStatusMutation.mutate(statusTarget)}
+      />
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        title="Loginni o'chirish"
+        confirmLabel="O'chirish"
+        tone="danger"
+        loading={deleteMutation.isPending}
+        error={actionError}
+        description={
+          <>
+            <b className="text-[var(--color-text)]">{deleteTarget?.fullName}</b> hisobi butunlay o&apos;chiriladi va
+            qaytarilmaydi.
+            {deleteTarget?.role === "TEACHER" && (
+              <> Xodim kartochkasi va guruh biriktiruvi saqlanib qoladi — u faqat kabinetsiz qoladi.</>
+            )}{" "}
+            Vaqtincha to&apos;xtatish kerak bo&apos;lsa, o&apos;chirish o&apos;rniga bloklang.
+          </>
+        }
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget)}
+      />
     </div>
   );
 }
