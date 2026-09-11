@@ -6,6 +6,8 @@ import styles from "../../../../parent.module.css";
 import { usePoem, type Poem } from "../../content";
 import { useLearned, useTextSize } from "../../store";
 import { Chip, FoydaliHeader, LearnedButton, NotFoundCard, StarIcon, TextSizeControl, formatUzDate } from "../../ui";
+import { SaveImageButton, useKindergartenName } from "../../save-image-button";
+import { kindergartenLabel, renderPoemImage } from "../../share-image";
 
 /**
  * She'r sahifasi — yodlash uchun uch usul:
@@ -35,6 +37,7 @@ export default function PoemPage({ params }: { params: Promise<{ slug: string; i
   const { has, toggle } = useLearned();
   const size = useTextSize();
   const [mode, setMode] = useState<Mode>("read");
+  const brand = useKindergartenName(slug) ?? "Bog'cha";
 
   if (!poem) {
     return (
@@ -91,6 +94,14 @@ export default function PoemPage({ params }: { params: Promise<{ slug: string; i
       {mode === "read" && <ReadView poem={poem} fontSize={fontSize} />}
       {mode === "lines" && <LineByLine poem={poem} fontSize={fontSize} />}
       {mode === "game" && <WordGame poem={poem} fontSize={fontSize} />}
+
+      {/* Rasm har doim butun she'rdan — qaysi usul ochiq bo'lishidan qat'i nazar */}
+      <SaveImageButton
+        label="Rasm qilib saqlash"
+        shareTitle={poem.title}
+        shareText={`«${poem.title}» — ${kindergartenLabel(brand)}`}
+        build={async () => [await renderPoemImage(poem, brand)]}
+      />
 
       <LearnedButton
         learned={learned}

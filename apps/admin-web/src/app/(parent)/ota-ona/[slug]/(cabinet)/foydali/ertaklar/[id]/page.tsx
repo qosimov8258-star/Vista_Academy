@@ -1,12 +1,14 @@
 "use client";
 
-import { use } from "react";
+import { use, useRef } from "react";
 import clsx from "clsx";
 import { BulbIcon } from "@/components/ui/icons";
 import styles from "../../../../parent.module.css";
 import { useTale } from "../../content";
 import { useLearned, useTextSize } from "../../store";
 import { FoydaliHeader, LearnedButton, NotFoundCard, TaleCover, TextSizeControl, formatUzDate } from "../../ui";
+import { SaveImageButton, useKindergartenName } from "../../save-image-button";
+import { kindergartenLabel, renderTaleImages } from "../../share-image";
 
 /** Ertak matni uchun shrift (px) — she'rdan kichikroq, o'qishga qulay */
 const READING_SIZES = [16.5, 18.5, 21] as const;
@@ -21,6 +23,9 @@ export default function TalePage({ params }: { params: Promise<{ slug: string; i
   const { data: tale } = useTale(id);
   const { has, toggle } = useLearned();
   const size = useTextSize();
+  const brand = useKindergartenName(slug) ?? "Bog'cha";
+  // Muqova rasmi saqlanadigan rasmning birinchi sahifasiga ko'chiriladi
+  const coverRef = useRef<HTMLDivElement>(null);
 
   if (!tale) {
     return (
@@ -47,7 +52,7 @@ export default function TalePage({ params }: { params: Promise<{ slug: string; i
         right={<TextSizeControl />}
       />
 
-      <div className="mt-4 aspect-[16/9] w-full overflow-hidden rounded-[var(--p-radius)] shadow-[var(--p-shadow)]">
+      <div ref={coverRef} className="mt-4 aspect-[16/9] w-full overflow-hidden rounded-[var(--p-radius)] shadow-[var(--p-shadow)]">
         <TaleCover kind={tale.cover} className="h-full w-full" />
       </div>
 
@@ -86,6 +91,13 @@ export default function TalePage({ params }: { params: Promise<{ slug: string; i
           </ol>
         </section>
       )}
+
+      <SaveImageButton
+        label="Ertakni rasm qilib saqlash"
+        shareTitle={tale.title}
+        shareText={`«${tale.title}» — ${kindergartenLabel(brand)}`}
+        build={() => renderTaleImages(tale, brand, coverRef.current?.querySelector("svg") ?? null)}
+      />
 
       <LearnedButton
         learned={has("tales", tale.id)}
