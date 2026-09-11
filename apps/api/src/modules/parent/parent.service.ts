@@ -37,7 +37,8 @@ export class ParentService {
             status: true,
             avatarUpdatedAt: true,
             group: { select: { id: true, name: true } },
-            branch: { select: { id: true, name: true } },
+            // Manzil kabinetda osmon holatini (quyosh botishi) hisoblash uchun
+            branch: { select: { id: true, name: true, address: true } },
           },
         },
       },

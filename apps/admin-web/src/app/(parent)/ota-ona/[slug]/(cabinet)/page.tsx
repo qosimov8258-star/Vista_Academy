@@ -10,6 +10,7 @@ import type { ParentAccount, ParentAttendanceStrip, ParentChild, ParentDay } fro
 import { initials } from "@/components/ui/avatar";
 import styles from "../parent.module.css";
 import { CardFx } from "./card-fx";
+import { useSky } from "./use-sky";
 
 const WEEKDAY = ["Yak", "Du", "Se", "Cho", "Pay", "Ju", "Sha"];
 /** Kalendar ustunlari — hafta dushanbadan boshlanadi */
@@ -92,6 +93,10 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
     enabled: !!childId,
   });
 
+  const child = children.find((c) => c.id === childId) ?? null;
+  // Osmon — bola qatnaydigan filial joylashuviga qarab
+  const sky = useSky(child?.branch.address, child?.branch.name);
+
   if (meQuery.isLoading) {
     return (
       <div className="flex min-h-[60dvh] items-center justify-center">
@@ -102,7 +107,6 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
   if (!meQuery.data) return null;
 
   const { parent } = meQuery.data;
-  const child = children.find((c) => c.id === childId) ?? null;
   const day = dayQuery.data;
   const present = day?.attendance?.status === "PRESENT";
   const absent = day?.attendance?.status === "ABSENT";
@@ -141,7 +145,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
         {/* Bola kartochkasi */}
         {child && (
           <section className={`${styles.pop} ${styles.childCard} mt-5 rounded-[var(--p-radius)] p-5 shadow-[var(--p-shadow)]`}>
-            <CardFx rainbow />
+            <CardFx rainbow sky={sky} />
             <div className="flex items-center gap-4">
               <div className={styles.float}>
                 {child.avatarUpdatedAt ? (

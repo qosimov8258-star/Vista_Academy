@@ -631,7 +631,8 @@ export interface ParentChild {
   status: ChildStatus;
   avatarUpdatedAt: string | null;
   group: { id: string; name: string } | null;
-  branch: { id: string; name: string };
+  /** Manzil osmon holatini (quyosh botishi) hisoblash uchun kerak — qarang: lib/sky.ts */
+  branch: { id: string; name: string; address?: string | null };
   relation: GuardianRelation;
 }
 

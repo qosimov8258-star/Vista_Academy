@@ -8,6 +8,7 @@ import type { ParentAccount, ParentChild } from "@/lib/types";
 import { LogoutIcon } from "@/components/ui/icons";
 import styles from "../../parent.module.css";
 import { CardFx } from "../card-fx";
+import { useSky } from "../use-sky";
 
 /**
  * Sozlamalar. Hozircha bitta ish qiladi — kabinetdan chiqish.
@@ -28,6 +29,8 @@ export default function ParentSettingsPage({ params }: { params: Promise<{ slug:
     retry: false,
   });
   const parent = meQuery.data?.parent;
+  const firstChild = meQuery.data?.children[0];
+  const sky = useSky(firstChild?.branch.address, firstChild?.branch.name);
 
   const logout = async () => {
     setLeaving(true);
@@ -43,7 +46,7 @@ export default function ParentSettingsPage({ params }: { params: Promise<{ slug:
 
       {parent && (
         <section className={`${styles.childCard} mt-4 rounded-[var(--p-radius)] p-5 shadow-[var(--p-shadow)]`}>
-          <CardFx />
+          <CardFx sky={sky} />
           <p className="text-[12px] font-semibold uppercase tracking-[0.06em] text-[var(--p-muted)]">
             Kabinet egasi
           </p>

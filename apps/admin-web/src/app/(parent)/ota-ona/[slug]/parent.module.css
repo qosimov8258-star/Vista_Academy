@@ -227,6 +227,18 @@
   container-type: size;
 }
 
+/* Osmon holatiga qarab tagfon: kunduz krem, shafaqda qizg'ish, tunda ko'kimtir */
+.baseFx {
+  position: absolute;
+  inset: 0;
+}
+/* Tunda tepadan tushadigan siyohrang shu'la — osmon chuqurroq ko'rinsin */
+.nightBandFx {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 70% at 50% -20%, rgba(79, 70, 229, 0.17) 0%, transparent 60%);
+}
+
 /* Nafas olayotgan rangli yog'dular — blur emas, radial gradient: telefonda yengil */
 .blobFx {
   position: absolute;
@@ -263,6 +275,62 @@
   transform-box: fill-box;
   transform-origin: center;
   animation: pSunBreath 3.6s ease-in-out infinite alternate;
+}
+
+/* Oy: quyoshning o'rnida, sekin suzib turadi; yog'dusi nafas oladi */
+.moonFx {
+  position: absolute;
+  top: -30px;
+  right: -28px;
+  width: 140px;
+  height: 140px;
+  animation: pMoonFloat 6s ease-in-out infinite alternate;
+}
+@keyframes pMoonFloat {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(0, 4px, 0); }
+}
+.moonGlowFx {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pSunBreath 4.5s ease-in-out infinite alternate;
+}
+
+/* Tungi yulduzlar — har biri o'z ritmida miltillaydi */
+.starFx {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: var(--s);
+  height: var(--s);
+  opacity: 0;
+  transform-origin: center;
+  animation: pStarFx var(--d, 3s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
+@keyframes pStarFx {
+  0%, 100% { opacity: 0.25; transform: scale(0.6); }
+  50% { opacity: 0.95; transform: scale(1); }
+}
+
+/* Uchar yulduz: o'ng yuqoridan chap pastga, har 9 soniyada bir marta */
+.shootFx {
+  position: absolute;
+  top: 14%;
+  right: 16%;
+  width: 110px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, rgba(255, 224, 138, 0.95) 0%, rgba(255, 224, 138, 0) 100%);
+  transform-origin: left center;
+  opacity: 0;
+  animation: pShootFx 9s linear infinite;
+  animation-delay: 1.5s;
+}
+@keyframes pShootFx {
+  0%, 78% { opacity: 0; transform: rotate(-24deg) translate3d(0, 0, 0); }
+  80% { opacity: 1; }
+  90%, 100% { opacity: 0; transform: rotate(-24deg) translate3d(-240px, 0, 0); }
 }
 
 /* Kamalak: bola rasmi ortida, yuklanganda tashqaridan ichkariga chiziladi */
@@ -366,16 +434,22 @@
   .blobFx,
   .sunRaysFx,
   .sunDiscFx,
+  .moonFx,
+  .moonGlowFx,
   .rainbowArcFx,
   .cloudFx,
   .floaterFx,
   .swayFx,
   .sparkleFx,
+  .starFx,
+  .shootFx,
   .shineFx {
     animation: none;
   }
   /* Harakatsiz holatda ham ko'rinib tursin: uchqunlar yonib, bulutlar joyida */
   .sparkleFx { opacity: 0.7; transform: scale(0.8); }
+  .starFx { opacity: 0.8; transform: scale(0.9); }
   .cloudFx { transform: translate3d(30%, 0, 0); }
+  .shootFx,
   .shineFx { display: none; }
 }

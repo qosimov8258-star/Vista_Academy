@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import type { SkyPhase, SkyState } from "@/lib/sky";
 import styles from "../parent.module.css";
 
 /** CSS o'zgaruvchilari (`--x`) bilan to'ldirilgan uslub — React tiplari ularni bilmaydi. */
@@ -13,6 +14,10 @@ type FxStyle = CSSProperties & Record<`--${string}`, string | number>;
  * aylanayotgan quyosh, suzib o'tuvchi bulutchalar, bola rasmi ortida
  * chizilib chiqadigan kamalak, pastdan ko'tarilayotgan sharlar, yulduzcha
  * va yurakchalar, miltillovchi uchqunlar.
+ *
+ * Osmon haqiqiy vaqtga ergashadi (qarang: lib/sky.ts): kunduzi quyosh,
+ * quyosh botishi atrofida shafaq ranglari, tunda esa quyosh o'rniga oy —
+ * fazasi osmondagi oy bilan bir xil — yulduzlar va uchar yulduz.
  *
  * Hammasi faqat `transform` va `opacity` bilan harakatlanadi (GPU'da yengil),
  * `filter: blur` yo'q — yog'dular radial gradient bilan yumshatilgan.
@@ -53,7 +58,7 @@ const FLOATERS: Floater[] = [
   { kind: "heart", x: 62, size: 9, duration: 23, delay: -19, color: "#ff7a66", opacity: 0.45, sway: 10 },
 ];
 
-/** Uchqunlar — asosan bo'sh joylarda: o'ng yuqori burchak, o'ng chekka */
+/** Kunduzgi uchqunlar — asosan bo'sh joylarda: o'ng yuqori burchak, o'ng chekka */
 const SPARKLES = [
   { x: 86, y: 10, duration: 3.1, delay: 0 },
   { x: 94, y: 31, duration: 3.8, delay: 1.2 },
@@ -62,19 +67,60 @@ const SPARKLES = [
   { x: 97, y: 62, duration: 4.2, delay: 1.8 },
 ];
 
+/** Tungi yulduzlar — bola rasmi va ismi yopmaydigan joylarda */
+const STARS = [
+  { x: 3, y: 5, size: 9, duration: 2.8, delay: 0.2 },
+  { x: 14, y: 2, size: 6, duration: 3.4, delay: 1.1 },
+  { x: 27, y: 6, size: 7, duration: 2.6, delay: 0.6 },
+  { x: 41, y: 2, size: 10, duration: 3.9, delay: 1.7 },
+  { x: 55, y: 8, size: 6, duration: 3.1, delay: 0.9 },
+  { x: 66, y: 3, size: 8, duration: 2.9, delay: 2.2 },
+  { x: 72, y: 14, size: 6, duration: 3.6, delay: 1.4 },
+  { x: 30, y: 29, size: 7, duration: 3.3, delay: 2.6 },
+  { x: 3, y: 47, size: 8, duration: 2.7, delay: 0.4 },
+  { x: 96, y: 40, size: 9, duration: 3.8, delay: 1.9 },
+  { x: 50, y: 40, size: 6, duration: 3.2, delay: 2.9 },
+  { x: 97, y: 66, size: 7, duration: 2.5, delay: 1.3 },
+];
+
 /** Bulutchalar — tepadan chapdan o'ngga suzadi */
 const CLOUDS = [
   { y: 21, width: 46, duration: 52, delay: -18 },
   { y: 8, width: 30, duration: 74, delay: -40 },
 ];
 
-/** Yog'dular: nafas olayotgan rangli dog'lar */
-const BLOBS: Array<{ style: CSSProperties; size: number; color: string; duration: number; delay: number }> = [
-  { style: { top: -80, right: -70 }, size: 250, color: "rgba(255, 183, 3, 0.34)", duration: 15, delay: 0 },
-  { style: { bottom: -100, right: -80 }, size: 270, color: "rgba(86, 180, 245, 0.28)", duration: 19, delay: -6 },
-  { style: { bottom: -90, left: -80 }, size: 240, color: "rgba(63, 191, 155, 0.26)", duration: 17, delay: -11 },
-  { style: { top: "34%", left: -90 }, size: 200, color: "rgba(167, 139, 250, 0.18)", duration: 21, delay: -3 },
+/** Yog'dular joyi va o'lchami; rangi osmon holatiga qarab */
+const BLOBS: Array<{ style: CSSProperties; size: number; duration: number; delay: number }> = [
+  { style: { top: -80, right: -70 }, size: 250, duration: 15, delay: 0 },
+  { style: { bottom: -100, right: -80 }, size: 270, duration: 19, delay: -6 },
+  { style: { bottom: -90, left: -80 }, size: 240, duration: 17, delay: -11 },
+  { style: { top: "34%", left: -90 }, size: 200, duration: 21, delay: -3 },
 ];
+
+/** Osmon holatiga qarab ranglar: kunduz iliq, shafaqda qizg'ish, tunda ko'kimtir */
+const PALETTE: Record<
+  SkyPhase,
+  { base: string; blobs: [string, string, string, string]; cloud: string; cloudOpacity: number }
+> = {
+  kun: {
+    base: "linear-gradient(168deg, #fffbf3 0%, #ffffff 60%)",
+    blobs: ["rgba(255, 183, 3, 0.34)", "rgba(86, 180, 245, 0.28)", "rgba(63, 191, 155, 0.26)", "rgba(167, 139, 250, 0.18)"],
+    cloud: "#ffffff",
+    cloudOpacity: 0.9,
+  },
+  shafaq: {
+    base: "linear-gradient(168deg, #fff3e4 0%, #ffffff 60%)",
+    blobs: ["rgba(255, 140, 80, 0.36)", "rgba(255, 122, 102, 0.26)", "rgba(255, 183, 3, 0.28)", "rgba(196, 150, 255, 0.22)"],
+    cloud: "#fff1ec",
+    cloudOpacity: 0.95,
+  },
+  tun: {
+    base: "linear-gradient(168deg, #f2f1ff 0%, #ffffff 62%)",
+    blobs: ["rgba(99, 102, 241, 0.24)", "rgba(56, 120, 220, 0.22)", "rgba(63, 191, 155, 0.14)", "rgba(167, 139, 250, 0.26)"],
+    cloud: "#eef0ff",
+    cloudOpacity: 0.7,
+  },
+};
 
 const RAINBOW = ["#ff8fa3", "#ffb703", "#ffe66d", "#8ce99a", "#74c0fc", "#b197fc"];
 
@@ -107,6 +153,29 @@ const SUN_RAYS = Array.from({ length: 12 }, (_, i) => {
     y2: fixed(70 + 64 * Math.sin(a)),
   };
 });
+
+/**
+ * Oyning yorug' qismi. Faza 0 — yangi oy, 0.5 — to'lin oy, 1 — yana yangi oy.
+ * O'sayotgan oyning o'ng tomoni, kamayayotganining chap tomoni yorug'
+ * (shimoliy yarim shar). Yorug' qism ikki yoydan iborat: oyning tashqi
+ * chekkasi va soya chegarasi (terminator) — u ellips yoyi bo'lib, yarim o'qi
+ * fazaga qarab o'zgaradi.
+ */
+function moonLitPath(phase: number, cx: number, cy: number, r: number): string {
+  // Yangi oyga juda yaqin faza ko'rinmas hilol beradi — ozgina cheklaymiz
+  const p = Math.min(0.91, Math.max(0.09, phase));
+  const litRight = p <= 0.5;
+  const c = r * Math.cos(2 * Math.PI * p);
+  // SVG'da (y pastga) sweep=1 — soat yo'nalishida. Tashqi chekka tepadan
+  // pastga: o'ng tomondan o'tsa soat yo'nalishi, chapdan o'tsa teskarisi.
+  const outerSweep = litRight ? 1 : 0;
+  // Terminator pastdan tepaga qaytadi. U yorug' tomonga bo'rtib chiqsa
+  // (hilol) — bir yo'nalish, qarama-qarshi tomonga (do'ngayma) — teskarisi.
+  const bulgeRight = litRight === c > 0;
+  const termSweep = bulgeRight ? 0 : 1;
+  const rx = Math.max(0.01, Math.abs(c));
+  return `M${cx} ${cy - r}A${r} ${r} 0 0 ${outerSweep} ${cx} ${cy + r}A${fixed(rx)} ${r} 0 0 ${termSweep} ${cx} ${cy - r}`;
+}
 
 function FloaterShape({ kind, color }: { kind: FloaterKind; color: string }) {
   switch (kind) {
@@ -150,40 +219,86 @@ function FloaterShape({ kind, color }: { kind: FloaterKind; color: string }) {
   }
 }
 
-export function CardFx({ rainbow = false }: { rainbow?: boolean }) {
+const SPARKLE_PATH = "M12 0c1 8 4 11 12 12-8 1-11 4-12 12-1-8-4-11-12-12 8-1 11-4 12-12z";
+
+function Sun({ phase }: { phase: SkyPhase }) {
+  const dusk = phase === "shafaq";
   return (
-    <div className={styles.cardFx} aria-hidden="true">
+    // Shafaqda quyosh pastroq va qizg'ish — botayotgandek
+    <svg viewBox="0 0 140 140" className={styles.sunFx} style={dusk ? { top: -14 } : undefined}>
+      <defs>
+        <radialGradient id="cfx-sun">
+          <stop offset="0" stopColor={dusk ? "#fff0c0" : "#fff3c4"} />
+          <stop offset="0.7" stopColor={dusk ? "#ffb457" : "#ffd766"} />
+          <stop offset="1" stopColor={dusk ? "#ff8a5b" : "#ffc233"} />
+        </radialGradient>
+      </defs>
+      <g className={styles.sunRaysFx} stroke={dusk ? "#ffb27a" : "#ffd25e"} strokeWidth="5" strokeLinecap="round">
+        {SUN_RAYS.map((r, i) => (
+          <line key={i} x1={r.x1} y1={r.y1} x2={r.x2} y2={r.y2} />
+        ))}
+      </g>
+      <circle className={styles.sunDiscFx} cx="70" cy="70" r="40" fill="url(#cfx-sun)" />
+    </svg>
+  );
+}
+
+function Moon({ phase }: { phase: number }) {
+  const lit = moonLitPath(phase, 70, 70, 34);
+  return (
+    <svg viewBox="0 0 140 140" className={styles.moonFx}>
+      <defs>
+        <radialGradient id="cfx-moonglow">
+          <stop offset="0" stopColor="#fff6c9" stopOpacity="0.9" />
+          <stop offset="0.55" stopColor="#fff1b8" stopOpacity="0.35" />
+          <stop offset="1" stopColor="#fff1b8" stopOpacity="0" />
+        </radialGradient>
+        <clipPath id="cfx-moonlit">
+          <path d={lit} />
+        </clipPath>
+      </defs>
+      <circle className={styles.moonGlowFx} cx="70" cy="70" r="66" fill="url(#cfx-moonglow)" />
+      {/* Soyadagi qism — oq kartada ko'rinib turishi uchun och siyohrang */}
+      <circle cx="70" cy="70" r="34" fill="#e3e6fb" />
+      <path d={lit} fill="#fff1b8" />
+      {/* Kraterlar — faqat yorug' qismda */}
+      <g clipPath="url(#cfx-moonlit)" fill="#efd98f" opacity="0.6">
+        <circle cx="80" cy="58" r="5" />
+        <circle cx="61" cy="76" r="3.5" />
+        <circle cx="84" cy="84" r="4" />
+        <circle cx="70" cy="92" r="2.5" />
+      </g>
+    </svg>
+  );
+}
+
+export function CardFx({ rainbow = false, sky }: { rainbow?: boolean; sky: SkyState | null }) {
+  const phase: SkyPhase = sky?.phase ?? "kun";
+  const palette = PALETTE[phase];
+  const night = phase === "tun";
+
+  return (
+    <div className={styles.cardFx} data-sky={phase} aria-hidden="true">
+      <span className={styles.baseFx} style={{ background: palette.base }} />
+      {night && <span className={styles.nightBandFx} />}
+
       {BLOBS.map((b, i) => {
         const style: FxStyle = {
           ...b.style,
           width: b.size,
           height: b.size,
-          "--c": b.color,
+          "--c": palette.blobs[i],
           "--d": `${b.duration}s`,
           "--delay": `${b.delay}s`,
         };
         return <span key={i} className={styles.blobFx} style={style} />;
       })}
 
-      {/* Quyosh — o'ng yuqori burchakdan mo'ralaydi */}
-      <svg viewBox="0 0 140 140" className={styles.sunFx}>
-        <defs>
-          <radialGradient id="cfx-sun">
-            <stop offset="0" stopColor="#fff3c4" />
-            <stop offset="0.7" stopColor="#ffd766" />
-            <stop offset="1" stopColor="#ffc233" />
-          </radialGradient>
-        </defs>
-        <g className={styles.sunRaysFx} stroke="#ffd25e" strokeWidth="5" strokeLinecap="round">
-          {SUN_RAYS.map((r, i) => (
-            <line key={i} x1={r.x1} y1={r.y1} x2={r.x2} y2={r.y2} />
-          ))}
-        </g>
-        <circle className={styles.sunDiscFx} cx="70" cy="70" r="40" fill="url(#cfx-sun)" />
-      </svg>
+      {/* Quyosh yoki oy — o'ng yuqori burchakdan mo'ralaydi */}
+      {sky && (night ? <Moon phase={sky.moonPhase} /> : <Sun phase={phase} />)}
 
-      {/* Kamalak — bola rasmi ortida chizilib chiqadi */}
-      {rainbow && (
+      {/* Kamalak — bola rasmi ortida chizilib chiqadi (tunda kamalak bo'lmaydi) */}
+      {rainbow && !night && (
         <svg viewBox="0 0 132 132" className={styles.rainbowFx}>
           {RAINBOW.map((color, i) => (
             <path
@@ -202,13 +317,19 @@ export function CardFx({ rainbow = false }: { rainbow?: boolean }) {
       )}
 
       {CLOUDS.map((c, i) => {
-        const style: FxStyle = { "--y": `${c.y}%`, "--w": `${c.width}px`, "--d": `${c.duration}s`, "--delay": `${c.delay}s` };
+        const style: FxStyle = {
+          "--y": `${c.y}%`,
+          "--w": `${c.width}px`,
+          "--d": `${c.duration}s`,
+          "--delay": `${c.delay}s`,
+          opacity: palette.cloudOpacity,
+        };
         return (
-          <svg key={i} viewBox="0 0 64 34" className={styles.cloudFx} style={style}>
-            <ellipse cx="32" cy="26" rx="28" ry="8" fill="#fff" />
-            <circle cx="20" cy="20" r="11" fill="#fff" />
-            <circle cx="34" cy="14" r="14" fill="#fff" />
-            <circle cx="48" cy="21" r="10" fill="#fff" />
+          <svg key={i} viewBox="0 0 64 34" className={styles.cloudFx} style={style} fill={palette.cloud}>
+            <ellipse cx="32" cy="26" rx="28" ry="8" />
+            <circle cx="20" cy="20" r="11" />
+            <circle cx="34" cy="14" r="14" />
+            <circle cx="48" cy="21" r="10" />
           </svg>
         );
       })}
@@ -234,14 +355,32 @@ export function CardFx({ rainbow = false }: { rainbow?: boolean }) {
         );
       })}
 
-      {SPARKLES.map((s, i) => {
-        const style: FxStyle = { "--x": `${s.x}%`, "--y": `${s.y}%`, "--d": `${s.duration}s`, "--delay": `${s.delay}s` };
-        return (
-          <svg key={i} viewBox="0 0 24 24" className={styles.sparkleFx} style={style}>
-            <path d="M12 0c1 8 4 11 12 12-8 1-11 4-12 12-1-8-4-11-12-12 8-1 11-4 12-12z" fill="#ffe08a" />
-          </svg>
-        );
-      })}
+      {night
+        ? STARS.map((s, i) => {
+            const style: FxStyle = {
+              "--x": `${s.x}%`,
+              "--y": `${s.y}%`,
+              "--s": `${s.size}px`,
+              "--d": `${s.duration}s`,
+              "--delay": `${s.delay}s`,
+            };
+            return (
+              <svg key={i} viewBox="0 0 24 24" className={styles.starFx} style={style}>
+                <path d={SPARKLE_PATH} fill="#ffd76a" />
+              </svg>
+            );
+          })
+        : SPARKLES.map((s, i) => {
+            const style: FxStyle = { "--x": `${s.x}%`, "--y": `${s.y}%`, "--d": `${s.duration}s`, "--delay": `${s.delay}s` };
+            return (
+              <svg key={i} viewBox="0 0 24 24" className={styles.sparkleFx} style={style}>
+                <path d={SPARKLE_PATH} fill="#ffe08a" />
+              </svg>
+            );
+          })}
+
+      {/* Tunda vaqti-vaqti bilan uchar yulduz o'tadi */}
+      {night && <span className={styles.shootFx} />}
 
       {/* Vaqti-vaqti bilan o'tadigan yaltiroq */}
       <span className={styles.shineFx} />
