@@ -11,11 +11,14 @@ import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
+const LOGIN_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{1,30}[A-Za-z0-9]$/;
+const LOGIN_MESSAGE = "Login lotin harf, raqam, . _ - dan iborat bo'lishi va kamida 3 belgi bo'lishi kerak";
+
 const schema = z.object({
   name: z.string().min(2, "Nomi kamida 2 belgi"),
   address: z.string().optional(),
   managerFullName: z.string().min(2, "To'liq ism kamida 2 belgi"),
-  managerEmail: z.string().email("Email formati noto'g'ri"),
+  managerLogin: z.string().regex(LOGIN_PATTERN, LOGIN_MESSAGE),
   managerPassword: z.string().min(8, "Kamida 8 belgi"),
 });
 
@@ -70,11 +73,11 @@ export function CreateBranchModal({ open, onClose, slug }: { open: boolean; onCl
               {...register("managerFullName")}
             />
             <Input
-              label="Login email"
-              type="email"
-              placeholder="filial.admin@tarmoq.uz"
-              error={errors.managerEmail?.message}
-              {...register("managerEmail")}
+              label="Login"
+              type="text"
+              placeholder="filial_admin"
+              error={errors.managerLogin?.message}
+              {...register("managerLogin")}
             />
             <Input
               label="Parol"

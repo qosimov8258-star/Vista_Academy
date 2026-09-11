@@ -26,7 +26,7 @@ export class TenantJwtStrategy extends PassportStrategy(Strategy, "tenant-jwt") 
   async validate(payload: TenantAccessTokenPayload): Promise<TenantAuthenticatedUser> {
     const tenantUser = await this.prisma.tenantUser.findUnique({
       where: { id: payload.sub },
-      include: { organization: true, branch: true },
+      include: { organization: true, branch: true, employee: true },
     });
     if (
       !tenantUser ||
@@ -44,10 +44,12 @@ export class TenantJwtStrategy extends PassportStrategy(Strategy, "tenant-jwt") 
       branchId: tenantUser.branchId,
       branchSlug: tenantUser.branch?.slug ?? null,
       branchName: tenantUser.branch?.name ?? null,
-      email: tenantUser.email,
+      login: tenantUser.login,
       fullName: tenantUser.fullName,
       role: tenantUser.role,
       avatarUpdatedAt: tenantUser.avatarUpdatedAt?.toISOString() ?? null,
+      position: tenantUser.employee?.position ?? null,
+      subjects: tenantUser.employee?.subjects ?? [],
     };
   }
 }

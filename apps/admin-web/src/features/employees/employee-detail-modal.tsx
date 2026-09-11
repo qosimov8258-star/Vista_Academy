@@ -12,6 +12,8 @@ import { CredentialRow } from "@/components/ui/credential-row";
 import { EmployeePhoto } from "@/components/ui/employee-photo";
 import { initials } from "@/components/ui/avatar";
 import { PhoneIcon, EyeIcon, EyeOffIcon, CheckIcon, TrashIcon } from "@/components/ui/icons";
+import { formatPositionLabel, isSubjectTeacherPosition } from "@/lib/employee-position";
+import { EmployeeTopics } from "@/features/employees/employee-topics";
 
 /**
  * Xodim ustiga bosilganda ochiladi: telefon, login va kabinet paroli shu yerda.
@@ -170,7 +172,9 @@ export function EmployeeDetailModal({
           />
           <div className="text-center">
             <p className="text-[16px] font-semibold text-[var(--color-text)]">{employee.fullName}</p>
-            <p className="text-[13px] text-[var(--color-text-muted)]">{employee.position}</p>
+            <p className="text-[13px] text-[var(--color-text-muted)]">
+              {formatPositionLabel(employee.position, employee.subjects)}
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <Badge tone={employee.isActive ? "success" : "neutral"}>{employee.isActive ? "Faol" : "Nofaol"}</Badge>
@@ -234,7 +238,7 @@ export function EmployeeDetailModal({
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-[13px] font-medium text-[var(--color-text)]">Login</p>
-                <p className="truncate text-sm text-[var(--color-text-muted)]">{employee.tenantUser.email}</p>
+                <p className="truncate text-sm text-[var(--color-text-muted)]">{employee.tenantUser.login}</p>
               </div>
             </div>
 
@@ -350,6 +354,8 @@ export function EmployeeDetailModal({
             )}
           </div>
         )}
+
+        {isSubjectTeacherPosition(employee.position) && <EmployeeTopics slug={slug} employeeId={employee.id} />}
 
         <div className="flex justify-end pt-1">
           <Button type="button" variant="secondary" onClick={onClose}>

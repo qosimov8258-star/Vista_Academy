@@ -9,7 +9,7 @@ import { SetTenantUserStatusDto, UpdateTenantUserDto } from "./dto/update-tenant
 
 const SAFE_SELECT = {
   id: true,
-  email: true,
+  login: true,
   fullName: true,
   role: true,
   branchId: true,
@@ -36,7 +36,7 @@ export class TenantUsersService {
         data: {
           organizationId: caller.organizationId,
           branchId,
-          email: dto.email.toLowerCase(),
+          login: dto.login.toLowerCase(),
           passwordHash,
           fullName: dto.fullName,
           role: targetRole,
@@ -45,7 +45,7 @@ export class TenantUsersService {
       });
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
-        throw new ConflictException("Bu email bilan foydalanuvchi allaqachon mavjud");
+        throw new ConflictException("Bu login bilan foydalanuvchi allaqachon mavjud");
       }
       throw err;
     }

@@ -14,11 +14,15 @@ export interface TenantAuthenticatedUser {
   branchId: string | null;
   branchSlug: string | null;
   branchName: string | null;
-  email: string;
+  login: string;
   fullName: string;
   role: TenantUserRole;
   /** Profil rasmi bor bo'lsa — oxirgi yangilangan vaqti (kesh uchun). */
   avatarUpdatedAt: string | null;
+  /** Bog'langan xodim kartochkasidagi lavozim (masalan "Fan o'qituvchisi", "Oshpaz"). Xodimga bog'lanmagan hisoblarda (Super Admin, moliyachi) — null. */
+  position: string | null;
+  /** "Fan o'qituvchisi" lavozimida tanlangan fan(lar). Boshqa lavozimlarda/bog'lanmagan hisoblarda — bo'sh massiv. */
+  subjects: string[];
 }
 
 export type OrganizationStatus = "ACTIVE" | "SUSPENDED";
@@ -149,7 +153,7 @@ export interface Employee {
   createdAt: string;
   avatarUpdatedAt: string | null;
   /** Kabineti bo'lmagan xodimda null — u tizimga kirmaydi. */
-  tenantUser?: { id: string; email: string; role: TenantUserRole; isActive: boolean } | null;
+  tenantUser?: { id: string; login: string; role: TenantUserRole; isActive: boolean } | null;
   teachingGroups?: GroupTeacherLink[];
   /** Oylik sxemasi — ro'yxat bilan birga keladi, alohida so'rov kerak emas. */
   salaryScheme?: { ruleType: "FIXED" | "PER_HOUR" | "PER_CHILD"; fixedAmount: string; rate: string } | null;
@@ -265,7 +269,7 @@ export interface LedgerEntry {
 
 export interface TenantUser {
   id: string;
-  email: string;
+  login: string;
   fullName: string;
   role: TenantUserRole;
   branchId: string | null;
@@ -515,6 +519,15 @@ export interface Guardian {
   createdAt: string;
 }
 
+export interface GuardianCabinetCredentials {
+  guardianId: string;
+  fullName: string;
+  /** Login — telefon raqami. */
+  login: string;
+  /** Parol faqat shu javobda keladi: bazada xesh saqlanadi. */
+  password: string;
+}
+
 export interface ChildGuardian {
   id: string;
   childId: string;
@@ -525,7 +538,12 @@ export interface ChildGuardian {
   canViewFinance: boolean;
   canReceiveNotifications: boolean;
   createdAt: string;
-  guardian: Guardian;
+  guardian: Guardian & {
+    isActive?: boolean;
+    lastLoginAt?: string | null;
+    /** Kabinet ochilganmi — paroli bormi degani. */
+    hasCabinet?: boolean;
+  };
 }
 
 // ===== HR / Payroll =====
@@ -724,4 +742,164 @@ export interface GroupAttendanceDay {
     status: AttendanceStatus | null;
     note: string | null;
   }[];
+}
+
+/* ------------------------------------------------------------------ */
+/* Ota-ona kabineti                                                    */
+/* ------------------------------------------------------------------ */
+
+export interface ParentAccount {
+  id: string;
+  organizationId: string;
+  organizationSlug: string;
+  organizationName: string;
+  fullName: string;
+  phone: string;
+}
+
+export interface ParentChild {
+  id: string;
+  publicId: number;
+  fullName: string;
+  gender: Gender | null;
+  birthDate: string | null;
+  status: ChildStatus;
+  avatarUpdatedAt: string | null;
+  group: { id: string; name: string } | null;
+  /** Manzil osmon holatini (quyosh botishi) hisoblash uchun kerak — qarang: lib/sky.ts */
+  branch: { id: string; name: string; address?: string | null };
+  relation: GuardianRelation;
+}
+
+/** `GET /app/parent/children/:id/day` javobi. */
+export interface ParentDay {
+  date: string;
+  child: { id: string; fullName: string; groupName: string | null; avatarUpdatedAt: string | null };
+  attendance: { status: AttendanceStatus; note: string | null } | null;
+  report: {
+    eatingQuality: "GOOD" | "AVERAGE" | "POOR" | null;
+    sleepMinutes: number | null;
+    mood: "HAPPY" | "NEUTRAL" | "UPSET" | null;
+    toiletNotes: string | null;
+    activityNotes: string | null;
+    updatedAt: string;
+  } | null;
+  menu: { breakfast: string | null; lunch: string | null; snack: string | null } | null;
+}
+
+export interface ParentAttendanceStrip {
+  items: { date: string; status: AttendanceStatus | null }[];
+  present: number;
+  absent: number;
+  marked: number;
+}
+
+/* ------------------------------------------------------------------ */
+/* Qo'shimcha darsliklar — dars jadvali, savol-javob, baholar          */
+/* ------------------------------------------------------------------ */
+
+export type Weekday = "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY" | "SUNDAY";
+
+export interface Room {
+  id: string;
+  branchId: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LessonSchedule {
+  id: string;
+  branchId: string;
+  groupId: string;
+  employeeId: string;
+  roomId: string;
+  subject: string | null;
+  weekday: Weekday;
+  startTime: string;
+  endTime: string;
+  createdAt: string;
+  updatedAt: string;
+  group: { id: string; name: string };
+  room: { id: string; name: string };
+  employee: { id: string; fullName: string };
+}
+
+export interface TopicQuestion {
+  id: string;
+  topicId: string;
+  question: string;
+  options: string[];
+  answer: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** `GET /app/lesson-topics` ro'yxatidagi bitta element. */
+export interface LessonTopic {
+  id: string;
+  branchId: string;
+  groupId: string;
+  employeeId: string;
+  subject: string | null;
+  title: string;
+  date: string;
+  createdAt: string;
+  updatedAt: string;
+  _count: { questions: number };
+  /** Mavzu sanasi 2+ oy oldin bo'lsa — takrorlash vaqti kelgani. */
+  reviewDue: boolean;
+}
+
+/** `GET /app/lesson-topics/:id` javobi — savollar banki bilan birga. */
+export interface LessonTopicDetail {
+  id: string;
+  branchId: string;
+  groupId: string;
+  employeeId: string;
+  subject: string | null;
+  title: string;
+  date: string;
+  createdAt: string;
+  updatedAt: string;
+  reviewDue: boolean;
+  questions: TopicQuestion[];
+}
+
+/**
+ * Xodim tafsilot oynasidagi "Mavzu qo'shasizmi?" ro'yxatidagi bitta element.
+ * `GET/POST /app/employees/:id/topics`.
+ */
+export interface EmployeeTopic {
+  id: string;
+  employeeId: string;
+  title: string;
+  createdAt: string;
+}
+
+export interface LessonGrade {
+  id: string;
+  branchId: string;
+  groupId: string;
+  childId: string;
+  employeeId: string;
+  topicId: string | null;
+  date: string;
+  score: number;
+  note: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** `GET /app/lesson-grades?groupId=&date=` javobidagi bitta bola. */
+export interface LessonGradeChild {
+  childId: string;
+  fullName: string;
+  grade: LessonGrade | null;
+}
+
+export interface LessonGradeDay {
+  groupId: string;
+  date: string;
+  children: LessonGradeChild[];
 }

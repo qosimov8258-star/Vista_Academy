@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsEmail, IsOptional, IsString, MinLength } from "class-validator";
+import { IsOptional, IsString, Matches, MinLength } from "class-validator";
+import { LOGIN_PATTERN, LOGIN_PATTERN_MESSAGE } from "../../../common/validators/login";
 
 export class CreateBranchDto {
   @ApiProperty({ example: "Yunusobod filiali" })
@@ -18,10 +19,11 @@ export class CreateBranchDto {
   @MinLength(2)
   managerFullName?: string;
 
-  @ApiPropertyOptional({ example: "menejer@tarmoq.uz" })
+  @ApiPropertyOptional({ example: "filial_admin" })
   @IsOptional()
-  @IsEmail()
-  managerEmail?: string;
+  @IsString()
+  @Matches(LOGIN_PATTERN, { message: LOGIN_PATTERN_MESSAGE })
+  managerLogin?: string;
 
   @ApiPropertyOptional({ example: "ChangeMe123!" })
   @IsOptional()

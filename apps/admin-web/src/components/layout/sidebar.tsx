@@ -11,12 +11,14 @@ import { useAuth } from "@/lib/use-auth";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { useSidebarCollapsed } from "@/lib/use-sidebar-collapsed";
 import { useSidebarSections } from "@/lib/use-sidebar-sections";
-import { ROLE_LABEL, canManageUsers, isTeacher } from "@/lib/permissions";
+import { canManageUsers, isTeacher } from "@/lib/permissions";
+import { formatPositionLabel } from "@/lib/employee-position";
 import { Avatar } from "@/components/ui/avatar";
 import type { IconProps } from "@/components/ui/icons";
 import {
   ArrowLeftIcon,
   BellIcon,
+  BookIcon,
   BriefcaseIcon,
   BuildingIcon,
   CalendarIcon,
@@ -31,9 +33,11 @@ import {
   MoneyIcon,
   NoteIcon,
   PhoneIcon,
+  QuestionIcon,
   SettingsIcon,
   LogoutIcon,
   SidebarIcon,
+  StarIcon,
   TeacherIcon,
 } from "@/components/ui/icons";
 
@@ -94,6 +98,9 @@ export function Sidebar({ slug }: { slug: string }) {
   const [collapsed, toggleCollapsed] = useSidebarCollapsed();
   const [openSections, toggleSection] = useSidebarSections();
   const isNetworkAdmin = user?.role === "NETWORK_ADMIN";
+  // "Fan o'qituvchisi" lavozimida tanlangan fan(lar) ko'rsatiladi (masalan
+  // "Matematika o'qituvchisi"), boshqa lavozimlarda lavozim nomining o'zi.
+  const positionLabel = user?.position ? formatPositionLabel(user.position, user.subjects) : null;
   const showUsersNav = canManageUsers(user?.role);
   const teacher = isTeacher(user?.role);
   const params = useParams<{ branchSlug?: string }>();
@@ -151,6 +158,20 @@ export function Sidebar({ slug }: { slug: string }) {
         { href: `/${slug}/children`, label: "Bolalar", icon: ChildIcon, show: true },
       ],
     },
+    {
+      id: "darsliklar",
+      label: "Qo'shimcha darsliklar",
+      icon: BookIcon,
+      items: [
+        // Filial admini/administratorning `/lessons/...` sahifalari bilan
+        // bir xil URL bo'lmasligi uchun o'qituvchining kabineti alohida
+        // `/my-lessons/...` manzilida turadi (ikkalasi ham o'sha bir
+        // komponentni ko'rsatadi — cheklov rol bo'yicha serverda bo'ladi).
+        { href: `/${slug}/my-lessons/schedule`, label: "Dars jadvallari", icon: CalendarIcon, show: true },
+        { href: `/${slug}/my-lessons/topics`, label: "Savol-javob", icon: QuestionIcon, show: true },
+        { href: `/${slug}/my-lessons/grades`, label: "Baholari", icon: StarIcon, show: true },
+      ],
+    },
   ];
 
   const operationalEntries: NavEntry[] = [
@@ -183,6 +204,8 @@ export function Sidebar({ slug }: { slug: string }) {
         { href: `${base}/attendance`, label: "Davomat", icon: ChecklistIcon, show: true },
         { href: `${base}/daily-reports`, label: "Kundalik hisobot", icon: NoteIcon, show: true },
         { href: `${base}/nutrition`, label: "Ovqatlanish", icon: MealIcon, show: true },
+        // O'zi bilan xonalar katalogini ham boshqaradi — alohida nav shart emas
+        { href: `${base}/lessons/schedule`, label: "Dars jadvali", icon: CalendarIcon, show: true },
       ],
     },
     {
@@ -259,13 +282,24 @@ export function Sidebar({ slug }: { slug: string }) {
       >
         {!collapsed && (
           <>
-            <Avatar user={user} size={36} />
+            <span
+              aria-hidden
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-base font-bold text-white ring-1 ring-inset ring-[rgba(16,24,40,0.06)]"
+              style={{ background: "linear-gradient(135deg, #4CA6D4, #61AE41)" }}
+            >
+              V
+            </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold leading-tight text-[var(--color-text)]">
-                {user ? ROLE_LABEL[user.role] : "Admin"}
+              <p className="font-heading truncate text-sm font-extrabold leading-tight" style={{ color: "#4CA6D4" }}>
+                Vista
               </p>
-              {user?.branchName && (
-                <p className="truncate text-xs leading-tight text-[var(--color-text-muted)]">{user.branchName}</p>
+              <p className="truncate text-xs font-bold leading-tight" style={{ color: "#61AE41" }}>
+                Academy
+              </p>
+              {(positionLabel ?? user?.branchName) && (
+                <p className="truncate text-[11px] leading-tight text-[var(--color-text-muted)]">
+                  {positionLabel ?? user?.branchName}
+                </p>
               )}
             </div>
           </>
@@ -276,7 +310,7 @@ export function Sidebar({ slug }: { slug: string }) {
           aria-label={collapsed ? "Yon panelni ochish" : "Yon panelni yig'ish"}
           title={collapsed ? "Yon panelni ochish" : "Yon panelni yig'ish"}
           aria-expanded={!collapsed}
-          className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-[11px] text-[var(--color-text-muted)] transition-colors hover:bg-black/[0.05] hover:text-[var(--color-text)]"
+          className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-[11px] text-[var(--color-text-muted)] outline-none transition-colors hover:bg-black/[0.05] hover:text-[var(--color-text)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/30"
         >
           <SidebarIcon className="h-[18px] w-[18px]" />
         </button>
@@ -319,7 +353,10 @@ export function Sidebar({ slug }: { slug: string }) {
                       href={item.href}
                       title={item.label}
                       aria-current={active ? "page" : undefined}
-                      className={clsx(rowBase, "mb-1 h-11 justify-center", active ? activeRow : idleRow)}
+                      className={clsx(
+                        "group relative mx-auto mb-1 flex h-11 w-11 items-center justify-center rounded-full text-[15px] outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/30 motion-reduce:transition-none",
+                        active ? activeRow : idleRow,
+                      )}
                     >
                       <Icon
                         filled={active}

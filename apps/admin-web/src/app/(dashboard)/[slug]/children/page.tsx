@@ -14,6 +14,8 @@ import { Input, Select } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
+import { ChildPhoto } from "@/components/ui/child-photo";
+import { initials } from "@/components/ui/avatar";
 import { formatChildId, formatDate } from "@/lib/format";
 import { downloadCsv } from "@/lib/download";
 import { useBranchContext } from "@/lib/use-branch-context";
@@ -167,6 +169,11 @@ export default function ChildrenPage({ params }: { params: Promise<{ slug: strin
           <DataTable>
             <THead>
               <tr>
+                {/* Surat ustuni — sarlavha matni kerak emas, lekin ekran
+                    o'quvchi uchun nomi bo'lsin */}
+                <Th className="w-px pr-0">
+                  <span className="sr-only">Surat</span>
+                </Th>
                 <Th>ID</Th>
                 <Th>To'liq ism</Th>
                 <Th>Ota-ona / aloqa</Th>
@@ -179,6 +186,9 @@ export default function ChildrenPage({ params }: { params: Promise<{ slug: strin
             <TBody>
               {childrenQuery.data.data.map((child) => (
                 <Tr key={child.id} {...rowLinkProps(`/${slug}/children/${child.id}`, (href) => router.push(href))}>
+                  <Td className="w-px pr-0">
+                    <ChildPhoto child={child} size={36} fallback={initials(child.fullName)} />
+                  </Td>
                   <Td>
                     <span className="font-mono text-[12.5px] tabular-nums text-[var(--color-text-muted)]">
                       {formatChildId(child.publicId)}
@@ -209,8 +219,14 @@ export default function ChildrenPage({ params }: { params: Promise<{ slug: strin
                   <Td className="tabular-nums text-[var(--color-text-muted)]">
                     {child.birthDate ? formatDate(child.birthDate) : "—"}
                   </Td>
-                  {!forcedBranchId && <Td className="text-[var(--color-text-muted)]">{child.branch?.name ?? "—"}</Td>}
-                  <Td className="text-[var(--color-text-muted)]">{child.group?.name ?? "—"}</Td>
+                  {!forcedBranchId && (
+                    <Td nowrap className="text-[var(--color-text-muted)]">
+                      {child.branch?.name ?? "—"}
+                    </Td>
+                  )}
+                  <Td nowrap className="text-[var(--color-text-muted)]">
+                    {child.group?.name ?? "—"}
+                  </Td>
                   <Td>
                     <Badge tone={STATUS_TONE[child.status]}>{STATUS_LABEL[child.status]}</Badge>
                   </Td>

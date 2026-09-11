@@ -48,28 +48,28 @@ async function seedTariffPlans() {
 }
 
 async function main() {
-  const email = (process.env.SEED_SUPER_ADMIN_EMAIL ?? "admin@bogcha.uz").toLowerCase();
+  const login = (process.env.SEED_SUPER_ADMIN_LOGIN ?? process.env.SEED_SUPER_ADMIN_EMAIL ?? "admin").toLowerCase();
   const password = process.env.SEED_SUPER_ADMIN_PASSWORD ?? "ChangeMe123!";
 
   await seedTariffPlans();
 
-  const existing = await prisma.platformUser.findUnique({ where: { email } });
+  const existing = await prisma.platformUser.findUnique({ where: { login } });
   if (existing) {
-    console.log(`Super admin already exists: ${email}`);
+    console.log(`Super admin already exists: ${login}`);
     return;
   }
 
   const passwordHash = await argon2.hash(password);
   await prisma.platformUser.create({
     data: {
-      email,
+      login,
       passwordHash,
       fullName: "Platform Super Admin",
       role: "PLATFORM_SUPER_ADMIN",
     },
   });
 
-  console.log(`Seeded platform super admin: ${email} / ${password}`);
+  console.log(`Seeded platform super admin: ${login} / ${password}`);
 }
 
 main()

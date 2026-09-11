@@ -12,13 +12,16 @@ import { Modal } from "@/components/ui/modal";
 import { Input, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
+const LOGIN_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{1,30}[A-Za-z0-9]$/;
+const LOGIN_MESSAGE = "Login lotin harf, raqam, . _ - dan iborat bo'lishi va kamida 3 belgi bo'lishi kerak";
+
 const schema = z.object({
   branchId: z.string().min(1, "Filialni tanlang").optional(),
   // Super Admin filial admini yoki moliyachi yaratadi; filial admini uchun bu
   // maydon ko'rinmaydi va server baribir doim MANAGER yaratadi.
   role: z.enum(["BRANCH_ADMIN", "FINANCE"]).optional(),
   fullName: z.string().min(2, "To'liq ism kamida 2 belgi"),
-  email: z.string().email("Email formati noto'g'ri"),
+  login: z.string().regex(LOGIN_PATTERN, LOGIN_MESSAGE),
   password: z.string().min(8, "Kamida 8 belgi"),
 });
 
@@ -64,16 +67,12 @@ export function CreateTenantUserModal({
     setServerError(null);
   }, [open, firstBranchId, reset]);
 
-  // Sarlavha va email namunasi tanlangan rolga qarab o'zgaradi
+  // Sarlavha va login namunasi tanlangan rolga qarab o'zgaradi
   const selectedRole = watch("role") ?? "BRANCH_ADMIN";
   const targetRole: TenantUserRole = isNetworkAdmin ? selectedRole : "MANAGER";
   const targetRoleLabel = ROLE_LABEL[targetRole];
-  const emailPlaceholder =
-    targetRole === "FINANCE"
-      ? "moliyachi@tarmoq.uz"
-      : targetRole === "BRANCH_ADMIN"
-        ? "filial.admin@tarmoq.uz"
-        : "administrator@tarmoq.uz";
+  const loginPlaceholder =
+    targetRole === "FINANCE" ? "moliyachi" : targetRole === "BRANCH_ADMIN" ? "filial_admin" : "administrator";
 
   const mutation = useMutation({
     mutationFn: (values: FormValues) =>
@@ -128,11 +127,11 @@ export function CreateTenantUserModal({
         )}
         <Input label="To'liq ism" placeholder="Aziz Rahimov" error={errors.fullName?.message} {...register("fullName")} />
         <Input
-          label="Login email"
-          type="email"
-          placeholder={emailPlaceholder}
-          error={errors.email?.message}
-          {...register("email")}
+          label="Login"
+          type="text"
+          placeholder={loginPlaceholder}
+          error={errors.login?.message}
+          {...register("login")}
         />
         <Input label="Parol" type="password" placeholder="Kamida 8 belgi" error={errors.password?.message} {...register("password")} />
 

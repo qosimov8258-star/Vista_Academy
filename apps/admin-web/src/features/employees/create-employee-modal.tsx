@@ -18,6 +18,7 @@ import { SubjectsModal } from "@/features/employees/subjects-modal";
 import { PencilIcon, ChevronDownIcon, CheckIcon, EyeIcon, EyeOffIcon } from "@/components/ui/icons";
 import { initials } from "@/components/ui/avatar";
 import { prepareChildPhoto } from "@/lib/child-photo";
+import { isSubjectTeacherPosition } from "@/lib/employee-position";
 
 const schema = z
   .object({
@@ -25,8 +26,8 @@ const schema = z
     firstName: z.string().min(2, "Ism kamida 2 belgi"),
     phone: z
       .string()
-      .optional()
-      .refine((value) => !value || /\d[\d\s()+-]{7,}/.test(value), "Telefon raqami noto'g'ri"),
+      .min(1, "Telefon raqami kiritilishi shart")
+      .refine((value) => /\d[\d\s()+-]{7,}/.test(value), "Telefon raqami noto'g'ri"),
     // Kabinet ixtiyoriy: oshpaz yoki farrosh tizimga kirmaydi
     withAccount: z.boolean(),
     groupIds: z.array(z.string()),
@@ -56,11 +57,6 @@ const schema = z
 
 type FormValues = z.infer<typeof schema>;
 
-const SUBJECT_TEACHER_POSITION = "fan o'qituvchisi";
-
-/** Turli tirnoq belgilari (', ', `) bilan kiritilgan lavozim nomini solishtirish uchun. */
-const normalizePosition = (value: string) => value.trim().toLowerCase().replace(/[''`]/g, "'");
-
 export function CreateEmployeeModal({
   open,
   onClose,
@@ -76,6 +72,7 @@ export function CreateEmployeeModal({
   const [serverError, setServerError] = useState<string | null>(null);
   const [photoImage, setPhotoImage] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  const [photoRequiredError, setPhotoRequiredError] = useState<string | null>(null);
   const [photoChecking, setPhotoChecking] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [positionName, setPositionName] = useState(initialPosition?.name ?? "");
@@ -84,7 +81,7 @@ export function CreateEmployeeModal({
   const [subjects, setSubjects] = useState<string[]>([]);
   const [subjectsError, setSubjectsError] = useState<string | null>(null);
   const [subjectsModalOpen, setSubjectsModalOpen] = useState(false);
-  const isSubjectTeacher = normalizePosition(positionName) === SUBJECT_TEACHER_POSITION;
+  const isSubjectTeacher = isSubjectTeacherPosition(positionName);
   const [createdCredentials, setCreatedCredentials] = useState<EmployeeCredentials | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -95,6 +92,9 @@ export function CreateEmployeeModal({
       setPositionError(null);
       setSubjects([]);
       setSubjectsError(null);
+      setPhotoImage(null);
+      setPhotoError(null);
+      setPhotoRequiredError(null);
       setCreatedCredentials(null);
     }
   }, [open, initialPosition]);
@@ -142,6 +142,7 @@ export function CreateEmployeeModal({
         return;
       }
       setPhotoImage(result.image);
+      setPhotoRequiredError(null);
     } finally {
       setPhotoChecking(false);
     }
@@ -175,10 +176,9 @@ export function CreateEmployeeModal({
             }
           : undefined,
       });
-      if (photoImage) {
-        // Rasm ixtiyoriy — yuklab bo'lmasa ham xodim yaratilgan hisoblanadi
-        await api.put(`/app/employees/${result.employee.id}/avatar`, { image: photoImage }).catch(() => {});
-      }
+      // Surat xodim yaratilgandan keyin alohida so'rov bilan yuklanadi; shu so'rov
+      // muvaffaqiyatsiz bo'lsa ham xodim yozuvi allaqachon yaratilgan hisoblanadi.
+      await api.put(`/app/employees/${result.employee.id}/avatar`, { image: photoImage }).catch(() => {});
       return result;
     },
     onSuccess: (result) => {
@@ -213,6 +213,7 @@ export function CreateEmployeeModal({
     setServerError(null);
     setPhotoImage(null);
     setPhotoError(null);
+    setPhotoRequiredError(null);
     setPositionName("");
     setPositionError(null);
     setSubjects([]);
@@ -252,6 +253,10 @@ export function CreateEmployeeModal({
       <form
         className="space-y-4"
         onSubmit={handleSubmit((values) => {
+          if (!photoImage) {
+            setPhotoRequiredError("Xodim surati talab qilinadi");
+            return;
+          }
           if (positionName.trim().length < 2) {
             setPositionError("Lavozimni tanlang yoki yarating");
             return;
@@ -286,7 +291,11 @@ export function CreateEmployeeModal({
                 className="h-[72px] w-[72px] shrink-0 rounded-full object-cover ring-1 ring-inset ring-[rgba(16,24,40,0.06)]"
               />
             ) : (
-              <span className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)]/10 text-[26px] font-semibold text-[var(--color-primary)] ring-1 ring-inset ring-[rgba(16,24,40,0.06)]">
+              <span
+                className={`flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)]/10 text-[26px] font-semibold text-[var(--color-primary)] ring-1 ring-inset ${
+                  photoRequiredError ? "ring-2 ring-[var(--color-danger)]" : "ring-[rgba(16,24,40,0.06)]"
+                }`}
+              >
                 {initials(`${firstName ?? ""} ${lastName ?? ""}`) || "?"}
               </span>
             )}
@@ -318,11 +327,11 @@ export function CreateEmployeeModal({
             disabled={photoChecking}
             className="cursor-pointer text-[12.5px] font-medium text-[var(--color-primary)] hover:underline disabled:opacity-60"
           >
-            {photoChecking ? "Tekshirilmoqda..." : photoImage ? "Suratni almashtirish" : "Surat qo'yish"}
+            {photoChecking ? "Tekshirilmoqda..." : photoImage ? "Suratni almashtirish" : "Surat qo'yish (majburiy)"}
           </button>
-          {photoError && (
+          {(photoError || photoRequiredError) && (
             <p role="alert" className="max-w-[320px] text-center text-[12.5px] text-[var(--color-danger)]">
-              {photoError}
+              {photoError || photoRequiredError}
             </p>
           )}
         </div>
