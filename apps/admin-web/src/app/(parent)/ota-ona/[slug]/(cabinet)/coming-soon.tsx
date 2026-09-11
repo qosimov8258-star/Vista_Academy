@@ -25,7 +25,7 @@ export function ComingSoon({ title, description }: { title: string; description:
           </svg>
         </div>
 
-        <span className="mt-5 inline-flex items-center rounded-full bg-[var(--p-sun)]/18 px-3 py-1.5 text-[12px] font-bold uppercase tracking-[0.07em] text-[#a8720a]">
+        <span className="mt-5 inline-flex items-center rounded-full bg-[var(--p-sun)]/18 px-3 py-1.5 text-[12px] font-bold uppercase tracking-[0.07em] text-[var(--p-sun-ink)]">
           Tez orada
         </span>
         <h1 className="mt-3 text-[26px] font-extrabold leading-tight tracking-[-0.02em] text-[var(--p-ink)]">

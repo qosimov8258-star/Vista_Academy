@@ -1,6 +1,9 @@
+"use client";
+
 import type { CSSProperties } from "react";
 import type { SkyPhase, SkyState } from "@/lib/sky";
 import styles from "../parent.module.css";
+import { useCabinetTheme } from "./theme";
 
 /** CSS o'zgaruvchilari (`--x`) bilan to'ldirilgan uslub — React tiplari ularni bilmaydi. */
 type FxStyle = CSSProperties & Record<`--${string}`, string | number>;
@@ -97,28 +100,37 @@ const BLOBS: Array<{ style: CSSProperties; size: number; duration: number; delay
   { style: { top: "34%", left: -90 }, size: 200, duration: 21, delay: -3 },
 ];
 
-/** Osmon holatiga qarab ranglar: kunduz iliq, shafaqda qizg'ish, tunda ko'kimtir */
+/**
+ * Osmon holatiga qarab ranglar: kunduz iliq, shafaqda qizg'ish, tunda ko'kimtir.
+ * Tagfon va bulutlar ko'rinish rejimiga (yorug'/qorong'i) ham bog'liq —
+ * qorong'ida karta to'q, bulutlar esa shaffof oq.
+ */
 const PALETTE: Record<
   SkyPhase,
-  { base: string; blobs: [string, string, string, string]; cloud: string; cloudOpacity: number }
+  {
+    base: [light: string, dark: string];
+    blobs: [string, string, string, string];
+    cloud: [light: string, dark: string];
+    cloudOpacity: [light: number, dark: number];
+  }
 > = {
   kun: {
-    base: "linear-gradient(168deg, #fffbf3 0%, #ffffff 60%)",
+    base: ["linear-gradient(168deg, #fffbf3 0%, #ffffff 60%)", "linear-gradient(168deg, #2d2b4a 0%, #272541 60%)"],
     blobs: ["rgba(255, 183, 3, 0.34)", "rgba(86, 180, 245, 0.28)", "rgba(63, 191, 155, 0.26)", "rgba(167, 139, 250, 0.18)"],
-    cloud: "#ffffff",
-    cloudOpacity: 0.9,
+    cloud: ["#ffffff", "#ffffff"],
+    cloudOpacity: [0.9, 0.14],
   },
   shafaq: {
-    base: "linear-gradient(168deg, #fff3e4 0%, #ffffff 60%)",
+    base: ["linear-gradient(168deg, #fff3e4 0%, #ffffff 60%)", "linear-gradient(168deg, #3a2c47 0%, #272541 60%)"],
     blobs: ["rgba(255, 140, 80, 0.36)", "rgba(255, 122, 102, 0.26)", "rgba(255, 183, 3, 0.28)", "rgba(196, 150, 255, 0.22)"],
-    cloud: "#fff1ec",
-    cloudOpacity: 0.95,
+    cloud: ["#fff1ec", "#ffd9cf"],
+    cloudOpacity: [0.95, 0.16],
   },
   tun: {
-    base: "linear-gradient(168deg, #f2f1ff 0%, #ffffff 62%)",
+    base: ["linear-gradient(168deg, #f2f1ff 0%, #ffffff 62%)", "linear-gradient(168deg, #232752 0%, #272541 62%)"],
     blobs: ["rgba(99, 102, 241, 0.24)", "rgba(56, 120, 220, 0.22)", "rgba(63, 191, 155, 0.14)", "rgba(167, 139, 250, 0.26)"],
-    cloud: "#eef0ff",
-    cloudOpacity: 0.7,
+    cloud: ["#eef0ff", "#ffffff"],
+    cloudOpacity: [0.7, 0.1],
   },
 };
 
@@ -243,7 +255,7 @@ function Sun({ phase }: { phase: SkyPhase }) {
   );
 }
 
-function Moon({ phase }: { phase: number }) {
+function Moon({ phase, dark }: { phase: number; dark: boolean }) {
   const lit = moonLitPath(phase, 70, 70, 34);
   return (
     <svg viewBox="0 0 140 140" className={styles.moonFx}>
@@ -258,8 +270,8 @@ function Moon({ phase }: { phase: number }) {
         </clipPath>
       </defs>
       <circle className={styles.moonGlowFx} cx="70" cy="70" r="66" fill="url(#cfx-moonglow)" />
-      {/* Soyadagi qism — oq kartada ko'rinib turishi uchun och siyohrang */}
-      <circle cx="70" cy="70" r="34" fill="#e3e6fb" />
+      {/* Soyadagi qism — yorug' kartada och siyohrang, qorong'ida to'q */}
+      <circle cx="70" cy="70" r="34" fill={dark ? "#3b3a66" : "#e3e6fb"} />
       <path d={lit} fill="#fff1b8" />
       {/* Kraterlar — faqat yorug' qismda */}
       <g clipPath="url(#cfx-moonlit)" fill="#efd98f" opacity="0.6">
@@ -273,14 +285,23 @@ function Moon({ phase }: { phase: number }) {
 }
 
 export function CardFx({ rainbow = false, sky }: { rainbow?: boolean; sky: SkyState | null }) {
+  const { dark } = useCabinetTheme();
   const phase: SkyPhase = sky?.phase ?? "kun";
   const palette = PALETTE[phase];
   const night = phase === "tun";
+  const mode = dark ? 1 : 0;
+  // Qorong'i kartada yaltiroq xiraroq bo'lsin
+  const rootStyle: FxStyle = { "--p-shine": dark ? "rgba(255, 255, 255, 0.16)" : "rgba(255, 255, 255, 0.55)" };
 
   return (
-    <div className={styles.cardFx} data-sky={phase} aria-hidden="true">
-      <span className={styles.baseFx} style={{ background: palette.base }} />
-      {night && <span className={styles.nightBandFx} />}
+    <div className={styles.cardFx} data-sky={phase} style={rootStyle} aria-hidden="true">
+      <span className={styles.baseFx} style={{ background: palette.base[mode] }} />
+      {night && (
+        <span
+          className={styles.nightBandFx}
+          style={dark ? { background: "radial-gradient(120% 70% at 50% -20%, rgba(120, 110, 255, 0.24) 0%, transparent 60%)" } : undefined}
+        />
+      )}
 
       {BLOBS.map((b, i) => {
         const style: FxStyle = {
@@ -295,7 +316,7 @@ export function CardFx({ rainbow = false, sky }: { rainbow?: boolean; sky: SkySt
       })}
 
       {/* Quyosh yoki oy — o'ng yuqori burchakdan mo'ralaydi */}
-      {sky && (night ? <Moon phase={sky.moonPhase} /> : <Sun phase={phase} />)}
+      {sky && (night ? <Moon phase={sky.moonPhase} dark={dark} /> : <Sun phase={phase} />)}
 
       {/* Kamalak — bola rasmi ortida chizilib chiqadi (tunda kamalak bo'lmaydi) */}
       {rainbow && !night && (
@@ -322,10 +343,10 @@ export function CardFx({ rainbow = false, sky }: { rainbow?: boolean; sky: SkySt
           "--w": `${c.width}px`,
           "--d": `${c.duration}s`,
           "--delay": `${c.delay}s`,
-          opacity: palette.cloudOpacity,
+          opacity: palette.cloudOpacity[mode],
         };
         return (
-          <svg key={i} viewBox="0 0 64 34" className={styles.cloudFx} style={style} fill={palette.cloud}>
+          <svg key={i} viewBox="0 0 64 34" className={styles.cloudFx} style={style} fill={palette.cloud[mode]}>
             <ellipse cx="32" cy="26" rx="28" ry="8" />
             <circle cx="20" cy="20" r="11" />
             <circle cx="34" cy="14" r="14" />

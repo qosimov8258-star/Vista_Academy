@@ -10,7 +10,7 @@ import type { ParentAccount, ParentAttendanceStrip, ParentChild, ParentDay } fro
 import { initials } from "@/components/ui/avatar";
 import styles from "../parent.module.css";
 import { CardFx } from "./card-fx";
-import { useSky } from "./use-sky";
+import { useCabinetTheme } from "./theme";
 
 const WEEKDAY = ["Yak", "Du", "Se", "Cho", "Pay", "Ju", "Sha"];
 /** Kalendar ustunlari — hafta dushanbadan boshlanadi */
@@ -42,10 +42,10 @@ const TONE_DOT: Record<string, string> = {
 
 const TONE_BG: Record<string, string> = {
   mint: "bg-[var(--p-mint)]/12 text-[var(--p-mint)]",
-  sun: "bg-[var(--p-sun)]/16 text-[#b07d00]",
+  sun: "bg-[var(--p-sun)]/16 text-[var(--p-sun-ink)]",
   coral: "bg-[var(--p-coral)]/14 text-[var(--p-coral)]",
-  sky: "bg-[var(--p-sky)]/14 text-[#2b7fb8]",
-  lilac: "bg-[var(--p-lilac)]/14 text-[#7c5cd6]",
+  sky: "bg-[var(--p-sky)]/14 text-[var(--p-sky-ink)]",
+  lilac: "bg-[var(--p-lilac)]/14 text-[var(--p-lilac-ink)]",
 };
 
 function prettyDate(iso: string): string {
@@ -94,8 +94,8 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
   });
 
   const child = children.find((c) => c.id === childId) ?? null;
-  // Osmon — bola qatnaydigan filial joylashuviga qarab
-  const sky = useSky(child?.branch.address, child?.branch.name);
+  // Osmon holati qobiqda hisoblanadi — karta ham, ko'rinish rejimi ham shundan
+  const { sky } = useCabinetTheme();
 
   if (meQuery.isLoading) {
     return (
@@ -133,7 +133,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
                   "shrink-0 cursor-pointer rounded-full px-4 py-2.5 text-[14px] font-semibold transition-colors",
                   c.id === childId
                     ? "bg-[var(--p-coral)] text-white"
-                    : "bg-white/70 text-[var(--p-muted)]",
+                    : "bg-[var(--p-panel)] text-[var(--p-muted)]",
                 )}
               >
                 {c.fullName.split(" ").slice(-1)[0]}
@@ -156,7 +156,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
                     className="h-[72px] w-[72px] rounded-full object-cover ring-4 ring-[var(--p-sun)]/25"
                   />
                 ) : (
-                  <span className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-[var(--p-sun)]/20 text-[22px] font-bold text-[#b07d00] ring-4 ring-[var(--p-sun)]/15">
+                  <span className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-[var(--p-sun)]/20 text-[22px] font-bold text-[var(--p-sun-ink)] ring-4 ring-[var(--p-sun)]/15">
                     {initials(child.fullName)}
                   </span>
                 )}
@@ -176,7 +176,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
             <div
               className={clsx(
                 "mt-4 flex items-center gap-3 rounded-[18px] px-4 py-3.5",
-                present ? "bg-[var(--p-mint)]/12" : absent ? "bg-[var(--p-coral)]/12" : "bg-black/[0.04]",
+                present ? "bg-[var(--p-mint)]/12" : absent ? "bg-[var(--p-coral)]/12" : "bg-[var(--p-sunken)]",
               )}
             >
               <span
@@ -209,7 +209,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
         {dayQuery.isLoading ? (
           <div className="mt-4 space-y-3">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="h-28 animate-pulse rounded-[var(--p-radius)] bg-white/60" />
+              <div key={i} className="h-28 animate-pulse rounded-[var(--p-radius)] bg-[var(--p-card)]/60" />
             ))}
           </div>
         ) : (
@@ -299,14 +299,14 @@ function AttendanceCalendar({ strip }: { strip: ParentAttendanceStrip }) {
   const unmarked = strip.items.filter((item) => !item.status && !isRestDay(item)).length;
 
   return (
-    <div className="mt-4 rounded-[18px] bg-white/70 px-4 py-3.5">
+    <div className="mt-4 rounded-[18px] bg-[var(--p-panel)] px-4 py-3.5">
       <p className="text-[14px] font-bold text-[var(--p-ink)]">Oxirgi 2 hafta</p>
 
       {/* Avval son bilan javob: eng ko'p so'raladigan savol shu */}
       <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1.5">
         <Tally count={strip.present} label="kun keldi" dot="bg-[var(--p-mint)]" />
         <Tally count={strip.absent} label="kun kelmadi" dot="bg-[var(--p-coral)]" />
-        {unmarked > 0 && <Tally count={unmarked} label="kun belgilanmagan" dot="bg-black/15" />}
+        {unmarked > 0 && <Tally count={unmarked} label="kun belgilanmagan" dot="bg-[var(--p-muted)]/50" />}
       </div>
 
       <div className="mt-3 grid grid-cols-7 gap-1">
@@ -340,9 +340,9 @@ function AttendanceCalendar({ strip }: { strip: ParentAttendanceStrip }) {
                     ? "bg-[var(--p-coral)] text-white"
                     : rest
                       ? "text-[var(--p-muted)]/45"
-                      : "bg-black/[0.05] text-[var(--p-muted)]",
+                      : "bg-[var(--p-sunken)] text-[var(--p-muted)]",
                 // Bugungi kun ko'zga tashlanib tursin
-                item.date === today && "ring-2 ring-[var(--p-ink)]/25 ring-offset-1 ring-offset-white",
+                item.date === today && "ring-2 ring-[var(--p-ink)]/25 ring-offset-1 ring-offset-[var(--p-card)]",
               )}
             >
               {Number(item.date.slice(8, 10))}

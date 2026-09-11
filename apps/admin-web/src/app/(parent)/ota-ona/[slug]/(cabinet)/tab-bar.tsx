@@ -48,7 +48,7 @@ export function ParentTabBar({ slug }: { slug: string }) {
               aria-current={active ? "page" : undefined}
               className={clsx(
                 "relative z-10 flex flex-1 flex-col items-center justify-center gap-1 rounded-full py-2 transition-colors duration-200",
-                active ? "text-[#a8720a]" : "text-[var(--p-muted)] active:bg-black/[0.04]",
+                active ? "text-[var(--p-sun-ink)]" : "text-[var(--p-muted)] active:bg-[var(--p-sunken)]",
               )}
             >
               <Icon
