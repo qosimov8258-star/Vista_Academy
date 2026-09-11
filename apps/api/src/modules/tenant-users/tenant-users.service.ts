@@ -54,7 +54,7 @@ export class TenantUsersService {
       entityType: "TenantUser",
       entityId: created.id,
       branchId,
-      summary: `${created.fullName} (${created.email}) uchun ${targetRole} huquqi bilan hisob yaratildi`,
+      summary: `${created.fullName} (${created.login}) uchun ${targetRole} huquqi bilan hisob yaratildi`,
     });
     return created;
   }
@@ -156,7 +156,7 @@ export class TenantUsersService {
       entityType: "TenantUser",
       entityId: id,
       branchId: target.branchId,
-      summary: `${deleted.fullName} (${deleted.email}) hisobi o'chirildi`,
+      summary: `${deleted.fullName} (${deleted.login}) hisobi o'chirildi`,
     });
     return { id };
   }
