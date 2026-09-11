@@ -17,12 +17,14 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-hook-form": "^7.87.0",
+    "three": "^0.186.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
+    "@types/three": "^0.185.4",
     "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3"
   }

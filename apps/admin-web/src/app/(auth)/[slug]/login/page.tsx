@@ -4,7 +4,7 @@ import { Suspense, use } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
 import type { PublicOrganization } from "@/lib/types";
-import { KindergartenScene } from "@/components/brand/kindergarten-scene";
+import { KindergartenBackdrop } from "@/components/brand/kindergarten-backdrop";
 import { LoginForm } from "./login-form";
 import styles from "./login.module.css";
 
@@ -20,7 +20,7 @@ function HouseGlyph({ className }: { className?: string }) {
 }
 
 /**
- * Kirish sahifasi: butun fon — jonli bog'cha hovlisi, o'ng tomonda oq karta.
+ * Kirish sahifasi: butun fon — jonli 3D bog'cha hovlisi, o'ng tomonda oq karta.
  * Tor ekranda sahna yuqoridagi dumaloq panelga aylanadi, karta uning ostidan
  * bir oz kirib turadi. Bu sahifa barcha rollar uchun umumiy eshik.
  */
@@ -42,7 +42,7 @@ export default function LoginPage({ params }: { params: Promise<{ slug: string }
         className="absolute inset-x-0 top-0 h-[46vh] min-h-[300px] max-h-[440px] overflow-hidden rounded-b-[28px] lg:inset-0 lg:h-auto lg:min-h-0 lg:max-h-none lg:rounded-none"
         aria-hidden="true"
       >
-        <KindergartenScene name={orgQuery.isPending ? null : (orgName ?? slug)} />
+        <KindergartenBackdrop name={orgQuery.isPending ? null : (orgName ?? slug)} />
       </div>
 
       <div className={`${styles.brand} absolute right-4 top-4 z-20 flex items-center gap-2.5 lg:left-8 lg:right-auto lg:top-7`}>
