@@ -95,6 +95,8 @@ model Organization {
   medicationLogs         MedicationLog[]
   guardians              Guardian[]
   notificationLogs       NotificationLog[]
+  dishes                 Dish[]
+  auditLogs              AuditLog[]
 
   @@map("organizations")
 }
@@ -136,6 +138,8 @@ model TenantUser {
   avatarMimeType  String?        @map("avatar_mime_type")
   avatarUpdatedAt DateTime?      @map("avatar_updated_at")
   isActive        Boolean        @default(true) @map("is_active")
+  // Faol/nofaol hisoblarni ajratish uchun — muvaffaqiyatli har bir loginda yangilanadi.
+  lastLoginAt     DateTime?      @map("last_login_at")
   createdAt       DateTime       @default(now()) @map("created_at")
   updatedAt       DateTime       @updatedAt @map("updated_at")
 
@@ -149,6 +153,7 @@ model TenantUser {
   sentNotifications NotificationLog[]    @relation("NotificationSentBy")
   employee          Employee?
   webauthnCredentials WebAuthnCredential[]
+  auditLogs         AuditLog[]
 
   @@unique([organizationId, email])
   @@index([branchId])
@@ -202,6 +207,12 @@ model Branch {
   address         String?
   timezone        String    @default("Asia/Tashkent")
   currency        String    @default("UZS")
+  // Ish vaqti ("08:00" / "19:00" shaklida) — Sozlamalarda ko'rsatish uchun,
+  // hozircha hech qanday amal (masalan davomat cheklovi) ularga bog'liq emas.
+  openTime            String?  @map("open_time")
+  closeTime           String?  @map("close_time")
+  // Yangi hisob-faktura yaratishda bo'sh qoldirilsa shu summa taklif etiladi.
+  defaultTuitionAmount Decimal? @map("default_tuition_amount") @db.Decimal(12, 2)
   // Filial belgisi (logotip). TenantUser avatari bilan bir xil yondashuv:
   // rasm 256x256 gacha kichraytiriladi va bevosita bazada saqlanadi.
   // Blob har bir filial so'roviga tushib ketmasligi uchun Prisma mijozida
@@ -232,6 +243,7 @@ model Branch {
   shifts                 Shift[]
   payrollEntries         PayrollEntry[]
   notificationLogs       NotificationLog[]
+  auditLogs              AuditLog[]
 
   @@unique([organizationId, name])
   @@unique([organizationId, slug])
@@ -498,6 +510,9 @@ model Subject {
 enum EmployeeAttendanceStatus {
   PRESENT
   ABSENT
+  LATE
+  SICK
+  ON_LEAVE
 }
 
 model EmployeeAttendance {
@@ -506,6 +521,10 @@ model EmployeeAttendance {
   branchId   String                   @map("branch_id")
   date       DateTime                 @db.Date
   status     EmployeeAttendanceStatus
+  // "HH:MM" shaklida — soatlik hisob-kitob kerak bo'lmagani uchun vaqt
+  // oralig'i emas, oddiy matn sifatida saqlanadi.
+  checkInTime  String? @map("check_in_time")
+  checkOutTime String? @map("check_out_time")
   note       String?
   createdAt  DateTime                 @default(now()) @map("created_at")
   updatedAt  DateTime                 @updatedAt @map("updated_at")
@@ -535,9 +554,61 @@ model MenuEntry {
   @@map("menu_entries")
 }
 
+/**
+ * Taomlar katalogi — tashkilot bo'ylab qayta ishlatiladigan taom nomlari,
+ * kaloriya va allergenlar bilan. Menyu kuni (`MenuEntry`) hali ham erkin
+ * matn — katalog shu matnni yozishda tanlash uchun yordamchi ro'yxat,
+ * ikkalasi orasida majburiy bog'lanish yo'q.
+ */
+model Dish {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  name           String
+  calories       Int?
+  allergens      String?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, name])
+  @@map("dishes")
+}
+
+/**
+ * Nozik amallar tarixi — kim, qachon, nimani o'zgartirgani. Hozircha
+ * hisoblar (TenantUser) va moliya (to'lov/qaytarish) bo'yicha amallar
+ * yoziladi; boshqa modullarga bosqichma-bosqich kengaytiriladi.
+ *
+ * `actorName` maqsadli ravishda ikkilangan (denormalized): `actor` (login)
+ * keyinchalik o'chirilishi mumkin (masalan xodim ishdan bo'shaganda), lekin
+ * tarixda kim qilgani o'qilishda qolishi kerak.
+ */
+model AuditLog {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  branchId       String?  @map("branch_id")
+  actorUserId    String?  @map("actor_user_id")
+  actorName      String   @map("actor_name")
+  action         String
+  entityType     String   @map("entity_type")
+  entityId       String?  @map("entity_id")
+  summary        String
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  actor        TenantUser?  @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([branchId, createdAt])
+  @@map("audit_logs")
+}
+
 enum AttendanceStatus {
   PRESENT
   ABSENT
+  LATE
+  SICK
 }
 
 model Attendance {
@@ -827,6 +898,13 @@ model Lead {
   lostReason       String?    @map("lost_reason")
   assignedToUserId String?    @map("assigned_to_user_id")
   convertedChildId String?    @unique @map("converted_child_id")
+  // Keyingi bog'lanish uchun eslatma — o'tib ketgan bo'lsa UI'da ajratib ko'rsatiladi.
+  followUpDate DateTime? @map("follow_up_date") @db.Date
+  // "Sinov kuni belgilandi" bosqichi uchun haqiqiy sana (avval faqat status bo'lgan).
+  trialDate    DateTime? @map("trial_date") @db.Date
+  // "Shartnoma" bosqichi uchun shartnoma imzolangan/imzolanadigan sana va izoh.
+  contractDate DateTime? @map("contract_date") @db.Date
+  contractNote String?   @map("contract_note")
   createdAt        DateTime   @default(now()) @map("created_at")
   updatedAt        DateTime   @updatedAt @map("updated_at")
 
@@ -1052,6 +1130,8 @@ model PayrollEntry {
   baseAmount    Decimal       @default(0) @map("base_amount") @db.Decimal(14, 2)
   bonusAmount   Decimal       @default(0) @map("bonus_amount") @db.Decimal(14, 2)
   penaltyAmount Decimal       @default(0) @map("penalty_amount") @db.Decimal(14, 2)
+  // Jarimadan farqli — soliq, sug'urta, avans kabi rasmiy ushlab qolish.
+  deductionAmount Decimal     @default(0) @map("deduction_amount") @db.Decimal(14, 2)
   totalAmount   Decimal       @default(0) @map("total_amount") @db.Decimal(14, 2)
   status        PayrollStatus @default(DRAFT)
   paidAt        DateTime?     @map("paid_at")
