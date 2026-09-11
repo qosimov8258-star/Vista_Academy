@@ -1,4 +1,5 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import type { AttendanceStatus } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
 import { AuthenticatedParent } from "./parent-auth.types";
 
@@ -105,7 +106,9 @@ export class ParentService {
     });
     const byDate = new Map(records.map((r) => [r.date.toISOString().slice(0, 10), r.status]));
 
-    const items: { date: string; status: "PRESENT" | "ABSENT" | null }[] = [];
+    // `AttendanceStatus` LATE/SICK'ni ham o'z ichiga oladi — chiziqda ular
+    // ham chizilaveradi, faqat quyidagi present/absent hisobiga kirmaydi.
+    const items: { date: string; status: AttendanceStatus | null }[] = [];
     for (let cursor = from; cursor <= to; cursor = addDays(cursor, 1)) {
       const key = cursor.toISOString().slice(0, 10);
       items.push({ date: key, status: byDate.get(key) ?? null });
