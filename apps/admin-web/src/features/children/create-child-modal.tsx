@@ -102,9 +102,9 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
           </Select>
           <Select label="Guruh (ixtiyoriy)" defaultValue="" {...register("groupId")}>
             <option value="">Tanlanmagan</option>
-            {groups?.map((group) => (
+            {groups?.filter((group) => group.status === "ACTIVE").map((group) => (
               <option key={group.id} value={group.id}>
-                {group.name}
+                {group.name} ({group._count?.children ?? 0}/{group.capacity})
               </option>
             ))}
           </Select>

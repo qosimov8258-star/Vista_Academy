@@ -13,6 +13,7 @@ import type {
   Vaccination,
   MedicationLog,
   ChildGuardian,
+  LedgerEntry,
 } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,13 +29,15 @@ import {
   NoteIcon,
   PencilIcon,
   PhoneIcon,
+  WalletIcon,
 } from "@/components/ui/icons";
 import { CopyButton } from "@/components/ui/copy-button";
 import { ChildPhoto } from "@/components/ui/child-photo";
 import { prepareChildPhoto } from "@/lib/child-photo";
 import { initials } from "@/components/ui/avatar";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
-import { formatAge, formatChildId, formatDate, formatDateTime, formatGender, formatPhone } from "@/lib/format";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { formatAge, formatChildId, formatDate, formatDateTime, formatGender, formatMoney, formatPhone } from "@/lib/format";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { EditDevelopmentModal } from "@/features/development/edit-development-modal";
 import { EditHealthProfileModal, BLOOD_TYPE_LABEL } from "@/features/child-health/edit-health-profile-modal";
@@ -44,6 +47,7 @@ import { AddMedicationModal } from "@/features/child-health/add-medication-modal
 import { QuarantineModal } from "@/features/child-health/quarantine-modal";
 import { AddGuardianModal } from "@/features/guardians/add-guardian-modal";
 import { EditGuardianLinkModal } from "@/features/guardians/edit-guardian-link-modal";
+import { EditChildModal } from "@/features/children/edit-child-modal";
 import { canWriteOperational } from "@/lib/permissions";
 
 const VACCINATION_STATUS_LABEL: Record<string, string> = {
@@ -56,11 +60,26 @@ const VACCINATION_STATUS_TONE: Record<string, "warning" | "success" | "danger"> 
   DONE: "success",
   MISSED: "danger",
 };
+
+/** Rejalashtirilgan sana o'tib ketgan, lekin hali "Bajarildi"/"O'tkazib
+ * yuborildi" deb belgilanmagan — buni oddiy "Rejalashtirilgan"dan ajratib
+ * ko'rsatish kerak. */
+function isVaccinationOverdue(v: { status: string; scheduledDate: string }): boolean {
+  return v.status === "SCHEDULED" && new Date(v.scheduledDate) < new Date();
+}
 const GUARDIAN_RELATION_LABEL: Record<string, string> = {
   FATHER: "Ota",
   MOTHER: "Ona",
   GRANDPARENT: "Bobo/Buvi",
   OTHER: "Boshqa",
+};
+
+const LEDGER_TYPE_LABEL: Record<string, string> = {
+  CHARGE: "Hisoblandi",
+  DISCOUNT: "Chegirma",
+  PAYMENT: "To'lov",
+  REFUND: "Qaytarish",
+  ADJUSTMENT: "Tuzatish",
 };
 
 const EATING_LABEL: Record<string, string> = { GOOD: "Yaxshi", AVERAGE: "O'rtacha", POOR: "Yomon" };
@@ -132,6 +151,8 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
   const [quarantineOpen, setQuarantineOpen] = useState(false);
   const [guardianOpen, setGuardianOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<ChildGuardian | null>(null);
+  const [deletingLink, setDeletingLink] = useState<ChildGuardian | null>(null);
+  const [editChildOpen, setEditChildOpen] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [photoChecking, setPhotoChecking] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -140,6 +161,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
   const queryClient = useQueryClient();
   const { branchSlug } = useBranchContext(slug);
   const childrenHref = branchSlug ? `/${slug}/${branchSlug}/children` : `/${slug}/children`;
+  const financeHref = branchSlug ? `/${slug}/${branchSlug}/finance/${childId}` : `/${slug}/finance/${childId}`;
 
   const childQuery = useQuery({
     queryKey: ["child", slug, childId],
@@ -174,6 +196,24 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
   const guardiansQuery = useQuery({
     queryKey: ["child-guardians", slug, childId],
     queryFn: () => api.get<ChildGuardian[]>(`/app/children/${childId}/guardians`),
+  });
+
+  const removeGuardianLinkMutation = useMutation({
+    mutationFn: (linkId: string) => api.delete(`/app/child-guardians/${linkId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["child-guardians", slug, childId] });
+      queryClient.invalidateQueries({ queryKey: ["children", slug] });
+      setDeletingLink(null);
+    },
+  });
+
+  // Moliyaviy ma'lumot: `assertMoneyReader` faqat O'qituvchini rad etadi,
+  // shuning uchun UI ham xuddi shu qoidani takrorlaydi.
+  const canReadMoney = user?.role !== "TEACHER";
+  const ledgerQuery = useQuery({
+    queryKey: ["ledger", slug, childId],
+    queryFn: () => api.get<LedgerEntry[]>(`/app/children/${childId}/ledger`),
+    enabled: canReadMoney,
   });
 
   const photoMutation = useMutation({
@@ -220,6 +260,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
     mutationFn: () => api.delete(`/app/children/${childId}/quarantine`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["child", slug, childId] });
+      queryClient.invalidateQueries({ queryKey: ["children", slug] });
     },
   });
 
@@ -282,6 +323,11 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
               <Badge tone={child.status === "ACTIVE" ? "success" : child.status === "QUARANTINED" ? "danger" : "neutral"}>
                 {child.status === "ACTIVE" ? "Faol" : child.status === "QUARANTINED" ? "Karantinda" : "Nofaol"}
               </Badge>
+              {canWrite && (
+                <Button size="sm" variant="outline" onClick={() => setEditChildOpen(true)}>
+                  Tahrirlash
+                </Button>
+              )}
             </div>
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
               <span className="rounded-full bg-[var(--color-surface-sunken)] px-2.5 py-1 text-[12px] font-semibold tabular-nums text-[var(--color-text-muted)]">
@@ -446,6 +492,72 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
         )
       )}
 
+      {canReadMoney && (
+        <Card className="overflow-hidden">
+          <CardHeader className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle>Moliya</CardTitle>
+            <Link href={financeHref} className="text-[13px] font-medium text-[var(--color-primary)] hover:underline">
+              To&apos;liq tarix →
+            </Link>
+          </CardHeader>
+          <CardBody className="p-0">
+            {ledgerQuery.isLoading ? (
+              <div className="px-5 py-5 sm:px-6">
+                <LoadingState rows={2} />
+              </div>
+            ) : ledgerQuery.isError ? (
+              <div className="px-5 py-5 sm:px-6">
+                <ErrorState message={(ledgerQuery.error as Error).message} />
+              </div>
+            ) : !ledgerQuery.data || ledgerQuery.data.length === 0 ? (
+              <div className="px-5 py-5 sm:px-6">
+                <EmptyState title="Moliyaviy yozuv yo'q" icon={<WalletIcon className="h-[26px] w-[26px]" />} />
+              </div>
+            ) : (
+              <>
+                <div className="border-b border-[var(--color-separator)] px-5 py-3.5 sm:px-6">
+                  <p className="text-[12px] font-medium text-[var(--color-text-muted)]">Joriy qarzdorlik</p>
+                  {(() => {
+                    const balance = ledgerQuery.data.reduce((sum, e) => sum + Number(e.amount), 0);
+                    return (
+                      <p
+                        className={clsx(
+                          "mt-1 text-[20px] font-semibold tabular-nums",
+                          balance > 0 ? "text-[var(--color-danger)]" : "text-[var(--color-success)]",
+                        )}
+                      >
+                        {formatMoney(balance)}
+                      </p>
+                    );
+                  })()}
+                </div>
+                <ul className="divide-y divide-[var(--color-separator)]">
+                  {ledgerQuery.data.slice(0, 3).map((entry) => (
+                    <li key={entry.id} className="flex items-center justify-between gap-3 px-5 py-2.5 sm:px-6">
+                      <div className="min-w-0">
+                        <p className="text-[13.5px] font-medium text-[var(--color-text)]">
+                          {LEDGER_TYPE_LABEL[entry.type] ?? entry.type}
+                        </p>
+                        <p className="text-[12px] text-[var(--color-text-muted)]">{formatDateTime(entry.createdAt)}</p>
+                      </div>
+                      <span
+                        className={clsx(
+                          "shrink-0 text-[13.5px] font-medium tabular-nums",
+                          Number(entry.amount) < 0 ? "text-[var(--color-success)]" : "text-[var(--color-text)]",
+                        )}
+                      >
+                        {Number(entry.amount) > 0 ? "+" : ""}
+                        {formatMoney(entry.amount)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </CardBody>
+        </Card>
+      )}
+
       <Card>
         <CardHeader className="flex flex-wrap items-center justify-between gap-3">
           <CardTitle>Rivojlanish ({latestAssessment?.period ?? "hali baholanmagan"})</CardTitle>
@@ -493,6 +605,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
                   <Th>Ovqatlanishi</Th>
                   <Th numeric>Uyqu</Th>
                   <Th>Kayfiyati</Th>
+                  <Th>Tualet</Th>
                   <Th>Faoliyat</Th>
                 </tr>
               </THead>
@@ -507,6 +620,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
                       {r.sleepMinutes != null ? `${r.sleepMinutes} daq` : "—"}
                     </Td>
                     <Td className="text-[var(--color-text-muted)]">{r.mood ? MOOD_LABEL[r.mood] : "—"}</Td>
+                    <Td className="text-[var(--color-text-muted)]">{r.toiletNotes || "—"}</Td>
                     <Td className="text-[var(--color-text-muted)]">{r.activityNotes || "—"}</Td>
                   </Tr>
                 ))}
@@ -597,7 +711,11 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
                     <Td className="font-medium">{v.name}</Td>
                     <Td className="tabular-nums text-[var(--color-text-muted)]">{formatDate(v.scheduledDate)}</Td>
                     <Td>
-                      <Badge tone={VACCINATION_STATUS_TONE[v.status]}>{VACCINATION_STATUS_LABEL[v.status]}</Badge>
+                      {isVaccinationOverdue(v) ? (
+                        <Badge tone="danger">Muddati o&apos;tgan</Badge>
+                      ) : (
+                        <Badge tone={VACCINATION_STATUS_TONE[v.status]}>{VACCINATION_STATUS_LABEL[v.status]}</Badge>
+                      )}
                     </Td>
                     <Td className="tabular-nums text-[var(--color-text-muted)]">{v.doneDate ? formatDate(v.doneDate) : "—"}</Td>
                     <Td className="text-[var(--color-text-muted)]">{v.note || "—"}</Td>
@@ -732,9 +850,19 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
                     </Td>
                     {canWrite && (
                       <Td className="text-right">
-                        <Button size="sm" variant="ghost" onClick={() => setEditingLink(link)}>
-                          Tahrirlash
-                        </Button>
+                        <div className="flex justify-end gap-1.5">
+                          <Button size="sm" variant="ghost" onClick={() => setEditingLink(link)}>
+                            Tahrirlash
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]"
+                            onClick={() => setDeletingLink(link)}
+                          >
+                            O&apos;chirish
+                          </Button>
+                        </div>
                       </Td>
                     )}
                   </Tr>
@@ -744,6 +872,10 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
           )}
         </CardBody>
       </Card>
+
+      {canWrite && editChildOpen && (
+        <EditChildModal open={editChildOpen} onClose={() => setEditChildOpen(false)} slug={slug} child={child} />
+      )}
 
       {canWrite && assessOpen && (
         <EditDevelopmentModal
@@ -794,6 +926,23 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
           link={editingLink}
         />
       )}
+
+      <ConfirmDialog
+        open={!!deletingLink}
+        onClose={() => setDeletingLink(null)}
+        title="Ota-ona bog'lanishini o'chirish"
+        confirmLabel="O'chirish"
+        tone="danger"
+        loading={removeGuardianLinkMutation.isPending}
+        description={
+          <>
+            <b className="text-[var(--color-text)]">{deletingLink?.guardian.fullName}</b> bu bola bilan bog'lanishi
+            butunlay o&apos;chiriladi. O&apos;zi (vasiy sifatida) tizimda qoladi, faqat shu bola bilan aloqasi
+            uziladi.
+          </>
+        }
+        onConfirm={() => deletingLink && removeGuardianLinkMutation.mutate(deletingLink.id)}
+      />
     </div>
   );
 }

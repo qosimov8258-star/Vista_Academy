@@ -1,13 +1,15 @@
 "use client";
 
 import { use, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { Group, Organization } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { DataTable, THead, TBody, Tr, Th, Td } from "@/components/ui/table";
+import { DataTable, THead, TBody, Tr, Th, Td, rowLinkProps } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
@@ -17,6 +19,7 @@ import { canWriteOperational } from "@/lib/permissions";
 
 export default function GroupsPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
+  const router = useRouter();
   const [createOpen, setCreateOpen] = useState(false);
   const { user } = useAuth();
   const canWrite = canWriteOperational(user?.role);
@@ -68,8 +71,12 @@ export default function GroupsPage({ params }: { params: Promise<{ slug: string 
             </THead>
             <TBody>
               {groupsQuery.data.map((group) => (
-                <Tr key={group.id}>
-                  <Td className="font-medium">{group.name}</Td>
+                <Tr key={group.id} {...rowLinkProps(`/${slug}/groups/${group.id}`, (href) => router.push(href))}>
+                  <Td className="font-medium">
+                    <Link href={`/${slug}/groups/${group.id}`} className="text-[var(--color-primary)] hover:underline">
+                      {group.name}
+                    </Link>
+                  </Td>
                   {!forcedBranchId && <Td className="text-[var(--color-text-muted)]">{branchName(group.branchId)}</Td>}
                   <Td numeric className="text-[var(--color-text-muted)]">
                     {group._count?.children ?? 0} / {group.capacity}

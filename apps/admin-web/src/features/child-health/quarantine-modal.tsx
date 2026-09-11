@@ -42,6 +42,8 @@ export function QuarantineModal({
     mutationFn: (values: FormValues) => api.post(`/app/children/${childId}/quarantine`, values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["child", slug, childId] });
+      // Ro'yxat va guruh sahifasidagi holat belgisi ham yangilansin.
+      queryClient.invalidateQueries({ queryKey: ["children", slug] });
       reset();
       onClose();
     },
