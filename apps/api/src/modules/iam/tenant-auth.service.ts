@@ -26,22 +26,22 @@ export class TenantAuthService {
     private readonly jwt: JwtService,
   ) {}
 
-  async validateCredentials(orgSlug: string, email: string, password: string): Promise<TenantAuthenticatedUser> {
+  async validateCredentials(orgSlug: string, login: string, password: string): Promise<TenantAuthenticatedUser> {
     const organization = await this.prisma.organization.findUnique({ where: { slug: orgSlug } });
     if (!organization) {
       throw new UnauthorizedException("Tashkilot topilmadi");
     }
 
     const tenantUser = await this.prisma.tenantUser.findUnique({
-      where: { organizationId_email: { organizationId: organization.id, email: email.toLowerCase() } },
-      include: { branch: true },
+      where: { organizationId_login: { organizationId: organization.id, login: login.toLowerCase() } },
+      include: { branch: true, employee: true },
     });
     if (!tenantUser || !tenantUser.isActive) {
-      throw new UnauthorizedException("Email yoki parol noto'g'ri");
+      throw new UnauthorizedException("Login yoki parol noto'g'ri");
     }
     const passwordValid = await argon2.verify(tenantUser.passwordHash, password);
     if (!passwordValid) {
-      throw new UnauthorizedException("Email yoki parol noto'g'ri");
+      throw new UnauthorizedException("Login yoki parol noto'g'ri");
     }
 
     return this.toAuthenticatedUser(tenantUser, organization);
@@ -54,7 +54,7 @@ export class TenantAuthService {
       organizationSlug: user.organizationSlug,
       branchSlug: user.branchSlug,
       branchId: user.branchId,
-      email: user.email,
+      login: user.login,
       role: user.role,
     };
     const accessTtl = process.env.JWT_TENANT_ACCESS_TTL ?? process.env.JWT_ACCESS_TTL ?? "15m";
@@ -90,7 +90,7 @@ export class TenantAuthService {
     const tokenHash = hashToken(rawRefreshToken);
     const existing = await this.prisma.tenantRefreshToken.findUnique({
       where: { tokenHash },
-      include: { tenantUser: { include: { organization: true, branch: true } } },
+      include: { tenantUser: { include: { organization: true, branch: true, employee: true } } },
     });
 
     if (!existing || existing.revokedAt || existing.expiresAt < new Date()) {
@@ -125,10 +125,11 @@ export class TenantAuthService {
       organizationId: string;
       branchId: string | null;
       branch: { slug: string; name: string } | null;
-      email: string;
+      login: string;
       fullName: string;
       role: TenantAccessTokenPayload["role"];
       avatarUpdatedAt: Date | null;
+      employee: { position: string; subjects: string[] } | null;
     },
     organization: { slug: string; name: string },
   ): TenantAuthenticatedUser {
@@ -140,10 +141,12 @@ export class TenantAuthService {
       branchId: tenantUser.branchId,
       branchSlug: tenantUser.branch?.slug ?? null,
       branchName: tenantUser.branch?.name ?? null,
-      email: tenantUser.email,
+      login: tenantUser.login,
       fullName: tenantUser.fullName,
       role: tenantUser.role,
       avatarUpdatedAt: tenantUser.avatarUpdatedAt?.toISOString() ?? null,
+      position: tenantUser.employee?.position ?? null,
+      subjects: tenantUser.employee?.subjects ?? [],
     };
   }
 }

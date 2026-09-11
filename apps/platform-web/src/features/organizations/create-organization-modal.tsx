@@ -10,9 +10,13 @@ import { organizationAccessUrl } from "@/lib/admin-web";
 import type { Organization, Plan } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Input, Select } from "@/components/ui/input";
+import { PasswordVeilInput } from "@/components/ui/password-veil-input";
 import { Button } from "@/components/ui/button";
 import { CheckCircleIcon } from "@/components/ui/icons";
 import { formatMoney } from "@/lib/format";
+
+const LOGIN_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{1,30}[A-Za-z0-9]$/;
+const LOGIN_MESSAGE = "Login lotin harf, raqam, . _ - dan iborat bo'lishi va kamida 3 belgi bo'lishi kerak";
 
 const schema = z.object({
   name: z.string().min(2, "Nomi kamida 2 belgi"),
@@ -21,7 +25,7 @@ const schema = z.object({
   contactPhone: z.string().optional(),
   planId: z.string().min(1, "Tarif tanlang"),
   adminFullName: z.string().min(2, "To'liq ism kamida 2 belgi"),
-  adminEmail: z.string().email("Email formati noto'g'ri"),
+  adminLogin: z.string().regex(LOGIN_PATTERN, LOGIN_MESSAGE),
   adminPassword: z.string().min(8, "Kamida 8 belgi"),
 });
 
@@ -170,15 +174,14 @@ export function CreateOrganizationModal({ open, onClose }: { open: boolean; onCl
               {...register("adminFullName")}
             />
             <Input
-              label="Login email"
-              type="email"
-              placeholder="admin@tarmoq.uz"
-              error={errors.adminEmail?.message}
-              {...register("adminEmail")}
+              label="Login"
+              type="text"
+              placeholder="admin_tarmoq"
+              error={errors.adminLogin?.message}
+              {...register("adminLogin")}
             />
-            <Input
+            <PasswordVeilInput
               label="Parol"
-              type="password"
               placeholder="Kamida 8 belgi"
               error={errors.adminPassword?.message}
               {...register("adminPassword")}

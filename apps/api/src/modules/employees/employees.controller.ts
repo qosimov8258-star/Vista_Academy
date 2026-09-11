@@ -23,6 +23,7 @@ import { CurrentTenantUser } from "../iam/decorators/current-tenant-user.decorat
 import { TenantAuthenticatedUser, toTenantScope } from "../iam/tenant-auth.types";
 import { EmployeesService } from "./employees.service";
 import { CreateEmployeeDto, EmployeeAccountDto } from "./dto/create-employee.dto";
+import { CreateEmployeeTopicDto } from "./dto/create-employee-topic.dto";
 import { UpdateEmployeeGroupsDto } from "./dto/update-employee-groups.dto";
 import { UpdateEmployeeAvatarDto } from "./dto/update-employee-avatar.dto";
 import { EmployeeQueryDto } from "./dto/employee-query.dto";
@@ -84,6 +85,36 @@ export class EmployeesController {
       throw new BadRequestException("Reveal token kerak");
     }
     return this.employeesService.revealPassword(toTenantScope(user), id, revealToken);
+  }
+
+  /** Xodim tafsilot oynasidagi "Mavzu qo'shasizmi?" ro'yxati. */
+  @Get(":id/topics")
+  listTopics(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string) {
+    return this.employeesService.listTopics(toTenantScope(user), id);
+  }
+
+  /** Mavzu inputidagi tavsiyalar — xodimning dars jadvalidagi fanlari. */
+  @Get(":id/topics/suggestions")
+  listTopicSuggestions(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string) {
+    return this.employeesService.listTopicSuggestions(toTenantScope(user), id);
+  }
+
+  @Post(":id/topics")
+  addTopic(
+    @CurrentTenantUser() user: TenantAuthenticatedUser,
+    @Param("id") id: string,
+    @Body() dto: CreateEmployeeTopicDto,
+  ) {
+    return this.employeesService.addTopic(toTenantScope(user), id, dto);
+  }
+
+  @Delete(":id/topics/:topicId")
+  removeTopic(
+    @CurrentTenantUser() user: TenantAuthenticatedUser,
+    @Param("id") id: string,
+    @Param("topicId") topicId: string,
+  ) {
+    return this.employeesService.removeTopic(toTenantScope(user), id, topicId);
   }
 
   /** Xodim suratini yuklash. */

@@ -17,6 +17,7 @@ import { useBranchContext } from "@/lib/use-branch-context";
 import { canWriteOperational } from "@/lib/permissions";
 import { EmployeePhoto } from "@/components/ui/employee-photo";
 import { initials } from "@/components/ui/avatar";
+import { formatPositionLabel } from "@/lib/employee-position";
 
 const OTHER_POSITION: Position = { id: "__other__", organizationId: "", name: "Boshqa", createdAt: "" };
 const ALL_TAB = "__all__";
@@ -155,7 +156,9 @@ export default function EmployeesPage({ params }: { params: Promise<{ slug: stri
                   <p className="truncate text-[13px] font-medium text-[var(--color-text)]">
                     {employee.fullName}
                   </p>
-                  <p className="truncate text-[11px] text-[var(--color-text-muted)]">{employee.position}</p>
+                  <p className="truncate text-[11px] text-[var(--color-text-muted)]">
+                    {formatPositionLabel(employee.position, employee.subjects)}
+                  </p>
                 </div>
                 <Badge tone={employee.isActive ? "success" : "neutral"}>
                   {employee.isActive ? "Faol" : "Nofaol"}

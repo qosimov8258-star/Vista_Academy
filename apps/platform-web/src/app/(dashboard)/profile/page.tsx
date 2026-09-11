@@ -27,8 +27,11 @@ const TABS: { id: TabId; label: string; icon: TabIcon }[] = [
   { id: "security", label: "Xavfsizlik", icon: ShieldIcon },
 ];
 
+const LOGIN_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{1,30}[A-Za-z0-9]$/;
+const LOGIN_MESSAGE = "Login lotin harf, raqam, . _ - dan iborat bo'lishi va kamida 3 belgi bo'lishi kerak";
+
 const profileSchema = z.object({
-  email: z.string().trim().min(1, "Email kiritilishi shart").email("Email noto'g'ri formatda"),
+  login: z.string().trim().regex(LOGIN_PATTERN, LOGIN_MESSAGE),
   firstName: z.string().trim().min(1, "Ism kiritilishi shart").max(100),
   lastName: z.string().trim().min(1, "Familiya kiritilishi shart").max(100),
   phone: z.string().trim().max(20, "Ko'pi bilan 20 belgi").optional(),
@@ -62,7 +65,7 @@ export default function ProfilePage() {
     initializedRef.current = true;
     const fallback = splitFullName(user.fullName);
     reset({
-      email: user.email,
+      login: user.login,
       firstName: user.firstName || fallback.first,
       lastName: user.lastName || fallback.last,
       phone: user.phone || "",
@@ -74,7 +77,7 @@ export default function ProfilePage() {
     onSuccess: (data) => {
       queryClient.setQueryData(["auth", "me"], data);
       reset({
-        email: data.user.email,
+        login: data.user.login,
         firstName: data.user.firstName ?? "",
         lastName: data.user.lastName ?? "",
         phone: data.user.phone ?? "",
@@ -118,7 +121,7 @@ export default function ProfilePage() {
   if (isLoading) return <LoadingState />;
   if (isError || !user) return <ErrorState message="Profil ma'lumotlarini yuklab bo'lmadi" />;
 
-  const displayName = user.fullName || user.email;
+  const displayName = user.fullName || user.login;
   const avatarSrc = assetUrl(user.avatarUrl);
 
   return (
@@ -174,7 +177,7 @@ export default function ProfilePage() {
           </div>
           {avatarError && <p className="mt-2 text-xs text-[var(--color-danger)]">{avatarError}</p>}
           <p className="mt-3 text-[17px] font-semibold text-[var(--color-text)]">{displayName}</p>
-          <p className="text-[13px] text-[var(--color-text-muted)]">{user.email}</p>
+          <p className="text-[13px] text-[var(--color-text-muted)]">{user.login}</p>
           <Badge tone="primary" className="mt-2.5">
             {roleLabel(user.role)}
           </Badge>
@@ -238,7 +241,7 @@ export default function ProfilePage() {
                     error={errors.phone?.message}
                     {...register("phone")}
                   />
-                  <Input label="Email" type="email" error={errors.email?.message} {...register("email")} />
+                  <Input label="Login" type="text" error={errors.login?.message} {...register("login")} />
                   <Input label="Rol" value={roleLabel(user.role)} disabled readOnly className="sm:col-span-2" />
                 </div>
                 <div className="flex justify-end pt-1">

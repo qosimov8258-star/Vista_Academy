@@ -331,7 +331,7 @@ export default function BranchDetailPage({ params }: { params: Promise<{ slug: s
                         {isSelf && <Badge tone="neutral">Siz</Badge>}
                         {!member.isActive && <Badge tone="danger">Bloklangan</Badge>}
                       </div>
-                      <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">{member.email}</p>
+                      <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">{member.login}</p>
                     </div>
 
                     <span

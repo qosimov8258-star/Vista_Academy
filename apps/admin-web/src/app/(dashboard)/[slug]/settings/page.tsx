@@ -141,7 +141,7 @@ export default function SettingsPage({ params }: { params: Promise<{ slug: strin
             <Avatar user={user} size={72} />
             <div className="min-w-0 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[15px] font-medium text-[var(--color-text)]">{user.email}</span>
+                <span className="text-[15px] font-medium text-[var(--color-text)]">{user.login}</span>
                 <Badge tone="primary">{ROLE_LABEL[user.role]}</Badge>
               </div>
               <div className="flex flex-wrap gap-2">

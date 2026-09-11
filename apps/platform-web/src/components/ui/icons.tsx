@@ -291,3 +291,31 @@ export function PencilIcon(props: IconProps) {
     </Icon>
   );
 }
+
+export function CheckIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="m5 12.6 4.6 4.6L19 7.4" />
+    </Icon>
+  );
+}
+
+export function EyeIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M2.6 12S6 5.6 12 5.6 21.4 12 21.4 12 18 18.4 12 18.4 2.6 12 2.6 12Z" />
+      <circle cx="12" cy="12" r="3.1" />
+    </Icon>
+  );
+}
+
+export function EyeOffIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M9.9 5.9a8.6 8.6 0 0 1 2.1-.3c6 0 9.4 6.4 9.4 6.4a16.3 16.3 0 0 1-2.5 3.4" />
+      <path d="M6.4 7.7A16.4 16.4 0 0 0 2.6 12S6 18.4 12 18.4c1.6 0 3-.34 4.2-.87" />
+      <path d="M10.1 10.1a2.7 2.7 0 0 0 3.8 3.8" />
+      <path d="m4.3 4.3 15.4 15.4" />
+    </Icon>
+  );
+}

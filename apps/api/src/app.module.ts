@@ -8,6 +8,7 @@ import { HealthModule } from "./modules/health/health.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { IamModule } from "./modules/iam/iam.module";
 import { WebAuthnModule } from "./modules/webauthn/webauthn.module";
+import { PlatformWebAuthnModule } from "./modules/platform-webauthn/platform-webauthn.module";
 import { OrganizationsModule } from "./modules/organizations/organizations.module";
 import { PlansModule } from "./modules/plans/plans.module";
 import { SubscriptionsModule } from "./modules/subscriptions/subscriptions.module";
@@ -22,6 +23,10 @@ import { AttendanceModule } from "./modules/attendance/attendance.module";
 import { StaffAttendanceModule } from "./modules/staff-attendance/staff-attendance.module";
 import { NutritionModule } from "./modules/nutrition/nutrition.module";
 import { DailyReportsModule } from "./modules/daily-reports/daily-reports.module";
+import { RoomsModule } from "./modules/rooms/rooms.module";
+import { LessonScheduleModule } from "./modules/lesson-schedule/lesson-schedule.module";
+import { LessonTopicsModule } from "./modules/lesson-topics/lesson-topics.module";
+import { LessonGradesModule } from "./modules/lesson-grades/lesson-grades.module";
 import { DevelopmentModule } from "./modules/development/development.module";
 import { BillingModule } from "./modules/billing/billing.module";
 import { TenantDashboardModule } from "./modules/tenant-dashboard/tenant-dashboard.module";
@@ -42,6 +47,7 @@ import { ExportsModule } from "./modules/exports/exports.module";
     AuthModule,
     IamModule,
     WebAuthnModule,
+    PlatformWebAuthnModule,
     OrganizationsModule,
     PlansModule,
     SubscriptionsModule,
@@ -56,6 +62,10 @@ import { ExportsModule } from "./modules/exports/exports.module";
     StaffAttendanceModule,
     NutritionModule,
     DailyReportsModule,
+    RoomsModule,
+    LessonScheduleModule,
+    LessonTopicsModule,
+    LessonGradesModule,
     DevelopmentModule,
     BillingModule,
     TenantDashboardModule,

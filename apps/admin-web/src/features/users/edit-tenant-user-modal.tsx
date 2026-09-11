@@ -86,9 +86,9 @@ export function EditTenantUserModal({
 
         <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
           <p className="text-[13px] text-[var(--color-text-muted)]">Login</p>
-          <p className="text-[15px] font-medium text-[var(--color-text)]">{user.email}</p>
+          <p className="text-[15px] font-medium text-[var(--color-text)]">{user.login}</p>
           <p className="mt-1 text-[12.5px] text-[var(--color-text-muted)]">
-            Email o&apos;zgartirilmaydi — u hisobning doimiy identifikatori.
+            Login o&apos;zgartirilmaydi — u hisobning doimiy identifikatori.
           </p>
         </div>
 

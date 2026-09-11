@@ -69,3 +69,22 @@ export function teacherChildWhere(
   }
   return { ...base, groupId: { in: groupIds } };
 }
+
+/**
+ * Yozishdan oldin: guruh o'qituvchining o'z guruhlaridan biri ekanini
+ * tekshiradi (dars jadvali, mavzular, baholar — hammasi shu bilan himoyalanadi).
+ * Boshqa rollarda hech nima qilmaydi.
+ */
+export async function assertTeacherOwnsGroup(
+  prisma: PrismaService,
+  scope: TenantScope,
+  groupId: string,
+): Promise<void> {
+  const groupIds = await resolveTeacherGroupIds(prisma, scope);
+  if (groupIds === null) {
+    return;
+  }
+  if (!groupIds.includes(groupId)) {
+    throw new ForbiddenException("Bu guruh sizga biriktirilmagan");
+  }
+}
