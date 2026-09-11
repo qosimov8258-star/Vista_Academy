@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { ForbiddenException, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantScope } from "../iam/tenant-auth.types";
+import { resolveTeacherGroupIds, teacherChildWhere } from "../iam/teacher-scope";
 import { ChildrenService } from "../children/children.service";
 import { GroupsService } from "../groups/groups.service";
 import { EmployeesService } from "../employees/employees.service";
@@ -28,28 +29,53 @@ export class TenantDashboardService {
   ) {}
 
   async summary(scope: TenantScope) {
+    // Bildirishnomalar sahifasida ko'rinishidan oldin, hozirgi holatga mos
+    // ravishda yetishmayotganlarini to'ldirib qo'yamiz.
+    await this.billingService.syncOverdueNotifications(scope);
+
+    // Filial darajasidagi vidjetlar (diqqat, tug'ilgan kun, guruh
+    // to'lganligi, qarzdorlar) faqat bitta filialga biriktirilgan
+    // foydalanuvchilar uchun ma'noli — Super Adminning tarmoq bo'ylab
+    // ko'rinishida bo'sh qaytariladi (xuddi "Filial raqamlari" bo'limi
+    // yashirilganidek).
     const [
       childrenCount,
       activeGroupsCount,
       employeesCount,
       monthRevenue,
+      previousMonthRevenue,
       outstandingDebt,
+      overdueInvoicesCount,
       todayAttendance,
       todayStaffAttendance,
       todayDailyReportsFilled,
       activeLeadsCount,
       pendingNotificationsCount,
+      attention,
+      upcomingBirthdays,
+      groupCapacity,
+      topDebtors,
     ] = await Promise.all([
       this.childrenService.countActive(scope),
       this.groupsService.countActive(scope),
       this.employeesService.countActive(scope),
       this.billingService.monthRevenue(scope),
+      this.billingService.previousMonthRevenue(scope),
       this.billingService.outstandingDebt(scope),
+      this.billingService.overdueInvoicesCount(scope),
       this.attendanceService.todaySummary(scope),
       this.staffAttendanceService.todaySummary(scope),
       this.dailyReportsService.todayFilledCount(scope),
       this.crmService.countActive(scope),
       this.notificationsService.countPending(scope),
+      scope.branchId
+        ? this.attentionList(scope)
+        : Promise.resolve({ unmarkedAttendance: [], missingDailyReport: [], overdueVaccinations: [] }),
+      scope.branchId ? this.upcomingBirthdays(scope) : Promise.resolve([]),
+      scope.branchId
+        ? this.groupsService.capacityOverview(scope)
+        : Promise.resolve({ totalCapacity: 0, totalActive: 0, groups: [] }),
+      scope.branchId ? this.billingService.topDebtors(scope) : Promise.resolve([]),
     ]);
 
     return {
@@ -57,13 +83,78 @@ export class TenantDashboardService {
       activeGroupsCount,
       employeesCount,
       monthRevenue,
+      previousMonthRevenue,
       outstandingDebt,
+      overdueInvoicesCount,
       todayAttendance,
       todayStaffAttendance,
       todayDailyReportsFilled,
       activeLeadsCount,
       pendingNotificationsCount,
+      attention,
+      upcomingBirthdays,
+      groupCapacity,
+      topDebtors,
     };
+  }
+
+  /** Bugun kimning davomati belgilanmagan, kundalik hisoboti to'ldirilmagan
+   * va kimning rejalashtirilgan vaksinatsiyasi muddati o'tib ketgan. */
+  private async attentionList(scope: TenantScope) {
+    const teacherGroupIds = await resolveTeacherGroupIds(this.prisma, scope);
+    const [attendanceDay, reportDay, overdueVaccinations] = await Promise.all([
+      this.attendanceService.findByBranchAndDate(scope, {}),
+      this.dailyReportsService.findByBranchAndDate(scope, {}),
+      this.prisma.vaccination.findMany({
+        where: {
+          branchId: scope.branchId ?? undefined,
+          status: "SCHEDULED",
+          scheduledDate: { lt: new Date() },
+          child: teacherChildWhere({ status: "ACTIVE" }, teacherGroupIds),
+        },
+        select: { id: true, childId: true, name: true, scheduledDate: true, child: { select: { fullName: true } } },
+        orderBy: { scheduledDate: "asc" },
+      }),
+    ]);
+    return {
+      unmarkedAttendance: attendanceDay.children
+        .filter((c) => c.status === null)
+        .map((c) => ({ childId: c.childId, fullName: c.fullName, groupName: c.groupName })),
+      missingDailyReport: reportDay.children
+        .filter((c) => c.report === null)
+        .map((c) => ({ childId: c.childId, fullName: c.fullName, groupName: c.groupName })),
+      overdueVaccinations: overdueVaccinations.map((v) => ({
+        childId: v.childId,
+        fullName: v.child.fullName,
+        vaccineName: v.name,
+        scheduledDate: v.scheduledDate,
+      })),
+    };
+  }
+
+  /** Kelasi 7 kun ichida tug'ilgan kuni bo'lgan bolalar. */
+  private async upcomingBirthdays(scope: TenantScope, days = 7) {
+    const teacherGroupIds = await resolveTeacherGroupIds(this.prisma, scope);
+    const children = await this.prisma.child.findMany({
+      where: teacherChildWhere({ branchId: scope.branchId ?? undefined, status: "ACTIVE" }, teacherGroupIds),
+      select: { id: true, fullName: true, birthDate: true },
+    });
+    const today = new Date();
+    const todayUTC = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+    return children
+      .filter((c): c is typeof c & { birthDate: Date } => c.birthDate !== null)
+      .map((c) => {
+        const month = c.birthDate.getUTCMonth();
+        const day = c.birthDate.getUTCDate();
+        let occurrence = birthdayOccurrenceUTC(today.getUTCFullYear(), month, day);
+        if (occurrence < todayUTC) {
+          occurrence = birthdayOccurrenceUTC(today.getUTCFullYear() + 1, month, day);
+        }
+        const daysUntil = Math.round((occurrence - todayUTC) / 86_400_000);
+        return { childId: c.id, fullName: c.fullName, birthDate: c.birthDate, daysUntil };
+      })
+      .filter((c) => c.daysUntil <= days)
+      .sort((a, b) => a.daysUntil - b.daysUntil);
   }
 
   /**
@@ -110,7 +201,8 @@ export class TenantDashboardService {
             name: true,
             capacity: true,
             status: true,
-            _count: { select: { children: true } },
+            // Faqat faol bolalar guruh o'rnini band qiladi.
+            _count: { select: { children: { where: { status: "ACTIVE" } } } },
             teachers: { select: { employee: { select: { id: true, fullName: true } } } },
           },
           orderBy: { name: "asc" },
@@ -191,4 +283,15 @@ export class TenantDashboardService {
       },
     };
   }
+}
+
+/**
+ * Berilgan yilda tug'ilgan kunning UTC sanasi. 29-fevral kabisa bo'lmagan
+ * yilga to'g'ri kelsa, `Date.UTC` uni avtomatik 1-martga aylantirib
+ * yuboradi — shuning uchun bunday holda 28-fevralga tushiramiz.
+ */
+function birthdayOccurrenceUTC(year: number, month: number, day: number): number {
+  const isLeap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+  const safeDay = month === 1 && day === 29 && !isLeap ? 28 : day;
+  return Date.UTC(year, month, safeDay);
 }
