@@ -122,6 +122,9 @@ model Organization {
   notificationLogs       NotificationLog[]
   dishes                 Dish[]
   auditLogs              AuditLog[]
+  poems                  Poem[]
+  proverbs               Proverb[]
+  tales                  Tale[]
 
   @@map("organizations")
 }
@@ -179,6 +182,9 @@ model TenantUser {
   employee          Employee?
   webauthnCredentials WebAuthnCredential[]
   auditLogs         AuditLog[]
+  poems             Poem[]
+  proverbs          Proverb[]
+  tales             Tale[]
 
   @@unique([organizationId, login])
   @@index([branchId])
@@ -273,6 +279,9 @@ model Branch {
   lessonSchedules        LessonSchedule[]
   lessonTopics           LessonTopic[]
   lessonGrades           LessonGrade[]
+  poems                  Poem[]
+  proverbs               Proverb[]
+  tales                  Tale[]
 
   @@unique([organizationId, name])
   @@unique([organizationId, slug])
@@ -306,6 +315,9 @@ model Group {
   lessonSchedules LessonSchedule[]
   lessonTopics    LessonTopic[]
   lessonGrades    LessonGrade[]
+  poems           Poem[]
+  proverbs        Proverb[]
+  tales           Tale[]
 
   @@unique([branchId, name])
   @@index([branchId])
@@ -800,6 +812,99 @@ model LessonGrade {
   @@index([branchId, date])
   @@index([groupId])
   @@map("lesson_grades")
+}
+
+// ---------------------------------------------------------------------------
+// "Foydali" bo'limi — tarbiyachi yuklaydigan she'r/maqol/ertak, ota-ona
+// kabinetida o'qish/yodlash uchun ko'rinadi. `groupId: null` — butun filial.
+// ---------------------------------------------------------------------------
+
+enum UsefulStatus {
+  DRAFT // qoralama — ota-onaga ko'rinmaydi
+  PUBLISHED // chop etilgan
+}
+
+/// She'r. stanzas — bandlar: [["1-qator", "2-qator", ...], [...]]
+model Poem {
+  id             String       @id @default(uuid())
+  organizationId String       @map("organization_id")
+  branchId       String       @map("branch_id")
+  /// null — filialdagi barcha guruhlar uchun
+  groupId        String?      @map("group_id")
+  title          String
+  author         String?
+  ageFrom        Int          @default(3) @map("age_from")
+  ageTo          Int          @default(6) @map("age_to")
+  stanzas        Json
+  status         UsefulStatus @default(PUBLISHED)
+  createdById    String       @map("created_by_id")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  deletedAt      DateTime?    @map("deleted_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  group        Group?       @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  createdBy    TenantUser   @relation(fields: [createdById], references: [id])
+
+  @@index([branchId, status])
+  @@map("poems")
+}
+
+model Proverb {
+  id             String       @id @default(uuid())
+  organizationId String       @map("organization_id")
+  branchId       String       @map("branch_id")
+  groupId        String?      @map("group_id")
+  text           String
+  /// Bolaga tushuntirish uchun sodda izoh
+  meaning        String
+  status         UsefulStatus @default(PUBLISHED)
+  createdById    String       @map("created_by_id")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  deletedAt      DateTime?    @map("deleted_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  group        Group?       @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  createdBy    TenantUser   @relation(fields: [createdById], references: [id])
+
+  @@index([branchId, status])
+  @@map("proverbs")
+}
+
+model Tale {
+  id             String       @id @default(uuid())
+  organizationId String       @map("organization_id")
+  branchId       String       @map("branch_id")
+  groupId        String?      @map("group_id")
+  title          String
+  /// "O'zbek xalq ertagi", muallif ismi va h.k.
+  origin         String
+  minutes        Int
+  /// Xatboshilar: string[]
+  paragraphs     Json
+  moral          String
+  /// O'qib bo'lgach bolaga beriladigan savollar: string[]
+  questions      Json
+  /// Muqova: hozircha tayyor rasmlardan biri ("tun", "sholgom")
+  cover          String       @default("tun")
+  ageFrom        Int          @default(3) @map("age_from")
+  ageTo          Int          @default(7) @map("age_to")
+  status         UsefulStatus @default(PUBLISHED)
+  createdById    String       @map("created_by_id")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  deletedAt      DateTime?    @map("deleted_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  group        Group?       @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  createdBy    TenantUser   @relation(fields: [createdById], references: [id])
+
+  @@index([branchId, status])
+  @@map("tales")
 }
 
 // ---------------------------------------------------------------------------
