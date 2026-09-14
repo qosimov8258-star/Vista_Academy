@@ -17,6 +17,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         tenantUser: { avatar: true },
         child: { avatar: true },
         employee: { avatar: true },
+        product: { image1: true, image2: true, image3: true },
       },
     });
   }

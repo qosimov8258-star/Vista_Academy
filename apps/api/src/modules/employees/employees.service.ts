@@ -11,7 +11,9 @@ import { TenantAuthenticatedUser, TenantScope, requireOperationalScope, toTenant
 import { verifyRevealToken } from "../webauthn/reveal-token";
 import { AuditLogService } from "../audit-log/audit-log.service";
 import { CreateEmployeeDto, EmployeeAccountDto } from "./dto/create-employee.dto";
+import { UpdateEmployeeCredentialsDto } from "./dto/update-employee-credentials.dto";
 import { CreateEmployeeTopicDto } from "./dto/create-employee-topic.dto";
+import { UpdateEmployeeTopicsSettingDto } from "./dto/update-employee-topics-setting.dto";
 import { UpdateEmployeeGroupsDto } from "./dto/update-employee-groups.dto";
 import { UpdateEmployeeAvatarDto } from "./dto/update-employee-avatar.dto";
 import { EmployeeQueryDto } from "./dto/employee-query.dto";
@@ -312,6 +314,59 @@ export class EmployeesService {
   }
 
   /**
+   * Admin login va/yoki parolni o'zi kiritib o'zgartiradi (generatsiyasiz).
+   * `regeneratePassword` kabi WebAuthn talab qilinmaydi. Parol o'zgarsa,
+   * eski seanslar darhol yopiladi; faqat login o'zgarganda esa yo'q —
+   * mavjud sessiyalar userId bo'yicha ishlayveradi.
+   */
+  async updateCredentials(scope: TenantScope, id: string, dto: UpdateEmployeeCredentialsDto) {
+    const branchId = requireOperationalScope(scope);
+    const employee = await this.prisma.employee.findFirst({
+      where: { id, organizationId: scope.organizationId, branchId },
+      select: { tenantUserId: true },
+    });
+    if (!employee) {
+      throw new NotFoundException("Xodim topilmadi");
+    }
+    if (!employee.tenantUserId) {
+      throw new BadRequestException("Bu xodimning kabineti yo'q");
+    }
+    if (!dto.login && !dto.password) {
+      throw new BadRequestException("O'zgartiradigan hech narsa yo'q");
+    }
+
+    const data: Prisma.TenantUserUpdateInput = {};
+    if (dto.login) {
+      data.login = dto.login.trim().toLowerCase();
+    }
+    if (dto.password) {
+      const [passwordHash, passwordEncrypted] = await Promise.all([
+        argon2.hash(dto.password),
+        Promise.resolve(encryptSecret(dto.password)),
+      ]);
+      data.passwordHash = passwordHash;
+      data.passwordEncrypted = passwordEncrypted;
+    }
+
+    try {
+      const tenantUser = await this.prisma.tenantUser.update({
+        where: { id: employee.tenantUserId },
+        data,
+        select: { login: true },
+      });
+      if (dto.password) {
+        await this.prisma.tenantRefreshToken.updateMany({
+          where: { tenantUserId: employee.tenantUserId, revokedAt: null },
+          data: { revokedAt: new Date() },
+        });
+      }
+      return { login: tenantUser.login };
+    } catch (err) {
+      throw this.translateLoginConflict(err);
+    }
+  }
+
+  /**
    * Xodim kabineti parolini ko'rsatadi. WebAuthn bilan tasdiqlangan qisqa
    * umrli "reveal token" talab qilinadi — shu tokensiz parol hech qachon
    * qaytarilmaydi.
@@ -422,12 +477,20 @@ export class EmployeesService {
     });
   }
 
-  /** Xodim tafsilot oynasidagi "Mavzu qo'shasizmi?" ro'yxati. */
+  /**
+   * Xodim tafsilot oynasidagi "Mavzu qo'shasizmi?" ro'yxati. Bu yerdagi har
+   * bir mavzu aslida `LessonTopic` — xodim dars beradigan har bir guruhda
+   * alohida nusxa sifatida yaratiladi (pastdagi `addTopic`ga qarang), shuning
+   * uchun bir xil nomli bir nechta nusxa bo'lishi mumkin — ro'yxatda nomi
+   * bo'yicha bittadan ko'rsatiladi.
+   */
   async listTopics(scope: TenantScope, employeeId: string) {
     await this.requireWritableEmployee(scope, employeeId);
-    return this.prisma.employeeTopic.findMany({
+    return this.prisma.lessonTopic.findMany({
       where: { employeeId },
+      distinct: ["title"],
       orderBy: { createdAt: "asc" },
+      select: { id: true, employeeId: true, title: true, createdAt: true },
     });
   }
 
@@ -445,20 +508,55 @@ export class EmployeesService {
     return rows.map((row) => row.subject).filter((subject): subject is string => !!subject);
   }
 
-  async addTopic(scope: TenantScope, employeeId: string, dto: CreateEmployeeTopicDto) {
+  /**
+   * "Mavzu qo'shasizmi?" almashtirgichi. Yoqilsa — administrator mavzularni
+   * shu yerdan markazlashtirib boshqaradi va xodimning o'zi "Savol-javob"
+   * sahifasida ("/my-lessons/topics") yangi mavzu qo'sha olmay qoladi
+   * (serverda `LessonTopicsService.resolveActingEmployeeId` bloklaydi).
+   */
+  async setTopicsManagedByAdmin(scope: TenantScope, employeeId: string, dto: UpdateEmployeeTopicsSettingDto) {
     await this.requireWritableEmployee(scope, employeeId);
-    return this.prisma.employeeTopic.create({
-      data: { employeeId, title: dto.title.trim() },
+    return this.prisma.employee.update({
+      where: { id: employeeId },
+      data: { topicsManagedByAdmin: dto.managedByAdmin },
+      select: { id: true, topicsManagedByAdmin: true },
     });
   }
 
+  /**
+   * Mavzu xodimning o'ziga biriktiriladi: u dars beradigan har bir guruhning
+   * "Savol-javob" ro'yxatida bir vaqtda paydo bo'lishi uchun shu guruhlar
+   * soniga qarab bir nechta `LessonTopic` yaratiladi (sanasi — bugungi kun).
+   */
+  async addTopic(scope: TenantScope, employeeId: string, dto: CreateEmployeeTopicDto) {
+    const employee = await this.requireWritableEmployee(scope, employeeId);
+    const title = dto.title.trim();
+    const teachingGroups = await this.prisma.groupTeacher.findMany({
+      where: { employeeId },
+      select: { groupId: true },
+    });
+    if (teachingGroups.length === 0) {
+      throw new BadRequestException("Xodim hali birorta guruhga biriktirilmagan — avval guruhga qo'shing");
+    }
+    const today = new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`);
+    const [firstTopic] = await this.prisma.$transaction(
+      teachingGroups.map(({ groupId }) =>
+        this.prisma.lessonTopic.create({
+          data: { branchId: employee.branchId, groupId, employeeId, title, date: today },
+        }),
+      ),
+    );
+    return firstTopic;
+  }
+
+  /** Bu nomdagi mavzuni xodimning barcha guruhlaridan birdaniga o'chiradi. */
   async removeTopic(scope: TenantScope, employeeId: string, topicId: string) {
     await this.requireWritableEmployee(scope, employeeId);
-    const topic = await this.prisma.employeeTopic.findFirst({ where: { id: topicId, employeeId } });
+    const topic = await this.prisma.lessonTopic.findFirst({ where: { id: topicId, employeeId } });
     if (!topic) {
       throw new NotFoundException("Mavzu topilmadi");
     }
-    await this.prisma.employeeTopic.delete({ where: { id: topicId } });
+    await this.prisma.lessonTopic.deleteMany({ where: { employeeId, title: topic.title } });
   }
 
   /** Yozish uchun: xodim shu tashkilot/filialda. */

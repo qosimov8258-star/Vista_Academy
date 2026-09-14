@@ -10,6 +10,8 @@ import { UpdateLessonTopicDto } from "./dto/update-lesson-topic.dto";
 import { LessonTopicQueryDto } from "./dto/lesson-topic-query.dto";
 import { CreateTopicQuestionDto } from "./dto/create-topic-question.dto";
 import { UpdateTopicQuestionDto } from "./dto/update-topic-question.dto";
+import { CreateParentQuestionDto } from "./dto/create-parent-question.dto";
+import { UpdateParentQuestionDto } from "./dto/update-parent-question.dto";
 
 @ApiBearerAuth()
 @ApiTags("Tenant Lesson Topics")
@@ -61,5 +63,33 @@ export class LessonTopicsController {
   @Delete("questions/:questionId")
   removeQuestion(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("questionId") questionId: string) {
     return this.lessonTopicsService.removeQuestion(toTenantScope(user), questionId);
+  }
+
+  @Get(":id/parent-questions")
+  listParentQuestions(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string) {
+    return this.lessonTopicsService.listParentQuestions(toTenantScope(user), id);
+  }
+
+  @Post(":id/parent-questions")
+  addParentQuestion(
+    @CurrentTenantUser() user: TenantAuthenticatedUser,
+    @Param("id") id: string,
+    @Body() dto: CreateParentQuestionDto,
+  ) {
+    return this.lessonTopicsService.addParentQuestion(toTenantScope(user), id, dto);
+  }
+
+  @Patch("parent-questions/:questionId")
+  updateParentQuestion(
+    @CurrentTenantUser() user: TenantAuthenticatedUser,
+    @Param("questionId") questionId: string,
+    @Body() dto: UpdateParentQuestionDto,
+  ) {
+    return this.lessonTopicsService.updateParentQuestion(toTenantScope(user), questionId, dto);
+  }
+
+  @Delete("parent-questions/:questionId")
+  removeParentQuestion(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("questionId") questionId: string) {
+    return this.lessonTopicsService.removeParentQuestion(toTenantScope(user), questionId);
   }
 }

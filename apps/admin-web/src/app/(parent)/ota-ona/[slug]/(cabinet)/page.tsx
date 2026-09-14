@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import { ApiError } from "@/lib/api";
 import { PARENT_API_URL, parentApi } from "@/lib/parent-api";
@@ -63,7 +63,9 @@ function sleepLabel(minutes: number): string {
 export default function ParentHomePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [activeChildId, setActiveChildId] = useState<string | null>(null);
+  const [reasonDraft, setReasonDraft] = useState("");
 
   const meQuery = useQuery({
     queryKey: ["parent-me", slug],
@@ -91,6 +93,17 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
     queryKey: ["parent-strip", childId],
     queryFn: () => parentApi.get<ParentAttendanceStrip>(`/app/parent/children/${childId}/attendance`),
     enabled: !!childId,
+  });
+
+  // Kelmagan kun uchun sababni ota-ona shu yerdan yozadi — tarbiyachi buni
+  // ko'rgach "Aloqaga chiqish"ni bosishga hojat qolmaydi.
+  const reasonMutation = useMutation({
+    mutationFn: (reason: string) =>
+      parentApi.post(`/app/parent/children/${childId}/attendance/${dayQuery.data?.date}/reason`, { reason }),
+    onSuccess: () => {
+      setReasonDraft("");
+      queryClient.invalidateQueries({ queryKey: ["parent-day", childId] });
+    },
   });
 
   const child = children.find((c) => c.id === childId) ?? null;
@@ -195,11 +208,45 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
                   {present
                     ? "Tarbiyachi davomatni belgiladi"
                     : absent
-                      ? day?.attendance?.note || "Sabab ko'rsatilmagan"
+                      ? day?.attendance?.parentReason || day?.attendance?.note || "Sabab ko'rsatilmagan"
                       : "Tarbiyachi hali davomat qilmadi"}
                 </p>
               </div>
             </div>
+
+            {/* Kelmagan kun uchun sabab — bir marta yozilgach o'zgartirilmaydi,
+                tarbiyachi buni ko'radi va aloqaga chiqishga hojat qolmaydi. */}
+            {absent && !day?.attendance?.parentReason && (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const reason = reasonDraft.trim();
+                  if (reason) reasonMutation.mutate(reason);
+                }}
+                className="mt-3 space-y-2"
+              >
+                <label className="block text-[12px] font-semibold uppercase tracking-[0.05em] text-[var(--p-muted)]">
+                  Nega kelmadi? Sababini yozing
+                </label>
+                <textarea
+                  value={reasonDraft}
+                  onChange={(e) => setReasonDraft(e.target.value)}
+                  rows={2}
+                  placeholder="Masalan: shifokorga bordik"
+                  className="w-full resize-none rounded-[14px] bg-[var(--p-card)] px-3.5 py-2.5 text-[14px] text-[var(--p-ink)] outline-none ring-1 ring-[var(--p-muted)]/20 focus:ring-[var(--p-coral)]"
+                />
+                <button
+                  type="submit"
+                  disabled={!reasonDraft.trim() || reasonMutation.isPending}
+                  className="rounded-full bg-[var(--p-coral)] px-4 py-2 text-[13px] font-semibold text-white disabled:opacity-50"
+                >
+                  {reasonMutation.isPending ? "Yuborilmoqda..." : "Yuborish"}
+                </button>
+                {reasonMutation.isError && (
+                  <p className="text-[12px] text-[var(--p-coral)]">Yuborib bo&apos;lmadi — qayta urinib ko&apos;ring</p>
+                )}
+              </form>
+            )}
 
             {stripQuery.data && <AttendanceCalendar strip={stripQuery.data} />}
           </section>

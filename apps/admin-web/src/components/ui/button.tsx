@@ -11,7 +11,7 @@ import clsx from "clsx";
  * tugmalarni qayta yozish kerak bo'lardi. Ranglar bu yerda dizayn
  * token'laridan olinadi, shuning uchun ikkala ilovada ham o'z brendida chiqadi.
  */
-type Variant = "primary" | "secondary" | "tertiary" | "outline" | "ghost" | "danger" | "dangerSoft";
+type Variant = "primary" | "secondary" | "tertiary" | "outline" | "ghost" | "danger" | "dangerSoft" | "info";
 type Size = "sm" | "md" | "lg";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -43,6 +43,8 @@ const variantClasses: Record<Variant, string> = {
   // O'chirish kabi amalning yumshoqroq ko'rinishi
   dangerSoft:
     "bg-[var(--color-danger-bg)] text-[var(--color-danger)] hover:brightness-[0.96] focus-visible:ring-[var(--color-danger)]/20",
+  // Ko'k — "Saqlash" kabi asosiy brend rangidan ataylab ajralib turishi kerak bo'lgan amallar uchun
+  info: "bg-[#2563eb] text-white shadow-[0_1px_2px_rgba(37,99,235,0.24),0_6px_16px_-6px_rgba(37,99,235,0.4)] hover:brightness-95 focus-visible:ring-[#2563eb]/25",
 };
 
 const sizeClasses: Record<Size, string> = {

@@ -14,6 +14,10 @@ import { initials } from "@/components/ui/avatar";
 import { PhoneIcon, EyeIcon, EyeOffIcon, CheckIcon, TrashIcon } from "@/components/ui/icons";
 import { formatPositionLabel, isSubjectTeacherPosition } from "@/lib/employee-position";
 import { EmployeeTopics } from "@/features/employees/employee-topics";
+import { PasswordChecklist, getPasswordRules } from "@/components/ui/password-checklist";
+import { Toast, type ToastState } from "@/components/ui/toast";
+
+const LOGIN_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{1,30}[A-Za-z0-9]$/;
 
 /**
  * Xodim ustiga bosilganda ochiladi: telefon, login va kabinet paroli shu yerda.
@@ -49,6 +53,17 @@ export function EmployeeDetailModal({
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  const [loginInput, setLoginInput] = useState("");
+  const [savedLogin, setSavedLogin] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [credentialsError, setCredentialsError] = useState<string | null>(null);
+  const [toast, setToast] = useState<ToastState | null>(null);
+
+  const [topicsManagedByAdmin, setTopicsManagedByAdmin] = useState(false);
+  const [topicsSaveError, setTopicsSaveError] = useState<string | null>(null);
+
   useEffect(() => {
     if (!open) {
       setVisiblePassword(null);
@@ -61,8 +76,28 @@ export function EmployeeDetailModal({
       setDeleteConfirming(false);
       setDeleting(false);
       setDeleteError(null);
+      setTopicsSaveError(null);
     }
   }, [open]);
+
+  // Har bir xodim ochilganda (yoki almashganda) login/parol maydonlari o'sha
+  // xodimning haqiqiy loginidan yangilanadi — aks holda oldingi xodimning
+  // saqlanmagan qoralamasi qolib ketishi mumkin edi.
+  useEffect(() => {
+    const login = employee?.tenantUser?.login ?? "";
+    setLoginInput(login);
+    setSavedLogin(login);
+    setNewPassword("");
+    setConfirmNewPassword("");
+    setShowNewPassword(false);
+    setCredentialsError(null);
+  }, [employee?.id, employee?.tenantUser?.login]);
+
+  // Almashtirgich holati serverdagi qiymatga moslanadi — xodim almashganda yoki
+  // saqlangandan keyin (invalidate qilib qayta yuklangach) shu yerdan yangilanadi.
+  useEffect(() => {
+    setTopicsManagedByAdmin(employee?.topicsManagedByAdmin ?? false);
+  }, [employee?.id, employee?.topicsManagedByAdmin]);
 
   const { data: groups } = useQuery({
     queryKey: ["groups", slug],
@@ -70,14 +105,37 @@ export function EmployeeDetailModal({
     enabled: open && accountOpen,
   });
 
-  const regenerateMutation = useMutation({
-    mutationFn: () => api.post<{ password: string }>(`/app/employees/${employee!.id}/password/regenerate`),
-    onSuccess: (data) => {
-      setVisiblePassword(data.password);
-      setRevealError(null);
+  const credentialsMutation = useMutation({
+    mutationFn: () =>
+      api.patch<{ login: string }>(`/app/employees/${employee!.id}/credentials`, {
+        login: loginInput.trim().toLowerCase() !== savedLogin ? loginInput.trim().toLowerCase() : undefined,
+        password: newPassword || undefined,
+      }),
+    onSuccess: (result) => {
+      setSavedLogin(result.login);
+      setLoginInput(result.login);
+      setNewPassword("");
+      setConfirmNewPassword("");
+      setShowNewPassword(false);
+      setCredentialsError(null);
+      // Yangi parol qo'yilgan bo'lsa, avval ko'rsatilgan eski parol endi eskirgan.
+      setVisiblePassword(null);
+      queryClient.invalidateQueries({ queryKey: ["employees", slug] });
+      setToast({ type: "success", message: "Saqlandi" });
     },
     onError: (err) => {
-      setRevealError(err instanceof ApiError ? err.message : "Parolni yangilab bo'lmadi");
+      setCredentialsError(err instanceof ApiError ? err.message : "Saqlab bo'lmadi");
+      setToast({ type: "error", message: "Saqlab bo'lmadi" });
+    },
+  });
+
+  const topicsSettingMutation = useMutation({
+    mutationFn: (next: boolean) =>
+      api.patch<{ id: string; topicsManagedByAdmin: boolean }>(`/app/employees/${employee!.id}/topics-setting`, {
+        managedByAdmin: next,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["employees", slug] });
     },
   });
 
@@ -98,6 +156,56 @@ export function EmployeeDetailModal({
   });
 
   if (!employee) return null;
+
+  const credentialsDirty =
+    !!employee.tenantUser && (loginInput.trim().toLowerCase() !== savedLogin || newPassword.length > 0);
+  const topicsDirty = topicsManagedByAdmin !== (employee.topicsManagedByAdmin ?? false);
+  const dirty = credentialsDirty || topicsDirty;
+
+  // Oynaning tagidagi yagona "Saqlash" tugmasi hamma o'zgargan bo'limlarni
+  // (login/parol va "Mavzu qo'shasizmi?" almashtirgichi) birgalikda saqlaydi —
+  // har bir bo'lim uchun alohida tugma bo'lmasin.
+  const handleSave = async () => {
+    setCredentialsError(null);
+    setTopicsSaveError(null);
+
+    if (credentialsDirty) {
+      const trimmedLogin = loginInput.trim().toLowerCase();
+      if (!LOGIN_PATTERN.test(trimmedLogin)) {
+        setCredentialsError("Login lotin harf, raqam, . _ - dan iborat bo'lishi va kamida 3 belgi bo'lishi kerak");
+        return;
+      }
+      if (newPassword) {
+        if (getPasswordRules(newPassword).some((rule) => !rule.met)) {
+          setCredentialsError("Parol talablarga javob bermaydi");
+          return;
+        }
+        if (newPassword !== confirmNewPassword) {
+          setCredentialsError("Parollar mos kelmadi");
+          return;
+        }
+      }
+      try {
+        await credentialsMutation.mutateAsync();
+      } catch {
+        return;
+      }
+    }
+
+    if (topicsDirty) {
+      try {
+        await topicsSettingMutation.mutateAsync(topicsManagedByAdmin);
+      } catch (err) {
+        setTopicsSaveError(err instanceof ApiError ? err.message : "Saqlab bo'lmadi");
+        setToast({ type: "error", message: "Saqlab bo'lmadi" });
+        return;
+      }
+    }
+
+    if (!credentialsDirty) {
+      setToast({ type: "success", message: "Saqlandi" });
+    }
+  };
 
   const toggleGroup = (id: string) => {
     setGroupIds((prev) => (prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]));
@@ -235,16 +343,28 @@ export function EmployeeDetailModal({
 
         {employee.tenantUser ? (
           <div className="space-y-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-[13px] font-medium text-[var(--color-text)]">Login</p>
-                <p className="truncate text-sm text-[var(--color-text-muted)]">{employee.tenantUser.login}</p>
-              </div>
+            <div>
+              <label className="mb-1.5 block text-[13px] font-medium text-[var(--color-text)]" htmlFor="employee-login">
+                Login
+              </label>
+              <input
+                id="employee-login"
+                value={loginInput}
+                onChange={(e) => setLoginInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && credentialsDirty && !credentialsMutation.isPending) {
+                    e.preventDefault();
+                    handleSave();
+                  }
+                }}
+                disabled={!canWrite || credentialsMutation.isPending}
+                className="w-full rounded-xl border border-[var(--color-border)] bg-white px-3.5 py-2.5 text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[var(--color-primary)] disabled:opacity-60"
+              />
             </div>
 
             <div className="flex items-center justify-between gap-3 border-t border-[var(--color-border)] pt-3">
               <div className="min-w-0">
-                <p className="text-[13px] font-medium text-[var(--color-text)]">Parol</p>
+                <p className="text-[13px] font-medium text-[var(--color-text)]">Joriy parol</p>
                 <p className="truncate font-mono text-sm text-[var(--color-text-muted)]">
                   {visiblePassword ?? "••••••••••"}
                 </p>
@@ -269,16 +389,68 @@ export function EmployeeDetailModal({
               )}
             </div>
             {revealError && <p className="text-xs text-[var(--color-danger)]">{revealError}</p>}
+
             {canWrite && (
-              <button
-                type="button"
-                onClick={() => regenerateMutation.mutate()}
-                disabled={regenerateMutation.isPending}
-                className="cursor-pointer text-[12.5px] font-medium text-[var(--color-primary)] hover:underline disabled:opacity-60"
-              >
-                {regenerateMutation.isPending ? "Yaratilmoqda..." : "Yangi parol generatsiya qilish"}
-              </button>
+              <div className="border-t border-[var(--color-border)] pt-3">
+                <label
+                  className="mb-1.5 block text-[13px] font-medium text-[var(--color-text)]"
+                  htmlFor="employee-new-password"
+                >
+                  Yangi parol
+                </label>
+                <div className="relative">
+                  <input
+                    id="employee-new-password"
+                    type={showNewPassword ? "text" : "password"}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && credentialsDirty && !credentialsMutation.isPending) {
+                        e.preventDefault();
+                        handleSave();
+                      }
+                    }}
+                    placeholder="O'zgartirmaslik uchun bo'sh qoldiring"
+                    autoComplete="new-password"
+                    disabled={credentialsMutation.isPending}
+                    className="w-full rounded-xl border border-[var(--color-border)] bg-white px-3.5 py-2.5 pr-10 text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[var(--color-primary)] disabled:opacity-60"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword((v) => !v)}
+                    aria-label={showNewPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                  >
+                    {showNewPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+                  </button>
+                </div>
+
+                {newPassword && (
+                  <>
+                    <input
+                      type={showNewPassword ? "text" : "password"}
+                      value={confirmNewPassword}
+                      onChange={(e) => setConfirmNewPassword(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && credentialsDirty && !credentialsMutation.isPending) {
+                          e.preventDefault();
+                          handleSave();
+                        }
+                      }}
+                      placeholder="Yangi parolni tasdiqlang"
+                      autoComplete="new-password"
+                      disabled={credentialsMutation.isPending}
+                      className="mt-2 w-full rounded-xl border border-[var(--color-border)] bg-white px-3.5 py-2.5 text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[var(--color-primary)] disabled:opacity-60"
+                    />
+                    <div className="mt-2.5">
+                      <PasswordChecklist rules={getPasswordRules(newPassword, confirmNewPassword)} />
+                    </div>
+                  </>
+                )}
+              </div>
             )}
+
+            {credentialsError && <p className="text-xs text-[var(--color-danger)]">{credentialsError}</p>}
           </div>
         ) : (
           <div className="space-y-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] p-4">
@@ -355,14 +527,36 @@ export function EmployeeDetailModal({
           </div>
         )}
 
-        {isSubjectTeacherPosition(employee.position) && <EmployeeTopics slug={slug} employeeId={employee.id} />}
+        {isSubjectTeacherPosition(employee.position) && (
+          <EmployeeTopics
+            slug={slug}
+            employeeId={employee.id}
+            managedByAdmin={topicsManagedByAdmin}
+            onManagedByAdminChange={setTopicsManagedByAdmin}
+          />
+        )}
+
+        {topicsSaveError && <p className="text-xs text-[var(--color-danger)]">{topicsSaveError}</p>}
 
         <div className="flex justify-end pt-1">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            Yopish
-          </Button>
+          {dirty ? (
+            <Button
+              type="button"
+              variant="info"
+              loading={credentialsMutation.isPending || topicsSettingMutation.isPending}
+              onClick={handleSave}
+            >
+              Saqlash
+            </Button>
+          ) : (
+            <Button type="button" variant="secondary" onClick={onClose}>
+              Yopish
+            </Button>
+          )}
         </div>
       </div>
+
+      <Toast toast={toast} onDismiss={() => setToast(null)} />
     </Modal>
   );
 }

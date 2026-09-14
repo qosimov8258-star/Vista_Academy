@@ -23,7 +23,13 @@ import clsx from "clsx";
 export default function LessonTopicsPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const { user } = useAuth();
-  const canWrite = canWriteTeaching(user?.role);
+  // Administrator xodim tafsilotida "Mavzu qo'shasizmi?"ni yoqib saqlagan
+  // bo'lsa, o'qituvchining o'zi bu yerdan yangi mavzu qo'sha olmaydi — buni
+  // administrator markazlashtirib boshqaradi. Serverda ham bloklangan
+  // (`LessonTopicsService.resolveActingEmployeeId`). Bu cheklov faqat
+  // mavzuga tegishli — test savollarini o'qituvchi har doim o'zi tuzadi.
+  const canWriteTopics = canWriteTeaching(user?.role) && !user?.topicsManagedByAdmin;
+  const canWriteQuestions = canWriteTeaching(user?.role);
   const { branchId: forcedBranchId } = useBranchContext(slug);
   const [groupId, setGroupId] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -32,6 +38,7 @@ export default function LessonTopicsPage({ params }: { params: Promise<{ slug: s
     topic: null,
   });
   const [deletingTopic, setDeletingTopic] = useState<LessonTopic | null>(null);
+  const [quickQuestionModalOpen, setQuickQuestionModalOpen] = useState(false);
 
   const groupsQuery = useQuery({
     queryKey: ["groups", slug, forcedBranchId],
@@ -71,14 +78,25 @@ export default function LessonTopicsPage({ params }: { params: Promise<{ slug: s
             Dars mavzulari va ularga tegishli test savollari banki
           </p>
         </div>
-        {canWrite && (
-          <Button onClick={() => setTopicModal({ open: true, topic: null })} disabled={!groupId}>
-            + Yangi mavzu qo&apos;shish
-          </Button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {canWriteQuestions && (
+            <Button
+              variant="outline"
+              onClick={() => setQuickQuestionModalOpen(true)}
+              disabled={!groupId || !topicsQuery.data || topicsQuery.data.length === 0}
+            >
+              + Savol qo&apos;shish
+            </Button>
+          )}
+          {canWriteTopics && (
+            <Button onClick={() => setTopicModal({ open: true, topic: null })} disabled={!groupId}>
+              + Yangi mavzu qo&apos;shish
+            </Button>
+          )}
+        </div>
       </div>
 
-      {!canWrite && <ViewOnlyNote role={user?.role} />}
+      {!canWriteTopics && <ViewOnlyNote role={user?.role} />}
 
       <Card className="p-4">
         {groupsQuery.isLoading ? (
@@ -110,16 +128,20 @@ export default function LessonTopicsPage({ params }: { params: Promise<{ slug: s
         <EmptyState
           icon={<QuestionIcon className="h-[26px] w-[26px]" />}
           title="Hali mavzu yo'q"
-          description={canWrite ? "\"+ Yangi mavzu qo'shish\" tugmasi orqali birinchi mavzuni qo'shing" : undefined}
+          description={
+            canWriteTopics ? "\"+ Yangi mavzu qo'shish\" tugmasi orqali birinchi mavzuni qo'shing" : undefined
+          }
         />
       ) : (
         <div className="space-y-3">
-          {topicsQuery.data.map((topic) => (
+          {topicsQuery.data.map((topic, index) => (
             <TopicRow
               key={topic.id}
               slug={slug}
               topic={topic}
-              canWrite={canWrite}
+              index={index}
+              canWriteTopic={canWriteTopics}
+              canWriteQuestions={canWriteQuestions}
               expanded={expandedId === topic.id}
               onToggle={() => setExpandedId((current) => (current === topic.id ? null : topic.id))}
               onEdit={() => setTopicModal({ open: true, topic })}
@@ -129,13 +151,23 @@ export default function LessonTopicsPage({ params }: { params: Promise<{ slug: s
         </div>
       )}
 
-      {canWrite && groupId && (
+      {canWriteTopics && groupId && (
         <TopicModal
           open={topicModal.open}
           onClose={() => setTopicModal({ open: false, topic: null })}
           slug={slug}
           groupId={groupId}
           topic={topicModal.topic}
+        />
+      )}
+
+      {canWriteQuestions && groupId && (
+        <TopicQuestionModal
+          open={quickQuestionModalOpen}
+          onClose={() => setQuickQuestionModalOpen(false)}
+          slug={slug}
+          topics={topicsQuery.data ?? []}
+          question={null}
         />
       )}
 
@@ -162,7 +194,9 @@ export default function LessonTopicsPage({ params }: { params: Promise<{ slug: s
 function TopicRow({
   slug,
   topic,
-  canWrite,
+  index,
+  canWriteTopic,
+  canWriteQuestions,
   expanded,
   onToggle,
   onEdit,
@@ -170,7 +204,9 @@ function TopicRow({
 }: {
   slug: string;
   topic: LessonTopic;
-  canWrite: boolean;
+  index: number;
+  canWriteTopic: boolean;
+  canWriteQuestions: boolean;
   expanded: boolean;
   onToggle: () => void;
   onEdit: () => void;
@@ -189,7 +225,9 @@ function TopicRow({
           </span>
           <span className="min-w-0 flex-1">
             <span className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-medium text-[var(--color-text)]">{topic.title}</span>
+              <span className="text-sm font-medium text-[var(--color-text)]">
+                {index + 1}. {topic.title}
+              </span>
               {topic.reviewDue && <Badge tone="warning">Takrorlash vaqti</Badge>}
             </span>
             <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-[var(--color-text-muted)]">
@@ -205,7 +243,7 @@ function TopicRow({
             )}
           />
         </button>
-        {canWrite && (
+        {canWriteTopic && (
           <div className="flex shrink-0 items-center gap-1">
             <button
               type="button"
@@ -227,7 +265,11 @@ function TopicRow({
         )}
       </div>
 
-      {expanded && <TopicQuestions slug={slug} topicId={topic.id} canWrite={canWrite} />}
+      {expanded && (
+        <div className="border-t border-[var(--color-separator)] bg-[var(--color-surface-sunken)]/40">
+          <TopicQuestions slug={slug} topicId={topic.id} canWrite={canWriteQuestions} />
+        </div>
+      )}
     </Card>
   );
 }
@@ -255,7 +297,7 @@ function TopicQuestions({ slug, topicId, canWrite }: { slug: string; topicId: st
   });
 
   return (
-    <div className="border-t border-[var(--color-separator)] bg-[var(--color-surface-sunken)]/40 px-5 py-4">
+    <div className="px-5 py-4">
       {detailQuery.isLoading ? (
         <LoadingState rows={2} />
       ) : detailQuery.isError ? (
