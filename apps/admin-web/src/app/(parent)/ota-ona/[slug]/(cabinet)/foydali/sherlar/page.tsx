@@ -7,13 +7,14 @@ import { BulbIcon, ChevronRightIcon } from "@/components/ui/icons";
 import styles from "../../../parent.module.css";
 import { usePoems } from "../content";
 import { useLearned } from "../store";
-import { Chip, FoydaliHeader, PoemIcon, StarIcon, TONES, TONE_CYCLE } from "../ui";
+import { Chip, EmptyCard, FoydaliHeader, ListSkeleton, LoadErrorCard, PoemIcon, StarIcon, TONES, TONE_CYCLE } from "../ui";
 
 /** She'rlar ro'yxati — tarbiyachilar qo'shgan, bolaning yoshiga mos she'rlar */
 export default function PoemsPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const base = `/ota-ona/${slug}/foydali`;
-  const { data: poems } = usePoems();
+  const poemsQuery = usePoems();
+  const poems = poemsQuery.data;
   const { has } = useLearned();
 
   return (
@@ -32,10 +33,19 @@ export default function PoemsPage({ params }: { params: Promise<{ slug: string }
         </p>
       </div>
 
-      {poems.length === 0 ? (
-        <p className="mt-10 text-center text-[15px] text-[var(--p-muted)]">
-          Hozircha she&apos;r yo&apos;q — tarbiyachi tez orada qo&apos;shadi.
-        </p>
+      {!poems ? (
+        poemsQuery.isError ? (
+          <LoadErrorCard error={poemsQuery.error} onRetry={() => poemsQuery.refetch()} loginHref={`/ota-ona/${slug}/kirish`} />
+        ) : (
+          <ListSkeleton />
+        )
+      ) : poems.length === 0 ? (
+        <EmptyCard
+          Icon={PoemIcon}
+          tone="lilac"
+          title="Hozircha she'r yo'q"
+          text="Tarbiyachi she'r qo'shishi bilan u shu yerda paydo bo'ladi."
+        />
       ) : (
         <ul className="mt-4 space-y-3">
           {poems.map((poem, i) => {

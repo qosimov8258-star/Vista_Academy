@@ -6,13 +6,14 @@ import { ClockIcon } from "@/components/ui/icons";
 import styles from "../../../parent.module.css";
 import { useTales } from "../content";
 import { useLearned } from "../store";
-import { Chip, FoydaliHeader, TaleCover } from "../ui";
+import { Chip, EmptyCard, FoydaliHeader, ListSkeleton, LoadErrorCard, TaleCover, TaleIcon } from "../ui";
 
 /** Ertaklar ro'yxati — muqovali kartalar */
 export default function TalesPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const base = `/ota-ona/${slug}/foydali`;
-  const { data: tales } = useTales();
+  const talesQuery = useTales();
+  const tales = talesQuery.data;
   const { has } = useLearned();
 
   return (
@@ -24,10 +25,19 @@ export default function TalesPage({ params }: { params: Promise<{ slug: string }
         subtitle="Uxlashdan oldin birga o'qing — oxirida bolangizga savollar bor"
       />
 
-      {tales.length === 0 ? (
-        <p className="mt-10 text-center text-[15px] text-[var(--p-muted)]">
-          Hozircha ertak yo&apos;q — tarbiyachi tez orada qo&apos;shadi.
-        </p>
+      {!tales ? (
+        talesQuery.isError ? (
+          <LoadErrorCard error={talesQuery.error} onRetry={() => talesQuery.refetch()} loginHref={`/ota-ona/${slug}/kirish`} />
+        ) : (
+          <ListSkeleton rows={2} tall />
+        )
+      ) : tales.length === 0 ? (
+        <EmptyCard
+          Icon={TaleIcon}
+          tone="sky"
+          title="Hozircha ertak yo'q"
+          text="Tarbiyachi ertak qo'shishi bilan u shu yerda paydo bo'ladi."
+        />
       ) : (
         <ul className="mt-5 space-y-4">
           {tales.map((tale) => {

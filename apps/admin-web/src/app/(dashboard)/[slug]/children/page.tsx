@@ -145,7 +145,6 @@ export default function ChildrenPage({ params }: { params: Promise<{ slug: strin
           <option value="">Barcha holatlar</option>
           <option value="ACTIVE">{STATUS_LABEL.ACTIVE}</option>
           <option value="INACTIVE">{STATUS_LABEL.INACTIVE}</option>
-          <option value="QUARANTINED">{STATUS_LABEL.QUARANTINED}</option>
         </Select>
       </Card>
 

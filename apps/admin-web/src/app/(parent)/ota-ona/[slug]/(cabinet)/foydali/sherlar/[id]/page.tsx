@@ -3,9 +3,9 @@
 import { use, useMemo, useState } from "react";
 import clsx from "clsx";
 import styles from "../../../../parent.module.css";
-import { usePoem, type Poem } from "../../content";
+import { isGone, usePoem, type Poem } from "../../content";
 import { useLearned, useTextSize } from "../../store";
-import { Chip, FoydaliHeader, LearnedButton, NotFoundCard, StarIcon, TextSizeControl, formatUzDate } from "../../ui";
+import { Chip, FoydaliHeader, LearnedButton, ListSkeleton, LoadErrorCard, NotFoundCard, StarIcon, TextSizeControl, formatUzDate } from "../../ui";
 import { SaveImageButton, useKindergartenName } from "../../save-image-button";
 import { kindergartenLabel, renderPoemImage } from "../../share-image";
 
@@ -33,7 +33,8 @@ const POEM_SIZES = [19, 22, 26] as const;
 export default function PoemPage({ params }: { params: Promise<{ slug: string; id: string }> }) {
   const { slug, id } = use(params);
   const base = `/ota-ona/${slug}/foydali`;
-  const { data: poem } = usePoem(id);
+  const poemQuery = usePoem(id);
+  const poem = poemQuery.data;
   const { has, toggle } = useLearned();
   const size = useTextSize();
   const [mode, setMode] = useState<Mode>("read");
@@ -43,11 +44,17 @@ export default function PoemPage({ params }: { params: Promise<{ slug: string; i
     return (
       <div className="mx-auto w-full max-w-[520px] px-4">
         <FoydaliHeader backHref={`${base}/sherlar`} backLabel="She'rlar" title="She'r" />
-        <NotFoundCard
-          backHref={`${base}/sherlar`}
-          backLabel="She'rlarga qaytish"
-          text="Bu she'r o'chirilgan yoki hali qo'shilmagan."
-        />
+        {!poemQuery.isError ? (
+          <ListSkeleton rows={2} tall />
+        ) : isGone(poemQuery.error) ? (
+          <NotFoundCard
+            backHref={`${base}/sherlar`}
+            backLabel="She'rlarga qaytish"
+            text="Bu she'r o'chirilgan yoki hali qo'shilmagan."
+          />
+        ) : (
+          <LoadErrorCard error={poemQuery.error} onRetry={() => poemQuery.refetch()} loginHref={`/ota-ona/${slug}/kirish`} />
+        )}
       </div>
     );
   }

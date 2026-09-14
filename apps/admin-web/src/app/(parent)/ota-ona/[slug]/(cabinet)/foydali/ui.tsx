@@ -4,6 +4,7 @@ import { useId, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import clsx from "clsx";
 import { ArrowLeftIcon } from "@/components/ui/icons";
+import { ApiError } from "@/lib/api";
 import styles from "../../parent.module.css";
 import type { Tale } from "./content";
 import { setTextSize, useTextSize } from "./store";
@@ -207,6 +208,80 @@ export function NotFoundCard({ backHref, backLabel, text }: { backHref: string; 
       >
         {backLabel}
       </Link>
+    </div>
+  );
+}
+
+/** Yuklanish paytida — kartalar shaklidagi yumshoq miltillash */
+export function ListSkeleton({ rows = 3, tall = false }: { rows?: number; tall?: boolean }) {
+  return (
+    <ul className="mt-4 space-y-3" aria-busy="true" aria-label="Yuklanmoqda">
+      {Array.from({ length: rows }, (_, i) => (
+        <li
+          key={i}
+          className={clsx(
+            "animate-pulse rounded-[24px] bg-[var(--p-card)]/70 motion-reduce:animate-none",
+            tall ? "h-[228px]" : "h-[92px]",
+          )}
+          style={{ animationDelay: `${i * 120}ms` }}
+        />
+      ))}
+    </ul>
+  );
+}
+
+/** Hali hech narsa qo'shilmagan — bo'sh sahifa emas, tushuntirish */
+export function EmptyCard({
+  Icon,
+  tone,
+  title,
+  text,
+}: {
+  Icon: (props: IconProps) => React.JSX.Element;
+  tone: Tone;
+  title: string;
+  text: string;
+}) {
+  return (
+    <div className="mt-5 flex flex-col items-center rounded-[var(--p-radius)] bg-[var(--p-card)] px-6 py-8 text-center shadow-[var(--p-shadow)]">
+      <span className={clsx("flex h-16 w-16 items-center justify-center rounded-[22px]", TONES[tone].soft, TONES[tone].ink)}>
+        <Icon className="h-9 w-9" />
+      </span>
+      <p className={`${styles.roundedFont} mt-4 text-[19px] font-extrabold text-[var(--p-ink)]`}>{title}</p>
+      <p className="mt-1 max-w-[300px] text-[14px] leading-relaxed text-[var(--p-muted)]">{text}</p>
+    </div>
+  );
+}
+
+/** Yuklab bo'lmadi: internet yo'q yoki seans tugagan */
+export function LoadErrorCard({ error, onRetry, loginHref }: { error: unknown; onRetry: () => void; loginHref: string }) {
+  const signedOut = error instanceof ApiError && error.status === 401;
+  return (
+    <div role="alert" className="mt-5 rounded-[var(--p-radius)] bg-[var(--p-card)] p-6 text-center shadow-[var(--p-shadow)]">
+      <p className={`${styles.roundedFont} text-[19px] font-extrabold text-[var(--p-ink)]`}>
+        {signedOut ? "Qayta kirish kerak" : "Yuklab bo'lmadi"}
+      </p>
+      <p className="mt-1 text-[14px] leading-relaxed text-[var(--p-muted)]">
+        {signedOut
+          ? "Kabinet parol almashgani yoki uzoq kirilmagani uchun yopilgan."
+          : "Internetni tekshirib, qayta urinib ko'ring."}
+      </p>
+      {signedOut ? (
+        <Link
+          href={loginHref}
+          className="mt-4 inline-flex rounded-full bg-[var(--p-coral)] px-5 py-2.5 text-[14px] font-bold text-white"
+        >
+          Kirish
+        </Link>
+      ) : (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mt-4 inline-flex cursor-pointer rounded-full bg-[var(--p-sunken)] px-5 py-2.5 text-[14px] font-bold text-[var(--p-ink)] transition-colors active:bg-[var(--p-line)]"
+        >
+          Qayta urinish
+        </button>
+      )}
     </div>
   );
 }
