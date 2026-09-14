@@ -13,9 +13,8 @@ import { Select } from "@/components/ui/input";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { ClockIcon, DoorIcon, PencilIcon, TeacherIcon, TrashIcon } from "@/components/ui/icons";
+import { ClockIcon, PencilIcon, TeacherIcon, TrashIcon } from "@/components/ui/icons";
 import { LessonScheduleModal } from "@/features/lessons/lesson-schedule-modal";
-import { ManageRoomsModal } from "@/features/lessons/manage-rooms-modal";
 
 const WEEKDAY_ORDER: Weekday[] = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
 const WEEKDAY_LABEL: Record<Weekday, string> = {
@@ -39,7 +38,6 @@ export default function LessonSchedulePage({ params }: { params: Promise<{ slug:
     open: false,
     schedule: null,
   });
-  const [roomsModalOpen, setRoomsModalOpen] = useState(false);
   const [deleting, setDeleting] = useState<LessonSchedule | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -89,14 +87,11 @@ export default function LessonSchedulePage({ params }: { params: Promise<{ slug:
             Dars jadvali
           </h1>
           <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">
-            Guruh darslari qaysi xonada, qaysi kunda va soatda o&apos;tishi
+            Guruh darslari qaysi kunda va soatda o&apos;tishi
           </p>
         </div>
         {canWrite && (
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setRoomsModalOpen(true)}>
-              Xonalarni boshqarish
-            </Button>
             <Button
               onClick={() => setScheduleModal({ open: true, schedule: null })}
               disabled={!groupId}
@@ -165,10 +160,6 @@ export default function LessonSchedulePage({ params }: { params: Promise<{ slug:
                       </p>
                       <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-[var(--color-text-muted)]">
                         <span className="inline-flex items-center gap-1">
-                          <DoorIcon className="h-3.5 w-3.5" />
-                          {item.room.name}
-                        </span>
-                        <span className="inline-flex items-center gap-1">
                           <TeacherIcon className="h-3.5 w-3.5" />
                           {item.employee.fullName}
                         </span>
@@ -215,8 +206,6 @@ export default function LessonSchedulePage({ params }: { params: Promise<{ slug:
           schedule={scheduleModal.schedule}
         />
       )}
-
-      {canWrite && <ManageRoomsModal open={roomsModalOpen} onClose={() => setRoomsModalOpen(false)} slug={slug} branchId={forcedBranchId} />}
 
       <ConfirmDialog
         open={!!deleting}

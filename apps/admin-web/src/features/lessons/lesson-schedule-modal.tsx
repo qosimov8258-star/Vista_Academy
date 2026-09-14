@@ -7,7 +7,7 @@ import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
-import type { Employee, Group, LessonSchedule, Room, Weekday } from "@/lib/types";
+import type { Employee, Group, LessonSchedule, Weekday } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Input, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -24,11 +24,15 @@ const WEEKDAY_OPTIONS: { value: Weekday; label: string }[] = [
 
 const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
 
+function timeToMinutes(value: string): number {
+  const [hours, minutes] = value.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
 const schema = z
   .object({
     groupId: z.string().min(1, "Guruhni tanlang"),
     employeeId: z.string().min(1, "Xodimni tanlang"),
-    roomId: z.string().min(1, "Xonani tanlang"),
     subject: z.string().optional(),
     weekday: z.enum(["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"]),
     startTime: z.string().regex(TIME_REGEX, "Vaqt HH:mm formatida bo'lishi kerak"),
@@ -73,9 +77,11 @@ export function LessonScheduleModal({
     queryFn: () => api.get<Employee[]>(`/app/employees${branchId ? `?branchId=${branchId}` : ""}`),
     enabled: open,
   });
-  const roomsQuery = useQuery({
-    queryKey: ["rooms", slug, branchId],
-    queryFn: () => api.get<Room[]>(`/app/rooms${branchId ? `?branchId=${branchId}` : ""}`),
+  // Guruhi qanday bo'lishidan qat'i nazar — bitta o'qituvchi bir vaqtda ikkita
+  // darsga yozilib qolmasin (bu faqat ogohlantiradi, saqlashni to'xtatmaydi).
+  const allSchedulesQuery = useQuery({
+    queryKey: ["lesson-schedules", slug, branchId, "all"],
+    queryFn: () => api.get<LessonSchedule[]>(`/app/lesson-schedules${branchId ? `?branchId=${branchId}` : ""}`),
     enabled: open,
   });
 
@@ -83,13 +89,13 @@ export function LessonScheduleModal({
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     values: {
       groupId: schedule?.groupId ?? groupId,
       employeeId: schedule?.employeeId ?? "",
-      roomId: schedule?.roomId ?? "",
       subject: schedule?.subject ?? "",
       weekday: schedule?.weekday ?? "MONDAY",
       startTime: schedule?.startTime ?? "09:00",
@@ -125,11 +131,33 @@ export function LessonScheduleModal({
 
   const groups = groupsQuery.data ?? [];
   const employees = employeesQuery.data ?? [];
-  const rooms = roomsQuery.data ?? [];
+
+  const watchEmployeeId = watch("employeeId");
+  const watchWeekday = watch("weekday");
+  const watchStartTime = watch("startTime");
+  const watchEndTime = watch("endTime");
+
+  const teacherConflicts = (() => {
+    if (!watchEmployeeId || !TIME_REGEX.test(watchStartTime) || !TIME_REGEX.test(watchEndTime)) return [];
+    const startMinutes = timeToMinutes(watchStartTime);
+    const endMinutes = timeToMinutes(watchEndTime);
+    if (endMinutes <= startMinutes) return [];
+    return (allSchedulesQuery.data ?? []).filter((row) => {
+      if (row.id === schedule?.id) return false;
+      if (row.employeeId !== watchEmployeeId || row.weekday !== watchWeekday) return false;
+      const rowStart = timeToMinutes(row.startTime);
+      const rowEnd = timeToMinutes(row.endTime);
+      return startMinutes < rowEnd && rowStart < endMinutes;
+    });
+  })();
 
   return (
     <Modal open={open} onClose={handleClose} title={isEdit ? "Darsni tahrirlash" : "Yangi dars"}>
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
+        <h1 className="font-heading text-center text-[28px] font-extrabold tracking-tight text-[var(--color-primary)]">
+          Vista Academy
+        </h1>
+
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
             {serverError}
@@ -154,23 +182,13 @@ export function LessonScheduleModal({
           ))}
         </Select>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Select label="Xona" error={errors.roomId?.message} {...register("roomId")}>
-            <option value="">Tanlang</option>
-            {rooms.map((room) => (
-              <option key={room.id} value={room.id}>
-                {room.name}
-              </option>
-            ))}
-          </Select>
-          <Select label="Hafta kuni" error={errors.weekday?.message} {...register("weekday")}>
-            {WEEKDAY_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </Select>
-        </div>
+        <Select label="Hafta kuni" error={errors.weekday?.message} {...register("weekday")}>
+          {WEEKDAY_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </Select>
 
         <Input label="Fan (ixtiyoriy)" placeholder="Ingliz tili" {...register("subject")} />
 
@@ -178,6 +196,16 @@ export function LessonScheduleModal({
           <Input label="Boshlanish vaqti" type="time" error={errors.startTime?.message} {...register("startTime")} />
           <Input label="Tugash vaqti" type="time" error={errors.endTime?.message} {...register("endTime")} />
         </div>
+
+        {teacherConflicts.length > 0 && (
+          <div className="rounded-lg bg-[var(--color-warning-bg)] px-3 py-2 text-sm text-[var(--color-warning)]">
+            Diqqat: bu o&apos;qituvchida shu kun va vaqtda allaqachon dars bor —{" "}
+            {teacherConflicts
+              .map((row) => `${row.group.name} guruhi, ${row.startTime}–${row.endTime}`)
+              .join("; ")}
+            .
+          </div>
+        )}
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={handleClose}>

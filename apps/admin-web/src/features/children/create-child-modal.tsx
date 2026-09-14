@@ -1,32 +1,47 @@
 "use client";
 
-import { Controller, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { api, ApiError } from "@/lib/api";
-import type { Child, Group } from "@/lib/types";
+import type { CreateChildResult, ChildCredentials, Group } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Input, Select } from "@/components/ui/input";
-import { DateOfBirthInput } from "@/components/ui/date-of-birth-input";
 import { Button } from "@/components/ui/button";
-import { PencilIcon } from "@/components/ui/icons";
-import { initials } from "@/components/ui/avatar";
+import { PasswordChecklist, getPasswordRules } from "@/components/ui/password-checklist";
+import { CredentialRow } from "@/components/ui/credential-row";
+import { EyeIcon, EyeOffIcon, CheckIcon, PencilIcon } from "@/components/ui/icons";
 import { prepareChildPhoto } from "@/lib/child-photo";
+import { initials } from "@/components/ui/avatar";
 
-const schema = z.object({
-  groupId: z.string().optional(),
-  lastName: z.string().min(2, "Familiya kamida 2 belgi"),
-  firstName: z.string().min(2, "Ism kamida 2 belgi"),
-  gender: z.enum(["MALE", "FEMALE"], { message: "Jinsini tanlang" }),
-  birthDate: z.string().optional(),
-  guardianFullName: z.string().min(2, "Ota-ona ismi kamida 2 belgi"),
-  guardianRelation: z.enum(["MOTHER", "FATHER", "GRANDPARENT", "OTHER"]),
-  guardianPhone: z
-    .string()
-    .refine((v) => v.replace(/\D/g, "").length >= 9, "Telefon raqami to'liq emas"),
-});
+const schema = z
+  .object({
+    groupId: z.string().optional(),
+    lastName: z.string().min(2, "Familiya kamida 2 belgi"),
+    firstName: z.string().min(2, "Ism kamida 2 belgi"),
+    gender: z.enum(["MALE", "FEMALE"], { message: "Jinsini tanlang" }),
+    birthDate: z.string().optional(),
+    guardianFullName: z.string().min(2, "Ota-ona ismi kamida 2 belgi"),
+    guardianRelation: z.enum(["MOTHER", "FATHER", "GRANDPARENT", "OTHER"]),
+    guardianPhone: z
+      .string()
+      .refine((v) => v.replace(/\D/g, "").length >= 9, "Telefon raqami to'liq emas"),
+    // Ixtiyoriy — bo'sh qoldirilsa backend avtomatik generatsiya qiladi
+    guardianPassword: z.string().optional(),
+    guardianConfirmPassword: z.string().optional(),
+  })
+  .superRefine((values, ctx) => {
+    if (!values.guardianPassword) return;
+    const unmet = getPasswordRules(values.guardianPassword).some((rule) => !rule.met);
+    if (unmet) {
+      ctx.addIssue({ code: "custom", path: ["guardianPassword"], message: "Parol talablarga javob bermaydi" });
+    }
+    if (values.guardianPassword !== values.guardianConfirmPassword) {
+      ctx.addIssue({ code: "custom", path: ["guardianConfirmPassword"], message: "Parollar mos kelmadi" });
+    }
+  });
 
 type FormValues = z.infer<typeof schema>;
 
@@ -37,10 +52,12 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [photoChecking, setPhotoChecking] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const [createdCredentials, setCreatedCredentials] = useState<ChildCredentials | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const {
     register,
-    control,
     handleSubmit,
     reset,
     watch,
@@ -52,6 +69,9 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
 
   const lastName = watch("lastName");
   const firstName = watch("firstName");
+  const password = watch("guardianPassword");
+  const confirmPassword = watch("guardianConfirmPassword");
+  const passwordRules = getPasswordRules(password ?? "", confirmPassword ?? "");
 
   const { data: groups } = useQuery({
     queryKey: ["groups", slug],
@@ -80,25 +100,36 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
 
   const mutation = useMutation({
     mutationFn: async (values: FormValues) => {
-      const child = await api.post<Child>("/app/children", {
-        ...values,
+      const result = await api.post<CreateChildResult>("/app/children", {
         groupId: values.groupId || undefined,
+        lastName: values.lastName,
+        firstName: values.firstName,
+        gender: values.gender,
         birthDate: values.birthDate || undefined,
+        guardianFullName: values.guardianFullName,
+        guardianRelation: values.guardianRelation,
+        guardianPhone: values.guardianPhone,
+        guardianPassword: values.guardianPassword || undefined,
       });
       // Surat bola yaratilgandan keyin alohida so'rov bilan yuklanadi; shu so'rov
       // muvaffaqiyatsiz bo'lsa ham bola yozuvi allaqachon yaratilgan hisoblanadi.
       if (photoImage) {
-        await api.put(`/app/children/${child.id}/avatar`, { image: photoImage }).catch(() => {});
+        await api.put(`/app/children/${result.id}/avatar`, { image: photoImage }).catch(() => {});
       }
-      return child;
+      return result;
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["children", slug] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-summary", slug] });
-      reset();
       setPhotoImage(null);
       setPhotoError(null);
-      onClose();
+      if (result.credentials) {
+        // Login/parol shu javobda bir marta keladi — yopishdan oldin ko'rsatiladi.
+        setCreatedCredentials(result.credentials);
+      } else {
+        reset();
+        onClose();
+      }
     },
     onError: (err) => {
       setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
@@ -110,8 +141,35 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
     setServerError(null);
     setPhotoImage(null);
     setPhotoError(null);
+    setCreatedCredentials(null);
+    setShowPassword(false);
+    setShowConfirmPassword(false);
     onClose();
   };
+
+  if (createdCredentials) {
+    return (
+      <Modal open={open} onClose={handleClose} title="Bola qo'shildi">
+        <div className="space-y-4">
+          <div className="flex flex-col items-center gap-2 text-center">
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-success-bg)] text-[var(--color-success)]">
+              <CheckIcon className="h-6 w-6" />
+            </span>
+            <p className="text-sm text-[var(--color-text-muted)]">
+              Ota-ona kabineti ochildi. Login va parolni ota-onaga bering — parol qayta ko&apos;rsatilmaydi.
+            </p>
+          </div>
+          <CredentialRow label="Login" value={createdCredentials.login} />
+          <CredentialRow label="Parol" value={createdCredentials.password} />
+          <div className="flex justify-end pt-1">
+            <Button type="button" onClick={handleClose}>
+              Yopish
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    );
+  }
 
   return (
     <Modal open={open} onClose={handleClose} title="Yangi bola">
@@ -122,6 +180,10 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
           mutation.mutate(values);
         })}
       >
+        <h1 className="font-heading text-center text-[28px] font-extrabold tracking-tight text-[var(--color-primary)]">
+          Vista Academy
+        </h1>
+
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
             {serverError}
@@ -172,7 +234,7 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
             disabled={photoChecking}
             className="cursor-pointer text-[12.5px] font-medium text-[var(--color-primary)] hover:underline disabled:opacity-60"
           >
-            {photoChecking ? "Tekshirilmoqda..." : photoImage ? "Suratni almashtirish" : "Surat qo'yish (ixtiyoriy)"}
+            {photoChecking ? "Tekshirilmoqda..." : photoImage ? "Rasmni almashtirish" : "Surat qo'yish (ixtiyoriy)"}
           </button>
           {photoError && (
             <p role="alert" className="max-w-[320px] text-center text-[12.5px] text-[var(--color-danger)]">
@@ -210,27 +272,16 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
           </Select>
         </div>
 
-        <Controller
-          control={control}
-          name="birthDate"
-          render={({ field }) => (
-            <DateOfBirthInput
-              label="Tug'ilgan sana (ixtiyoriy)"
-              value={field.value ?? ""}
-              onChange={field.onChange}
-              error={errors.birthDate?.message}
-              hint="Saqlanganda bolaga qisqa ID beriladi (masalan id14732)"
-            />
-          )}
+        <Input
+          label="Tug'ilgan sana (ixtiyoriy)"
+          type="date"
+          error={errors.birthDate?.message}
+          hint="Saqlanganda bolaga qisqa ID beriladi (masalan id14732)"
+          {...register("birthDate")}
         />
 
         <div className="space-y-4 border-t border-[var(--color-border)] pt-4">
-          <p className="text-sm font-medium text-[var(--color-text)]">
-            Aloqa uchun ota-ona
-            <span className="ml-2 font-normal text-[var(--color-text-muted)]">
-              bog&apos;cha shu raqamga qo&apos;ng&apos;iroq qiladi
-            </span>
-          </p>
+          <p className="text-sm font-medium text-[var(--color-text)]">Aloqa uchun ota-ona</p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_140px]">
             <Input
               label="Ismi va familiyasi"
@@ -253,6 +304,47 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
             error={errors.guardianPhone?.message}
             {...register("guardianPhone")}
           />
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="relative">
+              <Input
+                label="Parol (ixtiyoriy)"
+                type={showPassword ? "text" : "password"}
+                placeholder="Bo'sh qoldirilsa avtomatik beriladi"
+                error={errors.guardianPassword?.message}
+                {...register("guardianPassword")}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-3 top-[38px] cursor-pointer text-gray-400 hover:text-[var(--color-text)]"
+                aria-label={showPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+              >
+                {showPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+              </button>
+            </div>
+            <div className="relative">
+              <Input
+                label="Parolni tasdiqlang"
+                type={showConfirmPassword ? "text" : "password"}
+                error={errors.guardianConfirmPassword?.message}
+                {...register("guardianConfirmPassword")}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword((v) => !v)}
+                className="absolute right-3 top-[38px] cursor-pointer text-gray-400 hover:text-[var(--color-text)]"
+                aria-label={showConfirmPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+              >
+                {showConfirmPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+          {password && (
+            <div className="rounded-[var(--radius-md)] bg-[var(--color-surface)] p-3">
+              <PasswordChecklist rules={passwordRules} />
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end gap-2 pt-2">

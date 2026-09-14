@@ -140,6 +140,14 @@ export interface Child {
   guardians?: ChildGuardian[];
 }
 
+/** Bola yaratilganda ota-onaning kabineti ochilsa — shu javobda bir marta keladi. */
+export interface ChildCredentials {
+  login: string;
+  password: string;
+}
+
+export type CreateChildResult = Child & { credentials: ChildCredentials | null };
+
 export interface Employee {
   id: string;
   organizationId: string;
@@ -902,20 +910,11 @@ export interface ParentPurchaseResult {
 
 export type Weekday = "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY" | "SUNDAY";
 
-export interface Room {
-  id: string;
-  branchId: string;
-  name: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface LessonSchedule {
   id: string;
   branchId: string;
   groupId: string;
   employeeId: string;
-  roomId: string;
   subject: string | null;
   weekday: Weekday;
   startTime: string;
@@ -923,8 +922,16 @@ export interface LessonSchedule {
   createdAt: string;
   updatedAt: string;
   group: { id: string; name: string };
-  room: { id: string; name: string };
   employee: { id: string; fullName: string };
+}
+
+export interface EmployeeNotification {
+  id: string;
+  branchId: string;
+  employeeId: string;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
 }
 
 export interface TopicQuestion {

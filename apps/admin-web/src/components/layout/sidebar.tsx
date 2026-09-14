@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { usePathname, useParams, useRouter } from "next/navigation";
 import { useRef, useState, type SyntheticEvent } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import type { EmployeeNotification } from "@/lib/types";
 import { clearTenantTokens, getTenantRefreshToken } from "@/lib/tenant-session";
 import clsx from "clsx";
 import type { ComponentType } from "react";
@@ -130,6 +131,14 @@ export function Sidebar({ slug }: { slug: string }) {
   const showUsersNav = canManageUsers(user?.role);
   const showUseful = canViewUseful(user?.role);
   const teacher = isTeacher(user?.role);
+  // Yon paneldagi "Bildirishnomalarim" belgisi uchun — daqiqada bir marta yangilanadi.
+  const notificationsQuery = useQuery({
+    queryKey: ["employee-notifications", slug],
+    queryFn: () => api.get<EmployeeNotification[]>("/app/employee-notifications"),
+    enabled: teacher,
+    refetchInterval: 60_000,
+  });
+  const unreadNotificationsCount = notificationsQuery.data?.filter((n) => !n.isRead).length ?? 0;
   const params = useParams<{ branchSlug?: string }>();
   const { branch } = useBranchContext(slug);
   // A NETWORK_ADMIN who hasn't drilled into a specific branch only manages
@@ -175,6 +184,13 @@ export function Sidebar({ slug }: { slug: string }) {
   // ochilmaydi ham — server tomonda ham yopiq.
   const teacherEntries: NavEntry[] = [
     { href: `/${slug}`, label: "Bosh sahifa", icon: HomeIcon, show: true, exact: true },
+    {
+      href: `/${slug}/my-notifications`,
+      label: "Bildirishnomalarim",
+      icon: BellIcon,
+      show: true,
+      badge: unreadNotificationsCount > 0 ? unreadNotificationsCount : undefined,
+    },
     {
       id: "guruhlarim",
       label: "Mening guruhlarim",

@@ -14,11 +14,6 @@ export class UpdateLessonScheduleDto {
   @IsString()
   employeeId?: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  roomId?: string;
-
   @ApiPropertyOptional({ example: "Ingliz tili" })
   @IsOptional()
   @IsString()

@@ -53,6 +53,9 @@ export class ChildrenService {
               fullName: dto.guardianFullName,
               phone: dto.guardianPhone,
               relation: dto.guardianRelation,
+              // Har doim beriladi (bo'sh bo'lsa ham) — bola yaratilishi bilanoq
+              // ota-onaning kabineti ochilishi kerak.
+              password: dto.guardianPassword ?? "",
             },
           },
           childInclude,
@@ -62,11 +65,11 @@ export class ChildrenService {
     await this.auditLog.logFromUser(caller, {
       action: "child.create",
       entityType: "Child",
-      entityId: created.id,
+      entityId: created.child.id,
       branchId,
-      summary: `${created.fullName} ro'yxatga olindi`,
+      summary: `${created.child.fullName} ro'yxatga olindi`,
     });
-    return created;
+    return { ...created.child, credentials: created.credentials };
   }
 
   async findAll(scope: TenantScope, query: ChildQueryDto) {

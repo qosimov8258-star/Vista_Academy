@@ -478,6 +478,58 @@ export class BillingService {
     }
   }
 
+  /**
+   * Muddatiga besh kun yoki undan kam qolgan (lekin hali o'tmagan)
+   * fakturalar uchun `PAYMENT_DUE` bildirishnomasi — `syncOverdueNotifications`
+   * bilan bir xil naqsh: bola boshiga kuniga bittadan, muddat kuni o'zi esa
+   * darhol `PAYMENT_OVERDUE` ga o'tadi (yuqoriga qarang), shuning uchun bu
+   * yerda qatnashmaydi.
+   */
+  async syncPaymentDueNotifications(scope: TenantScope): Promise<void> {
+    const now = new Date();
+    const horizon = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000);
+    const dueSoon = await this.prisma.invoice.findMany({
+      where: {
+        organizationId: scope.organizationId,
+        branchId: scope.branchId ?? undefined,
+        status: { in: [InvoiceStatus.PENDING, InvoiceStatus.PARTIALLY_PAID] },
+        dueDate: { gt: now, lte: horizon },
+      },
+      select: { branchId: true, childId: true, dueDate: true, child: { select: { fullName: true } } },
+    });
+    if (dueSoon.length === 0) return;
+
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const alreadyNotified = await this.prisma.notificationLog.findMany({
+      where: {
+        childId: { in: dueSoon.map((invoice) => invoice.childId) },
+        eventType: "PAYMENT_DUE",
+        createdAt: { gte: todayStart },
+      },
+      select: { childId: true },
+    });
+    const notified = new Set(alreadyNotified.map((n) => n.childId));
+
+    for (const invoice of dueSoon) {
+      if (notified.has(invoice.childId)) continue;
+      notified.add(invoice.childId);
+      const link = await this.prisma.childGuardian.findFirst({
+        where: { childId: invoice.childId, canReceiveNotifications: true },
+        include: { guardian: true },
+        orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+      });
+      await this.notifications.logSystemEvent({
+        organizationId: scope.organizationId,
+        branchId: invoice.branchId,
+        childId: invoice.childId,
+        eventType: "PAYMENT_DUE",
+        recipientName: link?.guardian.fullName ?? "Ota-ona",
+        message: `${invoice.child.fullName} uchun to'lov muddati yaqinlashmoqda (${invoice.dueDate.toISOString().slice(0, 10)}).`,
+      });
+    }
+  }
+
   /** Bosh sahifadagi "eng ko'p qarzdorlar" vidjeti uchun. */
   async topDebtors(scope: TenantScope, limit = 5) {
     const branchId = scope.branchId;
