@@ -903,3 +903,76 @@ export interface LessonGradeDay {
   date: string;
   children: LessonGradeChild[];
 }
+
+/* ------------------------------------------------------------------ */
+/* Foydali — she'rlar, maqollar, ertaklar                              */
+/* ------------------------------------------------------------------ */
+
+export type UsefulStatus = "DRAFT" | "PUBLISHED";
+
+interface UsefulCreatedBy {
+  id: string;
+  fullName: string;
+}
+
+interface UsefulGroupRef {
+  id: string;
+  name: string;
+}
+
+/** `GET/POST/PATCH /app/useful/poems` — tarbiyachi tomoni. */
+export interface Poem {
+  id: string;
+  branchId: string;
+  /** null — butun filial uchun. */
+  groupId: string | null;
+  title: string;
+  author: string | null;
+  ageFrom: number;
+  ageTo: number;
+  /** Bandlar: har biri qatorlar massivi. */
+  stanzas: string[][];
+  status: UsefulStatus;
+  createdById: string;
+  createdBy: UsefulCreatedBy;
+  group: UsefulGroupRef | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** `GET/POST/PATCH /app/useful/proverbs` — tarbiyachi tomoni. */
+export interface Proverb {
+  id: string;
+  branchId: string;
+  groupId: string | null;
+  text: string;
+  meaning: string;
+  status: UsefulStatus;
+  createdById: string;
+  createdBy: UsefulCreatedBy;
+  group: UsefulGroupRef | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** `GET/POST/PATCH /app/useful/tales` — tarbiyachi tomoni. */
+export interface Tale {
+  id: string;
+  branchId: string;
+  groupId: string | null;
+  title: string;
+  origin: string;
+  minutes: number;
+  paragraphs: string[];
+  moral: string;
+  questions: string[];
+  cover: string;
+  ageFrom: number;
+  ageTo: number;
+  status: UsefulStatus;
+  createdById: string;
+  createdBy: UsefulCreatedBy;
+  group: UsefulGroupRef | null;
+  createdAt: string;
+  updatedAt: string;
+}

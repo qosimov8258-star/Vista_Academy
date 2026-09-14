@@ -11,7 +11,7 @@ import { useAuth } from "@/lib/use-auth";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { useSidebarCollapsed } from "@/lib/use-sidebar-collapsed";
 import { useSidebarSections } from "@/lib/use-sidebar-sections";
-import { canManageUsers, isTeacher } from "@/lib/permissions";
+import { canManageUsers, canViewUseful, isTeacher } from "@/lib/permissions";
 import { formatPositionLabel } from "@/lib/employee-position";
 import { Avatar } from "@/components/ui/avatar";
 import type { IconProps } from "@/components/ui/icons";
@@ -21,6 +21,7 @@ import {
   BookIcon,
   BriefcaseIcon,
   BuildingIcon,
+  BulbIcon,
   CalendarIcon,
   ChartIcon,
   ChecklistIcon,
@@ -102,6 +103,7 @@ export function Sidebar({ slug }: { slug: string }) {
   // "Matematika o'qituvchisi"), boshqa lavozimlarda lavozim nomining o'zi.
   const positionLabel = user?.position ? formatPositionLabel(user.position, user.subjects) : null;
   const showUsersNav = canManageUsers(user?.role);
+  const showUseful = canViewUseful(user?.role);
   const teacher = isTeacher(user?.role);
   const params = useParams<{ branchSlug?: string }>();
   const { branch } = useBranchContext(slug);
@@ -172,6 +174,16 @@ export function Sidebar({ slug }: { slug: string }) {
         { href: `/${slug}/my-lessons/grades`, label: "Baholari", icon: StarIcon, show: true },
       ],
     },
+    {
+      id: "foydali",
+      label: "Foydali",
+      icon: BulbIcon,
+      items: [
+        { href: `/${slug}/useful/poems`, label: "She'rlar", icon: NoteIcon, show: showUseful },
+        { href: `/${slug}/useful/proverbs`, label: "Maqollar", icon: BulbIcon, show: showUseful },
+        { href: `/${slug}/useful/tales`, label: "Ertaklar", icon: BookIcon, show: showUseful },
+      ],
+    },
   ];
 
   const operationalEntries: NavEntry[] = [
@@ -206,6 +218,16 @@ export function Sidebar({ slug }: { slug: string }) {
         { href: `${base}/nutrition`, label: "Ovqatlanish", icon: MealIcon, show: true },
         // O'zi bilan xonalar katalogini ham boshqaradi — alohida nav shart emas
         { href: `${base}/lessons/schedule`, label: "Dars jadvali", icon: CalendarIcon, show: true },
+      ],
+    },
+    {
+      id: "foydali",
+      label: "Foydali",
+      icon: BulbIcon,
+      items: [
+        { href: `${base}/useful/poems`, label: "She'rlar", icon: NoteIcon, show: showUseful },
+        { href: `${base}/useful/proverbs`, label: "Maqollar", icon: BulbIcon, show: showUseful },
+        { href: `${base}/useful/tales`, label: "Ertaklar", icon: BookIcon, show: showUseful },
       ],
     },
     {
