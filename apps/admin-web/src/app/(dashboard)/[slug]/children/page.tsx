@@ -20,6 +20,7 @@ import { formatChildId, formatDate } from "@/lib/format";
 import { downloadCsv } from "@/lib/download";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { CreateChildModal } from "@/features/children/create-child-modal";
+import { EditChildModal } from "@/features/children/edit-child-modal";
 import { canWriteOperational } from "@/lib/permissions";
 
 const STATUS_LABEL: Record<string, string> = { ACTIVE: "Faol", INACTIVE: "Nofaol", QUARANTINED: "Karantinda" };
@@ -42,6 +43,7 @@ export default function ChildrenPage({ params }: { params: Promise<{ slug: strin
   const [groupFilter, setGroupFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
+  const [editingChild, setEditingChild] = useState<Child | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const { user } = useAuth();
@@ -181,6 +183,7 @@ export default function ChildrenPage({ params }: { params: Promise<{ slug: strin
                 {!forcedBranchId && <Th>Filial</Th>}
                 <Th>Guruh</Th>
                 <Th>Holat</Th>
+                {canWrite && <Th />}
               </tr>
             </THead>
             <TBody>
@@ -230,6 +233,13 @@ export default function ChildrenPage({ params }: { params: Promise<{ slug: strin
                   <Td>
                     <Badge tone={STATUS_TONE[child.status]}>{STATUS_LABEL[child.status]}</Badge>
                   </Td>
+                  {canWrite && (
+                    <Td className="text-right">
+                      <Button size="sm" variant="outline" onClick={() => setEditingChild(child)}>
+                        Tahrirlash
+                      </Button>
+                    </Td>
+                  )}
                 </Tr>
               ))}
             </TBody>
@@ -257,6 +267,9 @@ export default function ChildrenPage({ params }: { params: Promise<{ slug: strin
       )}
 
       {canWrite && <CreateChildModal open={createOpen} onClose={() => setCreateOpen(false)} slug={slug} />}
+      {canWrite && editingChild && (
+        <EditChildModal open={!!editingChild} onClose={() => setEditingChild(null)} slug={slug} child={editingChild} />
+      )}
     </div>
   );
 }

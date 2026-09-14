@@ -15,6 +15,7 @@ import { formatDate } from "@/lib/format";
 import { downloadCsv } from "@/lib/download";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { EditMenuModal } from "@/features/nutrition/edit-menu-modal";
+import { WeeklyMenuModal } from "@/features/nutrition/weekly-menu-modal";
 import { DishCatalogCard } from "@/features/nutrition/dish-catalog-card";
 import { canWriteOperational } from "@/lib/permissions";
 
@@ -47,6 +48,7 @@ export default function NutritionPage({ params }: { params: Promise<{ slug: stri
   // in an effect (client-only) avoids a hydration mismatch on the date text below.
   const [weekStart, setWeekStart] = useState<string | null>(null);
   const [editDate, setEditDate] = useState<string | null>(null);
+  const [weeklyMenuOpen, setWeeklyMenuOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
@@ -148,9 +150,16 @@ export default function NutritionPage({ params }: { params: Promise<{ slug: stri
           </h1>
           <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">Haftalik menyu</p>
         </div>
-        <Button variant="outline" loading={exporting} disabled={!weekStart} onClick={handleExport}>
-          Eksport (CSV)
-        </Button>
+        <div className="flex items-center gap-2">
+          {canWrite && (
+            <Button variant="outline" disabled={!weekStart} onClick={() => setWeeklyMenuOpen(true)}>
+              Haftalik menyu
+            </Button>
+          )}
+          <Button variant="outline" loading={exporting} disabled={!weekStart} onClick={handleExport}>
+            Eksport (CSV)
+          </Button>
+        </div>
       </div>
 
       {exportError && (
@@ -159,18 +168,7 @@ export default function NutritionPage({ params }: { params: Promise<{ slug: stri
         </div>
       )}
 
-      <Card className="flex flex-col gap-4 p-5 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-col gap-3 sm:flex-row">
-          {!forcedBranchId && branches.length > 1 && (
-            <Select label="Filial" value={branchId} onChange={(e) => setBranchId(e.target.value)} className="sm:max-w-xs">
-              {branches.map((branch) => (
-                <option key={branch.id} value={branch.id}>
-                  {branch.name}
-                </option>
-              ))}
-            </Select>
-          )}
-        </div>
+      <Card className="flex flex-col gap-4 p-5 sm:flex-row sm:items-end">
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
@@ -192,6 +190,17 @@ export default function NutritionPage({ params }: { params: Promise<{ slug: stri
             Keyingi hafta →
           </Button>
         </div>
+        {!forcedBranchId && branches.length > 1 && (
+          <div className="sm:ml-auto sm:max-w-xs">
+            <Select label="Filial" value={branchId} onChange={(e) => setBranchId(e.target.value)}>
+              {branches.map((branch) => (
+                <option key={branch.id} value={branch.id}>
+                  {branch.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+        )}
       </Card>
 
       {!canWrite && <ViewOnlyNote role={user?.role} />}
@@ -278,6 +287,16 @@ export default function NutritionPage({ params }: { params: Promise<{ slug: stri
           slug={slug}
           date={editDate}
           entry={entryByDate.get(editDate) ?? null}
+        />
+      )}
+
+      {canWrite && weeklyMenuOpen && (
+        <WeeklyMenuModal
+          open={weeklyMenuOpen}
+          onClose={() => setWeeklyMenuOpen(false)}
+          slug={slug}
+          days={days}
+          entryByDate={entryByDate}
         />
       )}
 

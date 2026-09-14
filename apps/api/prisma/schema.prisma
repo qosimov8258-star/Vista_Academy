@@ -269,8 +269,8 @@ model Branch {
   payrollEntries         PayrollEntry[]
   notificationLogs       NotificationLog[]
   auditLogs              AuditLog[]
-  rooms                  Room[]
   lessonSchedules        LessonSchedule[]
+  employeeNotifications  EmployeeNotification[]
   lessonTopics           LessonTopic[]
   lessonGrades           LessonGrade[]
 
@@ -501,6 +501,7 @@ model Employee {
   lessonTopics    LessonTopic[]
   lessonGrades    LessonGrade[]
   employeeTopics  EmployeeTopic[]
+  notifications   EmployeeNotification[]
 
   @@index([organizationId, branchId])
   @@map("employees")
@@ -700,27 +701,11 @@ enum Weekday {
   SUNDAY
 }
 
-model Room {
-  id        String   @id @default(uuid())
-  branchId  String   @map("branch_id")
-  name      String
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  branch    Branch           @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  schedules LessonSchedule[]
-
-  @@unique([branchId, name])
-  @@index([branchId])
-  @@map("rooms")
-}
-
 model LessonSchedule {
   id         String   @id @default(uuid())
   branchId   String   @map("branch_id")
   groupId    String   @map("group_id")
   employeeId String   @map("employee_id")
-  roomId     String   @map("room_id")
   subject    String?
   weekday    Weekday
   startTime  String   @map("start_time")
@@ -731,13 +716,28 @@ model LessonSchedule {
   branch   Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
   group    Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
   employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  room     Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
 
   @@index([branchId])
-  @@index([groupId])
+  @@index([groupId, weekday])
   @@index([employeeId])
-  @@index([roomId, weekday])
   @@map("lesson_schedules")
+}
+
+/** Dars jadvali belgilanganda/o'zgarganda tegishli xodimga (o'qituvchiga) ko'rinadigan bildirishnoma. */
+model EmployeeNotification {
+  id         String   @id @default(uuid())
+  branchId   String   @map("branch_id")
+  employeeId String   @map("employee_id")
+  message    String
+  isRead     Boolean  @default(false) @map("is_read")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  branch   Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId, isRead])
+  @@index([branchId])
+  @@map("employee_notifications")
 }
 
 model LessonTopic {

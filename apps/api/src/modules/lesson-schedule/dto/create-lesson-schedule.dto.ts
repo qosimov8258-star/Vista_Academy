@@ -14,10 +14,6 @@ export class CreateLessonScheduleDto {
   @IsString()
   employeeId!: string;
 
-  @ApiProperty()
-  @IsString()
-  roomId!: string;
-
   @ApiPropertyOptional({ example: "Ingliz tili" })
   @IsOptional()
   @IsString()

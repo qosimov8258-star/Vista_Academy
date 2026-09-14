@@ -16,23 +16,10 @@ const eventTypeOptions: { value: NotificationEventType; label: string }[] = [
   { value: "CHILD_ABSENT", label: "Bola kelmadi" },
   { value: "DAILY_REPORT_READY", label: "Kundalik hisobot tayyor" },
   { value: "PAYMENT_DUE", label: "To'lov muddati" },
-  { value: "PAYMENT_OVERDUE", label: "To'lov kechikdi" },
-  { value: "VACCINATION_DUE", label: "Vaksinatsiya muddati" },
-  { value: "QUARANTINE_ALERT", label: "Karantin xabari" },
-  { value: "LEAD_FOLLOW_UP", label: "Ariza bo'yicha aloqa" },
 ];
 
 const schema = z.object({
-  eventType: z.enum([
-    "CHILD_ABSENT",
-    "DAILY_REPORT_READY",
-    "PAYMENT_DUE",
-    "PAYMENT_OVERDUE",
-    "VACCINATION_DUE",
-    "QUARANTINE_ALERT",
-    "LEAD_FOLLOW_UP",
-    "CUSTOM",
-  ]),
+  eventType: z.enum(["CHILD_ABSENT", "DAILY_REPORT_READY", "PAYMENT_DUE", "CUSTOM"]),
   childId: z.string().optional(),
   recipientName: z.string().min(2, "Qabul qiluvchi ismi kamida 2 belgi"),
   recipientContact: z.string().optional(),
@@ -93,6 +80,10 @@ export function CreateNotificationModal({ open, onClose, slug }: { open: boolean
   return (
     <Modal open={open} onClose={handleClose} title="Yangi bildirishnoma yozuvi">
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
+        <h1 className="font-heading text-center text-[28px] font-extrabold tracking-tight text-[var(--color-primary)]">
+          Vista Academy
+        </h1>
+
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
             {serverError}

@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { ComponentType, SVGProps } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { DashboardSummary, Group, Organization } from "@/lib/types";
+import type { DashboardSummary, Group, LessonSchedule, Organization, Weekday } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,7 @@ import {
   ChecklistIcon,
   ChevronRightIcon,
   ChildIcon,
+  ClockIcon,
   GroupIcon,
   MealIcon,
   MoneyIcon,
@@ -28,6 +29,17 @@ import {
   PhoneIcon,
   TeacherIcon,
 } from "@/components/ui/icons";
+
+/** JS `Date.getDay()` (0=yakshanba) dan bazadagi Weekday enumiga o'tkazish. */
+const WEEKDAY_BY_JS_DAY: Weekday[] = [
+  "SUNDAY",
+  "MONDAY",
+  "TUESDAY",
+  "WEDNESDAY",
+  "THURSDAY",
+  "FRIDAY",
+  "SATURDAY",
+];
 
 const QUICK_ACTIONS = [
   { label: "Arizalar (CRM)", icon: PhoneIcon, suffix: "crm" },
@@ -221,6 +233,17 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
     queryFn: () => api.get<Group[]>("/app/groups"),
     enabled: teacher,
   });
+
+  // O'qituvchida bu so'rov ham faqat unga biriktirilgan guruhlar darslarini qaytaradi
+  const lessonSchedulesQuery = useQuery({
+    queryKey: ["lesson-schedules", slug, "dashboard"],
+    queryFn: () => api.get<LessonSchedule[]>("/app/lesson-schedules"),
+    enabled: teacher,
+  });
+  const todayWeekday = WEEKDAY_BY_JS_DAY[new Date().getDay()];
+  const todaysLessons = (lessonSchedulesQuery.data ?? [])
+    .filter((lesson) => lesson.weekday === todayWeekday)
+    .sort((a, b) => a.startTime.localeCompare(b.startTime));
 
   if (orgQuery.isLoading) return <LoadingState rows={4} />;
   if (orgQuery.isError) return <ErrorState message={(orgQuery.error as Error).message} />;
@@ -561,6 +584,34 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
                   highlight={(summary?.pendingNotificationsCount ?? 0) > 0}
                 />
               </div>
+            </section>
+          )}
+
+          {teacher && (
+            <section>
+              <SectionTitle>Bugungi darslarim</SectionTitle>
+              {todaysLessons.length > 0 ? (
+                <div className="space-y-2">
+                  {todaysLessons.map((lesson) => (
+                    <Card key={lesson.id} className="flex items-center gap-3 p-3.5">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
+                        <ClockIcon className="h-[18px] w-[18px]" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-[var(--color-text)]">
+                          {lesson.startTime} – {lesson.endTime}
+                          {lesson.subject && (
+                            <span className="text-[var(--color-text-muted)]"> · {lesson.subject}</span>
+                          )}
+                        </p>
+                        <p className="text-xs text-[var(--color-text-muted)]">{lesson.group.name} guruhi</p>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState icon={<ClockIcon className="h-[26px] w-[26px]" />} title="Bugun darsingiz yo'q" />
+              )}
             </section>
           )}
 

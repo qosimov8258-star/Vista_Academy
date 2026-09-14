@@ -32,6 +32,7 @@ export class TenantDashboardService {
     // Bildirishnomalar sahifasida ko'rinishidan oldin, hozirgi holatga mos
     // ravishda yetishmayotganlarini to'ldirib qo'yamiz.
     await this.billingService.syncOverdueNotifications(scope);
+    await this.billingService.syncPaymentDueNotifications(scope);
 
     // Filial darajasidagi vidjetlar (diqqat, tug'ilgan kun, guruh
     // to'lganligi, qarzdorlar) faqat bitta filialga biriktirilgan

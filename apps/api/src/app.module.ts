@@ -25,8 +25,8 @@ import { NutritionModule } from "./modules/nutrition/nutrition.module";
 import { DishesModule } from "./modules/dishes/dishes.module";
 import { AuditLogModule } from "./modules/audit-log/audit-log.module";
 import { DailyReportsModule } from "./modules/daily-reports/daily-reports.module";
-import { RoomsModule } from "./modules/rooms/rooms.module";
 import { LessonScheduleModule } from "./modules/lesson-schedule/lesson-schedule.module";
+import { EmployeeNotificationsModule } from "./modules/employee-notifications/employee-notifications.module";
 import { LessonTopicsModule } from "./modules/lesson-topics/lesson-topics.module";
 import { LessonGradesModule } from "./modules/lesson-grades/lesson-grades.module";
 import { DevelopmentModule } from "./modules/development/development.module";
@@ -67,8 +67,8 @@ import { ParentModule } from "./modules/parent/parent.module";
     DishesModule,
     AuditLogModule,
     DailyReportsModule,
-    RoomsModule,
     LessonScheduleModule,
+    EmployeeNotificationsModule,
     LessonTopicsModule,
     LessonGradesModule,
     DevelopmentModule,
