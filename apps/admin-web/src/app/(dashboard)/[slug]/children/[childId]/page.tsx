@@ -45,7 +45,6 @@ import { EditHealthProfileModal, BLOOD_TYPE_LABEL } from "@/features/child-healt
 import { AddVaccinationModal } from "@/features/child-health/add-vaccination-modal";
 import { UpdateVaccinationModal } from "@/features/child-health/update-vaccination-modal";
 import { AddMedicationModal } from "@/features/child-health/add-medication-modal";
-import { QuarantineModal } from "@/features/child-health/quarantine-modal";
 import { AddGuardianModal } from "@/features/guardians/add-guardian-modal";
 import { ParentCabinetModal } from "@/features/guardians/parent-cabinet-modal";
 import { EditGuardianLinkModal } from "@/features/guardians/edit-guardian-link-modal";
@@ -150,7 +149,6 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
   const [vaccinationOpen, setVaccinationOpen] = useState(false);
   const [updatingVaccination, setUpdatingVaccination] = useState<Vaccination | null>(null);
   const [medicationOpen, setMedicationOpen] = useState(false);
-  const [quarantineOpen, setQuarantineOpen] = useState(false);
   const [guardianOpen, setGuardianOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<ChildGuardian | null>(null);
   const [deletingLink, setDeletingLink] = useState<ChildGuardian | null>(null);
@@ -261,14 +259,6 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
       setPhotoChecking(false);
     }
   };
-
-  const clearQuarantineMutation = useMutation({
-    mutationFn: () => api.delete(`/app/children/${childId}/quarantine`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["child", slug, childId] });
-      queryClient.invalidateQueries({ queryKey: ["children", slug] });
-    },
-  });
 
   if (childQuery.isLoading) return <LoadingState />;
   if (childQuery.isError) return <ErrorState message={(childQuery.error as Error).message} />;
@@ -401,7 +391,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
             </h2>
             <p className="text-[12.5px] text-[var(--color-text-muted)]">Telefon raqamini bosib nusxalang</p>
           </div>
-          {canWrite && (
+          {canWrite && guardiansQuery.isSuccess && guardiansQuery.data.length === 0 && (
             <Button size="sm" variant="outline" onClick={() => setGuardianOpen(true)}>
               + Ota-ona qo&apos;shish
             </Button>
@@ -490,44 +480,6 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
       </Card>
 
       {!canWrite && <ViewOnlyNote role={user?.role} />}
-
-      {child.status === "QUARANTINED" ? (
-        <Card className="border-[var(--color-danger)]/40 shadow-[var(--shadow-raised)]">
-          <CardHeader className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle className="text-[var(--color-danger)]">Bola karantinda</CardTitle>
-            {canWrite && (
-              <Button size="sm" variant="danger" loading={clearQuarantineMutation.isPending} onClick={() => clearQuarantineMutation.mutate()}>
-                Karantinni yopish
-              </Button>
-            )}
-          </CardHeader>
-          <CardBody className="space-y-1.5 text-[14px]">
-            <p className="text-[var(--color-text)]">
-              <span className="text-[var(--color-text-muted)]">Sabab: </span>
-              {child.quarantineReason ?? "—"}
-            </p>
-            <p className="text-[var(--color-text)]">
-              <span className="text-[var(--color-text-muted)]">Qaysi sanagacha: </span>
-              {child.quarantineUntil ? formatDate(child.quarantineUntil) : "—"}
-            </p>
-            {clearQuarantineMutation.isError && (
-              <p className="text-[var(--color-danger)]">
-                {clearQuarantineMutation.error instanceof ApiError
-                  ? clearQuarantineMutation.error.message
-                  : "Kutilmagan xatolik yuz berdi"}
-              </p>
-            )}
-          </CardBody>
-        </Card>
-      ) : (
-        canWrite && (
-          <div className="flex justify-end">
-            <Button size="sm" variant="danger" onClick={() => setQuarantineOpen(true)}>
-              Karantin e&apos;lon qilish
-            </Button>
-          </div>
-        )
-      )}
 
       {canReadMoney && (
         <Card className="overflow-hidden">
@@ -944,10 +896,6 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
 
       {canWrite && medicationOpen && (
         <AddMedicationModal open={medicationOpen} onClose={() => setMedicationOpen(false)} slug={slug} childId={childId} />
-      )}
-
-      {canWrite && quarantineOpen && (
-        <QuarantineModal open={quarantineOpen} onClose={() => setQuarantineOpen(false)} slug={slug} childId={childId} />
       )}
 
       {canWrite && guardianOpen && (
