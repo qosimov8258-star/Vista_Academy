@@ -217,7 +217,7 @@ export class CrmService {
     // keyinchalik bolaning kartochkasidan aniqlashtiriladi.
     return withPublicIdRetry(() =>
       this.prisma.$transaction(async (tx) => {
-        const child = await createChildWithGuardian(
+        const { child } = await createChildWithGuardian(
           tx,
           {
             organizationId: scope.organizationId,

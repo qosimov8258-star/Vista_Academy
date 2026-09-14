@@ -86,6 +86,10 @@ export function CreateInvoiceModal({ open, onClose, slug }: { open: boolean; onC
   return (
     <Modal open={open} onClose={onClose} title="Yangi hisob-faktura">
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
+        <h1 className="font-heading text-center text-[28px] font-extrabold tracking-tight text-[var(--color-primary)]">
+          Vista Academy
+        </h1>
+
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
             {serverError}

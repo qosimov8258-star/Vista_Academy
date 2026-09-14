@@ -9,9 +9,18 @@ import { LessonScheduleQueryDto } from "./dto/lesson-schedule-query.dto";
 
 const scheduleInclude = {
   group: { select: { id: true, name: true } },
-  room: { select: { id: true, name: true } },
   employee: { select: { id: true, fullName: true } },
 } satisfies Prisma.LessonScheduleInclude;
+
+const WEEKDAY_LABEL: Record<Weekday, string> = {
+  MONDAY: "dushanba",
+  TUESDAY: "seshanba",
+  WEDNESDAY: "chorshanba",
+  THURSDAY: "payshanba",
+  FRIDAY: "juma",
+  SATURDAY: "shanba",
+  SUNDAY: "yakshanba",
+};
 
 function timeToMinutes(value: string): number {
   const [hours, minutes] = value.split(":").map(Number);
@@ -65,15 +74,14 @@ export class LessonScheduleService {
       throw new BadRequestException("Tugash vaqti boshlanish vaqtidan keyin bo'lishi kerak");
     }
 
-    await this.assertBelongsToBranch(branchId, dto.groupId, dto.roomId, dto.employeeId);
-    await this.assertNoOverlap(dto.roomId, dto.weekday, startMinutes, endMinutes);
+    await this.assertBelongsToBranch(branchId, dto.groupId, dto.employeeId);
+    await this.assertNoOverlap(dto.groupId, dto.weekday, startMinutes, endMinutes);
 
-    return this.prisma.lessonSchedule.create({
+    const created = await this.prisma.lessonSchedule.create({
       data: {
         branchId,
         groupId: dto.groupId,
         employeeId: dto.employeeId,
-        roomId: dto.roomId,
         subject: dto.subject,
         weekday: dto.weekday,
         startTime: dto.startTime,
@@ -81,6 +89,8 @@ export class LessonScheduleService {
       },
       include: scheduleInclude,
     });
+    await this.notifyEmployee(created);
+    return created;
   }
 
   async update(scope: TenantScope, id: string, dto: UpdateLessonScheduleDto) {
@@ -91,7 +101,6 @@ export class LessonScheduleService {
     }
 
     const groupId = dto.groupId ?? existing.groupId;
-    const roomId = dto.roomId ?? existing.roomId;
     const employeeId = dto.employeeId ?? existing.employeeId;
     const weekday = dto.weekday ?? existing.weekday;
     const startTime = dto.startTime ?? existing.startTime;
@@ -103,16 +112,15 @@ export class LessonScheduleService {
       throw new BadRequestException("Tugash vaqti boshlanish vaqtidan keyin bo'lishi kerak");
     }
 
-    if (dto.groupId || dto.roomId || dto.employeeId) {
-      await this.assertBelongsToBranch(branchId, groupId, roomId, employeeId);
+    if (dto.groupId || dto.employeeId) {
+      await this.assertBelongsToBranch(branchId, groupId, employeeId);
     }
-    await this.assertNoOverlap(roomId, weekday, startMinutes, endMinutes, id);
+    await this.assertNoOverlap(groupId, weekday, startMinutes, endMinutes, id);
 
-    return this.prisma.lessonSchedule.update({
+    const updated = await this.prisma.lessonSchedule.update({
       where: { id },
       data: {
         groupId: dto.groupId,
-        roomId: dto.roomId,
         employeeId: dto.employeeId,
         subject: dto.subject,
         weekday: dto.weekday,
@@ -121,6 +129,11 @@ export class LessonScheduleService {
       },
       include: scheduleInclude,
     });
+    // Xodim, guruh, kun yoki vaqt o'zgarsa — o'qituvchi qayta xabardor qilinadi.
+    if (dto.groupId || dto.employeeId || dto.weekday || dto.startTime || dto.endTime) {
+      await this.notifyEmployee(updated);
+    }
+    return updated;
   }
 
   async remove(scope: TenantScope, id: string) {
@@ -133,33 +146,47 @@ export class LessonScheduleService {
     return { id };
   }
 
-  private async assertBelongsToBranch(branchId: string, groupId: string, roomId: string, employeeId: string) {
-    const [group, room, employee] = await Promise.all([
+  /** Dars belgilangani/o'zgargani haqida xodimga ko'rinadigan bildirishnoma yozadi. */
+  private async notifyEmployee(schedule: {
+    branchId: string;
+    employeeId: string;
+    weekday: Weekday;
+    startTime: string;
+    endTime: string;
+    group: { name: string };
+  }) {
+    await this.prisma.employeeNotification.create({
+      data: {
+        branchId: schedule.branchId,
+        employeeId: schedule.employeeId,
+        message: `"${schedule.group.name}" guruhida har ${WEEKDAY_LABEL[schedule.weekday]} kuni soat ${schedule.startTime}–${schedule.endTime} oralig'ida darsingiz bor.`,
+      },
+    });
+  }
+
+  private async assertBelongsToBranch(branchId: string, groupId: string, employeeId: string) {
+    const [group, employee] = await Promise.all([
       this.prisma.group.findFirst({ where: { id: groupId, branchId } }),
-      this.prisma.room.findFirst({ where: { id: roomId, branchId } }),
       this.prisma.employee.findFirst({ where: { id: employeeId, branchId } }),
     ]);
     if (!group) {
       throw new NotFoundException("Guruh topilmadi");
-    }
-    if (!room) {
-      throw new NotFoundException("Xona topilmadi");
     }
     if (!employee) {
       throw new NotFoundException("Xodim topilmadi");
     }
   }
 
-  /** Bir xona bir vaqtda ikki guruhga berilmasin. */
+  /** Bir guruhda bir vaqtda ikkita dars bo'lmasin. */
   private async assertNoOverlap(
-    roomId: string,
+    groupId: string,
     weekday: Weekday,
     startMinutes: number,
     endMinutes: number,
     excludeId?: string,
   ) {
     const existing = await this.prisma.lessonSchedule.findMany({
-      where: { roomId, weekday, ...(excludeId ? { id: { not: excludeId } } : {}) },
+      where: { groupId, weekday, ...(excludeId ? { id: { not: excludeId } } : {}) },
       select: { startTime: true, endTime: true },
     });
     const overlaps = existing.some((row) => {
@@ -168,7 +195,7 @@ export class LessonScheduleService {
       return startMinutes < rowEnd && rowStart < endMinutes;
     });
     if (overlaps) {
-      throw new ConflictException("Bu xona shu kun va vaqtda band");
+      throw new ConflictException("Bu guruhda shu kun va vaqtda allaqachon dars bor");
     }
   }
 }

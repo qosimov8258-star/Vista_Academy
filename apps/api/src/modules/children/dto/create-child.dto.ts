@@ -42,4 +42,15 @@ export class CreateChildDto {
   @ApiProperty({ enum: GuardianRelation, example: GuardianRelation.MOTHER })
   @IsEnum(GuardianRelation)
   guardianRelation!: GuardianRelation;
+
+  @ApiPropertyOptional({
+    example: "Ab12345!",
+    description: "Ota-ona kabineti uchun parol — berilmasa avtomatik generatsiya qilinadi",
+  })
+  @IsOptional()
+  @IsString()
+  @MinLength(8, { message: "Parol kamida 8 ta belgidan iborat bo'lishi kerak" })
+  @Matches(/[A-Z]/, { message: "Parolda kamida bitta bosh harf bo'lishi kerak" })
+  @Matches(/[^A-Za-z0-9]/, { message: "Parolda kamida bitta maxsus belgi bo'lishi kerak" })
+  guardianPassword?: string;
 }

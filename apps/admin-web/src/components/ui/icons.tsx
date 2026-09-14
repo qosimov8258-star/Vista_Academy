@@ -410,6 +410,25 @@ export function UnlockIcon(props: IconProps) {
   );
 }
 
+export function UserIcon(props: IconProps) {
+  return (
+    <Outline {...props}>
+      <circle cx="12" cy="8.2" r="3.6" />
+      <path d="M4.8 20.2c0-3.7 3.2-6.6 7.2-6.6s7.2 2.9 7.2 6.6" />
+    </Outline>
+  );
+}
+
+export function CameraIcon(props: IconProps) {
+  return (
+    <Outline {...props}>
+      <rect x="3" y="7.4" width="18" height="12.6" rx="2.6" />
+      <path d="M8.4 7.4 9.8 4.8h4.4l1.4 2.6" />
+      <circle cx="12" cy="13.6" r="3.4" />
+    </Outline>
+  );
+}
+
 export function CopyIcon(props: IconProps) {
   return (
     <Outline {...props}>

@@ -1,5 +1,7 @@
 import { Gender, GuardianRelation, Prisma } from "@prisma/client";
+import * as argon2 from "argon2";
 import { normalizePhone } from "../../common/phone";
+import { generateParentPassword } from "../parent/parent-auth.service";
 
 /** Birinchi blok: id10000..id19999, keyin 20000-liklar va hokazo. */
 const FIRST_BLOCK = 1;
@@ -51,6 +53,18 @@ export interface ChildGuardianInput {
   fullName: string;
   phone: string;
   relation: GuardianRelation;
+  /**
+   * Berilsa (bo'sh satr ham hisoblanadi) ota-onaning kabineti shu yerdayoq
+   * ochiladi — bo'sh bo'lsa tasodifiy parol generatsiya qilinadi. `undefined`
+   * bo'lsa kabinetga tegilmaydi (CRM arizasidan bola yaratishda ishlatiladi —
+   * u yerda parol so'ralmaydi, kabinet keyin qo'lda ochiladi).
+   */
+  password?: string;
+}
+
+export interface GuardianCredentials {
+  login: string;
+  password: string;
 }
 
 export interface CreateChildInput {
@@ -88,23 +102,47 @@ export async function createChildWithGuardian<T extends Prisma.ChildInclude>(
   tx: Prisma.TransactionClient,
   input: CreateChildInput,
   include: T,
-) {
+): Promise<{ child: Prisma.ChildGetPayload<{ include: T }>; credentials: GuardianCredentials | null }> {
   const publicId = await allocateChildPublicId(tx, input.organizationId);
   const phone = normalizePhone(input.guardian.phone);
 
   // Aka-uka/opa-singil qo'shilganda bir xil telefon bo'yicha mavjud vasiy
   // topiladi va ikkala bola bitta ota-onaga bog'lanadi.
-  const guardian =
-    (await tx.guardian.findFirst({ where: { organizationId: input.organizationId, phone } })) ??
-    (await tx.guardian.create({
+  const existingGuardian = await tx.guardian.findFirst({ where: { organizationId: input.organizationId, phone } });
+
+  let guardianId: string;
+  let credentials: GuardianCredentials | null = null;
+
+  if (existingGuardian) {
+    guardianId = existingGuardian.id;
+    // Kabineti allaqachon ochiq bo'lsa parolga tegilmaydi — aks holda ota-ona
+    // eski parolidan to'satdan chetlashtirilardi.
+    if (!existingGuardian.passwordHash && input.guardian.password !== undefined) {
+      const password = input.guardian.password || generateParentPassword();
+      const passwordHash = await argon2.hash(password);
+      await tx.guardian.update({ where: { id: guardianId }, data: { passwordHash, isActive: true } });
+      credentials = { login: phone, password };
+    }
+  } else {
+    let passwordHash: string | undefined;
+    if (input.guardian.password !== undefined) {
+      const password = input.guardian.password || generateParentPassword();
+      passwordHash = await argon2.hash(password);
+      credentials = { login: phone, password };
+    }
+    const created = await tx.guardian.create({
       data: {
         organizationId: input.organizationId,
         fullName: input.guardian.fullName.trim(),
         phone,
+        passwordHash,
+        isActive: passwordHash ? true : undefined,
       },
-    }));
+    });
+    guardianId = created.id;
+  }
 
-  return tx.child.create({
+  const child = await tx.child.create({
     data: {
       organizationId: input.organizationId,
       branchId: input.branchId,
@@ -116,11 +154,13 @@ export async function createChildWithGuardian<T extends Prisma.ChildInclude>(
       gender: input.gender ?? undefined,
       birthDate: input.birthDate ?? undefined,
       guardians: {
-        create: { guardianId: guardian.id, relation: input.guardian.relation, isPrimary: true },
+        create: { guardianId, relation: input.guardian.relation, isPrimary: true },
       },
     },
     include,
   });
+
+  return { child, credentials };
 }
 
 /**

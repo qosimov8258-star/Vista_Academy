@@ -19,6 +19,8 @@ const KNOWN_ORG_PAGES = new Set([
   "notifications",
   "lessons",
   "my-lessons",
+  "my-notifications",
+  "settings",
   "useful",
 ]);
 
