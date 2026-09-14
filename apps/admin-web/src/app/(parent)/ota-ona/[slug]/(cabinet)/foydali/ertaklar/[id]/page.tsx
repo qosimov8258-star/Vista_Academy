@@ -4,9 +4,9 @@ import { use, useRef } from "react";
 import clsx from "clsx";
 import { BulbIcon } from "@/components/ui/icons";
 import styles from "../../../../parent.module.css";
-import { useTale } from "../../content";
+import { isGone, useTale } from "../../content";
 import { useLearned, useTextSize } from "../../store";
-import { FoydaliHeader, LearnedButton, NotFoundCard, TaleCover, TextSizeControl, formatUzDate } from "../../ui";
+import { FoydaliHeader, LearnedButton, ListSkeleton, LoadErrorCard, NotFoundCard, TaleCover, TextSizeControl, formatUzDate } from "../../ui";
 import { SaveImageButton, useKindergartenName } from "../../save-image-button";
 import { kindergartenLabel, renderTaleImages } from "../../share-image";
 
@@ -20,7 +20,8 @@ const READING_SIZES = [16.5, 18.5, 21] as const;
 export default function TalePage({ params }: { params: Promise<{ slug: string; id: string }> }) {
   const { slug, id } = use(params);
   const base = `/ota-ona/${slug}/foydali`;
-  const { data: tale } = useTale(id);
+  const taleQuery = useTale(id);
+  const tale = taleQuery.data;
   const { has, toggle } = useLearned();
   const size = useTextSize();
   const brand = useKindergartenName(slug) ?? "Bog'cha";
@@ -31,11 +32,17 @@ export default function TalePage({ params }: { params: Promise<{ slug: string; i
     return (
       <div className="mx-auto w-full max-w-[520px] px-4">
         <FoydaliHeader backHref={`${base}/ertaklar`} backLabel="Ertaklar" title="Ertak" />
-        <NotFoundCard
-          backHref={`${base}/ertaklar`}
-          backLabel="Ertaklarga qaytish"
-          text="Bu ertak o'chirilgan yoki hali qo'shilmagan."
-        />
+        {!taleQuery.isError ? (
+          <ListSkeleton rows={2} tall />
+        ) : isGone(taleQuery.error) ? (
+          <NotFoundCard
+            backHref={`${base}/ertaklar`}
+            backLabel="Ertaklarga qaytish"
+            text="Bu ertak o'chirilgan yoki hali qo'shilmagan."
+          />
+        ) : (
+          <LoadErrorCard error={taleQuery.error} onRetry={() => taleQuery.refetch()} loginHref={`/ota-ona/${slug}/kirish`} />
+        )}
       </div>
     );
   }

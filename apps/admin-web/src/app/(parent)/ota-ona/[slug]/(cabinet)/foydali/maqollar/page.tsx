@@ -6,7 +6,7 @@ import { ChevronDownIcon } from "@/components/ui/icons";
 import styles from "../../../parent.module.css";
 import { useProverbs } from "../content";
 import { useDayIndex, useLearned } from "../store";
-import { FoydaliHeader, ProverbIcon, SparkleDeco, StarIcon, TONES, TONE_CYCLE } from "../ui";
+import { EmptyCard, FoydaliHeader, ListSkeleton, LoadErrorCard, ProverbIcon, SparkleDeco, StarIcon, TONES, TONE_CYCLE } from "../ui";
 
 /**
  * Maqollar. Har birining ostida bolaga tushuntirish uchun sodda izoh bor —
@@ -15,11 +15,12 @@ import { FoydaliHeader, ProverbIcon, SparkleDeco, StarIcon, TONES, TONE_CYCLE } 
 export default function ProverbsPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const base = `/ota-ona/${slug}/foydali`;
-  const { data: proverbs } = useProverbs();
+  const proverbsQuery = useProverbs();
+  const proverbs = proverbsQuery.data;
   const { has, toggle } = useLearned();
   const day = useDayIndex();
   const [open, setOpen] = useState<string | null>(null);
-  const featured = proverbs.length > 0 ? proverbs[day % proverbs.length] : null;
+  const featured = proverbs && proverbs.length > 0 ? proverbs[day % proverbs.length] : null;
 
   return (
     <div className="mx-auto w-full max-w-[520px] px-4">
@@ -56,6 +57,20 @@ export default function ProverbsPage({ params }: { params: Promise<{ slug: strin
         </section>
       )}
 
+      {!proverbs ? (
+        proverbsQuery.isError ? (
+          <LoadErrorCard error={proverbsQuery.error} onRetry={() => proverbsQuery.refetch()} loginHref={`/ota-ona/${slug}/kirish`} />
+        ) : (
+          <ListSkeleton />
+        )
+      ) : proverbs.length === 0 ? (
+        <EmptyCard
+          Icon={ProverbIcon}
+          tone="mint"
+          title="Hozircha maqol yo'q"
+          text="Tarbiyachi maqol qo'shishi bilan u shu yerda paydo bo'ladi."
+        />
+      ) : (
       <ul className="mt-5 space-y-3">
         {proverbs.map((proverb, i) => {
           const tone = TONES[TONE_CYCLE[(i + 4) % TONE_CYCLE.length]];
@@ -111,6 +126,7 @@ export default function ProverbsPage({ params }: { params: Promise<{ slug: strin
           );
         })}
       </ul>
+      )}
     </div>
   );
 }

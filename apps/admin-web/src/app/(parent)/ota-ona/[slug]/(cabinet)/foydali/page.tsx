@@ -13,6 +13,7 @@ import {
   ProverbIcon,
   RiddleIcon,
   SectionLabel,
+  LoadErrorCard,
   SongIcon,
   SparkleDeco,
   StarIcon,
@@ -32,12 +33,15 @@ import {
 export default function UsefulPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const base = `/ota-ona/${slug}/foydali`;
-  const { data: poems } = usePoems();
-  const { data: proverbs } = useProverbs();
-  const { data: tales } = useTales();
+  const poemsQuery = usePoems();
+  const proverbsQuery = useProverbs();
+  const talesQuery = useTales();
+  const poems = poemsQuery.data;
+  // Birortasi umuman yuklanmagan bo'lsa — sababini bitta kartada aytamiz
+  const failed = [poemsQuery, proverbsQuery, talesQuery].find((query) => query.isError && !query.data);
   const { learned } = useLearned();
   const day = useDayIndex();
-  const featured = poems.length > 0 ? poems[day % poems.length] : null;
+  const featured = poems && poems.length > 0 ? poems[day % poems.length] : null;
 
   const sections: Array<{
     href: string;
@@ -45,7 +49,8 @@ export default function UsefulPage({ params }: { params: Promise<{ slug: string 
     note: string;
     Icon: (props: { className?: string }) => React.JSX.Element;
     tone: Tone;
-    total: number;
+    /** null — hali yuklanmagan */
+    total: number | null;
     done: number;
     unit: string;
     doneWord: string;
@@ -56,8 +61,8 @@ export default function UsefulPage({ params }: { params: Promise<{ slug: string 
       note: "Qatorma-qator yodlang",
       Icon: PoemIcon,
       tone: "lilac",
-      total: poems.length,
-      done: countLearned(learned.poems, poems),
+      total: poems?.length ?? null,
+      done: countLearned(learned.poems, poems ?? []),
       unit: "she'r",
       doneWord: "yodlandi",
     },
@@ -67,8 +72,8 @@ export default function UsefulPage({ params }: { params: Promise<{ slug: string 
       note: "Ma'nosi bilan",
       Icon: ProverbIcon,
       tone: "mint",
-      total: proverbs.length,
-      done: countLearned(learned.proverbs, proverbs),
+      total: proverbsQuery.data?.length ?? null,
+      done: countLearned(learned.proverbs, proverbsQuery.data ?? []),
       unit: "maqol",
       doneWord: "yodlandi",
     },
@@ -78,8 +83,8 @@ export default function UsefulPage({ params }: { params: Promise<{ slug: string 
       note: "Uxlashdan oldin o'qing",
       Icon: TaleIcon,
       tone: "sky",
-      total: tales.length,
-      done: countLearned(learned.tales, tales),
+      total: talesQuery.data?.length ?? null,
+      done: countLearned(learned.tales, talesQuery.data ?? []),
       unit: "ertak",
       doneWord: "o'qildi",
     },
@@ -94,6 +99,14 @@ export default function UsefulPage({ params }: { params: Promise<{ slug: string 
   return (
     <div className="mx-auto w-full max-w-[520px] px-4">
       <FoydaliHeader title="Foydali" subtitle="Bolangiz bilan birga o'qing, yodlang va o'ynang" />
+
+      {failed && (
+        <LoadErrorCard
+          error={failed.error}
+          onRetry={() => [poemsQuery, proverbsQuery, talesQuery].forEach((query) => query.isError && query.refetch())}
+          loginHref={`/ota-ona/${slug}/kirish`}
+        />
+      )}
 
       {featured && (
         <Link
@@ -129,7 +142,7 @@ export default function UsefulPage({ params }: { params: Promise<{ slug: string 
         <ul className="mt-3 space-y-3">
           {sections.map((section) => {
             const tone = TONES[section.tone];
-            const progress = section.total > 0 ? section.done / section.total : 0;
+            const progress = section.total ? section.done / section.total : 0;
             return (
               <li key={section.href}>
                 <Link
@@ -144,8 +157,15 @@ export default function UsefulPage({ params }: { params: Promise<{ slug: string 
                       {section.title}
                     </span>
                     <span className="mt-0.5 block text-[13px] text-[var(--p-muted)]">
-                      {section.total} ta {section.unit}
-                      {section.done > 0 ? ` · ${section.done} tasi ${section.doneWord}` : ` · ${section.note}`}
+                      {section.total === null
+                        ? failed
+                          ? section.note
+                          : "Yuklanmoqda…"
+                        : section.total === 0
+                          ? "Hozircha yo'q · tarbiyachi qo'shadi"
+                          : `${section.total} ta ${section.unit}${
+                              section.done > 0 ? ` · ${section.done} tasi ${section.doneWord}` : ` · ${section.note}`
+                            }`}
                     </span>
                     <span className="mt-2.5 block h-1.5 overflow-hidden rounded-full bg-[var(--p-sunken)]">
                       <span

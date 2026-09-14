@@ -2,7 +2,7 @@
 
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
 import { parentApi } from "@/lib/parent-api";
 import type { ParentAccount, PublicOrganization } from "@/lib/types";
@@ -18,6 +18,7 @@ import styles from "../parent.module.css";
 export default function ParentLoginPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +47,8 @@ export default function ParentLoginPage({ params }: { params: Promise<{ slug: st
     setBusy(true);
     try {
       await parentApi.post<{ parent: ParentAccount }>("/app/parent/login", { orgSlug: slug, phone, password });
+      // Shu telefonda oldin boshqa ota-ona kirgan bo'lsa, uning ma'lumoti xotirada qolmasin
+      queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== "org-public" });
       router.push(`/ota-ona/${slug}`);
       router.refresh();
     } catch (err) {
