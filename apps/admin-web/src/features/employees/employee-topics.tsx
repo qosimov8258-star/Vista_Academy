@@ -9,14 +9,29 @@ import { CloseIcon } from "@/components/ui/icons";
 
 /**
  * Xodim tafsilot oynasidagi "Mavzu qo'shasizmi?" bo'limi — faqat dars
- * o'tadigan (Fan o'qituvchisi) xodimlarda ko'rinadi. O'chirib-yoqish
- * shunchaki bu bo'limni yashiradi/ko'rsatadi; mavzular backendda saqlanadi
- * va yopib-ochilganda yo'qolmaydi. Mavjud mavzu bo'lsa, ochilganda bo'lim
- * avtomatik ko'rinadi.
+ * o'tadigan (Fan o'qituvchisi) xodimlarda ko'rinadi. Almashtirgich
+ * `Employee.topicsManagedByAdmin`ni boshqaradi: yoqilsa, administrator
+ * mavzularni shu yerdan markazlashtirib boshqaradi va xodimning o'zi
+ * "Savol-javob" sahifasida ("/my-lessons/topics") yangi mavzu qo'sha olmay
+ * qoladi (serverda ham bloklangan). O'chirilgan bo'lsa — o'qituvchining o'zi
+ * qo'sha oladi. Almashtirgichning holati o'zining alohida "Saqlash" tugmasi
+ * bilan emas, balki oynaning tagidagi yagona "Saqlash" tugmasi bilan
+ * saqlanadi — shu sababli holat va uni saqlash logikasi ota komponentda
+ * (`EmployeeDetailModal`) yashaydi, bu yerga faqat controlled prop sifatida
+ * beriladi.
  */
-export function EmployeeTopics({ slug, employeeId }: { slug: string; employeeId: string }) {
+export function EmployeeTopics({
+  slug,
+  employeeId,
+  managedByAdmin,
+  onManagedByAdminChange,
+}: {
+  slug: string;
+  employeeId: string;
+  managedByAdmin: boolean;
+  onManagedByAdminChange: (value: boolean) => void;
+}) {
   const queryClient = useQueryClient();
-  const [expanded, setExpanded] = useState<boolean | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [value, setValue] = useState("");
   const [inputFocused, setInputFocused] = useState(false);
@@ -32,8 +47,7 @@ export function EmployeeTopics({ slug, employeeId }: { slug: string; employeeId:
   });
 
   const topics = topicsQuery.data ?? [];
-  // Foydalanuvchi hali tugmani bosmagan bo'lsa — mavjud mavzular asosida sukut holat.
-  const isOn = expanded ?? topics.length > 0;
+  const isOn = managedByAdmin;
 
   const addMutation = useMutation({
     mutationFn: (title: string) => api.post<EmployeeTopic>(`/app/employees/${employeeId}/topics`, { title }),
@@ -81,7 +95,7 @@ export function EmployeeTopics({ slug, employeeId }: { slug: string; employeeId:
           role="switch"
           aria-checked={isOn}
           aria-label="Mavzu qo'shasizmi?"
-          onClick={() => setExpanded(!isOn)}
+          onClick={() => onManagedByAdminChange(!isOn)}
           className={clsx(
             "relative h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-[var(--dur-fast)]",
             isOn ? "bg-[var(--color-primary)]" : "bg-[var(--color-border)]",

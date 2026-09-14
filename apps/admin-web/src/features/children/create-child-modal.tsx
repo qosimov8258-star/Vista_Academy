@@ -4,13 +4,16 @@ import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { Child, Group } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Input, Select } from "@/components/ui/input";
 import { DateOfBirthInput } from "@/components/ui/date-of-birth-input";
 import { Button } from "@/components/ui/button";
+import { PencilIcon } from "@/components/ui/icons";
+import { initials } from "@/components/ui/avatar";
+import { prepareChildPhoto } from "@/lib/child-photo";
 
 const schema = z.object({
   groupId: z.string().optional(),
@@ -30,17 +33,25 @@ type FormValues = z.infer<typeof schema>;
 export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClose: () => void; slug: string }) {
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [photoImage, setPhotoImage] = useState<string | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [photoChecking, setPhotoChecking] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const {
     register,
     control,
     handleSubmit,
     reset,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { guardianRelation: "MOTHER", birthDate: "" },
   });
+
+  const lastName = watch("lastName");
+  const firstName = watch("firstName");
 
   const { data: groups } = useQuery({
     queryKey: ["groups", slug],
@@ -48,17 +59,45 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
     enabled: open,
   });
 
+  const handlePhotoPick = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    setPhotoError(null);
+    setPhotoChecking(true);
+    try {
+      const result = await prepareChildPhoto(file);
+      if (!result.ok) {
+        setPhotoError(result.reason);
+        return;
+      }
+      setPhotoImage(result.image);
+    } finally {
+      setPhotoChecking(false);
+    }
+  };
+
   const mutation = useMutation({
-    mutationFn: (values: FormValues) =>
-      api.post<Child>("/app/children", {
+    mutationFn: async (values: FormValues) => {
+      const child = await api.post<Child>("/app/children", {
         ...values,
         groupId: values.groupId || undefined,
         birthDate: values.birthDate || undefined,
-      }),
+      });
+      // Surat bola yaratilgandan keyin alohida so'rov bilan yuklanadi; shu so'rov
+      // muvaffaqiyatsiz bo'lsa ham bola yozuvi allaqachon yaratilgan hisoblanadi.
+      if (photoImage) {
+        await api.put(`/app/children/${child.id}/avatar`, { image: photoImage }).catch(() => {});
+      }
+      return child;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["children", slug] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-summary", slug] });
       reset();
+      setPhotoImage(null);
+      setPhotoError(null);
       onClose();
     },
     onError: (err) => {
@@ -66,8 +105,16 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
     },
   });
 
+  const handleClose = () => {
+    reset();
+    setServerError(null);
+    setPhotoImage(null);
+    setPhotoError(null);
+    onClose();
+  };
+
   return (
-    <Modal open={open} onClose={onClose} title="Yangi bola">
+    <Modal open={open} onClose={handleClose} title="Yangi bola">
       <form
         className="space-y-4"
         onSubmit={handleSubmit((values) => {
@@ -80,6 +127,59 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
             {serverError}
           </div>
         )}
+
+        <div className="flex flex-col items-center gap-2">
+          <div className="group relative shrink-0">
+            {photoImage ? (
+              // eslint-disable-next-line @next/next/no-img-element -- data: URL, Next optimizatsiyasi kerak emas
+              <img
+                src={photoImage}
+                alt="Bola surati"
+                width={72}
+                height={72}
+                className="h-[72px] w-[72px] shrink-0 rounded-full object-cover ring-1 ring-inset ring-[rgba(16,24,40,0.06)]"
+              />
+            ) : (
+              <span className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)]/10 text-[26px] font-semibold text-[var(--color-primary)] ring-1 ring-inset ring-[rgba(16,24,40,0.06)]">
+                {initials(`${firstName ?? ""} ${lastName ?? ""}`) || "?"}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => photoInputRef.current?.click()}
+              disabled={photoChecking}
+              aria-label="Bola suratini tanlash"
+              title="Surat qo'yish"
+              className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-full bg-black/45 text-white opacity-0 transition-opacity duration-[var(--dur-fast)] hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none disabled:cursor-wait disabled:opacity-100 motion-reduce:transition-none"
+            >
+              {photoChecking ? (
+                <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              ) : (
+                <PencilIcon className="h-5 w-5" />
+              )}
+            </button>
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="hidden"
+              onChange={handlePhotoPick}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => photoInputRef.current?.click()}
+            disabled={photoChecking}
+            className="cursor-pointer text-[12.5px] font-medium text-[var(--color-primary)] hover:underline disabled:opacity-60"
+          >
+            {photoChecking ? "Tekshirilmoqda..." : photoImage ? "Suratni almashtirish" : "Surat qo'yish (ixtiyoriy)"}
+          </button>
+          {photoError && (
+            <p role="alert" className="max-w-[320px] text-center text-[12.5px] text-[var(--color-danger)]">
+              {photoError}
+            </p>
+          )}
+        </div>
 
         {/* Familiya oldinda: ro'yxatlar va hujjatlar "Familiya Ism" tartibida */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -156,7 +256,7 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button" variant="outline" onClick={handleClose}>
             Bekor qilish
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>

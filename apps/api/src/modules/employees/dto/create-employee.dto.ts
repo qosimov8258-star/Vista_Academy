@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { ArrayNotEmpty, IsArray, IsOptional, IsString, Matches, MinLength, ValidateNested } from "class-validator";
+import { IsArray, IsOptional, IsString, Matches, MinLength, ValidateNested } from "class-validator";
 
 /**
  * Xodimga tizimga kirish huquqi. Hamma xodimga ham kerak emas — oshpaz yoki
@@ -12,10 +12,11 @@ import { ArrayNotEmpty, IsArray, IsOptional, IsString, Matches, MinLength, Valid
 export class EmployeeAccountDto {
   @ApiProperty({
     type: [String],
-    description: "Tarbiyachiga biriktiriladigan guruhlar — u faqat shularni ko'radi",
+    description:
+      "Tarbiyachiga biriktiriladigan guruhlar — u faqat shularni ko'radi. Guruhga bog'liq bo'lmagan " +
+      "xodimlar (masalan oshpaz) uchun bo'sh massiv yuboriladi.",
   })
   @IsArray()
-  @ArrayNotEmpty({ message: "Kamida bitta guruh tanlang" })
   @IsString({ each: true })
   groupIds!: string[];
 

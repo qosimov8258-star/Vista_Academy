@@ -525,6 +525,26 @@ export function StarIcon(props: IconProps) {
   );
 }
 
+export function CoinIcon(props: IconProps) {
+  return (
+    <Outline {...props}>
+      <circle cx="12" cy="12" r="8.4" />
+      <circle cx="12" cy="12" r="5.4" />
+      <path d="M12 9v6M10.1 10.3c0-.75.8-1.3 1.9-1.3s1.9.5 1.9 1.2c0 1.7-3.8.9-3.8 2.6 0 .7.8 1.2 1.9 1.2s1.9-.55 1.9-1.3" />
+    </Outline>
+  );
+}
+
+export function ShopIcon(props: IconProps) {
+  return (
+    <Outline {...props}>
+      <path d="M4.2 5.6h15.6l1.3 4.4a2.1 2.1 0 0 1-2 2.7 2.4 2.4 0 0 1-2-1.1 2.4 2.4 0 0 1-4 0 2.4 2.4 0 0 1-4 0 2.4 2.4 0 0 1-2 1.1 2.1 2.1 0 0 1-2-2.7Z" />
+      <path d="M5.4 12.5V19a1 1 0 0 0 1 1h11.2a1 1 0 0 0 1-1v-6.5" />
+      <path d="M9.8 20v-4.4a1 1 0 0 1 1-1h2.4a1 1 0 0 1 1 1V20" />
+    </Outline>
+  );
+}
+
 export function DoorIcon(props: IconProps) {
   return (
     <Outline {...props}>

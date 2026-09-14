@@ -18,7 +18,8 @@ import { SubjectsModal } from "@/features/employees/subjects-modal";
 import { PencilIcon, ChevronDownIcon, CheckIcon, EyeIcon, EyeOffIcon } from "@/components/ui/icons";
 import { initials } from "@/components/ui/avatar";
 import { prepareChildPhoto } from "@/lib/child-photo";
-import { isSubjectTeacherPosition } from "@/lib/employee-position";
+import { isSubjectTeacherPosition, isCookPosition } from "@/lib/employee-position";
+import { validateUzbekPhone } from "@/lib/phone";
 
 const schema = z
   .object({
@@ -27,7 +28,19 @@ const schema = z
     phone: z
       .string()
       .min(1, "Telefon raqami kiritilishi shart")
-      .refine((value) => /\d[\d\s()+-]{7,}/.test(value), "Telefon raqami noto'g'ri"),
+      .superRefine((value, ctx) => {
+        const error = validateUzbekPhone(value);
+        if (error === "prefix") {
+          ctx.addIssue({ code: "custom", message: "Telefon raqami +998 bilan boshlanishi kerak" });
+        } else if (error === "length") {
+          ctx.addIssue({ code: "custom", message: "Telefon raqami 9 xonali bo'lishi kerak (+998 dan keyin)" });
+        } else if (error === "code") {
+          ctx.addIssue({
+            code: "custom",
+            message: "Bunday operator kodi mavjud emas (masalan: 90, 91, 93, 94, 95, 97, 98, 99)",
+          });
+        }
+      }),
     // Kabinet ixtiyoriy: oshpaz yoki farrosh tizimga kirmaydi
     withAccount: z.boolean(),
     groupIds: z.array(z.string()),
@@ -38,9 +51,6 @@ const schema = z
   })
   .superRefine((values, ctx) => {
     if (!values.withAccount) return;
-    if (values.groupIds.length === 0) {
-      ctx.addIssue({ code: "custom", path: ["groupIds"], message: "Kamida bitta guruh tanlang" });
-    }
     if (values.login && values.login.trim().length < 3) {
       ctx.addIssue({ code: "custom", path: ["login"], message: "Login kamida 3 belgi bo'lishi kerak" });
     }
@@ -82,6 +92,8 @@ export function CreateEmployeeModal({
   const [subjectsError, setSubjectsError] = useState<string | null>(null);
   const [subjectsModalOpen, setSubjectsModalOpen] = useState(false);
   const isSubjectTeacher = isSubjectTeacherPosition(positionName);
+  const isCookRole = isCookPosition(positionName);
+  const [groupsError, setGroupsError] = useState<string | null>(null);
   const [createdCredentials, setCreatedCredentials] = useState<EmployeeCredentials | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -95,6 +107,7 @@ export function CreateEmployeeModal({
       setPhotoImage(null);
       setPhotoError(null);
       setPhotoRequiredError(null);
+      setGroupsError(null);
       setCreatedCredentials(null);
     }
   }, [open, initialPosition]);
@@ -119,6 +132,14 @@ export function CreateEmployeeModal({
     mode: "onChange",
     defaultValues: { withAccount: false, groupIds: [] },
   });
+
+  useEffect(() => {
+    // Oshpaz guruhga biriktirilmaydi — lavozim oshpazga o'zgarsa, guruh tanlovi va xatosi bekor bo'ladi
+    if (isCookRole) {
+      setValue("groupIds", []);
+      setGroupsError(null);
+    }
+  }, [isCookRole, setValue]);
 
   const withAccount = watch("withAccount");
   const groupIds = watch("groupIds");
@@ -157,7 +178,7 @@ export function CreateEmployeeModal({
   const { data: groups } = useQuery({
     queryKey: ["groups", slug],
     queryFn: () => api.get<Group[]>("/app/groups"),
-    enabled: open && withAccount,
+    enabled: open && withAccount && !isCookRole,
   });
 
   const mutation = useMutation({
@@ -206,6 +227,7 @@ export function CreateEmployeeModal({
     setValue("groupIds", groupIds.includes(id) ? groupIds.filter((g) => g !== id) : [...groupIds, id], {
       shouldValidate: true,
     });
+    setGroupsError(null);
   };
 
   const handleClose = () => {
@@ -217,6 +239,7 @@ export function CreateEmployeeModal({
     setPositionName("");
     setPositionError(null);
     setSubjects([]);
+    setGroupsError(null);
     setSubjectsError(null);
     setCreatedCredentials(null);
     setShowPassword(false);
@@ -265,13 +288,21 @@ export function CreateEmployeeModal({
             setSubjectsError("Kamida bitta fan tanlang");
             return;
           }
+          if (values.withAccount && !isCookRole && values.groupIds.length === 0) {
+            setGroupsError("Kamida bitta guruh tanlang");
+            return;
+          }
           setServerError(null);
           mutation.mutate(values);
         })}
       >
-        <h1 className="font-heading text-center text-[28px] font-extrabold tracking-tight text-[var(--color-primary)]">
-          Vista Academy
-        </h1>
+        <div className="flex flex-col items-center gap-1.5">
+          {/* eslint-disable-next-line @next/next/no-img-element -- statik brend rasmi, Next optimizatsiyasi kerak emas */}
+          <img src="/logo.png" alt="Vista Academy" className="h-10 w-10 object-contain" />
+          <h1 className="font-heading text-center text-[28px] font-extrabold tracking-tight text-[var(--color-primary)]">
+            Vista Academy
+          </h1>
+        </div>
 
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
@@ -405,8 +436,8 @@ export function CreateEmployeeModal({
             <span>
               <span className="block text-sm font-medium text-[var(--color-text)]">Kabinet ochish</span>
               <span className="block text-xs text-[var(--color-text-muted)]">
-                Tarbiyachi tizimga kirib, o&apos;ziga biriktirilgan guruhlarga davomat qo&apos;yadi va kundalik
-                hisobot to&apos;ldiradi. Oshpaz yoki farrosh kabi xodimlarga kerak emas.
+                Tarbiyachi tizimga kirib, o&apos;ziga biriktirilgan guruhlarga davomat qo&apos;yadi. Oshpaz yoki
+                farrosh kabi xodimlarga kerak emas.
               </span>
             </span>
           </label>
@@ -488,40 +519,40 @@ export function CreateEmployeeModal({
                 </div>
               )}
 
-              <div>
-                <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">Guruhlari</span>
-                {!groups ? (
-                  <p className="text-xs text-[var(--color-text-muted)]">Guruhlar yuklanmoqda...</p>
-                ) : groups.length === 0 ? (
-                  <p className="text-xs text-[var(--color-text-muted)]">
-                    Avval guruh oching — tarbiyachi qaysi guruhga biriktirilishi kerakligi shundan aniqlanadi.
-                  </p>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {groups.map((group) => {
-                      const selected = groupIds.includes(group.id);
-                      return (
-                        <button
-                          key={group.id}
-                          type="button"
-                          onClick={() => toggleGroup(group.id)}
-                          aria-pressed={selected}
-                          className={`cursor-pointer rounded-full border px-3 py-1.5 text-[13px] transition-colors ${
-                            selected
-                              ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
-                              : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]"
-                          }`}
-                        >
-                          {group.name}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-                {errors.groupIds?.message && (
-                  <span className="mt-1.5 block text-xs text-[var(--color-danger)]">{errors.groupIds.message}</span>
-                )}
-              </div>
+              {!isCookRole && (
+                <div>
+                  <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">Guruhlari</span>
+                  {!groups ? (
+                    <p className="text-xs text-[var(--color-text-muted)]">Guruhlar yuklanmoqda...</p>
+                  ) : groups.length === 0 ? (
+                    <p className="text-xs text-[var(--color-text-muted)]">
+                      Avval guruh oching — tarbiyachi qaysi guruhga biriktirilishi kerakligi shundan aniqlanadi.
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {groups.map((group) => {
+                        const selected = groupIds.includes(group.id);
+                        return (
+                          <button
+                            key={group.id}
+                            type="button"
+                            onClick={() => toggleGroup(group.id)}
+                            aria-pressed={selected}
+                            className={`cursor-pointer rounded-full border px-3 py-1.5 text-[13px] transition-colors ${
+                              selected
+                                ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
+                                : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]"
+                            }`}
+                          >
+                            {group.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {groupsError && <span className="mt-1.5 block text-xs text-[var(--color-danger)]">{groupsError}</span>}
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { api, ApiError } from "@/lib/api";
+import { setTenantTokens } from "@/lib/tenant-session";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import type { TenantAuthenticatedUser } from "@/lib/types";
@@ -31,10 +32,17 @@ export function LoginForm({ slug }: { slug: string }) {
   const onSubmit = async (values: FormValues) => {
     setServerError(null);
     try {
-      const { user } = await api.post<{ user: TenantAuthenticatedUser }>("/app/auth/login", {
+      const { user, accessToken, refreshToken } = await api.post<{
+        user: TenantAuthenticatedUser;
+        accessToken: string;
+        refreshToken: string;
+      }>("/app/auth/login", {
         orgSlug: slug,
         ...values,
       });
+      // Shu tab uchun mustaqil token — boshqa tabda boshqa foydalanuvchi kirsa ham,
+      // bu tab o'zining sessionStorage'idagi tokeni bilan ishlashda davom etadi.
+      setTenantTokens({ accessToken, refreshToken });
       const defaultDestination = user.branchSlug ? `/${slug}/${user.branchSlug}` : `/${slug}`;
       const next = searchParams.get("next") ?? defaultDestination;
       router.push(next);

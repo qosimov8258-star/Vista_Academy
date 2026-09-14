@@ -112,6 +112,8 @@ model Organization {
   invoices               Invoice[]
   payments               Payment[]
   ledgerEntries          LedgerEntry[]
+  coinTransactions       CoinTransaction[]
+  weeklyCoinAssessments  WeeklyCoinAssessment[]
   dailyReports           DailyReport[]
   developmentAssessments DevelopmentAssessment[]
   leads                  Lead[]
@@ -122,6 +124,7 @@ model Organization {
   notificationLogs       NotificationLog[]
   dishes                 Dish[]
   auditLogs              AuditLog[]
+  products               Product[]
 
   @@map("organizations")
 }
@@ -172,6 +175,7 @@ model TenantUser {
   branch            Branch?              @relation(fields: [branchId], references: [id], onDelete: Cascade)
   refreshTokens     TenantRefreshToken[]
   recordedPayments  Payment[]
+  coinTransactions  CoinTransaction[]
   assignedLeads     Lead[]               @relation("LeadAssignedTo")
   leadActivities    LeadActivity[]       @relation("LeadActivityCreatedBy")
   medicationLogs    MedicationLog[]
@@ -179,6 +183,7 @@ model TenantUser {
   employee          Employee?
   webauthnCredentials WebAuthnCredential[]
   auditLogs         AuditLog[]
+  productSales      ProductSale[]
 
   @@unique([organizationId, login])
   @@index([branchId])
@@ -257,6 +262,8 @@ model Branch {
   invoices               Invoice[]
   payments               Payment[]
   ledgerEntries          LedgerEntry[]
+  coinTransactions       CoinTransaction[]
+  weeklyCoinAssessments  WeeklyCoinAssessment[]
   menuEntries            MenuEntry[]
   employeeAttendances    EmployeeAttendance[]
   dailyReports           DailyReport[]
@@ -273,6 +280,7 @@ model Branch {
   lessonSchedules        LessonSchedule[]
   lessonTopics           LessonTopic[]
   lessonGrades           LessonGrade[]
+  products               Product[]
 
   @@unique([organizationId, name])
   @@unique([organizationId, slug])
@@ -358,6 +366,8 @@ model Child {
   invoices               Invoice[]
   payments               Payment[]
   ledgerEntries          LedgerEntry[]
+  coinTransactions       CoinTransaction[]
+  weeklyCoinAssessments  WeeklyCoinAssessment[]
   dailyReports           DailyReport[]
   developmentAssessments DevelopmentAssessment[]
   convertedFromLead      Lead?
@@ -367,6 +377,7 @@ model Child {
   guardians              ChildGuardian[]
   notificationLogs       NotificationLog[]
   lessonGrades           LessonGrade[]
+  productSales           ProductSale[]
 
   @@unique([organizationId, publicId])
   @@index([organizationId, branchId])
@@ -477,6 +488,11 @@ model Employee {
   // o'qitishini belgilaydi. Boshqa lavozimlarda bo'sh massiv.
   subjects        String[]  @default([])
   isActive        Boolean   @default(true) @map("is_active")
+  // "Mavzu qo'shasizmi?" (xodim tafsilotidagi) yoqilib saqlansa — mavzularni
+  // administrator shu yerdan markazlashtirib boshqaradi va shu xodimning o'zi
+  // "Savol-javob" sahifasida ("/my-lessons/topics") yangi mavzu qo'sha olmaydi.
+  // O'chirilgan bo'lsa — o'qituvchining o'zi qo'sha oladi (odatdagi holat).
+  topicsManagedByAdmin Boolean @default(false) @map("topics_managed_by_admin")
   // Xodim surati. Bolalar/filial/foydalanuvchi rasmlari bilan bir xil
   // yondashuv: brauzerda kichraytirilib, bevosita bazada saqlanadi.
   avatar          Bytes?    @map("avatar")
@@ -500,28 +516,10 @@ model Employee {
   lessonSchedules LessonSchedule[]
   lessonTopics    LessonTopic[]
   lessonGrades    LessonGrade[]
-  employeeTopics  EmployeeTopic[]
+  weeklyCoinAssessments WeeklyCoinAssessment[]
 
   @@index([organizationId, branchId])
   @@map("employees")
-}
-
-/**
- * Xodim (fan o'qituvchisi) tafsilot oynasidagi tezkor "Mavzu qo'shasizmi?"
- * ro'yxati. `LessonTopic`dan farqi — guruh/sanaga bog'lanmagan, faqat
- * xodimga tegishli oddiy mavzu nomlari ro'yxati (savol banki bilan
- * bog'liq emas).
- */
-model EmployeeTopic {
-  id         String   @id @default(uuid())
-  employeeId String   @map("employee_id")
-  title      String
-  createdAt  DateTime @default(now()) @map("created_at")
-
-  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-
-  @@index([employeeId])
-  @@map("employee_topics")
 }
 
 /**
@@ -673,11 +671,25 @@ model Attendance {
   date      DateTime         @db.Date
   status    AttendanceStatus
   note      String?
+  // Ota-ona kabinetida yozib qoldirgan sabab (masalan "shifokorga bordik") —
+  // tarbiyachining `note`sidan ajratilgan, chunki bittasi xodim, ikkinchisi
+  // ota-ona tomonidan yoziladi.
+  parentReason String? @map("parent_reason")
+  // Tarbiyachi "Aloqaga chiqish" bosgan payt — ota-ona sabab qoldirmagan
+  // bo'lsa, administratorga bildirishnoma shu payt yaratiladi. Qayta
+  // bosilganda takror bildirishnoma yuborilmasligi uchun belgi vazifasini
+  // ham o'taydi.
+  contactRequestedAt DateTime? @map("contact_requested_at")
+  // PRESENT deb belgilanganda avtomatik yaratiladigan kunlik coin
+  // tranzaksiyasiga bog'lanish — status boshqa holatga o'zgartirilsa,
+  // shu tranzaksiya topilib bekor qilinadi (coin qaytarib olinadi).
+  coinTransactionId String?  @unique @map("coin_transaction_id")
   createdAt DateTime         @default(now()) @map("created_at")
   updatedAt DateTime         @updatedAt @map("updated_at")
 
-  child  Child  @relation(fields: [childId], references: [id], onDelete: Cascade)
-  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  child           Child            @relation(fields: [childId], references: [id], onDelete: Cascade)
+  branch          Branch           @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  coinTransaction CoinTransaction? @relation(fields: [coinTransactionId], references: [id], onDelete: SetNull)
 
   @@unique([childId, date])
   @@index([branchId, date])
@@ -751,11 +763,12 @@ model LessonTopic {
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
-  branch    Branch          @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  group     Group           @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  employee  Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  questions TopicQuestion[]
-  grades    LessonGrade[]
+  branch          Branch           @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  group           Group            @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  employee        Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  questions       TopicQuestion[]
+  grades          LessonGrade[]
+  parentQuestions ParentQuestion[]
 
   @@index([branchId])
   @@index([groupId, date])
@@ -772,9 +785,25 @@ model TopicQuestion {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   topic LessonTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  weeklyAssessmentAnswers WeeklyCoinAssessmentAnswer[]
 
   @@index([topicId])
   @@map("topic_questions")
+}
+
+/// Ota-ona farzandidan uyda so'rashi uchun savollar — variantsiz, baholashsiz.
+/// Ota-ona paneli shu jadvaldan mavzu bo'yicha savollarni o'qib oladi.
+model ParentQuestion {
+  id        String   @id @default(uuid())
+  topicId   String   @map("topic_id")
+  question  String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  topic LessonTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@index([topicId])
+  @@map("parent_questions")
 }
 
 model LessonGrade {
@@ -932,6 +961,146 @@ model LedgerEntry {
 
   @@index([childId, createdAt])
   @@map("ledger_entries")
+}
+
+/// Coin tranzaksiyasi qaysi avtomatik manbadan kelganini bildiradi. Barcha
+/// coin — davomat, haftalik baholash va do'kondan xarid qilishdan tashqari —
+/// endi hech qayerdan qo'lda berilmaydi; MANAGE/BRANCH_ADMIN/TEACHER coin
+/// miqdorini o'zgartira olmaydi, faqat ko'radi. MANUAL — shu o'zgarishdan
+/// oldin yozilgan eski (qo'lda berilgan) tranzaksiyalar uchun standart
+/// qiymat sifatida qoladi.
+enum CoinTransactionSource {
+  ATTENDANCE
+  WEEKLY_ASSESSMENT
+  /// Ota-ona kabinetidagi do'kondan tovar sotib olinganda — manfiy summa.
+  PRODUCT_PURCHASE
+  MANUAL
+}
+
+model CoinTransaction {
+  id               String                @id @default(uuid())
+  organizationId   String                @map("organization_id")
+  branchId         String                @map("branch_id")
+  childId          String                @map("child_id")
+  /// Signed: musbat — bolaga coin qo'shildi, manfiy — ayirildi/sarflandi.
+  amount           Int
+  reason           String
+  source           CoinTransactionSource @default(MANUAL)
+  recordedByUserId String?               @map("recorded_by_user_id")
+  createdAt        DateTime              @default(now()) @map("created_at")
+
+  organization     Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch           Branch                @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  child            Child                 @relation(fields: [childId], references: [id], onDelete: Cascade)
+  recordedBy       TenantUser?           @relation(fields: [recordedByUserId], references: [id], onDelete: SetNull)
+  attendance       Attendance?
+  weeklyAssessment WeeklyCoinAssessment?
+
+  @@index([organizationId, branchId])
+  @@index([childId, createdAt])
+  @@map("coin_transactions")
+}
+
+/// Haftalik "savol-javob + she'r yodlash" baholashi — tarbiyachi o'tilgan
+/// mavzulardan savol so'raydi va har birini to'g'ri/noto'g'ri belgilaydi,
+/// she'r yodlaganini belgilaydi. Coin shulardan avtomatik hisoblanadi
+/// (savol-javob uchun max 40, she'r uchun 10 — jami max 50/hafta) va
+/// alohida CoinTransaction sifatida yoziladi; hech kim bu summani qo'lda
+/// o'zgartira olmaydi. Bitta bolaga haftasiga bitta yozuv (@@unique).
+model WeeklyCoinAssessment {
+  id                String   @id @default(uuid())
+  organizationId    String   @map("organization_id")
+  branchId          String   @map("branch_id")
+  childId           String   @map("child_id")
+  employeeId        String   @map("employee_id")
+  // Baholangan haftaning dushanbasi (Asia/Tashkent).
+  weekStart         DateTime @map("week_start") @db.Date
+  poemRecited       Boolean  @default(false) @map("poem_recited")
+  coinsAwarded      Int      @map("coins_awarded")
+  coinTransactionId String   @unique @map("coin_transaction_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  organization    Organization                 @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch          Branch                       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  child           Child                        @relation(fields: [childId], references: [id], onDelete: Cascade)
+  employee        Employee                     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  coinTransaction CoinTransaction              @relation(fields: [coinTransactionId], references: [id], onDelete: Cascade)
+  answers         WeeklyCoinAssessmentAnswer[]
+
+  @@unique([childId, weekStart])
+  @@index([organizationId, branchId])
+  @@map("weekly_coin_assessments")
+}
+
+model WeeklyCoinAssessmentAnswer {
+  id           String  @id @default(uuid())
+  assessmentId String  @map("assessment_id")
+  questionId   String  @map("question_id")
+  correct      Boolean
+
+  assessment WeeklyCoinAssessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  question   TopicQuestion        @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([assessmentId, questionId])
+  @@index([assessmentId])
+  @@map("weekly_coin_assessment_answers")
+}
+
+/**
+ * Coin do'konidagi tovar. Har bir filial o'z zaxirasini yuritadi.
+ * Rasm TenantUser/Branch avatari bilan bir xil yondashuvda bazada saqlanadi
+ * (3 ta slot); `hasImageN` bayroqlari ro'yxat so'rovida blobni tortmasdan
+ * qaysi slot to'ldirilganini bilish uchun.
+ */
+model Product {
+  id              String    @id @default(uuid())
+  organizationId  String    @map("organization_id")
+  branchId        String    @map("branch_id")
+  name            String
+  description     String?
+  color           String?
+  priceCoins      Int       @default(0) @map("price_coins")
+  quantity        Int       @default(0)
+  image1          Bytes?    @map("image1")
+  image1MimeType  String?   @map("image1_mime_type")
+  hasImage1       Boolean   @default(false) @map("has_image1")
+  image2          Bytes?    @map("image2")
+  image2MimeType  String?   @map("image2_mime_type")
+  hasImage2       Boolean   @default(false) @map("has_image2")
+  image3          Bytes?    @map("image3")
+  image3MimeType  String?   @map("image3_mime_type")
+  hasImage3       Boolean   @default(false) @map("has_image3")
+  imagesUpdatedAt DateTime? @map("images_updated_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch        @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  sales        ProductSale[]
+
+  @@index([organizationId, branchId])
+  @@map("products")
+}
+
+/// Tovar sotilgan sayin yoziladigan hisob — zaxiradan shuncha son ayiriladi.
+/// `childId` faqat ota-ona kabinetidan sotib olinganda to'ldiriladi; xodim
+/// admin panelda qo'lda "sotgan"da bo'sh qoladi (u aniq bolaga bog'liq emas).
+model ProductSale {
+  id           String   @id @default(uuid())
+  productId    String   @map("product_id")
+  quantity     Int
+  soldByUserId String?  @map("sold_by_user_id")
+  childId      String?  @map("child_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  product Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  soldBy  TenantUser? @relation(fields: [soldByUserId], references: [id], onDelete: SetNull)
+  child   Child?      @relation(fields: [childId], references: [id], onDelete: SetNull)
+
+  @@index([productId, createdAt])
+  @@index([childId])
+  @@map("product_sales")
 }
 
 // ---------------------------------------------------------------------------

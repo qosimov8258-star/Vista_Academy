@@ -23,6 +23,8 @@ export interface TenantAuthenticatedUser {
   position: string | null;
   /** "Fan o'qituvchisi" lavozimida tanlangan fan(lar). Boshqa lavozimlarda/bog'lanmagan hisoblarda — bo'sh massiv. */
   subjects: string[];
+  /** Administrator xodim tafsilotida "Mavzu qo'shasizmi?"ni yoqib saqlagan bo'lsa — true. Shu holatda o'qituvchi "Savol-javob"ga o'zi mavzu qo'sha olmaydi. */
+  topicsManagedByAdmin: boolean;
 }
 
 export type OrganizationStatus = "ACTIVE" | "SUSPENDED";
@@ -152,6 +154,8 @@ export interface Employee {
   isActive: boolean;
   createdAt: string;
   avatarUpdatedAt: string | null;
+  /** "Mavzu qo'shasizmi?" almashtirgichi — yoqiq bo'lsa, xodimning o'zi "Savol-javob"ga mavzu qo'sha olmaydi. */
+  topicsManagedByAdmin: boolean;
   /** Kabineti bo'lmagan xodimda null — u tizimga kirmaydi. */
   tenantUser?: { id: string; login: string; role: TenantUserRole; isActive: boolean } | null;
   teachingGroups?: GroupTeacherLink[];
@@ -190,13 +194,82 @@ export interface AttendanceChild {
   childId: string;
   fullName: string;
   groupName: string | null;
+  gender: "MALE" | "FEMALE" | null;
+  /** Surati bor bo'lsa — oxirgi yangilangan vaqti (rasm keshini yangilash uchun). */
+  avatarUpdatedAt: string | null;
   status: AttendanceStatus | null;
   note: string | null;
+  /** Ota-ona kabinetida yozib qoldirgan sabab — tarbiyachining `note`sidan alohida. */
+  parentReason: string | null;
+  /** Tarbiyachi "Aloqaga chiqish" bosgan payt (ISO) — bosilmagan bo'lsa `null`. */
+  contactRequestedAt: string | null;
 }
 
 export interface AttendanceDay {
   date: string;
   children: AttendanceChild[];
+}
+
+/** `GET /app/coins/children` javobidagi bitta qator — bolaning joriy coin balansi. */
+export interface CoinChildBalance {
+  childId: string;
+  fullName: string;
+  gender: "MALE" | "FEMALE" | null;
+  avatarUpdatedAt: string | null;
+  groupName: string | null;
+  balance: number;
+  /** Kunlik davomatdan (har kelgan kuniga 5 coin) yig'ilgan jami. */
+  attendanceCoins: number;
+  /** Haftalik savol-javob + she'r yodlashdan yig'ilgan jami. */
+  weeklyAssessmentCoins: number;
+}
+
+/** Coin qaysi avtomatik manbadan berilganini bildiradi — hech qachon qo'lda emas. */
+export type CoinTransactionSource = "ATTENDANCE" | "WEEKLY_ASSESSMENT" | "MANUAL";
+
+/** `GET /app/coins/children/:childId/transactions` ro'yxatidagi bitta yozuv. */
+export interface CoinTransaction {
+  id: string;
+  amount: number;
+  reason: string;
+  source: CoinTransactionSource;
+  createdAt: string;
+}
+
+/** `GET /app/coins/weekly-assessments/questions` javobidagi bitta mavzu guruhi. */
+export interface WeeklyAssessmentQuestionGroup {
+  topicId: string;
+  topicTitle: string;
+  topicDate: string;
+  questions: TopicQuestion[];
+}
+
+/** `GET /app/coins/children/:childId/weekly-assessments` ro'yxatidagi bitta yozuv. */
+export interface WeeklyCoinAssessment {
+  id: string;
+  weekStart: string;
+  poemRecited: boolean;
+  coinsAwarded: number;
+  employee: { fullName: string } | null;
+  answers: { question: { question: string }; correct: boolean }[];
+}
+
+/** `GET /app/products` javobidagi bitta qator — coin do'konidagi tovar. */
+export interface Product {
+  id: string;
+  branchId: string;
+  name: string;
+  description: string | null;
+  color: string | null;
+  priceCoins: number;
+  quantity: number;
+  hasImage1: boolean;
+  hasImage2: boolean;
+  hasImage3: boolean;
+  /** Surat(lar)ning oxirgi yangilangan vaqti — brauzer keshini yangilash uchun so'rov satriga qo'shiladi. */
+  imagesUpdatedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 /** `GET /app/attendance/chronic-absences` javobi — Davomat sahifasidagi ogohlantirish uchun. */
@@ -213,6 +286,23 @@ export interface AttendanceRangeSummary {
   to: string;
   totalChildren: number;
   days: { date: string; present: number; absent: number; unmarked: number }[];
+}
+
+export interface ChildAttendanceHistory {
+  /** Statistika shu yil bo'yicha hisoblanadi. */
+  year: number;
+  stats: {
+    present: number;
+    absent: number;
+    /** Izohi bor kelmagan kunlar — sababli. */
+    excusedAbsent: number;
+    /** Izohsiz kelmagan kunlar — sababsiz. */
+    unexcusedAbsent: number;
+    /** Foizda, belgilangan kunlar orasida. Hech narsa belgilanmagan bo'lsa — null. */
+    attendanceRate: number | null;
+  };
+  /** Shu yildagi barcha belgilangan kunlar, sanasi bo'yicha o'sish tartibida — kalendarni bo'yash va kelmagan kunlar ro'yxatini chiqarish uchun. */
+  records: { date: string; status: AttendanceStatus; note: string | null }[];
 }
 
 export type InvoiceStatus = "PENDING" | "PARTIALLY_PAID" | "PAID" | "OVERDUE" | "CANCELLED";
@@ -775,7 +865,7 @@ export interface ParentChild {
 export interface ParentDay {
   date: string;
   child: { id: string; fullName: string; groupName: string | null; avatarUpdatedAt: string | null };
-  attendance: { status: AttendanceStatus; note: string | null } | null;
+  attendance: { status: AttendanceStatus; note: string | null; parentReason: string | null } | null;
   report: {
     eatingQuality: "GOOD" | "AVERAGE" | "POOR" | null;
     sleepMinutes: number | null;
@@ -792,6 +882,18 @@ export interface ParentAttendanceStrip {
   present: number;
   absent: number;
   marked: number;
+}
+
+/** `GET /app/parent/children/:id/products` javobi — coin do'koni. */
+export interface ParentShop {
+  balance: number;
+  products: Product[];
+}
+
+/** `POST /app/parent/children/:id/products/:productId/purchase` javobi. */
+export interface ParentPurchaseResult {
+  product: Product;
+  balance: number;
 }
 
 /* ------------------------------------------------------------------ */
@@ -849,6 +951,15 @@ export interface LessonTopic {
   _count: { questions: number };
   /** Mavzu sanasi 2+ oy oldin bo'lsa — takrorlash vaqti kelgani. */
   reviewDue: boolean;
+}
+
+/** Ota-ona uchun savol — variantsiz, uyda farzandidan so'rash uchun. */
+export interface ParentQuestion {
+  id: string;
+  topicId: string;
+  question: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 /** `GET /app/lesson-topics/:id` javobi — savollar banki bilan birga. */

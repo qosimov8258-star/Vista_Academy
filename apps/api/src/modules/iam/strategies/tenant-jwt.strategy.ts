@@ -14,9 +14,13 @@ function extractFromCookie(req: Request): string | null {
 export class TenantJwtStrategy extends PassportStrategy(Strategy, "tenant-jwt") {
   constructor(private readonly prisma: PrismaService) {
     super({
+      // Bearer header birinchi tekshiriladi: har bir tab o'zining sessionStorage'dagi
+      // tokenini header orqali yuboradi va bu bitta brauzerdagi umumiy cookie'dan
+      // ustun turadi — aks holda ikkinchi tabda kirilgan foydalanuvchi cookie'ni
+      // qayta yozib, birinchi tabni ham o'ziga "ko'chiradi".
       jwtFromRequest: ExtractJwt.fromExtractors([
-        extractFromCookie,
         ExtractJwt.fromAuthHeaderAsBearerToken(),
+        extractFromCookie,
       ]),
       ignoreExpiration: false,
       secretOrKey: requireTenantAccessSecret(),
@@ -50,6 +54,7 @@ export class TenantJwtStrategy extends PassportStrategy(Strategy, "tenant-jwt") 
       avatarUpdatedAt: tenantUser.avatarUpdatedAt?.toISOString() ?? null,
       position: tenantUser.employee?.position ?? null,
       subjects: tenantUser.employee?.subjects ?? [],
+      topicsManagedByAdmin: tenantUser.employee?.topicsManagedByAdmin ?? false,
     };
   }
 }

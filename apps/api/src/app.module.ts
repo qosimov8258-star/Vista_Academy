@@ -20,6 +20,8 @@ import { EmployeesModule } from "./modules/employees/employees.module";
 import { PositionsModule } from "./modules/positions/positions.module";
 import { SubjectsModule } from "./modules/subjects/subjects.module";
 import { AttendanceModule } from "./modules/attendance/attendance.module";
+import { CoinsModule } from "./modules/coins/coins.module";
+import { ProductsModule } from "./modules/products/products.module";
 import { StaffAttendanceModule } from "./modules/staff-attendance/staff-attendance.module";
 import { NutritionModule } from "./modules/nutrition/nutrition.module";
 import { DishesModule } from "./modules/dishes/dishes.module";
@@ -62,6 +64,8 @@ import { ParentModule } from "./modules/parent/parent.module";
     PositionsModule,
     SubjectsModule,
     AttendanceModule,
+    CoinsModule,
+    ProductsModule,
     StaffAttendanceModule,
     NutritionModule,
     DishesModule,

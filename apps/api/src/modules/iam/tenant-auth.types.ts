@@ -18,6 +18,8 @@ export interface TenantAuthenticatedUser {
   position: string | null;
   /** "Fan o'qituvchisi" lavozimida tanlangan fan(lar). Boshqa lavozimlarda/bog'lanmagan hisoblarda — bo'sh massiv. */
   subjects: string[];
+  /** Administrator xodim tafsilotida "Mavzu qo'shasizmi?"ni yoqib saqlagan bo'lsa — true. Shu holatda o'qituvchi "Savol-javob"ga o'zi mavzu qo'sha olmaydi. */
+  topicsManagedByAdmin: boolean;
 }
 
 export interface TenantAccessTokenPayload {
@@ -93,13 +95,13 @@ export function requireOperationalScope(scope: TenantScope): string {
     throw new ForbiddenException("Moliyachi faqat Moliya va Ish haqi bo'limlarida o'zgartirish kirita oladi");
   }
   if (scope.role === "TEACHER") {
-    throw new ForbiddenException("O'qituvchi faqat o'z guruhlarining davomati va kundalik hisobotini yuritadi");
+    throw new ForbiddenException("O'qituvchi faqat o'z guruhlarining davomatini yuritadi");
   }
   return branchId;
 }
 
 /**
- * Tarbiyachilik ishi — bolalar davomati va kundalik hisobot.
+ * Tarbiyachilik ishi — bolalar davomati.
  * O'qituvchi shu yerda ishlaydi (lekin faqat o'z guruhlari doirasida —
  * buni `assertTeacherOwnsChild` tekshiradi), moliyachi esa yo'q.
  */

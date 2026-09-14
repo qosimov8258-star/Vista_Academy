@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname, useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState, type SyntheticEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { clearTenantTokens, getTenantRefreshToken } from "@/lib/tenant-session";
 import clsx from "clsx";
 import type { ComponentType } from "react";
 import { useAuth } from "@/lib/use-auth";
@@ -26,6 +27,7 @@ import {
   ChecklistIcon,
   ChevronRightIcon,
   ChildIcon,
+  CoinIcon,
   GroupIcon,
   HomeIcon,
   KeyIcon,
@@ -35,6 +37,7 @@ import {
   PhoneIcon,
   QuestionIcon,
   SettingsIcon,
+  ShopIcon,
   LogoutIcon,
   SidebarIcon,
   StarIcon,
@@ -97,6 +100,28 @@ export function Sidebar({ slug }: { slug: string }) {
   const { user } = useAuth();
   const [collapsed, toggleCollapsed] = useSidebarCollapsed();
   const [openSections, toggleSection] = useSidebarSections();
+
+  // Sichqoncha nav elementlari ustidan o'tganda orqa fondagi belgilagich
+  // shu yerga qarab silliq siljiydi ("sas" panelidagi kabi hover effekti).
+  const navRef = useRef<HTMLElement>(null);
+  const [hoverRect, setHoverRect] = useState<{ top: number; left: number; width: number; height: number } | null>(
+    null,
+  );
+
+  const trackHover = (event: SyntheticEvent<HTMLElement>) => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const itemRect = event.currentTarget.getBoundingClientRect();
+    const navRect = nav.getBoundingClientRect();
+    setHoverRect({
+      top: itemRect.top - navRect.top + nav.scrollTop,
+      left: itemRect.left - navRect.left + nav.scrollLeft,
+      width: itemRect.width,
+      height: itemRect.height,
+    });
+  };
+
+  const clearHover = () => setHoverRect(null);
   const isNetworkAdmin = user?.role === "NETWORK_ADMIN";
   // "Fan o'qituvchisi" lavozimida tanlangan fan(lar) ko'rsatiladi (masalan
   // "Matematika o'qituvchisi"), boshqa lavozimlarda lavozim nomining o'zi.
@@ -209,6 +234,15 @@ export function Sidebar({ slug }: { slug: string }) {
       ],
     },
     {
+      id: "coin",
+      label: "Coin",
+      icon: CoinIcon,
+      items: [
+        { href: `${base}/coin/children`, label: "Bolalar", icon: ChildIcon, show: true },
+        { href: `${base}/coin/shop`, label: "Do'kon", icon: ShopIcon, show: true },
+      ],
+    },
+    {
       id: "moliya",
       label: "Moliya va aloqa",
       icon: MoneyIcon,
@@ -248,11 +282,12 @@ export function Sidebar({ slug }: { slug: string }) {
     if (loggingOut) return;
     setLoggingOut(true);
     try {
-      await api.post("/app/auth/logout");
+      await api.post("/app/auth/logout", { refreshToken: getTenantRefreshToken() });
     } finally {
       // So'rovlar keshi tozalanmasa, xuddi shu brauzerda boshqa foydalanuvchi
       // kirganda oldingi filialning raqamlari bir zum ko'rinib qoladi —
       // kesh kaliti foydalanuvchiga emas, tashkilot slug'iga bog'langan.
+      clearTenantTokens();
       queryClient.clear();
       router.push(`/${slug}/login`);
       router.refresh();
@@ -260,9 +295,9 @@ export function Sidebar({ slug }: { slug: string }) {
   };
 
   const rowBase =
-    "group relative flex items-center rounded-[16px] text-[15px] transition-colors duration-150 motion-reduce:transition-none";
+    "group relative z-10 flex items-center rounded-[16px] text-[15px] transition-colors duration-150 motion-reduce:transition-none";
   const activeRow = "bg-white text-[var(--color-text)] font-semibold shadow-[var(--shadow-card)]";
-  const idleRow = "font-medium text-[var(--color-text-muted)] hover:bg-black/[0.045] hover:text-[var(--color-text)]";
+  const idleRow = "font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text)]";
 
   return (
     <aside
@@ -282,13 +317,8 @@ export function Sidebar({ slug }: { slug: string }) {
       >
         {!collapsed && (
           <>
-            <span
-              aria-hidden
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-base font-bold text-white ring-1 ring-inset ring-[rgba(16,24,40,0.06)]"
-              style={{ background: "linear-gradient(135deg, #4CA6D4, #61AE41)" }}
-            >
-              V
-            </span>
+            {/* eslint-disable-next-line @next/next/no-img-element -- statik brend rasmi, Next optimizatsiyasi kerak emas */}
+            <img src="/logo.png" alt="Vista Academy" className="h-9 w-9 shrink-0 object-contain" />
             <div className="min-w-0 flex-1">
               <p className="font-heading truncate text-sm font-extrabold leading-tight" style={{ color: "#4CA6D4" }}>
                 Vista
@@ -339,7 +369,24 @@ export function Sidebar({ slug }: { slug: string }) {
         </Link>
       )}
 
-      <nav className={clsx("flex-1 overflow-y-auto scrollbar-thin pb-4", collapsed ? "px-3" : "px-3")}>
+      <nav
+        ref={navRef}
+        onMouseLeave={clearHover}
+        className={clsx("relative flex-1 overflow-y-auto scrollbar-thin pb-4", collapsed ? "px-3" : "px-3")}
+      >
+        <div
+          aria-hidden
+          className={clsx(
+            "pointer-events-none absolute z-0 bg-black/[0.045] transition-[transform,width,height,opacity] duration-200 ease-out motion-reduce:transition-none",
+            collapsed ? "rounded-full" : "rounded-[16px]",
+          )}
+          style={{
+            transform: `translate(${hoverRect?.left ?? 0}px, ${hoverRect?.top ?? 0}px)`,
+            width: hoverRect?.width ?? 0,
+            height: hoverRect?.height ?? 0,
+            opacity: hoverRect ? 1 : 0,
+          }}
+        />
         {collapsed
           ? collapsedGroups.map((group, groupIndex) => (
               <div key={group[0]?.href ?? groupIndex}>
@@ -353,8 +400,11 @@ export function Sidebar({ slug }: { slug: string }) {
                       href={item.href}
                       title={item.label}
                       aria-current={active ? "page" : undefined}
+                      onMouseEnter={trackHover}
+                      onFocus={trackHover}
+                      onBlur={clearHover}
                       className={clsx(
-                        "group relative mx-auto mb-1 flex h-11 w-11 items-center justify-center rounded-full text-[15px] outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/30 motion-reduce:transition-none",
+                        "group relative z-10 mx-auto mb-1 flex h-11 w-11 items-center justify-center rounded-full text-[15px] outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/30 motion-reduce:transition-none",
                         active ? activeRow : idleRow,
                       )}
                     >
@@ -376,6 +426,9 @@ export function Sidebar({ slug }: { slug: string }) {
                     key={entry.href}
                     href={entry.href}
                     aria-current={active ? "page" : undefined}
+                    onMouseEnter={trackHover}
+                    onFocus={trackHover}
+                    onBlur={clearHover}
                     className={clsx(rowBase, "mb-1 h-11 gap-3 px-3", active ? activeRow : idleRow)}
                   >
                     <Icon
@@ -400,6 +453,9 @@ export function Sidebar({ slug }: { slug: string }) {
                     type="button"
                     onClick={() => toggleSection(entry.id)}
                     aria-expanded={open}
+                    onMouseEnter={trackHover}
+                    onFocus={trackHover}
+                    onBlur={clearHover}
                     className={clsx(rowBase, "h-11 w-full cursor-pointer gap-3 px-3 text-left", idleRow)}
                   >
                     <Icon className="h-5 w-5 shrink-0 text-current" />
@@ -434,6 +490,9 @@ export function Sidebar({ slug }: { slug: string }) {
                             <Link
                               href={item.href}
                               aria-current={active ? "page" : undefined}
+                              onMouseEnter={trackHover}
+                              onFocus={trackHover}
+                              onBlur={clearHover}
                               className={clsx(rowBase, "mb-0.5 ml-9 h-10 gap-2 pl-3 pr-3", active ? activeRow : idleRow)}
                             >
                               <span className="truncate">{item.label}</span>
@@ -454,6 +513,9 @@ export function Sidebar({ slug }: { slug: string }) {
             <Link
               href={settingsItem.href}
               aria-current={isActive(settingsItem) ? "page" : undefined}
+              onMouseEnter={trackHover}
+              onFocus={trackHover}
+              onBlur={clearHover}
               className={clsx(rowBase, "h-11 gap-3 px-3", isActive(settingsItem) ? activeRow : idleRow)}
             >
               <SettingsIcon

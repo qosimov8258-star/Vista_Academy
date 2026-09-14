@@ -22,6 +22,7 @@ import { ParentAuthService, IssuedParentTokens } from "./parent-auth.service";
 import { ParentService } from "./parent.service";
 import { ParentLoginDto } from "./dto/parent-login.dto";
 import { ChangeParentPasswordDto } from "./dto/change-parent-password.dto";
+import { SubmitAbsenceReasonDto } from "./dto/submit-absence-reason.dto";
 import { ParentJwtAuthGuard } from "./guards/parent-jwt-auth.guard";
 import { CurrentParent } from "./decorators/current-parent.decorator";
 import { AuthenticatedParent } from "./parent-auth.types";
@@ -102,6 +103,56 @@ export class ParentController {
   @UseGuards(ParentJwtAuthGuard)
   attendance(@CurrentParent() parent: AuthenticatedParent, @Param("childId") childId: string) {
     return this.parentService.attendanceStrip(parent, childId);
+  }
+
+  /** Coin do'koni: bolaning filialidagi tovarlar ro'yxati va joriy balans. */
+  @Get("children/:childId/products")
+  @UseGuards(ParentJwtAuthGuard)
+  products(@CurrentParent() parent: AuthenticatedParent, @Param("childId") childId: string) {
+    return this.parentService.products(parent, childId);
+  }
+
+  /** Tovarni sotib olish — zaxira va balans yetarli bo'lsagina o'tadi. */
+  @Post("children/:childId/products/:productId/purchase")
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(ParentJwtAuthGuard)
+  purchaseProduct(
+    @CurrentParent() parent: AuthenticatedParent,
+    @Param("childId") childId: string,
+    @Param("productId") productId: string,
+  ) {
+    return this.parentService.purchaseProduct(parent, childId, productId);
+  }
+
+  /** Do'kon tovari surati. */
+  @Get("products/:id/images/:position")
+  @Header("Cache-Control", "private, max-age=60")
+  @UseGuards(ParentJwtAuthGuard)
+  async productImage(
+    @CurrentParent() parent: AuthenticatedParent,
+    @Param("id") id: string,
+    @Param("position") position: string,
+    @Res() res: Response,
+  ) {
+    const record = await this.parentService.productImage(parent, id, position);
+    if (!record.image) {
+      throw new NotFoundException("Bu rasm o'rni bo'sh");
+    }
+    res.setHeader("Content-Type", record.mimeType ?? "image/jpeg");
+    res.send(Buffer.from(record.image));
+  }
+
+  /** Kelmagan kun uchun ota-ona sababini yozadi. */
+  @Post("children/:childId/attendance/:date/reason")
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(ParentJwtAuthGuard)
+  submitAbsenceReason(
+    @CurrentParent() parent: AuthenticatedParent,
+    @Param("childId") childId: string,
+    @Param("date") date: string,
+    @Body() dto: SubmitAbsenceReasonDto,
+  ) {
+    return this.parentService.submitAbsenceReason(parent, childId, date, dto.reason);
   }
 
   /** Bolaning surati — kabinetda ko'rsatish uchun. */

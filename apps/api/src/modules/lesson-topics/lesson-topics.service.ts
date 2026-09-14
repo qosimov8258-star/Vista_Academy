@@ -7,6 +7,8 @@ import { UpdateLessonTopicDto } from "./dto/update-lesson-topic.dto";
 import { LessonTopicQueryDto } from "./dto/lesson-topic-query.dto";
 import { CreateTopicQuestionDto } from "./dto/create-topic-question.dto";
 import { UpdateTopicQuestionDto } from "./dto/update-topic-question.dto";
+import { CreateParentQuestionDto } from "./dto/create-parent-question.dto";
+import { UpdateParentQuestionDto } from "./dto/update-parent-question.dto";
 
 /** Mavzu shuncha oydan eskirgan bo'lsa, davriy ko'rikdan o'tkazish tavsiya etiladi. */
 const REVIEW_DUE_MONTHS = 2;
@@ -121,6 +123,39 @@ export class LessonTopicsService {
     return { id: question.id };
   }
 
+  /** Ota-ona uyda farzanidan so'rashi uchun savollar ro'yxati — test savollar bankidan mustaqil. */
+  async listParentQuestions(scope: TenantScope, topicId: string) {
+    const topic = await this.requireTopic(scope, topicId);
+    return this.prisma.parentQuestion.findMany({
+      where: { topicId: topic.id },
+      orderBy: { createdAt: "asc" },
+    });
+  }
+
+  async addParentQuestion(scope: TenantScope, topicId: string, dto: CreateParentQuestionDto) {
+    requireTeachingScope(scope);
+    const topic = await this.requireTopic(scope, topicId);
+    return this.prisma.parentQuestion.create({
+      data: { topicId: topic.id, question: dto.question },
+    });
+  }
+
+  async updateParentQuestion(scope: TenantScope, questionId: string, dto: UpdateParentQuestionDto) {
+    requireTeachingScope(scope);
+    const question = await this.requireParentQuestion(scope, questionId);
+    return this.prisma.parentQuestion.update({
+      where: { id: question.id },
+      data: { question: dto.question },
+    });
+  }
+
+  async removeParentQuestion(scope: TenantScope, questionId: string) {
+    requireTeachingScope(scope);
+    const question = await this.requireParentQuestion(scope, questionId);
+    await this.prisma.parentQuestion.delete({ where: { id: question.id } });
+    return { id: question.id };
+  }
+
   /** Guruh shu tashkilot/filialga tegishli ekanini tekshiradi. */
   private async requireGroup(scope: TenantScope, groupId: string) {
     const group = await this.prisma.group.findFirst({
@@ -166,12 +201,33 @@ export class LessonTopicsService {
     return question;
   }
 
+  /** Ota-ona uchun savol shu tashkilotga tegishli mavzuga bog'liq ekanini tekshiradi. */
+  private async requireParentQuestion(scope: TenantScope, id: string) {
+    const question = await this.prisma.parentQuestion.findFirst({
+      where: { id, topic: { branch: { organizationId: scope.organizationId } } },
+      include: { topic: true },
+    });
+    if (!question) {
+      throw new NotFoundException("Savol topilmadi");
+    }
+    if (scope.branchId && question.topic.branchId !== scope.branchId) {
+      throw new ForbiddenException("Bu savolga kirish huquqingiz yo'q");
+    }
+    await assertTeacherOwnsGroup(this.prisma, scope, question.topic.groupId);
+    return question;
+  }
+
   /** Chaqiruvchining xodim kartochkasini topadi — mavzu muallifini belgilash uchun. */
   private async resolveActingEmployeeId(scope: TenantScope): Promise<string> {
     const employee = await this.prisma.employee.findUnique({ where: { tenantUserId: scope.userId } });
     if (!employee) {
       throw new BadRequestException(
         "Xodim profilingiz topilmadi — mavzuni faqat xodim kartochkasiga ega foydalanuvchi qo'sha oladi",
+      );
+    }
+    if (employee.topicsManagedByAdmin) {
+      throw new ForbiddenException(
+        "Mavzularingizni administrator markazlashtirib boshqaryapti — bu yerdan yangi mavzu qo'sha olmaysiz",
       );
     }
     return employee.id;
