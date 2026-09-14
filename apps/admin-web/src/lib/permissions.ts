@@ -48,6 +48,17 @@ export function canWriteTeaching(role: TenantUserRole | undefined): boolean {
   return isBranchLevel(role) && role !== "FINANCE";
 }
 
+/**
+ * "Foydali" bo'limi (she'rlar, maqollar, ertaklar) ko'rish huquqi.
+ * Moliyachi bu yerga umuman kirmaydi (ko'rish ham, yozish ham yo'q);
+ * qolgan barcha filial darajasidagi rollar va Super Admin ko'ra oladi.
+ * Yozish huquqi uchun `canWriteTeaching` ishlatiladi — API'dagi
+ * `requireTeachingScope` bilan bir xil qoida.
+ */
+export function canViewUseful(role: TenantUserRole | undefined): boolean {
+  return role !== "FINANCE";
+}
+
 /** Foydalanuvchi yaratish huquqi: Super Admin va filial admini. */
 export function canManageUsers(role: TenantUserRole | undefined): boolean {
   return role === "NETWORK_ADMIN" || role === "BRANCH_ADMIN";

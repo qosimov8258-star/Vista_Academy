@@ -21,6 +21,7 @@ const KNOWN_ORG_PAGES = new Set([
   "my-lessons",
   "my-notifications",
   "settings",
+  "useful",
 ]);
 
 function base64UrlDecode(input: string): string {
