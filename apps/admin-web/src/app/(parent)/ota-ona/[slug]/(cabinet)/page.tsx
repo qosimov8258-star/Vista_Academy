@@ -412,12 +412,12 @@ function Tally({ count, label, dot }: { count: number; label: string; dot: strin
 
 function MiniCard({ label, value, tone }: { label: string; value: string; tone: string }) {
   return (
-    <div className="rounded-[20px] bg-[var(--p-card)] p-3.5 text-center shadow-[var(--p-shadow)]">
+    <div className="rounded-[20px] bg-[var(--p-card)] p-3 text-center shadow-[var(--p-shadow)] min-[360px]:p-3.5">
       <span className={clsx("mx-auto flex h-9 w-9 items-center justify-center rounded-full text-[13px] font-bold", TONE_BG[tone])}>
         {label[0]}
       </span>
-      <p className="mt-2 text-[11.5px] font-semibold uppercase tracking-[0.05em] text-[var(--p-muted)]">{label}</p>
-      <p className="mt-0.5 text-[14px] font-bold leading-tight text-[var(--p-ink)]">{value}</p>
+      <p className="mt-2 text-[clamp(10px,3vw,11.5px)] font-semibold uppercase tracking-[0.04em] text-[var(--p-muted)]">{label}</p>
+      <p className="mt-0.5 text-[clamp(12.5px,3.7vw,14px)] font-bold leading-tight text-[var(--p-ink)]">{value}</p>
     </div>
   );
 }
