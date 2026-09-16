@@ -88,7 +88,7 @@ export default function PoemPage({ params }: { params: Promise<{ slug: string; i
               aria-checked={active}
               onClick={() => setMode(option.key)}
               className={clsx(
-                "cursor-pointer rounded-full py-2.5 text-[13px] font-bold transition-colors",
+                "cursor-pointer rounded-full px-1 py-2.5 text-[clamp(11px,3.4vw,13px)] font-bold transition-colors",
                 active ? "bg-[var(--p-card)] text-[var(--p-ink)] shadow-[var(--p-shadow)]" : "text-[var(--p-muted)]",
               )}
             >
@@ -328,7 +328,7 @@ function WordGame({ poem, fontSize }: { poem: Poem; fontSize: number }) {
                 setRevealed(new Set());
               }}
               className={clsx(
-                "cursor-pointer rounded-full py-2 text-[13px] font-bold transition-colors",
+                "cursor-pointer rounded-full px-1 py-2 text-[clamp(11px,3.4vw,13px)] font-bold transition-colors",
                 active ? "bg-[var(--p-lilac)] text-white" : "text-[var(--p-muted)]",
               )}
             >

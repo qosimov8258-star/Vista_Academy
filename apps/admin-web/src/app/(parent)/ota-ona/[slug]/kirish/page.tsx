@@ -61,11 +61,16 @@ export default function ParentLoginPage({ params }: { params: Promise<{ slug: st
 
   return (
     <div className={`${styles.shell} ${styles.sky} flex min-h-[100dvh] flex-col`}>
-      <div className="relative h-[34vh] min-h-[220px] overflow-hidden">
+      {/*
+        Rasm balandligi ekranga qarab: telefon yotiq holatda yoki past
+        oynada u kichrayadi, aks holda parol maydoni ekrandan tushib
+        ketardi va ota-ona avval pastga surishi kerak bo'lardi.
+      */}
+      <div className="relative h-[34vh] min-h-[220px] overflow-hidden [@media(max-height:560px)]:h-[30vh] [@media(max-height:560px)]:min-h-[120px]">
         <KindergartenBackdrop name={orgQuery.data?.name ?? null} />
       </div>
 
-      <div className="relative -mt-8 flex-1 rounded-t-[32px] bg-[var(--p-card)] px-5 pb-10 pt-7 shadow-[var(--p-shadow)] sm:mx-auto sm:w-full sm:max-w-[440px] sm:rounded-[var(--p-radius)]">
+      <div className="relative -mt-8 flex-1 rounded-t-[32px] bg-[var(--p-card)] px-5 pb-10 pt-7 shadow-[var(--p-shadow)] sm:mx-auto sm:w-full sm:max-w-[440px] sm:rounded-[var(--p-radius)] [@media(max-height:560px)]:pb-6 [@media(max-height:560px)]:pt-5">
         <div className={styles.pop}>
           <div className={`${styles.greet} flex items-start gap-3.5`}>
             <SmilingSun key={failCount} sad={!!error} />
@@ -73,20 +78,20 @@ export default function ParentLoginPage({ params }: { params: Promise<{ slug: st
               <span className="inline-flex items-center rounded-full bg-[var(--p-sun)]/18 px-2.5 py-1 text-[11.5px] font-bold uppercase tracking-[0.07em] text-[#a8720a]">
                 Ota-ona kabineti
               </span>
-              <h1 className="mt-2 text-[30px] font-extrabold leading-[1.1] tracking-[-0.025em] text-[var(--p-ink)]">
+              <h1 className="mt-2 text-[30px] font-extrabold leading-[1.1] tracking-[-0.025em] text-[var(--p-ink)] [@media(max-height:560px)]:text-[24px]">
                 Assalomu
                 <br />
                 alaykum<span className="text-[var(--p-coral)]">!</span>
               </h1>
             </div>
           </div>
-          <p className="mt-3.5 text-[15.5px] leading-relaxed text-[var(--p-muted)]">
+          <p className="mt-3.5 text-[15.5px] leading-relaxed text-[var(--p-muted)] [@media(max-height:560px)]:hidden">
             Bolangizning bugungi kuni — <b className="font-semibold text-[var(--p-ink)]">davomati</b>,{" "}
             <b className="font-semibold text-[var(--p-ink)]">ovqati</b> va{" "}
             <b className="font-semibold text-[var(--p-ink)]">mashg&apos;ulotlari</b> shu yerda.
           </p>
 
-          <form onSubmit={submit} className="mt-6 space-y-4">
+          <form onSubmit={submit} className="mt-6 space-y-4 [@media(max-height:560px)]:mt-4 [@media(max-height:560px)]:space-y-3">
             {error && (
               <div
                 role="alert"
