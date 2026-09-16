@@ -1,5 +1,10 @@
-import type { Tone } from "../foydali/ui";
-import type { DiaryActivityKind } from "./diary";
+import type { DiaryActivityKind } from "./types";
+
+/**
+ * Rang nomi. Ota-ona kabineti uni `--p-*` tokenlariga (foydali/ui TONES),
+ * tarbiyachi paneli esa o'z ranglariga moslaydi.
+ */
+export type DiaryTone = "lilac" | "mint" | "sky" | "sun" | "coral";
 
 type IconProps = { className?: string };
 
@@ -122,7 +127,7 @@ function OtherIcon({ className }: IconProps) {
 
 export const KIND_META: Record<
   DiaryActivityKind,
-  { label: string; tone: Tone; Icon: (props: IconProps) => React.JSX.Element }
+  { label: string; tone: DiaryTone; Icon: (props: IconProps) => React.JSX.Element }
 > = {
   ARRIVAL: { label: "Kelish", tone: "sun", Icon: ArrivalIcon },
   LESSON: { label: "Mashg'ulot", tone: "lilac", Icon: LessonIcon },

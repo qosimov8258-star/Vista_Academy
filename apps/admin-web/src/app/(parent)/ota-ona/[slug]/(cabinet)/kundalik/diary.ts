@@ -1,9 +1,11 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type { AttendanceStatus } from "@/lib/types";
+import type { DiaryDay, DiaryDaySummary, DiaryItem, DiaryMedia } from "@/features/diary/types";
 import { ApiError } from "@/lib/api";
 import { PARENT_API_URL, parentApi } from "@/lib/parent-api";
+
+export type { DiaryActivityKind, DiaryDay, DiaryDaySummary, DiaryItem, DiaryMedia } from "@/features/diary/types";
 
 /**
  * Kundalik — guruhning kun tartibi, tarbiyachi belgilari va kun lahzalari.
@@ -14,69 +16,6 @@ import { PARENT_API_URL, parentApi } from "@/lib/parent-api";
  *
  * Tarbiyachi tomoni va to'liq shartnoma: docs/kundalik-api.md.
  */
-
-export type DiaryActivityKind =
-  | "ARRIVAL"
-  | "LESSON"
-  | "EXERCISE"
-  | "MEAL"
-  | "SLEEP"
-  | "WALK"
-  | "SWIM"
-  | "PLAY"
-  | "CREATIVE"
-  | "DEPARTURE"
-  | "OTHER";
-
-export interface DiaryMedia {
-  id: string;
-  entryId: string | null;
-  kind: "PHOTO" | "VIDEO";
-  mimeType: string;
-  sizeBytes: number;
-  width: number | null;
-  height: number | null;
-  durationSeconds: number | null;
-  caption: string | null;
-  hasPoster: boolean;
-  createdAt: string;
-  createdByName: string;
-}
-
-export interface DiaryItem {
-  key: string;
-  routineItemId: string | null;
-  entryId: string | null;
-  startTime: string;
-  endTime: string | null;
-  title: string;
-  kind: DiaryActivityKind;
-  done: boolean;
-  note: string | null;
-  doneAt: string | null;
-  doneByName: string | null;
-  media: DiaryMedia[];
-}
-
-export interface DiaryDay {
-  date: string;
-  /** Filial vaqti bo'yicha bugungi sana */
-  today: string;
-  weekday: string | null;
-  /** Bola guruhga biriktirilmagan bo'lsa null */
-  group: { id: string; name: string } | null;
-  attendance: AttendanceStatus | null;
-  items: DiaryItem[];
-  media: DiaryMedia[];
-  summary: { total: number; done: number; photos: number; videos: number };
-}
-
-export interface DiaryDaySummary {
-  date: string;
-  done: number;
-  photos: number;
-  videos: number;
-}
 
 const noRetryOnAuth = (count: number, error: unknown) =>
   !(error instanceof ApiError && [400, 401, 404].includes(error.status)) && count < 1;

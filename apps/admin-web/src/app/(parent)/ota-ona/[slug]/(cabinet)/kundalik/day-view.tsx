@@ -21,7 +21,7 @@ import {
   type DiaryMedia,
   type ItemPhase,
 } from "./diary";
-import { CameraIcon, DiaryIcon, KIND_META, PlayGlyph } from "./kinds";
+import { CameraIcon, DiaryIcon, KIND_META, PlayGlyph } from "@/features/diary/kinds";
 
 /* ------------------------------------------------------------------ kunlar */
 

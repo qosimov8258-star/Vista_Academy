@@ -11,7 +11,7 @@ import styles from "../../parent.module.css";
 import { EmptyCard, ListSkeleton, LoadErrorCard } from "../foydali/ui";
 import { DayContent, DayStrip } from "./day-view";
 import { nowMinutes, useDiaryDay, useDiaryDays, type DiaryMedia } from "./diary";
-import { DiaryIcon } from "./kinds";
+import { DiaryIcon } from "@/features/diary/kinds";
 import { MediaViewer } from "./media-viewer";
 
 /** Har 30 soniyada yangilanadigan soat — "hozir" belgisi siljib borsin */
