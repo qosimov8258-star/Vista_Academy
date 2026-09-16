@@ -2,6 +2,7 @@
 
 import { use, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
 import type { Organization, Wallet, WalletTransaction } from "@/lib/types";
@@ -43,6 +44,7 @@ export default function BogchaDetailPage({
 }) {
   const { id } = use(params);
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   const [subscriptionModal, setSubscriptionModal] = useState<
     "assign" | "change" | null
@@ -393,6 +395,10 @@ export default function BogchaDetailPage({
         open={editOpen}
         organization={org}
         onClose={() => setEditOpen(false)}
+        onDeleted={() => {
+          setEditOpen(false);
+          router.push("/bogchalar");
+        }}
       />
     </div>
   );
