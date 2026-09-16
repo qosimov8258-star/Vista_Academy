@@ -326,6 +326,9 @@ model Group {
   poems           Poem[]
   proverbs        Proverb[]
   tales           Tale[]
+  diaryRoutine    DiaryRoutineItem[]
+  diaryEntries    DiaryEntry[]
+  diaryMedia      DiaryMedia[]
 
   @@unique([branchId, name])
   @@index([branchId])
@@ -1679,4 +1682,118 @@ model NotificationLog {
 
   @@index([branchId, status, createdAt])
   @@map("notification_logs")
+}
+
+// ---------------------------------------------------------------------------
+// Kundalik — guruhning kun tartibi, kunlik belgilar va lahzalar (rasm/video).
+//
+// Tarbiyachi guruh uchun kun tartibini bir marta shablon qilib yozadi
+// (08:00 kelish, 09:00 matematika, 12:00 ovqat ...). Har kuni mashg'ulot
+// o'tgach "bo'ldi" deb belgilaydi va xohlasa izoh, rasm yoki video qo'shadi.
+// Guruhdagi barcha ota-onalar buni kabinetda vaqt chizig'i ko'rinishida ko'radi.
+// ---------------------------------------------------------------------------
+
+enum DiaryActivityKind {
+  ARRIVAL
+  LESSON
+  EXERCISE
+  MEAL
+  SLEEP
+  WALK
+  SWIM
+  PLAY
+  CREATIVE
+  DEPARTURE
+  OTHER
+}
+
+enum DiaryMediaKind {
+  PHOTO
+  VIDEO
+}
+
+/// Kun tartibi shablonidagi bitta band. `weekdays` — qaysi kunlari bo'ladi
+/// (masalan suzish faqat seshanba va payshanba).
+model DiaryRoutineItem {
+  id             String            @id @default(uuid())
+  organizationId String            @map("organization_id")
+  branchId       String            @map("branch_id")
+  groupId        String            @map("group_id")
+  /// "08:00" ko'rinishida (24 soat)
+  startTime      String            @map("start_time")
+  endTime        String?           @map("end_time")
+  title          String
+  kind           DiaryActivityKind @default(OTHER)
+  weekdays       Weekday[]
+  sortOrder      Int               @default(0) @map("sort_order")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+
+  group   Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  entries DiaryEntry[]
+
+  @@index([groupId])
+  @@map("diary_routine_items")
+}
+
+/// Kunlik belgi: mashg'ulot o'tdi. Vaqt va nom shablondan nusxa olinadi —
+/// shablon keyin o'zgartirilsa ham o'tgan kunlar tarixi buzilmaydi.
+/// `routineItemId` null bo'lsa — shablonda yo'q, o'sha kunga qo'shilgan voqea.
+model DiaryEntry {
+  id             String            @id @default(uuid())
+  organizationId String            @map("organization_id")
+  branchId       String            @map("branch_id")
+  groupId        String            @map("group_id")
+  date           DateTime          @db.Date
+  routineItemId  String?           @map("routine_item_id")
+  startTime      String            @map("start_time")
+  endTime        String?           @map("end_time")
+  title          String
+  kind           DiaryActivityKind @default(OTHER)
+  note           String?
+  createdById    String            @map("created_by_id")
+  createdByName  String            @map("created_by_name")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+
+  group       Group             @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  routineItem DiaryRoutineItem? @relation(fields: [routineItemId], references: [id], onDelete: SetNull)
+  media       DiaryMedia[]
+
+  @@unique([routineItemId, date])
+  @@index([groupId, date])
+  @@map("diary_entries")
+}
+
+/// Kun lahzasi — rasm yoki qisqa video. Fayl hozircha bazada saqlanadi;
+/// ro'yxat so'rovlari `data` ustunini hech qachon tanlamaydi.
+model DiaryMedia {
+  id              String         @id @default(uuid())
+  organizationId  String         @map("organization_id")
+  branchId        String         @map("branch_id")
+  groupId         String         @map("group_id")
+  date            DateTime       @db.Date
+  /// Qaysi mashg'ulotga tegishli (ixtiyoriy)
+  entryId         String?        @map("entry_id")
+  kind            DiaryMediaKind
+  mimeType        String         @map("mime_type")
+  sizeBytes       Int            @map("size_bytes")
+  data            Bytes
+  /// Video uchun muqova kadri (brauzerda olinadi)
+  posterData      Bytes?         @map("poster_data")
+  posterMimeType  String?        @map("poster_mime_type")
+  width           Int?
+  height          Int?
+  durationSeconds Int?           @map("duration_seconds")
+  caption         String?
+  createdById     String         @map("created_by_id")
+  createdByName   String         @map("created_by_name")
+  createdAt       DateTime       @default(now()) @map("created_at")
+
+  group Group       @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  entry DiaryEntry? @relation(fields: [entryId], references: [id], onDelete: SetNull)
+
+  @@index([groupId, date])
+  @@index([entryId])
+  @@map("diary_media")
 }
