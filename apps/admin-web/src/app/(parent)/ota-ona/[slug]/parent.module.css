@@ -608,3 +608,34 @@
     animation: none;
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Kundalik — hozir o'tayotgan mashg'ulot nuqtasi atrofida yumshoq to'lqin
+ * ------------------------------------------------------------------------ */
+.diaryNow::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 999px;
+  border: 2px solid var(--p-coral);
+  opacity: 0;
+  animation: diaryNowPulse 2.2s ease-out infinite;
+}
+
+@keyframes diaryNowPulse {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .diaryNow::after {
+    animation: none;
+    opacity: 0.5;
+  }
+}
