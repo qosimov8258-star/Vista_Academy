@@ -44,6 +44,7 @@ import { NotificationsModule } from "./modules/notifications/notifications.modul
 import { ExportsModule } from "./modules/exports/exports.module";
 import { ParentModule } from "./modules/parent/parent.module";
 import { UsefulModule } from "./modules/useful/useful.module";
+import { DiaryModule } from "./modules/diary/diary.module";
 
 @Module({
   imports: [
@@ -89,6 +90,7 @@ import { UsefulModule } from "./modules/useful/useful.module";
     ExportsModule,
     ParentModule,
     UsefulModule,
+    DiaryModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
