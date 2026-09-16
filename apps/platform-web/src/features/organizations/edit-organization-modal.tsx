@@ -35,10 +35,16 @@ export function EditOrganizationModal({
   open,
   onClose,
   organization,
+  onDeleted,
 }: {
   open: boolean;
   onClose: () => void;
   organization: Organization;
+  /** O'chirish muvaffaqiyatli bo'lgach qo'shimcha harakat kerak bo'lsa
+   * (masalan, tafsilot sahifasidan ro'yxatga qaytarish) — chaqiruvchi shu
+   * yerda beradi. Ro'yxat sahifasida shart emas: query keshi yangilanishi
+   * bilanoq tashkilot ro'yxatdan o'zi tushib qoladi. */
+  onDeleted?: () => void;
 }) {
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -51,6 +57,10 @@ export function EditOrganizationModal({
   const [passwordDraft, setPasswordDraft] = useState("");
   const [credentialsError, setCredentialsError] = useState<string | null>(null);
 
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   // Modal yopilganda ko'rsatilgan parol ekranda qolib ketmasligi uchun —
   // qayta ochilganda yana WebAuthn tasdiqlashi talab qilinadi.
   useEffect(() => {
@@ -61,6 +71,9 @@ export function EditOrganizationModal({
       setLoginDraft("");
       setPasswordDraft("");
       setCredentialsError(null);
+      setDeleteOpen(false);
+      setDeleteConfirmText("");
+      setDeleteError(null);
     }
   }, [open]);
 
@@ -206,7 +219,26 @@ export function EditOrganizationModal({
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: () => api.delete(`/platform/organizations/${organization.id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["organizations"] });
+      queryClient.invalidateQueries({ queryKey: ["organizations", organization.id] });
+      queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "summary"] });
+      setDeleteOpen(false);
+      onClose();
+      onDeleted?.();
+    },
+    onError: (err) => {
+      setDeleteError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+    },
+  });
+
+  const isDeleteConfirmed = deleteConfirmText.trim() === organization.name;
+
   return (
+    <>
     <Modal open={open} onClose={onClose} title="Tashkilotni tahrirlash">
       <form
         className="space-y-4"
@@ -353,6 +385,70 @@ export function EditOrganizationModal({
           </Button>
         </div>
       </form>
+
+      <div className="mt-6 space-y-3 rounded-[var(--radius-lg)] border border-[var(--color-danger)]/25 bg-[var(--color-danger-bg)] p-4">
+        <div>
+          <p className="text-[13px] font-semibold text-[var(--color-danger)]">Xavfli hudud</p>
+          <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+            Bog&apos;chani platformadan butunlay o&apos;chirish — bu amalni ortga qaytarib bo&apos;lmaydi.
+          </p>
+        </div>
+        <Button type="button" variant="danger" size="sm" onClick={() => setDeleteOpen(true)}>
+          Bog&apos;chani o&apos;chirish
+        </Button>
+      </div>
     </Modal>
+
+    <Modal
+      open={deleteOpen}
+      onClose={() => {
+        if (deleteMutation.isPending) return;
+        setDeleteOpen(false);
+      }}
+      title="Bog'chani butunlay o'chirish"
+    >
+      <div className="space-y-4">
+        <p className="rounded-[var(--radius-lg)] bg-[var(--color-danger-bg)] px-3 py-2.5 text-[13px] text-[var(--color-danger)]">
+          Diqqat! Bu amalni ortga qaytarib bo&apos;lmaydi. <strong>{organization.name}</strong> bilan bog&apos;liq
+          barcha filiallar, xodimlar, bolalar, obuna, hamyon va boshqa ma&apos;lumotlar butunlay o&apos;chib ketadi.
+        </p>
+        <Input
+          label={`Tasdiqlash uchun "${organization.name}" deb yozing`}
+          hint="O'chirish tugmasi faqat nomi to'g'ri kiritilgandan keyin faollashadi"
+          value={deleteConfirmText}
+          onChange={(e) => setDeleteConfirmText(e.target.value)}
+          placeholder={organization.name}
+          autoFocus
+        />
+        {deleteError && (
+          <p role="alert" className="text-xs text-[var(--color-danger)]">
+            {deleteError}
+          </p>
+        )}
+        <div className="flex justify-end gap-2 pt-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setDeleteOpen(false)}
+            disabled={deleteMutation.isPending}
+          >
+            Bekor qilish
+          </Button>
+          <Button
+            type="button"
+            variant="danger"
+            loading={deleteMutation.isPending}
+            disabled={!isDeleteConfirmed}
+            onClick={() => {
+              setDeleteError(null);
+              deleteMutation.mutate();
+            }}
+          >
+            Ha, butunlay o&apos;chirish
+          </Button>
+        </div>
+      </div>
+    </Modal>
+    </>
   );
 }

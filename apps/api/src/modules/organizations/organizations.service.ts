@@ -358,6 +358,132 @@ export class OrganizationsService {
     return updated;
   }
 
+  /**
+   * Tashkilotni BUTUNLAY, qaytarib bo'lmaydigan tarzda o'chiradi — bu
+   * soft-delete emas, `status`ni o'zgartirish emas: Organization qatori va
+   * unga bog'liq HAMMA yozuv (filiallar, xodimlar, bolalar, moliya, coin,
+   * darsliklar, "foydali" bo'limi, sog'liq, CRM, ota-ona/vasiy, HR/ish haqi,
+   * bildirishnoma, obuna, hamyon) bazadan butunlay o'chiriladi.
+   *
+   * Har bir bog'liq jadval bitta tranzaksiyada, ENG CHUQUR (boshqa jadvalga
+   * ishora qiluvchi) yozuvlardan boshlab, Organization qatorigacha aniq
+   * tartibda o'chiriladi — shu tartib buzilsa, `schema.prisma`dagi FK
+   * cheklovi (`onDelete` qanday sozlangan bo'lishidan qat'iy nazar) xatoga
+   * olib keladi. Shuning uchun bu yerda hech qanday DB darajasidagi cascade
+   * xatti-harakatiga tayanilmaydi — hamma narsa qo'lda, tartib bilan.
+   *
+   * DIQQAT: bu amal qaytarilmaydi. Nomni tasdiqlash kabi UX himoyasi
+   * frontendda alohida qurilgan — bu yerda faqat `@Roles` orqali huquq
+   * tekshiruvi bor.
+   */
+  async remove(id: string) {
+    await this.findOne(id);
+
+    await this.prisma.$transaction(
+      async (tx) => {
+        // 1) Darsliklar/HR/do'kon — o'zidan boshqa hech narsa ishora
+        //    qilmaydigan eng chuqur yozuvlar.
+        await tx.weeklyCoinAssessmentAnswer.deleteMany({
+          where: { assessment: { organizationId: id } },
+        });
+        await tx.topicQuestion.deleteMany({ where: { topic: { branch: { organizationId: id } } } });
+        await tx.parentQuestion.deleteMany({ where: { topic: { branch: { organizationId: id } } } });
+        await tx.lessonGrade.deleteMany({ where: { branch: { organizationId: id } } });
+        await tx.lessonTopic.deleteMany({ where: { branch: { organizationId: id } } });
+        await tx.lessonSchedule.deleteMany({ where: { branch: { organizationId: id } } });
+        await tx.employeeNotification.deleteMany({ where: { employee: { organizationId: id } } });
+        await tx.groupTeacher.deleteMany({ where: { employee: { organizationId: id } } });
+        await tx.employeeAttendance.deleteMany({ where: { employee: { organizationId: id } } });
+        await tx.shift.deleteMany({ where: { employee: { organizationId: id } } });
+        await tx.payrollEntry.deleteMany({ where: { employee: { organizationId: id } } });
+        await tx.salaryScheme.deleteMany({ where: { employee: { organizationId: id } } });
+        await tx.menuEntry.deleteMany({ where: { branch: { organizationId: id } } });
+        await tx.productSale.deleteMany({ where: { product: { organizationId: id } } });
+        await tx.product.deleteMany({ where: { organizationId: id } });
+
+        // 2) Moliya: PaymentAllocation/LedgerEntry Invoice va Payment'ga
+        //    ishora qiladi — ular avval o'chishi kerak.
+        await tx.paymentAllocation.deleteMany({ where: { payment: { organizationId: id } } });
+        await tx.ledgerEntry.deleteMany({ where: { organizationId: id } });
+
+        // 3) Coin: davomat va haftalik baholash CoinTransaction'ga ishora
+        //    qiladi (WeeklyCoinAssessment — majburiy, Attendance — ixtiyoriy).
+        await tx.attendance.deleteMany({ where: { branch: { organizationId: id } } });
+        await tx.weeklyCoinAssessment.deleteMany({ where: { organizationId: id } });
+        await tx.coinTransaction.deleteMany({ where: { organizationId: id } });
+
+        // 4) CRM (navbat) — LeadActivity avval, keyin Lead (u Child'ga
+        //    ixtiyoriy ishora qiladi, shuning uchun Child'dan oldin o'chishi
+        //    kerak).
+        await tx.leadActivity.deleteMany({ where: { lead: { organizationId: id } } });
+        await tx.lead.deleteMany({ where: { organizationId: id } });
+
+        // 5) Ota-ona/vasiy.
+        await tx.childGuardian.deleteMany({ where: { child: { organizationId: id } } });
+        await tx.guardianRefreshToken.deleteMany({ where: { guardian: { organizationId: id } } });
+        await tx.guardian.deleteMany({ where: { organizationId: id } });
+
+        // 6) Endi Invoice/Payment xavfsiz o'chadi — ularga ishora qiluvchi
+        //    yozuvlar allaqachon yo'q.
+        await tx.invoice.deleteMany({ where: { organizationId: id } });
+        await tx.payment.deleteMany({ where: { organizationId: id } });
+
+        // 7) Sog'liq, kundalik hisobot/rivojlanish, bildirishnoma, "foydali"
+        //    (she'r/maqol/ertak), audit, taomlar katalogi — bularning
+        //    hech biriga boshqa hech narsa ishora qilmaydi.
+        await tx.healthProfile.deleteMany({ where: { organizationId: id } });
+        await tx.vaccination.deleteMany({ where: { organizationId: id } });
+        await tx.medicationLog.deleteMany({ where: { organizationId: id } });
+        await tx.dailyReport.deleteMany({ where: { organizationId: id } });
+        await tx.developmentAssessment.deleteMany({ where: { organizationId: id } });
+        await tx.notificationLog.deleteMany({ where: { organizationId: id } });
+        await tx.poem.deleteMany({ where: { organizationId: id } });
+        await tx.proverb.deleteMany({ where: { organizationId: id } });
+        await tx.tale.deleteMany({ where: { organizationId: id } });
+        await tx.auditLog.deleteMany({ where: { organizationId: id } });
+        await tx.dish.deleteMany({ where: { organizationId: id } });
+
+        // 8) Bola — yuqoridagi hamma narsa undan oldin o'chirilgani uchun
+        //    endi xavfsiz.
+        await tx.child.deleteMany({ where: { organizationId: id } });
+
+        // 9) Guruh — Bola (ixtiyoriy), GroupTeacher, dars jadvali/mavzu/
+        //    baho va "foydali" (ixtiyoriy groupId) allaqachon o'chirilgan.
+        await tx.group.deleteMany({ where: { branch: { organizationId: id } } });
+
+        // 10) Xodim — unga ishora qiluvchi barcha jadvallar yuqorida
+        //     o'chirilgan.
+        await tx.employee.deleteMany({ where: { organizationId: id } });
+
+        // 11) Tashkilot bo'ylab katalog — boshqa hech narsa ularga ishora
+        //     qilmaydi.
+        await tx.position.deleteMany({ where: { organizationId: id } });
+        await tx.subject.deleteMany({ where: { organizationId: id } });
+
+        // 12) Xodim kabineti (TenantUser) — Employee.tenantUserId, Poem/
+        //     Proverb/Tale.createdById va boshqa ixtiyoriy ishoralar
+        //     allaqachon yo'q qilingan.
+        await tx.webAuthnCredential.deleteMany({ where: { tenantUser: { organizationId: id } } });
+        await tx.tenantRefreshToken.deleteMany({ where: { tenantUser: { organizationId: id } } });
+        await tx.tenantUser.deleteMany({ where: { organizationId: id } });
+
+        // 13) Filial — unga ishora qiluvchi hamma narsa yuqorida o'chirilgan.
+        await tx.branch.deleteMany({ where: { organizationId: id } });
+
+        // 14) Obuna va hamyon.
+        await tx.walletTransaction.deleteMany({ where: { wallet: { organizationId: id } } });
+        await tx.wallet.deleteMany({ where: { organizationId: id } });
+        await tx.subscription.deleteMany({ where: { organizationId: id } });
+
+        // 15) Tashkilotning o'zi — eng oxirida.
+        await tx.organization.delete({ where: { id } });
+      },
+      { timeout: 30_000 },
+    );
+
+    return { id };
+  }
+
   private async generateUniqueSlug(name: string): Promise<string> {
     const base = slugify(name);
     let candidate = base;
