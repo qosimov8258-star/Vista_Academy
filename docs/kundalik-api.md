@@ -171,31 +171,9 @@ GET    /app/diary/media/:id/poster                     video muqovasi
 
 **Kunlik chegara (guruhga):** 10 ta rasm va 2 ta video. Undan oshsa 400 qaytadi, xabari tayyor o'zbekcha matn — foydalanuvchiga to'g'ridan-to'g'ri ko'rsating.
 
-> ⚠️ `lib/api.ts` `Content-Type: application/json` qo'yadi. FormData uchun `fetch` ni to'g'ridan-to'g'ri ishlating yoki `api` ga FormData qo'llovini qo'shing (sarlavhani **qo'ymaslik** kerak — brauzer `boundary` ni o'zi qo'yadi).
+> ⚠️ `lib/api.ts` `Content-Type: application/json` qo'yadi, FormData uchun u yaramaydi. Tayyor yuklash funksiyasi (rasmni kichraytirish va video muqovasi bilan): **5.6**. Faylni `<img>`/`<video>` da ko'rsatish: **5.7**.
 
-```ts
-const form = new FormData();
-form.append("file", compressedFile);
-if (poster) form.append("poster", poster, "poster.jpg");
-form.append("caption", caption);
-form.append("durationSeconds", String(Math.round(video.duration)));
-
-const token = getTenantAccessToken();   // lib/tenant-session
-const res = await fetch(`${API_URL}/app/diary/groups/${groupId}/days/${date}/media`, {
-  method: "POST",
-  credentials: "include",
-  headers: token ? { Authorization: `Bearer ${token}` } : {},   // Content-Type QO'YILMAYDI
-  body: form,
-});
-```
-
-Hozir media **bazada saqlanadi**, shuning uchun yuborishdan oldin brauzerda kichraytirish shart:
-
-- **Rasm:** `canvas` orqali uzun tomoni ≤ 1600 px, `toBlob("image/jpeg", 0.82)`. Telefon rasmi 4–6 MB dan ~300 KB ga tushadi. HEIC (iPhone) brauzer `<input accept="image/*">` orqali odatda JPEG bo'lib keladi.
-- **Video:** serverda qayta siqilmaydi. UI'da `file.size > 8 MB` bo'lsa, yuklamasdan oldin ogohlantiring: "15–20 soniyali video tanlang". Davomiylikni `<video>` ning `loadedmetadata` hodisasidan oling.
-- **Video muqovasi:** `<video>` ni `currentTime = 0.5` ga surib, kadrni `canvas` ga chizing va 480 px JPEG sifatida `poster` qilib yuboring. Muqova bo'lmasa, ota-onada kulrang katak chiqadi.
-
-**Faylni ko'rsatish.** Xodim tokeni `bogcha_tenant_at` cookie'sida ham yuradi, shuning uchun `<img src={`${API_URL}/app/diary/media/${id}/file`}>` va `<video src=… poster=…/poster>` to'g'ridan-to'g'ri ishlaydi. Video `Range` bilan uzatiladi, iPhone'da ham o'ynaydi. Faqat uzoq ochiq turgan sahifada access cookie muddati tugasa, rasm 401 qaytaradi. Shunda `onError` da sahifa ma'lumotini qayta so'rang: `api` tokenni yangilaydi, cookie ham yangilanadi.
+Media hozircha **bazada saqlanadi**, shuning uchun rasm yuborishdan oldin brauzerda albatta kichraytiriladi. Video serverda qayta siqilmaydi — 8 MB dan kattasini yuklashdan oldin rad eting.
 
 ## 4. Xatolar
 
@@ -209,18 +187,237 @@ Hozir media **bazada saqlanadi**, shuning uchun yuborishdan oldin brauzerda kich
 | Boshqa guruh | 403 | `"Bu guruh sizga biriktirilmagan"` |
 | Topilmadi | 404 | `"Guruh topilmadi"`, `"Belgi topilmadi"`, `"Fayl topilmadi"` |
 
-## 5. Tarbiyachi paneli — UI tavsiyasi
+## 5. Tarbiyachi paneli — nima qilish kerak
 
-Tarbiyachi buni telefonda, bolalar orasida, bir qo'li bilan ishlatadi. **Har bir amal bitta bosish bo'lsin.**
+Tarbiyachi ham, fan o'qituvchisi ham tizimda bitta rol (`TEACHER`) va bitta menyu (`teacherEntries`). Filial admini va menejer ham xuddi shu sahifadan foydalanadi, faqat ular filialdagi hamma guruhni ko'radi. Cheklovni server o'zi qiladi, UI'da rol bo'yicha alohida mantiq shart emas.
 
-1. **"Kundalik" sahifasi** (menyuda "Mening guruhlarim" ichida). Tepada guruh tanlagich (bir nechta guruh bo'lsa) va sana (sukut — bugun).
-2. **Bugungi ro'yxat** — `GET …/days/:date`. Har bir band qatorida katta **"O'tdi ✓"** tugmasi bo'lsin. Bosilganda `POST …/entries { routineItemId }` ketadi, qator darhol yashil bo'ladi (optimistic update). Qatorni bosganda izoh va rasm qo'shish oynasi ochiladi.
-3. **"+ Rasm/video"** tugmasi pastda doim ko'rinib tursin. `<input type="file" accept="image/*,video/*" capture>` telefonda kamerani darhol ochadi. Bir nechta faylni tanlash mumkin, lekin ular birma-bir yuklanadi va yuklanish holati ko'rsatiladi.
-4. **"+ Voqea"** — shablonda yo'q narsa uchun: vaqt, nom va tur.
-5. **Kun tartibini sozlash** (alohida sahifa yoki oyna). Bandlar ro'yxati bo'ladi: vaqt, nom, tur (ikonkali tanlagich) va hafta kunlari (7 ta kichik tugma). "Saqlash" butun ro'yxatni `PUT` qiladi. Yangi guruh uchun tayyor namuna tugmasi qulay: 08:00 kelish, 09:00 mashg'ulot, 10:00 gimnastika, 12:00 tushlik, 13:00–15:00 uyqu, 17:30 uyga ketish.
-6. **Kunlar tarixi** — `GET …/days` bilan kalendar yoki tasma: qaysi kun to'ldirilgan, qaysi biri bo'sh.
+> Tarbiyachi buni **telefonda**, bolalar orasida, ko'pincha bir qo'li bilan ishlatadi. Asosiy qoida: **har bir amal bitta bosish**, tugmalar katta (≥ 44px), sahifa 360px da qulay.
 
-Ikonka va rang mosligi ota-ona kabinetidagi bilan bir xil bo'lsa yaxshi: `apps/admin-web/src/app/(parent)/ota-ona/[slug]/(cabinet)/kundalik/kinds.tsx` (`KIND_META`). Kerak bo'lsa, uni umumiy joyga ko'chiramiz — avval kelishib olamiz.
+### 5.1. Tayyor turgan narsalar (qayta yozmang)
+
+| Fayl | Ichida |
+|---|---|
+| `apps/admin-web/src/features/diary/types.ts` | `DiaryDay`, `DiaryItem`, `DiaryMedia`, `DiaryDaySummary`, `DiaryRoutineItem`, `DiaryActivityKind` |
+| `apps/admin-web/src/features/diary/kinds.tsx` | `KIND_META[kind]` → `{ label, tone, Icon }` — 11 tur uchun ikonka, nom va rang (ota-ona kabinetidagi bilan bir xil); `CameraIcon`, `PlayGlyph`, `DiaryIcon` |
+| `components/ui/*` | `Modal`, `ConfirmDialog`, `Button`, `Card`, `Input`, `Badge`, `states` (Loading/Empty/Error), `toast` |
+| `lib/api.ts` | `api.get/post/put/patch/delete` — JSON so'rovlar |
+| `lib/permissions.ts` | `canWriteTeaching(role)` — yozish tugmalarini ko'rsatish uchun |
+
+`tone` — rang nomi (`lilac | mint | sky | sun | coral`). Panelda uni o'z `--color-*` tokenlaringizga moslang.
+
+### 5.2. Yangi fayllar (tavsiya etilgan joylar)
+
+```
+apps/admin-web/src/
+├─ app/(dashboard)/[slug]/diary/page.tsx                 ← filial admini/menejer: "Guruh kundaligi"
+├─ app/(dashboard)/[slug]/my-diary/page.tsx              ← o'qituvchi: export { default } from "../diary/page"
+├─ app/(dashboard)/[slug]/diary/routine/page.tsx         ← kun tartibini sozlash (yoki modal)
+└─ features/diary/
+   ├─ use-diary.ts          ← react-query hook'lari va mutatsiyalar
+   ├─ upload.ts             ← FormData yuborish, rasmni kichraytirish, video muqovasi
+   ├─ day-checklist.tsx     ← bugungi ro'yxat (asosiy ekran)
+   ├─ entry-sheet.tsx       ← izoh / rasm qo'shish oynasi
+   ├─ extra-event-modal.tsx ← "+ Voqea"
+   ├─ media-strip.tsx       ← kunning rasm/videolari, o'chirish
+   └─ routine-editor.tsx    ← shablon muharriri
+```
+
+`my-*` manzili `my-lessons` bilan bir xil sabab uchun kerak: o'qituvchi va admin URL'lari aralashib ketmasin.
+
+**Menyu** (`components/layout/sidebar.tsx`) — ⚠️ umumiy fayl, qo'shishdan oldin jamoaga ayting:
+
+```ts
+// teacherEntries → "Mening guruhlarim"
+{ href: `/${slug}/my-diary`, label: "Guruh kundaligi", icon: CalendarIcon, show: true },
+// operationalEntries → "Kundalik ish"
+{ href: `${base}/diary`, label: "Guruh kundaligi", icon: CalendarIcon, show: true },
+```
+
+Nomi "Kundalik hisobot" emas, **"Guruh kundaligi"** bo'lsin, chunki "Kundalik hisobot" (`/daily-reports` — bolaning kayfiyati, ovqati, uyqusi) allaqachon bor.
+
+### 5.3. Asosiy ekran: "Guruh kundaligi"
+
+```
+┌──────────────────────────────────────────┐
+│ Guruh kundaligi         [Yulduzcha ▾]    │  ← guruh tanlagich (1 ta bo'lsa yashirin)
+│ ‹  Bugun, 16-sentabr  ›      ⚙ Tartib    │  ← sana: oldingi/keyingi kun; kelajak — yopiq
+│ ███████████░░░░  7/10 o'tdi              │
+├──────────────────────────────────────────┤
+│ 08:00  ☀ Bog'chaga kelish        [✓ O'tdi]│
+│ 09:00  📖 Matematika              [ O'tdi ]│  ← bosilsa: POST entries { routineItemId }
+│        "Shakllarni o'rgandik"  🖼🖼        │  ← izoh va rasmlar (bo'lsa)
+│ 12:00  🍲 Tushlik                 [ O'tdi ]│
+├──────────────────────────────────────────┤
+│ Kun lahzalari (4/10 rasm · 1/2 video)    │
+│ [🖼][🖼][▶][🖼] [+]                        │
+├──────────────────────────────────────────┤
+│ [ + Voqea ]        [ 📷 Rasm / video ]    │  ← pastda yopishib turadi
+└──────────────────────────────────────────┘
+```
+
+1. **Guruhlar:** `api.get<Group[]>("/app/groups")` — o'qituvchiga server faqat o'z guruhlarini qaytaradi. Filial admini uchun `?branchId=` (`useBranchContext(slug)` dagidek).
+2. **Kun:** `GET /app/diary/groups/:groupId/days/:date`. Sukut sana — javobdagi `today`, lekin birinchi so'rov uchun brauzer sanasi yetarli. `date > today` bo'lsa "keyingi kun" tugmasi o'chiq.
+3. **"O'tdi" tugmasi:**
+   - `done === false` → `POST …/entries { routineItemId }`. Tugma **optimistic** holda darhol yashil bo'ladi, xato bo'lsa qaytadi va toast chiqadi.
+   - `done === true` → qatorni bosish izoh/rasm oynasini ochadi. "Bekor qilish" `DELETE /app/diary/entries/:entryId` ni tasdiqlash bilan chaqiradi (`ConfirmDialog`).
+4. **Qator bosilganda — `entry-sheet`:** izoh maydoni (`PATCH entries/:id { note }`, 500 belgi), "📷 Rasm qo'shish" (`entryId` bilan yuklash) va shu mashg'ulot rasmlari. Hali belgilanmagan qatorda "O'tdi deb saqlash" tugmasi bir yo'la `POST { routineItemId, note }` yuboradi.
+5. **Kun lahzalari:** `day.media` va `day.items[].media` birga. Har bir katakda o'chirish (`DELETE media/:id`, tasdiq bilan) va izohni tahrirlash (`PATCH media/:id { caption }`). Hisoblagich `summary.photos/10`, `summary.videos/2` — chegaraga yetganda yuklash tugmasi o'chiq.
+6. **"+ Voqea":** vaqt (boshlanish/tugash), nom, tur (`KIND_META` dan ikonkali tugmalar), izoh → `POST entries { startTime, endTime, title, kind, note }`.
+7. **Bo'sh holat:** `items.length === 0` va shablon ham bo'sh bo'lsa, "Kun tartibi hali yo'q" va **"Namuna bilan boshlash"** tugmasini ko'rsating (5.5).
+8. **Yangilash:** har bir mutatsiyadan keyin `queryClient.invalidateQueries({ queryKey: ["diary-day", groupId, date] })`.
+
+### 5.4. Hook'lar (`features/diary/use-diary.ts`)
+
+```ts
+export const diaryKeys = {
+  day: (groupId: string, date: string) => ["diary-day", groupId, date] as const,
+  days: (groupId: string) => ["diary-days", groupId] as const,
+  routine: (groupId: string) => ["diary-routine", groupId] as const,
+};
+
+export function useDiaryDay(groupId: string | null, date: string) {
+  return useQuery({
+    queryKey: diaryKeys.day(groupId ?? "", date),
+    queryFn: () => api.get<DiaryDay>(`/app/diary/groups/${groupId}/days/${date}`),
+    enabled: !!groupId,
+  });
+}
+
+export function useMarkEntry(groupId: string, date: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { routineItemId?: string; note?: string; startTime?: string; endTime?: string; title?: string; kind?: DiaryActivityKind }) =>
+      api.post(`/app/diary/groups/${groupId}/days/${date}/entries`, body),
+    // Tugma darhol yashil bo'lsin
+    onMutate: async (body) => {
+      await qc.cancelQueries({ queryKey: diaryKeys.day(groupId, date) });
+      const previous = qc.getQueryData<DiaryDay>(diaryKeys.day(groupId, date));
+      if (previous && body.routineItemId) {
+        qc.setQueryData<DiaryDay>(diaryKeys.day(groupId, date), {
+          ...previous,
+          items: previous.items.map((i) => (i.routineItemId === body.routineItemId ? { ...i, done: true } : i)),
+        });
+      }
+      return { previous };
+    },
+    onError: (_e, _b, ctx) => ctx?.previous && qc.setQueryData(diaryKeys.day(groupId, date), ctx.previous),
+    onSettled: () => qc.invalidateQueries({ queryKey: diaryKeys.day(groupId, date) }),
+  });
+}
+```
+
+### 5.5. Kun tartibi muharriri
+
+- `GET …/routine` → ro'yxat. Har qatorda: vaqt (`<input type="time">` × 2, tugash ixtiyoriy), nom, tur (tanlagich `KIND_META` ikonkalari bilan), **hafta kunlari** — 7 ta kichik tugma (Du Se Cho Pay Ju Sha Yak), o'chirish.
+- Yuqoriga/pastga surish yoki vaqt bo'yicha avtomatik saralash kifoya (drag-and-drop shart emas).
+- **"Saqlash"** butun ro'yxatni yuboradi: `PUT …/routine { items }`. Mavjud bandlar `id` bilan ketadi.
+- Band o'chirilayotganda ogohlantirish: "O'tgan kunlardagi belgilar saqlanib qoladi".
+- **Namuna shablon** (bo'sh guruh uchun bitta tugma):
+
+```ts
+const WD = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"];
+export const ROUTINE_TEMPLATE = [
+  { startTime: "08:00", endTime: null,    title: "Bog'chaga kelish", kind: "ARRIVAL",   weekdays: WD },
+  { startTime: "08:30", endTime: "09:00", title: "Nonushta",         kind: "MEAL",      weekdays: WD },
+  { startTime: "09:00", endTime: "09:30", title: "Mashg'ulot",       kind: "LESSON",    weekdays: WD },
+  { startTime: "10:00", endTime: "10:30", title: "Gimnastika",       kind: "EXERCISE",  weekdays: WD },
+  { startTime: "10:45", endTime: "11:30", title: "Hovlida sayr",     kind: "WALK",      weekdays: WD },
+  { startTime: "12:00", endTime: "12:40", title: "Tushlik",          kind: "MEAL",      weekdays: WD },
+  { startTime: "13:00", endTime: "15:00", title: "Kunduzgi uyqu",    kind: "SLEEP",     weekdays: WD },
+  { startTime: "16:00", endTime: "16:40", title: "O'yin",            kind: "PLAY",      weekdays: WD },
+  { startTime: "17:30", endTime: null,    title: "Uyga ketish",      kind: "DEPARTURE", weekdays: WD },
+];
+```
+
+### 5.6. Yuklash (`features/diary/upload.ts`)
+
+```ts
+import { getTenantAccessToken } from "@/lib/tenant-session";
+import { ApiError } from "@/lib/api";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
+
+/** Rasmni uzun tomoni 1600px, JPEG 0.82 — 4–6 MB telefon rasmi ~300 KB bo'ladi */
+export async function compressImage(file: File): Promise<{ blob: Blob; width: number; height: number }> {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  const blob = await new Promise<Blob>((ok) => canvas.toBlob((b) => ok(b!), "image/jpeg", 0.82));
+  return { blob, width: canvas.width, height: canvas.height };
+}
+
+/** Video: davomiylik va 0.5-soniyadagi kadr (muqova, 480px) */
+export function videoInfo(file: File): Promise<{ duration: number; poster: Blob | null; width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const video = document.createElement("video");
+    video.muted = true; video.playsInline = true; video.preload = "auto"; video.src = url;
+    video.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Videoni o'qib bo'lmadi")); };
+    video.onloadedmetadata = () => { video.currentTime = Math.min(0.5, video.duration / 2); };
+    video.onseeked = () => {
+      const scale = Math.min(1, 480 / Math.max(video.videoWidth, video.videoHeight));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(video.videoWidth * scale);
+      canvas.height = Math.round(video.videoHeight * scale);
+      canvas.getContext("2d")!.drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((poster) => {
+        URL.revokeObjectURL(url);
+        resolve({ duration: Math.round(video.duration), poster, width: video.videoWidth, height: video.videoHeight });
+      }, "image/jpeg", 0.75);
+    };
+  });
+}
+
+export async function uploadDiaryMedia(groupId: string, date: string, file: File, opts: { caption?: string; entryId?: string } = {}) {
+  const form = new FormData();
+  if (file.type.startsWith("image/")) {
+    const { blob, width, height } = await compressImage(file);
+    form.append("file", blob, "rasm.jpg");
+    form.append("width", String(width));
+    form.append("height", String(height));
+  } else {
+    if (file.size > 8 * 1024 * 1024) throw new Error("Video 8 MB dan katta — 15–20 soniyali video tanlang");
+    const info = await videoInfo(file);
+    form.append("file", file, file.name);
+    if (info.poster) form.append("poster", info.poster, "poster.jpg");
+    form.append("durationSeconds", String(info.duration));
+    form.append("width", String(info.width));
+    form.append("height", String(info.height));
+  }
+  if (opts.caption) form.append("caption", opts.caption);
+  if (opts.entryId) form.append("entryId", opts.entryId);
+
+  const token = getTenantAccessToken();
+  const res = await fetch(`${API_URL}/app/diary/groups/${groupId}/days/${date}/media`, {
+    method: "POST",
+    credentials: "include",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},   // Content-Type QO'YILMAYDI
+    body: form,
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok || !body?.success) {
+    throw new ApiError(res.status, body?.error?.code ?? "ERROR", body?.error?.message ?? "Yuklab bo'lmadi");
+  }
+  return body.data as DiaryMedia;
+}
+```
+
+- `<input type="file" accept="image/*,video/*" multiple>`. Telefonda kamera va galereya tanlovi o'zi chiqadi.
+- Bir nechta fayl tanlansa, ular **ketma-ket** yuklanadi (parallel emas). Har birining holati ko'rinsin: ⏳ → ✓ yoki ✗ va xabar.
+- Yuklash paytida sahifadan chiqib ketmaslik uchun ogohlantirish qo'yish mumkin (`beforeunload`).
+- 401 kelsa, `api.get("/app/auth/me")` kabi oddiy so'rov tokenni yangilaydi, keyin qayta urinib ko'ring.
+
+### 5.7. Rasm/videoni ko'rsatish
+
+```tsx
+<img src={`${API_URL}/app/diary/media/${m.id}/file`} loading="lazy" />
+<video src={`${API_URL}/app/diary/media/${m.id}/file`} poster={m.hasPoster ? `${API_URL}/app/diary/media/${m.id}/poster` : undefined} controls playsInline preload="metadata" />
+```
+
+Cookie (`bogcha_tenant_at`) avtomatik ketadi, sarlavha kerak emas. Kichik katakda videoning `poster` ini `<img>` bilan ko'rsating va ustiga `PlayGlyph` qo'ying.
 
 ## 6. Ota-ona tomoni (ma'lumot uchun)
 
@@ -234,12 +431,18 @@ Ota-ona bolasi qaysi guruhda bo'lsa, o'sha guruhning kundaligini ko'radi. Bugung
 
 ## 7. Tekshirish ro'yxati
 
-- [ ] Shablon: qo'shish, tahrirlash, o'chirish, tartibni o'zgartirish, hafta kunlari
-- [ ] Bugun: bandni belgilash, izoh qo'shish, belgini bekor qilish
+- [ ] Menyuda "Guruh kundaligi": o'qituvchida `/my-diary`, filial admini/menejerda `/diary`
+- [ ] Bir nechta guruhli o'qituvchi guruhni almashtira oladi; boshqa guruhni ocholmaydi
+- [ ] Shablon: namuna bilan boshlash, qo'shish, tahrirlash, o'chirish, hafta kunlari
+- [ ] Bugun: bitta bosishda "O'tdi", izoh qo'shish, belgini bekor qilish (tasdiq bilan)
 - [ ] Shablonda yo'q voqea qo'shish
+- [ ] O'tgan kunni to'ldirish mumkin; kelajak kun yopiq
 - [ ] Rasm: telefondagi katta rasm kichraytirilib yuklanadi (≤ 3 MB)
-- [ ] Video: 8 MB dan katta bo'lsa yuklashdan oldin ogohlantiriladi; muqova yuboriladi
-- [ ] Kunlik chegara xabari ko'rsatiladi
-- [ ] O'qituvchi boshqa guruhni ocholmaydi
-- [ ] Ota-ona kabinetida (`/ota-ona/:slug/kundalik`) hammasi ko'rinadi
+- [ ] Video: 8 MB dan kattasi yuklashdan oldin rad etiladi; muqova va davomiylik yuboriladi
+- [ ] Bir nechta fayl ketma-ket yuklanadi, har birining holati ko'rinadi
+- [ ] Kunlik chegara (10 rasm, 2 video) — tugma o'chadi, server xabari ko'rsatiladi
+- [ ] 360px telefon ekranida hamma tugma qulay bosiladi
+- [ ] Ota-ona kabinetida (`/ota-ona/:slug/kundalik`) tarbiyachi belgilagani bir daqiqa ichida ko'rinadi
 - [ ] Uchala build o'tadi
+
+Lokal bazada "Yulduzcha (6-7 yosh)" guruhida namuna ma'lumot bor (tarbiyachi: `tarbiyachi5@usmon.uz`) — UI'ni shu bilan sinab ko'rish mumkin.
