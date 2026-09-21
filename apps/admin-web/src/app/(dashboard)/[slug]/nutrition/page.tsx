@@ -16,8 +16,10 @@ import { downloadCsv } from "@/lib/download";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { EditMenuModal } from "@/features/nutrition/edit-menu-modal";
 import { WeeklyMenuModal } from "@/features/nutrition/weekly-menu-modal";
-import { DishCatalogCard } from "@/features/nutrition/dish-catalog-card";
 import { canWriteOperational } from "@/lib/permissions";
+import { isHeadChefPosition } from "@/lib/employee-position";
+import { TodayRemindersCard } from "@/features/child-notes/today-reminders-card";
+import { TodayChildrenCard } from "@/features/nutrition/today-children-card";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -40,7 +42,9 @@ function addDays(dateString: string, days: number): string {
 export default function NutritionPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const { user } = useAuth();
-  const canWrite = canWriteOperational(user?.role);
+  // Bosh oshpaz TEACHER roli bilan kiradi, lekin menyu aynan uning ishi.
+  const isHeadChef = !!user?.position && isHeadChefPosition(user.position);
+  const canWrite = canWriteOperational(user?.role) || isHeadChef;
   const { branchId: forcedBranchId } = useBranchContext(slug);
   const [branchId, setBranchId] = useState("");
   // "Today" depends on the viewer's clock, which can differ between the
@@ -205,6 +209,9 @@ export default function NutritionPage({ params }: { params: Promise<{ slug: stri
 
       {!canWrite && <ViewOnlyNote role={user?.role} />}
 
+      {branchId && <TodayChildrenCard slug={slug} branchId={branchId} today={todayDateString()} />}
+      {branchId && <TodayRemindersCard slug={slug} branchId={branchId} today={todayDateString()} />}
+
       {allergyWarnings.length > 0 && (
         <Card className="border-[var(--color-danger)]/40 shadow-[var(--shadow-raised)]">
           <CardHeader>
@@ -217,21 +224,6 @@ export default function NutritionPage({ params }: { params: Promise<{ slug: stri
               <p key={i}>
                 {formatDate(w.date)}, {w.mealLabel}: &quot;{w.token}&quot; —{" "}
                 <span className="font-medium">{w.childName}</span>da shu allergiya bor
-              </p>
-            ))}
-          </CardBody>
-        </Card>
-      )}
-
-      {!!allergiesQuery.data?.length && (
-        <Card className="border-[var(--color-danger)]/30">
-          <CardHeader>
-            <CardTitle className="text-[var(--color-danger)]">Diqqat — allergiyasi bor bolalar</CardTitle>
-          </CardHeader>
-          <CardBody className="space-y-1 text-[14px] text-[var(--color-text)]">
-            {allergiesQuery.data.map((item) => (
-              <p key={item.child.id}>
-                <span className="font-medium">{item.child.fullName}</span> — {item.allergies}
               </p>
             ))}
           </CardBody>
@@ -300,7 +292,29 @@ export default function NutritionPage({ params }: { params: Promise<{ slug: stri
         />
       )}
 
-      <DishCatalogCard slug={slug} canWrite={canWrite} />
+      <Card>
+        <CardHeader>
+          <CardTitle>Allergiyasi bor bolalar</CardTitle>
+        </CardHeader>
+        <CardBody className="text-[14px] text-[var(--color-text)]">
+          {allergiesQuery.isLoading ? (
+            <LoadingState rows={2} />
+          ) : allergiesQuery.isError ? (
+            <ErrorState message={(allergiesQuery.error as Error).message} />
+          ) : !allergiesQuery.data?.length ? (
+            <EmptyState title="Allergiyasi bor bola yo'q" />
+          ) : (
+            <ul className="divide-y divide-[var(--color-border)]">
+              {allergiesQuery.data.map((item) => (
+                <li key={item.child.id} className="flex flex-wrap items-baseline justify-between gap-2 py-2.5">
+                  <span className="font-medium">{item.child.fullName}</span>
+                  <span className="text-[var(--color-danger)]">{item.allergies}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardBody>
+      </Card>
     </div>
   );
 }

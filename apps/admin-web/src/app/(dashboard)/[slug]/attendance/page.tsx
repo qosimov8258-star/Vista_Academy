@@ -16,6 +16,9 @@ import { downloadCsv } from "@/lib/download";
 import { useBranchContext } from "@/lib/use-branch-context";
 import clsx from "clsx";
 import { canWriteTeaching } from "@/lib/permissions";
+import { isAssistantPosition } from "@/lib/employee-position";
+import { ChildNoteModal } from "@/features/child-notes/child-note-modal";
+import { TodayRemindersCard } from "@/features/child-notes/today-reminders-card";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 
@@ -46,7 +49,9 @@ export default function AttendancePage({ params }: { params: Promise<{ slug: str
   const [exportFrom, setExportFrom] = useState("");
   const [exportTo, setExportTo] = useState("");
   const { user } = useAuth();
-  const canWrite = canWriteTeaching(user?.role);
+  // Tarbiyachi yordamchisi davomatni faqat ko'radi — belgilash tarbiyachiniki.
+  const canWrite = canWriteTeaching(user?.role) && !(user?.position && isAssistantPosition(user.position));
+  const [noteChild, setNoteChild] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     setDate((current) => current || todayDateString());
@@ -233,6 +238,8 @@ export default function AttendancePage({ params }: { params: Promise<{ slug: str
 
       {!canWrite && <ViewOnlyNote role={user?.role} />}
 
+      {branchId && date && <TodayRemindersCard slug={slug} branchId={branchId} today={date} />}
+
       {!date ? (
         <LoadingState />
       ) : !branchId ? (
@@ -267,6 +274,15 @@ export default function AttendancePage({ params }: { params: Promise<{ slug: str
                   {/* Bir necha guruhli tarbiyachi kimni belgilayotganini bilsin */}
                   {child.groupName && (
                     <p className="text-xs text-[var(--color-text-muted)]">{child.groupName}</p>
+                  )}
+                  {canWrite && (
+                    <button
+                      type="button"
+                      className="mt-0.5 text-xs font-medium text-[var(--color-primary)] hover:underline"
+                      onClick={() => setNoteChild({ id: child.childId, name: child.fullName })}
+                    >
+                      Xabar / eslatma
+                    </button>
                   )}
                 </div>
                 {canWrite ? (
@@ -388,6 +404,17 @@ export default function AttendancePage({ params }: { params: Promise<{ slug: str
           )}
         </CardBody>
       </Card>
+      {canWrite && noteChild && branchId && date && (
+        <ChildNoteModal
+          open
+          onClose={() => setNoteChild(null)}
+          slug={slug}
+          branchId={branchId}
+          childId={noteChild.id}
+          childName={noteChild.name}
+          date={date}
+        />
+      )}
     </div>
   );
 }

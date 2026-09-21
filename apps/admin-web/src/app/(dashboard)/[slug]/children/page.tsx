@@ -21,7 +21,7 @@ import { downloadCsv } from "@/lib/download";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { CreateChildModal } from "@/features/children/create-child-modal";
 import { EditChildModal } from "@/features/children/edit-child-modal";
-import { canWriteOperational } from "@/lib/permissions";
+import { canWriteOperational, isTeacher } from "@/lib/permissions";
 
 const STATUS_LABEL: Record<string, string> = { ACTIVE: "Faol", INACTIVE: "Nofaol", QUARANTINED: "Karantinda" };
 const STATUS_TONE: Record<string, "success" | "neutral" | "danger"> = {
@@ -48,6 +48,8 @@ export default function ChildrenPage({ params }: { params: Promise<{ slug: strin
   const [exportError, setExportError] = useState<string | null>(null);
   const { user } = useAuth();
   const canWrite = canWriteOperational(user?.role);
+  // Tarbiyachiga bitta guruh biriktiriladi — guruh filtri, guruh va filial ustuni unga keraksiz.
+  const teacher = isTeacher(user?.role);
   const { branchId: forcedBranchId } = useBranchContext(slug);
   const router = useRouter();
 
@@ -114,7 +116,7 @@ export default function ChildrenPage({ params }: { params: Promise<{ slug: strin
 
       {!canWrite && <ViewOnlyNote role={user?.role} />}
 
-      <Card className="grid gap-3 p-4 sm:grid-cols-3 sm:px-6">
+      <Card className={`grid gap-3 p-4 sm:px-6 ${teacher ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
         <Input
           placeholder="Ism, ota-ona yoki ID bo'yicha qidirish (masalan id14732)"
           value={search}
@@ -123,6 +125,7 @@ export default function ChildrenPage({ params }: { params: Promise<{ slug: strin
             setSearch(e.target.value);
           }}
         />
+        {!teacher && (
         <Select
           value={groupFilter}
           onChange={(e) => {
@@ -137,6 +140,7 @@ export default function ChildrenPage({ params }: { params: Promise<{ slug: strin
             </option>
           ))}
         </Select>
+        )}
         <Select
           value={statusFilter}
           onChange={(e) => {
@@ -180,8 +184,8 @@ export default function ChildrenPage({ params }: { params: Promise<{ slug: strin
                 <Th>To'liq ism</Th>
                 <Th>Ota-ona / aloqa</Th>
                 <Th>Tug'ilgan sana</Th>
-                {!forcedBranchId && <Th>Filial</Th>}
-                <Th>Guruh</Th>
+                {!forcedBranchId && !teacher && <Th>Filial</Th>}
+                {!teacher && <Th>Guruh</Th>}
                 <Th>Holat</Th>
                 {canWrite && <Th />}
               </tr>
@@ -222,14 +226,16 @@ export default function ChildrenPage({ params }: { params: Promise<{ slug: strin
                   <Td className="tabular-nums text-[var(--color-text-muted)]">
                     {child.birthDate ? formatDate(child.birthDate) : "—"}
                   </Td>
-                  {!forcedBranchId && (
+                  {!forcedBranchId && !teacher && (
                     <Td nowrap className="text-[var(--color-text-muted)]">
                       {child.branch?.name ?? "—"}
                     </Td>
                   )}
-                  <Td nowrap className="text-[var(--color-text-muted)]">
-                    {child.group?.name ?? "—"}
-                  </Td>
+                  {!teacher && (
+                    <Td nowrap className="text-[var(--color-text-muted)]">
+                      {child.group?.name ?? "—"}
+                    </Td>
+                  )}
                   <Td>
                     <Badge tone={STATUS_TONE[child.status]}>{STATUS_LABEL[child.status]}</Badge>
                   </Td>
