@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useParams, useRouter } from "next/navigation";
-import { useRef, useState, type SyntheticEvent } from "react";
+import { useEffect, useRef, useState, type SyntheticEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { EmployeeNotification } from "@/lib/types";
@@ -102,6 +102,9 @@ export function Sidebar({ slug }: { slug: string }) {
   const { user } = useAuth();
   const [collapsed, toggleCollapsed] = useSidebarCollapsed();
   const [openSections, toggleSection] = useSidebarSections();
+  // Mobil pastki navigatsiyada qaysi bo'lim varag'i ochiq turibdi (yon panel
+  // kabi doimiy saqlanmaydi — sahifa almashsa yopiladi).
+  const [mobileSheet, setMobileSheet] = useState<string | null>(null);
 
   // Sichqoncha nav elementlari ustidan o'tganda orqa fondagi belgilagich
   // shu yerga qarab silliq siljiydi ("sas" panelidagi kabi hover effekti).
@@ -309,6 +312,20 @@ export function Sidebar({ slug }: { slug: string }) {
     )
     .filter((entry) => (isSection(entry) ? entry.items.length > 0 : entry.show));
 
+  // O'qituvchi uchun mobil ekranda pastda turadigan navigatsiya: "Bildirishnomalarim"
+  // bu yerda takrorlanmaydi, chunki mobilda u yuqori panelda qo'ng'iroqcha
+  // ikonkasi sifatida turadi (qarang: Topbar).
+  const mobileNavEntries = entries.filter(
+    (entry) => isSection(entry) || entry.href !== `/${slug}/my-notifications`,
+  );
+  const activeMobileSection = mobileSheet
+    ? mobileNavEntries.find((entry): entry is NavSection => isSection(entry) && entry.id === mobileSheet)
+    : undefined;
+
+  useEffect(() => {
+    setMobileSheet(null);
+  }, [pathname]);
+
   // Yig'ilgan holatda bo'lim sarlavhasi sig'maydi — barcha havolalar
   // tekis ro'yxatga aylanadi, bo'limlar orasi ingichka chiziq bilan ajraladi.
   const collapsedGroups: NavLeaf[][] = [
@@ -338,6 +355,7 @@ export function Sidebar({ slug }: { slug: string }) {
   const idleRow = "font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text)]";
 
   return (
+    <>
     <aside
       className={clsx(
         "hidden shrink-0 flex-col bg-[var(--color-sidebar)] md:flex",
@@ -605,5 +623,88 @@ export function Sidebar({ slug }: { slug: string }) {
         </button>
       </div>
     </aside>
+
+    {/* Mobil pastki navigatsiya: yon panel <768px da butunlay yashirilgani
+        uchun o'qituvchiga ekran pastida asosiy bo'limlar beriladi. */}
+    {teacher && (
+      <>
+        {activeMobileSection && (
+          <>
+            <div
+              className="fixed inset-0 z-30 md:hidden"
+              aria-hidden
+              onClick={() => setMobileSheet(null)}
+            />
+            <div className="fixed inset-x-3 bottom-[calc(4rem+env(safe-area-inset-bottom)+0.5rem)] z-50 rounded-[20px] bg-[var(--color-surface)] p-2 shadow-[var(--shadow-modal)] md:hidden">
+              {activeMobileSection.items.map((item) => {
+                const active = isActive(item);
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMobileSheet(null)}
+                    className={clsx(
+                      "flex items-center gap-3 rounded-[14px] px-3.5 py-3 text-[15px] font-medium transition-colors",
+                      active
+                        ? "bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
+                        : "text-[var(--color-text)] hover:bg-black/[0.04]",
+                    )}
+                  >
+                    <Icon filled={active} className="h-5 w-5 shrink-0" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        <nav
+          className="fixed inset-x-0 bottom-0 z-40 flex h-16 items-stretch border-t border-[var(--color-separator)] bg-[var(--color-surface)]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-[20px] md:hidden"
+          aria-label="Asosiy navigatsiya"
+        >
+          {mobileNavEntries.map((entry) => {
+            if (!isSection(entry)) {
+              const active = isActive(entry);
+              const Icon = entry.icon;
+              return (
+                <Link
+                  key={entry.href}
+                  href={entry.href}
+                  aria-current={active ? "page" : undefined}
+                  className={clsx(
+                    "flex flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-medium",
+                    active ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)]",
+                  )}
+                >
+                  <Icon filled={active} className="h-5 w-5" />
+                  <span className="truncate px-1">{entry.label}</span>
+                </Link>
+              );
+            }
+
+            const active = entry.items.some(isActive) || mobileSheet === entry.id;
+            const Icon = entry.icon;
+            return (
+              <button
+                key={entry.id}
+                type="button"
+                onClick={() => setMobileSheet((current) => (current === entry.id ? null : entry.id))}
+                aria-expanded={mobileSheet === entry.id}
+                className={clsx(
+                  "flex flex-1 cursor-pointer flex-col items-center justify-center gap-0.5 text-[11px] font-medium",
+                  active ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)]",
+                )}
+              >
+                <Icon className="h-5 w-5" />
+                <span className="truncate px-1">{entry.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+      </>
+    )}
+    </>
   );
 }

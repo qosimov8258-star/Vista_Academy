@@ -9,3 +9,4 @@ dist/
 apps/api/generated/
 apps/api/uploads/
 *.tsbuildinfo
+/Vista_Academy/
