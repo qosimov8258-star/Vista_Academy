@@ -69,6 +69,7 @@ git log main..mening-vetkam --oneline    # faqat mening commitlarim
 |---|---|---|
 | `apps/platform-web` (3100) | Platforma admin paneli — tashkilotlar, tariflar, obunalar | islombel |
 | `apps/admin-web` (3101) | Bog'cha paneli — Super Admin, filial, tarbiyachi | Usmon |
+| `apps/landing-web` (3102) | Ommaviy lending sahifa (marketing) | islombel |
 | `apps/api` (4000) | NestJS backend | **umumiy** |
 
 **O'z hududingizdan tashqariga chiqsangiz — avval ayting.** Barcha
@@ -122,6 +123,7 @@ Portlar **doim** shu — 3000/3001 boshqa loyiha egallagan:
 | API | 4000 |
 | platform-web | 3100 |
 | admin-web | 3101 |
+| landing-web | 3102 |
 | PostgreSQL | 5436 |
 
 `package.json` dagi `dev` skriptlari 3000/3001 ni ko'rsatadi — **portni qo'lda bering**:
@@ -130,6 +132,7 @@ Portlar **doim** shu — 3000/3001 boshqa loyiha egallagan:
 npm run start:dev --workspace=apps/api                    # 4000
 npx next dev -p 3100    # apps/platform-web ichida
 npx next dev -p 3101    # apps/admin-web ichida
+npx next dev -p 3102    # apps/landing-web ichida
 ```
 
 Docker ishlatilmaydi — Postgres qo'lda 5436 portda ishga tushiriladi.

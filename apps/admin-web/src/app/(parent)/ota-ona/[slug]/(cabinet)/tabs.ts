@@ -1,4 +1,4 @@
-import { BulbIcon, HomeIcon, NoteIcon, SettingsIcon } from "@/components/ui/icons";
+import { BulbIcon, HomeIcon, NoteIcon, SettingsIcon, ShopIcon } from "@/components/ui/icons";
 
 /**
  * Pastki menyu tartibi. Menyu ham, sahifa o'tishi ham shu ro'yxatdan
@@ -8,6 +8,7 @@ import { BulbIcon, HomeIcon, NoteIcon, SettingsIcon } from "@/components/ui/icon
 export const CABINET_TABS = [
   { href: "", label: "Bosh menu", icon: HomeIcon },
   { href: "/kundalik", label: "Kundalik", icon: NoteIcon },
+  { href: "/dokon", label: "Do'kon", icon: ShopIcon },
   { href: "/foydali", label: "Foydali", icon: BulbIcon },
   { href: "/sozlamalar", label: "Sozlamalar", icon: SettingsIcon },
 ] as const;

@@ -135,7 +135,7 @@ export class TenantAuthService {
       fullName: string;
       role: TenantAccessTokenPayload["role"];
       avatarUpdatedAt: Date | null;
-      employee: { position: string; subjects: string[] } | null;
+      employee: { position: string; subjects: string[]; topicsManagedByAdmin: boolean } | null;
     },
     organization: { slug: string; name: string },
   ): TenantAuthenticatedUser {
@@ -153,6 +153,7 @@ export class TenantAuthService {
       avatarUpdatedAt: tenantUser.avatarUpdatedAt?.toISOString() ?? null,
       position: tenantUser.employee?.position ?? null,
       subjects: tenantUser.employee?.subjects ?? [],
+      topicsManagedByAdmin: tenantUser.employee?.topicsManagedByAdmin ?? false,
     };
   }
 }

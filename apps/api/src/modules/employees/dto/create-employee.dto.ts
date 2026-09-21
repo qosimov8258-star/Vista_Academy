@@ -12,7 +12,9 @@ import { IsArray, IsOptional, IsString, Matches, MinLength, ValidateNested } fro
 export class EmployeeAccountDto {
   @ApiProperty({
     type: [String],
-    description: "Tarbiyachiga biriktiriladigan guruhlar — u faqat shularni ko'radi. Kassir va bosh oshpazga guruh kerak emas.",
+    description:
+      "Tarbiyachiga biriktiriladigan guruhlar — u faqat shularni ko'radi. Guruhga bog'liq bo'lmagan " +
+      "xodimlar (masalan oshpaz) uchun bo'sh massiv yuboriladi.",
   })
   @IsOptional()
   @IsArray()

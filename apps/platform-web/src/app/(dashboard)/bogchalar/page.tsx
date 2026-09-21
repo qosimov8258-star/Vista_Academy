@@ -319,7 +319,14 @@ export default function BogchalarPage() {
       )}
 
       <CreateOrganizationModal open={createOpen} onClose={() => setCreateOpen(false)} />
-      {editOrg && <EditOrganizationModal open organization={editOrg} onClose={() => setEditOrg(null)} />}
+      {editOrg && (
+        <EditOrganizationModal
+          open
+          organization={editOrg}
+          onClose={() => setEditOrg(null)}
+          onDeleted={() => setEditOrg(null)}
+        />
+      )}
     </div>
   );
 }

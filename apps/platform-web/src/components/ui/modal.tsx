@@ -5,6 +5,13 @@ import { createPortal } from "react-dom";
 import { CloseIcon } from "./icons";
 import { IconButton } from "./button";
 
+// Bir vaqtda ikkita Modal ustma-ust ochilishi mumkin (masalan, o'chirishni
+// tasdiqlash oynasi). Har biri o'z `open`ini mustaqil boshqargani uchun
+// ichkarisi yopilganda sahifa skrolini shartsiz qaytarib bo'lmaydi — hali
+// tashqarisi ochiq bo'lishi mumkin. Shu uchun nechta Modal ochiqligini
+// hisoblab, hammasi yopilgandagina skrol qaytariladi.
+let openModalCount = 0;
+
 interface ModalProps {
   open: boolean;
   onClose: () => void;
@@ -34,13 +41,17 @@ export function Modal({
       if (e.key === "Escape") onClose();
     };
     document.addEventListener("keydown", onKey);
+    openModalCount += 1;
     document.body.style.overflow = "hidden";
     // Oyna ochilganda fokus ichkariga o'tsin — klaviatura orqasidagi
     // sahifada qolib ketmasin.
     panelRef.current?.focus();
     return () => {
       document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
+      openModalCount -= 1;
+      if (openModalCount === 0) {
+        document.body.style.overflow = "";
+      }
     };
   }, [open, onClose]);
 

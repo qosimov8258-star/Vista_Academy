@@ -33,11 +33,49 @@ const CHILD_ATTENDANCE_STATUS_LABEL: Record<AttendanceStatus, string> = {
   SICK: "Kasal",
 };
 
+const STATUS_SEGMENT_OPTIONS: { value: AttendanceStatus; label: string; activeClass: string }[] = [
+  { value: "PRESENT", label: "Keldi", activeClass: "bg-[var(--color-success)] text-white" },
+  { value: "ABSENT", label: "Kelmadi", activeClass: "bg-[var(--color-danger)] text-white" },
+  { value: "LATE", label: "Kech qoldi", activeClass: "bg-[var(--color-warning)] text-white" },
+  { value: "SICK", label: "Kasal", activeClass: "bg-[var(--color-warning)] text-white" },
+];
+
+/** Bitta ixcham, to'liq dumaloq konteynerga to'plangan holat tanlovi — 4 ta
+ * alohida keng tugma o'rniga, iOS segmented control uslubida. */
+function StatusSegmented({
+  value,
+  onChange,
+}: {
+  value: AttendanceStatus;
+  onChange: (status: AttendanceStatus) => void;
+}) {
+  return (
+    <div className="inline-flex flex-wrap items-center gap-0.5 rounded-full bg-[var(--color-surface-sunken)] p-1">
+      {STATUS_SEGMENT_OPTIONS.map((opt) => (
+        <button
+          key={opt.value}
+          type="button"
+          onClick={() => onChange(opt.value)}
+          className={clsx(
+            "cursor-pointer whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-semibold transition-colors duration-[var(--dur-fast)]",
+            value === opt.value
+              ? opt.activeClass
+              : "text-[var(--color-text-muted)] hover:bg-[var(--color-border)]",
+          )}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function AttendancePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const queryClient = useQueryClient();
   const { branchId: forcedBranchId } = useBranchContext(slug);
   const [branchId, setBranchId] = useState("");
+  const [tab, setTab] = useState<"all" | "absent">("all");
   // "Today" depends on the viewer's clock, which can differ between the
   // server-rendered pass and the client hydration pass — computing it lazily
   // in an effect (client-only) avoids a hydration mismatch on the date input.
@@ -173,6 +211,17 @@ export default function AttendancePage({ params }: { params: Promise<{ slug: str
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date, branchId]);
 
+  // Ota-ona sabab qoldirmagan bo'lsa — tarbiyachi shu tugma bilan filial
+  // administratoriga xabar beradi (Bildirishnomalar jurnaliga yoziladi).
+  const requestContactMutation = useMutation({
+    mutationFn: (childId: string) => api.post("/app/attendance/request-contact", { childId, date }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["attendance", slug, branchId, date] });
+    },
+  });
+
+  const absentChildren = attendanceQuery.data?.children.filter((c) => c.status === "ABSENT") ?? [];
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -251,118 +300,149 @@ export default function AttendancePage({ params }: { params: Promise<{ slug: str
       ) : !attendanceQuery.data || attendanceQuery.data.children.length === 0 ? (
         <EmptyState title="Bu filialda faol bola yo'q" />
       ) : (
-        <Card className="overflow-hidden">
-          <ul className="divide-y divide-[var(--color-separator)]">
-            {attendanceQuery.data.children.map((child) => (
-              <li key={child.childId} className="flex flex-wrap items-center justify-between gap-2.5 px-5 py-3">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <p className="text-sm font-medium text-[var(--color-text)]">{child.fullName}</p>
-                    {(() => {
-                      const flag = chronicAbsenceByChildId.get(child.childId);
-                      if (!flag) return null;
-                      return (
-                        <>
-                          {flag.consecutiveAbsentDays >= 3 && (
-                            <Badge tone="danger">{flag.consecutiveAbsentDays} kun ketma-ket kelmadi</Badge>
-                          )}
-                          {flag.overdueAndAbsentToday && <Badge tone="danger">To&apos;lov muddati o&apos;tgan</Badge>}
-                        </>
-                      );
-                    })()}
-                  </div>
-                  {/* Bir necha guruhli tarbiyachi kimni belgilayotganini bilsin */}
-                  {child.groupName && (
-                    <p className="text-xs text-[var(--color-text-muted)]">{child.groupName}</p>
-                  )}
-                  {canWrite && (
-                    <button
-                      type="button"
-                      className="mt-0.5 text-xs font-medium text-[var(--color-primary)] hover:underline"
-                      onClick={() => setNoteChild({ id: child.childId, name: child.fullName })}
-                    >
-                      Xabar / eslatma
-                    </button>
-                  )}
-                </div>
-                {canWrite ? (
-                  <div className="flex flex-wrap items-center justify-end gap-2">
-                    {statusFor(child.childId) !== "PRESENT" && (
-                      <input
-                        type="text"
-                        value={noteFor(child.childId)}
-                        onChange={(e) => setLocalNotes((s) => ({ ...s, [child.childId]: e.target.value }))}
-                        placeholder="Izoh (ixtiyoriy)"
-                        className="h-9 w-40 rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-2.5 text-[13px] text-[var(--color-text)] outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20"
-                      />
+        <>
+          <div className="flex gap-2">
+            <Button size="sm" variant={tab === "all" ? "primary" : "tertiary"} onClick={() => setTab("all")}>
+              Barchasi
+            </Button>
+            <Button size="sm" variant={tab === "absent" ? "primary" : "tertiary"} onClick={() => setTab("absent")}>
+              Kelmaganlar{absentChildren.length > 0 ? ` (${absentChildren.length})` : ""}
+            </Button>
+          </div>
+
+          {tab === "absent" ? (
+            <Card className="overflow-hidden">
+              {absentChildren.length === 0 ? (
+                <EmptyState title="Bugun hammasi keldi" description="Kelmagan bola yo'q" />
+              ) : (
+                <ul className="divide-y divide-[var(--color-separator)]">
+                  {absentChildren.map((child) => (
+                    <li key={child.childId} className="flex flex-wrap items-center justify-between gap-2.5 px-5 py-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-[var(--color-text)]">{child.fullName}</p>
+                        {child.groupName && (
+                          <p className="text-xs text-[var(--color-text-muted)]">{child.groupName}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {child.parentReason ? (
+                          <div className="max-w-xs text-right">
+                            <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
+                              Ota-ona sababi
+                            </p>
+                            <p className="text-sm text-[var(--color-text)]">{child.parentReason}</p>
+                          </div>
+                        ) : child.contactRequestedAt ? (
+                          <Badge tone="warning">Aloqaga chiqish so&apos;raldi</Badge>
+                        ) : canWrite ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            loading={
+                              requestContactMutation.isPending &&
+                              requestContactMutation.variables === child.childId
+                            }
+                            onClick={() => requestContactMutation.mutate(child.childId)}
+                          >
+                            Aloqaga chiqish
+                          </Button>
+                        ) : (
+                          <Badge tone="neutral">Sabab yo&apos;q</Badge>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          ) : (
+            <Card className="overflow-hidden">
+              <ul className="divide-y divide-[var(--color-separator)]">
+                {attendanceQuery.data.children.map((child) => (
+                  <li key={child.childId} className="flex flex-wrap items-center justify-between gap-2.5 px-5 py-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <p className="text-sm font-medium text-[var(--color-text)]">{child.fullName}</p>
+                        {(() => {
+                          const flag = chronicAbsenceByChildId.get(child.childId);
+                          if (!flag) return null;
+                          return (
+                            <>
+                              {flag.consecutiveAbsentDays >= 3 && (
+                                <Badge tone="danger">{flag.consecutiveAbsentDays} kun ketma-ket kelmadi</Badge>
+                              )}
+                              {flag.overdueAndAbsentToday && <Badge tone="danger">To&apos;lov muddati o&apos;tgan</Badge>}
+                            </>
+                          );
+                        })()}
+                      </div>
+                      {/* Bir necha guruhli tarbiyachi kimni belgilayotganini bilsin */}
+                      {child.groupName && (
+                        <p className="text-xs text-[var(--color-text-muted)]">{child.groupName}</p>
+                      )}
+                      {canWrite && (
+                        <button
+                          type="button"
+                          className="mt-0.5 text-xs font-medium text-[var(--color-primary)] hover:underline"
+                          onClick={() => setNoteChild({ id: child.childId, name: child.fullName })}
+                        >
+                          Xabar / eslatma
+                        </button>
+                      )}
+                    </div>
+                    {canWrite ? (
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        {statusFor(child.childId) !== "PRESENT" && (
+                          <input
+                            type="text"
+                            value={noteFor(child.childId)}
+                            onChange={(e) => setLocalNotes((s) => ({ ...s, [child.childId]: e.target.value }))}
+                            placeholder="Izoh (ixtiyoriy)"
+                            className="h-9 w-40 rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-2.5 text-[13px] text-[var(--color-text)] outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20"
+                          />
+                        )}
+                        <StatusSegmented
+                          value={statusFor(child.childId)}
+                          onChange={(status) => setLocalStatuses((s) => ({ ...s, [child.childId]: status }))}
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-end gap-1">
+                        <Badge
+                          tone={
+                            child.status === "PRESENT"
+                              ? "success"
+                              : child.status === "ABSENT"
+                                ? "danger"
+                                : child.status === "LATE" || child.status === "SICK"
+                                  ? "warning"
+                                  : "neutral"
+                          }
+                        >
+                          {child.status ? CHILD_ATTENDANCE_STATUS_LABEL[child.status] : "Belgilanmagan"}
+                        </Badge>
+                        {child.note && <p className="text-xs text-[var(--color-text-muted)]">{child.note}</p>}
+                      </div>
                     )}
-                    <Button
-                      size="sm"
-                      variant={statusFor(child.childId) === "PRESENT" ? "primary" : "tertiary"}
-                      className={clsx(statusFor(child.childId) === "PRESENT" && "bg-[var(--color-success)] hover:opacity-90")}
-                      onClick={() => setLocalStatuses((s) => ({ ...s, [child.childId]: "PRESENT" }))}
-                    >
-                      Keldi
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={statusFor(child.childId) === "ABSENT" ? "danger" : "tertiary"}
-                      onClick={() => setLocalStatuses((s) => ({ ...s, [child.childId]: "ABSENT" }))}
-                    >
-                      Kelmadi
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="tertiary"
-                      className={clsx(statusFor(child.childId) === "LATE" && "bg-[var(--color-warning)] text-white hover:opacity-90")}
-                      onClick={() => setLocalStatuses((s) => ({ ...s, [child.childId]: "LATE" }))}
-                    >
-                      Kech qoldi
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="tertiary"
-                      className={clsx(statusFor(child.childId) === "SICK" && "bg-[var(--color-warning)] text-white hover:opacity-90")}
-                      onClick={() => setLocalStatuses((s) => ({ ...s, [child.childId]: "SICK" }))}
-                    >
-                      Kasal
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-end gap-1">
-                    <Badge
-                      tone={
-                        child.status === "PRESENT"
-                          ? "success"
-                          : child.status === "ABSENT"
-                            ? "danger"
-                            : child.status === "LATE" || child.status === "SICK"
-                              ? "warning"
-                              : "neutral"
-                      }
-                    >
-                      {child.status ? CHILD_ATTENDANCE_STATUS_LABEL[child.status] : "Belgilanmagan"}
-                    </Badge>
-                    {child.note && <p className="text-xs text-[var(--color-text-muted)]">{child.note}</p>}
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
-          {canWrite && (
-            <div className="hairline flex items-center justify-between gap-3 border-t border-[var(--color-separator)] px-5 py-3.5 sm:px-6">
-              {saveMutation.isError && (
-                <span className="text-[13px] text-[var(--color-danger)]">Saqlashda xatolik yuz berdi</span>
+                  </li>
+                ))}
+              </ul>
+              {canWrite && (
+                <div className="hairline flex items-center justify-between gap-3 border-t border-[var(--color-separator)] px-5 py-3.5 sm:px-6">
+                  {saveMutation.isError && (
+                    <span className="text-[13px] text-[var(--color-danger)]">Saqlashda xatolik yuz berdi</span>
+                  )}
+                  {saveMutation.isSuccess && !saveMutation.isPending && (
+                    <span className="text-[13px] text-[var(--color-success)]">Saqlandi</span>
+                  )}
+                  <Button className="ml-auto" loading={saveMutation.isPending} onClick={() => saveMutation.mutate()}>
+                    Saqlash
+                  </Button>
+                </div>
               )}
-              {saveMutation.isSuccess && !saveMutation.isPending && (
-                <span className="text-[13px] text-[var(--color-success)]">Saqlandi</span>
-              )}
-              <Button className="ml-auto" loading={saveMutation.isPending} onClick={() => saveMutation.mutate()}>
-                Saqlash
-              </Button>
-            </div>
+            </Card>
           )}
-        </Card>
+        </>
       )}
 
       <Card className="overflow-hidden">

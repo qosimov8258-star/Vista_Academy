@@ -1,7 +1,13 @@
+import { getTenantAccessToken } from "./tenant-session";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
 
 export async function downloadCsv(path: string, filename: string): Promise<void> {
-  const res = await fetch(`${API_URL}${path}`, { credentials: "include" });
+  const accessToken = getTenantAccessToken();
+  const res = await fetch(`${API_URL}${path}`, {
+    credentials: "include",
+    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+  });
   if (!res.ok) {
     throw new Error("Eksport qilishda xatolik yuz berdi");
   }

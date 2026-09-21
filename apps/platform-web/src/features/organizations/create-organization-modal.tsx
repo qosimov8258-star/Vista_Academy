@@ -20,12 +20,9 @@ const LOGIN_MESSAGE = "Login lotin harf, raqam, . _ - dan iborat bo'lishi va kam
 
 const schema = z.object({
   name: z.string().min(2, "Nomi kamida 2 belgi"),
-  contactName: z.string().optional(),
-  contactEmail: z.union([z.string().email("Email formati noto'g'ri"), z.literal("")]).optional(),
+  contactName: z.string().regex(LOGIN_PATTERN, LOGIN_MESSAGE),
   contactPhone: z.string().optional(),
   planId: z.string().min(1, "Tarif tanlang"),
-  adminFullName: z.string().min(2, "To'liq ism kamida 2 belgi"),
-  adminLogin: z.string().regex(LOGIN_PATTERN, LOGIN_MESSAGE),
   adminPassword: z.string().min(8, "Kamida 8 belgi"),
 });
 
@@ -52,7 +49,7 @@ export function CreateOrganizationModal({ open, onClose }: { open: boolean; onCl
 
   useEffect(() => {
     if (open) {
-      reset({ name: "", contactName: "", contactEmail: "", contactPhone: "", planId: "" });
+      reset({ name: "", contactName: "", contactPhone: "", planId: "", adminPassword: "" });
       setServerError(null);
     }
   }, [open, reset]);
@@ -60,8 +57,15 @@ export function CreateOrganizationModal({ open, onClose }: { open: boolean; onCl
   const mutation = useMutation({
     mutationFn: (values: FormValues) =>
       api.post<Organization>("/platform/organizations", {
-        ...values,
-        contactEmail: values.contactEmail || undefined,
+        name: values.name,
+        contactName: values.contactName,
+        contactPhone: values.contactPhone,
+        planId: values.planId,
+        // Ism maydoni Super Admin login sifatida ham ishlatiladi — to'liq ismni
+        // keyinroq super admin o'zi panelda o'zgartiradi.
+        adminFullName: values.contactName,
+        adminLogin: values.contactName,
+        adminPassword: values.adminPassword,
       }),
     onSuccess: (organization) => {
       queryClient.invalidateQueries({ queryKey: ["organizations"] });
@@ -143,15 +147,19 @@ export function CreateOrganizationModal({ open, onClose }: { open: boolean; onCl
         )}
         <Input label="Bog'cha nomi" placeholder="Quyoshcha bog'chasi" error={errors.name?.message} {...register("name")} />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input label="Ism" placeholder="Aziza Karimova" {...register("contactName")} />
+          <Input
+            label="Ism"
+            placeholder="admin_tarmoq"
+            error={errors.contactName?.message}
+            {...register("contactName")}
+          />
           <Input label="Telefon raqami" placeholder="+998901234567" {...register("contactPhone")} />
         </div>
-        <Input
-          label="Email"
-          type="email"
-          placeholder="info@bogcha.uz"
-          error={errors.contactEmail?.message}
-          {...register("contactEmail")}
+        <PasswordVeilInput
+          label="Parol"
+          placeholder="Kamida 8 belgi"
+          error={errors.adminPassword?.message}
+          {...register("adminPassword")}
         />
         <Select label="Tarif" defaultValue="" error={errors.planId?.message} {...register("planId")}>
           <option value="" disabled>
@@ -163,31 +171,6 @@ export function CreateOrganizationModal({ open, onClose }: { open: boolean; onCl
             </option>
           ))}
         </Select>
-
-        <div className="border-t border-[var(--color-border)] pt-4">
-          <p className="mb-3 text-sm font-medium text-[var(--color-text)]">Super Admin akkaunti</p>
-          <div className="space-y-4">
-            <Input
-              label="To'liq ism"
-              placeholder="Aziza Karimova"
-              error={errors.adminFullName?.message}
-              {...register("adminFullName")}
-            />
-            <Input
-              label="Login"
-              type="text"
-              placeholder="admin_tarmoq"
-              error={errors.adminLogin?.message}
-              {...register("adminLogin")}
-            />
-            <PasswordVeilInput
-              label="Parol"
-              placeholder="Kamida 8 belgi"
-              error={errors.adminPassword?.message}
-              {...register("adminPassword")}
-            />
-          </div>
-        </div>
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={handleClose}>

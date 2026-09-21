@@ -8,6 +8,7 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
 import type {
   Child,
+  ChildAttendanceHistory,
   DailyReport,
   DevelopmentAssessment,
   HealthProfile,
@@ -46,12 +47,12 @@ import { EditHealthProfileModal, BLOOD_TYPE_LABEL } from "@/features/child-healt
 import { AddVaccinationModal } from "@/features/child-health/add-vaccination-modal";
 import { UpdateVaccinationModal } from "@/features/child-health/update-vaccination-modal";
 import { AddMedicationModal } from "@/features/child-health/add-medication-modal";
-import { QuarantineModal } from "@/features/child-health/quarantine-modal";
 import { AddGuardianModal } from "@/features/guardians/add-guardian-modal";
 import { ParentCabinetModal } from "@/features/guardians/parent-cabinet-modal";
 import { EditGuardianLinkModal } from "@/features/guardians/edit-guardian-link-modal";
 import { EditChildModal } from "@/features/children/edit-child-modal";
-import { canWriteOperational } from "@/lib/permissions";
+import { ChildAttendanceCalendar } from "@/features/attendance/child-attendance-calendar";
+import { canWriteOperational, canWriteTeaching } from "@/lib/permissions";
 
 const VACCINATION_STATUS_LABEL: Record<string, string> = {
   SCHEDULED: "Rejalashtirilgan",
@@ -153,7 +154,6 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
   const [vaccinationOpen, setVaccinationOpen] = useState(false);
   const [updatingVaccination, setUpdatingVaccination] = useState<Vaccination | null>(null);
   const [medicationOpen, setMedicationOpen] = useState(false);
-  const [quarantineOpen, setQuarantineOpen] = useState(false);
   const [guardianOpen, setGuardianOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<ChildGuardian | null>(null);
   const [deletingLink, setDeletingLink] = useState<ChildGuardian | null>(null);
@@ -164,6 +164,10 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
   const photoInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
   const canWrite = canWriteOperational(user?.role);
+  // Davomatga izoh yozish — tarbiyachilik ishi (kunlik davomat sahifasi bilan
+  // bir xil ruxsat), operatsion `canWrite`dan alohida: o'qituvchi bu yerda
+  // ham izoh yoza olishi kerak, garchi boshqa bo'limlarni tahrirlay olmasa ham.
+  const canWriteAttendance = canWriteTeaching(user?.role);
   const queryClient = useQueryClient();
   const { branchSlug } = useBranchContext(slug);
   const childrenHref = branchSlug ? `/${slug}/${branchSlug}/children` : `/${slug}/children`;
@@ -173,6 +177,15 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
     queryKey: ["child", slug, childId],
     queryFn: () => api.get<Child>(`/app/children/${childId}`),
   });
+
+  const attendanceHistoryQuery = useQuery({
+    queryKey: ["child-attendance-history", slug, childId],
+    queryFn: () => api.get<ChildAttendanceHistory>(`/app/children/${childId}/attendance-history`),
+  });
+  // Jadval faqat kelmagan/kasal kunlarni ko'rsatadi — eng yangisidan boshlab.
+  const attendanceAbsences = [...(attendanceHistoryQuery.data?.records ?? [])]
+    .filter((r) => r.status !== "PRESENT")
+    .reverse();
 
   const reportsQuery = useQuery({
     queryKey: ["daily-reports-history", slug, childId],
@@ -264,14 +277,6 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
       setPhotoChecking(false);
     }
   };
-
-  const clearQuarantineMutation = useMutation({
-    mutationFn: () => api.delete(`/app/children/${childId}/quarantine`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["child", slug, childId] });
-      queryClient.invalidateQueries({ queryKey: ["children", slug] });
-    },
-  });
 
   if (childQuery.isLoading) return <LoadingState />;
   if (childQuery.isError) return <ErrorState message={(childQuery.error as Error).message} />;
@@ -421,6 +426,101 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
         </dl>
       </Card>
 
+      {/* Davomat — ochilib boshqa sahifaga o'tmaydi, bola profilida darhol ko'rinadi */}
+      <Card className="overflow-hidden">
+        <CardHeader className="flex flex-wrap items-center justify-between gap-3">
+          <CardTitle>Davomat ({attendanceHistoryQuery.data?.year ?? new Date().getFullYear()})</CardTitle>
+          {attendanceHistoryQuery.data?.stats.attendanceRate != null && (
+            <Badge
+              tone={
+                attendanceHistoryQuery.data.stats.attendanceRate >= 80
+                  ? "success"
+                  : attendanceHistoryQuery.data.stats.attendanceRate >= 50
+                    ? "warning"
+                    : "danger"
+              }
+            >
+              Davomat: {attendanceHistoryQuery.data.stats.attendanceRate}%
+            </Badge>
+          )}
+        </CardHeader>
+        {attendanceHistoryQuery.isLoading ? (
+          <CardBody>
+            <LoadingState rows={2} />
+          </CardBody>
+        ) : attendanceHistoryQuery.isError ? (
+          <CardBody>
+            <ErrorState message={(attendanceHistoryQuery.error as Error).message} />
+          </CardBody>
+        ) : (
+          <>
+            <CardBody className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
+                <p className="text-[12.5px] text-[var(--color-text-muted)]">Kelgan kunlar</p>
+                <p className="mt-1 text-[18px] font-semibold tabular-nums text-[var(--color-text)]">
+                  {attendanceHistoryQuery.data?.stats.present ?? 0}
+                </p>
+              </div>
+              <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
+                <p className="text-[12.5px] text-[var(--color-text-muted)]">Kelmagan kunlar</p>
+                <p className="mt-1 text-[18px] font-semibold tabular-nums text-[var(--color-text)]">
+                  {attendanceHistoryQuery.data?.stats.absent ?? 0}
+                </p>
+              </div>
+              <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
+                <p className="text-[12.5px] text-[var(--color-text-muted)]">Sababli</p>
+                <p className="mt-1 text-[18px] font-semibold tabular-nums text-[var(--color-warning)]">
+                  {attendanceHistoryQuery.data?.stats.excusedAbsent ?? 0}
+                </p>
+              </div>
+              <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
+                <p className="text-[12.5px] text-[var(--color-text-muted)]">Sababsiz</p>
+                <p className="mt-1 text-[18px] font-semibold tabular-nums text-[var(--color-danger)]">
+                  {attendanceHistoryQuery.data?.stats.unexcusedAbsent ?? 0}
+                </p>
+              </div>
+            </CardBody>
+
+            {attendanceHistoryQuery.data && attendanceHistoryQuery.data.records.length > 0 && (
+              <ChildAttendanceCalendar
+                slug={slug}
+                childId={childId}
+                year={attendanceHistoryQuery.data.year}
+                records={attendanceHistoryQuery.data.records}
+                canEditNote={canWriteAttendance}
+              />
+            )}
+
+            <CardBody className="border-t border-[var(--color-separator)] p-0">
+              {attendanceAbsences.length === 0 ? (
+                <EmptyState title="Bu yil hali kelmagan kun yo'q" icon={<CalendarIcon className="h-[26px] w-[26px]" />} />
+              ) : (
+                <DataTable>
+                  <THead>
+                    <tr>
+                      <Th>Sana</Th>
+                      <Th>Holati</Th>
+                      <Th>Sababi</Th>
+                    </tr>
+                  </THead>
+                  <TBody>
+                    {attendanceAbsences.map((a) => (
+                      <Tr key={a.date}>
+                        <Td className="font-medium tabular-nums">{formatDate(a.date)}</Td>
+                        <Td>
+                          <Badge tone={a.note ? "warning" : "danger"}>{a.note ? "Sababli" : "Sababsiz"}</Badge>
+                        </Td>
+                        <Td className="text-[var(--color-text-muted)]">{a.note || "—"}</Td>
+                      </Tr>
+                    ))}
+                  </TBody>
+                </DataTable>
+              )}
+            </CardBody>
+          </>
+        )}
+      </Card>
+
       {/* Bog'lanish uchun ota-ona shu yerda — ro'yxatning pastida emas */}
       <Card className="overflow-hidden">
         <div className="hairline flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-separator)] px-5 py-4 sm:px-6">
@@ -430,7 +530,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
             </h2>
             <p className="text-[12.5px] text-[var(--color-text-muted)]">Telefon raqamini bosib nusxalang</p>
           </div>
-          {canWrite && (
+          {canWrite && guardiansQuery.isSuccess && guardiansQuery.data.length === 0 && (
             <Button size="sm" variant="outline" onClick={() => setGuardianOpen(true)}>
               + Ota-ona qo&apos;shish
             </Button>
@@ -519,44 +619,6 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
       </Card>
 
       {!canWrite && <ViewOnlyNote role={user?.role} />}
-
-      {child.status === "QUARANTINED" ? (
-        <Card className="border-[var(--color-danger)]/40 shadow-[var(--shadow-raised)]">
-          <CardHeader className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle className="text-[var(--color-danger)]">Bola karantinda</CardTitle>
-            {canWrite && (
-              <Button size="sm" variant="danger" loading={clearQuarantineMutation.isPending} onClick={() => clearQuarantineMutation.mutate()}>
-                Karantinni yopish
-              </Button>
-            )}
-          </CardHeader>
-          <CardBody className="space-y-1.5 text-[14px]">
-            <p className="text-[var(--color-text)]">
-              <span className="text-[var(--color-text-muted)]">Sabab: </span>
-              {child.quarantineReason ?? "—"}
-            </p>
-            <p className="text-[var(--color-text)]">
-              <span className="text-[var(--color-text-muted)]">Qaysi sanagacha: </span>
-              {child.quarantineUntil ? formatDate(child.quarantineUntil) : "—"}
-            </p>
-            {clearQuarantineMutation.isError && (
-              <p className="text-[var(--color-danger)]">
-                {clearQuarantineMutation.error instanceof ApiError
-                  ? clearQuarantineMutation.error.message
-                  : "Kutilmagan xatolik yuz berdi"}
-              </p>
-            )}
-          </CardBody>
-        </Card>
-      ) : (
-        canWrite && (
-          <div className="flex justify-end">
-            <Button size="sm" variant="danger" onClick={() => setQuarantineOpen(true)}>
-              Karantin e&apos;lon qilish
-            </Button>
-          </div>
-        )
-      )}
 
       {canReadMoney && (
         <Card className="overflow-hidden">
@@ -973,10 +1035,6 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
 
       {canWrite && medicationOpen && (
         <AddMedicationModal open={medicationOpen} onClose={() => setMedicationOpen(false)} slug={slug} childId={childId} />
-      )}
-
-      {canWrite && quarantineOpen && (
-        <QuarantineModal open={quarantineOpen} onClose={() => setQuarantineOpen(false)} slug={slug} childId={childId} />
       )}
 
       {canWrite && guardianOpen && (

@@ -46,11 +46,12 @@ export default function LoginPage({ params }: { params: Promise<{ slug: string }
       </div>
 
       <div className={`${styles.brand} absolute right-4 top-4 z-20 flex items-center gap-2.5 lg:left-8 lg:right-auto lg:top-7`}>
-        <div className="flex h-9 w-9 items-center justify-center rounded-[11px] bg-[var(--color-primary)] text-base font-bold text-white shadow-[0_2px_6px_rgba(15,118,110,0.35)]">
-          B
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element -- statik brend rasmi, Next optimizatsiyasi kerak emas */}
+        <img src="/logo.png" alt="Vista Academy" className="h-9 w-9 shrink-0 object-contain drop-shadow-sm" />
         <div className="leading-tight">
-          <p className="text-sm font-semibold text-[var(--color-text)]">Bog&apos;chalar tarmog&apos;i</p>
+          <p className="text-sm font-semibold">
+            <span style={{ color: "#4CA6D4" }}>Vista</span> <span style={{ color: "#61AE41" }}>Academy</span>
+          </p>
           <p className="text-[11px] font-medium text-[var(--color-text-muted)]">Boshqaruv paneli</p>
         </div>
       </div>

@@ -20,6 +20,8 @@ import { EmployeesModule } from "./modules/employees/employees.module";
 import { PositionsModule } from "./modules/positions/positions.module";
 import { SubjectsModule } from "./modules/subjects/subjects.module";
 import { AttendanceModule } from "./modules/attendance/attendance.module";
+import { CoinsModule } from "./modules/coins/coins.module";
+import { ProductsModule } from "./modules/products/products.module";
 import { StaffAttendanceModule } from "./modules/staff-attendance/staff-attendance.module";
 import { NutritionModule } from "./modules/nutrition/nutrition.module";
 import { DishesModule } from "./modules/dishes/dishes.module";
@@ -46,6 +48,7 @@ import { NotificationsModule } from "./modules/notifications/notifications.modul
 import { ExportsModule } from "./modules/exports/exports.module";
 import { ParentModule } from "./modules/parent/parent.module";
 import { UsefulModule } from "./modules/useful/useful.module";
+import { LandingModule } from "./modules/landing/landing.module";
 
 @Module({
   imports: [
@@ -67,6 +70,8 @@ import { UsefulModule } from "./modules/useful/useful.module";
     PositionsModule,
     SubjectsModule,
     AttendanceModule,
+    CoinsModule,
+    ProductsModule,
     StaffAttendanceModule,
     NutritionModule,
     DishesModule,
@@ -93,6 +98,7 @@ import { UsefulModule } from "./modules/useful/useful.module";
     ExportsModule,
     ParentModule,
     UsefulModule,
+    LandingModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

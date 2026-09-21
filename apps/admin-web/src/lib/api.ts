@@ -1,3 +1,5 @@
+import { clearTenantTokens, getTenantAccessToken, getTenantRefreshToken, setTenantTokens } from "./tenant-session";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
 
 export class ApiError extends Error {
@@ -24,11 +26,26 @@ let refreshPromise: Promise<boolean> | null = null;
 
 async function tryRefresh(): Promise<boolean> {
   if (!refreshPromise) {
+    const refreshToken = getTenantRefreshToken();
     refreshPromise = fetch(`${API_URL}/app/auth/refresh`, {
       method: "POST",
       credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(refreshToken ? { refreshToken } : {}),
     })
-      .then((res) => res.ok)
+      .then(async (res) => {
+        if (!res.ok) {
+          clearTenantTokens();
+          return false;
+        }
+        const body: Envelope<{ accessToken: string; refreshToken: string }> | null = await res
+          .json()
+          .catch(() => null);
+        if (body?.data) {
+          setTenantTokens(body.data);
+        }
+        return true;
+      })
       .catch(() => false)
       .finally(() => {
         refreshPromise = null;
@@ -38,11 +55,13 @@ async function tryRefresh(): Promise<boolean> {
 }
 
 async function request<T>(path: string, options: RequestInit = {}, retry = true): Promise<T> {
+  const accessToken = getTenantAccessToken();
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...options.headers,
     },
   });
@@ -82,7 +101,11 @@ export interface Paginated<T> {
 }
 
 export async function getPaginated<T>(path: string): Promise<Paginated<T>> {
-  const res = await fetch(`${API_URL}${path}`, { credentials: "include" });
+  const accessToken = getTenantAccessToken();
+  const res = await fetch(`${API_URL}${path}`, {
+    credentials: "include",
+    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+  });
   const body = (await res.json()) as Envelope<T[]>;
   if (!res.ok || !body.success) {
     throw new ApiError(res.status, body.error?.code ?? "ERROR", body.error?.message ?? res.statusText);

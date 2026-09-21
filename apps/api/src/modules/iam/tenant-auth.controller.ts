@@ -15,6 +15,7 @@ import type { Request, Response } from "express";
 import { Public } from "../../common/decorators/public.decorator";
 import { TenantAuthService, IssuedTenantTokens } from "./tenant-auth.service";
 import { TenantLoginDto } from "./dto/tenant-login.dto";
+import { TenantRefreshDto } from "./dto/tenant-refresh.dto";
 import { TenantAuthenticatedUser } from "./tenant-auth.types";
 import { TenantJwtAuthGuard } from "./guards/tenant-jwt-auth.guard";
 import { CurrentTenantUser } from "./decorators/current-tenant-user.decorator";
@@ -34,25 +35,35 @@ export class TenantAuthController {
     const user = await this.authService.validateCredentials(dto.orgSlug, dto.login, dto.password);
     const tokens = await this.authService.issueTokens(user, requestMeta(req));
     setAuthCookies(res, tokens);
-    return { user };
+    return { user, ...tokenResponse(tokens) };
   }
 
   @Post("refresh")
   @HttpCode(HttpStatus.OK)
-  async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const rawRefreshToken = req.cookies?.[REFRESH_COOKIE] as string | undefined;
+  async refresh(
+    @Body() dto: TenantRefreshDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    // Tab'ning o'z sessionStorage'idagi refresh token bo'lsa, u ustuvor — shu orqali
+    // har bir tab boshqa tabda kirilgan foydalanuvchi bilan aralashmasdan yangilanadi.
+    const rawRefreshToken = dto.refreshToken ?? (req.cookies?.[REFRESH_COOKIE] as string | undefined);
     if (!rawRefreshToken) {
       throw new UnauthorizedException("Refresh token topilmadi");
     }
     const tokens = await this.authService.rotateRefreshToken(rawRefreshToken, requestMeta(req));
     setAuthCookies(res, tokens);
-    return { refreshed: true };
+    return { refreshed: true, ...tokenResponse(tokens) };
   }
 
   @Post("logout")
   @HttpCode(HttpStatus.OK)
-  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const rawRefreshToken = req.cookies?.[REFRESH_COOKIE] as string | undefined;
+  async logout(
+    @Body() dto: TenantRefreshDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const rawRefreshToken = dto.refreshToken ?? (req.cookies?.[REFRESH_COOKIE] as string | undefined);
     if (rawRefreshToken) {
       await this.authService.revokeRefreshToken(rawRefreshToken);
     }
@@ -93,4 +104,8 @@ function setAuthCookies(res: Response, tokens: IssuedTenantTokens) {
 function clearAuthCookies(res: Response) {
   res.clearCookie(ACCESS_COOKIE, { path: "/" });
   res.clearCookie(REFRESH_COOKIE, { path: "/api/v1/app/auth" });
+}
+
+function tokenResponse(tokens: IssuedTenantTokens) {
+  return { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken };
 }

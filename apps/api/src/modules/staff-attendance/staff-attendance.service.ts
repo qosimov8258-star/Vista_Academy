@@ -199,12 +199,13 @@ export class StaffAttendanceService {
 
   async todaySummary(scope: TenantScope) {
     const date = toDateOnly(todayDateString());
+    const baseWhere = { date, branchId: scope.branchId ?? undefined, branch: { organizationId: scope.organizationId } };
+    // Kech qoldi, kasal va ta'tildagi xodimlar ham "kelmaganlar" qatorida
+    // hisoblanadi — dashboard kartasida faqat "Keldi" / "Kelmadi" ko'rsatiladi.
     const [present, absent] = await Promise.all([
+      this.prisma.employeeAttendance.count({ where: { ...baseWhere, status: "PRESENT" } }),
       this.prisma.employeeAttendance.count({
-        where: { status: "PRESENT", date, branchId: scope.branchId ?? undefined, branch: { organizationId: scope.organizationId } },
-      }),
-      this.prisma.employeeAttendance.count({
-        where: { status: "ABSENT", date, branchId: scope.branchId ?? undefined, branch: { organizationId: scope.organizationId } },
+        where: { ...baseWhere, status: { in: ["ABSENT", "LATE", "SICK", "ON_LEAVE"] } },
       }),
     ]);
     return { present, absent };

@@ -9,11 +9,11 @@ import { Card, CardHeader, CardBody, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { DataTable, THead, TBody, Tr, Th, Td } from "@/components/ui/table";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { useBranchContext } from "@/lib/use-branch-context";
-import clsx from "clsx";
 import { canWriteOperational } from "@/lib/permissions";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
@@ -25,14 +25,6 @@ function todayDateString(): string {
 function currentPeriodString(): string {
   return todayDateString().slice(0, 7);
 }
-
-const STATUS_LABEL: Record<StaffAttendanceStatus, string> = {
-  PRESENT: "Keldi",
-  ABSENT: "Kelmadi",
-  LATE: "Kech qoldi",
-  SICK: "Kasal",
-  ON_LEAVE: "Ta'til",
-};
 
 export default function StaffAttendancePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
@@ -195,70 +187,56 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
                   <p className="text-xs text-[var(--color-text-muted)]">{employee.position}</p>
                 </div>
                 {canWrite ? (
-                  <div className="flex flex-wrap items-center justify-end gap-2">
-                    <input
-                      type="time"
-                      aria-label="Kelgan vaqti"
-                      value={timeFor(employee.employeeId, employee).checkInTime}
-                      onChange={(e) =>
-                        setTimes((t) => ({
-                          ...t,
-                          [employee.employeeId]: { ...timeFor(employee.employeeId, employee), checkInTime: e.target.value },
-                        }))
-                      }
-                      className="h-8 w-[90px] rounded-[var(--radius-sm)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-2 text-[12.5px] text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
-                    />
-                    <input
-                      type="time"
-                      aria-label="Ketgan vaqti"
-                      value={timeFor(employee.employeeId, employee).checkOutTime}
-                      onChange={(e) =>
-                        setTimes((t) => ({
-                          ...t,
-                          [employee.employeeId]: { ...timeFor(employee.employeeId, employee), checkOutTime: e.target.value },
-                        }))
-                      }
-                      className="h-8 w-[90px] rounded-[var(--radius-sm)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-2 text-[12.5px] text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
-                    />
-                    <Button
-                      size="sm"
-                      variant={statusFor(employee.employeeId) === "PRESENT" ? "primary" : "tertiary"}
-                      className={clsx(statusFor(employee.employeeId) === "PRESENT" && "bg-[var(--color-success)] hover:opacity-90")}
-                      onClick={() => setLocalStatuses((s) => ({ ...s, [employee.employeeId]: "PRESENT" }))}
-                    >
-                      Keldi
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={statusFor(employee.employeeId) === "ABSENT" ? "danger" : "tertiary"}
-                      onClick={() => setLocalStatuses((s) => ({ ...s, [employee.employeeId]: "ABSENT" }))}
-                    >
-                      Kelmadi
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="tertiary"
-                      className={clsx(statusFor(employee.employeeId) === "LATE" && "bg-[var(--color-warning)] text-white hover:opacity-90")}
-                      onClick={() => setLocalStatuses((s) => ({ ...s, [employee.employeeId]: "LATE" }))}
-                    >
-                      Kech qoldi
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="tertiary"
-                      className={clsx(statusFor(employee.employeeId) === "SICK" && "bg-[var(--color-warning)] text-white hover:opacity-90")}
-                      onClick={() => setLocalStatuses((s) => ({ ...s, [employee.employeeId]: "SICK" }))}
-                    >
-                      Kasal
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="tertiary"
-                      className={clsx(statusFor(employee.employeeId) === "ON_LEAVE" && "bg-[var(--color-text-muted)] text-white hover:opacity-90")}
-                      onClick={() => setLocalStatuses((s) => ({ ...s, [employee.employeeId]: "ON_LEAVE" }))}
-                    >
-                      Ta&apos;til
-                    </Button>
+                  <div className="flex flex-wrap items-center justify-end gap-3">
+                    {statusFor(employee.employeeId) === "PRESENT" && (
+                      <>
+                        <input
+                          type="time"
+                          aria-label="Kelgan vaqti"
+                          value={timeFor(employee.employeeId, employee).checkInTime}
+                          onChange={(e) =>
+                            setTimes((t) => ({
+                              ...t,
+                              [employee.employeeId]: { ...timeFor(employee.employeeId, employee), checkInTime: e.target.value },
+                            }))
+                          }
+                          className="h-8 w-[90px] rounded-[var(--radius-sm)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-2 text-[12.5px] text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
+                        />
+                        <input
+                          type="time"
+                          aria-label="Ketgan vaqti"
+                          value={timeFor(employee.employeeId, employee).checkOutTime}
+                          onChange={(e) =>
+                            setTimes((t) => ({
+                              ...t,
+                              [employee.employeeId]: { ...timeFor(employee.employeeId, employee), checkOutTime: e.target.value },
+                            }))
+                          }
+                          className="h-8 w-[90px] rounded-[var(--radius-sm)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-2 text-[12.5px] text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
+                        />
+                      </>
+                    )}
+                    <div className="flex items-center gap-2.5">
+                      <span
+                        className={
+                          statusFor(employee.employeeId) === "PRESENT"
+                            ? "text-[13px] font-medium text-[var(--color-success)]"
+                            : "text-[13px] font-medium text-[var(--color-text-muted)]"
+                        }
+                      >
+                        {statusFor(employee.employeeId) === "PRESENT" ? "Keldi" : "Kelmadi"}
+                      </span>
+                      <Switch
+                        checked={statusFor(employee.employeeId) === "PRESENT"}
+                        onChange={() =>
+                          setLocalStatuses((s) => ({
+                            ...s,
+                            [employee.employeeId]: statusFor(employee.employeeId) === "PRESENT" ? "ABSENT" : "PRESENT",
+                          }))
+                        }
+                        aria-label={`${employee.fullName} — davomat`}
+                      />
+                    </div>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
@@ -267,18 +245,8 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
                         {employee.checkInTime ?? "—"}–{employee.checkOutTime ?? "—"}
                       </span>
                     )}
-                    <Badge
-                      tone={
-                        employee.status === "PRESENT"
-                          ? "success"
-                          : employee.status === "ABSENT"
-                            ? "danger"
-                            : employee.status === "LATE" || employee.status === "SICK"
-                              ? "warning"
-                              : "neutral"
-                      }
-                    >
-                      {employee.status ? STATUS_LABEL[employee.status] : "Belgilanmagan"}
+                    <Badge tone={employee.status === "PRESENT" ? "success" : employee.status ? "danger" : "neutral"}>
+                      {employee.status === "PRESENT" ? "Keldi" : employee.status ? "Kelmadi" : "Belgilanmagan"}
                     </Badge>
                   </div>
                 )}
@@ -329,9 +297,6 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
                   <Th>Xodim</Th>
                   <Th numeric>Keldi</Th>
                   <Th numeric>Kelmadi</Th>
-                  <Th numeric>Kech</Th>
-                  <Th numeric>Kasal</Th>
-                  <Th numeric>Ta&apos;til</Th>
                   <Th numeric>Foiz</Th>
                 </tr>
               </THead>
@@ -340,10 +305,10 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
                   <Tr key={employee.employeeId}>
                     <Td className="font-medium">{employee.fullName}</Td>
                     <Td numeric className="text-[var(--color-text-muted)]">{employee.present}</Td>
-                    <Td numeric className="text-[var(--color-text-muted)]">{employee.absent}</Td>
-                    <Td numeric className="text-[var(--color-text-muted)]">{employee.late}</Td>
-                    <Td numeric className="text-[var(--color-text-muted)]">{employee.sick}</Td>
-                    <Td numeric className="text-[var(--color-text-muted)]">{employee.onLeave}</Td>
+                    {/* Kech qoldi, kasal va ta'til — barchasi "Kelmadi" qatoriga qo'shib ko'rsatiladi */}
+                    <Td numeric className="text-[var(--color-text-muted)]">
+                      {employee.absent + employee.late + employee.sick + employee.onLeave}
+                    </Td>
                     <Td numeric>
                       {employee.rate === null ? (
                         "—"

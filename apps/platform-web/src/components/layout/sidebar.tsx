@@ -6,7 +6,7 @@ import clsx from "clsx";
 import { useRef, useState, type ComponentType, type SVGProps, type SyntheticEvent } from "react";
 import { useAuth } from "@/lib/use-auth";
 import { roleLabel } from "@/lib/format";
-import { BuildingIcon, CardIcon, DashboardIcon, RefreshIcon, UserIcon } from "@/components/ui/icons";
+import { BuildingIcon, CardIcon, DashboardIcon, GlobeIcon, RefreshIcon, UserIcon } from "@/components/ui/icons";
 
 type NavIcon = ComponentType<SVGProps<SVGSVGElement>>;
 
@@ -22,6 +22,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/bogchalar", label: "Bog'chalar", icon: BuildingIcon },
   { href: "/plans", label: "Tarif rejalar", icon: CardIcon },
   { href: "/subscriptions", label: "Obunalar", icon: RefreshIcon },
+  { href: "/lending-sahifa", label: "Lending sahifa", icon: GlobeIcon },
   { href: "/profile", label: "Profil", icon: UserIcon },
 ];
 

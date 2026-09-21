@@ -9,7 +9,6 @@ const KNOWN_ORG_PAGES = new Set([
   "employees",
   "attendance",
   "lesson-attendance",
-  "daily-reports",
   "staff-attendance",
   "nutrition",
   "cash",
@@ -29,6 +28,7 @@ const KNOWN_ORG_PAGES = new Set([
   "notifications",
   "lessons",
   "my-lessons",
+  "coin",
   "my-notifications",
   "settings",
   "useful",
@@ -85,9 +85,17 @@ export function proxy(req: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (isLogin && hasSession) {
-    return NextResponse.redirect(new URL(`/${slug}`, req.url));
-  }
+  // MUHIM: bu yerda "isLogin && hasSession" holatida login sahifasidan
+  // avtomatik uzoqlashtirish YO'Q — atayin. Auth cookie butun brauzerga
+  // umumiy (tab-bo'yicha emas), shuning uchun bitta tabda kirilgan
+  // foydalanuvchining cookie'si boshqa (yangi) tabda ham "hasSession=true"
+  // ko'rsatadi. Avval shu yerda avtomatik yo'naltirish bo'lgani uchun
+  // ikkinchi tab login formasiga umuman yetib bormay, birinchi tabning
+  // cookie'si asosida to'g'ridan-to'g'ri boshqa foydalanuvchi sifatida
+  // dashboardga tashlanardi. Login sahifasi cookie holatidan qat'iy nazar
+  // har doim ko'rsatiladi — haqiqiy identifikatsiya endi shu tabning
+  // sessionStorage'dagi tokeni orqali (Authorization header, ko'ring:
+  // lib/api.ts) aniqlanadi, cookie faqat zaxira.
 
   // Each branch gets its own bookmarkable link: /{orgSlug}/{branchSlug}[/...].
   // For a branch-scoped role (BRANCH_ADMIN/MANAGER) that link is purely cosmetic —
@@ -108,8 +116,13 @@ export function proxy(req: NextRequest) {
 export const config = {
   // `ota-ona` — ota-ona kabineti: u o'z autentifikatsiyasiga ega va xodimlar
   // seansiga bog'liq emas, shuning uchun bu proxy unga umuman tegmaydi.
-  // `face-model` — public/ dagi statik fayllar (yuzni aniqlash modeli).
-  // Ular chiqarib tashlanmasa, proxy birinchi bo'lakni tashkilot slug'i deb
-  // o'ylab, model so'rovini login sahifasiga yo'naltiradi.
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|face-model|ota-ona).*)"],
+  // `face-model`, `logo.png`, `cursor.png`/`cursor@2x.png`,
+  // `pointer.png`/`pointer@2x.png` — public/ dagi statik fayllar (yuzni
+  // aniqlash modeli, brend logotipi, custom kursor rasmlari — @2x
+  // Retina/HiDPI ekranlar uchun). Ular chiqarib tashlanmasa, proxy
+  // birinchi bo'lakni tashkilot slug'i deb o'ylab, so'rovni login
+  // sahifasiga yo'naltiradi.
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|face-model|ota-ona|logo.png|cursor.png|cursor@2x.png|pointer.png|pointer@2x.png).*)",
+  ],
 };

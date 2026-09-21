@@ -23,7 +23,9 @@ import { CurrentTenantUser } from "../iam/decorators/current-tenant-user.decorat
 import { TenantAuthenticatedUser, toTenantScope } from "../iam/tenant-auth.types";
 import { EmployeesService } from "./employees.service";
 import { CreateEmployeeDto, EmployeeAccountDto } from "./dto/create-employee.dto";
+import { UpdateEmployeeCredentialsDto } from "./dto/update-employee-credentials.dto";
 import { CreateEmployeeTopicDto } from "./dto/create-employee-topic.dto";
+import { UpdateEmployeeTopicsSettingDto } from "./dto/update-employee-topics-setting.dto";
 import { UpdateEmployeeGroupsDto } from "./dto/update-employee-groups.dto";
 import { UpdateEmployeeAvatarDto } from "./dto/update-employee-avatar.dto";
 import { EmployeeQueryDto } from "./dto/employee-query.dto";
@@ -70,6 +72,16 @@ export class EmployeesController {
     return this.employeesService.regeneratePassword(user, id);
   }
 
+  /** Login va/yoki parolni admin o'zi kiritib o'zgartiradi. */
+  @Patch(":id/credentials")
+  updateCredentials(
+    @CurrentTenantUser() user: TenantAuthenticatedUser,
+    @Param("id") id: string,
+    @Body() dto: UpdateEmployeeCredentialsDto,
+  ) {
+    return this.employeesService.updateCredentials(toTenantScope(user), id, dto);
+  }
+
   /**
    * Xodim kabineti parolini ko'rsatadi. `X-Reveal-Token` — admin qurilmasi
    * WebAuthn bilan tasdiqlangandan keyin `/app/webauthn/authentication/verify`
@@ -97,6 +109,16 @@ export class EmployeesController {
   @Get(":id/topics/suggestions")
   listTopicSuggestions(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string) {
     return this.employeesService.listTopicSuggestions(toTenantScope(user), id);
+  }
+
+  /** "Mavzu qo'shasizmi?" almashtirgichini saqlaydi. */
+  @Patch(":id/topics-setting")
+  setTopicsManagedByAdmin(
+    @CurrentTenantUser() user: TenantAuthenticatedUser,
+    @Param("id") id: string,
+    @Body() dto: UpdateEmployeeTopicsSettingDto,
+  ) {
+    return this.employeesService.setTopicsManagedByAdmin(toTenantScope(user), id, dto);
   }
 
   @Post(":id/topics")

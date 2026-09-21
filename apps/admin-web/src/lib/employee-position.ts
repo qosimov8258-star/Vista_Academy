@@ -49,6 +49,11 @@ export function isCabinetlessPosition(position: string): boolean {
   return CABINETLESS_POSITIONS.has(normalizePosition(position));
 }
 
+/** Oshpaz (bosh oshpaz, oshpaz yordamchisi va h.k.) guruhga biriktirilmaydi. */
+export function isCookPosition(position: string): boolean {
+  return normalizePosition(position).includes("oshpaz");
+}
+
 /**
  * Lavozim yorlig'ini hosil qiladi. "Fan o'qituvchisi" lavozimida tanlangan
  * fan(lar) ko'rsatiladi (masalan "Ingliz tili o'qituvchisi") — umumiy

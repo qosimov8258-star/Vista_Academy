@@ -7,6 +7,7 @@ import { NotificationsService } from "../notifications/notifications.service";
 import { MarkAttendanceDto } from "./dto/mark-attendance.dto";
 import { AttendanceQueryDto } from "./dto/attendance-query.dto";
 import { AttendanceRangeQueryDto } from "./dto/attendance-range-query.dto";
+import { RequestContactDto } from "./dto/request-contact.dto";
 
 function toDateOnly(value: string): Date {
   return new Date(`${value}T00:00:00.000Z`);
@@ -49,10 +50,62 @@ export class AttendanceService {
     }
     await assertTeacherOwnsChild(this.prisma, scope, child);
     const date = toDateOnly(dto.date);
-    const record = await this.prisma.attendance.upsert({
-      where: { childId_date: { childId: dto.childId, date } },
-      create: { childId: dto.childId, branchId: child.branchId, date, status: dto.status, note: dto.note },
-      update: { status: dto.status, note: dto.note },
+
+    const record = await this.prisma.$transaction(async (tx) => {
+      const existing = await tx.attendance.findUnique({
+        where: { childId_date: { childId: dto.childId, date } },
+      });
+      const wasPresent = existing?.status === "PRESENT";
+      const willBePresent = dto.status === "PRESENT";
+
+      // undefined — coinTransactionId ustuniga tegilmaydi; null — bog'lanish uziladi.
+      let coinTransactionId: string | null | undefined;
+      let coinTransactionIdToRemove: string | null = null;
+
+      if (!wasPresent && willBePresent) {
+        // ABSENT/LATE/SICK/belgilanmagan -> PRESENT: bitta kunga bitta marta +5 coin.
+        const coinTransaction = await tx.coinTransaction.create({
+          data: {
+            organizationId: child.organizationId,
+            branchId: child.branchId,
+            childId: child.id,
+            amount: 5,
+            source: "ATTENDANCE",
+            reason: `Kunlik davomat — ${dto.date}`,
+            recordedByUserId: scope.userId,
+          },
+        });
+        coinTransactionId = coinTransaction.id;
+      } else if (wasPresent && !willBePresent && existing?.coinTransactionId) {
+        // PRESENT -> boshqa holat: avval berilgan coin qaytarib olinadi.
+        coinTransactionId = null;
+        coinTransactionIdToRemove = existing.coinTransactionId;
+      }
+
+      const updated = await tx.attendance.upsert({
+        where: { childId_date: { childId: dto.childId, date } },
+        create: {
+          childId: dto.childId,
+          branchId: child.branchId,
+          date,
+          status: dto.status,
+          note: dto.note,
+          coinTransactionId: coinTransactionId ?? undefined,
+        },
+        update: {
+          status: dto.status,
+          note: dto.note,
+          ...(coinTransactionId !== undefined ? { coinTransactionId } : {}),
+        },
+      });
+
+      // Attendance yozuvi avval yangilanadi (coinTransactionId: null), keyin
+      // eski tranzaksiya o'chiriladi — FK constraint buzilmasligi uchun tartib muhim.
+      if (coinTransactionIdToRemove) {
+        await tx.coinTransaction.delete({ where: { id: coinTransactionIdToRemove } });
+      }
+
+      return updated;
     });
 
     if (dto.status === "ABSENT") {
@@ -74,6 +127,49 @@ export class AttendanceService {
     return record;
   }
 
+  /**
+   * Tarbiyachi "Aloqaga chiqish" tugmasini bosganda — ota-ona kelmagan kun
+   * uchun sabab qoldirmagan bo'lsa shu yo'l bilan filial administratoriga
+   * xabar beriladi (mavjud Bildirishnomalar jurnaliga yoziladi). Qayta
+   * bosilsa — takror bildirishnoma yuborilmaydi, borini qaytaradi.
+   */
+  async requestContact(scope: TenantScope, dto: RequestContactDto) {
+    const branchId = requireTeachingScope(scope);
+    const child = await this.prisma.child.findFirst({ where: { id: dto.childId, organizationId: scope.organizationId } });
+    if (!child) {
+      throw new NotFoundException("Bola topilmadi");
+    }
+    if (child.branchId !== branchId) {
+      throw new ForbiddenException("Bu bolaga kirish huquqingiz yo'q");
+    }
+    await assertTeacherOwnsChild(this.prisma, scope, child);
+    const date = toDateOnly(dto.date);
+
+    const existing = await this.prisma.attendance.findUnique({
+      where: { childId_date: { childId: dto.childId, date } },
+    });
+    if (!existing || existing.status !== "ABSENT") {
+      throw new BadRequestException("Faqat shu kuni kelmagan bola uchun aloqaga chiqish so'ralishi mumkin");
+    }
+    if (existing.contactRequestedAt) {
+      return existing;
+    }
+
+    const updated = await this.prisma.attendance.update({
+      where: { id: existing.id },
+      data: { contactRequestedAt: new Date() },
+    });
+    await this.notifications.logSystemEvent({
+      organizationId: scope.organizationId,
+      branchId: child.branchId,
+      childId: child.id,
+      eventType: "CHILD_ABSENT",
+      recipientName: "Administrator",
+      message: `${child.fullName} bugun (${dto.date}) kelmadi, ota-ona sabab qoldirmadi — tarbiyachi aloqaga chiqishni so'radi.`,
+    });
+    return updated;
+  }
+
   async findByBranchAndDate(scope: TenantScope, query: AttendanceQueryDto) {
     const branchId = scope.branchId ?? query.branchId;
     if (scope.branchId && query.branchId && query.branchId !== scope.branchId) {
@@ -92,7 +188,13 @@ export class AttendanceService {
     const [children, records] = await Promise.all([
       this.prisma.child.findMany({
         where: teacherChildWhere({ branchId, status: "ACTIVE" }, teacherGroupIds),
-        select: { id: true, fullName: true, group: { select: { id: true, name: true } } },
+        select: {
+          id: true,
+          fullName: true,
+          gender: true,
+          avatarUpdatedAt: true,
+          group: { select: { id: true, name: true } },
+        },
         orderBy: [{ group: { name: "asc" } }, { fullName: "asc" }],
       }),
       this.prisma.attendance.findMany({ where: { branchId, date } }),
@@ -105,8 +207,12 @@ export class AttendanceService {
         childId: c.id,
         fullName: c.fullName,
         groupName: c.group?.name ?? null,
+        gender: c.gender,
+        avatarUpdatedAt: c.avatarUpdatedAt ? c.avatarUpdatedAt.toISOString() : null,
         status: recordByChild.get(c.id)?.status ?? null,
         note: recordByChild.get(c.id)?.note ?? null,
+        parentReason: recordByChild.get(c.id)?.parentReason ?? null,
+        contactRequestedAt: recordByChild.get(c.id)?.contactRequestedAt?.toISOString() ?? null,
       })),
     };
   }
@@ -182,6 +288,58 @@ export class AttendanceService {
     return { from, to, totalChildren, days };
   }
 
+  /**
+   * Bola kabinetidagi "Davomat" kartasi uchun — shu yilgi barcha belgilangan
+   * kunlar (statistika + kalendarni bo'yash uchun kunma-kun ro'yxat).
+   * LATE ham kelgan hisoblanadi (bola bog'chaga qatnashgan, faqat kech
+   * qolgan); ABSENT/SICK ichida izohi bor bo'lsa — sababli, bo'lmasa —
+   * sababsiz deb hisoblanadi.
+   */
+  async getChildHistory(scope: TenantScope, childId: string, year?: number) {
+    const child = await this.prisma.child.findFirst({ where: { id: childId, organizationId: scope.organizationId } });
+    if (!child) {
+      throw new NotFoundException("Bola topilmadi");
+    }
+    if (scope.branchId && child.branchId !== scope.branchId) {
+      throw new ForbiddenException("Bu bolaga kirish huquqingiz yo'q");
+    }
+
+    const targetYear = year && Number.isInteger(year) ? year : new Date().getFullYear();
+    const from = new Date(Date.UTC(targetYear, 0, 1));
+    const to = new Date(Date.UTC(targetYear, 11, 31));
+
+    const records = await this.prisma.attendance.findMany({
+      where: { childId, date: { gte: from, lte: to } },
+      orderBy: { date: "asc" },
+      select: { date: true, status: true, note: true },
+    });
+
+    let present = 0;
+    let absent = 0;
+    let excusedAbsent = 0;
+    let unexcusedAbsent = 0;
+    for (const record of records) {
+      if (record.status === "PRESENT" || record.status === "LATE") {
+        present += 1;
+      } else {
+        absent += 1;
+        if (record.note && record.note.trim().length > 0) {
+          excusedAbsent += 1;
+        } else {
+          unexcusedAbsent += 1;
+        }
+      }
+    }
+    const total = records.length;
+    const attendanceRate = total > 0 ? Math.round((present / total) * 100) : null;
+
+    return {
+      year: targetYear,
+      stats: { present, absent, excusedAbsent, unexcusedAbsent, attendanceRate },
+      records: records.map((r) => ({ date: dateKey(r.date), status: r.status, note: r.note })),
+    };
+  }
+
   async todaySummary(scope: TenantScope) {
     const date = toDateOnly(todayDateString());
     const teacherGroupIds = await resolveTeacherGroupIds(this.prisma, scope);
@@ -191,9 +349,11 @@ export class AttendanceService {
       branch: { organizationId: scope.organizationId },
       ...(teacherGroupIds === null ? {} : { child: { groupId: { in: teacherGroupIds } } }),
     };
+    // Kech qoldi va kasal bolalar ham "kelmaganlar" qatorida hisoblanadi —
+    // dashboard kartasida faqat "Keldi" / "Kelmadi" ikkita holat ko'rsatiladi.
     const [present, absent] = await Promise.all([
       this.prisma.attendance.count({ where: { ...base, status: "PRESENT" } }),
-      this.prisma.attendance.count({ where: { ...base, status: "ABSENT" } }),
+      this.prisma.attendance.count({ where: { ...base, status: { in: ["ABSENT", "LATE", "SICK"] } } }),
     ]);
     return { present, absent };
   }

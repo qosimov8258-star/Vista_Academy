@@ -5,14 +5,15 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { parentApi } from "@/lib/parent-api";
 import type { ParentAccount, ParentChild } from "@/lib/types";
-import { LogoutIcon } from "@/components/ui/icons";
+import { KeyIcon, LogoutIcon } from "@/components/ui/icons";
 import styles from "../../parent.module.css";
 import clsx from "clsx";
 import { CardFx } from "../card-fx";
 import { useCabinetTheme, type ThemeMode } from "../theme";
+import { PasswordSheet } from "./password-sheet";
 
 /**
- * Sozlamalar. Hozircha bitta ish qiladi — kabinetdan chiqish.
+ * Sozlamalar: ko'rinish, parolni almashtirish va kabinetdan chiqish.
  *
  * Chiqish tugmasi ilgari bosh sahifaning tepasida turardi: ota-ona uni
  * kunda bir marta ham bosmaydi, ammo bolasining kartochkasi yonida doim
@@ -61,6 +62,7 @@ export default function ParentSettingsPage({ params }: { params: Promise<{ slug:
   const router = useRouter();
   const [leaving, setLeaving] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
 
   const meQuery = useQuery({
     queryKey: ["parent-me", slug],
@@ -134,6 +136,28 @@ export default function ParentSettingsPage({ params }: { params: Promise<{ slug:
         )}
       </section>
 
+      {/* Parol — ota va ona bittasini ishlatadi */}
+      {parent && (
+        <section className="mt-3 overflow-hidden rounded-[var(--p-radius)] bg-[var(--p-card)] shadow-[var(--p-shadow)]">
+          <button
+            type="button"
+            onClick={() => setPasswordOpen(true)}
+            className="flex w-full cursor-pointer items-center gap-3.5 px-5 py-4 text-left transition-colors active:bg-[var(--p-sunken)]"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--p-sky)]/14 text-[var(--p-sky-ink)]">
+              <KeyIcon className="h-[18px] w-[18px]" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[15.5px] font-bold text-[var(--p-ink)]">Parolni almashtirish</span>
+              <span className="block text-[13px] text-[var(--p-muted)]">Bog&apos;cha bergan parol o&apos;rniga o&apos;zingiznikini qo&apos;ying</span>
+            </span>
+            <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 text-[var(--p-muted)]/70" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="m9 6 6 6-6 6" />
+            </svg>
+          </button>
+        </section>
+      )}
+
       {/* Chiqish */}
       <section className="mt-3 overflow-hidden rounded-[var(--p-radius)] bg-[var(--p-card)] shadow-[var(--p-shadow)]">
         {confirming ? (
@@ -183,9 +207,18 @@ export default function ParentSettingsPage({ params }: { params: Promise<{ slug:
           Tez orada
         </span>
         <p className="mt-2.5 text-[14px] leading-relaxed text-[var(--p-muted)]">
-          Parolni almashtirish, bildirishnomalar va aloqa ma&apos;lumotlari shu yerda bo&apos;ladi.
+          Bildirishnomalar va aloqa ma&apos;lumotlari shu yerda bo&apos;ladi.
         </p>
       </section>
+
+      {passwordOpen && parent && (
+        <PasswordSheet
+          slug={slug}
+          phone={parent.phone}
+          onClose={() => setPasswordOpen(false)}
+          onSignedOut={() => router.replace(`/ota-ona/${slug}/kirish`)}
+        />
+      )}
     </div>
   );
 }

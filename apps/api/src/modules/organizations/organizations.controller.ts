@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Headers, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { PlatformUserRole } from "@prisma/client";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
@@ -71,5 +71,15 @@ export class OrganizationsController {
   @Patch(":id/admin")
   updateAdminAccount(@Param("id") id: string, @Body() dto: UpdateOrganizationAdminDto) {
     return this.organizationsService.updateAdminAccount(id, dto);
+  }
+
+  /**
+   * Tashkilotni BUTUNLAY o'chiradi (hard delete) — qaytarib bo'lmaydi.
+   * Faqat Platform Super Admin uchun; Support bu amalni bajara olmaydi.
+   */
+  @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN)
+  @Delete(":id")
+  remove(@Param("id") id: string) {
+    return this.organizationsService.remove(id);
   }
 }
