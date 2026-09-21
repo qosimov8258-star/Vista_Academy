@@ -23,12 +23,16 @@ import { AttendanceModule } from "./modules/attendance/attendance.module";
 import { StaffAttendanceModule } from "./modules/staff-attendance/staff-attendance.module";
 import { NutritionModule } from "./modules/nutrition/nutrition.module";
 import { DishesModule } from "./modules/dishes/dishes.module";
+import { CashDeskModule } from "./modules/cash-desk/cash-desk.module";
+import { AdminDeskModule } from "./modules/admin-desk/admin-desk.module";
+import { ChildRemindersModule } from "./modules/child-reminders/child-reminders.module";
 import { AuditLogModule } from "./modules/audit-log/audit-log.module";
 import { DailyReportsModule } from "./modules/daily-reports/daily-reports.module";
 import { LessonScheduleModule } from "./modules/lesson-schedule/lesson-schedule.module";
 import { EmployeeNotificationsModule } from "./modules/employee-notifications/employee-notifications.module";
 import { LessonTopicsModule } from "./modules/lesson-topics/lesson-topics.module";
 import { LessonGradesModule } from "./modules/lesson-grades/lesson-grades.module";
+import { LessonAttendanceModule } from "./modules/lesson-attendance/lesson-attendance.module";
 import { DevelopmentModule } from "./modules/development/development.module";
 import { BillingModule } from "./modules/billing/billing.module";
 import { TenantDashboardModule } from "./modules/tenant-dashboard/tenant-dashboard.module";
@@ -66,12 +70,16 @@ import { UsefulModule } from "./modules/useful/useful.module";
     StaffAttendanceModule,
     NutritionModule,
     DishesModule,
+    CashDeskModule,
+    AdminDeskModule,
+    ChildRemindersModule,
     AuditLogModule,
     DailyReportsModule,
     LessonScheduleModule,
     EmployeeNotificationsModule,
     LessonTopicsModule,
     LessonGradesModule,
+    LessonAttendanceModule,
     DevelopmentModule,
     BillingModule,
     TenantDashboardModule,

@@ -244,7 +244,7 @@ export interface Invoice {
   overdue: boolean;
 }
 
-export type PaymentMethod = "CASH" | "BANK_TRANSFER";
+export type PaymentMethod = "CASH" | "BANK_TRANSFER" | "CARD";
 export type PaymentStatus = "COMPLETED" | "REFUNDED";
 
 export interface Payment {
@@ -695,7 +695,7 @@ export interface FinanceSummary {
     branchName: string;
   })[];
   statuses: { status: InvoiceStatus; count: number; billed: number; paid: number }[];
-  byMethod: { CASH: { amount: number; count: number }; BANK_TRANSFER: { amount: number; count: number } };
+  byMethod: { CASH: { amount: number; count: number }; BANK_TRANSFER: { amount: number; count: number }; CARD: { amount: number; count: number } };
 }
 
 export type FinanceChildStatus = "PAID" | "PARTIAL" | "UNPAID";

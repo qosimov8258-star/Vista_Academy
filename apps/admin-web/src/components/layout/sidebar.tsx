@@ -13,7 +13,7 @@ import { useBranchContext } from "@/lib/use-branch-context";
 import { useSidebarCollapsed } from "@/lib/use-sidebar-collapsed";
 import { useSidebarSections } from "@/lib/use-sidebar-sections";
 import { canManageUsers, canViewUseful, isTeacher } from "@/lib/permissions";
-import { formatPositionLabel } from "@/lib/employee-position";
+import { formatPositionLabel, isAssistantPosition, isCashierPosition, isHeadChefPosition, isSubjectTeacherPosition } from "@/lib/employee-position";
 import { Avatar } from "@/components/ui/avatar";
 import type { IconProps } from "@/components/ui/icons";
 import {
@@ -106,6 +106,11 @@ export function Sidebar({ slug }: { slug: string }) {
   const showUsersNav = canManageUsers(user?.role);
   const showUseful = canViewUseful(user?.role);
   const teacher = isTeacher(user?.role);
+  const isSubjectTeacher = !!user?.position && isSubjectTeacherPosition(user.position);
+  const isHeadChef = !!user?.position && isHeadChefPosition(user.position);
+  const isAssistant = !!user?.position && isAssistantPosition(user.position);
+  const isCashier = !!user?.position && isCashierPosition(user.position);
+  const isManager = user?.role === "MANAGER";
   // Yon paneldagi "Bildirishnomalarim" belgisi uchun — daqiqada bir marta yangilanadi.
   const notificationsQuery = useQuery({
     queryKey: ["employee-notifications", slug],
@@ -157,7 +162,7 @@ export function Sidebar({ slug }: { slug: string }) {
   // O'qituvchi kabineti: faqat o'z guruhlariga tegishli uchta bo'lim.
   // Qolgan modullar (moliya, xodimlar, CRM, ...) unga ko'rinmaydi ham,
   // ochilmaydi ham — server tomonda ham yopiq.
-  const teacherEntries: NavEntry[] = [
+  const chefEntries: NavEntry[] = [
     { href: `/${slug}`, label: "Bosh sahifa", icon: HomeIcon, show: true, exact: true },
     {
       href: `/${slug}/my-notifications`,
@@ -166,30 +171,24 @@ export function Sidebar({ slug }: { slug: string }) {
       show: true,
       badge: unreadNotificationsCount > 0 ? unreadNotificationsCount : undefined,
     },
+    { href: `/${slug}/nutrition`, label: "Ovqatlanish", icon: MealIcon, show: true },
+  ];
+
+  // Tarbiyachi yordamchisi: guruhni, tarbiyachi belgilagan davomatni (faqat ko'rish),
+  // bolalarni, dars jadvalini va Foydali bo'limini ko'radi; dori eslatmalari bosh sahifada turadi.
+  const assistantEntries: NavEntry[] = [
+    ...chefEntries.filter((e) => isSection(e) || !e.href.endsWith("/nutrition")),
     {
       id: "guruhlarim",
       label: "Mening guruhlarim",
       icon: GroupIcon,
       items: [
         { href: `/${slug}/attendance`, label: "Davomat", icon: ChecklistIcon, show: true },
-        { href: `/${slug}/daily-reports`, label: "Kundalik hisobot", icon: NoteIcon, show: true },
         { href: `/${slug}/children`, label: "Bolalar", icon: ChildIcon, show: true },
+        { href: `/${slug}/my-lessons/schedule`, label: "Dars jadvali", icon: CalendarIcon, show: true },
       ],
     },
-    {
-      id: "darsliklar",
-      label: "Qo'shimcha darsliklar",
-      icon: BookIcon,
-      items: [
-        // Filial admini/administratorning `/lessons/...` sahifalari bilan
-        // bir xil URL bo'lmasligi uchun o'qituvchining kabineti alohida
-        // `/my-lessons/...` manzilida turadi (ikkalasi ham o'sha bir
-        // komponentni ko'rsatadi — cheklov rol bo'yicha serverda bo'ladi).
-        { href: `/${slug}/my-lessons/schedule`, label: "Dars jadvallari", icon: CalendarIcon, show: true },
-        { href: `/${slug}/my-lessons/topics`, label: "Savol-javob", icon: QuestionIcon, show: true },
-        { href: `/${slug}/my-lessons/grades`, label: "Baholari", icon: StarIcon, show: true },
-      ],
-    },
+    // Tarbiyachining vaqti bo'lmasa yordamchi she'r/maqol/ertak qo'shadi; har birida kim yozgani ko'rinadi.
     {
       id: "foydali",
       label: "Foydali",
@@ -202,8 +201,82 @@ export function Sidebar({ slug }: { slug: string }) {
     },
   ];
 
+  // Kassir: guruhlar emas, pul bilan ishlaydi. Moliyachi roli bilan kiradi.
+  const cashierEntries: NavEntry[] = [
+    { href: `/${slug}`, label: "Bosh sahifa", icon: HomeIcon, show: true, exact: true },
+    { href: `/${slug}/cash`, label: "Kassa", icon: MoneyIcon, show: true },
+    { href: `/${slug}/finance`, label: "Hisob-fakturalar", icon: NoteIcon, show: true },
+    { href: `/${slug}/group-payments`, label: "Guruhlar bo'yicha to'lov", icon: GroupIcon, show: true },
+    { href: `/${slug}/cash-report`, label: "Oylik hisobot", icon: ChartIcon, show: true },
+    {
+      id: "oqituvchilar",
+      label: "O'qituvchilar",
+      icon: TeacherIcon,
+      items: [
+        { href: `/${slug}/hr`, label: "Ish haqi", icon: BriefcaseIcon, show: true },
+        { href: `/${slug}/staff-absences`, label: "Kelmagan kunlar", icon: CalendarIcon, show: true },
+      ],
+    },
+    { href: `/${slug}/my-notifications`, label: "Bildirishnomalarim", icon: BellIcon, show: true },
+  ];
+
+  const teacherEntries: NavEntry[] = [
+    ...chefEntries.filter((e) => isSection(e) || !e.href.endsWith("/nutrition")),
+    {
+      id: "guruhlarim",
+      label: "Mening guruhlarim",
+      icon: GroupIcon,
+      items: [
+        // Fan o'qituvchisi kunlik emas, o'z darsi bo'yicha davomat qiladi
+        { href: isSubjectTeacher ? `/${slug}/lesson-attendance` : `/${slug}/attendance`, label: "Davomat", icon: ChecklistIcon, show: true },
+        { href: `/${slug}/children`, label: "Bolalar", icon: ChildIcon, show: !isSubjectTeacher },
+        // Fan o'qituvchisida dars jadvali alohida "Qo'shimcha darsliklar" o'rniga shu yerda
+        { href: `/${slug}/my-lessons/schedule`, label: "Dars jadvali", icon: CalendarIcon, show: isSubjectTeacher },
+      ],
+    },
+    {
+      id: "darsliklar",
+      label: "Qo'shimcha darsliklar",
+      icon: BookIcon,
+      items: [
+        // Filial admini/administratorning `/lessons/...` sahifalari bilan
+        // bir xil URL bo'lmasligi uchun o'qituvchining kabineti alohida
+        // `/my-lessons/...` manzilida turadi (ikkalasi ham o'sha bir
+        // komponentni ko'rsatadi — cheklov rol bo'yicha serverda bo'ladi).
+        { href: `/${slug}/my-lessons/schedule`, label: "Dars jadvallari", icon: CalendarIcon, show: !isSubjectTeacher },
+      ],
+    },
+    // Fan o'qituvchisiga she'r/maqol/ertak kerak emas — bu faqat tarbiyachilar uchun.
+    ...(isSubjectTeacher
+      ? []
+      : [
+          {
+            id: "foydali",
+            label: "Foydali",
+            icon: BulbIcon,
+            items: [
+              { href: `/${slug}/useful/poems`, label: "She'rlar", icon: NoteIcon, show: showUseful },
+              { href: `/${slug}/useful/proverbs`, label: "Maqollar", icon: BulbIcon, show: showUseful },
+              { href: `/${slug}/useful/tales`, label: "Ertaklar", icon: BookIcon, show: showUseful },
+            ],
+          },
+        ]),
+  ];
+
   const operationalEntries: NavEntry[] = [
     { href: base, label: "Bosh sahifa", icon: HomeIcon, show: true, exact: true },
+    // Administratorning kundalik ishi: qo'ng'iroqlar, olib ketish, bugungi holat
+    {
+      id: "bugungi-ishlar",
+      label: "Bugungi ishlar",
+      icon: PhoneIcon,
+      items: [
+        { href: `${base}/calls`, label: "Qo'ng'iroqlar", icon: PhoneIcon, show: isManager },
+        { href: `${base}/pickups`, label: "Olib ketish", icon: ChildIcon, show: true },
+        { href: `${base}/board`, label: "Bugungi holat", icon: ChartIcon, show: true },
+        { href: `${base}/weekly-report`, label: "Haftalik hisobot", icon: NoteIcon, show: true },
+      ],
+    },
     {
       id: "qabul",
       label: "Qabul va bolalar",
@@ -220,7 +293,8 @@ export function Sidebar({ slug }: { slug: string }) {
       icon: TeacherIcon,
       items: [
         { href: `${base}/employees`, label: "Xodimlar ro'yxati", icon: TeacherIcon, show: true },
-        { href: `${base}/hr`, label: "Ish haqi (HR)", icon: BriefcaseIcon, show: true },
+        // Maosh kassirda; administratorga ko'rinmaydi
+        { href: `${base}/hr`, label: "Ish haqi (HR)", icon: BriefcaseIcon, show: !isManager },
         { href: `${base}/staff-attendance`, label: "Xodimlar davomati", icon: CalendarIcon, show: true },
       ],
     },
@@ -229,21 +303,9 @@ export function Sidebar({ slug }: { slug: string }) {
       label: "Kundalik ish",
       icon: ChecklistIcon,
       items: [
-        { href: `${base}/attendance`, label: "Davomat", icon: ChecklistIcon, show: true },
-        { href: `${base}/daily-reports`, label: "Kundalik hisobot", icon: NoteIcon, show: true },
         { href: `${base}/nutrition`, label: "Ovqatlanish", icon: MealIcon, show: true },
         // O'zi bilan xonalar katalogini ham boshqaradi — alohida nav shart emas
         { href: `${base}/lessons/schedule`, label: "Dars jadvali", icon: CalendarIcon, show: true },
-      ],
-    },
-    {
-      id: "foydali",
-      label: "Foydali",
-      icon: BulbIcon,
-      items: [
-        { href: `${base}/useful/poems`, label: "She'rlar", icon: NoteIcon, show: showUseful },
-        { href: `${base}/useful/proverbs`, label: "Maqollar", icon: BulbIcon, show: showUseful },
-        { href: `${base}/useful/tales`, label: "Ertaklar", icon: BookIcon, show: showUseful },
       ],
     },
     {
@@ -251,7 +313,9 @@ export function Sidebar({ slug }: { slug: string }) {
       label: "Moliya va aloqa",
       icon: MoneyIcon,
       items: [
-        { href: `${base}/finance`, label: "Moliya", icon: MoneyIcon, show: true },
+        { href: `${base}/finance`, label: "Moliya", icon: MoneyIcon, show: !isManager },
+        // Qarzdorlarga qo'ng'iroq qilib eslatish administratorning ishi
+        { href: `${base}/debtors`, label: "Qarzdorlar", icon: PhoneIcon, show: true },
         { href: `${base}/notifications`, label: "Bildirishnomalar", icon: BellIcon, show: true },
         // Branch/user management stay a network-wide (root-level) concern, never
         // duplicated inside a single branch's panel.
@@ -269,7 +333,7 @@ export function Sidebar({ slug }: { slug: string }) {
     show: true,
   };
 
-  const entries = (teacher ? teacherEntries : isNetworkAdmin && !inBranchContext ? rootEntries : operationalEntries)
+  const entries = (isCashier ? cashierEntries : teacher ? (isHeadChef ? chefEntries : isAssistant ? assistantEntries : teacherEntries) : isNetworkAdmin && !inBranchContext ? rootEntries : operationalEntries)
     .map((entry) =>
       isSection(entry) ? { ...entry, items: entry.items.filter((item) => item.show) } : entry,
     )

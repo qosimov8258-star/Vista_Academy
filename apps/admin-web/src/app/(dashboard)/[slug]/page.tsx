@@ -9,10 +9,14 @@ import type { DashboardSummary, Group, LessonSchedule, Organization, Weekday } f
 import { useAuth } from "@/lib/use-auth";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { TodayRemindersCard } from "@/features/child-notes/today-reminders-card";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { formatDate, formatMoney } from "@/lib/format";
 import { canWriteOperational, canWriteTeaching, isTeacher } from "@/lib/permissions";
+import { isCashierPosition } from "@/lib/employee-position";
+import { CashierHome } from "@/features/cash/cashier-home";
+import { AdminHome } from "@/features/desk/admin-home";
 import {
   BellIcon,
   BriefcaseIcon,
@@ -69,6 +73,17 @@ const MONTH_NAMES = [
   "oktabr",
   "noyabr",
   "dekabr",
+];
+
+// Haftalik jadval dushanbadan boshlanadi (JS `getDay()` tartibidan farqli).
+const WEEK_ORDER: { key: Weekday; label: string }[] = [
+  { key: "MONDAY", label: "Dushanba" },
+  { key: "TUESDAY", label: "Seshanba" },
+  { key: "WEDNESDAY", label: "Chorshanba" },
+  { key: "THURSDAY", label: "Payshanba" },
+  { key: "FRIDAY", label: "Juma" },
+  { key: "SATURDAY", label: "Shanba" },
+  { key: "SUNDAY", label: "Yakshanba" },
 ];
 
 const WEEKDAY_NAMES = ["yakshanba", "dushanba", "seshanba", "chorshanba", "payshanba", "juma", "shanba"];
@@ -241,14 +256,50 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
     enabled: teacher,
   });
   const todayWeekday = WEEKDAY_BY_JS_DAY[new Date().getDay()];
-  const todaysLessons = (lessonSchedulesQuery.data ?? [])
-    .filter((lesson) => lesson.weekday === todayWeekday)
-    .sort((a, b) => a.startTime.localeCompare(b.startTime));
+  // Tarbiyachi kun bo'yi bolalar bilan — guruhning bu haftadagi barcha darslari
+  // (qaysi kuni, soat nechida) ko'rinib tursin, shunda bolalar qachon boshqa
+  // o'qituvchi bilan bo'lishini oldindan biladi.
+  const weekPlan = WEEK_ORDER.map((day) => ({
+    ...day,
+    lessons: (lessonSchedulesQuery.data ?? [])
+      .filter((lesson) => lesson.weekday === day.key)
+      .sort((a, b) => a.startTime.localeCompare(b.startTime)),
+  })).filter((day) => day.lessons.length > 0);
 
   if (orgQuery.isLoading) return <LoadingState rows={4} />;
   if (orgQuery.isError) return <ErrorState message={(orgQuery.error as Error).message} />;
   const org = orgQuery.data;
   if (!org) return null;
+
+  // Kassir guruh bilan ishlamaydi — o'z kassa sahifasini ko'radi.
+  if (user?.position && isCashierPosition(user.position)) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
+            {user?.branchName ?? org.name}
+          </h1>
+          <p className="text-[13px] text-[var(--color-text-muted)]">Bugun · {todayLabel()}</p>
+        </div>
+        <CashierHome slug={slug} />
+      </div>
+    );
+  }
+
+  // Administrator (MANAGER) uchun alohida bosh sahifa: bugungi holat va qo'ng'iroqlar.
+  if (user?.role === "MANAGER") {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
+            {user?.branchName ?? org.name}
+          </h1>
+          <p className="text-[13px] text-[var(--color-text-muted)]">Bugun · {todayLabel()}</p>
+        </div>
+        <AdminHome slug={slug} />
+      </div>
+    );
+  }
 
   const summary = summaryQuery.data;
   const children = summary?.childrenCount ?? 0;
@@ -283,6 +334,15 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
         <ErrorState message={(summaryQuery.error as Error).message} />
       ) : (
         <>
+          {/* Tarbiyachi yozgan bugungi eslatmalar (dori vaqti va h.k.) — filial darajasidagi hamma ko'radi */}
+          {user?.branchId && (
+            <TodayRemindersCard
+              slug={slug}
+              branchId={user.branchId}
+              today={new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tashkent" }).format(new Date())}
+            />
+          )}
+
           {/* Tarmoq admini uchun tashkilotning o'zi haqidagi ma'lumot */}
           {isNetworkAdmin && (
             <section>
@@ -353,14 +413,6 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
                   href={isNetworkAdmin ? undefined : `/${slug}/attendance`}
                   actionLabel={canTeach ? "Davomatni belgilash" : "Ko'rish"}
                 />
-                <TodayCard
-                  title="Kundalik hisobot"
-                  icon={NoteIcon}
-                  done={summary?.todayDailyReportsFilled ?? 0}
-                  total={children}
-                  href={isNetworkAdmin ? undefined : `/${slug}/daily-reports`}
-                  actionLabel={canTeach ? "To'ldirish" : "Ko'rish"}
-                />
                 {!teacher && (
                   <TodayCard
                     title="Xodimlar davomati"
@@ -385,8 +437,7 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
                 <Card className="p-4">
                   <p className="text-[13px] font-medium text-[var(--color-text-muted)]">Bugun belgilanmagan</p>
-                  {summary.attention.unmarkedAttendance.length === 0 &&
-                  summary.attention.missingDailyReport.length === 0 ? (
+                  {summary.attention.unmarkedAttendance.length === 0 ? (
                     <p className="mt-2 text-[13.5px] text-[var(--color-success)]">Hammasi belgilangan</p>
                   ) : (
                     <div className="mt-2 space-y-2">
@@ -400,19 +451,6 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
                               .join(", ")}
                             {summary.attention.unmarkedAttendance.length > 3 &&
                               ` +${summary.attention.unmarkedAttendance.length - 3}`}
-                          </span>
-                        </p>
-                      )}
-                      {summary.attention.missingDailyReport.length > 0 && (
-                        <p className="text-[12.5px] text-[var(--color-text-muted)]">
-                          Kundalik hisobot:{" "}
-                          <span className="font-medium text-[var(--color-text)]">
-                            {summary.attention.missingDailyReport
-                              .slice(0, 3)
-                              .map((c) => c.fullName)
-                              .join(", ")}
-                            {summary.attention.missingDailyReport.length > 3 &&
-                              ` +${summary.attention.missingDailyReport.length - 3}`}
                           </span>
                         </p>
                       )}
@@ -589,28 +627,36 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
 
           {teacher && (
             <section>
-              <SectionTitle>Bugungi darslarim</SectionTitle>
-              {todaysLessons.length > 0 ? (
-                <div className="space-y-2">
-                  {todaysLessons.map((lesson) => (
-                    <Card key={lesson.id} className="flex items-center gap-3 p-3.5">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
-                        <ClockIcon className="h-[18px] w-[18px]" />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-[var(--color-text)]">
-                          {lesson.startTime} – {lesson.endTime}
-                          {lesson.subject && (
-                            <span className="text-[var(--color-text-muted)]"> · {lesson.subject}</span>
-                          )}
-                        </p>
-                        <p className="text-xs text-[var(--color-text-muted)]">{lesson.group.name} guruhi</p>
-                      </div>
-                    </Card>
+              <SectionTitle>Bu haftaki darslar</SectionTitle>
+              {weekPlan.length > 0 ? (
+                <div className="space-y-4">
+                  {weekPlan.map((day) => (
+                    <div key={day.key} className="space-y-2">
+                      <p className="flex items-center gap-2 text-[13px] font-semibold text-[var(--color-text-muted)]">
+                        {day.label}
+                        {day.key === todayWeekday && <Badge tone="primary">Bugun</Badge>}
+                      </p>
+                      {day.lessons.map((lesson) => (
+                        <Card key={lesson.id} className="flex items-center gap-3 p-3.5">
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
+                            <ClockIcon className="h-[18px] w-[18px]" />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-[var(--color-text)]">
+                              {lesson.startTime} – {lesson.endTime}
+                              {lesson.subject && (
+                                <span className="text-[var(--color-text-muted)]"> · {lesson.subject}</span>
+                              )}
+                            </p>
+                            <p className="text-xs text-[var(--color-text-muted)]">{lesson.group.name} guruhi</p>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
                   ))}
                 </div>
               ) : (
-                <EmptyState icon={<ClockIcon className="h-[26px] w-[26px]" />} title="Bugun darsingiz yo'q" />
+                <EmptyState icon={<ClockIcon className="h-[26px] w-[26px]" />} title="Bu hafta guruhingizda dars yo'q" />
               )}
             </section>
           )}
