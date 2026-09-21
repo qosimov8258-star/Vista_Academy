@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { api, getPaginated } from "@/lib/api";
@@ -48,6 +48,11 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
   const [overdueOnly, setOverdueOnly] = useState(false);
   const [search, setSearch] = useState("");
   const [period, setPeriod] = useState("");
+  // Qarzdorlar sahifasidan `?search=bola-ismi` bilan kelinganda qidiruv oldindan to'ladi.
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get("search");
+    if (q) setSearch(q);
+  }, []);
   const [createOpen, setCreateOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [payInvoice, setPayInvoice] = useState<Invoice | null>(null);
@@ -139,6 +144,12 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
             <span className="text-[13px] text-[var(--color-text-muted)]">Naqd:</span>
             <span className="text-[14px] font-semibold tabular-nums text-[var(--color-text)]">
               {formatMoney(summaryQuery.data.byMethod.CASH.amount)} ({summaryQuery.data.byMethod.CASH.count})
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[13px] text-[var(--color-text-muted)]">Karta:</span>
+            <span className="text-[14px] font-semibold tabular-nums text-[var(--color-text)]">
+              {formatMoney(summaryQuery.data.byMethod.CARD.amount)} ({summaryQuery.data.byMethod.CARD.count})
             </span>
           </div>
           <div className="flex items-center gap-2">

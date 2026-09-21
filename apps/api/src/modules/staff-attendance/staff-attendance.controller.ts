@@ -31,6 +31,12 @@ export class StaffAttendanceController {
     return this.staffAttendanceService.monthlySummary(toTenantScope(user), query);
   }
 
+  /** Oy davomida kelmagan/kasal/ta'til kunlari ro'yxati. */
+  @Get("absences")
+  absences(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query() query: StaffAttendanceSummaryQueryDto) {
+    return this.staffAttendanceService.absences(toTenantScope(user), query);
+  }
+
   @Post()
   mark(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: MarkStaffAttendanceDto) {
     return this.staffAttendanceService.mark(toTenantScope(user), dto);

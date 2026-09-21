@@ -12,7 +12,7 @@ import { CredentialRow } from "@/components/ui/credential-row";
 import { EmployeePhoto } from "@/components/ui/employee-photo";
 import { initials } from "@/components/ui/avatar";
 import { PhoneIcon, EyeIcon, EyeOffIcon, CheckIcon, TrashIcon } from "@/components/ui/icons";
-import { formatPositionLabel, isSubjectTeacherPosition } from "@/lib/employee-position";
+import { formatPositionLabel, isCabinetlessPosition, isGrouplessPosition, isSubjectTeacherPosition } from "@/lib/employee-position";
 import { EmployeeTopics } from "@/features/employees/employee-topics";
 
 /**
@@ -283,8 +283,10 @@ export function EmployeeDetailModal({
         ) : (
           <div className="space-y-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] p-4">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-sm text-[var(--color-text-muted)]">Kabinet ochilmagan</p>
-              {canWrite && !accountOpen && (
+              <p className="text-sm text-[var(--color-text-muted)]">
+                {isCabinetlessPosition(employee.position) ? "Bu lavozim tizimga kirmaydi — kabinet kerak emas" : "Kabinet ochilmagan"}
+              </p>
+              {canWrite && !accountOpen && !isCabinetlessPosition(employee.position) && (
                 <Button type="button" variant="outline" size="sm" onClick={() => setAccountOpen(true)}>
                   Kabinet ochish
                 </Button>
@@ -301,6 +303,7 @@ export function EmployeeDetailModal({
                 <p className="text-xs text-[var(--color-text-muted)]">
                   Login va parol avtomatik generatsiya qilinadi va bir marta ko&apos;rsatiladi.
                 </p>
+                {!isGrouplessPosition(employee.position) && (
                 <div>
                   <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">Guruhlari</span>
                   {!groups ? (
@@ -330,6 +333,7 @@ export function EmployeeDetailModal({
                     </div>
                   )}
                 </div>
+                )}
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="ghost" size="sm" onClick={() => setAccountOpen(false)}>
                     Bekor qilish
@@ -339,7 +343,7 @@ export function EmployeeDetailModal({
                     size="sm"
                     loading={accountMutation.isPending}
                     onClick={() => {
-                      if (groupIds.length === 0) {
+                      if (groupIds.length === 0 && !isGrouplessPosition(employee.position)) {
                         setAccountError("Kamida bitta guruh tanlang");
                         return;
                       }

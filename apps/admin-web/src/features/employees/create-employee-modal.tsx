@@ -18,7 +18,7 @@ import { SubjectsModal } from "@/features/employees/subjects-modal";
 import { PencilIcon, ChevronDownIcon, CheckIcon, EyeIcon, EyeOffIcon } from "@/components/ui/icons";
 import { initials } from "@/components/ui/avatar";
 import { prepareChildPhoto } from "@/lib/child-photo";
-import { isSubjectTeacherPosition } from "@/lib/employee-position";
+import { isCabinetlessPosition, isGrouplessPosition, isSubjectTeacherPosition } from "@/lib/employee-position";
 
 const schema = z
   .object({
@@ -30,6 +30,8 @@ const schema = z
       .refine((value) => /\d[\d\s()+-]{7,}/.test(value), "Telefon raqami noto'g'ri"),
     // Kabinet ixtiyoriy: oshpaz yoki farrosh tizimga kirmaydi
     withAccount: z.boolean(),
+    // Kassir va bosh oshpazga guruh tanlash shart emas (lavozimga qarab qo'yiladi).
+    groupless: z.boolean().optional(),
     groupIds: z.array(z.string()),
     // Login/parol ixtiyoriy — bo'sh qoldirilsa backend avtomatik generatsiya qiladi
     login: z.string().optional(),
@@ -38,7 +40,7 @@ const schema = z
   })
   .superRefine((values, ctx) => {
     if (!values.withAccount) return;
-    if (values.groupIds.length === 0) {
+    if (values.groupIds.length === 0 && !values.groupless) {
       ctx.addIssue({ code: "custom", path: ["groupIds"], message: "Kamida bitta guruh tanlang" });
     }
     if (values.login && values.login.trim().length < 3) {
@@ -82,6 +84,9 @@ export function CreateEmployeeModal({
   const [subjectsError, setSubjectsError] = useState<string | null>(null);
   const [subjectsModalOpen, setSubjectsModalOpen] = useState(false);
   const isSubjectTeacher = isSubjectTeacherPosition(positionName);
+  // Oshpaz yordamchisi, idish yuvuvchi kabi lavozimlarga kabinet ochilmaydi.
+  const cabinetless = isCabinetlessPosition(positionName);
+  const groupless = isGrouplessPosition(positionName);
   const [createdCredentials, setCreatedCredentials] = useState<EmployeeCredentials | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -120,7 +125,13 @@ export function CreateEmployeeModal({
     defaultValues: { withAccount: false, groupIds: [] },
   });
 
-  const withAccount = watch("withAccount");
+  const withAccount = watch("withAccount") && !cabinetless;
+  useEffect(() => {
+    if (cabinetless) setValue("withAccount", false);
+  }, [cabinetless, setValue]);
+  useEffect(() => {
+    setValue("groupless", groupless);
+  }, [groupless, setValue]);
   const groupIds = watch("groupIds");
   const lastName = watch("lastName");
   const firstName = watch("firstName");
@@ -168,9 +179,9 @@ export function CreateEmployeeModal({
         phone: values.phone || undefined,
         position: positionName.trim(),
         subjects: isSubjectTeacher ? subjects : undefined,
-        account: values.withAccount
+        account: values.withAccount && !cabinetless
           ? {
-              groupIds: values.groupIds,
+              groupIds: groupless ? [] : values.groupIds,
               login: values.login?.trim() || undefined,
               password: values.password || undefined,
             }
@@ -395,6 +406,11 @@ export function CreateEmployeeModal({
           </div>
         )}
 
+        {cabinetless ? (
+          <p className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3.5 text-xs text-[var(--color-text-muted)]">
+            Bu lavozimdagi xodim tizimga kirmaydi — kabinet ochilmaydi, faqat xodimlar ro&apos;yxatida turadi.
+          </p>
+        ) : (
         <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3.5">
           <label className="flex cursor-pointer items-start gap-2.5">
             <input
@@ -488,6 +504,7 @@ export function CreateEmployeeModal({
                 </div>
               )}
 
+              {!groupless && (
               <div>
                 <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">Guruhlari</span>
                 {!groups ? (
@@ -522,9 +539,11 @@ export function CreateEmployeeModal({
                   <span className="mt-1.5 block text-xs text-[var(--color-danger)]">{errors.groupIds.message}</span>
                 )}
               </div>
+              )}
             </div>
           )}
         </div>
+        )}
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={handleClose}>

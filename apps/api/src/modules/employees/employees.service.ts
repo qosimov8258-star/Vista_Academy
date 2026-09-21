@@ -31,6 +31,31 @@ function normalizePosition(value: string): string {
 
 const SUBJECT_TEACHER_POSITION = normalizePosition(DEFAULT_POSITIONS[0]);
 
+// Tizimga kirmaydigan lavozimlar: ro'yxatda turadi, lekin login/parol berilmaydi.
+const CABINETLESS_POSITIONS = new Set(["oshpaz yordamchisi", "idish yuvuchi", "idish yuvuvchi"]);
+// Kabineti bor, lekin guruhi yo'q lavozimlar; kassir esa TEACHER emas, Moliyachi (FINANCE) roli bilan kiradi.
+const GROUPLESS_POSITIONS = new Set(["kassir", "bosh oshpaz", "administrator"]);
+const CASHIER_POSITION = "kassir";
+const GROUP_REQUIRED_MESSAGE = "Kamida bitta guruh tanlang";
+
+// Administrator MANAGER roli bilan kiradi: qarzdorlarga eslatma va filial ishlarini yuritadi.
+function roleForPosition(position: string): "FINANCE" | "MANAGER" | "TEACHER" {
+  const normalized = normalizePosition(position);
+  if (normalized === CASHIER_POSITION) return "FINANCE";
+  if (normalized === "administrator") return "MANAGER";
+  return "TEACHER";
+}
+
+function requireGroupsFor(position: string, groupIds: string[] | undefined): string[] {
+  const ids = groupIds ?? [];
+  if (ids.length === 0 && !GROUPLESS_POSITIONS.has(normalizePosition(position))) {
+    throw new BadRequestException(GROUP_REQUIRED_MESSAGE);
+  }
+  return ids;
+}
+
+const CABINETLESS_MESSAGE = "Bu lavozimdagi xodimga kabinet (login/parol) ochilmaydi";
+
 /** Ro'yxatda kabinet holati va biriktirilgan guruhlar ham ko'rinadi. */
 const employeeInclude = {
   tenantUser: { select: { id: true, login: true, role: true, isActive: true } },
@@ -68,6 +93,10 @@ export class EmployeesService {
     }
     const subjects = isSubjectTeacher ? dto.subjects! : [];
 
+    if (dto.account && CABINETLESS_POSITIONS.has(normalizePosition(dto.position))) {
+      throw new BadRequestException(CABINETLESS_MESSAGE);
+    }
+
     if (!dto.account) {
       const employee = await this.prisma.employee.create({
         data: {
@@ -92,7 +121,8 @@ export class EmployeesService {
       return { employee, credentials: null };
     }
 
-    await this.assertGroupsBelongToBranch(branchId, dto.account.groupIds);
+    const accountGroupIds = requireGroupsFor(dto.position, dto.account.groupIds);
+    await this.assertGroupsBelongToBranch(branchId, accountGroupIds);
     const { login, password, passwordHash, passwordEncrypted } = await this.resolveCredentials(
       scope.organizationId,
       dto.firstName,
@@ -113,7 +143,7 @@ export class EmployeesService {
             passwordHash,
             passwordEncrypted,
             fullName,
-            role: "TEACHER",
+            role: roleForPosition(dto.position),
           },
         });
         return tx.employee.create({
@@ -127,7 +157,7 @@ export class EmployeesService {
             position: dto.position,
             subjects,
             tenantUserId: tenantUser.id,
-            teachingGroups: { create: dto.account!.groupIds.map((groupId) => ({ groupId })) },
+            teachingGroups: { create: accountGroupIds.map((groupId) => ({ groupId })) },
           },
           include: employeeInclude,
         });
@@ -224,7 +254,11 @@ export class EmployeesService {
     if (employee.tenantUserId) {
       throw new ConflictException("Bu xodimning kabineti allaqachon ochilgan");
     }
-    await this.assertGroupsBelongToBranch(branchId, dto.groupIds);
+    if (CABINETLESS_POSITIONS.has(normalizePosition(employee.position))) {
+      throw new BadRequestException(CABINETLESS_MESSAGE);
+    }
+    const groupIds = requireGroupsFor(employee.position, dto.groupIds);
+    await this.assertGroupsBelongToBranch(branchId, groupIds);
     const { login, password, passwordHash, passwordEncrypted } = await this.resolveCredentials(
       scope.organizationId,
       employee.firstName,
@@ -243,12 +277,12 @@ export class EmployeesService {
             passwordHash,
             passwordEncrypted,
             fullName: employee.fullName,
-            role: "TEACHER",
+            role: roleForPosition(employee.position),
           },
         });
         await tx.groupTeacher.deleteMany({ where: { employeeId } });
         await tx.groupTeacher.createMany({
-          data: dto.groupIds.map((groupId) => ({ groupId, employeeId })),
+          data: groupIds.map((groupId) => ({ groupId, employeeId })),
         });
         return tx.employee.update({
           where: { id: employeeId },

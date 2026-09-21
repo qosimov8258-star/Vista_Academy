@@ -3,7 +3,8 @@
 import { use, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, getPaginated, ApiError } from "@/lib/api";
-import type { Employee, PayrollEntry, PayrollSummary, Shift } from "@/lib/types";
+import type { Employee, PayrollEntry, PayrollSummary, Shift, StaffAttendanceSummary } from "@/lib/types";
+import { absenceNote } from "@/features/cash/staff-absence";
 import { useAuth } from "@/lib/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardBody, CardTitle } from "@/components/ui/card";
@@ -84,6 +85,18 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
       ),
     enabled: !!period,
   });
+
+  // Tanlangan oyda kim necha kun kelmagan/kasal/ta'tilda bo'lgani — ish haqini hisoblashda ko'z oldida tursin.
+  const attendanceSummaryQuery = useQuery({
+    queryKey: ["staff-attendance-summary", slug, forcedBranchId ?? user?.branchId, period],
+    queryFn: () =>
+      api.get<StaffAttendanceSummary>(`/app/staff-attendance/summary?period=${period}${forcedBranchId ?? user?.branchId ? `&branchId=${forcedBranchId ?? user?.branchId}` : ""}`),
+    enabled: !!period,
+  });
+  const absenceByEmployee = useMemo(
+    () => new Map((attendanceSummaryQuery.data?.employees ?? []).map((row) => [row.employeeId, row])),
+    [attendanceSummaryQuery.data],
+  );
 
   const payrollQuery = useQuery({
     queryKey: ["payroll", slug, period, payrollPage, forcedBranchId],
@@ -170,6 +183,9 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
                   <div className="min-w-0">
                     <p className="truncate text-[14px] font-medium text-[var(--color-text)]">{employee.fullName}</p>
                     <p className="text-[12.5px] text-[var(--color-text-muted)]">{employee.position}</p>
+                    {absenceNote(absenceByEmployee.get(employee.id)) && (
+                      <p className="text-[12.5px] text-[var(--color-danger)]">{absenceNote(absenceByEmployee.get(employee.id))}</p>
+                    )}
                   </div>
                   {canWrite && (
                     <Button size="sm" variant="outline" onClick={() => setSalarySchemeEmployee(employee)}>
@@ -304,6 +320,11 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
                     <Tr key={entry.id}>
                       <Td className="font-medium">
                         {entry.employee?.fullName ?? employeeName(entry.employeeId)}
+                        {absenceNote(absenceByEmployee.get(entry.employeeId)) && (
+                          <div className="text-[12px] font-normal text-[var(--color-danger)]">
+                            {absenceNote(absenceByEmployee.get(entry.employeeId))}
+                          </div>
+                        )}
                       </Td>
                       <Td className="tabular-nums text-[var(--color-text-muted)]">{entry.period}</Td>
                       <Td numeric className="text-[var(--color-text-muted)]">
