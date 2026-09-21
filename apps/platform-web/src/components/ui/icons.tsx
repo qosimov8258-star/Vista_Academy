@@ -319,3 +319,34 @@ export function EyeOffIcon(props: IconProps) {
     </Icon>
   );
 }
+
+export function GlobeIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18" />
+      <path d="M12 3c2.6 2.5 4 5.7 4 9s-1.4 6.5-4 9c-2.6-2.5-4-5.7-4-9s1.4-6.5 4-9Z" />
+    </Icon>
+  );
+}
+
+export function FoodIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M6 3v7a2 2 0 0 0 4 0V3" />
+      <path d="M8 10v11" />
+      <path d="M17 3c-1.7 0-3 2-3 5s1.3 5 3 5" />
+      <path d="M17 3v18" />
+    </Icon>
+  );
+}
+
+export function DocumentIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" />
+      <path d="M14 3v5h5" />
+      <path d="M9 13h6M9 17h6" />
+    </Icon>
+  );
+}
