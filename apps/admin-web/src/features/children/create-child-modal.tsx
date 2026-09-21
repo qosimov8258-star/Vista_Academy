@@ -31,8 +31,20 @@ const schema = z
     // Ixtiyoriy — bo'sh qoldirilsa backend avtomatik generatsiya qiladi
     guardianPassword: z.string().optional(),
     guardianConfirmPassword: z.string().optional(),
+    // Birinchi hisob-fakturani bola bilan birga yaratish (ixtiyoriy)
+    createInvoice: z.boolean().optional(),
+    invoiceAmount: z.string().optional(),
+    invoiceDueDate: z.string().optional(),
   })
   .superRefine((values, ctx) => {
+    if (values.createInvoice) {
+      if (!(Number(values.invoiceAmount) > 0)) {
+        ctx.addIssue({ code: "custom", path: ["invoiceAmount"], message: "Summani kiriting" });
+      }
+      if (!values.invoiceDueDate) {
+        ctx.addIssue({ code: "custom", path: ["invoiceDueDate"], message: "To'lov muddatini tanlang" });
+      }
+    }
     if (!values.guardianPassword) return;
     const unmet = getPasswordRules(values.guardianPassword).some((rule) => !rule.met);
     if (unmet) {
@@ -69,6 +81,7 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
 
   const lastName = watch("lastName");
   const firstName = watch("firstName");
+  const createInvoice = watch("createInvoice");
   const password = watch("guardianPassword");
   const confirmPassword = watch("guardianConfirmPassword");
   const passwordRules = getPasswordRules(password ?? "", confirmPassword ?? "");
@@ -115,6 +128,16 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
       // muvaffaqiyatsiz bo'lsa ham bola yozuvi allaqachon yaratilgan hisoblanadi.
       if (photoImage) {
         await api.put(`/app/children/${result.id}/avatar`, { image: photoImage }).catch(() => {});
+      }
+      // Birinchi hisob-faktura: bola allaqachon yaratilgan, shuning uchun xato bo'lsa
+      // ham bola yozuvi qoladi — hisob-fakturani Moliya sahifasidan qayta yaratish mumkin.
+      if (values.createInvoice) {
+        const now = new Date();
+        const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+        await api
+          .post("/app/invoices", { childId: result.id, amount: Number(values.invoiceAmount), period, dueDate: values.invoiceDueDate })
+          .catch(() => {});
+        queryClient.invalidateQueries({ queryKey: ["invoices", slug] });
       }
       return result;
     },
@@ -343,6 +366,22 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
           {password && (
             <div className="rounded-[var(--radius-md)] bg-[var(--color-surface)] p-3">
               <PasswordChecklist rules={passwordRules} />
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3.5">
+          <label className="flex cursor-pointer items-start gap-2.5">
+            <input type="checkbox" className="mt-0.5 h-4 w-4 cursor-pointer accent-[var(--color-primary)]" {...register("createInvoice")} />
+            <span>
+              <span className="block text-sm font-medium text-[var(--color-text)]">Birinchi hisob-fakturani yaratish</span>
+              <span className="block text-xs text-[var(--color-text-muted)]">Joriy oy uchun to&apos;lov summasi va muddatini kiriting.</span>
+            </span>
+          </label>
+          {createInvoice && (
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Input label="Summa (UZS)" type="number" placeholder="850000" error={errors.invoiceAmount?.message} {...register("invoiceAmount")} />
+              <Input label="To'lov muddati" type="date" error={errors.invoiceDueDate?.message} {...register("invoiceDueDate")} />
             </div>
           )}
         </div>

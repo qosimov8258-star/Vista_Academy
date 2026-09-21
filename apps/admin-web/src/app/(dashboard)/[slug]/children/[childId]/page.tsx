@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useRef, useState } from "react";
+import { downloadCsv } from "@/lib/download";
 import Link from "next/link";
 import clsx from "clsx";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
@@ -146,6 +147,8 @@ function RatingBadge({ label, value }: { label: string; value: string | null }) 
 export default function ChildDetailPage({ params }: { params: Promise<{ slug: string; childId: string }> }) {
   const { slug, childId } = use(params);
   const [assessOpen, setAssessOpen] = useState(false);
+  const [docLoading, setDocLoading] = useState<string | null>(null);
+  const [docError, setDocError] = useState<string | null>(null);
   const [healthOpen, setHealthOpen] = useState(false);
   const [vaccinationOpen, setVaccinationOpen] = useState(false);
   const [updatingVaccination, setUpdatingVaccination] = useState<Vaccination | null>(null);
@@ -333,6 +336,32 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
                 <Button size="sm" variant="outline" onClick={() => setEditChildOpen(true)}>
                   Tahrirlash
                 </Button>
+              )}
+              {canWrite && (
+                <>
+                  {(["contract", "certificate"] as const).map((kind) => (
+                    <Button
+                      key={kind}
+                      size="sm"
+                      variant="outline"
+                      loading={docLoading === kind}
+                      onClick={async () => {
+                        setDocLoading(kind);
+                        setDocError(null);
+                        try {
+                          await downloadCsv(`/app/exports/children/${childId}/${kind}-pdf`, `${kind === "contract" ? "shartnoma" : "malumotnoma"}-${childId}.pdf`);
+                        } catch {
+                          setDocError("Hujjatni yuklab bo'lmadi — qayta urinib ko'ring");
+                        } finally {
+                          setDocLoading(null);
+                        }
+                      }}
+                    >
+                      {kind === "contract" ? "Shartnoma (PDF)" : "Ma'lumotnoma (PDF)"}
+                    </Button>
+                  ))}
+                  {docError && <span className="text-[12.5px] text-[var(--color-danger)]">{docError}</span>}
+                </>
               )}
             </div>
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">

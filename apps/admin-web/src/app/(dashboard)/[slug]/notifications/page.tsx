@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { formatDateTime } from "@/lib/format";
+import { BroadcastModal } from "@/features/notifications/broadcast-modal";
 import { CreateNotificationModal } from "@/features/notifications/create-notification-modal";
 import { MarkSentModal } from "@/features/notifications/mark-sent-modal";
 import { useBranchContext } from "@/lib/use-branch-context";
@@ -50,6 +51,7 @@ export default function NotificationsPage({ params }: { params: Promise<{ slug: 
   const [markSentTarget, setMarkSentTarget] = useState<NotificationLog | null>(null);
   const { user } = useAuth();
   const canWrite = canWriteOperational(user?.role);
+  const [broadcastOpen, setBroadcastOpen] = useState(false);
   const { branchId: forcedBranchId } = useBranchContext(slug);
 
   const notificationsQuery = useQuery({
@@ -76,7 +78,14 @@ export default function NotificationsPage({ params }: { params: Promise<{ slug: 
             yuborilmaydi, faqat yozib boriladi. Xabar berilgach, tegishli yozuvni &quot;Yuborildi&quot; deb belgilang.
           </p>
         </div>
-        {canWrite && <Button onClick={() => setCreateOpen(true)}>+ Yangi yozuv</Button>}
+        {canWrite && (
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setBroadcastOpen(true)}>
+              Ommaviy xabar
+            </Button>
+            <Button onClick={() => setCreateOpen(true)}>+ Yangi yozuv</Button>
+          </div>
+        )}
       </div>
 
       {!canWrite && <ViewOnlyNote role={user?.role} />}
@@ -195,6 +204,7 @@ export default function NotificationsPage({ params }: { params: Promise<{ slug: 
       )}
 
       {canWrite && <CreateNotificationModal open={createOpen} onClose={() => setCreateOpen(false)} slug={slug} />}
+      {canWrite && <BroadcastModal open={broadcastOpen} onClose={() => setBroadcastOpen(false)} slug={slug} />}
       {canWrite && (
         <MarkSentModal
           open={!!markSentTarget}
