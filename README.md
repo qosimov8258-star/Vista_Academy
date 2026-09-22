@@ -9,9 +9,10 @@ apps/
   api/            NestJS backend (Prisma + PostgreSQL)
   platform-web/   Platforma boshqaruvi (Super Admin) — tashkilotlarni yaratish/kuzatish
   admin-web/      Tashkilot/filial paneli (Super Admin, Filial admini, Moliyachi, Administrator, O'qituvchi)
+  landing-web/    Ommaviy lending sahifa (marketing) — tashkilot haqida, ariza qoldirish
 ```
 
-Uchta ilova bitta npm workspaces monorepo ichida (`apps/*`).
+To'rt ilova bitta npm workspaces monorepo ichida (`apps/*`).
 
 ## Talablar
 

@@ -1,0 +1,943 @@
+/* Bepul, kompyuter chizgan "minion-vari" personajlar — Illumination'ning haqiqiy
+   Minion dizaynini emas, o'yinchoq uslubidagi umumiy sariq qahramonlarni ifodalaydi. */
+
+.stage {
+  position: relative;
+  width: 100%;
+  height: 220px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+@media (min-width: 640px) {
+  .stage {
+    height: 250px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .stage {
+    height: 280px;
+  }
+}
+
+.scene {
+  position: absolute;
+  inset: 0;
+  perspective: 900px;
+}
+
+/* ================= Sahna jihozlari (statik) ================= */
+
+/* --- Arg'imchoq (see-saw) --- */
+.seesawSet {
+  position: absolute;
+  left: 10%;
+  bottom: 0;
+  width: 100px;
+  height: 26px;
+}
+.seesawFulcrum {
+  position: absolute;
+  left: 42px;
+  bottom: 0;
+  width: 0;
+  height: 0;
+  border-left: 16px solid transparent;
+  border-right: 16px solid transparent;
+  border-bottom: 24px solid #d99a3f;
+  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.15));
+}
+
+/* --- Halinchak (A-shaklidagi ramka, tekis dizayn) --- */
+.swingSet {
+  position: absolute;
+  left: 64%;
+  bottom: 0;
+  width: 90px;
+  height: 150px;
+}
+.swingPoleL,
+.swingPoleR {
+  position: absolute;
+  top: 0;
+  bottom: 15px;
+  width: 8px;
+  background: #7fe0c4;
+  border-radius: 4px;
+  transform-origin: bottom center;
+}
+.swingPoleL {
+  left: 6px;
+  transform: rotate(9deg);
+}
+.swingPoleR {
+  right: 6px;
+  transform: rotate(-9deg);
+}
+.swingFootL,
+.swingFootR {
+  position: absolute;
+  bottom: 0;
+  width: 18px;
+  height: 17px;
+  background: #a15c3e;
+  border-radius: 4px;
+  transform-origin: top center;
+}
+.swingFootL {
+  left: 0;
+  transform: rotate(9deg);
+}
+.swingFootR {
+  right: 0;
+  transform: rotate(-9deg);
+}
+.swingBar {
+  position: absolute;
+  top: 0;
+  left: 2px;
+  right: 2px;
+  height: 13px;
+  background: #ffcf3d;
+  border-radius: 7px;
+}
+
+/* --- Sirg'anchiq --- */
+.slideSet {
+  position: absolute;
+  left: 36%;
+  bottom: 0;
+  width: 140px;
+  height: 110px;
+}
+
+.ladder {
+  position: absolute;
+  right: 10px;
+  bottom: 0;
+  width: 20px;
+  height: 78px;
+}
+.ladderRailL,
+.ladderRailR {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, #dde2e8, #aab1bb);
+  border-radius: 2px;
+}
+.ladderRailL {
+  left: 0;
+}
+.ladderRailR {
+  right: 0;
+}
+.rung {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #aab1bb;
+  border-radius: 2px;
+}
+.rung1 {
+  top: 8px;
+}
+.rung2 {
+  top: 28px;
+}
+.rung3 {
+  top: 48px;
+}
+.rung4 {
+  top: 68px;
+}
+
+.platform {
+  position: absolute;
+  right: 4px;
+  bottom: 74px;
+  width: 32px;
+  height: 10px;
+  background: #aab1bb;
+  border-radius: 4px;
+}
+
+.ramp {
+  position: absolute;
+  left: 2px;
+  bottom: 8px;
+  width: 96px;
+  height: 24px;
+  background: linear-gradient(160deg, #7cd4f0, #2f9ac2);
+  border-radius: 10px;
+  transform-origin: right bottom;
+  transform: rotate(-27deg);
+  box-shadow: 0 3px 6px rgba(20, 60, 80, 0.18);
+}
+
+/* ================= Minion "yo'l" konteynerlari (24s aylanish, shoshilmasdan) =================
+   Bosqichlar: 0-20% sekin kirish · 20-75% o'ynash · 75-92% to'xtab qarash ·
+   92-99% chopib chiqish · 99-100% ekrandan yashirin */
+
+.wrap {
+  position: absolute;
+  bottom: 6px;
+  width: 56px;
+  height: 96px;
+}
+
+.groundShadow {
+  position: absolute;
+  left: 50%;
+  bottom: -4px;
+  width: 40px;
+  height: 10px;
+  background: radial-gradient(ellipse, rgba(30, 30, 30, 0.28) 0%, rgba(30, 30, 30, 0) 72%);
+  transform: translateX(-50%);
+}
+
+.local {
+  position: absolute;
+  inset: 0;
+}
+
+/* --- Arg'imchoqda o'ynovchi minion --- */
+.wrapBounce {
+  left: calc(10% + 30px);
+  animation: pathBounce 24s linear infinite;
+}
+.localBounce {
+  position: absolute;
+  left: -22px;
+  bottom: 24px;
+  width: 100px;
+  height: 12px;
+  transform-origin: 50% 50%;
+  animation: seesawTilt 24s ease-in-out infinite;
+}
+.seesawPlankGfx {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(160deg, #ffd23c, #e0a600);
+  border-radius: 6px;
+  box-shadow: 0 3px 5px rgba(0, 0, 0, 0.15);
+}
+.seesawRiderSlot {
+  position: absolute;
+  left: -4px;
+  bottom: 10px;
+  width: 60px;
+  height: 96px;
+}
+
+/* --- Sirg'anchiqda o'ynovchi minion --- */
+.wrapSlide {
+  left: calc(36% + 74px);
+  animation: pathSlide 24s linear infinite;
+}
+.localSlide {
+  animation: climbSlide 24s ease-in-out infinite;
+}
+
+/* --- Halinchakda uchuvchi minion --- */
+.wrapSwing {
+  left: calc(64% + 17px);
+  bottom: 0;
+  height: 150px;
+  animation: pathSwing 24s linear infinite;
+}
+.localSwing {
+  transform-origin: 50% 4px;
+  animation: pendulum 24s ease-in-out infinite;
+}
+.swingRopeL,
+.swingRopeR {
+  position: absolute;
+  top: 4px;
+  width: 2px;
+  height: 46px;
+  background: #9aa0aa;
+  z-index: 1;
+}
+.swingRopeL {
+  left: 1px;
+}
+.swingRopeR {
+  right: 1px;
+}
+.swingSeat {
+  position: absolute;
+  top: 46px;
+  left: 1px;
+  width: 54px;
+  height: 9px;
+  background: #ffcf3d;
+  border-radius: 4px;
+  z-index: 1;
+}
+.swingRider {
+  position: absolute;
+  left: 0;
+  top: -6px;
+  width: 56px;
+  height: 96px;
+  z-index: 2;
+}
+
+/* --- Banan bilan keluvchi minion --- */
+.wrapBanana {
+  left: 50%;
+  animation: pathBanana 24s linear infinite;
+}
+
+/* ================= Master yo'l animatsiyalari ================= */
+
+@keyframes pathBounce {
+  0% {
+    transform: translateX(65vw) rotateY(-28deg);
+    opacity: 0;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  25% {
+    transform: translateX(0) rotateY(0deg);
+    opacity: 1;
+  }
+  75% {
+    transform: translateX(0) rotateY(0deg);
+    opacity: 1;
+  }
+  92% {
+    transform: translateX(-6vw) rotateY(20deg);
+    opacity: 1;
+  }
+  97% {
+    transform: translateX(-90vw) rotateY(28deg);
+    opacity: 1;
+  }
+  99%,
+  100% {
+    transform: translateX(65vw) rotateY(-28deg);
+    opacity: 0;
+  }
+}
+
+@keyframes pathSlide {
+  0% {
+    transform: translateX(58vw) rotateY(-28deg);
+    opacity: 0;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  25% {
+    transform: translateX(0) rotateY(0deg);
+    opacity: 1;
+  }
+  75% {
+    transform: translateX(0) rotateY(0deg);
+    opacity: 1;
+  }
+  92% {
+    transform: translateX(-5vw) rotateY(20deg);
+    opacity: 1;
+  }
+  97% {
+    transform: translateX(-88vw) rotateY(28deg);
+    opacity: 1;
+  }
+  99%,
+  100% {
+    transform: translateX(58vw) rotateY(-28deg);
+    opacity: 0;
+  }
+}
+
+@keyframes pathSwing {
+  0% {
+    transform: translateX(52vw) rotateY(-28deg);
+    opacity: 0;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  25% {
+    transform: translateX(0) rotateY(0deg);
+    opacity: 1;
+  }
+  75% {
+    transform: translateX(0) rotateY(0deg);
+    opacity: 1;
+  }
+  92% {
+    transform: translateX(-4vw) rotateY(20deg);
+    opacity: 1;
+  }
+  97% {
+    transform: translateX(-86vw) rotateY(28deg);
+    opacity: 1;
+  }
+  99%,
+  100% {
+    transform: translateX(52vw) rotateY(-28deg);
+    opacity: 0;
+  }
+}
+
+@keyframes pathBanana {
+  0%,
+  73% {
+    transform: translateX(112vw) rotateY(-28deg);
+    opacity: 0;
+  }
+  78% {
+    transform: translateX(45vw) rotateY(-10deg);
+    opacity: 1;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  90% {
+    transform: translateX(6vw) rotateY(0deg);
+    opacity: 1;
+  }
+  92% {
+    transform: translateX(-6vw) rotateY(10deg);
+    opacity: 1;
+  }
+  97% {
+    transform: translateX(-95vw) rotateY(28deg);
+    opacity: 1;
+  }
+  99%,
+  100% {
+    transform: translateX(112vw) rotateY(-28deg);
+    opacity: 0;
+  }
+}
+
+/* ================= Lokal (ichki) harakatlar — 24s bosh yo'lga moslangan ================= */
+
+@keyframes pendulum {
+  0%,
+  25% {
+    transform: rotate(0deg);
+  }
+  30% {
+    transform: rotate(-20deg);
+  }
+  34% {
+    transform: rotate(18deg);
+  }
+  41% {
+    transform: rotate(-20deg);
+  }
+  48% {
+    transform: rotate(18deg);
+  }
+  55% {
+    transform: rotate(-20deg);
+  }
+  62% {
+    transform: rotate(18deg);
+  }
+  69% {
+    transform: rotate(-10deg);
+  }
+  75%,
+  92%,
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes seesawTilt {
+  0%,
+  25% {
+    transform: rotate(0deg);
+  }
+  30% {
+    transform: rotate(-13deg);
+  }
+  32% {
+    transform: rotate(13deg);
+  }
+  38% {
+    transform: rotate(-13deg);
+  }
+  44% {
+    transform: rotate(13deg);
+  }
+  50% {
+    transform: rotate(-13deg);
+  }
+  56% {
+    transform: rotate(13deg);
+  }
+  62% {
+    transform: rotate(-13deg);
+  }
+  68% {
+    transform: rotate(13deg);
+  }
+  75%,
+  92%,
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes climbSlide {
+  0%,
+  25% {
+    transform: translate(16px, 0) rotate(0deg);
+  }
+  36% {
+    transform: translate(16px, -68px) rotate(0deg);
+  }
+  39% {
+    transform: translate(16px, -68px) rotate(0deg);
+  }
+  50% {
+    transform: translate(-44px, -4px) rotate(-14deg);
+  }
+  55% {
+    transform: translate(-44px, 0) rotate(0deg);
+  }
+  66% {
+    transform: translate(16px, 0) rotate(0deg);
+  }
+  75%,
+  92%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+}
+
+@keyframes runLegs {
+  0%,
+  100% {
+    transform: rotate(24deg);
+  }
+  50% {
+    transform: rotate(-24deg);
+  }
+}
+
+@keyframes swingArms {
+  0%,
+  100% {
+    transform: rotate(-16deg);
+  }
+  50% {
+    transform: rotate(16deg);
+  }
+}
+
+@keyframes wave {
+  0%,
+  100% {
+    transform: rotate(-118deg);
+  }
+  50% {
+    transform: rotate(-98deg);
+  }
+}
+
+@keyframes bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+/* ================= Personaj (Minion figurasi) ================= */
+
+.figure {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 56px;
+  height: 96px;
+  transform-style: preserve-3d;
+  animation: bob 0.42s ease-in-out infinite;
+}
+
+.figureFlip {
+  transform: scaleX(-1);
+}
+
+.body {
+  position: absolute;
+  left: 7px;
+  top: 8px;
+  width: 42px;
+  height: 78px;
+  background: linear-gradient(150deg, #fff3ba 0%, #ffd23c 46%, #f2a600 100%);
+  border-radius: 21px 21px 18px 18px / 32px 32px 18px 18px;
+  box-shadow:
+    inset -6px -8px 11px rgba(180, 110, 0, 0.35),
+    inset 4px 7px 9px rgba(255, 255, 255, 0.55),
+    0 8px 12px rgba(0, 0, 0, 0.14);
+}
+
+.hair,
+.hair2,
+.hair3 {
+  position: absolute;
+  top: -6px;
+  width: 3px;
+  height: 14px;
+  background: #2a2620;
+  border-radius: 2px;
+}
+.hair {
+  left: 11px;
+  transform: rotate(-22deg);
+}
+.hair2 {
+  left: 20px;
+  height: 16px;
+  transform: rotate(2deg);
+}
+.hair3 {
+  left: 28px;
+  transform: rotate(22deg);
+}
+
+.goggle {
+  position: absolute;
+  left: 1px;
+  top: 14px;
+  width: 40px;
+  height: 19px;
+  background: linear-gradient(180deg, #585b61, #2a2d31);
+  border-radius: 10px;
+  box-shadow:
+    0 2px 3px rgba(0, 0, 0, 0.35),
+    inset 0 1px 1px rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 3px;
+}
+
+.eye {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pupil {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #20242a;
+}
+.pupil::after {
+  content: "";
+  position: absolute;
+  top: 0.5px;
+  left: 0.5px;
+  width: 2.5px;
+  height: 2.5px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.mouth {
+  position: absolute;
+  left: 50%;
+  top: 34px;
+  width: 13px;
+  height: 8px;
+  background: #2a1a12;
+  border-radius: 2px 2px 9px 9px;
+  transform: translateX(-50%);
+}
+
+.overalls {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 42px;
+  height: 22px;
+  background: linear-gradient(160deg, #5686b8, #2c5686);
+  border-radius: 0 0 18px 18px / 0 0 14px 14px;
+  box-shadow: inset 0 3px 4px rgba(255, 255, 255, 0.22);
+}
+
+.pocket {
+  position: absolute;
+  left: 50%;
+  top: 5px;
+  width: 12px;
+  height: 9px;
+  background: rgba(0, 0, 0, 0.16);
+  border-radius: 2px;
+  transform: translateX(-50%);
+}
+
+.strapL,
+.strapR {
+  position: absolute;
+  top: -14px;
+  width: 6px;
+  height: 18px;
+  background: #2c5686;
+  border-radius: 3px;
+}
+.strapL {
+  left: 6px;
+}
+.strapR {
+  right: 6px;
+}
+
+.buttonL,
+.buttonR {
+  position: absolute;
+  top: -2px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #ffd23c;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
+}
+.buttonL {
+  left: 6px;
+}
+.buttonR {
+  right: 6px;
+}
+
+.arm {
+  position: absolute;
+  top: 18px;
+  width: 9px;
+  height: 25px;
+  background: linear-gradient(160deg, #ffe27a, #f2a600);
+  border-radius: 5px;
+  transform-origin: top center;
+  animation: swingArms 0.75s ease-in-out infinite;
+}
+.armL {
+  left: -5px;
+  animation-delay: 0.375s;
+}
+.armR {
+  right: -5px;
+}
+.armRaised {
+  animation: wave 0.7s ease-in-out infinite;
+}
+
+.hand {
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #2a2d31;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  transform: translateX(-50%);
+}
+
+.banana {
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  width: 27px;
+  height: 11px;
+  background: linear-gradient(160deg, #ffe86b 0%, #ffd23c 55%, #e6b800 100%);
+  border-radius: 50% 50% 50% 8% / 90% 90% 60% 20%;
+  box-shadow:
+    inset -2px -2px 3px rgba(0, 0, 0, 0.15),
+    inset 0 1px 1px rgba(255, 255, 255, 0.45);
+  transform: translateX(-50%) rotate(-22deg);
+}
+.bananaStem {
+  position: absolute;
+  top: -3px;
+  right: -1px;
+  width: 6px;
+  height: 6px;
+  background: #6b4423;
+  border-radius: 2px 6px 2px 6px;
+  transform: rotate(20deg);
+}
+
+.leg {
+  position: absolute;
+  bottom: -14px;
+  width: 11px;
+  height: 19px;
+  background: linear-gradient(160deg, #ffe27a, #f2a600);
+  border-radius: 4px;
+  transform-origin: top center;
+  animation: runLegs 0.75s ease-in-out infinite;
+}
+.legL {
+  left: 6px;
+}
+.legR {
+  right: 6px;
+  animation-delay: 0.375s;
+}
+
+.shoe {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  width: 17px;
+  height: 9px;
+  background: #111214;
+  border-radius: 7px 7px 3px 3px;
+  transform: translateX(-50%);
+}
+
+/* ================= Tor ekranlar (telefon, < 640px) =================
+   Asosiy joylashuv foizlarga (10%/36%/64%) asoslangan, lekin jihozlar
+   o'lchami piksellarda qat'iy — shuning uchun tor ekranda ular bir-biriga
+   yaqinlashib, hatto ustma-ust chiqib qoladi. Shu sabab telefon uchun
+   uchala jihoz aniq piksel joylarga qo'yiladi va biroz kichraytiriladi. */
+@media (max-width: 639px) {
+  .seesawSet {
+    left: 6px;
+    width: 80px;
+    height: 21px;
+  }
+  .seesawFulcrum {
+    left: 34px;
+    border-left: 13px solid transparent;
+    border-right: 13px solid transparent;
+    border-bottom: 19px solid #d99a3f;
+  }
+  .wrapBounce {
+    left: 30px;
+  }
+
+  .slideSet {
+    left: 96px;
+    width: 112px;
+    height: 88px;
+  }
+  .ladder {
+    right: 8px;
+    width: 16px;
+    height: 62px;
+  }
+  .rung1 {
+    top: 6px;
+  }
+  .rung2 {
+    top: 22px;
+  }
+  .rung3 {
+    top: 38px;
+  }
+  .rung4 {
+    top: 54px;
+  }
+  .platform {
+    right: 3px;
+    bottom: 59px;
+    width: 26px;
+    height: 8px;
+  }
+  .ramp {
+    width: 77px;
+    bottom: 6px;
+    height: 19px;
+  }
+  .wrapSlide {
+    left: 155px;
+  }
+
+  .swingSet {
+    left: 228px;
+    width: 72px;
+    height: 120px;
+  }
+  .swingPoleL {
+    left: 5px;
+    width: 6px;
+  }
+  .swingPoleR {
+    right: 5px;
+    width: 6px;
+  }
+  .swingFootL,
+  .swingFootR {
+    width: 14px;
+    height: 14px;
+  }
+  .swingBar {
+    height: 10px;
+  }
+  .wrapSwing {
+    left: 236px;
+    height: 124px;
+  }
+
+  /* Narvon 78px dan 62px ga qisqargani uchun tirmashish balandligi ham
+     mos ravishda kichraytiriladi — aks holda minion narvon uchidan
+     yuqoriga chiqib ketganday ko'rinadi */
+  @keyframes climbSlide {
+    0%,
+    25% {
+      transform: translate(13px, 0) rotate(0deg);
+    }
+    36%,
+    39% {
+      transform: translate(13px, -54px) rotate(0deg);
+    }
+    50% {
+      transform: translate(-35px, -3px) rotate(-14deg);
+    }
+    55% {
+      transform: translate(-35px, 0) rotate(0deg);
+    }
+    66% {
+      transform: translate(13px, 0) rotate(0deg);
+    }
+    75%,
+    92%,
+    100% {
+      transform: translate(0, 0) rotate(0deg);
+    }
+  }
+}
+
+/* ================= Harakatni kamaytirish ================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .wrapBounce,
+  .wrapSlide,
+  .wrapSwing,
+  .wrapBanana,
+  .localBounce,
+  .localSlide,
+  .localSwing,
+  .figure,
+  .arm,
+  .leg {
+    animation: none !important;
+  }
+  .wrapBounce,
+  .wrapSlide,
+  .wrapSwing {
+    transform: translateX(0) rotateY(0deg);
+    opacity: 1;
+  }
+  .wrapBanana {
+    display: none;
+  }
+}

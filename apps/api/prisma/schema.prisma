@@ -1797,3 +1797,83 @@ model DiaryMedia {
   @@index([entryId])
   @@map("diary_media")
 }
+
+// ---------------------------------------------------------------------------
+// Lending sahifa (landing-web) kontenti. Platform Super Admin platform-web
+// orqali boshqaradi, landing-web esa ochiq (autentifikatsiyasiz) API orqali
+// o'qiydi. Global: tashkilotga bog'liq emas — landing-web bitta umumiy
+// marketing sayt.
+// ---------------------------------------------------------------------------
+
+enum LandingScheduleType {
+  LESSON
+  SLEEP
+  MEAL
+  OTHER
+}
+
+/// "Moslashuvchan jadval" bo'limi — kun tartibi: vaqt bo'yicha tartiblangan
+/// qatorlar (necha dars, qachon uxlashadi, qachon ovqatlanadi).
+model LandingScheduleItem {
+  id        String              @id @default(uuid())
+  time      String
+  title     String
+  type      LandingScheduleType @default(OTHER)
+  order     Int                 @default(0)
+  createdAt DateTime            @default(now()) @map("created_at")
+  updatedAt DateTime            @updatedAt @map("updated_at")
+
+  @@map("landing_schedule_items")
+}
+
+enum LandingMealType {
+  BREAKFAST
+  LUNCH
+  SNACK
+  DINNER
+  OTHER
+}
+
+/// "Sog'lom taomlar" bo'limi.
+model LandingMeal {
+  id          String          @id @default(uuid())
+  title       String
+  description String?
+  mealType    LandingMealType @default(OTHER) @map("meal_type")
+  weekday     Weekday?
+  time        String?
+  photoPath   String?         @map("photo_path")
+  order       Int             @default(0)
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  @@index([weekday])
+  @@map("landing_meals")
+}
+
+/// "O'qituvchilar" bo'limi.
+model LandingTeacher {
+  id        String   @id @default(uuid())
+  fullName  String   @map("full_name")
+  role      String
+  bio       String?
+  photoPath String?  @map("photo_path")
+  order     Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("landing_teachers")
+}
+
+/// "Doimiy tarbiyachi" va "Ta'lim yo'nalishi" kabi matnli bloklar — `key`
+/// bo'yicha yagona yozuv (masalan "doimiy-tarbiyachi", "talim-yonalishi").
+model LandingContentBlock {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  title     String
+  body      String
+  photoPath String?  @map("photo_path")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("landing_content_blocks")
+}

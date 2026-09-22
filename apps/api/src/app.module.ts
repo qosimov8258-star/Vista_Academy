@@ -45,6 +45,7 @@ import { ExportsModule } from "./modules/exports/exports.module";
 import { ParentModule } from "./modules/parent/parent.module";
 import { UsefulModule } from "./modules/useful/useful.module";
 import { DiaryModule } from "./modules/diary/diary.module";
+import { LandingModule } from "./modules/landing/landing.module";
 
 @Module({
   imports: [
@@ -91,6 +92,7 @@ import { DiaryModule } from "./modules/diary/diary.module";
     ParentModule,
     UsefulModule,
     DiaryModule,
+    LandingModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

@@ -19,8 +19,10 @@ export default async function DashboardLayout({
       <Sidebar slug={slug} />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar slug={slug} />
-        {/* min-h-0 bo'lmasa flex elementi mazmunidan kichrayolmaydi va scroll ishlamaydi */}
-        <main className="min-h-0 flex-1 overflow-y-auto px-6 py-6">{children}</main>
+        {/* min-h-0 bo'lmasa flex elementi mazmunidan kichrayolmaydi va scroll ishlamaydi.
+            Pastki bo'shliq mobilda kattaroq — o'qituvchi uchun ekran pastida
+            turadigan navigatsiya panel mazmunni yopib qo'ymasligi kerak. */}
+        <main className="min-h-0 flex-1 overflow-y-auto px-6 pb-24 pt-6 md:py-6">{children}</main>
       </div>
     </div>
   );
