@@ -1,11 +1,12 @@
 "use client";
 
-import { useRef } from "react";
 import clsx from "clsx";
 import type { MenuMeal, MenuPhoto } from "@/lib/types";
 import { CameraIcon, CheckIcon } from "@/components/ui/icons";
 import { MAX_PHOTOS_PER_MEAL, menuPhotoSrc } from "@/features/nutrition/use-menu-photos";
 import styles from "./chef.module.css";
+import { usePhotoPicker } from "./photo-picker";
+import { GalleryIcon } from "./quick-photo-sheet";
 
 /** Har bir ovqatning o'z rangi va belgisi — ro'yxatda bir qarashda ajralsin */
 export const MEAL_LOOK: Record<MenuMeal, { tint: string; ink: string; Icon: (p: { className?: string }) => React.JSX.Element }> = {
@@ -39,7 +40,7 @@ export function MealCard({
   onFile: (file: File) => void;
   onOpenPhoto: (id: string) => void;
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const picker = usePhotoPicker();
   const look = MEAL_LOOK[meal];
   const full = photos.length >= MAX_PHOTOS_PER_MEAL;
   const shared = photos.length > 0;
@@ -81,43 +82,44 @@ export function MealCard({
           </button>
         ))}
         {!full && (
-          <button
-            type="button"
-            disabled={uploading}
-            onClick={() => inputRef.current?.click()}
-            className={clsx(
-              "flex h-[84px] shrink-0 flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed text-[12px] font-semibold transition-colors",
-              shared ? "w-[84px]" : "w-full min-w-[84px]",
-              uploading
-                ? "border-orange-300 bg-orange-50 text-orange-500"
-                : "border-orange-200 text-orange-600 active:bg-orange-50",
-            )}
-          >
-            {uploading ? (
-              <>
-                <span className="h-5 w-5 animate-spin rounded-full border-2 border-orange-300 border-t-orange-600" aria-hidden />
-                Yuklanmoqda…
-              </>
-            ) : (
-              <>
-                <CameraIcon className="h-6 w-6" />
-                {shared ? "Yana" : "Rasmga olish"}
-              </>
-            )}
-          </button>
+          <>
+            <button
+              type="button"
+              disabled={uploading}
+              onClick={() => picker.openCamera(onFile)}
+              className={clsx(
+                "flex h-[84px] shrink-0 flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed text-[12px] font-semibold transition-colors",
+                shared ? "w-[84px]" : "min-w-[84px] flex-1",
+                uploading
+                  ? "border-orange-300 bg-orange-50 text-orange-500"
+                  : "border-orange-200 text-orange-600 active:bg-orange-50",
+              )}
+            >
+              {uploading ? (
+                <>
+                  <span className="h-5 w-5 animate-spin rounded-full border-2 border-orange-300 border-t-orange-600" aria-hidden />
+                  Yuklanmoqda…
+                </>
+              ) : (
+                <>
+                  <CameraIcon className="h-6 w-6" />
+                  {shared ? "Kamera" : "Rasmga olish"}
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              disabled={uploading}
+              onClick={() => picker.openGallery(onFile)}
+              aria-label={`${label}: galereyadan tanlash`}
+              className="flex h-[84px] w-[84px] shrink-0 flex-col items-center justify-center gap-1 rounded-2xl bg-[var(--color-surface-sunken)] text-[12px] font-semibold text-[var(--color-text-muted)] active:bg-black/[0.07] disabled:opacity-50"
+            >
+              <GalleryIcon className="h-6 w-6" />
+              Galereya
+            </button>
+          </>
         )}
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            e.target.value = "";
-            if (file) onFile(file);
-          }}
-        />
+        {picker.ui}
       </div>
       {error && <p className="mt-2 text-[13px] text-[var(--color-danger)]">{error}</p>}
     </article>

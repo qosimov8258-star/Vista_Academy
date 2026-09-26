@@ -115,8 +115,9 @@ export function ChefHome({ slug }: { slug: string }) {
         </h1>
       </header>
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:items-start">
-        <div className="space-y-5">
+      {/* grid-cols-1 = minmax(0,1fr): ustun ekrandan kengaymaydi — keng surat tasmasi o'z ichida aylanadi */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:items-start">
+        <div className="min-w-0 space-y-5">
           <PortionsHero d={d} />
 
           <section>
@@ -148,7 +149,7 @@ export function ChefHome({ slug }: { slug: string }) {
           </section>
         </div>
 
-        <div className="space-y-5">
+        <div className="min-w-0 space-y-5">
           <AllergiesCard allergies={allergiesQuery.data ?? []} loading={allergiesQuery.isLoading} />
           <GroupsCard groups={d.groups} />
         </div>
