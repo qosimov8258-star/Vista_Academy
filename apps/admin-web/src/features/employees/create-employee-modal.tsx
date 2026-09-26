@@ -231,9 +231,21 @@ export function CreateEmployeeModal({
   });
 
   const toggleGroup = (id: string) => {
-    setValue("groupIds", groupIds.includes(id) ? groupIds.filter((g) => g !== id) : [...groupIds, id], {
-      shouldValidate: true,
-    });
+    // Fan o'qituvchisi bir necha guruhda dars berishi mumkin — ko'p tanlov.
+    // Boshqa xodimlar (tarbiyachi va h.k.) bir vaqtning o'zida faqat bitta
+    // guruhga biriktiriladi, shuning uchun yangisini bosish avvalgisini
+    // almashtiradi (xuddi shu guruhni qayta bossa — bekor qilinadi).
+    setValue(
+      "groupIds",
+      isSubjectTeacher
+        ? groupIds.includes(id)
+          ? groupIds.filter((g) => g !== id)
+          : [...groupIds, id]
+        : groupIds.includes(id)
+          ? []
+          : [id],
+      { shouldValidate: true },
+    );
     setGroupsError(null);
   };
 
@@ -397,6 +409,7 @@ export function CreateEmployeeModal({
           label="Telefon raqami"
           type="tel"
           placeholder="+998 90 123 45 67"
+          maxLength={13}
           error={errors.phone?.message}
           {...register("phone")}
         />

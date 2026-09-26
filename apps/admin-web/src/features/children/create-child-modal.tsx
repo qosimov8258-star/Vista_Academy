@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { CreateChildResult, ChildCredentials, Group } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
@@ -15,47 +15,66 @@ import { CredentialRow } from "@/components/ui/credential-row";
 import { EyeIcon, EyeOffIcon, CheckIcon, PencilIcon } from "@/components/ui/icons";
 import { prepareChildPhoto } from "@/lib/child-photo";
 import { initials } from "@/components/ui/avatar";
+import { validateUzbekPhone } from "@/lib/phone";
 
-const schema = z
-  .object({
-    groupId: z.string().optional(),
-    lastName: z.string().min(2, "Familiya kamida 2 belgi"),
-    firstName: z.string().min(2, "Ism kamida 2 belgi"),
-    gender: z.enum(["MALE", "FEMALE"], { message: "Jinsini tanlang" }),
-    birthDate: z.string().optional(),
-    guardianFullName: z.string().min(2, "Ota-ona ismi kamida 2 belgi"),
-    guardianRelation: z.enum(["MOTHER", "FATHER", "GRANDPARENT", "OTHER"]),
-    guardianPhone: z
-      .string()
-      .refine((v) => v.replace(/\D/g, "").length >= 9, "Telefon raqami to'liq emas"),
-    // Ixtiyoriy — bo'sh qoldirilsa backend avtomatik generatsiya qiladi
-    guardianPassword: z.string().optional(),
-    guardianConfirmPassword: z.string().optional(),
-    // Birinchi hisob-fakturani bola bilan birga yaratish (ixtiyoriy)
-    createInvoice: z.boolean().optional(),
-    invoiceAmount: z.string().optional(),
-    invoiceDueDate: z.string().optional(),
-  })
-  .superRefine((values, ctx) => {
-    if (values.createInvoice) {
-      if (!(Number(values.invoiceAmount) > 0)) {
-        ctx.addIssue({ code: "custom", path: ["invoiceAmount"], message: "Summani kiriting" });
+// `hasGroups` mavjud faol guruhlar borligiga qarab qayta quriladi: guruhlar
+// bo'lsa birini tanlash shart, hech qanday faol guruh bo'lmasa (masalan
+// filial hali guruh yaratmagan) bola guruhsiz ham qo'shiladi.
+function buildSchema(hasGroups: boolean) {
+  return z
+    .object({
+      groupId: hasGroups ? z.string().min(1, "Guruhni tanlang") : z.string().optional(),
+      lastName: z.string().min(2, "Familiya kamida 2 belgi"),
+      firstName: z.string().min(2, "Ism kamida 2 belgi"),
+      gender: z.enum(["MALE", "FEMALE"], { message: "Jinsini tanlang" }),
+      birthDate: z.string().optional(),
+      guardianFullName: z.string().min(2, "Ota-ona ismi kamida 2 belgi"),
+      guardianRelation: z.enum(["MOTHER", "FATHER", "GRANDPARENT", "OTHER"]),
+      guardianPhone: z
+        .string()
+        .min(1, "Telefon raqami kiritilishi shart")
+        .superRefine((value, ctx) => {
+          const error = validateUzbekPhone(value);
+          if (error === "prefix") {
+            ctx.addIssue({ code: "custom", message: "Telefon raqami +998 bilan boshlanishi kerak" });
+          } else if (error === "length") {
+            ctx.addIssue({ code: "custom", message: "Telefon raqami 9 xonali bo'lishi kerak (+998 dan keyin)" });
+          } else if (error === "code") {
+            ctx.addIssue({
+              code: "custom",
+              message: "Bunday operator kodi mavjud emas (masalan: 90, 91, 93, 94, 95, 97, 98, 99)",
+            });
+          }
+        }),
+      // Ixtiyoriy — bo'sh qoldirilsa backend avtomatik generatsiya qiladi
+      guardianPassword: z.string().optional(),
+      guardianConfirmPassword: z.string().optional(),
+      // Birinchi hisob-fakturani bola bilan birga yaratish (ixtiyoriy)
+      createInvoice: z.boolean().optional(),
+      invoiceAmount: z.string().optional(),
+      invoiceDueDate: z.string().optional(),
+    })
+    .superRefine((values, ctx) => {
+      if (values.createInvoice) {
+        if (!(Number(values.invoiceAmount) > 0)) {
+          ctx.addIssue({ code: "custom", path: ["invoiceAmount"], message: "Summani kiriting" });
+        }
+        if (!values.invoiceDueDate) {
+          ctx.addIssue({ code: "custom", path: ["invoiceDueDate"], message: "To'lov muddatini tanlang" });
+        }
       }
-      if (!values.invoiceDueDate) {
-        ctx.addIssue({ code: "custom", path: ["invoiceDueDate"], message: "To'lov muddatini tanlang" });
+      if (!values.guardianPassword) return;
+      const unmet = getPasswordRules(values.guardianPassword).some((rule) => !rule.met);
+      if (unmet) {
+        ctx.addIssue({ code: "custom", path: ["guardianPassword"], message: "Parol talablarga javob bermaydi" });
       }
-    }
-    if (!values.guardianPassword) return;
-    const unmet = getPasswordRules(values.guardianPassword).some((rule) => !rule.met);
-    if (unmet) {
-      ctx.addIssue({ code: "custom", path: ["guardianPassword"], message: "Parol talablarga javob bermaydi" });
-    }
-    if (values.guardianPassword !== values.guardianConfirmPassword) {
-      ctx.addIssue({ code: "custom", path: ["guardianConfirmPassword"], message: "Parollar mos kelmadi" });
-    }
-  });
+      if (values.guardianPassword !== values.guardianConfirmPassword) {
+        ctx.addIssue({ code: "custom", path: ["guardianConfirmPassword"], message: "Parollar mos kelmadi" });
+      }
+    });
+}
 
-type FormValues = z.infer<typeof schema>;
+type FormValues = z.infer<ReturnType<typeof buildSchema>>;
 
 export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClose: () => void; slug: string }) {
   const queryClient = useQueryClient();
@@ -68,6 +87,14 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const { data: groups } = useQuery({
+    queryKey: ["groups", slug],
+    queryFn: () => api.get<Group[]>("/app/groups"),
+    enabled: open,
+  });
+  const activeGroups = useMemo(() => groups?.filter((group) => group.status === "ACTIVE") ?? [], [groups]);
+  const schema = useMemo(() => buildSchema(activeGroups.length > 0), [activeGroups.length]);
+
   const {
     register,
     handleSubmit,
@@ -76,6 +103,7 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
+    mode: "onChange",
     defaultValues: { guardianRelation: "MOTHER", birthDate: "" },
   });
 
@@ -85,12 +113,6 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
   const password = watch("guardianPassword");
   const confirmPassword = watch("guardianConfirmPassword");
   const passwordRules = getPasswordRules(password ?? "", confirmPassword ?? "");
-
-  const { data: groups } = useQuery({
-    queryKey: ["groups", slug],
-    queryFn: () => api.get<Group[]>("/app/groups"),
-    enabled: open,
-  });
 
   const handlePhotoPick = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -285,9 +307,16 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
             <option value="MALE">O&apos;g&apos;il bola</option>
             <option value="FEMALE">Qiz bola</option>
           </Select>
-          <Select label="Guruh (ixtiyoriy)" defaultValue="" {...register("groupId")}>
-            <option value="">Tanlanmagan</option>
-            {groups?.filter((group) => group.status === "ACTIVE").map((group) => (
+          <Select
+            label={activeGroups.length > 0 ? "Guruh" : "Guruh (ixtiyoriy)"}
+            defaultValue=""
+            error={errors.groupId?.message}
+            {...register("groupId")}
+          >
+            <option value="" disabled={activeGroups.length > 0}>
+              {activeGroups.length > 0 ? "Tanlang" : "Tanlanmagan"}
+            </option>
+            {activeGroups.map((group) => (
               <option key={group.id} value={group.id}>
                 {group.name} ({group._count?.children ?? 0}/{group.capacity})
               </option>
@@ -323,6 +352,7 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
             label="Telefon raqami"
             type="tel"
             placeholder="+998 90 123 45 67"
+            maxLength={13}
             hint="Xuddi shu raqam bilan yana bola qo'shilsa, ikkalasi bir ota-onaga bog'lanadi"
             error={errors.guardianPhone?.message}
             {...register("guardianPhone")}
