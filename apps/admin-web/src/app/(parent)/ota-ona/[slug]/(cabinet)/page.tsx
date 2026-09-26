@@ -1,12 +1,13 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import { ApiError } from "@/lib/api";
 import { PARENT_API_URL, parentApi } from "@/lib/parent-api";
-import type { MenuMeal, ParentAccount, ParentAttendanceStrip, ParentChild, ParentDay } from "@/lib/types";
+import type { ParentAccount, ParentAttendanceStrip, ParentChild, ParentDay } from "@/lib/types";
 import { initials } from "@/components/ui/avatar";
 import styles from "../parent.module.css";
 import { CardFx } from "./card-fx";
@@ -290,31 +291,8 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
                 )}
               </Panel>
 
-              {/* Ovqat menyusi */}
-              <Panel title="Bugungi ovqat" accent="sun">
-                {(day.menu && (day.menu.breakfast || day.menu.lunch || day.menu.snack)) || day.menuPhotos?.length ? (
-                  <ul className="space-y-3">
-                    {(
-                      [
-                        ["BREAKFAST", "Nonushta", day.menu?.breakfast],
-                        ["LUNCH", "Tushlik", day.menu?.lunch],
-                        ["SNACK", "Kechki", day.menu?.snack],
-                      ] as const
-                    ).map(([meal, label, value]) => (
-                      <Meal
-                        key={meal}
-                        label={label}
-                        value={value ?? null}
-                        photoUrls={(day.menuPhotos ?? [])
-                          .filter((p) => p.meal === (meal as MenuMeal))
-                          .map((p) => `${PARENT_API_URL}/app/parent/children/${day.child.id}/menu-photos/${p.id}`)}
-                      />
-                    ))}
-                  </ul>
-                ) : (
-                  <Empty text="Bugungi menyu kiritilmagan" />
-                )}
-              </Panel>
+              {/* Ovqat tartibi to'liq — Kundalik bo'limida; bu yerda qisqacha va havola */}
+              <TodayMealsLink slug={slug} day={day} />
 
               {day.report?.toiletNotes && (
                 <Panel title="Qo'shimcha" accent="mint">
@@ -447,41 +425,41 @@ function Panel({ title, accent, children }: { title: string; accent: string; chi
   );
 }
 
-/** Menyudagi bitta ovqat: nomi va oshpaz yuklagan surati (bosilsa kattalashadi) */
-function Meal({ label, value, photoUrls }: { label: string; value: string | null; photoUrls: string[] }) {
-  const [open, setOpen] = useState<string | null>(null);
+/** Bugungi ovqat — qisqacha; bosilsa Kundalik'dagi to'liq ovqat tartibiga o'tadi */
+function TodayMealsLink({ slug, day }: { slug: string; day: ParentDay }) {
+  const photos = day.menuPhotos ?? [];
+  const main = day.menu?.lunch || day.menu?.breakfast || day.menu?.snack || null;
+  const firstPhoto = photos[0];
   return (
-    <li>
-      <p className="text-[12px] font-semibold uppercase tracking-[0.05em] text-[var(--p-muted)]">{label}</p>
-      <p className="mt-0.5 text-[15px] leading-relaxed text-[var(--p-ink)]">{value || "—"}</p>
-      {photoUrls.length > 0 && (
-        <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
-          {photoUrls.map((src) => (
-            <button
-              key={src}
-              type="button"
-              onClick={() => setOpen(src)}
-              className="h-24 w-32 shrink-0 overflow-hidden rounded-2xl bg-black/5"
-              aria-label={`${label} suratini kattalashtirish`}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={src} alt={label} loading="lazy" className="h-full w-full object-cover" />
-            </button>
-          ))}
-        </div>
+    <Link
+      href={`/ota-ona/${slug}/kundalik`}
+      className="flex items-center gap-3.5 rounded-[var(--p-radius)] bg-[var(--p-card)] p-4 shadow-[var(--p-shadow)] transition-transform active:scale-[0.99]"
+    >
+      {firstPhoto ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={`${PARENT_API_URL}/app/parent/children/${day.child.id}/menu-photos/${firstPhoto.id}`}
+          alt="Bugungi ovqat"
+          className="h-14 w-14 shrink-0 rounded-2xl object-cover"
+        />
+      ) : (
+        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[var(--p-sun)]/18 text-[var(--p-sun-ink)]">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" className="h-7 w-7" aria-hidden>
+            <path d="M4 13h16a8 8 0 0 1-16 0ZM9 8c0-1.5 1-2 1-3.5M13 8c0-1.5 1-2 1-3.5" />
+          </svg>
+        </span>
       )}
-      {open && (
-        <button
-          type="button"
-          onClick={() => setOpen(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4"
-          aria-label="Yopish"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={open} alt={label} className="max-h-full max-w-full rounded-2xl object-contain" />
-        </button>
-      )}
-    </li>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[15px] font-bold text-[var(--p-ink)]">Bugungi ovqat tartibi</span>
+        <span className="block truncate text-[13.5px] text-[var(--p-muted)]">
+          {main ?? "Menyu hali kiritilmagan"}
+          {photos.length > 0 ? ` · ${photos.length} ta surat` : ""}
+        </span>
+      </span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 shrink-0 text-[var(--p-muted)]" aria-hidden>
+        <path d="m9 6 6 6-6 6" />
+      </svg>
+    </Link>
   );
 }
 
