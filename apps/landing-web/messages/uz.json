@@ -1,0 +1,45 @@
+{
+  "common": {
+    "language": "Til",
+    "languages": {
+      "uz": "O'zbekcha",
+      "ru": "Русский",
+      "en": "English"
+    },
+    "cta": "Ariza qoldirish"
+  },
+  "nav": {
+    "home": "Bosh sahifa",
+    "features": "Imkoniyatlarimiz",
+    "schools": "Maktablarimiz",
+    "schoolsBadge": "Tez orada",
+    "about": "Biz haqimizda",
+    "contact": "Bog'lanish",
+    "menuAria": "Menyu"
+  },
+  "groups": {
+    "schedule": "Moslashuvchan jadval",
+    "meals": "Sog'lom taomlar",
+    "teacher": "Doimiy tarbiyachi",
+    "education": "Ta'lim yo'nalishi",
+    "teachers": "O'qituvchilar"
+  },
+  "footer": {
+    "description": "Bolalarni mehr, xavfsizlik va zamonaviy ta'lim metodikalari bilan o'stiradigan bog'chalar tarmog'i.",
+    "pagesHeading": "Sahifalar",
+    "groupsHeading": "Guruhlarimiz",
+    "contactHeading": "Bog'lanish",
+    "address": "Toshkent sh., O'zbekiston",
+    "copyright": "© {year} Vista Academy. Barcha huquqlar himoyalangan.",
+    "tagline": "Mehr, xavfsizlik va zamonaviy ta'lim bilan."
+  },
+  "hero": {
+    "badgeMobile": "✨ Bolalar dunyosiga xush kelibsiz",
+    "badgeDesktop": "Eng ishonchli bog'cha",
+    "headingPrefix": "Farzandingiz kelajagi",
+    "headingHighlight": "shu yerdan",
+    "headingSuffix": "boshlanadi",
+    "paragraph": "Har bir kun — yangi bilim, yangi do'stlik va yangi kulgu bilan to'la.",
+    "ctaSecondary": "Batafsil ma'lumot"
+  }
+}

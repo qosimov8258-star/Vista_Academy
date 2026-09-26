@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Baloo_2 } from "next/font/google";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages } from "next-intl/server";
 import "./globals.css";
+import { BusIntro } from "@/components/bus-intro";
 
 const baloo2 = Baloo_2({
   subsets: ["latin"],
@@ -14,10 +17,18 @@ export const metadata: Metadata = {
     "Vista Academy — bolalarni mehr, xavfsizlik va zamonaviy ta'lim metodikalari bilan o'stiradigan bog'chalar tarmog'i.",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+
   return (
-    <html lang="uz" className={baloo2.variable}>
-      <body>{children}</body>
+    <html lang={locale} className={baloo2.variable}>
+      <body>
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <BusIntro />
+          {children}
+        </NextIntlClientProvider>
+      </body>
     </html>
   );
 }

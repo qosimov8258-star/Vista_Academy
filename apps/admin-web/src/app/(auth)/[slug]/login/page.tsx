@@ -1,10 +1,12 @@
 "use client";
 
 import { Suspense, use } from "react";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
 import type { PublicOrganization } from "@/lib/types";
 import { KindergartenBackdrop } from "@/components/brand/kindergarten-backdrop";
+import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { LoginForm } from "./login-form";
 import styles from "./login.module.css";
 
@@ -26,6 +28,7 @@ function HouseGlyph({ className }: { className?: string }) {
  */
 export default function LoginPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
+  const t = useTranslations("login");
   // Tizimdagi nom — uy peshtoqida va kartada. Topilmasa slug ko'rsatiladi.
   const orgQuery = useQuery({
     queryKey: ["org-public", slug],
@@ -52,8 +55,12 @@ export default function LoginPage({ params }: { params: Promise<{ slug: string }
           <p className="text-sm font-semibold">
             <span style={{ color: "#4CA6D4" }}>Vista</span> <span style={{ color: "#61AE41" }}>Academy</span>
           </p>
-          <p className="text-[11px] font-medium text-[var(--color-text-muted)]">Boshqaruv paneli</p>
+          <p className="text-[11px] font-medium text-[var(--color-text-muted)]">{t("panelSubtitle")}</p>
         </div>
+      </div>
+
+      <div className="absolute left-4 top-4 z-20 lg:right-8 lg:left-auto lg:top-7">
+        <LanguageSwitcher />
       </div>
 
       <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1600px] flex-col justify-start px-4 pb-10 pt-[calc(46vh-44px)] lg:grid lg:grid-cols-2 lg:items-center lg:justify-items-center lg:px-8 lg:pb-0 lg:pt-0">
@@ -69,10 +76,8 @@ export default function LoginPage({ params }: { params: Promise<{ slug: string }
                   <span className="truncate text-[13px] font-bold tracking-wide text-[#7c4a03]">{orgName ?? slug}</span>
                 </div>
               )}
-              <h1 className="mt-3 text-[26px] font-bold tracking-tight text-[var(--color-text)]">Xush kelibsiz!</h1>
-              <p className="mt-1.5 text-sm text-[var(--color-text-muted)]">
-                Boshqaruv paneliga kirish uchun ma&apos;lumotlaringizni kiriting.
-              </p>
+              <h1 className="mt-3 text-[26px] font-bold tracking-tight text-[var(--color-text)]">{t("title")}</h1>
+              <p className="mt-1.5 text-sm text-[var(--color-text-muted)]">{t("subtitle")}</p>
             </div>
 
             <Suspense fallback={null}>
@@ -80,7 +85,7 @@ export default function LoginPage({ params }: { params: Promise<{ slug: string }
             </Suspense>
 
             <p className="mt-6 border-t border-[var(--color-separator)] pt-4 text-center text-xs text-[var(--color-text-muted)]">
-              Parolni unutdingizmi? Tashkilot Super Admini bilan bog&apos;laning.
+              {t("forgotPassword")}
             </p>
           </div>
         </div>
