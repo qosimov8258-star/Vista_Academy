@@ -45,6 +45,7 @@ import { ExportsModule } from "./modules/exports/exports.module";
 import { ParentModule } from "./modules/parent/parent.module";
 import { UsefulModule } from "./modules/useful/useful.module";
 import { LandingModule } from "./modules/landing/landing.module";
+import { FaceIdModule } from "./modules/face-id/face-id.module";
 
 @Module({
   imports: [
@@ -91,6 +92,7 @@ import { LandingModule } from "./modules/landing/landing.module";
     ParentModule,
     UsefulModule,
     LandingModule,
+    FaceIdModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

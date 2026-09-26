@@ -1,4 +1,7 @@
+"use client";
+
 import Image from "next/image";
+import { alternatingDirection, staggerDelay, useReveal } from "./reveal";
 
 const FEATURES = [
   {
@@ -27,14 +30,30 @@ const FEATURES = [
   },
 ];
 
+function FeatureCard({ feature, index }: { feature: (typeof FEATURES)[number]; index: number }) {
+  const { ref, visible, style } = useReveal<HTMLAnchorElement>(staggerDelay(index));
+
+  return (
+    <a
+      ref={ref}
+      href={feature.href}
+      className={`reveal reveal-${alternatingDirection(index)} rounded-[var(--radius-xl)] bg-white p-6 shadow-[var(--shadow-card)] transition-transform duration-150 hover:-translate-y-1 ${visible ? "reveal-visible" : ""}`}
+      style={style}
+    >
+      <span className="flex h-12 w-12 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-tint)]" aria-hidden="true">
+        <Image src={feature.icon} alt="" width={28} height={28} className="h-7 w-7 object-contain" />
+      </span>
+      <p className="font-heading mt-4 text-[17px] font-bold text-[var(--color-text)]">{feature.title}</p>
+      <p className="mt-2 text-[14px] leading-relaxed text-[var(--color-text-muted)]">{feature.description}</p>
+    </a>
+  );
+}
+
 export function WhyUs() {
   return (
-    <section id="about" className="py-20 sm:py-28" style={{ background: "var(--color-tint)" }}>
+    <section className="py-20 sm:py-28" style={{ background: "var(--color-tint)" }}>
       <div className="mx-auto max-w-[720px] px-4 text-center">
-        <p className="text-[13px] font-bold uppercase tracking-[0.08em]" style={{ color: "var(--color-blue)" }}>
-          Biz haqimizda
-        </p>
-        <h2 className="font-heading mt-3 text-[30px] font-bold leading-tight tracking-tight text-[var(--color-text)] sm:text-[36px]">
+        <h2 className="font-heading text-[22px] font-bold leading-tight tracking-tight text-[var(--color-text)] sm:text-[30px] lg:text-[36px]">
           Vista Academy&apos;ni nima o&apos;ziga xos qiladi?
         </h2>
         <p className="mt-4 text-[16px] leading-relaxed text-[var(--color-text-muted)]">
@@ -44,18 +63,8 @@ export function WhyUs() {
       </div>
 
       <div className="mx-auto mt-12 grid max-w-[1120px] grid-cols-1 gap-5 px-4 sm:grid-cols-2 lg:grid-cols-4">
-        {FEATURES.map((feature) => (
-          <a
-            key={feature.title}
-            href={feature.href}
-            className="rounded-[var(--radius-xl)] bg-white p-6 shadow-[var(--shadow-card)] transition-transform duration-150 hover:-translate-y-1"
-          >
-            <span className="flex h-12 w-12 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-tint)]" aria-hidden="true">
-              <Image src={feature.icon} alt="" width={28} height={28} className="h-7 w-7 object-contain" />
-            </span>
-            <p className="font-heading mt-4 text-[17px] font-bold text-[var(--color-text)]">{feature.title}</p>
-            <p className="mt-2 text-[14px] leading-relaxed text-[var(--color-text-muted)]">{feature.description}</p>
-          </a>
+        {FEATURES.map((feature, index) => (
+          <FeatureCard key={feature.title} feature={feature} index={index} />
         ))}
       </div>
     </section>

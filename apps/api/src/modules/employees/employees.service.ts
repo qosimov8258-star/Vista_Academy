@@ -10,6 +10,7 @@ import { DEFAULT_POSITIONS } from "../../common/constants/default-positions";
 import { TenantAuthenticatedUser, TenantScope, requireOperationalScope, toTenantScope } from "../iam/tenant-auth.types";
 import { verifyRevealToken } from "../webauthn/reveal-token";
 import { AuditLogService } from "../audit-log/audit-log.service";
+import { FaceIdService } from "../face-id/face-id.service";
 import { CreateEmployeeDto, EmployeeAccountDto } from "./dto/create-employee.dto";
 import { UpdateEmployeeCredentialsDto } from "./dto/update-employee-credentials.dto";
 import { CreateEmployeeTopicDto } from "./dto/create-employee-topic.dto";
@@ -48,6 +49,7 @@ export class EmployeesService {
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly auditLog: AuditLogService,
+    private readonly faceIdService: FaceIdService,
   ) {}
 
   async create(caller: TenantAuthenticatedUser, dto: CreateEmployeeDto) {
@@ -91,6 +93,10 @@ export class EmployeesService {
         branchId,
         summary: `${fullName} xodim sifatida qo'shildi (${dto.position})`,
       });
+      await this.faceIdService.autoEnrollNewPerson(
+        { organizationId: scope.organizationId, branchId },
+        { personType: "EMPLOYEE", employeeId: employee.id },
+      );
       return { employee, credentials: null };
     }
 
@@ -141,6 +147,10 @@ export class EmployeesService {
         branchId,
         summary: `${fullName} xodim sifatida qo'shildi va kabinet ochildi (${login})`,
       });
+      await this.faceIdService.autoEnrollNewPerson(
+        { organizationId: scope.organizationId, branchId },
+        { personType: "EMPLOYEE", employeeId: employee.id },
+      );
       return { employee, credentials: { login, password } };
     } catch (err) {
       throw this.translateLoginConflict(err);

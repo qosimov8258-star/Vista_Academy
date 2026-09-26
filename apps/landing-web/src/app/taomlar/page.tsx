@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { PageShell } from "@/components/page-shell";
-import { BabyBottleAnimation } from "@/components/baby-bottle-animation";
+import { CradleFeedingAnimation } from "@/components/cradle-feeding-animation";
 import { MealsIntro } from "@/components/meals-intro";
 import { WeeklyMenu } from "@/components/weekly-menu";
 import { fetchLanding } from "@/lib/api";
@@ -18,7 +18,7 @@ export default async function MealsPage() {
       eyebrow="Guruhlarimiz"
       title="Sog'lom taomlar"
       description="Kun davomida muvozanatli va sifatli ovqatlanish — dastur doirasida qo'shimcha to'lovsiz taqdim etiladi."
-      heroImage={{ src: "/rasm/soglom-taom.png", alt: "Bolalar oshxonada sog'lom taom yemoqda", position: "50% 0%" }}
+      heroImage={{ src: "/taom/taoms.jpg", alt: "Bolalar oshxonada sog'lom taom yemoqda", position: "50% 0%" }}
       belowHero={
         <div className="flex flex-col items-center gap-8 sm:flex-row sm:justify-center">
           <div className="max-w-[300px] text-center sm:text-left">
@@ -29,7 +29,7 @@ export default async function MealsPage() {
               Kichkintoyingiz bilan birga quyidagi qiziqarli o&apos;yinni sinab ko&apos;ring.
             </p>
           </div>
-          <BabyBottleAnimation />
+          <CradleFeedingAnimation />
         </div>
       }
     >

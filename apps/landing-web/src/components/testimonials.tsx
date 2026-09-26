@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { Reveal } from "./reveal";
 
 const REVIEWS = [
   {
@@ -42,18 +43,18 @@ export function Testimonials() {
   return (
     <section className="py-20 sm:py-28">
       <div className="mx-auto max-w-[560px] px-4 text-center">
-        <div className="relative mx-auto h-[180px] w-full max-w-[560px] sm:h-[220px]">
+        <Reveal direction="up" className="relative mx-auto h-[180px] w-full max-w-[560px] sm:h-[220px]">
           <Image src="/bezak/bezak.jpg" alt="O'ynayotgan bolalar" fill sizes="560px" className="object-contain" />
-        </div>
+        </Reveal>
 
-        <p className="mt-6 text-[16px] italic leading-relaxed text-[var(--color-text-muted)]">
+        <Reveal direction="up" delay={120} className="mt-6 text-[16px] italic leading-relaxed text-[var(--color-text-muted)]">
           Har bir bola — o&apos;zgacha rang, o&apos;zgacha kulgu.
           <br />
           Bizning bog&apos;chamizda hammasi birga o&apos;ynab, birga ulg&apos;ayadi.
-        </p>
+        </Reveal>
       </div>
 
-      <div className="marqueeWrap mx-auto mt-10 max-w-[1120px]">
+      <Reveal direction="up" delay={150} className="marqueeWrap mx-auto mt-10 max-w-[1120px]">
         <div className="marqueeTrack">
           {REVIEWS.map((review) => (
             <ReviewCard key={`a-${review.name}`} review={review} />
@@ -62,7 +63,17 @@ export function Testimonials() {
             <ReviewCard key={`b-${review.name}`} review={review} />
           ))}
         </div>
-      </div>
+      </Reveal>
+
+      <Reveal direction="up" delay={180} className="mx-auto mt-20 max-w-[560px] px-4 text-center">
+        <div className="relative mx-auto h-[240px] w-full max-w-[420px] overflow-hidden rounded-[var(--radius-lg)] shadow-[var(--shadow-card)] sm:h-[280px]">
+          <Image src="/team.jpeg" alt="Vista Academy jamoasi" fill sizes="420px" className="object-cover" />
+        </div>
+        <p className="font-heading mt-5 text-[18px] font-bold text-[var(--color-text)]">Bizning jamoa</p>
+        <p className="mt-2 text-[14px] leading-relaxed text-[var(--color-text-muted)]">
+          Farzandingizga mehr, sabr va bilim bilan yondashadigan, bir-biriga qadrdon jamoamiz bilan tanishing.
+        </p>
+      </Reveal>
     </section>
   );
 }
