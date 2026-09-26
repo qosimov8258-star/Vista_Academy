@@ -214,6 +214,22 @@
     width 0.34s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
+/* "Yana" oynasi menyudan yuqoriga ko'tarilib chiqadi */
+@keyframes pMoreUp {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.moreSheet {
+  transform-origin: bottom center;
+  animation: pMoreUp 0.26s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
 /* Faol ikonka bir lahza "nafas oladi" — bosilgani seziladi */
 @keyframes pTabPop {
   0% { transform: scale(0.86); }
@@ -228,7 +244,8 @@
   .enterRight,
   .enterLeft,
   .enterSoft,
-  .tabIconActive {
+  .tabIconActive,
+  .moreSheet {
     animation: none;
   }
   .tabPill {
