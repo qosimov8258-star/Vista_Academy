@@ -407,7 +407,7 @@ export interface DashboardSummary {
 /** `GET /app/health/allergies` javobi — Ovqatlanish sahifasidagi ogohlantirish uchun. */
 export interface ChildAllergy {
   allergies: string;
-  child: { id: string; fullName: string };
+  child: { id: string; fullName: string; group?: { name: string } | null };
 }
 
 export interface AuditLogEntry {
