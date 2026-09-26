@@ -72,17 +72,25 @@
 }
 
 /* Custom kursor: butun sahifada standart holatda cursor.png, bosiladigan
-   elementlar va inputlar ustida esa pointer.png ko'rinadi. Yuqoridagi
-   ramka qoidasi kabi `@layer base` ichida — shunda komponentda atayin
-   qo'yilgan cursor-* utilitalari (masalan disabled/loading holatlar)
-   baribir bu standartni bosib o'tishi mumkin.
+   elementlar va inputlar ustida esa pointer.png ko'rinadi. `@layer utilities`
+   ichida turishi shart, `@layer base` emas: Tailwind o'zining `cursor-pointer`,
+   `disabled:cursor-wait` kabi utility klasslarini xuddi shu "utilities"
+   qatlamida generatsiya qiladi, `@layer` qatlamlari orasida esa tartib
+   spetsifiklikdan ustun turadi — qoida `base`da qolsa, Tailwind'ning
+   generatsiya qilgan oddiy `.cursor-pointer { cursor: pointer }` doim g'olib
+   chiqib, tugmalardagi maxsus kursor suratini yashirib qo'yardi (aynan shu
+   sababli "Kirish" kabi tugmalarda kursor rasmi ko'rinmay, brauzerning
+   standart o'qi chiqib qolar edi). Bitta qatlam ichida esa oddiy CSS
+   spetsifikligi ishlaydi, shu bois `disabled:cursor-wait` kabi atayin
+   qo'yilgan utilitalar (ikki klassli spetsifiklik) baribir bizning
+   standartimizni bosib o'tadi.
    Retina/HiDPI ekranlarda bitta past-zichlikdagi rasm xira ko'rinadi,
    shuning uchun `@2x` versiyasi ham beriladi — `image-set()` bilan
    brauzer ekran zichligiga mos rasmni tanlaydi. Uni tushunmaydigan eski
    brauzerlar uchun oddiy `url()` qatori zaxira (fallback) bo'lib qoladi:
    noto'g'ri qiymat butun e'lonni bekor qiladi, shu bilan undan oldingi
    qator kuchda qoladi. */
-@layer base {
+@layer utilities {
   html {
     cursor: url("/cursor.png") 4 4, auto;
     cursor: image-set(url("/cursor.png") 1x, url("/cursor@2x.png") 2x) 4 4, auto;

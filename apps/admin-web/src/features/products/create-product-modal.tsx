@@ -144,7 +144,7 @@ export function CreateProductModal({
               const image = images[position];
               const checking = checkingSlot === position;
               return (
-                <div key={position} className="group relative aspect-square w-full max-w-[100px] shrink-0">
+                <div key={position} className="group relative aspect-square w-full min-w-0 max-w-[100px] flex-1">
                   {image ? (
                     <>
                       {/* eslint-disable-next-line @next/next/no-img-element -- data: URL, Next optimizatsiyasi kerak emas */}

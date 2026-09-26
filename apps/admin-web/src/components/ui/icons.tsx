@@ -573,3 +573,37 @@ export function DoorIcon(props: IconProps) {
   );
 }
 
+export function GlobeIcon(props: IconProps) {
+  return (
+    <Outline {...props}>
+      <circle cx="12" cy="12" r="8.6" />
+      <path d="M3.4 12h17.2" />
+      <path d="M12 3.4c2.6 2.4 4 5.4 4 8.6s-1.4 6.2-4 8.6c-2.6-2.4-4-5.4-4-8.6s1.4-6.2 4-8.6Z" />
+    </Outline>
+  );
+}
+
+export function DocumentIcon(props: IconProps) {
+  return (
+    <Outline {...props}>
+      <path d="M6.6 3.4h7l4 4v12.2a1 1 0 0 1-1 1H6.6a1 1 0 0 1-1-1V4.4a1 1 0 0 1 1-1Z" />
+      <path d="M13.6 3.4v4h4" />
+      <path d="M8.2 13h7.6M8.2 16.6h7.6" />
+    </Outline>
+  );
+}
+
+/** Yuz skaneri: to'rt burchak "viewfinder" ramkasi ichida yuz. Face ID qurilmalari bo'limi uchun. */
+export function FaceIdIcon(props: IconProps) {
+  return (
+    <Outline {...props}>
+      <path d="M5 8V5.8A.8.8 0 0 1 5.8 5H8" />
+      <path d="M16 5h2.2a.8.8 0 0 1 .8.8V8" />
+      <path d="M19 16v2.2a.8.8 0 0 1-.8.8H16" />
+      <path d="M8 19H5.8a.8.8 0 0 1-.8-.8V16" />
+      <path d="M9.7 11.2h.01M14.3 11.2h.01" />
+      <path d="M9.5 14.3c.9.8 3.1.8 4 0" />
+    </Outline>
+  );
+}
+

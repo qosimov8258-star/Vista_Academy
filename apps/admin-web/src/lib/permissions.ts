@@ -59,6 +59,15 @@ export function canViewUseful(role: TenantUserRole | undefined): boolean {
   return role !== "FINANCE";
 }
 
+/**
+ * "Foydali" bo'limida yozish huquqi. Bu yerda faqat tarbiyachi o'z guruhi
+ * uchun material (she'r/maqol/ertak) tayyorlaydi — filial admini (BRANCH_ADMIN)
+ * va administrator (MANAGER) faqat kuzatib boradi, o'zlari yozmaydi.
+ */
+export function canWriteUseful(role: TenantUserRole | undefined): boolean {
+  return role === "TEACHER";
+}
+
 /** Foydalanuvchi yaratish huquqi: Super Admin va filial admini. */
 export function canManageUsers(role: TenantUserRole | undefined): boolean {
   return role === "NETWORK_ADMIN" || role === "BRANCH_ADMIN";

@@ -8,8 +8,18 @@ const KNOWN_ORG_PAGES = new Set([
   "groups",
   "employees",
   "attendance",
+  "lesson-attendance",
   "staff-attendance",
   "nutrition",
+  "cash",
+  "debtors",
+  "cash-report",
+  "group-payments",
+  "calls",
+  "board",
+  "pickups",
+  "weekly-report",
+  "staff-absences",
   "finance",
   "branches",
   "users",
@@ -22,6 +32,8 @@ const KNOWN_ORG_PAGES = new Set([
   "my-notifications",
   "settings",
   "useful",
+  "lending",
+  "face-id",
 ]);
 
 function base64UrlDecode(input: string): string {

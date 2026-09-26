@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useRef, useState } from "react";
+import { downloadCsv } from "@/lib/download";
 import Link from "next/link";
 import clsx from "clsx";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
@@ -147,6 +148,8 @@ function RatingBadge({ label, value }: { label: string; value: string | null }) 
 export default function ChildDetailPage({ params }: { params: Promise<{ slug: string; childId: string }> }) {
   const { slug, childId } = use(params);
   const [assessOpen, setAssessOpen] = useState(false);
+  const [docLoading, setDocLoading] = useState<string | null>(null);
+  const [docError, setDocError] = useState<string | null>(null);
   const [healthOpen, setHealthOpen] = useState(false);
   const [vaccinationOpen, setVaccinationOpen] = useState(false);
   const [updatingVaccination, setUpdatingVaccination] = useState<Vaccination | null>(null);
@@ -339,6 +342,32 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
                   Tahrirlash
                 </Button>
               )}
+              {canWrite && (
+                <>
+                  {(["contract", "certificate"] as const).map((kind) => (
+                    <Button
+                      key={kind}
+                      size="sm"
+                      variant="outline"
+                      loading={docLoading === kind}
+                      onClick={async () => {
+                        setDocLoading(kind);
+                        setDocError(null);
+                        try {
+                          await downloadCsv(`/app/exports/children/${childId}/${kind}-pdf`, `${kind === "contract" ? "shartnoma" : "malumotnoma"}-${childId}.pdf`);
+                        } catch {
+                          setDocError("Hujjatni yuklab bo'lmadi — qayta urinib ko'ring");
+                        } finally {
+                          setDocLoading(null);
+                        }
+                      }}
+                    >
+                      {kind === "contract" ? "Shartnoma (PDF)" : "Ma'lumotnoma (PDF)"}
+                    </Button>
+                  ))}
+                  {docError && <span className="text-[12.5px] text-[var(--color-danger)]">{docError}</span>}
+                </>
+              )}
             </div>
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
               <span className="rounded-full bg-[var(--color-surface-sunken)] px-2.5 py-1 text-[12px] font-semibold tabular-nums text-[var(--color-text-muted)]">
@@ -530,7 +559,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)]/10 text-[12px] font-semibold text-[var(--color-primary)]">
                   {initials(link.guardian.fullName)}
                 </span>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 basis-[10rem]">
                   <div className="flex flex-wrap items-center gap-1.5">
                     <p className="truncate text-[15px] font-medium text-[var(--color-text)]">
                       {link.guardian.fullName}
@@ -544,7 +573,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
                     {link.canPickup && " · olib ketadi"}
                   </p>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 max-sm:ml-[52px]">
                   <a
                     href={`tel:${link.guardian.phone}`}
                     className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-surface-sunken)] px-3 py-1.5 text-[14px] font-medium tabular-nums text-[var(--color-text)] transition-colors hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)]"

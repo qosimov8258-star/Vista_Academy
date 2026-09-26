@@ -17,6 +17,11 @@ import { useBranchContext } from "@/lib/use-branch-context";
 import { canWriteOperational } from "@/lib/permissions";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
+// Ko'pchilik xodim har kuni shu vaqt oralig'ida ishlaydi — har birini qo'lda
+// kiritish o'rniga standart shu bilan to'ldirib qo'yiladi, faqat istisnolar
+// (kimdir erta ketsa va h.k.) qo'lda o'zgartiriladi.
+const DEFAULT_CHECK_IN_TIME = "07:30";
+const DEFAULT_CHECK_OUT_TIME = "18:00";
 
 function todayDateString(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: DEFAULT_TIMEZONE }).format(new Date());
@@ -75,7 +80,10 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
 
   const [times, setTimes] = useState<Record<string, { checkInTime: string; checkOutTime: string }>>({});
   const timeFor = (employeeId: string, employee: { checkInTime: string | null; checkOutTime: string | null }) =>
-    times[employeeId] ?? { checkInTime: employee.checkInTime ?? "", checkOutTime: employee.checkOutTime ?? "" };
+    times[employeeId] ?? {
+      checkInTime: employee.checkInTime ?? DEFAULT_CHECK_IN_TIME,
+      checkOutTime: employee.checkOutTime ?? DEFAULT_CHECK_OUT_TIME,
+    };
 
   // Kelishni belgilash: sahifa ochilganda hamma "Keldi" deb ko'rsatiladi (hali
   // saqlanmagan) — ko'pchilik kun sayin kelgani uchun shunday tezroq. Faqat
@@ -200,7 +208,7 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
                               [employee.employeeId]: { ...timeFor(employee.employeeId, employee), checkInTime: e.target.value },
                             }))
                           }
-                          className="h-8 w-[90px] rounded-[var(--radius-sm)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-2 text-[12.5px] text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
+                          className="h-9 w-[124px] sm:h-8 sm:w-[124px] rounded-[var(--radius-sm)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-2 text-[12.5px] text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
                         />
                         <input
                           type="time"
@@ -212,7 +220,7 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
                               [employee.employeeId]: { ...timeFor(employee.employeeId, employee), checkOutTime: e.target.value },
                             }))
                           }
-                          className="h-8 w-[90px] rounded-[var(--radius-sm)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-2 text-[12.5px] text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
+                          className="h-9 w-[124px] sm:h-8 sm:w-[124px] rounded-[var(--radius-sm)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-2 text-[12.5px] text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
                         />
                       </>
                     )}
@@ -291,7 +299,7 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
           ) : !summaryQuery.data || summaryQuery.data.employees.length === 0 ? (
             <EmptyState title="Bu oy uchun ma'lumot yo'q" />
           ) : (
-            <DataTable>
+            <DataTable compact>
               <THead>
                 <tr>
                   <Th>Xodim</Th>

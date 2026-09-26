@@ -11,7 +11,7 @@ export default function EducationDirectionPage() {
     <ContentBlockView
       blockKey="talim-yonalishi"
       eyebrow="Guruhlarimiz"
-      fallbackTitle="Ta'lim yo'nalishi"
+      fallbackTitle="Ta'lim yo'nalishi va kelajak"
       fallbackBody="Zamonaviy dastur asosida yoshiga mos faoliyatlar bilan bolani maktabga tayyorlaymiz."
       heroImage={{ src: "/rasm/yonalishlar.png", alt: "O'quvchilar darsda qo'l ko'tarib javob bermoqda", position: "50% 0%" }}
       afterContent={<EducationHighlights />}

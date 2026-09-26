@@ -1,0 +1,71 @@
+{
+  "common": {
+    "language": "Til",
+    "languages": {
+      "uz": "O'zbekcha",
+      "ru": "Русский",
+      "en": "English"
+    }
+  },
+  "sidebar": {
+    "expand": "Yon panelni ochish",
+    "collapse": "Yon panelni yig'ish",
+    "logout": "Chiqish",
+    "logoutAria": "Tizimdan chiqish",
+    "notificationsAria": "Bildirishnomalarim",
+    "nav": {
+      "home": "Bosh sahifa",
+      "branches": "Filiallar",
+      "groups": "Guruhlar",
+      "students": "O'quvchilar",
+      "finance": "Moliya",
+      "reports": "Ma'lumotlar",
+      "employees": "Xodimlar",
+      "myNotifications": "Bildirishnomalarim",
+      "myGroups": "Mening guruhlarim",
+      "attendance": "Davomat",
+      "dailyReport": "Kundalik hisobot",
+      "children": "Bolalar",
+      "extraLessons": "Qo'shimcha darsliklar",
+      "lessonSchedules": "Dars jadvallari",
+      "qna": "Savol-javob",
+      "grades": "Baholari",
+      "useful": "Foydali",
+      "poems": "She'rlar",
+      "proverbs": "Maqollar",
+      "tales": "Ertaklar",
+      "admissionAndChildren": "Qabul va bolalar",
+      "crm": "Arizalar (CRM)",
+      "employeeList": "Xodimlar ro'yxati",
+      "hr": "Ish haqi (HR)",
+      "staffAttendance": "Xodimlar davomati",
+      "dailyWork": "Kundalik ish",
+      "nutrition": "Ovqatlanish",
+      "lessonSchedule": "Dars jadvali",
+      "faceId": "Face ID",
+      "devices": "Qurilmalar",
+      "faceRegistry": "Yuz ro'yxati",
+      "coin": "Coin",
+      "shop": "Do'kon",
+      "financeAndContact": "Moliya va aloqa",
+      "notifications": "Bildirishnomalar",
+      "admins": "Administratorlar",
+      "landingPage": "Lending sahifa",
+      "teachers": "O'qituvchilar",
+      "menu": "Menu",
+      "settings": "Sozlamalar"
+    }
+  },
+  "login": {
+    "panelSubtitle": "Boshqaruv paneli",
+    "title": "Xush kelibsiz!",
+    "subtitle": "Boshqaruv paneliga kirish uchun ma'lumotlaringizni kiriting.",
+    "loginLabel": "Login",
+    "passwordLabel": "Parol",
+    "submit": "Kirish",
+    "forgotPassword": "Parolni unutdingizmi? Tashkilot Super Admini bilan bog'laning.",
+    "loginRequired": "Login kiritilishi shart",
+    "passwordMin": "Kamida 8 belgi",
+    "unexpectedError": "Kutilmagan xatolik yuz berdi"
+  }
+}

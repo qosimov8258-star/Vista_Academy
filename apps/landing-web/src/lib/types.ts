@@ -26,7 +26,31 @@ export interface LandingTeacher {
   fullName: string;
   role: string;
   bio: string | null;
+  experience: string | null;
   photoPath: string | null;
+}
+
+export interface LandingGroupPhoto {
+  id: string;
+  path: string;
+  order: number;
+}
+
+export interface LandingGroupStudent {
+  id: string;
+  name: string;
+  bio: string | null;
+  photoPath: string | null;
+  order: number;
+}
+
+export interface LandingGroup {
+  id: string;
+  name: string;
+  slug: string;
+  photoPath: string | null;
+  photos: LandingGroupPhoto[];
+  students: LandingGroupStudent[];
 }
 
 export interface LandingContentBlock {

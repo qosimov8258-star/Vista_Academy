@@ -1,17 +1,7 @@
-const QUICK_LINKS = [
-  { label: "Bosh sahifa", href: "/#top" },
-  { label: "Imkoniyatlarimiz", href: "/#classrooms" },
-  { label: "Biz haqimizda", href: "/#about" },
-  { label: "Bog'lanish", href: "/#contact" },
-];
+"use client";
 
-const GROUPS_LINKS = [
-  { label: "Moslashuvchan jadval", href: "/jadval" },
-  { label: "Sog'lom taomlar", href: "/taomlar" },
-  { label: "Doimiy tarbiyachi", href: "/tarbiyachi" },
-  { label: "Ta'lim yo'nalishi", href: "/talim-yonalishi" },
-  { label: "O'qituvchilar", href: "/oqituvchilar" },
-];
+import { useTranslations } from "next-intl";
+import { Reveal } from "./reveal";
 
 function TelegramIcon({ className }: { className?: string }) {
   return (
@@ -59,11 +49,33 @@ function PinIcon({ className, style }: { className?: string; style?: React.CSSPr
 
 export function Footer() {
   const year = new Date().getFullYear();
+  const t = useTranslations();
+
+  const QUICK_LINKS = [
+    { label: t("nav.home"), href: "/#top" },
+    { label: t("nav.features"), href: "/#classrooms" },
+    { label: t("nav.about"), href: "/#about" },
+    { label: t("nav.contact"), href: "/#contact" },
+  ];
+
+  const GROUPS_LINKS = [
+    { label: t("groups.schedule"), href: "/jadval" },
+    { label: t("groups.meals"), href: "/taomlar" },
+    { label: t("groups.teacher"), href: "/tarbiyachi" },
+    { label: t("groups.education"), href: "/talim-yonalishi" },
+    { label: t("groups.teachers"), href: "/oqituvchilar" },
+  ];
 
   return (
-    <footer id="contact" className="border-t border-[var(--color-border)]" style={{ background: "var(--color-surface)" }}>
+    <footer
+      id="contact"
+      className="border-t border-[var(--color-border)]"
+      style={{
+        backgroundColor: "var(--color-surface)",
+      }}
+    >
       <div className="mx-auto max-w-[1120px] px-4 py-14 sm:py-16">
-        <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_1.1fr] lg:gap-8">
+        <Reveal direction="up" className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_1.1fr] lg:gap-8">
           <div>
             <a href="/#top" className="flex items-center gap-3">
               {/* eslint-disable-next-line @next/next/no-img-element -- statik brend rasmi */}
@@ -72,8 +84,7 @@ export function Footer() {
               <img src="/logo-name.png" alt="Vista Academy" className="h-8 w-auto object-contain" />
             </a>
             <p className="mt-4 max-w-[320px] text-[14px] leading-relaxed text-[var(--color-text-muted)]">
-              Bolalarni mehr, xavfsizlik va zamonaviy ta&apos;lim metodikalari bilan o&apos;stiradigan bog&apos;chalar
-              tarmog&apos;i.
+              {t("footer.description")}
             </p>
             <div className="mt-5 flex items-center gap-3">
               <a
@@ -94,7 +105,7 @@ export function Footer() {
           </div>
 
           <div>
-            <p className="font-heading text-[15px] font-bold text-[var(--color-text)]">Sahifalar</p>
+            <p className="font-heading text-[15px] font-bold text-[var(--color-text)]">{t("footer.pagesHeading")}</p>
             <ul className="mt-4 flex flex-col gap-2.5">
               {QUICK_LINKS.map((link) => (
                 <li key={link.href}>
@@ -110,7 +121,7 @@ export function Footer() {
           </div>
 
           <div>
-            <p className="font-heading text-[15px] font-bold text-[var(--color-text)]">Guruhlarimiz</p>
+            <p className="font-heading text-[15px] font-bold text-[var(--color-text)]">{t("footer.groupsHeading")}</p>
             <ul className="mt-4 flex flex-col gap-2.5">
               {GROUPS_LINKS.map((link) => (
                 <li key={link.href}>
@@ -126,11 +137,11 @@ export function Footer() {
           </div>
 
           <div>
-            <p className="font-heading text-[15px] font-bold text-[var(--color-text)]">Bog&apos;lanish</p>
+            <p className="font-heading text-[15px] font-bold text-[var(--color-text)]">{t("footer.contactHeading")}</p>
             <ul className="mt-4 flex flex-col gap-3">
               <li className="flex items-start gap-2.5 text-[14px] text-[var(--color-text-muted)]">
                 <PinIcon className="mt-0.5 h-4 w-4 shrink-0" style={{ color: "var(--color-blue)" }} />
-                Toshkent sh., O&apos;zbekiston
+                {t("footer.address")}
               </li>
               <li>
                 <a
@@ -152,22 +163,20 @@ export function Footer() {
               </li>
             </ul>
             <a
-              href="/#apply"
+              href="/ariza"
               className="mt-5 inline-flex rounded-full px-5 py-2.5 text-[14px] font-bold text-white shadow-[var(--shadow-cta)] transition-transform duration-150 hover:scale-[1.03]"
               style={{ background: "linear-gradient(135deg, var(--color-green) 0%, var(--color-green-dark) 100%)" }}
             >
-              Ariza qoldirish
+              {t("common.cta")}
             </a>
           </div>
-        </div>
+        </Reveal>
       </div>
 
       <div className="border-t border-[var(--color-border)]">
         <div className="mx-auto flex max-w-[1120px] flex-col items-center justify-between gap-2 px-4 py-5 text-center sm:flex-row sm:text-left">
-          <p className="text-[13px] text-[var(--color-text-muted)]">
-            © {year} Vista Academy. Barcha huquqlar himoyalangan.
-          </p>
-          <p className="text-[13px] text-[var(--color-text-muted)]">Mehr, xavfsizlik va zamonaviy ta&apos;lim bilan.</p>
+          <p className="text-[13px] text-[var(--color-text-muted)]">{t("footer.copyright", { year })}</p>
+          <p className="text-[13px] text-[var(--color-text-muted)]">{t("footer.tagline")}</p>
         </div>
       </div>
     </footer>

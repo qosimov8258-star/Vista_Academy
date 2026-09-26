@@ -1,0 +1,71 @@
+{
+  "common": {
+    "language": "Language",
+    "languages": {
+      "uz": "O'zbekcha",
+      "ru": "Русский",
+      "en": "English"
+    }
+  },
+  "sidebar": {
+    "expand": "Expand sidebar",
+    "collapse": "Collapse sidebar",
+    "logout": "Log out",
+    "logoutAria": "Log out of the system",
+    "notificationsAria": "My notifications",
+    "nav": {
+      "home": "Home",
+      "branches": "Branches",
+      "groups": "Groups",
+      "students": "Students",
+      "finance": "Finance",
+      "reports": "Reports",
+      "employees": "Employees",
+      "myNotifications": "My notifications",
+      "myGroups": "My groups",
+      "attendance": "Attendance",
+      "dailyReport": "Daily report",
+      "children": "Children",
+      "extraLessons": "Extra lessons",
+      "lessonSchedules": "Lesson schedules",
+      "qna": "Q&A",
+      "grades": "Grades",
+      "useful": "Useful",
+      "poems": "Poems",
+      "proverbs": "Proverbs",
+      "tales": "Tales",
+      "admissionAndChildren": "Admissions & children",
+      "crm": "Applications (CRM)",
+      "employeeList": "Employee list",
+      "hr": "Payroll (HR)",
+      "staffAttendance": "Staff attendance",
+      "dailyWork": "Daily work",
+      "nutrition": "Nutrition",
+      "lessonSchedule": "Lesson schedule",
+      "faceId": "Face ID",
+      "devices": "Devices",
+      "faceRegistry": "Face registry",
+      "coin": "Coin",
+      "shop": "Shop",
+      "financeAndContact": "Finance & contact",
+      "notifications": "Notifications",
+      "admins": "Admins",
+      "landingPage": "Landing page",
+      "teachers": "Teachers",
+      "menu": "Menu",
+      "settings": "Settings"
+    }
+  },
+  "login": {
+    "panelSubtitle": "Admin panel",
+    "title": "Welcome!",
+    "subtitle": "Enter your details to sign in to the admin panel.",
+    "loginLabel": "Login",
+    "passwordLabel": "Password",
+    "submit": "Sign in",
+    "forgotPassword": "Forgot your password? Contact the organization's Super Admin.",
+    "loginRequired": "Login is required",
+    "passwordMin": "At least 8 characters",
+    "unexpectedError": "An unexpected error occurred"
+  }
+}

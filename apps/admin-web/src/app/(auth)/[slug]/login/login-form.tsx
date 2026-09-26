@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
 import { setTenantTokens } from "@/lib/tenant-session";
@@ -12,18 +13,18 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import type { TenantAuthenticatedUser } from "@/lib/types";
 
-const schema = z.object({
-  login: z.string().min(1, "Login kiritilishi shart"),
-  password: z.string().min(8, "Kamida 8 belgi"),
-});
-
-type FormValues = z.infer<typeof schema>;
-
 export function LoginForm({ slug }: { slug: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
+  const t = useTranslations("login");
   const [serverError, setServerError] = useState<string | null>(null);
+
+  const schema = z.object({
+    login: z.string().min(1, t("loginRequired")),
+    password: z.string().min(8, t("passwordMin")),
+  });
+  type FormValues = z.infer<typeof schema>;
 
   const {
     register,
@@ -59,7 +60,7 @@ export function LoginForm({ slug }: { slug: string }) {
       if (err instanceof ApiError) {
         setServerError(err.message);
       } else {
-        setServerError("Kutilmagan xatolik yuz berdi");
+        setServerError(t("unexpectedError"));
       }
     }
   };
@@ -73,7 +74,7 @@ export function LoginForm({ slug }: { slug: string }) {
       )}
       <Input
         id="login"
-        label="Login"
+        label={t("loginLabel")}
         type="text"
         placeholder="admin_tarmoq"
         autoComplete="username"
@@ -83,7 +84,7 @@ export function LoginForm({ slug }: { slug: string }) {
       />
       <Input
         id="password"
-        label="Parol"
+        label={t("passwordLabel")}
         type="password"
         placeholder="••••••••"
         autoComplete="current-password"
@@ -92,7 +93,7 @@ export function LoginForm({ slug }: { slug: string }) {
         {...register("password")}
       />
       <Button type="submit" size="lg" fullWidth className="mt-2" loading={isSubmitting}>
-        Kirish
+        {t("submit")}
       </Button>
     </form>
   );
