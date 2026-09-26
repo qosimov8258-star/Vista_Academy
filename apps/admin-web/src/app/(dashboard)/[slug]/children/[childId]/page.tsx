@@ -559,7 +559,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)]/10 text-[12px] font-semibold text-[var(--color-primary)]">
                   {initials(link.guardian.fullName)}
                 </span>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 basis-[10rem]">
                   <div className="flex flex-wrap items-center gap-1.5">
                     <p className="truncate text-[15px] font-medium text-[var(--color-text)]">
                       {link.guardian.fullName}
@@ -573,7 +573,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
                     {link.canPickup && " · olib ketadi"}
                   </p>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 max-sm:ml-[52px]">
                   <a
                     href={`tel:${link.guardian.phone}`}
                     className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-surface-sunken)] px-3 py-1.5 text-[14px] font-medium tabular-nums text-[var(--color-text)] transition-colors hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)]"

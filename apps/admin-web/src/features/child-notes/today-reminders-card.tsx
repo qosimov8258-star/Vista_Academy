@@ -48,7 +48,7 @@ export function TodayRemindersCard({ slug, branchId, today }: { slug: string; br
               {r.groupName && <span className="text-[12.5px] text-[var(--color-text-muted)]">{r.groupName}</span>}
               <span className="basis-full text-[var(--color-text)] sm:basis-auto">{r.text}</span>
               <span className="basis-full pl-[60px] text-[12.5px] text-[var(--color-text-muted)]">Yozdi: {r.authorName}</span>
-              <span className="ml-auto flex items-center gap-2">
+              <span className="flex basis-full flex-wrap items-center gap-2 pl-[60px] sm:ml-auto sm:basis-auto sm:pl-0">
                 {r.doneAt && (
                   <Badge tone="success">
                     Berildi {new Date(r.doneAt).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" })}

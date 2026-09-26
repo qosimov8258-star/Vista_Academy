@@ -1,5 +1,6 @@
 "use client";
 
+import { TopbarAction } from "@/components/layout/topbar-action";
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
@@ -109,11 +110,30 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">Moliya</h1>
-          <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">Ota-onalar uchun hisob-fakturalar</p>
+        {/* Mobilda "+ Yangi hisob-faktura" sarlavha qatorining o'ngida, qolgan tugmalar pastda qatorga o'raladi */}
+        <div className="flex w-full items-start justify-between gap-3 md:w-auto">
+          <div className="min-w-0">
+            <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">Moliya</h1>
+            <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">Ota-onalar uchun hisob-fakturalar</p>
+          </div>
+          {canWrite && (
+            <div className="shrink-0 md:hidden">
+              <Button className="!h-auto !py-2" onClick={() => setCreateOpen(true)}>
+                <span className="text-center leading-tight">
+                  + Yangi
+                  <br />
+                  hisob-faktura
+                </span>
+              </Button>
+            </div>
+          )}
         </div>
-        <div className="flex gap-2">
+        <TopbarAction>
+          <Button variant="outline" loading={exporting} onClick={handleExport}>
+            Eksport (CSV)
+          </Button>
+        </TopbarAction>
+        <div className="flex flex-wrap gap-2">
           <Button
             variant={overdueOnly ? "danger" : "outline"}
             onClick={() => {
@@ -123,15 +143,21 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
           >
             Muddati o&apos;tganlar
           </Button>
-          <Button variant="outline" loading={exporting} onClick={handleExport}>
-            Eksport (CSV)
-          </Button>
+          <div className="hidden md:block">
+            <Button variant="outline" loading={exporting} onClick={handleExport}>
+              Eksport (CSV)
+            </Button>
+          </div>
           {canWrite && (
             <Button variant="outline" onClick={() => setBulkOpen(true)}>
               Ommaviy hisob-faktura
             </Button>
           )}
-          {canWrite && <Button onClick={() => setCreateOpen(true)}>+ Yangi hisob-faktura</Button>}
+          {canWrite && (
+            <div className="hidden md:block">
+              <Button onClick={() => setCreateOpen(true)}>+ Yangi hisob-faktura</Button>
+            </div>
+          )}
         </div>
       </div>
 

@@ -51,12 +51,12 @@ export default function DebtorsPage({ params }: { params: Promise<{ slug: string
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
+      <div className="flex items-start justify-between gap-3 md:flex-wrap md:items-end">
+        <div className="min-w-0">
           <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">Qarzdorlar</h1>
           <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">Kim qancha qarz va muddati o&apos;tganlar</p>
         </div>
-        <Button variant="outline" onClick={exportCsv} disabled={rows.length === 0}>
+        <Button variant="outline" className="shrink-0" onClick={exportCsv} disabled={rows.length === 0}>
           Eksport (CSV)
         </Button>
       </div>

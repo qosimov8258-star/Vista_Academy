@@ -31,17 +31,30 @@ export function Topbar({ slug }: { slug: string }) {
   const unreadCount = notificationsQuery.data?.filter((n) => !n.isRead).length ?? 0;
 
   return (
-    <header className="hairline flex h-[60px] shrink-0 items-center gap-3 border-b border-[var(--color-separator)] bg-[var(--color-surface)]/80 px-6 backdrop-blur-[20px]">
+    <header className="hairline flex h-[60px] shrink-0 items-center gap-3 border-b border-[var(--color-separator)] bg-[var(--color-surface)]/80 px-4 backdrop-blur-[20px] md:px-6">
+      {user && (
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new Event("open-mobile-menu"))}
+          aria-label="Menyuni ochish"
+          className="-ml-1 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--color-text)] transition-colors hover:bg-black/[0.05] md:hidden"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" className="h-6 w-6" aria-hidden="true">
+            <path d="M4 7h16M4 12h16M4 17h16" />
+          </svg>
+        </button>
+      )}
       {user && (
         <p className="truncate text-[17px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
           {user.organizationName}
         </p>
       )}
+      <div id="topbar-actions" className="ml-auto flex items-center gap-2 md:hidden" />
       {teacher && (
         <Link
           href={`/${slug}/my-notifications`}
           aria-label="Bildirishnomalarim"
-          className="relative ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-black/[0.05] hover:text-[var(--color-text)] md:hidden"
+          className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-black/[0.05] hover:text-[var(--color-text)] md:hidden"
         >
           <BellIcon className="h-5 w-5" />
           {unreadCount > 0 && (

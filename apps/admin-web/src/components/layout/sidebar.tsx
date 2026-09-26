@@ -13,11 +13,12 @@ import { useAuth } from "@/lib/use-auth";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { useSidebarCollapsed } from "@/lib/use-sidebar-collapsed";
 import { useSidebarSections } from "@/lib/use-sidebar-sections";
-import { canManageUsers, canViewUseful, isTeacher } from "@/lib/permissions";
+import { ROLE_LABEL, canManageUsers, canViewUseful, isTeacher } from "@/lib/permissions";
 import { formatPositionLabel, isAssistantPosition, isCashierPosition, isHeadChefPosition, isSubjectTeacherPosition } from "@/lib/employee-position";
 import { Avatar } from "@/components/ui/avatar";
 import type { IconProps } from "@/components/ui/icons";
 import {
+  CloseIcon,
   ArrowLeftIcon,
   BellIcon,
   BookIcon,
@@ -102,9 +103,8 @@ export function Sidebar({ slug }: { slug: string }) {
   const { user } = useAuth();
   const [collapsed, toggleCollapsed] = useSidebarCollapsed();
   const [openSections, toggleSection] = useSidebarSections();
-  // Mobil pastki navigatsiyada qaysi bo'lim varag'i ochiq turibdi (yon panel
-  // kabi doimiy saqlanmaydi — sahifa almashsa yopiladi).
-  const [mobileSheet, setMobileSheet] = useState<string | null>(null);
+  // Mobilda (<768px) tepadagi "uch chiziq" tugmasi ochadigan to'liq menyu (barcha rollar uchun).
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Sichqoncha nav elementlari ustidan o'tganda orqa fondagi belgilagich
   // shu yerga qarab silliq siljiydi ("sas" panelidagi kabi hover effekti).
@@ -293,16 +293,20 @@ export function Sidebar({ slug }: { slug: string }) {
 
   const operationalEntries: NavEntry[] = [
     { href: base, label: "Bosh sahifa", icon: HomeIcon, show: true, exact: true },
-    // Administratorning kundalik ishi: qo'ng'iroqlar, olib ketish, bugungi holat
+    // Administratorning kundalik ishi: qo'ng'iroqlar, olib ketish, bugungi holat.
+    // Bu sahifalar faqat o'z filialiga biriktirilgan foydalanuvchi uchun ishlaydi
+    // (backendda requireBranchScope NETWORK_ADMIN'ni rad etadi) — shuning uchun
+    // NETWORK_ADMIN boshqa filialni ko'rib turganda (inBranchContext) yashiriladi,
+    // aks holda havola 404/403 ga olib kelardi.
     {
       id: "bugungi-ishlar",
       label: "Bugungi ishlar",
       icon: PhoneIcon,
       items: [
-        { href: `${base}/calls`, label: "Qo'ng'iroqlar", icon: PhoneIcon, show: isManager },
-        { href: `${base}/pickups`, label: "Olib ketish", icon: ChildIcon, show: true },
-        { href: `${base}/board`, label: "Bugungi holat", icon: ChartIcon, show: true },
-        { href: `${base}/weekly-report`, label: "Haftalik hisobot", icon: NoteIcon, show: true },
+        { href: `${base}/calls`, label: "Qo'ng'iroqlar", icon: PhoneIcon, show: isManager && !inBranchContext },
+        { href: `${base}/pickups`, label: "Olib ketish", icon: ChildIcon, show: !inBranchContext && !isManager },
+        { href: `${base}/board`, label: "Bugungi holat", icon: ChartIcon, show: !inBranchContext },
+        { href: `${base}/weekly-report`, label: "Haftalik hisobot", icon: NoteIcon, show: !inBranchContext },
       ],
     },
     {
@@ -386,19 +390,15 @@ export function Sidebar({ slug }: { slug: string }) {
     )
     .filter((entry) => (isSection(entry) ? entry.items.length > 0 : entry.show));
 
-  // O'qituvchi uchun mobil ekranda pastda turadigan navigatsiya: "Bildirishnomalarim"
-  // bu yerda takrorlanmaydi, chunki mobilda u yuqori panelda qo'ng'iroqcha
-  // ikonkasi sifatida turadi (qarang: Topbar).
-  const mobileNavEntries = entries.filter(
-    (entry) => isSection(entry) || entry.href !== `/${slug}/my-notifications`,
-  );
-  const activeMobileSection = mobileSheet
-    ? mobileNavEntries.find((entry): entry is NavSection => isSection(entry) && entry.id === mobileSheet)
-    : undefined;
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
-    setMobileSheet(null);
-  }, [pathname]);
+    const open = () => setDrawerOpen(true);
+    window.addEventListener("open-mobile-menu", open);
+    return () => window.removeEventListener("open-mobile-menu", open);
+  }, []);
 
   // Yig'ilgan holatda bo'lim sarlavhasi sig'maydi — barcha havolalar
   // tekis ro'yxatga aylanadi, bo'limlar orasi ingichka chiziq bilan ajraladi.
@@ -698,28 +698,42 @@ export function Sidebar({ slug }: { slug: string }) {
       </div>
     </aside>
 
-    {/* Mobil pastki navigatsiya: yon panel <768px da butunlay yashirilgani
-        uchun o'qituvchiga ekran pastida asosiy bo'limlar beriladi. */}
-    {teacher && (
-      <>
-        {activeMobileSection && (
-          <>
-            <div
-              className="fixed inset-0 z-30 md:hidden"
-              aria-hidden
-              onClick={() => setMobileSheet(null)}
-            />
-            <div className="fixed inset-x-3 bottom-[calc(4rem+env(safe-area-inset-bottom)+0.5rem)] z-50 rounded-[20px] bg-[var(--color-surface)] p-2 shadow-[var(--shadow-modal)] md:hidden">
-              {activeMobileSection.items.map((item) => {
+    {/* Mobil to'liq menyu (o'qituvchidan boshqa rollar): Topbar'dagi uch chiziq tugmasi ochadi. */}
+    {drawerOpen && (
+      <div className="fixed inset-0 z-50 md:hidden">
+        <div className="absolute inset-0 bg-black/40" aria-hidden onClick={() => setDrawerOpen(false)} />
+        <aside
+          className="absolute inset-y-0 left-0 flex w-[82%] max-w-[320px] flex-col bg-[var(--color-surface)] shadow-[var(--shadow-modal)]"
+          aria-label="Asosiy menyu"
+        >
+          <div className="flex h-[60px] shrink-0 items-center justify-between gap-2 border-b border-[var(--color-separator)] px-4">
+            <div className="min-w-0">
+              <p className="truncate text-[15px] font-semibold text-[var(--color-text)]">{user?.fullName}</p>
+              <p className="truncate text-xs text-[var(--color-text-muted)]">{user ? ROLE_LABEL[user.role] : ""}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setDrawerOpen(false)}
+              aria-label="Menyuni yopish"
+              className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--color-text-muted)] hover:bg-black/[0.05]"
+            >
+              <CloseIcon className="h-5 w-5" />
+            </button>
+          </div>
+          <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto p-3" aria-label="Menyu">
+            {[...entries, settingsItem].map((entry) => {
+              const renderLink = (item: NavLeaf, nested: boolean) => {
                 const active = isActive(item);
                 const Icon = item.icon;
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    onClick={() => setMobileSheet(null)}
+                    onClick={() => setDrawerOpen(false)}
+                    aria-current={active ? "page" : undefined}
                     className={clsx(
-                      "flex items-center gap-3 rounded-[14px] px-3.5 py-3 text-[15px] font-medium transition-colors",
+                      "flex items-center gap-3 rounded-[14px] px-3.5 py-2.5 text-[15px] font-medium transition-colors",
+                      nested && "ml-3",
                       active
                         ? "bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
                         : "text-[var(--color-text)] hover:bg-black/[0.04]",
@@ -729,55 +743,33 @@ export function Sidebar({ slug }: { slug: string }) {
                     {item.label}
                   </Link>
                 );
-              })}
-            </div>
-          </>
-        )}
-
-        <nav
-          className="fixed inset-x-0 bottom-0 z-40 flex h-16 items-stretch border-t border-[var(--color-separator)] bg-[var(--color-surface)]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-[20px] md:hidden"
-          aria-label="Asosiy navigatsiya"
-        >
-          {mobileNavEntries.map((entry) => {
-            if (!isSection(entry)) {
-              const active = isActive(entry);
-              const Icon = entry.icon;
+              };
+              if (!isSection(entry)) return renderLink(entry, false);
+              const SectionIcon = entry.icon;
               return (
-                <Link
-                  key={entry.href}
-                  href={entry.href}
-                  aria-current={active ? "page" : undefined}
-                  className={clsx(
-                    "flex flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-medium",
-                    active ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)]",
-                  )}
-                >
-                  <Icon filled={active} className="h-5 w-5" />
-                  <span className="truncate px-1">{entry.label}</span>
-                </Link>
+                <div key={entry.id} className="pt-2">
+                  <p className="flex items-center gap-2 px-3.5 pb-1 text-[12px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                    <SectionIcon className="h-4 w-4" />
+                    {entry.label}
+                  </p>
+                  {entry.items.map((item) => renderLink(item, true))}
+                </div>
               );
-            }
-
-            const active = entry.items.some(isActive) || mobileSheet === entry.id;
-            const Icon = entry.icon;
-            return (
-              <button
-                key={entry.id}
-                type="button"
-                onClick={() => setMobileSheet((current) => (current === entry.id ? null : entry.id))}
-                aria-expanded={mobileSheet === entry.id}
-                className={clsx(
-                  "flex flex-1 cursor-pointer flex-col items-center justify-center gap-0.5 text-[11px] font-medium",
-                  active ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)]",
-                )}
-              >
-                <Icon className="h-5 w-5" />
-                <span className="truncate px-1">{entry.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-      </>
+            })}
+          </nav>
+          <div className="shrink-0 border-t border-[var(--color-separator)] p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={loggingOut}
+              className="flex w-full cursor-pointer items-center gap-3 rounded-[14px] px-3.5 py-2.5 text-[15px] font-medium text-[var(--color-danger)] hover:bg-[var(--color-danger-bg)] disabled:opacity-60"
+            >
+              <LogoutIcon className="h-5 w-5 shrink-0" />
+              Chiqish
+            </button>
+          </div>
+        </aside>
+      </div>
     )}
     </>
   );

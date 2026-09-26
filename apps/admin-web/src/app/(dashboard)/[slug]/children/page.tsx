@@ -4,6 +4,7 @@ import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
+import { TopbarAction } from "@/components/layout/topbar-action";
 import { api, getPaginated } from "@/lib/api";
 import type { Child, ChildAllergy, Group } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
@@ -94,13 +95,27 @@ export default function ChildrenPage({ params }: { params: Promise<{ slug: strin
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
-            Bolalar
-          </h1>
-          <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">Tarmoqqa ro'yxatga olingan bolalar</p>
+        {/* Mobilda: "Eksport" yuqori panelda (uch chiziq qatorida), "+ Yangi bola" sarlavha qatorining o'ngida.
+            Kompyuterda ikkalasi avvalgidek o'ng tomonda yonma-yon. */}
+        <div className="flex w-full items-start justify-between gap-3 md:w-auto">
+          <div className="min-w-0">
+            <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
+              Bolalar
+            </h1>
+            <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">Tarmoqqa ro'yxatga olingan bolalar</p>
+          </div>
+          {canWrite && (
+            <div className="shrink-0 md:hidden">
+              <Button onClick={() => setCreateOpen(true)}>+ Yangi bola</Button>
+            </div>
+          )}
         </div>
-        <div className="flex gap-2">
+        <TopbarAction>
+          <Button variant="outline" loading={exporting} onClick={handleExport}>
+            Eksport (CSV)
+          </Button>
+        </TopbarAction>
+        <div className="hidden gap-2 md:flex">
           <Button variant="outline" loading={exporting} onClick={handleExport}>
             Eksport (CSV)
           </Button>

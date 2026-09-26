@@ -81,8 +81,8 @@ export default function LessonSchedulePage({ params }: { params: Promise<{ slug:
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+      <div className="flex items-start justify-between gap-3 md:flex-wrap md:items-center">
+        <div className="min-w-0">
           <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
             Dars jadvali
           </h1>
@@ -91,7 +91,7 @@ export default function LessonSchedulePage({ params }: { params: Promise<{ slug:
           </p>
         </div>
         {canWrite && (
-          <div className="flex gap-2">
+          <div className="flex shrink-0 gap-2">
             <Button
               onClick={() => setScheduleModal({ open: true, schedule: null })}
               disabled={!groupId}

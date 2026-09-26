@@ -179,7 +179,7 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
           ) : (
             <ul className="divide-y divide-[var(--color-separator)]">
               {employeesQuery.data.map((employee) => (
-                <li key={employee.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 sm:px-6">
+                <li key={employee.id} className="flex flex-col items-start gap-3 px-5 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-6">
                   <div className="min-w-0">
                     <p className="truncate text-[14px] font-medium text-[var(--color-text)]">{employee.fullName}</p>
                     <p className="text-[12.5px] text-[var(--color-text-muted)]">{employee.position}</p>

@@ -76,13 +76,13 @@ export default function EmployeesPage({ params }: { params: Promise<{ slug: stri
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+      <div className="flex items-start justify-between gap-3 md:flex-wrap md:items-center">
+        <div className="min-w-0">
           <h1 className="text-xl font-semibold text-[var(--color-text)]">Xodimlar</h1>
           <p className="text-sm text-[var(--color-text-muted)]">Lavozimlar bo&apos;yicha guruhlangan xodimlar ro&apos;yxati</p>
         </div>
         {canWrite && (
-          <Button variant="outline" onClick={() => setEmployeeModal({ open: true, position: null })}>
+          <Button variant="outline" className="shrink-0" onClick={() => setEmployeeModal({ open: true, position: null })}>
             + Yangi xodim
           </Button>
         )}

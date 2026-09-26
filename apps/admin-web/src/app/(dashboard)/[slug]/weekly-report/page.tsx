@@ -1,5 +1,6 @@
 "use client";
 
+import { TopbarAction } from "@/components/layout/topbar-action";
 import { use, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -45,8 +46,13 @@ export default function WeeklyReportPage({ params }: { params: Promise<{ slug: s
           <Button variant="outline" size="sm" onClick={() => setFrom((f) => shift(f, 7))}>
             Keyingi hafta →
           </Button>
-          <Button onClick={() => window.print()}>Chop etish / PDF</Button>
+          <div className="hidden md:block">
+            <Button onClick={() => window.print()}>Chop etish / PDF</Button>
+          </div>
         </div>
+        <TopbarAction>
+          <Button onClick={() => window.print()}>Chop etish / PDF</Button>
+        </TopbarAction>
       </div>
 
       {!from || query.isLoading ? (

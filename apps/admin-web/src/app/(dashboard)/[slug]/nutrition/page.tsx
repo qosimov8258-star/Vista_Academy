@@ -147,14 +147,15 @@ export default function NutritionPage({ params }: { params: Promise<{ slug: stri
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+      <div className="flex items-start justify-between gap-3 md:flex-wrap md:items-center">
+        <div className="min-w-0">
           <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
             Ovqatlanish
           </h1>
           <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">Haftalik menyu</p>
         </div>
-        <div className="flex items-center gap-2">
+        {/* Mobilda ikki tugma sarlavhaning o'ng tomonida ustma-ust turadi, kompyuterda yonma-yon */}
+        <div className="flex shrink-0 flex-col items-stretch gap-2 md:flex-row md:items-center">
           {canWrite && (
             <Button variant="outline" disabled={!weekStart} onClick={() => setWeeklyMenuOpen(true)}>
               Haftalik menyu
@@ -173,16 +174,17 @@ export default function NutritionPage({ params }: { params: Promise<{ slug: stri
       )}
 
       <Card className="flex flex-col gap-4 p-5 sm:flex-row sm:items-end">
-        <div className="flex items-center gap-2">
+        <div className="grid grid-cols-2 items-center gap-2 sm:flex sm:flex-nowrap sm:justify-start">
           <Button
             variant="outline"
             size="sm"
             disabled={!weekStart}
             onClick={() => setWeekStart((w) => (w ? addDays(w, -7) : w))}
           >
-            ← Oldingi hafta
+            <span className="sm:hidden">← Oldingi</span>
+            <span className="hidden sm:inline">← Oldingi hafta</span>
           </Button>
-          <span className="whitespace-nowrap text-[14px] tabular-nums text-[var(--color-text-muted)]">
+          <span className="order-last col-span-2 whitespace-nowrap text-center text-[14px] tabular-nums text-[var(--color-text-muted)] sm:order-none sm:col-span-1">
             {weekStart && weekEnd ? `${formatDate(weekStart)} — ${formatDate(weekEnd)}` : "…"}
           </span>
           <Button
@@ -191,7 +193,8 @@ export default function NutritionPage({ params }: { params: Promise<{ slug: stri
             disabled={!weekStart}
             onClick={() => setWeekStart((w) => (w ? addDays(w, 7) : w))}
           >
-            Keyingi hafta →
+            <span className="sm:hidden">Keyingi →</span>
+            <span className="hidden sm:inline">Keyingi hafta →</span>
           </Button>
         </div>
         {!forcedBranchId && branches.length > 1 && (

@@ -1,5 +1,6 @@
 "use client";
 
+import { TopbarAction } from "@/components/layout/topbar-action";
 import { use, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
@@ -70,27 +71,48 @@ export default function NotificationsPage({ params }: { params: Promise<{ slug: 
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-start justify-between gap-3 md:items-center">
+        <div className="min-w-0">
           <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">Bildirishnomalar</h1>
-          <p className="text-[14px] text-[var(--color-text-muted)]">
+          <p className="hidden text-[14px] text-[var(--color-text-muted)] md:block">
             Ota-onalarga yuborilgan yoki yuborilishi kerak bo&apos;lgan xabarlar jurnali — haqiqiy SMS/Telegram
             yuborilmaydi, faqat yozib boriladi. Xabar berilgach, tegishli yozuvni &quot;Yuborildi&quot; deb belgilang.
           </p>
         </div>
         {canWrite && (
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setBroadcastOpen(true)}>
-              Ommaviy xabar
-            </Button>
-            <Button onClick={() => setCreateOpen(true)}>+ Yangi yozuv</Button>
-          </div>
+          <>
+            {/* Mobilda: "Ommaviy xabar" yuqori panelda, "+ Yangi yozuv" sarlavha qatorining o'ngida */}
+            <TopbarAction>
+              <Button variant="outline" onClick={() => setBroadcastOpen(true)}>
+                Ommaviy xabar
+              </Button>
+            </TopbarAction>
+            <div className="shrink-0 md:hidden">
+              <Button className="!h-auto !py-2" onClick={() => setCreateOpen(true)}>
+                <span className="text-center leading-tight">
+                  + Yangi
+                  <br />
+                  yozuv
+                </span>
+              </Button>
+            </div>
+            <div className="hidden gap-2 md:flex">
+              <Button variant="outline" onClick={() => setBroadcastOpen(true)}>
+                Ommaviy xabar
+              </Button>
+              <Button onClick={() => setCreateOpen(true)}>+ Yangi yozuv</Button>
+            </div>
+          </>
         )}
       </div>
+      <p className="-mt-3 text-[14px] text-[var(--color-text-muted)] md:hidden">
+        Ota-onalarga yuborilgan yoki yuborilishi kerak bo&apos;lgan xabarlar jurnali — haqiqiy SMS/Telegram
+        yuborilmaydi, faqat yozib boriladi. Xabar berilgach, tegishli yozuvni &quot;Yuborildi&quot; deb belgilang.
+      </p>
 
       {!canWrite && <ViewOnlyNote role={user?.role} />}
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {statusFilters.map((f) => (
           <Button
             key={f.value}

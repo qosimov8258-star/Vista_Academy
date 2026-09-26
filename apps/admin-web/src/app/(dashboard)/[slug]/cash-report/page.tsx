@@ -1,5 +1,6 @@
 "use client";
 
+import { TopbarAction } from "@/components/layout/topbar-action";
 import { use, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -73,9 +74,16 @@ export default function CashReportPage({ params }: { params: Promise<{ slug: str
           <div className="w-[170px]">
             <Input label="Oy" type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
           </div>
-          <Button variant="outline" onClick={exportCsv} disabled={!r}>
-            Eksport (CSV)
-          </Button>
+          <div className="hidden md:block">
+            <Button variant="outline" onClick={exportCsv} disabled={!r}>
+              Eksport (CSV)
+            </Button>
+          </div>
+          <TopbarAction>
+            <Button variant="outline" onClick={exportCsv} disabled={!r}>
+              Eksport (CSV)
+            </Button>
+          </TopbarAction>
         </div>
       </div>
 
