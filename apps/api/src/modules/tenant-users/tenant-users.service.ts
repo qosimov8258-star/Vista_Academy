@@ -193,7 +193,7 @@ export class TenantUsersService {
       if (!caller.branchId || target.branchId !== caller.branchId) {
         throw new ForbiddenException("Bu xodim sizning filialingizda emas");
       }
-      if (target.role !== "MANAGER" && target.role !== "TEACHER") {
+      if (target.role !== "MANAGER" && target.role !== "TEACHER" && target.role !== "CHEF") {
         throw new ForbiddenException("Bu xodimni boshqarish huquqingiz yo'q");
       }
       return target;

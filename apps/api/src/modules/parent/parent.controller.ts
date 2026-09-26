@@ -176,6 +176,21 @@ export class ParentController {
     res.setHeader("Content-Type", record.avatarMimeType ?? "image/jpeg");
     res.send(Buffer.from(record.avatar));
   }
+
+  /** Oshpaz yuklagan taom surati — "Bugungi ovqat" bo'limida ko'rsatiladi. */
+  @Get("children/:childId/menu-photos/:photoId")
+  @Header("Cache-Control", "private, max-age=86400")
+  @UseGuards(ParentJwtAuthGuard)
+  async menuPhoto(
+    @CurrentParent() parent: AuthenticatedParent,
+    @Param("childId") childId: string,
+    @Param("photoId") photoId: string,
+    @Res() res: Response,
+  ) {
+    const photo = await this.parentService.readMenuPhoto(parent, childId, photoId);
+    res.setHeader("Content-Type", photo.mimeType);
+    res.send(Buffer.from(photo.image));
+  }
 }
 
 function requestMeta(req: Request) {

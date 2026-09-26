@@ -23,6 +23,7 @@ import { OrganizationsService } from "./organizations.service";
 import { CreateBranchDto } from "./dto/create-branch.dto";
 import { UpdateBranchDto } from "./dto/update-branch.dto";
 import { UpdateBranchAvatarDto } from "./dto/update-branch-avatar.dto";
+import { AllowChef } from "../iam/decorators/allow-chef.decorator";
 
 @ApiBearerAuth()
 @ApiTags("Tenant Organization")
@@ -31,6 +32,8 @@ import { UpdateBranchAvatarDto } from "./dto/update-branch-avatar.dto";
 @Controller("app/organizations")
 export class TenantOrganizationsController {
   constructor(private readonly organizationsService: OrganizationsService) {}
+
+  @AllowChef()
 
   @Get("me")
   async getCurrent(@CurrentTenantUser() user: TenantAuthenticatedUser) {
@@ -51,6 +54,8 @@ export class TenantOrganizationsController {
     }
     return this.organizationsService.addBranch(user.organizationId, dto);
   }
+
+  @AllowChef()
 
   @Get("me/branches/:branchId")
   getBranch(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("branchId") branchId: string) {
@@ -89,6 +94,7 @@ export class TenantOrganizationsController {
    * Rasmni binar ko'rinishda qaytaradi. `<img src>` shu manzilni ishlatadi,
    * shuning uchun javob umumiy `{ success, data }` qobig'iga o'ralmaydi.
    */
+  @AllowChef()
   @Get("me/branches/:branchId/avatar")
   @Header("Cache-Control", "private, max-age=60")
   async readBranchAvatar(
@@ -120,7 +126,7 @@ export class TenantOrganizationsController {
    */
   private requireBranchWriteAccess(user: TenantAuthenticatedUser, branchId: string) {
     this.requireBranchAccess(user, branchId);
-    if (user.role === "FINANCE" || user.role === "TEACHER") {
+    if (user.role === "FINANCE" || user.role === "TEACHER" || user.role === "CHEF") {
       throw new ForbiddenException("Filial ma'lumotlarini o'zgartirish huquqingiz yo'q");
     }
   }

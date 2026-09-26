@@ -10,6 +10,7 @@ import { CreateVaccinationDto } from "./dto/create-vaccination.dto";
 import { UpdateVaccinationDto } from "./dto/update-vaccination.dto";
 import { CreateMedicationLogDto } from "./dto/create-medication-log.dto";
 import { SetQuarantineDto } from "./dto/quarantine.dto";
+import { AllowChef } from "../iam/decorators/allow-chef.decorator";
 
 @ApiBearerAuth()
 @ApiTags("Tenant Child Health")
@@ -25,6 +26,7 @@ export class ChildHealthController {
   }
 
   /** Allergiyasi bor faol bolalar — Ovqatlanish sahifasidagi ogohlantirish uchun. */
+  @AllowChef()
   @Get("health/allergies")
   listAllergies(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query("branchId") branchId?: string) {
     return this.childHealthService.listAllergies(toTenantScope(user), branchId);

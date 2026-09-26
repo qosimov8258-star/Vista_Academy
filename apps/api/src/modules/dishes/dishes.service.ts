@@ -1,7 +1,8 @@
 import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
-import { TenantScope, requireOperationalScope } from "../iam/tenant-auth.types";
+import { TenantScope } from "../iam/tenant-auth.types";
+import { requireKitchenWriteScope } from "../nutrition/kitchen-scope";
 import { CreateDishDto } from "./dto/create-dish.dto";
 import { UpdateDishDto } from "./dto/update-dish.dto";
 
@@ -17,7 +18,7 @@ export class DishesService {
   }
 
   async create(scope: TenantScope, dto: CreateDishDto) {
-    requireOperationalScope(scope);
+    requireKitchenWriteScope(scope);
     try {
       return await this.prisma.dish.create({
         data: {
@@ -36,7 +37,7 @@ export class DishesService {
   }
 
   async update(scope: TenantScope, id: string, dto: UpdateDishDto) {
-    requireOperationalScope(scope);
+    requireKitchenWriteScope(scope);
     await this.requireDish(scope, id);
     try {
       return await this.prisma.dish.update({
@@ -56,7 +57,7 @@ export class DishesService {
   }
 
   async remove(scope: TenantScope, id: string) {
-    requireOperationalScope(scope);
+    requireKitchenWriteScope(scope);
     await this.requireDish(scope, id);
     await this.prisma.dish.delete({ where: { id } });
     return { id };

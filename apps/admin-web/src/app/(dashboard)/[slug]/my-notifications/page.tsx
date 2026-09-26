@@ -9,10 +9,14 @@ import { Card } from "@/components/ui/card";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { BellIcon } from "@/components/ui/icons";
 import { formatDateTime } from "@/lib/format";
+import { useAuth } from "@/lib/use-auth";
+import { isChef } from "@/lib/permissions";
 
 export default function MyNotificationsPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const queryClient = useQueryClient();
+  // Oshpazga dars jadvali haqida emas, unga yuborilgan xabarlar keladi
+  const chef = isChef(useAuth().user?.role);
 
   const notificationsQuery = useQuery({
     queryKey: ["employee-notifications", slug],
@@ -40,7 +44,9 @@ export default function MyNotificationsPage({ params }: { params: Promise<{ slug
             Bildirishnomalarim
           </h1>
           <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">
-            Dars jadvalingiz belgilanganda yoki o&apos;zgarganda shu yerga xabar tushadi
+            {chef
+              ? "Rahbariyat sizga yuborgan xabarlar shu yerga tushadi"
+              : "Dars jadvalingiz belgilanganda yoki o'zgarganda shu yerga xabar tushadi"}
           </p>
         </div>
         {unreadCount > 0 && (
@@ -58,7 +64,7 @@ export default function MyNotificationsPage({ params }: { params: Promise<{ slug
         <EmptyState
           icon={<BellIcon className="h-[26px] w-[26px]" />}
           title="Hozircha bildirishnoma yo'q"
-          description="Sizga dars jadvali belgilanganda shu yerda ko'rinadi"
+          description={chef ? "Sizga xabar yuborilganda shu yerda ko'rinadi" : "Sizga dars jadvali belgilanganda shu yerda ko'rinadi"}
         />
       ) : (
         <div className="space-y-2">

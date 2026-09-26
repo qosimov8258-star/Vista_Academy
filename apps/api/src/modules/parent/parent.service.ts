@@ -57,7 +57,7 @@ export class ParentService {
     const date = dateInput ?? todayDateString();
     const dateOnly = toDateOnly(date);
 
-    const [attendance, report, menu] = await Promise.all([
+    const [attendance, report, menu, menuPhotos] = await Promise.all([
       this.prisma.attendance.findUnique({
         where: { childId_date: { childId: child.id, date: dateOnly } },
         select: { status: true, note: true, parentReason: true },
@@ -78,6 +78,12 @@ export class ParentService {
         where: { branchId_date: { branchId: child.branchId, date: dateOnly } },
         select: { breakfast: true, lunch: true, snack: true },
       }),
+      // Oshpaz yuklagan taom suratlari — faqat ro'yxat, surat alohida so'raladi
+      this.prisma.menuPhoto.findMany({
+        where: { branchId: child.branchId, date: dateOnly },
+        select: { id: true, meal: true },
+        orderBy: { createdAt: "asc" },
+      }),
     ]);
 
     return {
@@ -93,7 +99,21 @@ export class ParentService {
         : null,
       report,
       menu,
+      menuPhotos,
     };
+  }
+
+  /** Taom surati — faqat bolaning filialiga tegishli bo'lsa beriladi */
+  async readMenuPhoto(parent: AuthenticatedParent, childId: string, photoId: string) {
+    const child = await this.assertOwnsChild(parent, childId);
+    const photo = await this.prisma.menuPhoto.findFirst({
+      where: { id: photoId, branchId: child.branchId },
+      select: { image: true, mimeType: true },
+    });
+    if (!photo) {
+      throw new NotFoundException("Rasm topilmadi");
+    }
+    return photo;
   }
 
   /** Oxirgi kunlar davomati — kabinetdagi kichik chiziq uchun. */

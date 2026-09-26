@@ -15,8 +15,8 @@ import { useAuth } from "@/lib/use-auth";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { useSidebarCollapsed } from "@/lib/use-sidebar-collapsed";
 import { useSidebarSections } from "@/lib/use-sidebar-sections";
-import { ROLE_LABEL, canManageUsers, canViewUseful, isTeacher } from "@/lib/permissions";
-import { formatPositionLabel, isAssistantPosition, isCashierPosition, isHeadChefPosition, isSubjectTeacherPosition } from "@/lib/employee-position";
+import { ROLE_LABEL, canManageUsers, canViewUseful, isChef, isTeacher, receivesEmployeeNotifications } from "@/lib/permissions";
+import { formatPositionLabel, isAssistantPosition, isCashierPosition, isSubjectTeacherPosition } from "@/lib/employee-position";
 import { Avatar } from "@/components/ui/avatar";
 import type { IconProps } from "@/components/ui/icons";
 import {
@@ -140,7 +140,7 @@ export function Sidebar({ slug }: { slug: string }) {
   const showUseful = canViewUseful(user?.role);
   const teacher = isTeacher(user?.role);
   const isSubjectTeacher = !!user?.position && isSubjectTeacherPosition(user.position);
-  const isHeadChef = !!user?.position && isHeadChefPosition(user.position);
+  const chef = isChef(user?.role);
   const isAssistant = !!user?.position && isAssistantPosition(user.position);
   const isCashier = !!user?.position && isCashierPosition(user.position);
   const isManager = user?.role === "MANAGER";
@@ -148,7 +148,7 @@ export function Sidebar({ slug }: { slug: string }) {
   const notificationsQuery = useQuery({
     queryKey: ["employee-notifications", slug],
     queryFn: () => api.get<EmployeeNotification[]>("/app/employee-notifications"),
-    enabled: teacher,
+    enabled: receivesEmployeeNotifications(user?.role),
     refetchInterval: 60_000,
   });
   const unreadNotificationsCount = notificationsQuery.data?.filter((n) => !n.isRead).length ?? 0;
@@ -408,7 +408,7 @@ export function Sidebar({ slug }: { slug: string }) {
     show: true,
   };
 
-  const entries = (isCashier ? cashierEntries : teacher ? (isHeadChef ? chefEntries : isAssistant ? assistantEntries : teacherEntries) : isNetworkAdmin && !inBranchContext ? rootEntries : operationalEntries)
+  const entries = (chef ? chefEntries : isCashier ? cashierEntries : teacher ? (isAssistant ? assistantEntries : teacherEntries) : isNetworkAdmin && !inBranchContext ? rootEntries : operationalEntries)
     .map((entry) =>
       isSection(entry) ? { ...entry, items: entry.items.filter((item) => item.show) } : entry,
     )

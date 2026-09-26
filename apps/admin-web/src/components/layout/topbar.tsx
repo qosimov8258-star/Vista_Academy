@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { EmployeeNotification } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
-import { isTeacher } from "@/lib/permissions";
+import { isChef, receivesEmployeeNotifications } from "@/lib/permissions";
 import { BellIcon } from "@/components/ui/icons";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 
@@ -22,20 +22,22 @@ import { LanguageSwitcher } from "@/components/ui/language-switcher";
  */
 export function Topbar({ slug }: { slug: string }) {
   const { user } = useAuth();
-  const teacher = isTeacher(user?.role);
+  const showNotifications = receivesEmployeeNotifications(user?.role);
+  // Oshpazda telefonda pastki panel bor: menyu tugmasi va qo'ng'iroqcha takrorlanmaydi
+  const chef = isChef(user?.role);
   const t = useTranslations("sidebar");
 
   const notificationsQuery = useQuery({
     queryKey: ["employee-notifications", slug],
     queryFn: () => api.get<EmployeeNotification[]>("/app/employee-notifications"),
-    enabled: teacher,
+    enabled: showNotifications,
     refetchInterval: 60_000,
   });
   const unreadCount = notificationsQuery.data?.filter((n) => !n.isRead).length ?? 0;
 
   return (
     <header className="hairline flex h-[60px] shrink-0 items-center gap-3 border-b border-[var(--color-separator)] bg-[var(--color-surface)]/80 px-4 backdrop-blur-[20px] md:px-6">
-      {user && (
+      {user && !chef && (
         <button
           type="button"
           onClick={() => window.dispatchEvent(new Event("open-mobile-menu"))}
@@ -53,7 +55,7 @@ export function Topbar({ slug }: { slug: string }) {
         </p>
       )}
       <div id="topbar-actions" className="ml-auto flex items-center gap-2 md:hidden" />
-      {teacher && (
+      {showNotifications && !chef && (
         <Link
           href={`/${slug}/my-notifications`}
           aria-label={t("notificationsAria")}

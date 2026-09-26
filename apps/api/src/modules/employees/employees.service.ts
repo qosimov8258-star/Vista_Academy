@@ -42,10 +42,12 @@ const CASHIER_POSITION = "kassir";
 const GROUP_REQUIRED_MESSAGE = "Kamida bitta guruh tanlang";
 
 // Administrator MANAGER roli bilan kiradi: qarzdorlarga eslatma va filial ishlarini yuritadi.
-function roleForPosition(position: string): "FINANCE" | "MANAGER" | "TEACHER" {
+// Bosh oshpaz CHEF roli bilan kiradi: faqat oshxona (menyu, porsiyalar, taom suratlari).
+function roleForPosition(position: string): "FINANCE" | "MANAGER" | "TEACHER" | "CHEF" {
   const normalized = normalizePosition(position);
   if (normalized === CASHIER_POSITION) return "FINANCE";
   if (normalized === "administrator") return "MANAGER";
+  if (normalized === "bosh oshpaz") return "CHEF";
   return "TEACHER";
 }
 
