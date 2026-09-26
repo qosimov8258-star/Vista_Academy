@@ -1,6 +1,3 @@
-import { mkdirSync } from "fs";
-import { extname } from "path";
-import { randomUUID } from "crypto";
 import {
   BadRequestException,
   Body,
@@ -16,15 +13,13 @@ import {
   UseGuards,
   UseInterceptors,
 } from "@nestjs/common";
-import { FileInterceptor } from "@nestjs/platform-express";
-import { diskStorage } from "multer";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { PlatformUserRole } from "@prisma/client";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 import { RolesGuard } from "../../common/guards/roles.guard";
 import { Roles } from "../../common/decorators/roles.decorator";
-import { LANDING_UPLOAD_DIR } from "../../common/constants/uploads";
 import { LandingService } from "./landing.service";
+import { landingPhotoUploadInterceptor } from "./landing-upload.util";
 import { CreateScheduleItemDto } from "./dto/create-schedule-item.dto";
 import { UpdateScheduleItemDto } from "./dto/update-schedule-item.dto";
 import { CreateMealDto } from "./dto/create-meal.dto";
@@ -32,30 +27,6 @@ import { UpdateMealDto } from "./dto/update-meal.dto";
 import { CreateTeacherDto } from "./dto/create-teacher.dto";
 import { UpdateTeacherDto } from "./dto/update-teacher.dto";
 import { UpdateContentBlockDto } from "./dto/update-content-block.dto";
-
-const PHOTO_MIME_PATTERN = /^image\/(jpeg|png|webp|gif)$/;
-const PHOTO_MAX_SIZE = 5 * 1024 * 1024;
-
-const photoUploadInterceptor = () =>
-  FileInterceptor("file", {
-    storage: diskStorage({
-      destination: (_req, _file, cb) => {
-        mkdirSync(LANDING_UPLOAD_DIR, { recursive: true });
-        cb(null, LANDING_UPLOAD_DIR);
-      },
-      filename: (_req, file, cb) => {
-        cb(null, `${randomUUID()}${extname(file.originalname) || ".jpg"}`);
-      },
-    }),
-    limits: { fileSize: PHOTO_MAX_SIZE },
-    fileFilter: (_req, file, cb) => {
-      if (!PHOTO_MIME_PATTERN.test(file.mimetype)) {
-        cb(new BadRequestException("Faqat rasm fayllari qabul qilinadi (jpeg, png, webp, gif)"), false);
-        return;
-      }
-      cb(null, true);
-    },
-  });
 
 /**
  * Lending sahifa (landing-web) kontentini boshqarish — Platform Super Admin
@@ -122,7 +93,7 @@ export class LandingAdminController {
   @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN)
   @Post("meals/:id/photo")
   @HttpCode(HttpStatus.OK)
-  @UseInterceptors(photoUploadInterceptor())
+  @UseInterceptors(landingPhotoUploadInterceptor())
   async uploadMealPhoto(@Param("id") id: string, @UploadedFile() file?: Express.Multer.File) {
     if (!file) {
       throw new BadRequestException("Fayl yuborilmadi");
@@ -158,7 +129,7 @@ export class LandingAdminController {
   @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN)
   @Post("teachers/:id/photo")
   @HttpCode(HttpStatus.OK)
-  @UseInterceptors(photoUploadInterceptor())
+  @UseInterceptors(landingPhotoUploadInterceptor())
   async uploadTeacherPhoto(@Param("id") id: string, @UploadedFile() file?: Express.Multer.File) {
     if (!file) {
       throw new BadRequestException("Fayl yuborilmadi");
@@ -182,7 +153,7 @@ export class LandingAdminController {
   @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN)
   @Post("content-blocks/:key/photo")
   @HttpCode(HttpStatus.OK)
-  @UseInterceptors(photoUploadInterceptor())
+  @UseInterceptors(landingPhotoUploadInterceptor())
   async uploadContentBlockPhoto(@Param("key") key: string, @UploadedFile() file?: Express.Multer.File) {
     if (!file) {
       throw new BadRequestException("Fayl yuborilmadi");

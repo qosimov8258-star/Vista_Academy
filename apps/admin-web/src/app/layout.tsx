@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Baloo_2 } from "next/font/google";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages } from "next-intl/server";
 import { QueryProvider } from "@/lib/query-provider";
 import "./globals.css";
 
@@ -14,11 +16,16 @@ export const metadata: Metadata = {
   description: "Tarmoq va filial boshqaruvi",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+
   return (
-    <html lang="uz" className={baloo2.variable}>
+    <html lang={locale} className={baloo2.variable}>
       <body>
-        <QueryProvider>{children}</QueryProvider>
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <QueryProvider>{children}</QueryProvider>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

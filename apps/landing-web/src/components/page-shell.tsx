@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import Image from "next/image";
 import { SiteHeader } from "./site-header";
 import { Footer } from "./footer";
+import { Reveal } from "./reveal";
 
 /**
  * "Guruhlarimiz" ochiladigan menyusidagi har bir bo'lim sahifasi bir xil
@@ -10,8 +10,16 @@ import { Footer } from "./footer";
  * kengligida, chekkadan-chekkagacha rasm ustiga sarlavha yoziladi.
  */
 type HeroImage =
-  | { src: string; alt: string; position?: string; background?: never; placeholder?: never }
-  | { src?: undefined; alt: string; position?: never; background?: string; placeholder: ReactNode };
+  | {
+      src: string;
+      alt: string;
+      position?: string;
+      /** `cover` (standart) — rasm butun joyni to'ldirib, chekkalari kesiladi. `contain` — rasm hech kesilmasdan to'liq ko'rinadi, bo'sh joy `background` bilan to'ldiriladi (masalan, admindan yuklangan, o'lchami noma'lum rasmlar uchun). */
+      fit?: "cover" | "contain";
+      background?: string;
+      placeholder?: never;
+    }
+  | { src?: undefined; alt: string; position?: never; fit?: never; background?: string; placeholder: ReactNode };
 
 export function PageShell({
   eyebrow,
@@ -37,19 +45,13 @@ export function PageShell({
       <SiteHeader />
 
       {heroImage && (
-        <div
-          className="relative h-[360px] w-full overflow-hidden sm:h-[440px] lg:h-[520px]"
-          style={!heroImage.src ? { background: heroImage.background ?? "var(--color-tint)" } : undefined}
-        >
+        <Reveal direction="up" className="relative h-[360px] w-full overflow-hidden sm:h-[440px] lg:h-[520px]" style={heroImage.background || !heroImage.src ? { background: heroImage.background ?? "var(--color-tint)" } : undefined}>
           {heroImage.src ? (
-            <Image
+            // eslint-disable-next-line @next/next/no-img-element -- statik yoki API'dan kelgan dinamik rasm
+            <img
               src={heroImage.src}
               alt={heroImage.alt}
-              fill
-              sizes="100vw"
-              priority
-              quality={90}
-              className="object-cover"
+              className={`absolute inset-0 h-full w-full ${heroImage.fit === "contain" ? "object-contain" : "object-cover"}`}
               style={{ objectPosition: heroImage.position ?? "50% 0%" }}
             />
           ) : (
@@ -59,7 +61,7 @@ export function PageShell({
           <div className="absolute inset-0 flex flex-col items-center justify-end px-6 pb-10 text-center sm:pb-12 lg:flex-row lg:items-center lg:justify-start lg:px-16 lg:pb-0 lg:text-left">
             <div className="lg:max-w-[440px]">
               <p className="text-[13px] font-bold uppercase tracking-[0.08em] text-white/90">{eyebrow}</p>
-              <h1 className="font-heading mt-2 text-[30px] font-bold leading-tight tracking-tight text-white sm:text-[40px]">
+              <h1 className="font-heading mt-2 text-[22px] font-bold leading-tight tracking-tight text-white sm:text-[34px] lg:text-[40px]">
                 {title}
               </h1>
               {description && (
@@ -69,7 +71,7 @@ export function PageShell({
               )}
             </div>
           </div>
-        </div>
+        </Reveal>
       )}
 
       {belowHero && <div className="mx-auto max-w-[1120px] px-4 pt-10 sm:pt-12">{belowHero}</div>}
@@ -82,17 +84,17 @@ export function PageShell({
         }
       >
         {!heroImage && (
-          <div className="mx-auto mt-8 max-w-[720px] text-center">
+          <Reveal direction="up" className="mx-auto mt-8 max-w-[720px] text-center">
             <p className="text-[13px] font-bold uppercase tracking-[0.08em]" style={{ color: "var(--color-blue)" }}>
               {eyebrow}
             </p>
-            <h1 className="font-heading mt-3 text-[30px] font-bold leading-tight tracking-tight text-[var(--color-text)] sm:text-[36px]">
+            <h1 className="font-heading mt-3 text-[22px] font-bold leading-tight tracking-tight text-[var(--color-text)] sm:text-[30px] lg:text-[36px]">
               {title}
             </h1>
             {description && (
               <p className="mt-4 text-[16px] leading-relaxed text-[var(--color-text-muted)]">{description}</p>
             )}
-          </div>
+          </Reveal>
         )}
 
         <div className="mt-12">{children}</div>

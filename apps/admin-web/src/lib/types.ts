@@ -196,6 +196,46 @@ export interface CreateEmployeeResult {
   credentials: EmployeeCredentials | null;
 }
 
+export type FaceIdDeviceStatus = "ACTIVE" | "INACTIVE" | "MAINTENANCE";
+export type FaceEnrollmentStatus = "PENDING" | "REGISTERED" | "FAILED" | "REMOVED";
+export type FacePersonType = "EMPLOYEE" | "CHILD";
+
+/** Face ID qurilmasi — masalan Hikvision DS-K1T342MX turniket terminali. */
+export interface FaceIdDevice {
+  id: string;
+  organizationId: string;
+  branchId: string;
+  name: string;
+  model: string;
+  serialNumber: string | null;
+  ipAddress: string | null;
+  location: string | null;
+  status: FaceIdDeviceStatus;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  branch?: { id: string; name: string };
+}
+
+/** Xodim yoki bolaning bitta qurilmada yuzini ro'yxatga olish holati. */
+export interface FaceEnrollment {
+  id: string;
+  organizationId: string;
+  branchId: string;
+  deviceId: string;
+  personType: FacePersonType;
+  employeeId: string | null;
+  childId: string | null;
+  status: FaceEnrollmentStatus;
+  notes: string | null;
+  registeredAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  device: { id: string; name: string };
+  employee?: { id: string; fullName: string; avatarUpdatedAt: string | null } | null;
+  child?: { id: string; fullName: string; avatarUpdatedAt: string | null; gender: "MALE" | "FEMALE" | null } | null;
+}
+
 export type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "SICK";
 
 export interface AttendanceChild {
@@ -1093,4 +1133,69 @@ export interface Tale {
   group: UsefulGroupRef | null;
   createdAt: string;
   updatedAt: string;
+}
+
+// --- Lending sahifa (landing-web) ---------------------------------------------
+// `GET /app/landing/...` orqali o'qiladi (ochiq), `POST/PATCH/DELETE` esa shu
+// yerdan — "Lending sahifa" bo'limi orqali kiritiladi. Kontent global: barcha
+// tashkilotlar bitta umumiy landing-web saytini ko'radi.
+
+export interface LandingTeacher {
+  id: string;
+  fullName: string;
+  role: string;
+  bio: string | null;
+  experience: string | null;
+  photoPath: string | null;
+  order: number;
+}
+
+export type LandingMealType = "BREAKFAST" | "LUNCH" | "SNACK" | "DINNER" | "OTHER";
+
+export type LandingWeekday = "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY" | "SUNDAY";
+
+export interface LandingMeal {
+  id: string;
+  title: string;
+  description: string | null;
+  mealType: LandingMealType;
+  weekday: LandingWeekday | null;
+  time: string | null;
+  photoPath: string | null;
+  order: number;
+}
+
+/** Guruh sahifasidagi (saytda) galereya rasmi — kartochkadagi `photoPath`dan alohida. */
+export interface LandingGroupPhoto {
+  id: string;
+  path: string;
+  order: number;
+}
+
+/** Guruh sahifasidagi "N-o'quvchi" joylaridan biriga kiritilgan haqiqiy o'quvchi. */
+export interface LandingGroupStudent {
+  id: string;
+  name: string;
+  bio: string | null;
+  photoPath: string | null;
+  order: number;
+}
+
+export interface LandingGroup {
+  id: string;
+  name: string;
+  slug: string;
+  photoPath: string | null;
+  order: number;
+  photos: LandingGroupPhoto[];
+  students: LandingGroupStudent[];
+}
+
+/** "O'qituvchilar" sahifasidagi yumaloq rasmli maxsus bloklar ("maxsus-oqituvchi-1/2"). */
+export interface LandingContentBlock {
+  id: string;
+  key: string;
+  title: string;
+  body: string;
+  photoPath: string | null;
 }

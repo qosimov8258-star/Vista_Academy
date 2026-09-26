@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { PageShell } from "./page-shell";
 import { fetchLanding, assetUrl } from "@/lib/api";
 import type { LandingContentBlock } from "@/lib/types";
+import { Reveal } from "./reveal";
 
 /**
  * "Doimiy tarbiyachi" va "Ta'lim yo'nalishi" bir xil qolipda: sarlavha,
@@ -31,12 +32,14 @@ export async function ContentBlockView({
     <PageShell eyebrow={eyebrow} title={title} heroImage={heroImage} afterContent={afterContent}>
       <div className="mx-auto max-w-[680px] space-y-6 text-center">
         {block?.photoPath && (
-          <div className="overflow-hidden rounded-[var(--radius-xl)] shadow-[var(--shadow-card)]">
+          <Reveal direction="up" className="overflow-hidden rounded-[var(--radius-xl)] shadow-[var(--shadow-card)]">
             {/* eslint-disable-next-line @next/next/no-img-element -- API'dan kelgan dinamik rasm */}
             <img src={assetUrl(block.photoPath) ?? undefined} alt={title} className="h-auto w-full object-cover" />
-          </div>
+          </Reveal>
         )}
-        <p className="whitespace-pre-line text-[16px] leading-relaxed text-[var(--color-text-muted)]">{body}</p>
+        <Reveal direction="up" delay={120} className="whitespace-pre-line text-[16px] leading-relaxed text-[var(--color-text-muted)]">
+          {body}
+        </Reveal>
       </div>
     </PageShell>
   );

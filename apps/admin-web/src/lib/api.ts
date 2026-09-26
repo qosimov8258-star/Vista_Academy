@@ -1,6 +1,7 @@
 import { clearTenantTokens, getTenantAccessToken, getTenantRefreshToken, setTenantTokens } from "./tenant-session";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
+const API_ORIGIN = API_URL.replace(/\/api\/v1\/?$/, "");
 
 export class ApiError extends Error {
   code: string;
@@ -84,6 +85,40 @@ async function request<T>(path: string, options: RequestInit = {}, retry = true)
   return body.data as T;
 }
 
+async function upload<T>(path: string, file: File, retry = true): Promise<T> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const accessToken = getTenantAccessToken();
+
+  // Content-Type ni qo'lda qo'ymaymiz — brauzer multipart boundary'ni o'zi qo'shadi.
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "POST",
+    credentials: "include",
+    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+    body: formData,
+  });
+
+  if (res.status === 401 && retry) {
+    const refreshed = await tryRefresh();
+    if (refreshed) {
+      return upload<T>(path, file, false);
+    }
+  }
+
+  const isJson = res.headers.get("content-type")?.includes("application/json");
+  const body: Envelope<T> | null = isJson ? await res.json().catch(() => null) : null;
+
+  if (!res.ok || !body?.success) {
+    const error = body?.error;
+    if (res.status === 401) {
+      throw new ApiError(401, "UNAUTHORIZED", "Sessiya muddati tugadi. Sahifani yangilang va qaytadan urinib ko'ring.");
+    }
+    throw new ApiError(res.status, error?.code ?? "ERROR", error?.message ?? res.statusText, error?.details);
+  }
+
+  return body.data as T;
+}
+
 export const api = {
   get: <T>(path: string, init?: RequestInit) => request<T>(path, { method: "GET", ...init }),
   post: <T>(path: string, data?: unknown) =>
@@ -93,7 +128,15 @@ export const api = {
   put: <T>(path: string, data?: unknown) =>
     request<T>(path, { method: "PUT", body: data !== undefined ? JSON.stringify(data) : undefined }),
   delete: <T>(path: string, init?: RequestInit) => request<T>(path, { method: "DELETE", ...init }),
+  upload: <T>(path: string, file: File) => upload<T>(path, file),
 };
+
+/** Backend faqat "/uploads/..." kabi nisbiy yo'l qaytaradi — to'liq manzilga aylantiradi. */
+export function assetUrl(path?: string | null): string | null {
+  if (!path) return null;
+  if (/^https?:\/\//.test(path)) return path;
+  return `${API_ORIGIN}${path}`;
+}
 
 export interface Paginated<T> {
   data: T[];

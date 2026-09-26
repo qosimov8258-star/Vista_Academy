@@ -4,6 +4,7 @@ import { PrismaService } from "../../database/prisma.service";
 import { TenantAuthenticatedUser, TenantScope, requireOperationalScope, toTenantScope } from "../iam/tenant-auth.types";
 import { assertTeacherOwnsChild, resolveTeacherGroupIds, teacherChildWhere } from "../iam/teacher-scope";
 import { AuditLogService } from "../audit-log/audit-log.service";
+import { FaceIdService } from "../face-id/face-id.service";
 import { CreateChildDto } from "./dto/create-child.dto";
 import { UpdateChildDto } from "./dto/update-child.dto";
 import { ChildQueryDto } from "./dto/child-query.dto";
@@ -28,6 +29,7 @@ export class ChildrenService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLog: AuditLogService,
+    private readonly faceIdService: FaceIdService,
   ) {}
 
   async create(caller: TenantAuthenticatedUser, dto: CreateChildDto) {
@@ -69,6 +71,10 @@ export class ChildrenService {
       branchId,
       summary: `${created.child.fullName} ro'yxatga olindi`,
     });
+    await this.faceIdService.autoEnrollNewPerson(
+      { organizationId: scope.organizationId, branchId },
+      { personType: "CHILD", childId: created.child.id },
+    );
     return { ...created.child, credentials: created.credentials };
   }
 

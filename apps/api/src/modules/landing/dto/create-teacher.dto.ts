@@ -12,10 +12,15 @@ export class CreateTeacherDto {
   @MinLength(2)
   role!: string;
 
-  @ApiPropertyOptional({ example: "10 yillik tajribaga ega, ingliz tili bo'yicha sertifikatlangan" })
+  @ApiPropertyOptional({ example: "Har bir bola menga o'z farzandimdek aziz." })
   @IsOptional()
   @IsString()
   bio?: string;
+
+  @ApiPropertyOptional({ example: "10 yillik tajribaga ega, ingliz tili bo'yicha xalqaro sertifikatlangan (IELTS 8.0)." })
+  @IsOptional()
+  @IsString()
+  experience?: string;
 
   @ApiPropertyOptional({ example: 0 })
   @IsOptional()

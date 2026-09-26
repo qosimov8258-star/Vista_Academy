@@ -1,0 +1,71 @@
+{
+  "common": {
+    "language": "Язык",
+    "languages": {
+      "uz": "O'zbekcha",
+      "ru": "Русский",
+      "en": "English"
+    }
+  },
+  "sidebar": {
+    "expand": "Развернуть панель",
+    "collapse": "Свернуть панель",
+    "logout": "Выйти",
+    "logoutAria": "Выйти из системы",
+    "notificationsAria": "Мои уведомления",
+    "nav": {
+      "home": "Главная",
+      "branches": "Филиалы",
+      "groups": "Группы",
+      "students": "Учащиеся",
+      "finance": "Финансы",
+      "reports": "Отчёты",
+      "employees": "Сотрудники",
+      "myNotifications": "Мои уведомления",
+      "myGroups": "Мои группы",
+      "attendance": "Посещаемость",
+      "dailyReport": "Ежедневный отчёт",
+      "children": "Дети",
+      "extraLessons": "Дополнительные уроки",
+      "lessonSchedules": "Расписания уроков",
+      "qna": "Вопрос-ответ",
+      "grades": "Оценки",
+      "useful": "Полезное",
+      "poems": "Стихи",
+      "proverbs": "Пословицы",
+      "tales": "Сказки",
+      "admissionAndChildren": "Приём и дети",
+      "crm": "Заявки (CRM)",
+      "employeeList": "Список сотрудников",
+      "hr": "Зарплата (HR)",
+      "staffAttendance": "Посещаемость сотрудников",
+      "dailyWork": "Ежедневная работа",
+      "nutrition": "Питание",
+      "lessonSchedule": "Расписание уроков",
+      "faceId": "Face ID",
+      "devices": "Устройства",
+      "faceRegistry": "Реестр лиц",
+      "coin": "Coin",
+      "shop": "Магазин",
+      "financeAndContact": "Финансы и связь",
+      "notifications": "Уведомления",
+      "admins": "Администраторы",
+      "landingPage": "Лендинг-страница",
+      "teachers": "Учителя",
+      "menu": "Меню",
+      "settings": "Настройки"
+    }
+  },
+  "login": {
+    "panelSubtitle": "Панель управления",
+    "title": "Добро пожаловать!",
+    "subtitle": "Введите свои данные для входа в панель управления.",
+    "loginLabel": "Логин",
+    "passwordLabel": "Пароль",
+    "submit": "Войти",
+    "forgotPassword": "Забыли пароль? Обратитесь к супер-администратору организации.",
+    "loginRequired": "Логин обязателен",
+    "passwordMin": "Минимум 8 символов",
+    "unexpectedError": "Произошла непредвиденная ошибка"
+  }
+}

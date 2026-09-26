@@ -15,6 +15,7 @@
   --color-yellow-dark: #e0a600;
   --color-tint: #eef6fb;
   --color-tint-green: #e8f5e2;
+  --color-tint-cream: #faf1de;
 
   --radius-md: 14px;
   --radius-lg: 20px;
@@ -85,5 +86,44 @@ body {
   }
   to {
     transform: translateX(-50%);
+  }
+}
+
+/* Sahifaga kirganda / skroll qilganda hamma rasm va bloklar sekin,
+   zig-zag tarzda (chapdan-o'ngdan navbat bilan) joylashib boradi. */
+.reveal {
+  opacity: 0;
+  transition:
+    opacity 1000ms var(--ease-out),
+    transform 1000ms var(--ease-out);
+  will-change: opacity, transform;
+}
+
+.reveal-left {
+  transform: translate3d(-56px, 24px, 0);
+}
+
+.reveal-right {
+  transform: translate3d(56px, 24px, 0);
+}
+
+.reveal-up {
+  transform: translate3d(0, 56px, 0);
+}
+
+.reveal-down {
+  transform: translate3d(0, -40px, 0);
+}
+
+.reveal-visible {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
   }
 }

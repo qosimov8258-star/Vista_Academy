@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { usePathname, useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type SyntheticEvent } from "react";
+import { useTranslations } from "next-intl";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import type { EmployeeNotification } from "@/lib/types";
 import { clearTenantTokens, getTenantRefreshToken } from "@/lib/tenant-session";
 import clsx from "clsx";
@@ -31,6 +33,8 @@ import {
   ChevronRightIcon,
   ChildIcon,
   CoinIcon,
+  FaceIdIcon,
+  GlobeIcon,
   GroupIcon,
   HomeIcon,
   KeyIcon,
@@ -98,6 +102,7 @@ function Badge({ value, tone = "warning" }: { value: number; tone?: NavLeaf["bad
 export function Sidebar({ slug }: { slug: string }) {
   const pathname = usePathname();
   const router = useRouter();
+  const t = useTranslations("sidebar");
   const queryClient = useQueryClient();
   const [loggingOut, setLoggingOut] = useState(false);
   const { user } = useAuth();
@@ -170,31 +175,31 @@ export function Sidebar({ slug }: { slug: string }) {
     item.exact ? currentPath === item.href : currentPath.startsWith(item.href);
 
   const rootEntries: NavEntry[] = [
-    { href: `/${slug}`, label: "Bosh sahifa", icon: HomeIcon, show: true, exact: true },
-    { href: `/${slug}/branches`, label: "Filiallar", icon: BuildingIcon, show: true },
+    { href: `/${slug}`, label: t("nav.home"), icon: HomeIcon, show: true, exact: true },
+    { href: `/${slug}/branches`, label: t("nav.branches"), icon: BuildingIcon, show: true },
     // Tarmoq bo'ylab ko'rinishlar: barcha filiallarning guruh va bolalari
     // bitta ro'yxatda. Filial darajasidagi `/groups`, `/children` sahifalari
     // bulardan alohida — ular filial xodimlarining kundalik ish joyi.
-    { href: `/${slug}/network/groups`, label: "Guruhlar", icon: GroupIcon, show: true },
-    { href: `/${slug}/network/children`, label: "O'quvchilar", icon: ChildIcon, show: true },
-    { href: `/${slug}/network/finance`, label: "Moliya", icon: MoneyIcon, show: true },
+    { href: `/${slug}/network/groups`, label: t("nav.groups"), icon: GroupIcon, show: true },
+    { href: `/${slug}/network/children`, label: t("nav.students"), icon: ChildIcon, show: true },
+    { href: `/${slug}/network/finance`, label: t("nav.finance"), icon: MoneyIcon, show: true },
     // Filial bo'yicha to'liq hisobot. Sahifaning o'zida filial tanlanadi,
     // shuning uchun yon panelda bitta havola yetarli.
-    { href: `/${slug}/report`, label: "Ma'lumotlar", icon: ChartIcon, show: true },
+    { href: `/${slug}/report`, label: t("nav.reports"), icon: ChartIcon, show: true },
     // Super Admin har bir filialga admin va moliyachi tayinlaydi, shuning uchun
     // bu bo'lim uning asosiy ro'yxatida turishi shart. Filial ichiga
     // kirilganda ko'rinmaydi — u yerda filialning kundalik ishi turadi.
-    { href: `/${slug}/users`, label: "Xodimlar", icon: TeacherIcon, show: showUsersNav },
+    { href: `/${slug}/users`, label: t("nav.employees"), icon: TeacherIcon, show: showUsersNav },
   ];
 
   // O'qituvchi kabineti: faqat o'z guruhlariga tegishli uchta bo'lim.
   // Qolgan modullar (moliya, xodimlar, CRM, ...) unga ko'rinmaydi ham,
   // ochilmaydi ham — server tomonda ham yopiq.
   const chefEntries: NavEntry[] = [
-    { href: `/${slug}`, label: "Bosh sahifa", icon: HomeIcon, show: true, exact: true },
+    { href: `/${slug}`, label: t("nav.home"), icon: HomeIcon, show: true, exact: true },
     {
       href: `/${slug}/my-notifications`,
-      label: "Bildirishnomalarim",
+      label: t("nav.myNotifications"),
       icon: BellIcon,
       show: true,
       badge: unreadNotificationsCount > 0 ? unreadNotificationsCount : undefined,
@@ -208,23 +213,23 @@ export function Sidebar({ slug }: { slug: string }) {
     ...chefEntries.filter((e) => isSection(e) || !e.href.endsWith("/nutrition")),
     {
       id: "guruhlarim",
-      label: "Mening guruhlarim",
+      label: t("nav.myGroups"),
       icon: GroupIcon,
       items: [
-        { href: `/${slug}/attendance`, label: "Davomat", icon: ChecklistIcon, show: true },
-        { href: `/${slug}/children`, label: "Bolalar", icon: ChildIcon, show: true },
-        { href: `/${slug}/my-lessons/schedule`, label: "Dars jadvali", icon: CalendarIcon, show: true },
+        { href: `/${slug}/attendance`, label: t("nav.attendance"), icon: ChecklistIcon, show: true },
+        { href: `/${slug}/children`, label: t("nav.children"), icon: ChildIcon, show: true },
+        { href: `/${slug}/my-lessons/schedule`, label: t("nav.lessonSchedule"), icon: CalendarIcon, show: true },
       ],
     },
     // Tarbiyachining vaqti bo'lmasa yordamchi she'r/maqol/ertak qo'shadi; har birida kim yozgani ko'rinadi.
     {
       id: "foydali",
-      label: "Foydali",
+      label: t("nav.useful"),
       icon: BulbIcon,
       items: [
-        { href: `/${slug}/useful/poems`, label: "She'rlar", icon: NoteIcon, show: showUseful },
-        { href: `/${slug}/useful/proverbs`, label: "Maqollar", icon: BulbIcon, show: showUseful },
-        { href: `/${slug}/useful/tales`, label: "Ertaklar", icon: BookIcon, show: showUseful },
+        { href: `/${slug}/useful/poems`, label: t("nav.poems"), icon: NoteIcon, show: showUseful },
+        { href: `/${slug}/useful/proverbs`, label: t("nav.proverbs"), icon: BulbIcon, show: showUseful },
+        { href: `/${slug}/useful/tales`, label: t("nav.tales"), icon: BookIcon, show: showUseful },
       ],
     },
   ];
@@ -252,26 +257,26 @@ export function Sidebar({ slug }: { slug: string }) {
     ...chefEntries.filter((e) => isSection(e) || !e.href.endsWith("/nutrition")),
     {
       id: "guruhlarim",
-      label: "Mening guruhlarim",
+      label: t("nav.myGroups"),
       icon: GroupIcon,
       items: [
         // Fan o'qituvchisi kunlik emas, o'z darsi bo'yicha davomat qiladi
-        { href: isSubjectTeacher ? `/${slug}/lesson-attendance` : `/${slug}/attendance`, label: "Davomat", icon: ChecklistIcon, show: true },
-        { href: `/${slug}/children`, label: "Bolalar", icon: ChildIcon, show: !isSubjectTeacher },
+        { href: isSubjectTeacher ? `/${slug}/lesson-attendance` : `/${slug}/attendance`, label: t("nav.attendance"), icon: ChecklistIcon, show: true },
+        { href: `/${slug}/children`, label: t("nav.children"), icon: ChildIcon, show: !isSubjectTeacher },
         // Fan o'qituvchisida dars jadvali alohida "Qo'shimcha darsliklar" o'rniga shu yerda
-        { href: `/${slug}/my-lessons/schedule`, label: "Dars jadvali", icon: CalendarIcon, show: isSubjectTeacher },
+        { href: `/${slug}/my-lessons/schedule`, label: t("nav.lessonSchedule"), icon: CalendarIcon, show: isSubjectTeacher },
       ],
     },
     {
       id: "darsliklar",
-      label: "Qo'shimcha darsliklar",
+      label: t("nav.extraLessons"),
       icon: BookIcon,
       items: [
         // Filial admini/administratorning `/lessons/...` sahifalari bilan
         // bir xil URL bo'lmasligi uchun o'qituvchining kabineti alohida
         // `/my-lessons/...` manzilida turadi (ikkalasi ham o'sha bir
         // komponentni ko'rsatadi — cheklov rol bo'yicha serverda bo'ladi).
-        { href: `/${slug}/my-lessons/schedule`, label: "Dars jadvallari", icon: CalendarIcon, show: !isSubjectTeacher },
+        { href: `/${slug}/my-lessons/schedule`, label: t("nav.lessonSchedules"), icon: CalendarIcon, show: !isSubjectTeacher },
       ],
     },
     // Fan o'qituvchisiga she'r/maqol/ertak kerak emas — bu faqat tarbiyachilar uchun.
@@ -280,19 +285,19 @@ export function Sidebar({ slug }: { slug: string }) {
       : [
           {
             id: "foydali",
-            label: "Foydali",
+            label: t("nav.useful"),
             icon: BulbIcon,
             items: [
-              { href: `/${slug}/useful/poems`, label: "She'rlar", icon: NoteIcon, show: showUseful },
-              { href: `/${slug}/useful/proverbs`, label: "Maqollar", icon: BulbIcon, show: showUseful },
-              { href: `/${slug}/useful/tales`, label: "Ertaklar", icon: BookIcon, show: showUseful },
+              { href: `/${slug}/useful/poems`, label: t("nav.poems"), icon: NoteIcon, show: showUseful },
+              { href: `/${slug}/useful/proverbs`, label: t("nav.proverbs"), icon: BulbIcon, show: showUseful },
+              { href: `/${slug}/useful/tales`, label: t("nav.tales"), icon: BookIcon, show: showUseful },
             ],
           },
         ]),
   ];
 
   const operationalEntries: NavEntry[] = [
-    { href: base, label: "Bosh sahifa", icon: HomeIcon, show: true, exact: true },
+    { href: base, label: t("nav.home"), icon: HomeIcon, show: true, exact: true },
     // Administratorning kundalik ishi: qo'ng'iroqlar, olib ketish, bugungi holat.
     // Bu sahifalar faqat o'z filialiga biriktirilgan foydalanuvchi uchun ishlaydi
     // (backendda requireBranchScope NETWORK_ADMIN'ni rad etadi) — shuning uchun
@@ -311,66 +316,85 @@ export function Sidebar({ slug }: { slug: string }) {
     },
     {
       id: "qabul",
-      label: "Qabul va bolalar",
+      label: t("nav.admissionAndChildren"),
       icon: ChildIcon,
       items: [
-        { href: `${base}/crm`, label: "Arizalar (CRM)", icon: PhoneIcon, show: true },
-        { href: `${base}/children`, label: "Bolalar", icon: ChildIcon, show: true },
-        { href: `${base}/groups`, label: "Guruhlar", icon: GroupIcon, show: true },
+        { href: `${base}/crm`, label: t("nav.crm"), icon: PhoneIcon, show: true },
+        { href: `${base}/children`, label: t("nav.children"), icon: ChildIcon, show: true },
+        { href: `${base}/groups`, label: t("nav.groups"), icon: GroupIcon, show: true },
       ],
     },
     {
       id: "xodimlar",
-      label: "Xodimlar",
+      label: t("nav.employees"),
       icon: TeacherIcon,
       items: [
-        { href: `${base}/employees`, label: "Xodimlar ro'yxati", icon: TeacherIcon, show: true },
+        { href: `${base}/employees`, label: t("nav.employeeList"), icon: TeacherIcon, show: true },
         // Maosh kassirda; administratorga ko'rinmaydi
-        { href: `${base}/hr`, label: "Ish haqi (HR)", icon: BriefcaseIcon, show: !isManager },
-        { href: `${base}/staff-attendance`, label: "Xodimlar davomati", icon: CalendarIcon, show: true },
+        { href: `${base}/hr`, label: t("nav.hr"), icon: BriefcaseIcon, show: !isManager },
+        { href: `${base}/staff-attendance`, label: t("nav.staffAttendance"), icon: CalendarIcon, show: true },
       ],
     },
     {
       id: "kundalik",
-      label: "Kundalik ish",
+      label: t("nav.dailyWork"),
       icon: ChecklistIcon,
       items: [
-        { href: `${base}/nutrition`, label: "Ovqatlanish", icon: MealIcon, show: true },
+        { href: `${base}/nutrition`, label: t("nav.nutrition"), icon: MealIcon, show: true },
         // O'zi bilan xonalar katalogini ham boshqaradi — alohida nav shart emas
-        { href: `${base}/lessons/schedule`, label: "Dars jadvali", icon: CalendarIcon, show: true },
+        { href: `${base}/lessons/schedule`, label: t("nav.lessonSchedule"), icon: CalendarIcon, show: true },
+      ],
+    },
+    {
+      id: "face-id",
+      label: t("nav.faceId"),
+      icon: FaceIdIcon,
+      items: [
+        { href: `${base}/face-id/devices`, label: t("nav.devices"), icon: FaceIdIcon, show: true },
+        { href: `${base}/face-id/registrations`, label: t("nav.faceRegistry"), icon: ChildIcon, show: true },
       ],
     },
     {
       id: "coin",
-      label: "Coin",
+      label: t("nav.coin"),
       icon: CoinIcon,
       items: [
-        { href: `${base}/coin/children`, label: "Bolalar", icon: ChildIcon, show: true },
-        { href: `${base}/coin/shop`, label: "Do'kon", icon: ShopIcon, show: true },
+        { href: `${base}/coin/children`, label: t("nav.children"), icon: ChildIcon, show: true },
+        { href: `${base}/coin/shop`, label: t("nav.shop"), icon: ShopIcon, show: true },
       ],
     },
     {
       id: "foydali",
-      label: "Foydali",
+      label: t("nav.useful"),
       icon: BulbIcon,
       items: [
-        { href: `${base}/useful/poems`, label: "She'rlar", icon: NoteIcon, show: showUseful },
-        { href: `${base}/useful/proverbs`, label: "Maqollar", icon: BulbIcon, show: showUseful },
-        { href: `${base}/useful/tales`, label: "Ertaklar", icon: BookIcon, show: showUseful },
+        { href: `${base}/useful/poems`, label: t("nav.poems"), icon: NoteIcon, show: showUseful },
+        { href: `${base}/useful/proverbs`, label: t("nav.proverbs"), icon: BulbIcon, show: showUseful },
+        { href: `${base}/useful/tales`, label: t("nav.tales"), icon: BookIcon, show: showUseful },
       ],
     },
     {
       id: "moliya",
-      label: "Moliya va aloqa",
+      label: t("nav.financeAndContact"),
       icon: MoneyIcon,
       items: [
-        { href: `${base}/finance`, label: "Moliya", icon: MoneyIcon, show: !isManager },
+        { href: `${base}/finance`, label: t("nav.finance"), icon: MoneyIcon, show: !isManager },
         // Qarzdorlarga qo'ng'iroq qilib eslatish administratorning ishi
         { href: `${base}/debtors`, label: "Qarzdorlar", icon: PhoneIcon, show: true },
-        { href: `${base}/notifications`, label: "Bildirishnomalar", icon: BellIcon, show: true },
+        { href: `${base}/notifications`, label: t("nav.notifications"), icon: BellIcon, show: true },
         // Branch/user management stay a network-wide (root-level) concern, never
         // duplicated inside a single branch's panel.
-        { href: `/${slug}/users`, label: "Administratorlar", icon: KeyIcon, show: showUsersNav && !inBranchContext },
+        { href: `/${slug}/users`, label: t("nav.admins"), icon: KeyIcon, show: showUsersNav && !inBranchContext },
+      ],
+    },
+    {
+      id: "lending",
+      label: t("nav.landingPage"),
+      icon: GlobeIcon,
+      items: [
+        { href: `${base}/lending/teachers`, label: t("nav.teachers"), icon: TeacherIcon, show: true },
+        { href: `${base}/lending/menu`, label: t("nav.menu"), icon: MealIcon, show: true },
+        { href: `${base}/lending/groups`, label: t("nav.groups"), icon: GroupIcon, show: true },
       ],
     },
   ];
@@ -379,7 +403,7 @@ export function Sidebar({ slug }: { slug: string }) {
   // qaysi bo'limlarga kirishidan qat'i nazar.
   const settingsItem: NavLeaf = {
     href: `/${slug}/settings`,
-    label: "Sozlamalar",
+    label: t("nav.settings"),
     icon: SettingsIcon,
     show: true,
   };
@@ -467,8 +491,8 @@ export function Sidebar({ slug }: { slug: string }) {
         <button
           type="button"
           onClick={toggleCollapsed}
-          aria-label={collapsed ? "Yon panelni ochish" : "Yon panelni yig'ish"}
-          title={collapsed ? "Yon panelni ochish" : "Yon panelni yig'ish"}
+          aria-label={collapsed ? t("expand") : t("collapse")}
+          title={collapsed ? t("expand") : t("collapse")}
           aria-expanded={!collapsed}
           className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-[11px] text-[var(--color-text-muted)] outline-none transition-colors hover:bg-black/[0.05] hover:text-[var(--color-text)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/30"
         >
@@ -674,12 +698,15 @@ export function Sidebar({ slug }: { slug: string }) {
             <Avatar user={user} size={32} />
           </div>
         )}
+        <div className={clsx("mb-1 flex", collapsed ? "justify-center" : "justify-end")}>
+          <LanguageSwitcher collapsed={collapsed} dropUp />
+        </div>
         <button
           type="button"
           onClick={handleLogout}
           disabled={loggingOut}
-          title={collapsed ? "Chiqish" : undefined}
-          aria-label="Tizimdan chiqish"
+          title={collapsed ? t("logout") : undefined}
+          aria-label={t("logoutAria")}
           className={clsx(
             "group flex h-11 w-full cursor-pointer items-center rounded-[16px] text-[15px] font-medium",
             "text-[var(--color-text-muted)] transition-colors duration-[var(--dur-fast)] ease-[var(--ease-out)]",
@@ -693,7 +720,7 @@ export function Sidebar({ slug }: { slug: string }) {
           ) : (
             <LogoutIcon className="h-5 w-5 shrink-0" />
           )}
-          {!collapsed && <span className="truncate">Chiqish</span>}
+          {!collapsed && <span className="truncate">{t("logout")}</span>}
         </button>
       </div>
     </aside>
@@ -765,7 +792,7 @@ export function Sidebar({ slug }: { slug: string }) {
               className="flex w-full cursor-pointer items-center gap-3 rounded-[14px] px-3.5 py-2.5 text-[15px] font-medium text-[var(--color-danger)] hover:bg-[var(--color-danger-bg)] disabled:opacity-60"
             >
               <LogoutIcon className="h-5 w-5 shrink-0" />
-              Chiqish
+              {t("logout")}
             </button>
           </div>
         </aside>

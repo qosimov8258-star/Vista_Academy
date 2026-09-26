@@ -11,9 +11,9 @@ export default function PermanentCaregiverPage() {
     <ContentBlockView
       blockKey="doimiy-tarbiyachi"
       eyebrow="Guruhlarimiz"
-      fallbackTitle="Doimiy tarbiyachi"
+      fallbackTitle="Doimiy tarbiyachi va g'amxo'rlik"
       fallbackBody="Bolalar keyingi guruhga o'tguncha bir xil tarbiyachi bilan qoladi — bu ishonch va barqarorlik yaratadi."
-      heroImage={{ src: "/rasm/tarbiyachi.png", alt: "Tarbiyachi bolalar bilan mashg'ulot o'tkazmoqda", position: "50% 0%" }}
+      heroImage={{ src: "/rasm/tarbiyachi.jpeg", alt: "Tarbiyachi bolalar bilan mashg'ulot o'tkazmoqda", position: "50% 0%" }}
       afterContent={<CaregiverHighlights />}
     />
   );

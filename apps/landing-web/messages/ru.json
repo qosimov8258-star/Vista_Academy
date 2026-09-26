@@ -1,0 +1,45 @@
+{
+  "common": {
+    "language": "Язык",
+    "languages": {
+      "uz": "O'zbekcha",
+      "ru": "Русский",
+      "en": "English"
+    },
+    "cta": "Оставить заявку"
+  },
+  "nav": {
+    "home": "Главная",
+    "features": "Наши возможности",
+    "schools": "Наши школы",
+    "schoolsBadge": "Скоро",
+    "about": "О нас",
+    "contact": "Контакты",
+    "menuAria": "Меню"
+  },
+  "groups": {
+    "schedule": "Гибкий график",
+    "meals": "Здоровое питание",
+    "teacher": "Постоянный воспитатель",
+    "education": "Направления обучения",
+    "teachers": "Учителя"
+  },
+  "footer": {
+    "description": "Сеть детских садов Vista Academy, воспитывающая детей с заботой, безопасностью и современными методиками обучения.",
+    "pagesHeading": "Страницы",
+    "groupsHeading": "Наши группы",
+    "contactHeading": "Контакты",
+    "address": "г. Ташкент, Узбекистан",
+    "copyright": "© {year} Vista Academy. Все права защищены.",
+    "tagline": "С заботой, безопасностью и современным образованием."
+  },
+  "hero": {
+    "badgeMobile": "✨ Добро пожаловать в мир детства",
+    "badgeDesktop": "Самый надёжный детский сад",
+    "headingPrefix": "Будущее вашего ребёнка",
+    "headingHighlight": "начинается",
+    "headingSuffix": "именно здесь",
+    "paragraph": "Каждый день наполнен новыми знаниями, новой дружбой и новым смехом.",
+    "ctaSecondary": "Подробнее"
+  }
+}

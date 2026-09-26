@@ -128,6 +128,8 @@ model Organization {
   poems                  Poem[]
   proverbs               Proverb[]
   tales                  Tale[]
+  faceIdDevices          FaceIdDevice[]
+  faceEnrollments        FaceEnrollment[]
 
   @@map("organizations")
 }
@@ -296,6 +298,8 @@ model Branch {
   poems                  Poem[]
   proverbs               Proverb[]
   tales                  Tale[]
+  faceIdDevices          FaceIdDevice[]
+  faceEnrollments        FaceEnrollment[]
 
   @@unique([organizationId, name])
   @@unique([organizationId, slug])
@@ -400,6 +404,7 @@ model Child {
   lessonGrades           LessonGrade[]
   lessonAttendances      LessonAttendance[]
   productSales           ProductSale[]
+  faceEnrollments        FaceEnrollment[]
 
   @@unique([organizationId, publicId])
   @@index([organizationId, branchId])
@@ -541,6 +546,7 @@ model Employee {
   lessonAttendances LessonAttendance[]
   weeklyCoinAssessments WeeklyCoinAssessment[]
   notifications   EmployeeNotification[]
+  faceEnrollments FaceEnrollment[]
 
   @@index([organizationId, branchId])
   @@map("employees")
@@ -1767,6 +1773,82 @@ model PayrollEntry {
 }
 
 // ---------------------------------------------------------------------------
+// Face ID (Hikvision DS-K1T342MX turniket terminali) — xodim va bolalarning
+// yuz ro'yxati boshqaruvi. Bu bosqichda faqat ma'lumotlarni saqlash: qurilma
+// bilan haqiqiy tarmoq/ISAPI ulanishi keyingi bosqichda qo'shiladi, shuning
+// uchun bu yerda faqat qurilma katalogi va ro'yxatga olish holati saqlanadi.
+// ---------------------------------------------------------------------------
+
+enum FaceIdDeviceStatus {
+  ACTIVE
+  INACTIVE
+  MAINTENANCE
+}
+
+enum FaceEnrollmentStatus {
+  PENDING
+  REGISTERED
+  FAILED
+  REMOVED
+}
+
+enum FacePersonType {
+  EMPLOYEE
+  CHILD
+}
+
+model FaceIdDevice {
+  id             String             @id @default(uuid())
+  organizationId String             @map("organization_id")
+  branchId       String             @map("branch_id")
+  name           String
+  model          String             @default("DS-K1T342MX")
+  serialNumber   String?            @map("serial_number")
+  ipAddress      String?            @map("ip_address")
+  location       String?
+  status         FaceIdDeviceStatus @default(ACTIVE)
+  notes          String?
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch           @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  enrollments  FaceEnrollment[]
+
+  @@index([organizationId])
+  @@index([branchId])
+  @@map("face_id_devices")
+}
+
+model FaceEnrollment {
+  id             String                @id @default(uuid())
+  organizationId String                @map("organization_id")
+  branchId       String                @map("branch_id")
+  deviceId       String                @map("device_id")
+  personType     FacePersonType        @map("person_type")
+  employeeId     String?               @map("employee_id")
+  childId        String?               @map("child_id")
+  status         FaceEnrollmentStatus  @default(PENDING)
+  notes          String?
+  registeredAt   DateTime?             @map("registered_at")
+  createdAt      DateTime              @default(now()) @map("created_at")
+  updatedAt      DateTime              @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  device       FaceIdDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  employee     Employee?    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  child        Child?       @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([branchId])
+  @@index([deviceId])
+  @@index([employeeId])
+  @@index([childId])
+  @@map("face_enrollments")
+}
+
+// ---------------------------------------------------------------------------
 // Bildirishnomalar (notifications) — spec §1.14. No SMS/Telegram/Email
 // gateway is configured in this environment, so this is a communications
 // LOG staff use to track what should go out and mark it sent once they've
@@ -1878,14 +1960,15 @@ model LandingMeal {
 
 /// "O'qituvchilar" bo'limi.
 model LandingTeacher {
-  id        String   @id @default(uuid())
-  fullName  String   @map("full_name")
-  role      String
-  bio       String?
-  photoPath String?  @map("photo_path")
-  order     Int      @default(0)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id         String   @id @default(uuid())
+  fullName   String   @map("full_name")
+  role       String
+  bio        String?
+  experience String?
+  photoPath  String?  @map("photo_path")
+  order      Int      @default(0)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
   @@map("landing_teachers")
 }
@@ -1901,4 +1984,64 @@ model LandingContentBlock {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("landing_content_blocks")
+}
+
+/// "Guruhlarimiz" bo'limi — landing-web bosh sahifasidagi guruh kartochkalari.
+model LandingGroup {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  photoPath String?  @map("photo_path")
+  order     Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  photos    LandingGroupPhoto[]
+  students  LandingGroupStudent[]
+
+  @@map("landing_groups")
+}
+
+/// Guruhning o'z sahifasida (landing-web `/guruhlar/[slug]`) ko'rsatiladigan
+/// galereya rasmlari — kartochkadagi bitta `photoPath`dan farqli, bitta guruhda
+/// bir nechta rasm bo'lishi mumkin.
+model LandingGroupPhoto {
+  id        String       @id @default(uuid())
+  groupId   String       @map("group_id")
+  group     LandingGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  path      String
+  order     Int          @default(0)
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  @@index([groupId])
+  @@map("landing_group_photos")
+}
+
+/// Guruh sahifasidagi "N-o'quvchi" joylariga kiritiladigan haqiqiy o'quvchi —
+/// ism, qisqa bio va rasm. Hali kiritilmagan joylar sahifada placeholder
+/// ("Ism va rasm tez orada qo'shiladi") sifatida ko'rsatiladi.
+model LandingGroupStudent {
+  id        String       @id @default(uuid())
+  groupId   String       @map("group_id")
+  group     LandingGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  name      String
+  bio       String?
+  photoPath String?      @map("photo_path")
+  order     Int          @default(0)
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  @@index([groupId])
+  @@map("landing_group_students")
+}
+
+/// Bosh sahifadagi "Ariza qoldirish" tugmasi orqali ochiladigan sahifada
+/// yuboriladigan ariza — ism va telefon raqami, operator qayta qo'ng'iroq
+/// qilishi uchun.
+model LandingApplication {
+  id         String   @id @default(uuid())
+  fullName   String   @map("full_name")
+  phone      String
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("landing_applications")
 }
