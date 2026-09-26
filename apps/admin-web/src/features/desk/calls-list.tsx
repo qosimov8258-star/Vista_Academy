@@ -9,9 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
-import { CALL_KIND_LABEL, todayTashkent, type CallItem, type CallKind, type CallsResult } from "./shared";
+import { CALL_KIND_LABEL, RELATION_LABEL, todayTashkent, type CallItem, type CallKind, type CallsResult } from "./shared";
 
 const KIND_TONE: Record<CallKind, "danger" | "warning" | "info"> = { DEBT: "danger", ABSENT: "warning", LEAD: "info" };
+
+/** Ota-ona telefonni olmasa — "qo'ng'iroq qildim" o'rniga shu yozuv saqlanadi. */
+const NO_ANSWER_NOTE = "Aloqa qila olmadim — telefonni olmadi";
+const isNoAnswer = (note: string | null) => !!note && note.startsWith("Aloqa qila olmadim");
 
 /** Bugun qo'ng'iroq qilish ro'yxati. `limit` berilsa faqat tepadagi ochiq qo'ng'iroqlar ko'rsatiladi (bosh sahifa uchun). */
 export function CallsList({ slug, limit, filter }: { slug: string; limit?: number; filter?: CallKind | "ALL" }) {
@@ -30,7 +34,13 @@ export function CallsList({ slug, limit, filter }: { slug: string; limit?: numbe
   const fail = (err: unknown) => setError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
 
   const done = useMutation({
-    mutationFn: (item: CallItem) => api.post("/app/desk/calls/done", { kind: item.kind, subjectId: item.subjectId, date, note: note.trim() || undefined }),
+    mutationFn: ({ item, noAnswer }: { item: CallItem; noAnswer?: boolean }) =>
+      api.post("/app/desk/calls/done", {
+        kind: item.kind,
+        subjectId: item.subjectId,
+        date,
+        note: noAnswer ? NO_ANSWER_NOTE : note.trim() || undefined,
+      }),
     onSuccess: () => {
       setTarget(null);
       setNote("");
@@ -75,21 +85,38 @@ export function CallsList({ slug, limit, filter }: { slug: string; limit?: numbe
                     {item.badge && <Badge tone="danger">{item.badge}</Badge>}
                   </p>
                   <p className="text-[12.5px] text-[var(--color-text-muted)]">{item.subtitle}</p>
-                  <p className="text-[13px]">
-                    {item.contactName ?? "—"}
-                    {item.phone && (
-                      <>
-                        {" · "}
-                        <a href={`tel:${item.phone}`} className="font-medium text-[var(--color-primary)] hover:underline">
-                          {item.phone}
-                        </a>
-                      </>
+                  <div className="mt-1.5 flex flex-col items-start gap-1.5">
+                    {(item.contacts && item.contacts.length > 0
+                      ? item.contacts
+                      : item.phone
+                        ? [{ name: item.contactName, relation: null, phone: item.phone }]
+                        : []
+                    ).map((c, i) => (
+                      <div key={`${c.phone}-${i}`} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-[var(--color-text)]">
+                        <span>
+                          {c.relation ? `${RELATION_LABEL[c.relation] ?? c.relation}` : ""}
+                          {c.relation && c.name ? " · " : ""}
+                          {c.name ?? ""}
+                        </span>
+                        {c.phone && (
+                          <a
+                            href={`tel:${c.phone}`}
+                            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-primary)]/10 px-3 py-1.5 text-[14px] font-medium tabular-nums text-[var(--color-primary)] hover:bg-[var(--color-primary)]/[0.16]"
+                          >
+                            {c.phone}
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                    {!item.phone && !(item.contacts && item.contacts.length > 0) && (
+                      <span className="text-[13px] text-[var(--color-warning)]">Ota-ona raqami kiritilmagan</span>
                     )}
-                  </p>
+                  </div>
                   {item.done && (
-                    <p className="text-[12.5px] text-[var(--color-success)]">
-                      Qo&apos;ng&apos;iroq qilindi{item.calledByName ? ` · ${item.calledByName}` : ""}
-                      {item.doneNote ? ` · ${item.doneNote}` : ""}
+                    <p className={`text-[12.5px] ${isNoAnswer(item.doneNote) ? "text-[var(--color-warning)]" : "text-[var(--color-success)]"}`}>
+                      {isNoAnswer(item.doneNote) ? "Aloqa bo'lmadi" : "Qo'ng'iroq qilindi"}
+                      {item.calledByName ? ` · ${item.calledByName}` : ""}
+                      {item.doneNote && !isNoAnswer(item.doneNote) ? ` · ${item.doneNote}` : ""}
                     </p>
                   )}
                 </div>
@@ -98,9 +125,19 @@ export function CallsList({ slug, limit, filter }: { slug: string; limit?: numbe
                     Qaytarish
                   </Button>
                 ) : (
-                  <Button size="sm" onClick={() => { setTarget(item); setNote(""); }}>
-                    Qo&apos;ng&apos;iroq qildim
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" onClick={() => { setTarget(item); setNote(""); }}>
+                      Qo&apos;ng&apos;iroq qildim
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      loading={done.isPending && done.variables?.noAnswer && done.variables.item.subjectId === item.subjectId}
+                      onClick={() => done.mutate({ item, noAnswer: true })}
+                    >
+                      Aloqa qila olmadim
+                    </Button>
+                  </div>
                 )}
               </li>
             ))}
@@ -115,7 +152,7 @@ export function CallsList({ slug, limit, filter }: { slug: string; limit?: numbe
             <Button variant="outline" onClick={() => setTarget(null)}>
               Bekor qilish
             </Button>
-            <Button loading={done.isPending} onClick={() => target && done.mutate(target)}>
+            <Button loading={done.isPending} onClick={() => target && done.mutate({ item: target })}>
               Saqlash
             </Button>
           </div>

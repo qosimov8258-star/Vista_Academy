@@ -61,7 +61,7 @@ export class AdminDeskService {
       this.cashDesk.debtors(scope),
       this.prisma.attendance.findMany({
         where: { branchId, date: day, status: "ABSENT", child: { status: { not: "INACTIVE" } } },
-        select: { childId: true, note: true, child: { select: { fullName: true, group: { select: { name: true } }, guardians: { ...GUARDIAN_SELECT, take: 1 } } } },
+        select: { childId: true, note: true, child: { select: { fullName: true, group: { select: { name: true } }, guardians: { ...GUARDIAN_SELECT, take: 3 } } } },
       }),
       this.prisma.attendance.findMany({
         where: { branchId, status: "ABSENT", date: { in: [toDateOnly(addDays(date, -1)), toDateOnly(addDays(date, -2))] } },
@@ -98,6 +98,7 @@ export class AdminDeskService {
           subtitle: `Muddati o'tgan qarz: ${new Intl.NumberFormat("uz-UZ", { maximumFractionDigits: 0 }).format(r.overdue)} UZS`,
           contactName: r.guardianName,
           phone: r.guardianPhone,
+          contacts: r.guardianPhone ? [{ name: r.guardianName as string | null, relation: null as string | null, phone: r.guardianPhone as string | null }] : [],
           badge: null as string | null,
           ...withLog("DEBT", r.childId),
         })),
@@ -111,6 +112,7 @@ export class AdminDeskService {
           subtitle: `Bugun kelmadi${a.child.group ? ` · ${a.child.group.name}` : ""}${a.note ? ` · ${a.note}` : ""}`,
           contactName: g?.guardian.fullName ?? null,
           phone: g?.guardian.phone ?? null,
+          contacts: a.child.guardians.map((x) => ({ name: x.guardian.fullName as string | null, relation: x.relation as string | null, phone: x.guardian.phone as string | null })),
           badge: streak >= 3 ? `${streak} kun ketma-ket` : null,
           ...withLog("ABSENT", a.childId),
         };
@@ -122,6 +124,7 @@ export class AdminDeskService {
         subtitle: `Ariza (${l.stage === "NEW" ? "yangi" : "qayta bog'lanish"})`,
         contactName: l.parentName,
         phone: l.parentPhone,
+        contacts: l.parentPhone ? [{ name: l.parentName as string | null, relation: null as string | null, phone: l.parentPhone as string | null }] : [],
         badge: null as string | null,
         ...withLog("LEAD", l.id),
       })),

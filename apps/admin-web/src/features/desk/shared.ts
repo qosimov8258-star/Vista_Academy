@@ -7,6 +7,7 @@ export interface CallItem {
   subtitle: string;
   contactName: string | null;
   phone: string | null;
+  contacts?: { name: string | null; relation: string | null; phone: string | null }[];
   badge: string | null;
   done: boolean;
   doneNote: string | null;

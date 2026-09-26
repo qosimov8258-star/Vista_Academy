@@ -12,7 +12,6 @@ import { todayTashkent, type BoardResult } from "./shared";
 const ACTIONS = [
   { label: "Bola qabul qilish", suffix: "children" },
   { label: "Arizalar (CRM)", suffix: "crm" },
-  { label: "Olib ketish", suffix: "pickups" },
   { label: "Ommaviy xabar", suffix: "notifications" },
   { label: "Guruhlar", suffix: "groups" },
   { label: "Haftalik hisobot", suffix: "weekly-report" },
