@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import clsx from "clsx";
+import { LanguageSwitcher } from "@/components/language-switcher";
 
 type NavChild = {
   label: string;
@@ -15,22 +17,6 @@ type NavItem = {
   children?: NavChild[];
 };
 
-const GROUPS_MENU: NavChild[] = [
-  { label: "Moslashuvchan jadval", href: "/jadval" },
-  { label: "Sog'lom taomlar", href: "/taomlar" },
-  { label: "Doimiy tarbiyachi", href: "/tarbiyachi" },
-  { label: "Ta'lim yo'nalishi", href: "/talim-yonalishi" },
-  { label: "O'qituvchilar", href: "/oqituvchilar" },
-];
-
-const NAV_ITEMS: NavItem[] = [
-  { label: "Bosh sahifa", href: "/#top" },
-  { label: "Imkoniyatlarimiz", href: "/#classrooms", children: GROUPS_MENU },
-  { label: "Maktablarimiz", href: "/#schools", badge: "Tez orada" },
-  { label: "Biz haqimizda", href: "/#about" },
-  { label: "Bog'lanish", href: "/#contact" },
-];
-
 function ChevronDownIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
@@ -42,6 +28,23 @@ function ChevronDownIcon({ className }: { className?: string }) {
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
   const [mobileGroupsOpen, setMobileGroupsOpen] = useState(false);
+  const t = useTranslations();
+
+  const GROUPS_MENU: NavChild[] = [
+    { label: t("groups.schedule"), href: "/jadval" },
+    { label: t("groups.meals"), href: "/taomlar" },
+    { label: t("groups.teacher"), href: "/tarbiyachi" },
+    { label: t("groups.education"), href: "/talim-yonalishi" },
+    { label: t("groups.teachers"), href: "/oqituvchilar" },
+  ];
+
+  const NAV_ITEMS: NavItem[] = [
+    { label: t("nav.home"), href: "/#top" },
+    { label: t("nav.features"), href: "/#classrooms", children: GROUPS_MENU },
+    { label: t("nav.schools"), href: "/#schools", badge: t("nav.schoolsBadge") },
+    { label: t("nav.about"), href: "/#about" },
+    { label: t("nav.contact"), href: "/#contact" },
+  ];
 
   return (
     <header className="sticky top-0 z-50 border-b border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-bg)_88%,transparent)] backdrop-blur-md">
@@ -100,18 +103,19 @@ export function SiteHeader() {
         </nav>
 
         <div className="hidden items-center gap-4 lg:flex">
+          <LanguageSwitcher />
           <a
-            href="/#apply"
+            href="/ariza"
             className="rounded-full px-5 py-2.5 text-[15px] font-bold text-white shadow-[var(--shadow-cta)] transition-transform duration-150 hover:scale-[1.03]"
             style={{ background: "linear-gradient(135deg, var(--color-green) 0%, var(--color-green-dark) 100%)" }}
           >
-            Ariza qoldirish
+            {t("common.cta")}
           </a>
         </div>
 
         <button
           type="button"
-          aria-label="Menyu"
+          aria-label={t("nav.menuAria")}
           aria-expanded={open}
           onClick={() => setOpen((v) => !v)}
           className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-border)] lg:hidden"
@@ -181,13 +185,14 @@ export function SiteHeader() {
           )}
           <div className="mt-2 flex items-center gap-3 px-3">
             <a
-              href="/#apply"
+              href="/ariza"
               onClick={() => setOpen(false)}
               className="flex-1 rounded-full px-5 py-2.5 text-center text-[15px] font-bold text-white shadow-[var(--shadow-cta)]"
               style={{ background: "linear-gradient(135deg, var(--color-green) 0%, var(--color-green-dark) 100%)" }}
             >
-              Ariza qoldirish
+              {t("common.cta")}
             </a>
+            <LanguageSwitcher />
           </div>
         </div>
       </div>

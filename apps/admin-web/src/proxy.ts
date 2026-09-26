@@ -22,6 +22,8 @@ const KNOWN_ORG_PAGES = new Set([
   "my-notifications",
   "settings",
   "useful",
+  "lending",
+  "face-id",
 ]);
 
 function base64UrlDecode(input: string): string {

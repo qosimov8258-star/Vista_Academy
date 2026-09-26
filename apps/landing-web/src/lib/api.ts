@@ -32,3 +32,28 @@ export async function fetchLanding<T>(path: string, fallback: T): Promise<T> {
     return fallback;
   }
 }
+
+export interface LandingApplicationInput {
+  fullName: string;
+  phone: string;
+}
+
+type SubmitResult = { ok: true } | { ok: false; message: string };
+
+/** "Ariza qoldirish" formasini serverga yuboradi. */
+export async function submitLandingApplication(input: LandingApplicationInput): Promise<SubmitResult> {
+  try {
+    const res = await fetch(`${API_URL}/app/landing/applications`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    const body = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
+    if (!res.ok) {
+      return { ok: false, message: body?.error?.message ?? "Xatolik yuz berdi. Birozdan so'ng qayta urinib ko'ring." };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, message: "Internet aloqasida muammo. Birozdan so'ng qayta urinib ko'ring." };
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "common": {
+    "language": "Language",
+    "languages": {
+      "uz": "O'zbekcha",
+      "ru": "Русский",
+      "en": "English"
+    },
+    "cta": "Apply now"
+  },
+  "nav": {
+    "home": "Home",
+    "features": "Our features",
+    "schools": "Our schools",
+    "schoolsBadge": "Coming soon",
+    "about": "About us",
+    "contact": "Contact",
+    "menuAria": "Menu"
+  },
+  "groups": {
+    "schedule": "Flexible schedule",
+    "meals": "Healthy meals",
+    "teacher": "Dedicated caregiver",
+    "education": "Education tracks",
+    "teachers": "Teachers"
+  },
+  "footer": {
+    "description": "Vista Academy — a network of kindergartens raising children with care, safety and modern teaching methods.",
+    "pagesHeading": "Pages",
+    "groupsHeading": "Our groups",
+    "contactHeading": "Contact",
+    "address": "Tashkent, Uzbekistan",
+    "copyright": "© {year} Vista Academy. All rights reserved.",
+    "tagline": "With care, safety and modern education."
+  },
+  "hero": {
+    "badgeMobile": "✨ Welcome to a world made for kids",
+    "badgeDesktop": "The most trusted kindergarten",
+    "headingPrefix": "Your child's future",
+    "headingHighlight": "starts",
+    "headingSuffix": "right here",
+    "paragraph": "Every day is filled with new knowledge, new friendships and new laughter.",
+    "ctaSecondary": "Learn more"
+  }
+}

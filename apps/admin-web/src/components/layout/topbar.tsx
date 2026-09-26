@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { EmployeeNotification } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { isTeacher } from "@/lib/permissions";
 import { BellIcon } from "@/components/ui/icons";
+import { LanguageSwitcher } from "@/components/ui/language-switcher";
 
 /**
  * Yuqori panel faqat kontekstni ko'rsatadi — qaysi tashkilotdasiz.
@@ -21,6 +23,7 @@ import { BellIcon } from "@/components/ui/icons";
 export function Topbar({ slug }: { slug: string }) {
   const { user } = useAuth();
   const teacher = isTeacher(user?.role);
+  const t = useTranslations("sidebar");
 
   const notificationsQuery = useQuery({
     queryKey: ["employee-notifications", slug],
@@ -40,7 +43,7 @@ export function Topbar({ slug }: { slug: string }) {
       {teacher && (
         <Link
           href={`/${slug}/my-notifications`}
-          aria-label="Bildirishnomalarim"
+          aria-label={t("notificationsAria")}
           className="relative ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-black/[0.05] hover:text-[var(--color-text)] md:hidden"
         >
           <BellIcon className="h-5 w-5" />
@@ -51,6 +54,9 @@ export function Topbar({ slug }: { slug: string }) {
           )}
         </Link>
       )}
+      <div className={teacher ? undefined : "ml-auto"}>
+        <LanguageSwitcher />
+      </div>
     </header>
   );
 }
