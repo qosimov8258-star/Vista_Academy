@@ -10,11 +10,13 @@ import { UpsertMenuEntryDto } from "./dto/upsert-menu-entry.dto";
 import { MenuQueryDto } from "./dto/menu-query.dto";
 import { UploadMenuPhotoDto } from "./dto/upload-menu-photo.dto";
 import { MenuPhotosQueryDto } from "./dto/menu-photos-query.dto";
+import { AllowChef } from "../iam/decorators/allow-chef.decorator";
 
 @ApiBearerAuth()
 @ApiTags("Tenant Nutrition")
 @Public()
 @UseGuards(TenantJwtAuthGuard)
+@AllowChef()
 @Controller("app/menu")
 export class NutritionController {
   constructor(private readonly nutritionService: NutritionService) {}

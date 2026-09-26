@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { ChildAllergy, DashboardSummary, MenuEntry } from "@/lib/types";
+import type { ChildAllergy, MenuEntry } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingState, ErrorState } from "@/components/ui/states";
@@ -67,11 +67,6 @@ export function ChefHome({ slug }: { slug: string }) {
     queryFn: () => api.get<TodaySummary>(`/app/menu/today-summary?branchId=${branchId}&date=${today}`),
     enabled: !!branchId,
     refetchInterval: 15_000,
-  });
-  const summaryQuery = useQuery({
-    queryKey: ["dashboard-summary", slug],
-    queryFn: () => api.get<DashboardSummary>("/app/dashboard/summary"),
-    refetchInterval: 60_000,
   });
 
   const menuQuery = useQuery({
@@ -176,7 +171,7 @@ export function ChefHome({ slug }: { slug: string }) {
         <Tile label="Kasal" value={d.sick} />
         <Tile label="Belgilanmagan" value={d.notMarked} />
         <Tile label="Guruhlar soni" value={d.groups.length} />
-        <Tile label="Xodimlar soni" value={summaryQuery.data?.employeesCount ?? d.staff.total} />
+        <Tile label="Xodimlar soni" value={d.staff.total} />
         <Tile label="Kelgan xodimlar" value={d.staff.present + d.staff.late} tone="success" />
         <Tile label="Kelmagan xodimlar" value={d.staff.absent} tone="danger" />
       </div>

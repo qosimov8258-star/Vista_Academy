@@ -1,4 +1,4 @@
-export type TenantUserRole = "NETWORK_ADMIN" | "BRANCH_ADMIN" | "FINANCE" | "MANAGER" | "TEACHER";
+export type TenantUserRole = "NETWORK_ADMIN" | "BRANCH_ADMIN" | "FINANCE" | "MANAGER" | "TEACHER" | "CHEF";
 
 /** Kirish sahifasida ko'rsatiladigan ochiq ma'lumot (token talab qilinmaydi). */
 export interface PublicOrganization {

@@ -16,8 +16,7 @@ import { downloadCsv } from "@/lib/download";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { EditMenuModal } from "@/features/nutrition/edit-menu-modal";
 import { WeeklyMenuModal } from "@/features/nutrition/weekly-menu-modal";
-import { canWriteOperational } from "@/lib/permissions";
-import { isHeadChefPosition } from "@/lib/employee-position";
+import { canWriteKitchen } from "@/lib/permissions";
 import { TodayRemindersCard } from "@/features/child-notes/today-reminders-card";
 import { TodayChildrenCard } from "@/features/nutrition/today-children-card";
 import { MenuPhotosCard } from "@/features/nutrition/menu-photos-card";
@@ -43,9 +42,8 @@ function addDays(dateString: string, days: number): string {
 export default function NutritionPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const { user } = useAuth();
-  // Bosh oshpaz TEACHER roli bilan kiradi, lekin menyu aynan uning ishi.
-  const isHeadChef = !!user?.position && isHeadChefPosition(user.position);
-  const canWrite = canWriteOperational(user?.role) || isHeadChef;
+  // Menyu — oshpazning ishi; filial admini va administrator ham yozadi.
+  const canWrite = canWriteKitchen(user?.role);
   const { branchId: forcedBranchId } = useBranchContext(slug);
   const [branchId, setBranchId] = useState("");
   // "Today" depends on the viewer's clock, which can differ between the

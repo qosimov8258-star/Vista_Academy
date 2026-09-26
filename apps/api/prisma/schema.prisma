@@ -146,6 +146,7 @@ enum TenantUserRole {
   FINANCE // "Moliyachi" — bitta filial, faqat Moliya va Ish haqida yozadi
   MANAGER // "Administrator" — bitta filial, kundalik ish
   TEACHER // "O'qituvchi" — faqat o'ziga biriktirilgan guruhlar
+  CHEF // "Bosh oshpaz" — faqat oshxona: menyu, porsiyalar, taom suratlari
 }
 
 model TenantUser {

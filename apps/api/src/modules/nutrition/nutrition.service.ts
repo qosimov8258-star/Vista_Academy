@@ -21,7 +21,7 @@ export class NutritionService {
   constructor(private readonly prisma: PrismaService) {}
 
   async upsert(scope: TenantScope, dto: UpsertMenuEntryDto) {
-    const branchId = await requireKitchenWriteScope(this.prisma, scope);
+    const branchId = requireKitchenWriteScope(scope);
     const date = toDateOnly(dto.date);
     return this.prisma.menuEntry.upsert({
       where: { branchId_date: { branchId, date } },
@@ -76,7 +76,7 @@ export class NutritionService {
    * yuklaydi. Surat ota-ona kabinetida o'sha kunning menyusi ostida ko'rinadi.
    */
   async uploadPhoto(scope: TenantScope, dto: UploadMenuPhotoDto) {
-    const branchId = await requireKitchenWriteScope(this.prisma, scope);
+    const branchId = requireKitchenWriteScope(scope);
     const date = toDateOnly(dto.date.slice(0, 10));
 
     const [header, base64] = dto.image.split(",", 2);
@@ -101,7 +101,7 @@ export class NutritionService {
   }
 
   async deletePhoto(scope: TenantScope, id: string) {
-    const branchId = await requireKitchenWriteScope(this.prisma, scope);
+    const branchId = requireKitchenWriteScope(scope);
     const photo = await this.prisma.menuPhoto.findFirst({ where: { id, branchId }, select: { id: true } });
     if (!photo) {
       throw new NotFoundException("Rasm topilmadi");

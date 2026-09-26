@@ -7,11 +7,13 @@ import { TenantAuthenticatedUser, toTenantScope } from "../iam/tenant-auth.types
 import { DishesService } from "./dishes.service";
 import { CreateDishDto } from "./dto/create-dish.dto";
 import { UpdateDishDto } from "./dto/update-dish.dto";
+import { AllowChef } from "../iam/decorators/allow-chef.decorator";
 
 @ApiBearerAuth()
 @ApiTags("Tenant Dishes")
 @Public()
 @UseGuards(TenantJwtAuthGuard)
+@AllowChef()
 @Controller("app/dishes")
 export class DishesController {
   constructor(private readonly dishesService: DishesService) {}

@@ -13,8 +13,8 @@ import { TodayRemindersCard } from "@/features/child-notes/today-reminders-card"
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { formatDate, formatMoney } from "@/lib/format";
-import { canWriteOperational, canWriteTeaching, isTeacher } from "@/lib/permissions";
-import { isCashierPosition, isCookPosition } from "@/lib/employee-position";
+import { canWriteOperational, canWriteTeaching, isChef, isTeacher } from "@/lib/permissions";
+import { isCashierPosition } from "@/lib/employee-position";
 import { ChefHome } from "@/features/nutrition/chef-home";
 import { CashierHome } from "@/features/cash/cashier-home";
 import { AdminHome } from "@/features/desk/admin-home";
@@ -241,6 +241,8 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
   const summaryQuery = useQuery({
     queryKey: ["dashboard-summary", slug],
     queryFn: () => api.get<DashboardSummary>("/app/dashboard/summary"),
+    // Oshpazga filial xulosasi (moliya bilan) yopiq — uning sahifasi o'z ma'lumotini oladi
+    enabled: !!user && !isChef(user.role),
   });
 
   // O'qituvchida bu so'rov faqat unga biriktirilgan guruhlarni qaytaradi
@@ -288,7 +290,7 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
   }
 
   // Oshpaz dars o'tmaydi — unga butun bog'cha bo'yicha bolalar va davomat ko'rsatiladi.
-  if (user?.position && isCookPosition(user.position)) {
+  if (isChef(user?.role)) {
     return (
       <div className="space-y-6">
         <div>
