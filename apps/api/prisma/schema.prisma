@@ -273,6 +273,7 @@ model Branch {
   coinTransactions       CoinTransaction[]
   weeklyCoinAssessments  WeeklyCoinAssessment[]
   menuEntries            MenuEntry[]
+  menuPhotos             MenuPhoto[]
   childReminders         ChildReminder[]
   expenses               Expense[]
   callLogs               CallLog[]
@@ -635,6 +636,33 @@ model MenuEntry {
   @@unique([branchId, date])
   @@index([branchId, date])
   @@map("menu_entries")
+}
+
+/// Taom turi — oshpaz rasmni qaysi ovqatga yuklagani (MenuEntry ustunlari bilan bir xil)
+enum MenuMeal {
+  BREAKFAST
+  LUNCH
+  SNACK
+}
+
+/// Oshpaz tayyorlagan ovqatni suratga olib yuklaydi — ota-ona kabinetida
+/// bugungi menyu ostida ko'rinadi. Surat brauzerda kichraytirilib, boshqa
+/// rasmlar (bola, xodim, tovar) kabi bevosita bazada saqlanadi.
+model MenuPhoto {
+  id           String   @id @default(uuid())
+  branchId     String   @map("branch_id")
+  date         DateTime @db.Date
+  meal         MenuMeal
+  image        Bytes
+  mimeType     String   @map("mime_type")
+  // Kim yuklagani (tarix uchun) — foydalanuvchi o'chirilsa ham surat qoladi
+  uploadedById String?  @map("uploaded_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@index([branchId, date])
+  @@map("menu_photos")
 }
 
 /**

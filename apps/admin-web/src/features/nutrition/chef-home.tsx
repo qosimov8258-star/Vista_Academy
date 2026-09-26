@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/use-auth";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingState, ErrorState } from "@/components/ui/states";
 import { todayTashkent } from "@/features/desk/shared";
+import { MenuPhotosCard } from "./menu-photos-card";
 
 interface GroupRow {
   groupId: string | null;
@@ -27,6 +28,9 @@ interface TodaySummary {
   sick: number;
   notMarked: number;
   mealCount: number;
+  staff: { total: number; present: number; late: number; absent: number; notMarked: number };
+  staffMealCount: number;
+  totalMealCount: number;
   groups: GroupRow[];
 }
 
@@ -48,10 +52,10 @@ function Tile({ label, value, tone }: { label: string; value: number; tone?: "su
 }
 
 /**
- * Oshpaz uchun bosh sahifa: butun bog'chadagi bolalar soni, bugun nechtasi
- * kelgani va nechta bolaga ovqat tayyorlash kerakligi. Tarbiyachilar davomat
- * belgilagan sari raqamlar o'zi yangilanadi (har 15 soniyada so'raladi).
- * Bugungi menyu va allergiyasi bor bolalar ham shu yerda ko'rinadi.
+ * Oshpaz uchun bosh sahifa: bugun nechta bola va nechta xodim kelgani va
+ * jami nechta porsiya tayyorlash kerakligi. Davomat belgilangan sari raqamlar
+ * o'zi yangilanadi (har 15 soniyada so'raladi). Bugungi menyu, tayyor ovqat
+ * suratlari (ota-onalarga ko'rinadi) va allergiyasi bor bolalar ham shu yerda.
  */
 export function ChefHome({ slug }: { slug: string }) {
   const { user } = useAuth();
@@ -94,11 +98,20 @@ export function ChefHome({ slug }: { slug: string }) {
     <div className="space-y-6">
       <Card>
         <CardBody className="py-5">
-          <p className="text-[36px] font-semibold leading-none tabular-nums text-[var(--color-text)]">{d.mealCount}</p>
-          <p className="mt-1.5 text-[14px] text-[var(--color-text-muted)]">ta bolaga ovqat tayyorlanadi (kelgan + kechikkan)</p>
+          <p className="text-[36px] font-semibold leading-none tabular-nums text-[var(--color-text)]">{d.totalMealCount}</p>
+          <p className="mt-1.5 text-[14px] text-[var(--color-text-muted)]">porsiya ovqat tayyorlanadi</p>
+          <p className="mt-2 text-[14px] text-[var(--color-text)]">
+            <b className="tabular-nums">{d.mealCount}</b> ta bola + <b className="tabular-nums">{d.staffMealCount}</b> ta xodim
+            <span className="text-[var(--color-text-muted)]"> (kelgan va kechikkanlar)</span>
+          </p>
           {d.notMarked > 0 && (
             <p className="mt-3 rounded-lg bg-[var(--color-warning-bg)] px-3 py-2 text-[13px] text-[var(--color-warning)]">
               {d.notMarked} ta bolaning davomati hali belgilanmagan — raqam o&apos;zgarishi mumkin.
+            </p>
+          )}
+          {d.staff.notMarked > 0 && (
+            <p className="mt-2 rounded-lg bg-[var(--color-warning-bg)] px-3 py-2 text-[13px] text-[var(--color-warning)]">
+              {d.staff.notMarked} ta xodimning davomati hali belgilanmagan.
             </p>
           )}
         </CardBody>
@@ -153,6 +166,8 @@ export function ChefHome({ slug }: { slug: string }) {
         </CardBody>
       </Card>
 
+      {branchId && <MenuPhotosCard slug={slug} branchId={branchId} date={today} canWrite />}
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         <Tile label="Jami bolalar" value={d.total} />
         <Tile label="Kelgan" value={d.present} tone="success" />
@@ -161,7 +176,9 @@ export function ChefHome({ slug }: { slug: string }) {
         <Tile label="Kasal" value={d.sick} />
         <Tile label="Belgilanmagan" value={d.notMarked} />
         <Tile label="Guruhlar soni" value={d.groups.length} />
-        <Tile label="Xodimlar soni" value={summaryQuery.data?.employeesCount ?? 0} />
+        <Tile label="Xodimlar soni" value={summaryQuery.data?.employeesCount ?? d.staff.total} />
+        <Tile label="Kelgan xodimlar" value={d.staff.present + d.staff.late} tone="success" />
+        <Tile label="Kelmagan xodimlar" value={d.staff.absent} tone="danger" />
       </div>
 
       <Card>

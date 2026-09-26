@@ -25,6 +25,9 @@ interface TodaySummary {
   sick: number;
   notMarked: number;
   mealCount: number;
+  staff: { total: number; present: number; late: number; absent: number; notMarked: number };
+  staffMealCount: number;
+  totalMealCount: number;
   groups: GroupRow[];
 }
 
@@ -55,6 +58,12 @@ export function TodayChildrenCard({ slug, branchId, today }: { slug: string; bra
               <div>
                 <div className="text-[36px] font-semibold leading-none tabular-nums">{query.data.mealCount}</div>
                 <div className="mt-1 text-[var(--color-text-muted)]">ta bolaga ovqat tayyorlanadi</div>
+              </div>
+              <div>
+                <div className="text-[36px] font-semibold leading-none tabular-nums">{query.data.staffMealCount}</div>
+                <div className="mt-1 text-[var(--color-text-muted)]">
+                  ta xodim · jami <b className="text-[var(--color-text)]">{query.data.totalMealCount}</b> porsiya
+                </div>
               </div>
               <div className="flex flex-wrap gap-x-6 gap-y-1 text-[var(--color-text-muted)]">
                 <span>Jami: <b className="text-[var(--color-text)]">{query.data.total}</b></span>

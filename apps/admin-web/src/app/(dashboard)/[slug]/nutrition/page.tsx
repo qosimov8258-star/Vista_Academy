@@ -20,6 +20,7 @@ import { canWriteOperational } from "@/lib/permissions";
 import { isHeadChefPosition } from "@/lib/employee-position";
 import { TodayRemindersCard } from "@/features/child-notes/today-reminders-card";
 import { TodayChildrenCard } from "@/features/nutrition/today-children-card";
+import { MenuPhotosCard } from "@/features/nutrition/menu-photos-card";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -214,6 +215,7 @@ export default function NutritionPage({ params }: { params: Promise<{ slug: stri
 
       {branchId && <TodayChildrenCard slug={slug} branchId={branchId} today={todayDateString()} />}
       {branchId && <TodayRemindersCard slug={slug} branchId={branchId} today={todayDateString()} />}
+      {branchId && <MenuPhotosCard slug={slug} branchId={branchId} date={todayDateString()} canWrite={canWrite} />}
 
       {allergyWarnings.length > 0 && (
         <Card className="border-[var(--color-danger)]/40 shadow-[var(--shadow-raised)]">

@@ -481,6 +481,15 @@ export interface MenuEntry {
   snack: string | null;
 }
 
+/** Oshpaz suratga olib yuklagan taom — qaysi ovqatga tegishli */
+export type MenuMeal = "BREAKFAST" | "LUNCH" | "SNACK";
+
+export interface MenuPhoto {
+  id: string;
+  meal: MenuMeal;
+  createdAt: string;
+}
+
 export type StaffAttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "SICK" | "ON_LEAVE";
 
 export interface StaffAttendanceEmployee {
@@ -923,6 +932,8 @@ export interface ParentDay {
     updatedAt: string;
   } | null;
   menu: { breakfast: string | null; lunch: string | null; snack: string | null } | null;
+  /** Oshpaz yuklagan taom suratlari (surat alohida so'raladi) */
+  menuPhotos: { id: string; meal: MenuMeal }[];
 }
 
 export interface ParentAttendanceStrip {
