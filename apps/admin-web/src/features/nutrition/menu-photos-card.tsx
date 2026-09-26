@@ -1,28 +1,13 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
 import type { MenuMeal, MenuPhoto } from "@/lib/types";
-import { prepareMenuPhoto } from "@/lib/menu-photo";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { LoadingState } from "@/components/ui/states";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
-
-/** Bitta ovqatga bir kunda yuklanadigan suratlar soni (server ham tekshiradi) */
-const MAX_PER_MEAL = 4;
-
-const MEALS: { meal: MenuMeal; label: string }[] = [
-  { meal: "BREAKFAST", label: "Nonushta" },
-  { meal: "LUNCH", label: "Tushlik" },
-  { meal: "SNACK", label: "Kechki ovqat / gazak" },
-];
-
-export const menuPhotoSrc = (id: string) => `${API_URL}/app/menu/photos/${id}/image`;
+import { MAX_PHOTOS_PER_MEAL, MEALS, menuPhotoSrc, useMenuPhotos } from "./use-menu-photos";
 
 /**
  * Tayyor ovqat suratlari: oshpaz har bir ovqatni suratga olib yuklaydi,
@@ -40,25 +25,9 @@ export function MenuPhotosCard({
   date: string;
   canWrite: boolean;
 }) {
-  const queryClient = useQueryClient();
-  const queryKey = ["menu-photos", slug, branchId, date];
-  const photosQuery = useQuery({
-    queryKey,
-    queryFn: () => api.get<MenuPhoto[]>(`/app/menu/photos?branchId=${branchId}&date=${date}`),
-    enabled: !!branchId,
-  });
-  const photos = photosQuery.data ?? [];
-
+  const { query, photosOf, upload, uploading, errors, remove } = useMenuPhotos(slug, branchId, date);
   const [viewing, setViewing] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => api.delete(`/app/menu/photos/${id}`),
-    onSuccess: () => {
-      setDeleting(null);
-      queryClient.invalidateQueries({ queryKey });
-    },
-  });
 
   return (
     <Card>
@@ -71,20 +40,21 @@ export function MenuPhotosCard({
             ? "Ovqat tayyor bo'lgach suratga olib yuklang — ota-onalar kabinetda menyu ostida ko'radi."
             : "Oshpaz yuklagan suratlar — ota-onalar ham shularni ko'radi."}
         </p>
-        {photosQuery.isLoading ? (
+        {query.isLoading ? (
           <LoadingState rows={2} />
-        ) : photosQuery.isError ? (
-          <p className="text-[13px] text-[var(--color-danger)]">{(photosQuery.error as Error).message}</p>
+        ) : query.isError ? (
+          <p className="text-[13px] text-[var(--color-danger)]">{(query.error as Error).message}</p>
         ) : (
           MEALS.map(({ meal, label }) => (
             <MealRow
               key={meal}
               meal={meal}
               label={label}
-              date={date}
-              photos={photos.filter((p) => p.meal === meal)}
+              photos={photosOf(meal)}
               canWrite={canWrite}
-              onUploaded={() => queryClient.invalidateQueries({ queryKey })}
+              uploading={uploading === meal}
+              error={errors[meal]}
+              onFile={(file) => upload(meal, file)}
               onView={setViewing}
               onDelete={setDeleting}
             />
@@ -103,68 +73,47 @@ export function MenuPhotosCard({
         open={!!deleting}
         onClose={() => {
           setDeleting(null);
-          deleteMutation.reset();
+          remove.reset();
         }}
         title="Suratni o'chirish"
         description="Surat ota-onalar kabinetidan ham olib tashlanadi."
         confirmLabel="O'chirish"
         tone="danger"
-        loading={deleteMutation.isPending}
-        error={deleteMutation.error ? (deleteMutation.error as Error).message : undefined}
-        onConfirm={() => deleting && deleteMutation.mutate(deleting)}
+        loading={remove.isPending}
+        error={remove.error ? (remove.error as Error).message : undefined}
+        onConfirm={() => deleting && remove.mutate(deleting, { onSuccess: () => setDeleting(null) })}
       />
     </Card>
   );
 }
 
 function MealRow({
-  meal,
   label,
-  date,
   photos,
   canWrite,
-  onUploaded,
+  uploading,
+  error,
+  onFile,
   onView,
   onDelete,
 }: {
   meal: MenuMeal;
   label: string;
-  date: string;
   photos: MenuPhoto[];
   canWrite: boolean;
-  onUploaded: () => void;
+  uploading: boolean;
+  error?: string;
+  onFile: (file: File) => Promise<boolean>;
   onView: (id: string) => void;
   onDelete: (id: string) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleFile = async (file: File | undefined) => {
-    if (!file) return;
-    setError(null);
-    setUploading(true);
-    try {
-      const prepared = await prepareMenuPhoto(file);
-      if (!prepared.ok) {
-        setError(prepared.reason);
-        return;
-      }
-      await api.post("/app/menu/photos", { date, meal, image: prepared.image });
-      onUploaded();
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setUploading(false);
-      if (inputRef.current) inputRef.current.value = "";
-    }
-  };
 
   return (
     <div>
       <div className="flex items-center justify-between gap-3">
         <p className="text-[14px] font-medium text-[var(--color-text)]">{label}</p>
-        {canWrite && photos.length < MAX_PER_MEAL && (
+        {canWrite && photos.length < MAX_PHOTOS_PER_MEAL && (
           <>
             <Button variant="outline" size="sm" loading={uploading} onClick={() => inputRef.current?.click()}>
               Rasm qo&apos;shish
@@ -175,7 +124,11 @@ function MealRow({
               accept="image/*"
               capture="environment"
               className="hidden"
-              onChange={(e) => handleFile(e.target.files?.[0])}
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (file) await onFile(file);
+              }}
             />
           </>
         )}

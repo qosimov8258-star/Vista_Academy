@@ -16,7 +16,8 @@ import { downloadCsv } from "@/lib/download";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { EditMenuModal } from "@/features/nutrition/edit-menu-modal";
 import { WeeklyMenuModal } from "@/features/nutrition/weekly-menu-modal";
-import { canWriteKitchen } from "@/lib/permissions";
+import { canWriteKitchen, isChef } from "@/lib/permissions";
+import { ChefMenu } from "@/features/chef/chef-menu";
 import { TodayRemindersCard } from "@/features/child-notes/today-reminders-card";
 import { TodayChildrenCard } from "@/features/nutrition/today-children-card";
 import { MenuPhotosCard } from "@/features/nutrition/menu-photos-card";
@@ -41,6 +42,13 @@ function addDays(dateString: string, days: number): string {
 
 export default function NutritionPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
+  const { user } = useAuth();
+  // Oshpazga telefon uchun qurilgan menyu ko'rinishi; qolgan rollarga — haftalik jadval
+  if (isChef(user?.role)) return <ChefMenu slug={slug} />;
+  return <AdminNutritionPage slug={slug} />;
+}
+
+function AdminNutritionPage({ slug }: { slug: string }) {
   const { user } = useAuth();
   // Menyu — oshpazning ishi; filial admini va administrator ham yozadi.
   const canWrite = canWriteKitchen(user?.role);

@@ -289,19 +289,10 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
     );
   }
 
-  // Oshpaz dars o'tmaydi — unga butun bog'cha bo'yicha bolalar va davomat ko'rsatiladi.
+  // Oshpaz dars o'tmaydi — unga porsiyalar, bugungi taomlar va allergiyalar ko'rsatiladi
+  // (sarlavha va sana ChefHome'ning o'zida).
   if (isChef(user?.role)) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
-            {user?.branchName ?? org.name}
-          </h1>
-          <p className="text-[13px] text-[var(--color-text-muted)]">Bugun · {todayLabel()}</p>
-        </div>
-        <ChefHome slug={slug} />
-      </div>
-    );
+    return <ChefHome slug={slug} />;
   }
 
   // Administrator (MANAGER) uchun alohida bosh sahifa: bugungi holat va qo'ng'iroqlar.
