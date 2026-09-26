@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../database/prisma.service";
-import { TenantScope, requireOperationalScope } from "../iam/tenant-auth.types";
+import { TenantScope, requireBranchScope, requireOperationalScope } from "../iam/tenant-auth.types";
 import { MarkStaffAttendanceDto } from "./dto/mark-staff-attendance.dto";
 import { StaffAttendanceQueryDto } from "./dto/staff-attendance-query.dto";
 import { StaffAttendanceSummaryQueryDto } from "./dto/staff-attendance-summary-query.dto";
@@ -20,7 +20,8 @@ export class StaffAttendanceService {
   constructor(private readonly prisma: PrismaService) {}
 
   async mark(scope: TenantScope, dto: MarkStaffAttendanceDto) {
-    const branchId = requireOperationalScope(scope);
+    // Kassir (Moliyachi) ish haqini davomatdan hisoblaydi, shuning uchun u ham belgilay oladi.
+    const branchId = scope.role === "FINANCE" ? requireBranchScope(scope) : requireOperationalScope(scope);
     const employee = await this.prisma.employee.findFirst({
       where: { id: dto.employeeId, organizationId: scope.organizationId },
     });
@@ -153,6 +154,46 @@ export class StaffAttendanceService {
         onLeave: items.reduce((sum, item) => sum + item.onLeave, 0),
       },
       employees: items,
+    };
+  }
+
+  /**
+   * Oy davomida kelmagan, kasal yoki ta'tilda bo'lgan kunlar (kim, qaysi kuni, sababi).
+   * Kassir ish haqini hisoblashda shu ro'yxatdan foydalanadi.
+   */
+  async absences(scope: TenantScope, query: StaffAttendanceSummaryQueryDto) {
+    const branchId = scope.branchId ?? query.branchId;
+    if (scope.branchId && query.branchId && query.branchId !== scope.branchId) {
+      throw new ForbiddenException("Bu filialga kirish huquqingiz yo'q");
+    }
+    if (!branchId) {
+      throw new BadRequestException("Filialni tanlang");
+    }
+    const branch = await this.prisma.branch.findFirst({ where: { id: branchId, organizationId: scope.organizationId } });
+    if (!branch) {
+      throw new NotFoundException("Filial topilmadi");
+    }
+    const period = query.period ?? todayDateString().slice(0, 7);
+    const [year, month] = period.split("-").map(Number);
+    const rows = await this.prisma.employeeAttendance.findMany({
+      where: {
+        branchId,
+        status: { in: ["ABSENT", "SICK", "ON_LEAVE"] },
+        date: { gte: new Date(Date.UTC(year, month - 1, 1)), lte: new Date(Date.UTC(year, month, 0)) },
+      },
+      include: { employee: { select: { fullName: true, position: true } } },
+      orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+    });
+    return {
+      period,
+      absences: rows.map((r) => ({
+        employeeId: r.employeeId,
+        fullName: r.employee.fullName,
+        position: r.employee.position,
+        date: r.date.toISOString().slice(0, 10),
+        status: r.status,
+        note: r.note,
+      })),
     };
   }
 

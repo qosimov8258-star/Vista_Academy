@@ -40,14 +40,14 @@ export default function GroupsPage({ params }: { params: Promise<{ slug: string 
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+      <div className="flex items-start justify-between gap-3 md:flex-wrap md:items-center">
+        <div className="min-w-0">
           <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
             Guruhlar
           </h1>
           <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">Yosh toifalari bo'yicha guruhlar</p>
         </div>
-        {canWrite && <Button onClick={() => setCreateOpen(true)}>+ Yangi guruh</Button>}
+        {canWrite && <Button className="shrink-0" onClick={() => setCreateOpen(true)}>+ Yangi guruh</Button>}
       </div>
 
       {!canWrite && <ViewOnlyNote role={user?.role} />}
@@ -60,12 +60,16 @@ export default function GroupsPage({ params }: { params: Promise<{ slug: string 
         <EmptyState title="Guruh topilmadi" description={canWrite ? "Yangi guruh qo'shish uchun tugmani bosing" : undefined} />
       ) : (
         <Card className="overflow-hidden">
-          <DataTable>
+          <DataTable compact>
             <THead>
               <tr>
                 <Th>Nomi</Th>
-                {!forcedBranchId && <Th>Filial</Th>}
-                <Th numeric>Bolalar / Sig'im</Th>
+                {!forcedBranchId && <Th className="hidden md:table-cell">Filial</Th>}
+                <Th className="hidden md:table-cell">Tarbiyachi</Th>
+                <Th numeric>
+                  <span className="md:hidden">Bolalar</span>
+                  <span className="hidden md:inline">Bolalar / Sig'im</span>
+                </Th>
                 <Th>Holat</Th>
               </tr>
             </THead>
@@ -76,8 +80,22 @@ export default function GroupsPage({ params }: { params: Promise<{ slug: string 
                     <Link href={`/${slug}/groups/${group.id}`} className="text-[var(--color-primary)] hover:underline">
                       {group.name}
                     </Link>
+                    <div className="mt-1 text-[12.5px] font-normal text-[var(--color-text-muted)] md:hidden">
+                      {group.teachers && group.teachers.length > 0
+                        ? group.teachers.map((t) => t.employee?.fullName).filter(Boolean).join(", ")
+                        : "Tarbiyachi biriktirilmagan"}
+                    </div>
                   </Td>
-                  {!forcedBranchId && <Td className="text-[var(--color-text-muted)]">{branchName(group.branchId)}</Td>}
+                  {!forcedBranchId && <Td className="hidden text-[var(--color-text-muted)] md:table-cell">{branchName(group.branchId)}</Td>}
+                  <Td className="hidden md:table-cell">
+                    {group.teachers && group.teachers.length > 0 ? (
+                      <span className="text-[var(--color-text)]">
+                        {group.teachers.map((t) => t.employee?.fullName).filter(Boolean).join(", ")}
+                      </span>
+                    ) : (
+                      <Badge tone="warning">Biriktirilmagan</Badge>
+                    )}
+                  </Td>
                   <Td numeric className="text-[var(--color-text-muted)]">
                     {group._count?.children ?? 0} / {group.capacity}
                   </Td>

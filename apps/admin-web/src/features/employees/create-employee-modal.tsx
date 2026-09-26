@@ -18,7 +18,7 @@ import { SubjectsModal } from "@/features/employees/subjects-modal";
 import { PencilIcon, ChevronDownIcon, CheckIcon, EyeIcon, EyeOffIcon } from "@/components/ui/icons";
 import { initials } from "@/components/ui/avatar";
 import { prepareChildPhoto } from "@/lib/child-photo";
-import { isSubjectTeacherPosition, isCookPosition } from "@/lib/employee-position";
+import { isCabinetlessPosition, isCookPosition, isGrouplessPosition, isSubjectTeacherPosition } from "@/lib/employee-position";
 import { validateUzbekPhone } from "@/lib/phone";
 
 const schema = z
@@ -92,7 +92,10 @@ export function CreateEmployeeModal({
   const [subjectsError, setSubjectsError] = useState<string | null>(null);
   const [subjectsModalOpen, setSubjectsModalOpen] = useState(false);
   const isSubjectTeacher = isSubjectTeacherPosition(positionName);
-  const isCookRole = isCookPosition(positionName);
+  // Guruhga biriktirilmaydigan lavozimlar: oshpaz, kassir, administrator.
+  const isCookRole = isCookPosition(positionName) || isGrouplessPosition(positionName);
+  // Oshpaz yordamchisi, idish yuvuvchi kabi lavozimlarga kabinet ochilmaydi.
+  const cabinetless = isCabinetlessPosition(positionName);
   const [groupsError, setGroupsError] = useState<string | null>(null);
   const [createdCredentials, setCreatedCredentials] = useState<EmployeeCredentials | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -141,7 +144,11 @@ export function CreateEmployeeModal({
     }
   }, [isCookRole, setValue]);
 
-  const withAccount = watch("withAccount");
+  useEffect(() => {
+    if (cabinetless) setValue("withAccount", false);
+  }, [cabinetless, setValue]);
+
+  const withAccount = watch("withAccount") && !cabinetless;
   const groupIds = watch("groupIds");
   const lastName = watch("lastName");
   const firstName = watch("firstName");
@@ -189,7 +196,7 @@ export function CreateEmployeeModal({
         phone: values.phone || undefined,
         position: positionName.trim(),
         subjects: isSubjectTeacher ? subjects : undefined,
-        account: values.withAccount
+        account: values.withAccount && !cabinetless
           ? {
               groupIds: values.groupIds,
               login: values.login?.trim() || undefined,
@@ -224,9 +231,21 @@ export function CreateEmployeeModal({
   });
 
   const toggleGroup = (id: string) => {
-    setValue("groupIds", groupIds.includes(id) ? groupIds.filter((g) => g !== id) : [...groupIds, id], {
-      shouldValidate: true,
-    });
+    // Fan o'qituvchisi bir necha guruhda dars berishi mumkin — ko'p tanlov.
+    // Boshqa xodimlar (tarbiyachi va h.k.) bir vaqtning o'zida faqat bitta
+    // guruhga biriktiriladi, shuning uchun yangisini bosish avvalgisini
+    // almashtiradi (xuddi shu guruhni qayta bossa — bekor qilinadi).
+    setValue(
+      "groupIds",
+      isSubjectTeacher
+        ? groupIds.includes(id)
+          ? groupIds.filter((g) => g !== id)
+          : [...groupIds, id]
+        : groupIds.includes(id)
+          ? []
+          : [id],
+      { shouldValidate: true },
+    );
     setGroupsError(null);
   };
 
@@ -288,7 +307,7 @@ export function CreateEmployeeModal({
             setSubjectsError("Kamida bitta fan tanlang");
             return;
           }
-          if (values.withAccount && !isCookRole && values.groupIds.length === 0) {
+          if (values.withAccount && !cabinetless && !isCookRole && values.groupIds.length === 0) {
             setGroupsError("Kamida bitta guruh tanlang");
             return;
           }
@@ -390,6 +409,7 @@ export function CreateEmployeeModal({
           label="Telefon raqami"
           type="tel"
           placeholder="+998 90 123 45 67"
+          maxLength={13}
           error={errors.phone?.message}
           {...register("phone")}
         />
@@ -426,6 +446,11 @@ export function CreateEmployeeModal({
           </div>
         )}
 
+        {cabinetless ? (
+          <p className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3.5 text-xs text-[var(--color-text-muted)]">
+            Bu lavozimdagi xodim tizimga kirmaydi — kabinet ochilmaydi, faqat xodimlar ro&apos;yxatida turadi.
+          </p>
+        ) : (
         <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3.5">
           <label className="flex cursor-pointer items-start gap-2.5">
             <input
@@ -556,6 +581,7 @@ export function CreateEmployeeModal({
             </div>
           )}
         </div>
+        )}
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={handleClose}>

@@ -3,6 +3,7 @@
 import { use, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
+import { TopbarAction } from "@/components/layout/topbar-action";
 import clsx from "clsx";
 import { api, getPaginated } from "@/lib/api";
 import type { Lead, LeadStage, LeadStats } from "@/lib/types";
@@ -65,13 +66,26 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
-            Arizalar (CRM)
-          </h1>
-          <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">Yangi mijozlar bilan ishlash bosqichlari</p>
+        {/* Mobilda "+ Yangi ariza" sarlavha qatorining o'ng tomonida turadi, kompyuterda esa avvalgidek tugmalar guruhida */}
+        <div className="flex w-full items-start justify-between gap-3 md:w-auto">
+          <div className="min-w-0">
+            <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
+              Arizalar (CRM)
+            </h1>
+            <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">Yangi mijozlar bilan ishlash bosqichlari</p>
+          </div>
+          {canWrite && (
+            <div className="shrink-0 md:hidden">
+              <Button onClick={() => setCreateOpen(true)}>+ Yangi ariza</Button>
+            </div>
+          )}
         </div>
-        <div className="flex gap-2">
+        <TopbarAction>
+          <Button variant="outline" loading={exporting} onClick={handleExport}>
+            Eksport (CSV)
+          </Button>
+        </TopbarAction>
+        <div className="hidden gap-2 md:flex">
           <Button variant="outline" loading={exporting} onClick={handleExport}>
             Eksport (CSV)
           </Button>

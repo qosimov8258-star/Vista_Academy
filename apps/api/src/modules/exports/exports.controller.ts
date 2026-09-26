@@ -76,6 +76,22 @@ export class ExportsController {
     res.send(pdf);
   }
 
+  @Get("children/:id/contract-pdf")
+  async childContractPdf(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string, @Res() res: Response) {
+    const pdf = await this.exportsService.childDocumentPdf(toTenantScope(user), id, "contract");
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="shartnoma-${id}.pdf"`);
+    res.send(pdf);
+  }
+
+  @Get("children/:id/certificate-pdf")
+  async childCertificatePdf(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string, @Res() res: Response) {
+    const pdf = await this.exportsService.childDocumentPdf(toTenantScope(user), id, "certificate");
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="malumotnoma-${id}.pdf"`);
+    res.send(pdf);
+  }
+
   @Get("attendance")
   async attendance(
     @CurrentTenantUser() user: TenantAuthenticatedUser,

@@ -90,20 +90,20 @@ function PersonRow({
 
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="truncate text-[14px] font-medium text-[var(--color-text)]">{person.fullName}</span>
+          <span className="whitespace-nowrap text-[14px] font-medium text-[var(--color-text)] md:truncate">{person.fullName}</span>
           {isSelf && <Badge tone="neutral">Siz</Badge>}
           {!person.isActive && <Badge tone="neutral">Nofaol</Badge>}
         </div>
-        <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">{person.login}</p>
-        <p className="truncate text-[12px] text-[var(--color-text-muted)]/80">
+        <p className="whitespace-nowrap text-[12.5px] text-[var(--color-text-muted)] md:truncate">{person.login}</p>
+        <p className="whitespace-nowrap text-[12px] text-[var(--color-text-muted)]/80 md:truncate">
           {person.lastLoginAt ? `Oxirgi kirish: ${formatDateTime(person.lastLoginAt)}` : "Hali kirmagan"}
         </p>
       </div>
 
-      <span className={`hidden shrink-0 rounded-full px-2.5 py-1 text-[12px] font-medium sm:block ${style.chip}`}>
+      <span className={`shrink-0 rounded-full px-2.5 py-1 text-[12px] font-medium ${style.chip}`}>
         {ROLE_LABEL[person.role]}
       </span>
-      <span className="hidden shrink-0 text-[12px] tabular-nums text-[var(--color-text-muted)] lg:block">
+      <span className="block shrink-0 text-[12px] tabular-nums text-[var(--color-text-muted)] md:hidden lg:block">
         {formatDate(person.createdAt)}
       </span>
 
@@ -351,7 +351,7 @@ export default function UsersPage({ params }: { params: Promise<{ slug: string }
                       Bu filialda mos xodim yo&apos;q
                     </p>
                   ) : (
-                    <ul className="divide-y divide-[var(--color-separator)]">
+                    <div className="overflow-x-auto"><ul className="w-max min-w-full divide-y divide-[var(--color-separator)] md:w-auto">
                       {section.people.map((person) => (
                         <PersonRow
                           key={person.id}
@@ -369,7 +369,7 @@ export default function UsersPage({ params }: { params: Promise<{ slug: string }
                           }}
                         />
                       ))}
-                    </ul>
+                    </ul></div>
                   )}
                 </Card>
               ))}
@@ -387,7 +387,7 @@ export default function UsersPage({ params }: { params: Promise<{ slug: string }
                       {sections.networkLevel.length}
                     </span>
                   </div>
-                  <ul className="divide-y divide-[var(--color-separator)]">
+                  <div className="overflow-x-auto"><ul className="w-max min-w-full divide-y divide-[var(--color-separator)] md:w-auto">
                     {sections.networkLevel.map((person) => (
                       <PersonRow
                         key={person.id}
@@ -405,7 +405,7 @@ export default function UsersPage({ params }: { params: Promise<{ slug: string }
                         }}
                       />
                     ))}
-                  </ul>
+                  </ul></div>
                 </Card>
               )}
             </div>

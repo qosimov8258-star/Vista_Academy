@@ -15,11 +15,12 @@ import { useAuth } from "@/lib/use-auth";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { useSidebarCollapsed } from "@/lib/use-sidebar-collapsed";
 import { useSidebarSections } from "@/lib/use-sidebar-sections";
-import { canManageUsers, canViewUseful, isTeacher } from "@/lib/permissions";
-import { formatPositionLabel } from "@/lib/employee-position";
+import { ROLE_LABEL, canManageUsers, canViewUseful, isTeacher } from "@/lib/permissions";
+import { formatPositionLabel, isAssistantPosition, isCashierPosition, isHeadChefPosition, isSubjectTeacherPosition } from "@/lib/employee-position";
 import { Avatar } from "@/components/ui/avatar";
 import type { IconProps } from "@/components/ui/icons";
 import {
+  CloseIcon,
   ArrowLeftIcon,
   BellIcon,
   BookIcon,
@@ -107,9 +108,8 @@ export function Sidebar({ slug }: { slug: string }) {
   const { user } = useAuth();
   const [collapsed, toggleCollapsed] = useSidebarCollapsed();
   const [openSections, toggleSection] = useSidebarSections();
-  // Mobil pastki navigatsiyada qaysi bo'lim varag'i ochiq turibdi (yon panel
-  // kabi doimiy saqlanmaydi — sahifa almashsa yopiladi).
-  const [mobileSheet, setMobileSheet] = useState<string | null>(null);
+  // Mobilda (<768px) tepadagi "uch chiziq" tugmasi ochadigan to'liq menyu (barcha rollar uchun).
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Sichqoncha nav elementlari ustidan o'tganda orqa fondagi belgilagich
   // shu yerga qarab silliq siljiydi ("sas" panelidagi kabi hover effekti).
@@ -139,6 +139,11 @@ export function Sidebar({ slug }: { slug: string }) {
   const showUsersNav = canManageUsers(user?.role);
   const showUseful = canViewUseful(user?.role);
   const teacher = isTeacher(user?.role);
+  const isSubjectTeacher = !!user?.position && isSubjectTeacherPosition(user.position);
+  const isHeadChef = !!user?.position && isHeadChefPosition(user.position);
+  const isAssistant = !!user?.position && isAssistantPosition(user.position);
+  const isCashier = !!user?.position && isCashierPosition(user.position);
+  const isManager = user?.role === "MANAGER";
   // Yon paneldagi "Bildirishnomalarim" belgisi uchun — daqiqada bir marta yangilanadi.
   const notificationsQuery = useQuery({
     queryKey: ["employee-notifications", slug],
@@ -190,7 +195,7 @@ export function Sidebar({ slug }: { slug: string }) {
   // O'qituvchi kabineti: faqat o'z guruhlariga tegishli uchta bo'lim.
   // Qolgan modullar (moliya, xodimlar, CRM, ...) unga ko'rinmaydi ham,
   // ochilmaydi ham — server tomonda ham yopiq.
-  const teacherEntries: NavEntry[] = [
+  const chefEntries: NavEntry[] = [
     { href: `/${slug}`, label: t("nav.home"), icon: HomeIcon, show: true, exact: true },
     {
       href: `/${slug}/my-notifications`,
@@ -199,30 +204,24 @@ export function Sidebar({ slug }: { slug: string }) {
       show: true,
       badge: unreadNotificationsCount > 0 ? unreadNotificationsCount : undefined,
     },
+    { href: `/${slug}/nutrition`, label: "Ovqatlanish", icon: MealIcon, show: true },
+  ];
+
+  // Tarbiyachi yordamchisi: guruhni, tarbiyachi belgilagan davomatni (faqat ko'rish),
+  // bolalarni, dars jadvalini va Foydali bo'limini ko'radi; dori eslatmalari bosh sahifada turadi.
+  const assistantEntries: NavEntry[] = [
+    ...chefEntries.filter((e) => isSection(e) || !e.href.endsWith("/nutrition")),
     {
       id: "guruhlarim",
       label: t("nav.myGroups"),
       icon: GroupIcon,
       items: [
         { href: `/${slug}/attendance`, label: t("nav.attendance"), icon: ChecklistIcon, show: true },
-        { href: `/${slug}/daily-reports`, label: t("nav.dailyReport"), icon: NoteIcon, show: true },
         { href: `/${slug}/children`, label: t("nav.children"), icon: ChildIcon, show: true },
+        { href: `/${slug}/my-lessons/schedule`, label: t("nav.lessonSchedule"), icon: CalendarIcon, show: true },
       ],
     },
-    {
-      id: "darsliklar",
-      label: t("nav.extraLessons"),
-      icon: BookIcon,
-      items: [
-        // Filial admini/administratorning `/lessons/...` sahifalari bilan
-        // bir xil URL bo'lmasligi uchun o'qituvchining kabineti alohida
-        // `/my-lessons/...` manzilida turadi (ikkalasi ham o'sha bir
-        // komponentni ko'rsatadi — cheklov rol bo'yicha serverda bo'ladi).
-        { href: `/${slug}/my-lessons/schedule`, label: t("nav.lessonSchedules"), icon: CalendarIcon, show: true },
-        { href: `/${slug}/my-lessons/topics`, label: t("nav.qna"), icon: QuestionIcon, show: true },
-        { href: `/${slug}/my-lessons/grades`, label: t("nav.grades"), icon: StarIcon, show: true },
-      ],
-    },
+    // Tarbiyachining vaqti bo'lmasa yordamchi she'r/maqol/ertak qo'shadi; har birida kim yozgani ko'rinadi.
     {
       id: "foydali",
       label: t("nav.useful"),
@@ -235,8 +234,86 @@ export function Sidebar({ slug }: { slug: string }) {
     },
   ];
 
+  // Kassir: guruhlar emas, pul bilan ishlaydi. Moliyachi roli bilan kiradi.
+  const cashierEntries: NavEntry[] = [
+    { href: `/${slug}`, label: "Bosh sahifa", icon: HomeIcon, show: true, exact: true },
+    { href: `/${slug}/cash`, label: "Kassa", icon: MoneyIcon, show: true },
+    { href: `/${slug}/finance`, label: "Hisob-fakturalar", icon: NoteIcon, show: true },
+    { href: `/${slug}/group-payments`, label: "Guruhlar bo'yicha to'lov", icon: GroupIcon, show: true },
+    { href: `/${slug}/cash-report`, label: "Oylik hisobot", icon: ChartIcon, show: true },
+    {
+      id: "oqituvchilar",
+      label: "O'qituvchilar",
+      icon: TeacherIcon,
+      items: [
+        { href: `/${slug}/hr`, label: "Ish haqi", icon: BriefcaseIcon, show: true },
+        { href: `/${slug}/staff-absences`, label: "Kelmagan kunlar", icon: CalendarIcon, show: true },
+      ],
+    },
+    { href: `/${slug}/my-notifications`, label: "Bildirishnomalarim", icon: BellIcon, show: true },
+  ];
+
+  const teacherEntries: NavEntry[] = [
+    ...chefEntries.filter((e) => isSection(e) || !e.href.endsWith("/nutrition")),
+    {
+      id: "guruhlarim",
+      label: t("nav.myGroups"),
+      icon: GroupIcon,
+      items: [
+        // Fan o'qituvchisi kunlik emas, o'z darsi bo'yicha davomat qiladi
+        { href: isSubjectTeacher ? `/${slug}/lesson-attendance` : `/${slug}/attendance`, label: t("nav.attendance"), icon: ChecklistIcon, show: true },
+        { href: `/${slug}/children`, label: t("nav.children"), icon: ChildIcon, show: !isSubjectTeacher },
+        // Fan o'qituvchisida dars jadvali alohida "Qo'shimcha darsliklar" o'rniga shu yerda
+        { href: `/${slug}/my-lessons/schedule`, label: t("nav.lessonSchedule"), icon: CalendarIcon, show: isSubjectTeacher },
+      ],
+    },
+    {
+      id: "darsliklar",
+      label: t("nav.extraLessons"),
+      icon: BookIcon,
+      items: [
+        // Filial admini/administratorning `/lessons/...` sahifalari bilan
+        // bir xil URL bo'lmasligi uchun o'qituvchining kabineti alohida
+        // `/my-lessons/...` manzilida turadi (ikkalasi ham o'sha bir
+        // komponentni ko'rsatadi — cheklov rol bo'yicha serverda bo'ladi).
+        { href: `/${slug}/my-lessons/schedule`, label: t("nav.lessonSchedules"), icon: CalendarIcon, show: !isSubjectTeacher },
+      ],
+    },
+    // Fan o'qituvchisiga she'r/maqol/ertak kerak emas — bu faqat tarbiyachilar uchun.
+    ...(isSubjectTeacher
+      ? []
+      : [
+          {
+            id: "foydali",
+            label: t("nav.useful"),
+            icon: BulbIcon,
+            items: [
+              { href: `/${slug}/useful/poems`, label: t("nav.poems"), icon: NoteIcon, show: showUseful },
+              { href: `/${slug}/useful/proverbs`, label: t("nav.proverbs"), icon: BulbIcon, show: showUseful },
+              { href: `/${slug}/useful/tales`, label: t("nav.tales"), icon: BookIcon, show: showUseful },
+            ],
+          },
+        ]),
+  ];
+
   const operationalEntries: NavEntry[] = [
     { href: base, label: t("nav.home"), icon: HomeIcon, show: true, exact: true },
+    // Administratorning kundalik ishi: qo'ng'iroqlar, olib ketish, bugungi holat.
+    // Bu sahifalar faqat o'z filialiga biriktirilgan foydalanuvchi uchun ishlaydi
+    // (backendda requireBranchScope NETWORK_ADMIN'ni rad etadi) — shuning uchun
+    // NETWORK_ADMIN boshqa filialni ko'rib turganda (inBranchContext) yashiriladi,
+    // aks holda havola 404/403 ga olib kelardi.
+    {
+      id: "bugungi-ishlar",
+      label: "Bugungi ishlar",
+      icon: PhoneIcon,
+      items: [
+        { href: `${base}/calls`, label: "Qo'ng'iroqlar", icon: PhoneIcon, show: isManager && !inBranchContext },
+        { href: `${base}/pickups`, label: "Olib ketish", icon: ChildIcon, show: !inBranchContext && !isManager },
+        { href: `${base}/board`, label: "Bugungi holat", icon: ChartIcon, show: !inBranchContext },
+        { href: `${base}/weekly-report`, label: "Haftalik hisobot", icon: NoteIcon, show: !inBranchContext },
+      ],
+    },
     {
       id: "qabul",
       label: t("nav.admissionAndChildren"),
@@ -253,7 +330,8 @@ export function Sidebar({ slug }: { slug: string }) {
       icon: TeacherIcon,
       items: [
         { href: `${base}/employees`, label: t("nav.employeeList"), icon: TeacherIcon, show: true },
-        { href: `${base}/hr`, label: t("nav.hr"), icon: BriefcaseIcon, show: true },
+        // Maosh kassirda; administratorga ko'rinmaydi
+        { href: `${base}/hr`, label: t("nav.hr"), icon: BriefcaseIcon, show: !isManager },
         { href: `${base}/staff-attendance`, label: t("nav.staffAttendance"), icon: CalendarIcon, show: true },
       ],
     },
@@ -262,8 +340,6 @@ export function Sidebar({ slug }: { slug: string }) {
       label: t("nav.dailyWork"),
       icon: ChecklistIcon,
       items: [
-        { href: `${base}/attendance`, label: t("nav.attendance"), icon: ChecklistIcon, show: true },
-        { href: `${base}/daily-reports`, label: t("nav.dailyReport"), icon: NoteIcon, show: true },
         { href: `${base}/nutrition`, label: t("nav.nutrition"), icon: MealIcon, show: true },
         // O'zi bilan xonalar katalogini ham boshqaradi — alohida nav shart emas
         { href: `${base}/lessons/schedule`, label: t("nav.lessonSchedule"), icon: CalendarIcon, show: true },
@@ -302,7 +378,9 @@ export function Sidebar({ slug }: { slug: string }) {
       label: t("nav.financeAndContact"),
       icon: MoneyIcon,
       items: [
-        { href: `${base}/finance`, label: t("nav.finance"), icon: MoneyIcon, show: true },
+        { href: `${base}/finance`, label: t("nav.finance"), icon: MoneyIcon, show: !isManager },
+        // Qarzdorlarga qo'ng'iroq qilib eslatish administratorning ishi
+        { href: `${base}/debtors`, label: "Qarzdorlar", icon: PhoneIcon, show: true },
         { href: `${base}/notifications`, label: t("nav.notifications"), icon: BellIcon, show: true },
         // Branch/user management stay a network-wide (root-level) concern, never
         // duplicated inside a single branch's panel.
@@ -330,25 +408,21 @@ export function Sidebar({ slug }: { slug: string }) {
     show: true,
   };
 
-  const entries = (teacher ? teacherEntries : isNetworkAdmin && !inBranchContext ? rootEntries : operationalEntries)
+  const entries = (isCashier ? cashierEntries : teacher ? (isHeadChef ? chefEntries : isAssistant ? assistantEntries : teacherEntries) : isNetworkAdmin && !inBranchContext ? rootEntries : operationalEntries)
     .map((entry) =>
       isSection(entry) ? { ...entry, items: entry.items.filter((item) => item.show) } : entry,
     )
     .filter((entry) => (isSection(entry) ? entry.items.length > 0 : entry.show));
 
-  // O'qituvchi uchun mobil ekranda pastda turadigan navigatsiya: "Bildirishnomalarim"
-  // bu yerda takrorlanmaydi, chunki mobilda u yuqori panelda qo'ng'iroqcha
-  // ikonkasi sifatida turadi (qarang: Topbar).
-  const mobileNavEntries = entries.filter(
-    (entry) => isSection(entry) || entry.href !== `/${slug}/my-notifications`,
-  );
-  const activeMobileSection = mobileSheet
-    ? mobileNavEntries.find((entry): entry is NavSection => isSection(entry) && entry.id === mobileSheet)
-    : undefined;
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
-    setMobileSheet(null);
-  }, [pathname]);
+    const open = () => setDrawerOpen(true);
+    window.addEventListener("open-mobile-menu", open);
+    return () => window.removeEventListener("open-mobile-menu", open);
+  }, []);
 
   // Yig'ilgan holatda bo'lim sarlavhasi sig'maydi — barcha havolalar
   // tekis ro'yxatga aylanadi, bo'limlar orasi ingichka chiziq bilan ajraladi.
@@ -651,28 +725,42 @@ export function Sidebar({ slug }: { slug: string }) {
       </div>
     </aside>
 
-    {/* Mobil pastki navigatsiya: yon panel <768px da butunlay yashirilgani
-        uchun o'qituvchiga ekran pastida asosiy bo'limlar beriladi. */}
-    {teacher && (
-      <>
-        {activeMobileSection && (
-          <>
-            <div
-              className="fixed inset-0 z-30 md:hidden"
-              aria-hidden
-              onClick={() => setMobileSheet(null)}
-            />
-            <div className="fixed inset-x-3 bottom-[calc(4rem+env(safe-area-inset-bottom)+0.5rem)] z-50 rounded-[20px] bg-[var(--color-surface)] p-2 shadow-[var(--shadow-modal)] md:hidden">
-              {activeMobileSection.items.map((item) => {
+    {/* Mobil to'liq menyu (o'qituvchidan boshqa rollar): Topbar'dagi uch chiziq tugmasi ochadi. */}
+    {drawerOpen && (
+      <div className="fixed inset-0 z-50 md:hidden">
+        <div className="absolute inset-0 bg-black/40" aria-hidden onClick={() => setDrawerOpen(false)} />
+        <aside
+          className="absolute inset-y-0 left-0 flex w-[82%] max-w-[320px] flex-col bg-[var(--color-surface)] shadow-[var(--shadow-modal)]"
+          aria-label="Asosiy menyu"
+        >
+          <div className="flex h-[60px] shrink-0 items-center justify-between gap-2 border-b border-[var(--color-separator)] px-4">
+            <div className="min-w-0">
+              <p className="truncate text-[15px] font-semibold text-[var(--color-text)]">{user?.fullName}</p>
+              <p className="truncate text-xs text-[var(--color-text-muted)]">{user ? ROLE_LABEL[user.role] : ""}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setDrawerOpen(false)}
+              aria-label="Menyuni yopish"
+              className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--color-text-muted)] hover:bg-black/[0.05]"
+            >
+              <CloseIcon className="h-5 w-5" />
+            </button>
+          </div>
+          <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto p-3" aria-label="Menyu">
+            {[...entries, settingsItem].map((entry) => {
+              const renderLink = (item: NavLeaf, nested: boolean) => {
                 const active = isActive(item);
                 const Icon = item.icon;
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    onClick={() => setMobileSheet(null)}
+                    onClick={() => setDrawerOpen(false)}
+                    aria-current={active ? "page" : undefined}
                     className={clsx(
-                      "flex items-center gap-3 rounded-[14px] px-3.5 py-3 text-[15px] font-medium transition-colors",
+                      "flex items-center gap-3 rounded-[14px] px-3.5 py-2.5 text-[15px] font-medium transition-colors",
+                      nested && "ml-3",
                       active
                         ? "bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
                         : "text-[var(--color-text)] hover:bg-black/[0.04]",
@@ -682,55 +770,33 @@ export function Sidebar({ slug }: { slug: string }) {
                     {item.label}
                   </Link>
                 );
-              })}
-            </div>
-          </>
-        )}
-
-        <nav
-          className="fixed inset-x-0 bottom-0 z-40 flex h-16 items-stretch border-t border-[var(--color-separator)] bg-[var(--color-surface)]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-[20px] md:hidden"
-          aria-label="Asosiy navigatsiya"
-        >
-          {mobileNavEntries.map((entry) => {
-            if (!isSection(entry)) {
-              const active = isActive(entry);
-              const Icon = entry.icon;
+              };
+              if (!isSection(entry)) return renderLink(entry, false);
+              const SectionIcon = entry.icon;
               return (
-                <Link
-                  key={entry.href}
-                  href={entry.href}
-                  aria-current={active ? "page" : undefined}
-                  className={clsx(
-                    "flex flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-medium",
-                    active ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)]",
-                  )}
-                >
-                  <Icon filled={active} className="h-5 w-5" />
-                  <span className="truncate px-1">{entry.label}</span>
-                </Link>
+                <div key={entry.id} className="pt-2">
+                  <p className="flex items-center gap-2 px-3.5 pb-1 text-[12px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                    <SectionIcon className="h-4 w-4" />
+                    {entry.label}
+                  </p>
+                  {entry.items.map((item) => renderLink(item, true))}
+                </div>
               );
-            }
-
-            const active = entry.items.some(isActive) || mobileSheet === entry.id;
-            const Icon = entry.icon;
-            return (
-              <button
-                key={entry.id}
-                type="button"
-                onClick={() => setMobileSheet((current) => (current === entry.id ? null : entry.id))}
-                aria-expanded={mobileSheet === entry.id}
-                className={clsx(
-                  "flex flex-1 cursor-pointer flex-col items-center justify-center gap-0.5 text-[11px] font-medium",
-                  active ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)]",
-                )}
-              >
-                <Icon className="h-5 w-5" />
-                <span className="truncate px-1">{entry.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-      </>
+            })}
+          </nav>
+          <div className="shrink-0 border-t border-[var(--color-separator)] p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={loggingOut}
+              className="flex w-full cursor-pointer items-center gap-3 rounded-[14px] px-3.5 py-2.5 text-[15px] font-medium text-[var(--color-danger)] hover:bg-[var(--color-danger-bg)] disabled:opacity-60"
+            >
+              <LogoutIcon className="h-5 w-5 shrink-0" />
+              {t("logout")}
+            </button>
+          </div>
+        </aside>
+      </div>
     )}
     </>
   );

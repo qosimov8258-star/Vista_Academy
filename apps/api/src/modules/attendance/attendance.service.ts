@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantScope, requireTeachingScope } from "../iam/tenant-auth.types";
+import { assertNotAssistant } from "../iam/teacher-scope";
 import { assertTeacherOwnsChild, resolveTeacherGroupIds, teacherChildWhere } from "../iam/teacher-scope";
 import { NotificationsService } from "../notifications/notifications.service";
 import { MarkAttendanceDto } from "./dto/mark-attendance.dto";
@@ -39,6 +40,7 @@ export class AttendanceService {
 
   async mark(scope: TenantScope, dto: MarkAttendanceDto) {
     const branchId = requireTeachingScope(scope);
+    await assertNotAssistant(this.prisma, scope);
     const child = await this.prisma.child.findFirst({ where: { id: dto.childId, organizationId: scope.organizationId } });
     if (!child) {
       throw new NotFoundException("Bola topilmadi");

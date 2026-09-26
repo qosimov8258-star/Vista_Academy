@@ -21,6 +21,15 @@ export class NutritionController {
     return this.nutritionService.findRange(toTenantScope(user), query);
   }
 
+  @Get("today-summary")
+  todaySummary(
+    @CurrentTenantUser() user: TenantAuthenticatedUser,
+    @Query("date") date: string,
+    @Query("branchId") branchId?: string,
+  ) {
+    return this.nutritionService.todaySummary(toTenantScope(user), { date, branchId });
+  }
+
   @Post()
   upsert(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: UpsertMenuEntryDto) {
     return this.nutritionService.upsert(toTenantScope(user), dto);

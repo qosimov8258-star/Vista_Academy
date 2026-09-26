@@ -122,7 +122,7 @@ export default function LessonGradesPage({ params }: { params: Promise<{ slug: s
         <Card className="overflow-hidden">
           <ul className="divide-y divide-[var(--color-separator)]">
             {gradesQuery.data.children.map((child) => (
-              <li key={child.childId} className="flex items-center justify-between gap-3 px-5 py-3">
+              <li key={child.childId} className="flex flex-col items-start gap-2 px-5 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-[var(--color-text)]">{child.fullName}</p>
                   {child.grade?.note && (

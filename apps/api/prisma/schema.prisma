@@ -273,6 +273,11 @@ model Branch {
   coinTransactions       CoinTransaction[]
   weeklyCoinAssessments  WeeklyCoinAssessment[]
   menuEntries            MenuEntry[]
+  childReminders         ChildReminder[]
+  expenses               Expense[]
+  callLogs               CallLog[]
+  pickupLogs             PickupLog[]
+  cashClosings           CashClosing[]
   employeeAttendances    EmployeeAttendance[]
   dailyReports           DailyReport[]
   developmentAssessments DevelopmentAssessment[]
@@ -288,6 +293,7 @@ model Branch {
   employeeNotifications  EmployeeNotification[]
   lessonTopics           LessonTopic[]
   lessonGrades           LessonGrade[]
+  lessonAttendances      LessonAttendance[]
   products               Product[]
   poems                  Poem[]
   proverbs               Proverb[]
@@ -327,6 +333,7 @@ model Group {
   lessonSchedules LessonSchedule[]
   lessonTopics    LessonTopic[]
   lessonGrades    LessonGrade[]
+  lessonAttendances LessonAttendance[]
   poems           Poem[]
   proverbs        Proverb[]
   tales           Tale[]
@@ -390,9 +397,12 @@ model Child {
   healthProfile          HealthProfile?
   vaccinations           Vaccination[]
   medicationLogs         MedicationLog[]
+  reminders              ChildReminder[]
+  pickupLogs             PickupLog[]
   guardians              ChildGuardian[]
   notificationLogs       NotificationLog[]
   lessonGrades           LessonGrade[]
+  lessonAttendances      LessonAttendance[]
   productSales           ProductSale[]
   faceEnrollments        FaceEnrollment[]
 
@@ -533,6 +543,7 @@ model Employee {
   lessonSchedules LessonSchedule[]
   lessonTopics    LessonTopic[]
   lessonGrades    LessonGrade[]
+  lessonAttendances LessonAttendance[]
   weeklyCoinAssessments WeeklyCoinAssessment[]
   notifications   EmployeeNotification[]
   faceEnrollments FaceEnrollment[]
@@ -624,6 +635,32 @@ model MenuEntry {
   @@unique([branchId, date])
   @@index([branchId, date])
   @@map("menu_entries")
+}
+
+/**
+ * Tarbiyachi bola haqida bir kunlik eslatma yozadi ("10:00 da dori ichishi kerak").
+ * Filialdagi barcha panellarda o'sha kun ko'rinadi. `authorName` ikkilangan:
+ * xodim keyin o'chirilsa ham kim yozgani qoladi.
+ */
+model ChildReminder {
+  id         String   @id @default(uuid())
+  branchId   String   @map("branch_id")
+  childId    String   @map("child_id")
+  date       DateTime @db.Date
+  time       String?
+  text       String
+  authorName String   @map("author_name")
+  // Tarbiyachi bajarilganini belgilaydi ("dori berildi"): qachon va kim.
+  doneAt     DateTime? @map("done_at")
+  doneByName String?   @map("done_by_name")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  child  Child  @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@index([branchId, date])
+  @@index([childId, date])
+  @@map("child_reminders")
 }
 
 /**
@@ -807,6 +844,36 @@ model TopicQuestion {
 
   @@index([topicId])
   @@map("topic_questions")
+}
+
+/// Fan o'qituvchisining o'z darsi bo'yicha davomati (keldi/kelmadi). Tarbiyachining
+/// kunlik `Attendance` jadvalidan alohida — ikkalasi bir-birining ustidan yozmasligi uchun.
+/// `scheduleId` — dars jadvali qatori; ataylab bog'lanmagan (relation yo'q), shuning
+/// uchun jadval qatori o'chirilsa ham davomat tarixi saqlanadi (guruh/fan/vaqt nusxalangan).
+model LessonAttendance {
+  id         String           @id @default(uuid())
+  branchId   String           @map("branch_id")
+  groupId    String           @map("group_id")
+  childId    String           @map("child_id")
+  employeeId String           @map("employee_id")
+  scheduleId String           @map("schedule_id")
+  subject    String?
+  startTime  String           @map("start_time")
+  endTime    String           @map("end_time")
+  date       DateTime         @db.Date
+  status     AttendanceStatus
+  createdAt  DateTime         @default(now()) @map("created_at")
+  updatedAt  DateTime         @updatedAt @map("updated_at")
+
+  branch   Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  group    Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  child    Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([scheduleId, childId, date])
+  @@index([groupId, date])
+  @@index([employeeId, date])
+  @@map("lesson_attendances")
 }
 
 /// Ota-ona farzandidan uyda so'rashi uchun savollar — variantsiz, baholashsiz.
@@ -994,6 +1061,7 @@ model Invoice {
 enum PaymentMethod {
   CASH
   BANK_TRANSFER
+  CARD
 }
 
 enum PaymentStatus {
@@ -1072,6 +1140,80 @@ model LedgerEntry {
 
   @@index([childId, createdAt])
   @@map("ledger_entries")
+}
+
+/// Administrator qo'ng'iroq qilgan ota-ona/ariza belgisi (qarz, kelmagan bola, ariza). Har kun uchun alohida.
+model CallLog {
+  id           String   @id @default(uuid())
+  branchId     String   @map("branch_id")
+  /// DEBT | ABSENT | LEAD
+  kind         String
+  /// Bola yoki ariza id si (kind ga qarab)
+  subjectId    String   @map("subject_id")
+  date         DateTime @db.Date
+  note         String?
+  calledByName String   @map("called_by_name")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@index([branchId, date])
+  @@map("call_logs")
+}
+
+/// Bola kim tomonidan olib ketilgani (kechqurun topshirish). Bola kuniga bir marta.
+model PickupLog {
+  id             String   @id @default(uuid())
+  branchId       String   @map("branch_id")
+  childId        String   @map("child_id")
+  date           DateTime @db.Date
+  pickedByName   String   @map("picked_by_name")
+  relation       String?
+  note           String?
+  recordedByName String   @map("recorded_by_name")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  child  Child  @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@unique([childId, date])
+  @@index([branchId, date])
+  @@map("pickup_logs")
+}
+
+/// Kassirning kunlik xarajati (xo'jalik mollari va h.k.). Kassadagi naqd pulni kamaytiradi.
+model Expense {
+  id            String   @id @default(uuid())
+  branchId      String   @map("branch_id")
+  date          DateTime @db.Date
+  amount        Decimal  @db.Decimal(12, 2)
+  category      String
+  note          String?
+  createdByName String   @map("created_by_name")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@index([branchId, date])
+  @@map("expenses")
+}
+
+/// Kun oxirida kassa yopilishi: tizim hisoblagan naqd bilan kassir sanagan naqd farqi.
+model CashClosing {
+  id           String   @id @default(uuid())
+  branchId     String   @map("branch_id")
+  date         DateTime @db.Date
+  expectedCash Decimal  @map("expected_cash") @db.Decimal(12, 2)
+  countedCash  Decimal  @map("counted_cash") @db.Decimal(12, 2)
+  difference   Decimal  @db.Decimal(12, 2)
+  note         String?
+  closedByName String   @map("closed_by_name")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([branchId, date])
+  @@map("cash_closings")
 }
 
 /// Coin tranzaksiyasi qaysi avtomatik manbadan kelganini bildiradi. Barcha
