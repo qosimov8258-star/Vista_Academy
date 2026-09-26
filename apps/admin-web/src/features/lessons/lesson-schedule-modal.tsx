@@ -116,9 +116,14 @@ export function LessonScheduleModal({
     mutationFn: ({ weekdays, ...values }: FormValues): Promise<unknown> => {
       const subject = values.subject || undefined;
       // Tahrirlashda bitta yozuv = bitta kun; yangi darsda tanlangan hamma kunlar birdan yaratiladi.
-      return isEdit
-        ? api.patch<LessonSchedule>(`/app/lesson-schedules/${schedule!.id}`, { ...values, subject, weekday: weekdays[0] })
-        : api.post<LessonSchedule[]>("/app/lesson-schedules", { ...values, subject, weekdays });
+      if (!isEdit) return api.post<LessonSchedule[]>("/app/lesson-schedules", { ...values, subject, weekdays });
+      // Tahrirlashda mavjud yozuv o'z kunida qoladi (agar tanlangan bo'lsa), qo'shimcha
+      // tanlangan kunlar uchun esa xuddi shu ma'lumotlar bilan yangi yozuvlar yaratiladi.
+      const keep = weekdays.includes(schedule!.weekday) ? schedule!.weekday : weekdays[0];
+      const extra = weekdays.filter((day) => day !== keep);
+      return api.patch<LessonSchedule>(`/app/lesson-schedules/${schedule!.id}`, { ...values, subject, weekday: keep }).then(() =>
+        extra.length > 0 ? api.post<LessonSchedule[]>("/app/lesson-schedules", { ...values, subject, weekdays: extra }) : null,
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["lesson-schedules", slug] });
@@ -190,7 +195,7 @@ export function LessonScheduleModal({
 
         <div>
           <span className="mb-2 block text-[13px] font-medium text-[var(--color-text)]">
-            {isEdit ? "Hafta kuni" : "Hafta kunlari"}
+            Hafta kunlari
           </span>
           <div className="flex flex-wrap gap-2">
             {WEEKDAY_OPTIONS.map((option) => {
@@ -201,11 +206,9 @@ export function LessonScheduleModal({
                   type="button"
                   aria-pressed={selected}
                   onClick={() => {
-                    const next = isEdit
-                      ? [option.value]
-                      : selected
-                        ? watchWeekdays.filter((day) => day !== option.value)
-                        : [...watchWeekdays, option.value];
+                    const next = selected
+                      ? watchWeekdays.filter((day) => day !== option.value)
+                      : [...watchWeekdays, option.value];
                     setValue("weekdays", next, { shouldValidate: true, shouldDirty: true });
                   }}
                   className={clsx(

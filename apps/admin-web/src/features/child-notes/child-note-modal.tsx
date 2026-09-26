@@ -20,11 +20,6 @@ export interface ChildReminder {
   doneByName: string | null;
 }
 
-interface DailyReportRow {
-  date: string;
-  activityNotes: string | null;
-}
-
 interface HealthProfile {
   allergies: string | null;
 }
@@ -34,9 +29,8 @@ function errorText(err: unknown): string {
 }
 
 /**
- * Tarbiyachining bola haqidagi uchta yozuvi: ota-onaga kun xabari, bugungi
- * eslatma (masalan dori vaqti) va allergiya. Eslatma va allergiya boshqa
- * panellarda ham ko'rinadi.
+ * Tarbiyachining bola haqidagi ikkita yozuvi: bugungi eslatma (masalan dori
+ * vaqti) va allergiya. Ikkalasi ham boshqa panellarda ham ko'rinadi.
  */
 export function ChildNoteModal({
   open,
@@ -56,18 +50,12 @@ export function ChildNoteModal({
   date: string;
 }) {
   const queryClient = useQueryClient();
-  const [dayNote, setDayNote] = useState("");
   const [allergies, setAllergies] = useState("");
   const [time, setTime] = useState("");
   const [text, setText] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const reportsQuery = useQuery({
-    queryKey: ["child-daily-reports", slug, childId],
-    queryFn: () => api.get<DailyReportRow[]>(`/app/children/${childId}/daily-reports`),
-    enabled: open,
-  });
   const healthQuery = useQuery({
     queryKey: ["child-health", slug, childId],
     queryFn: () => api.get<HealthProfile | null>(`/app/children/${childId}/health`),
@@ -87,10 +75,6 @@ export function ChildNoteModal({
     setText("");
   }, [open, childId]);
   useEffect(() => {
-    const today = reportsQuery.data?.find((r) => r.date.slice(0, 10) === date);
-    setDayNote(today?.activityNotes ?? "");
-  }, [reportsQuery.data, date, childId]);
-  useEffect(() => {
     setAllergies(healthQuery.data?.allergies ?? "");
   }, [healthQuery.data, childId]);
 
@@ -102,15 +86,6 @@ export function ChildNoteModal({
   const doneReminder = useMutation({
     mutationFn: ({ id, done }: { id: string; done: boolean }) => api.post(`/app/reminders/${id}/done`, { done }),
     onSuccess: invalidateReminders,
-    onError: (err) => setError(errorText(err)),
-  });
-
-  const dayNoteMutation = useMutation({
-    mutationFn: () => api.post("/app/daily-reports", { childId, date, activityNotes: dayNote.trim() }),
-    onSuccess: () => {
-      setMessage("Ota-onaga xabar saqlandi");
-      queryClient.invalidateQueries({ queryKey: ["child-daily-reports", slug, childId] });
-    },
     onError: (err) => setError(errorText(err)),
   });
 
@@ -154,21 +129,6 @@ export function ChildNoteModal({
         )}
 
         <section className="space-y-2">
-          <p className={sectionTitle}>Ota-onaga xabar (bugun qanday o&apos;tdi)</p>
-          <Textarea
-            rows={3}
-            value={dayNote}
-            onChange={(e) => setDayNote(e.target.value)}
-            placeholder="Masalan: yaxshi ovqatlandi, 2 soat uxladi, rasm chizdi"
-          />
-          <div className="flex justify-end">
-            <Button size="sm" loading={dayNoteMutation.isPending} disabled={!dayNote.trim()} onClick={() => { setError(null); dayNoteMutation.mutate(); }}>
-              Saqlash
-            </Button>
-          </div>
-        </section>
-
-        <section className="space-y-2 border-t border-[var(--color-separator)] pt-4">
           <p className={sectionTitle}>Bugungi eslatma — ota-ona aytgan dori yoki alohida e&apos;tibor (yozgan xodim ismi ko&apos;rinadi)</p>
           {remindersQuery.data && remindersQuery.data.length > 0 && (
             <ul className="divide-y divide-[var(--color-separator)] rounded-lg border border-[var(--color-border)] text-[14px]">
