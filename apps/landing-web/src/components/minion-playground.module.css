@@ -27,6 +27,14 @@
   perspective: 900px;
 }
 
+/* 3D sahna (three.js) — CSS sahna ustida, tayyor bo'lgach silliq paydo bo'ladi */
+.webgl {
+  position: absolute;
+  inset: 0;
+  transition-property: opacity;
+  transition-timing-function: ease-out;
+}
+
 /* ================= Sahna jihozlari (statik) ================= */
 
 /* --- Arg'imchoq (see-saw) --- */
