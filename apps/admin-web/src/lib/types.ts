@@ -504,6 +504,10 @@ export interface StaffAttendanceEmployee {
 
 export interface StaffAttendanceDay {
   date: string;
+  /** Filial admini davomatni saqlab qulflagach true bo'ladi — o'sha kun endi o'zgartirilmaydi. */
+  locked: boolean;
+  lockedAt: string | null;
+  lockedByName: string | null;
   employees: StaffAttendanceEmployee[];
 }
 
@@ -515,12 +519,33 @@ export interface StaffAttendanceSummary {
     employeeId: string;
     fullName: string;
     position: string;
+    subjects: string[];
+    groups: string[];
     present: number;
     absent: number;
     late: number;
     sick: number;
     onLeave: number;
     rate: number | null;
+  }[];
+}
+
+/** `GET /app/staff-attendance/history` javobi — bitta xodimning bir oylik kun-kun tarixi. */
+export interface StaffAttendanceHistory {
+  employee: {
+    id: string;
+    fullName: string;
+    position: string;
+    subjects: string[];
+    groups: string[];
+  };
+  period: string;
+  days: {
+    date: string;
+    status: StaffAttendanceStatus;
+    checkInTime: string | null;
+    checkOutTime: string | null;
+    note: string | null;
   }[];
 }
 
