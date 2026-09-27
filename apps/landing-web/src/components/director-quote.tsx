@@ -38,7 +38,7 @@ export function DirectorQuote() {
 
         <div className="mt-8 flex items-center">
           {/* eslint-disable-next-line @next/next/no-img-element -- statik brend rasmi */}
-          <img src="/logo.png" alt="Vista Academy" className="h-12 w-12 shrink-0 object-contain" />
+          <img src="/homepage/logo.png" alt="Vista Academy" className="h-12 w-12 shrink-0 object-contain" />
 
           <div className="ml-5 flex items-center gap-3">
             <span
