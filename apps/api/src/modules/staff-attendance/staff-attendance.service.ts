@@ -4,6 +4,8 @@ import { TenantScope, requireBranchScope, requireOperationalScope } from "../iam
 import { MarkStaffAttendanceDto } from "./dto/mark-staff-attendance.dto";
 import { StaffAttendanceQueryDto } from "./dto/staff-attendance-query.dto";
 import { StaffAttendanceSummaryQueryDto } from "./dto/staff-attendance-summary-query.dto";
+import { LockStaffAttendanceDto } from "./dto/lock-staff-attendance.dto";
+import { StaffAttendanceHistoryQueryDto } from "./dto/staff-attendance-history-query.dto";
 
 function toDateOnly(value: string): Date {
   return new Date(`${value}T00:00:00.000Z`);
@@ -32,6 +34,7 @@ export class StaffAttendanceService {
       throw new ForbiddenException("Bu xodimga kirish huquqingiz yo'q");
     }
     const date = toDateOnly(dto.date);
+    await this.assertNotLocked(branchId, date);
     return this.prisma.employeeAttendance.upsert({
       where: { employeeId_date: { employeeId: dto.employeeId, date } },
       create: {
@@ -61,18 +64,22 @@ export class StaffAttendanceService {
     }
     const date = toDateOnly(query.date ?? todayDateString());
 
-    const [employees, records] = await Promise.all([
+    const [employees, records, lock] = await Promise.all([
       this.prisma.employee.findMany({
         where: { branchId, isActive: true },
         select: { id: true, fullName: true, position: true },
         orderBy: { fullName: "asc" },
       }),
       this.prisma.employeeAttendance.findMany({ where: { branchId, date } }),
+      this.prisma.staffAttendanceLock.findUnique({ where: { branchId_date: { branchId, date } } }),
     ]);
 
     const recordByEmployee = new Map(records.map((r) => [r.employeeId, r]));
     return {
       date: date.toISOString().slice(0, 10),
+      locked: !!lock,
+      lockedAt: lock?.lockedAt.toISOString() ?? null,
+      lockedByName: lock?.lockedByName ?? null,
       employees: employees.map((e) => ({
         employeeId: e.id,
         fullName: e.fullName,
@@ -83,6 +90,32 @@ export class StaffAttendanceService {
         checkOutTime: recordByEmployee.get(e.id)?.checkOutTime ?? null,
       })),
     };
+  }
+
+  /**
+   * Kunlik davomat saqlangandan keyin chaqiriladi (frontend hamma xodimni
+   * yozib bo'lgach) — o'sha kun uchun endi hech kim o'zgartira olmaydi, chunki
+   * ish haqi shu ma'lumotga bog'liq. Qayta qulflashga urinish sokin o'tadi
+   * (idempotent) — allaqachon qulflangan kunni ikkinchi marta saqlash oddiy holat.
+   */
+  async lockDay(scope: TenantScope, actorName: string, dto: LockStaffAttendanceDto) {
+    const branchId = scope.role === "FINANCE" ? requireBranchScope(scope) : requireOperationalScope(scope);
+    const date = toDateOnly(dto.date);
+    await this.prisma.staffAttendanceLock.upsert({
+      where: { branchId_date: { branchId, date } },
+      create: { branchId, date, lockedByName: actorName },
+      update: {},
+    });
+    return { locked: true };
+  }
+
+  private async assertNotLocked(branchId: string, date: Date) {
+    const lock = await this.prisma.staffAttendanceLock.findUnique({ where: { branchId_date: { branchId, date } } });
+    if (lock) {
+      throw new ForbiddenException(
+        `Bu kun uchun davomat allaqachon saqlangan va qulflangan (${lock.lockedByName}), endi o'zgartirib bo'lmaydi`,
+      );
+    }
   }
 
   /**
@@ -111,7 +144,13 @@ export class StaffAttendanceService {
     const [employees, records] = await Promise.all([
       this.prisma.employee.findMany({
         where: { branchId, isActive: true },
-        select: { id: true, fullName: true, position: true },
+        select: {
+          id: true,
+          fullName: true,
+          position: true,
+          subjects: true,
+          teachingGroups: { select: { group: { select: { name: true } } } },
+        },
         orderBy: { fullName: "asc" },
       }),
       this.prisma.employeeAttendance.findMany({
@@ -139,6 +178,8 @@ export class StaffAttendanceService {
         employeeId: employee.id,
         fullName: employee.fullName,
         position: employee.position,
+        subjects: employee.subjects,
+        groups: employee.teachingGroups.map((t) => t.group.name),
         ...counts,
         rate: marked === 0 ? null : Math.round((counts.present / marked) * 100),
       };
@@ -192,6 +233,60 @@ export class StaffAttendanceService {
         position: r.employee.position,
         date: r.date.toISOString().slice(0, 10),
         status: r.status,
+        note: r.note,
+      })),
+    };
+  }
+
+  /**
+   * Bitta xodimning bir oylik kun-kun tarixi — "Xodimlar ro'yxati"da xodim
+   * ustiga bosilganda ochiladigan tarix oynasi shu yerdan to'ldiriladi
+   * (kim, qaysi kasb, qaysi kunlari kelgan/kelmagan).
+   */
+  async employeeHistory(scope: TenantScope, query: StaffAttendanceHistoryQueryDto) {
+    const employee = await this.prisma.employee.findFirst({
+      where: { id: query.employeeId, organizationId: scope.organizationId },
+      select: {
+        id: true,
+        fullName: true,
+        position: true,
+        subjects: true,
+        branchId: true,
+        teachingGroups: { select: { group: { select: { name: true } } } },
+      },
+    });
+    if (!employee) {
+      throw new NotFoundException("Xodim topilmadi");
+    }
+    const scopedBranchId = scope.branchId ?? query.branchId;
+    if (scopedBranchId && employee.branchId !== scopedBranchId) {
+      throw new ForbiddenException("Bu xodimga kirish huquqingiz yo'q");
+    }
+
+    const period = query.period ?? todayDateString().slice(0, 7);
+    const [year, month] = period.split("-").map(Number);
+    const from = new Date(Date.UTC(year, month - 1, 1));
+    const to = new Date(Date.UTC(year, month, 0));
+
+    const records = await this.prisma.employeeAttendance.findMany({
+      where: { employeeId: employee.id, date: { gte: from, lte: to } },
+      orderBy: { date: "asc" },
+    });
+
+    return {
+      employee: {
+        id: employee.id,
+        fullName: employee.fullName,
+        position: employee.position,
+        subjects: employee.subjects,
+        groups: employee.teachingGroups.map((t) => t.group.name),
+      },
+      period,
+      days: records.map((r) => ({
+        date: r.date.toISOString().slice(0, 10),
+        status: r.status,
+        checkInTime: r.checkInTime,
+        checkOutTime: r.checkOutTime,
         note: r.note,
       })),
     };
