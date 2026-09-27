@@ -281,6 +281,7 @@ model Branch {
   pickupLogs             PickupLog[]
   cashClosings           CashClosing[]
   employeeAttendances    EmployeeAttendance[]
+  staffAttendanceLocks   StaffAttendanceLock[]
   dailyReports           DailyReport[]
   developmentAssessments DevelopmentAssessment[]
   leads                  Lead[]
@@ -620,6 +621,24 @@ model EmployeeAttendance {
   @@unique([employeeId, date])
   @@index([branchId, date])
   @@map("employee_attendances")
+}
+
+/**
+ * Filial administratori bir kunlik xodimlar davomatini saqlagach, o'sha kun
+ * qulflanadi — hech kim (hatto qayta ochib) o'zgartira olmaydi, chunki ish
+ * haqi shu ma'lumotga bog'liq. Har bir yozuv emas, kunning o'zi qulflanadi.
+ */
+model StaffAttendanceLock {
+  id           String   @id @default(uuid())
+  branchId     String   @map("branch_id")
+  date         DateTime @db.Date
+  lockedAt     DateTime @default(now()) @map("locked_at")
+  lockedByName String   @map("locked_by_name")
+
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([branchId, date])
+  @@map("staff_attendance_locks")
 }
 
 model MenuEntry {
