@@ -7,7 +7,16 @@ import clsx from "clsx";
 import { locales, localeCookieName, type Locale } from "@/i18n/config";
 import { GlobeIcon, ChevronDownIcon } from "@/components/ui/icons";
 
-export function LanguageSwitcher({ collapsed = false, dropUp = false }: { collapsed?: boolean; dropUp?: boolean }) {
+export function LanguageSwitcher({
+  collapsed = false,
+  dropUp = false,
+  appearance = "default",
+}: {
+  collapsed?: boolean;
+  dropUp?: boolean;
+  /** `onDark` — to'q fon ustida (masalan, kirish sahifasi): tugma och rangda */
+  appearance?: "default" | "onDark";
+}) {
   const locale = useLocale() as Locale;
   const t = useTranslations("common");
   const router = useRouter();
@@ -41,7 +50,10 @@ export function LanguageSwitcher({ collapsed = false, dropUp = false }: { collap
         aria-expanded={open}
         title={t("language")}
         className={clsx(
-          "flex h-9 items-center justify-center gap-1.5 rounded-full text-[13px] font-semibold text-[var(--color-text-muted)] outline-none transition-colors hover:bg-black/[0.05] hover:text-[var(--color-text)] disabled:opacity-60",
+          "flex h-9 items-center justify-center gap-1.5 rounded-full text-[13px] font-semibold outline-none transition-colors disabled:opacity-60",
+          appearance === "onDark"
+            ? "border border-white/[0.1] bg-white/[0.04] text-white/75 hover:bg-white/[0.08] hover:text-white"
+            : "text-[var(--color-text-muted)] hover:bg-black/[0.05] hover:text-[var(--color-text)]",
           collapsed ? "w-9" : "px-3",
         )}
       >

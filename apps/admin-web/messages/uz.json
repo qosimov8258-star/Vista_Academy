@@ -65,6 +65,32 @@
     "forgotPassword": "Parolni unutdingizmi? Tashkilot Super Admini bilan bog'laning.",
     "loginRequired": "Login kiritilishi shart",
     "passwordMin": "Kamida 8 belgi",
-    "unexpectedError": "Kutilmagan xatolik yuz berdi"
+    "unexpectedError": "Kutilmagan xatolik yuz berdi",
+    "hero": {
+      "status": "Tizim ishlamoqda",
+      "titleLine1": "Bog'changizni",
+      "titleLine2": "bir joydan boshqaring",
+      "subtitle": "Bolalar, davomat, to'lovlar va oshxona — bitta tizimda. Har bir filial qanday ishlayotganini har kuni aniq ko'rib turasiz.",
+      "featuresLabel": "Tizim imkoniyatlari",
+      "rights": "Barcha huquqlar himoyalangan",
+      "features": {
+        "attendance": {
+          "title": "Davomat",
+          "text": "Bugun kim keldi, kim kelmadi — bolalar va xodimlar bo'yicha bir qarashda."
+        },
+        "finance": {
+          "title": "Moliya",
+          "text": "To'lovlar, qarzdorlik va kassa — har bir filial bo'yicha real vaqtda."
+        },
+        "kitchen": {
+          "title": "Oshxona",
+          "text": "Menyu, porsiyalar hisobi va ota-onalarga tayyor taom surati."
+        },
+        "parents": {
+          "title": "Ota-onalar kabineti",
+          "text": "Kundalik, xabarlar va to'lovlar — ota-onaning telefonida."
+        }
+      }
+    }
   }
 }
