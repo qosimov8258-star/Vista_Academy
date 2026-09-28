@@ -268,7 +268,7 @@ export function DirectorRail({
         <span className={styles.label}>{item.label}</span>
         {item.badge != null && item.badge > 0 && (
           <span
-            className={clsx(styles.dot, "absolute h-2 w-2 rounded-full bg-emerald-400")}
+            className={clsx(styles.dot, "absolute h-2 w-2 rounded-full bg-[var(--accent-bright)]")}
             style={{ left: "calc((var(--row-size) - 22px) / 2 + 17px)", top: "calc(50% - 11px)" }}
             aria-hidden="true"
           />
@@ -301,7 +301,7 @@ export function DirectorRail({
           <span className={styles.label}>{section.label}</span>
           {open && <ChevronRightIcon className={clsx(styles.chevron, "h-4 w-4", expanded ? "rotate-90" : "")} />}
           {!open && section.items.some((i) => (i.badge ?? 0) > 0) && (
-            <span className={clsx(styles.dot, "absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-emerald-400")} aria-hidden="true" />
+            <span className={clsx(styles.dot, "absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-[var(--accent-bright)]")} aria-hidden="true" />
           )}
         </button>
         {expanded && (
@@ -317,7 +317,7 @@ export function DirectorRail({
                 >
                   <span className="min-w-0 flex-1 truncate">{item.label}</span>
                   {item.badge != null && item.badge > 0 && (
-                    <span className="ml-2 rounded-full bg-emerald-400/20 px-2 py-0.5 text-[11px] font-bold tabular-nums">{item.badge}</span>
+                    <span className="ml-2 rounded-full bg-[var(--accent-bright)]/20 px-2 py-0.5 text-[11px] font-bold tabular-nums">{item.badge}</span>
                   )}
                 </Link>
               );
@@ -466,7 +466,7 @@ export function DirectorRail({
             role="tooltip"
             className={clsx(
               styles.tooltip,
-              "pointer-events-none fixed z-[70] -translate-y-1/2 whitespace-nowrap rounded-[10px] bg-[#0d241b] px-3 py-1.5 text-[13px] font-semibold text-white shadow-[0_8px_24px_-8px_rgba(5,40,28,0.5)]",
+              "pointer-events-none fixed z-[70] -translate-y-1/2 whitespace-nowrap rounded-[10px] bg-[var(--accent-rail)] px-3 py-1.5 text-[13px] font-semibold text-white shadow-[0_8px_24px_-8px_color-mix(in_srgb,var(--accent-rail)_50%,transparent)]",
             )}
             style={{ top: tip.top, left: tip.left }}
           >
@@ -484,7 +484,7 @@ export function DirectorRail({
             aria-label={flyout.section.label}
             className={clsx(
               styles.flyout,
-              "fixed z-[70] w-[248px] rounded-[22px] border border-black/[0.04] bg-white p-2 shadow-[0_24px_48px_-16px_rgba(5,40,28,0.28),0_2px_6px_rgba(5,40,28,0.06)]",
+              "fixed z-[70] w-[248px] rounded-[22px] border border-black/[0.04] bg-white p-2 shadow-[0_24px_48px_-16px_color-mix(in_srgb,var(--accent-rail)_28%,transparent),0_2px_6px_color-mix(in_srgb,var(--accent-rail)_6%,transparent)]",
             )}
             style={{ top: flyout.top, left: flyout.left }}
           >
@@ -503,21 +503,21 @@ export function DirectorRail({
                   className={clsx(
                     "group flex h-11 items-center gap-3 rounded-[14px] px-3 text-[14.5px] transition-colors",
                     active
-                      ? "bg-emerald-50 font-semibold text-emerald-900"
+                      ? "bg-[var(--accent-soft)] font-semibold text-[var(--accent-soft-ink)]"
                       : "font-medium text-[var(--color-text)] hover:bg-[var(--color-surface-sunken)]",
                   )}
                 >
                   <span
                     className={clsx(
                       "flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] transition-colors",
-                      active ? "bg-emerald-500/15 text-emerald-700" : "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)] group-hover:bg-white",
+                      active ? "bg-[var(--accent-soft-icon)]/15 text-[var(--accent-soft-icon)]" : "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)] group-hover:bg-white",
                     )}
                   >
                     <Icon filled={active} className="h-[18px] w-[18px]" />
                   </span>
                   <span className="min-w-0 flex-1 truncate">{item.label}</span>
                   {item.badge != null && item.badge > 0 && (
-                    <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-bold tabular-nums text-emerald-700">{item.badge}</span>
+                    <span className="rounded-full bg-[var(--accent-soft-icon)]/15 px-2 py-0.5 text-[11px] font-bold tabular-nums text-[var(--accent-soft-icon)]">{item.badge}</span>
                   )}
                 </Link>
               );
@@ -573,13 +573,13 @@ export function DirectorMenuContent({
         aria-current={active ? "page" : undefined}
         className={clsx(
           "group flex h-11 items-center gap-3 rounded-[14px] px-3 text-[14.5px] transition-colors",
-          active ? "bg-emerald-50 font-semibold text-emerald-900" : "font-medium text-[var(--color-text)] hover:bg-[var(--color-surface-sunken)] active:bg-[var(--color-surface-sunken)]",
+          active ? "bg-[var(--accent-soft)] font-semibold text-[var(--accent-soft-ink)]" : "font-medium text-[var(--color-text)] hover:bg-[var(--color-surface-sunken)] active:bg-[var(--color-surface-sunken)]",
         )}
       >
-        <Icon filled={active} className={clsx("h-5 w-5 shrink-0", active ? "text-emerald-600" : "text-[var(--color-text-muted)]")} />
+        <Icon filled={active} className={clsx("h-5 w-5 shrink-0", active ? "text-[var(--accent-soft-icon)]" : "text-[var(--color-text-muted)]")} />
         <span className="min-w-0 flex-1 truncate">{item.label}</span>
         {item.badge != null && item.badge > 0 && (
-          <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-bold tabular-nums text-emerald-700">{item.badge}</span>
+          <span className="rounded-full bg-[var(--accent-soft-icon)]/15 px-2 py-0.5 text-[11px] font-bold tabular-nums text-[var(--accent-soft-icon)]">{item.badge}</span>
         )}
       </Link>
     );
@@ -588,7 +588,7 @@ export function DirectorMenuContent({
   return (
     <>
       <div className="flex shrink-0 items-center gap-3 px-5 pb-4 pt-5">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-[#0d241b] text-[16px] font-extrabold text-emerald-300">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-[var(--accent-rail)] text-[16px] font-extrabold text-[var(--accent-light)]">
           {orgName ? initials(orgName) : ""}
         </span>
         <div className="min-w-0 flex-1">
@@ -611,12 +611,12 @@ export function DirectorMenuContent({
         <Link
           href={`/${slug}/branches`}
           onClick={onClose}
-          className="group mx-4 mb-2 flex shrink-0 items-center gap-2.5 rounded-[16px] bg-emerald-50 px-3.5 py-2.5 transition-colors hover:bg-emerald-100/70"
+          className="group mx-4 mb-2 flex shrink-0 items-center gap-2.5 rounded-[16px] bg-[var(--accent-soft)] px-3.5 py-2.5 transition-colors hover:bg-[var(--accent-soft-icon)]/12"
         >
-          <ArrowLeftIcon className="h-4 w-4 shrink-0 text-emerald-700 transition-transform group-hover:-translate-x-0.5" />
+          <ArrowLeftIcon className="h-4 w-4 shrink-0 text-[var(--accent-soft-icon)] transition-transform group-hover:-translate-x-0.5" />
           <span className="min-w-0 flex-1">
-            <span className="block text-[11.5px] font-semibold text-emerald-700/80">Filiallarga qaytish</span>
-            <span className="block truncate text-[14px] font-bold text-emerald-900">{branchName}</span>
+            <span className="block text-[11.5px] font-semibold text-[var(--accent-soft-icon)]/80">Filiallarga qaytish</span>
+            <span className="block truncate text-[14px] font-bold text-[var(--accent-soft-ink)]">{branchName}</span>
           </span>
         </Link>
       )}

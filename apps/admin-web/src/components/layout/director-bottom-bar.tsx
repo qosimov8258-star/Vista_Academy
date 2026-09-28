@@ -240,11 +240,11 @@ export function DirectorBottomBar({
         sheet &&
         createPortal(
           <div className="fixed inset-0 z-[65] md:hidden" role="dialog" aria-modal="true" aria-label={sheet.kind === "menu" ? "Barcha bo'limlar" : sheet.section.label}>
-            <div className={clsx(styles.scrim, "absolute inset-0 bg-[#0d241b]/35 backdrop-blur-[2px]")} onClick={() => setSheet(null)} aria-hidden="true" />
+            <div className={clsx(styles.scrim, "absolute inset-0 bg-[var(--accent-rail)]/35 backdrop-blur-[2px]")} onClick={() => setSheet(null)} aria-hidden="true" />
             <div
               className={clsx(
                 styles.sheet,
-                "absolute inset-x-0 bottom-0 flex max-h-[86dvh] flex-col overflow-hidden rounded-t-[28px] bg-white shadow-[0_-24px_48px_-20px_rgba(5,40,28,0.35)]",
+                "absolute inset-x-0 bottom-0 flex max-h-[86dvh] flex-col overflow-hidden rounded-t-[28px] bg-white shadow-[0_-24px_48px_-20px_color-mix(in_srgb,var(--accent-rail)_35%,transparent)]",
               )}
             >
               <div className="mx-auto mt-2.5 h-1.5 w-10 shrink-0 rounded-full bg-black/15" aria-hidden="true" />
@@ -278,7 +278,7 @@ function SectionList({ section, isActive, onClose }: { section: NavSection; isAc
   return (
     <div className="px-4 pt-4" style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom))" }}>
       <div className="flex items-center gap-3 px-1 pb-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-[#0d241b] text-emerald-300">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-[var(--accent-rail)] text-[var(--accent-light)]">
           <SectionIcon className="h-[22px] w-[22px]" />
         </span>
         <p className="min-w-0 flex-1 truncate text-[18px] font-bold tracking-[-0.01em] text-[var(--color-text)]">{section.label}</p>
@@ -295,20 +295,20 @@ function SectionList({ section, isActive, onClose }: { section: NavSection; isAc
               aria-current={active ? "page" : undefined}
               className={clsx(
                 "flex h-[52px] items-center gap-3 rounded-[16px] px-3 text-[15.5px] transition-colors",
-                active ? "bg-emerald-50 font-semibold text-emerald-900" : "font-medium text-[var(--color-text)] active:bg-[var(--color-surface-sunken)]",
+                active ? "bg-[var(--accent-soft)] font-semibold text-[var(--accent-soft-ink)]" : "font-medium text-[var(--color-text)] active:bg-[var(--color-surface-sunken)]",
               )}
             >
               <span
                 className={clsx(
                   "flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px]",
-                  active ? "bg-emerald-500/15 text-emerald-700" : "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)]",
+                  active ? "bg-[var(--accent-soft-icon)]/15 text-[var(--accent-soft-icon)]" : "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)]",
                 )}
               >
                 <Icon filled={active} className="h-5 w-5" />
               </span>
               <span className="min-w-0 flex-1 truncate">{item.label}</span>
               {item.badge != null && item.badge > 0 && (
-                <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-bold tabular-nums text-emerald-700">{item.badge}</span>
+                <span className="rounded-full bg-[var(--accent-soft-icon)]/15 px-2 py-0.5 text-[11px] font-bold tabular-nums text-[var(--accent-soft-icon)]">{item.badge}</span>
               )}
             </Link>
           );

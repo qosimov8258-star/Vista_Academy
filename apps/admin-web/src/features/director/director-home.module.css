@@ -26,9 +26,9 @@ a.card:active {
 /* Bugungi holat vidjeti — yon paneldagi to'q yashil bilan bir oila */
 .hero {
   background:
-    radial-gradient(120% 140% at 100% 0%, rgba(52, 211, 153, 0.22), transparent 55%),
-    linear-gradient(160deg, #11302a 0%, #0d241b 55%, #0a1c15 100%);
-  box-shadow: 0 24px 48px -24px rgba(5, 40, 28, 0.6);
+    radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--accent-bright) 22%, transparent), transparent 55%),
+    linear-gradient(160deg, var(--accent-rail-2) 0%, var(--accent-rail) 55%, color-mix(in srgb, var(--accent-rail) 85%, black) 100%);
+  box-shadow: 0 24px 48px -24px color-mix(in srgb, var(--accent-rail) 60%, transparent);
 }
 .heroGlow {
   position: absolute;
@@ -37,7 +37,7 @@ a.card:active {
   right: -120px;
   bottom: -200px;
   border-radius: 9999px;
-  border: 1px solid rgba(110, 231, 183, 0.12);
+  border: 1px solid color-mix(in srgb, var(--accent-light) 12%, transparent);
   pointer-events: none;
 }
 .heroGlow::after {
@@ -45,7 +45,7 @@ a.card:active {
   position: absolute;
   inset: 60px;
   border-radius: inherit;
-  border: 1px dashed rgba(110, 231, 183, 0.08);
+  border: 1px dashed color-mix(in srgb, var(--accent-light) 8%, transparent);
 }
 
 .ring {

@@ -61,7 +61,7 @@ const fullMoney = (value: number) => `${Math.round(value).toLocaleString("ru-RU"
 
 /**
  * Bog'cha direktori (Super Admin) bosh sahifasi — iOS uslubida: katta
- * sarlavha, yumaloq vidjetlar, rangli "squircle" ikonkalar, guruhlangan
+ * sarlavha, yumaloq vidjetlar, tizim rangidagi "squircle" ikonkalar, guruhlangan
  * ro'yxat va iPhone bosh ekranidagidek tezkor bo'limlar. Telefonda ilova
  * kabi ko'rinadi.
  */
@@ -98,14 +98,14 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
   const attendanceStarted = childrenPresent + childrenAbsent + staffPresent + staffAbsent > 0;
 
   const apps: { label: string; href: string; icon: ComponentType<IconProps>; tint: IosTint }[] = [
-    { label: "Filiallar", href: `/${slug}/branches`, icon: BuildingIcon, tint: "blue" },
-    { label: "Guruhlar", href: `/${slug}/network/groups`, icon: GroupIcon, tint: "teal" },
-    { label: "Bolalar", href: `/${slug}/network/children`, icon: ChildIcon, tint: "orange" },
-    { label: "Moliya", href: `/${slug}/network/finance`, icon: MoneyIcon, tint: "green" },
-    { label: "Hisobot", href: `/${slug}/report`, icon: ChartIcon, tint: "indigo" },
-    { label: "Xodimlar", href: `/${slug}/users`, icon: TeacherIcon, tint: "purple" },
-    { label: "Audit", href: `/${slug}/audit-logs`, icon: AuditIcon, tint: "emerald" },
-    { label: "Sozlamalar", href: `/${slug}/settings`, icon: SettingsIcon, tint: "gray" },
+    { label: "Filiallar", href: `/${slug}/branches`, icon: BuildingIcon, tint: "accent" },
+    { label: "Guruhlar", href: `/${slug}/network/groups`, icon: GroupIcon, tint: "accent" },
+    { label: "Bolalar", href: `/${slug}/network/children`, icon: ChildIcon, tint: "accent" },
+    { label: "Moliya", href: `/${slug}/network/finance`, icon: MoneyIcon, tint: "accent" },
+    { label: "Hisobot", href: `/${slug}/report`, icon: ChartIcon, tint: "accent" },
+    { label: "Xodimlar", href: `/${slug}/users`, icon: TeacherIcon, tint: "accent" },
+    { label: "Audit", href: `/${slug}/audit-logs`, icon: AuditIcon, tint: "accent" },
+    { label: "Sozlamalar", href: `/${slug}/settings`, icon: SettingsIcon, tint: "accent" },
   ];
 
   return (
@@ -131,7 +131,7 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
         <div className={styles.heroGlow} aria-hidden="true" />
         <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
           <div className="max-w-[340px]">
-            <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-emerald-200/70">Bugun bog&apos;chada</p>
+            <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--accent-light)]/70">Bugun bog&apos;chada</p>
             <p className="mt-2 text-[22px] font-bold leading-snug tracking-[-0.015em] md:text-[26px]">
               {loading
                 ? "Yuklanmoqda…"
@@ -139,24 +139,24 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
                   ? "Davomat hali belgilanmagan"
                   : `${children} boladan ${childrenPresent} tasi keldi`}
             </p>
-            <p className="mt-1.5 text-[14px] text-emerald-50/60">
+            <p className="mt-1.5 text-[14px] text-[var(--accent-pale)]/60">
               {org.branches.length} ta filial · {children} bola · {employees} xodim
             </p>
           </div>
 
           <div className="flex gap-3 md:gap-4">
-            <RingStat label="Bolalar" present={childrenPresent} absent={childrenAbsent} total={children} color="#6ee7b7" />
-            <RingStat label="Xodimlar" present={staffPresent} absent={staffAbsent} total={employees} color="#7dd3fc" />
+            <RingStat label="Bolalar" present={childrenPresent} absent={childrenAbsent} total={children} color="var(--accent-light)" />
+            <RingStat label="Xodimlar" present={staffPresent} absent={staffAbsent} total={employees} color="var(--accent-pale)" />
           </div>
         </div>
       </section>
 
       {/* Raqamlar — vidjetlar */}
       <section className={clsx(styles.rise, "grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4")} style={{ animationDelay: "80ms" }}>
-        <Widget href={`/${slug}/branches`} icon={BuildingIcon} tint="blue" label="Filiallar" value={org.branches.length} />
-        <Widget href={`/${slug}/network/children`} icon={ChildIcon} tint="orange" label="Bolalar" value={children} loading={loading} />
-        <Widget href={`/${slug}/network/groups`} icon={GroupIcon} tint="teal" label="Faol guruhlar" value={s?.activeGroupsCount ?? 0} loading={loading} />
-        <Widget href={`/${slug}/users`} icon={TeacherIcon} tint="purple" label="Xodimlar" value={employees} loading={loading} />
+        <Widget href={`/${slug}/branches`} icon={BuildingIcon} tint="accent" label="Filiallar" value={org.branches.length} />
+        <Widget href={`/${slug}/network/children`} icon={ChildIcon} tint="accent" label="Bolalar" value={children} loading={loading} />
+        <Widget href={`/${slug}/network/groups`} icon={GroupIcon} tint="accent" label="Faol guruhlar" value={s?.activeGroupsCount ?? 0} loading={loading} />
+        <Widget href={`/${slug}/users`} icon={TeacherIcon} tint="accent" label="Xodimlar" value={employees} loading={loading} />
       </section>
 
       {/* Moliya */}
@@ -165,7 +165,7 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
         <div className="grid gap-3 md:grid-cols-2 md:gap-4">
           <Link href={`/${slug}/network/finance`} className={clsx(styles.card, "group block p-5")}>
             <div className="flex items-center gap-3">
-              <IosIcon icon={MoneyIcon} tint="green" size={36} />
+              <IosIcon icon={MoneyIcon} tint="accent" size={36} />
               <p className="text-[15px] font-semibold text-[var(--color-text)]">Joriy oy tushumi</p>
               {change !== null && (
                 <span
@@ -214,7 +214,7 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
           <SectionHeader title="Filiallar" href={`/${slug}/branches`} />
           {org.branches.length === 0 ? (
             <div className={clsx(styles.card, "flex flex-col items-center px-6 py-10 text-center")}>
-              <IosIcon icon={BuildingIcon} tint="blue" size={52} />
+              <IosIcon icon={BuildingIcon} tint="accent" size={52} />
               <p className="mt-4 text-[16px] font-semibold text-[var(--color-text)]">Hali filial yo&apos;q</p>
               <Link href={`/${slug}/branches`} className="mt-2 text-[14px] font-semibold text-[var(--color-primary)]">
                 Filial qo&apos;shish
@@ -230,7 +230,7 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
                       href={`/${slug}/${branch.slug}`}
                       className="group relative flex items-center gap-3.5 px-4 py-3.5 transition-colors active:bg-black/[0.04] md:hover:bg-black/[0.025]"
                     >
-                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[13px] bg-gradient-to-b from-[#e9f9f1] to-[#d3f1e3] text-[17px] font-bold text-[#0f7a55]">
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[13px] bg-[var(--accent-soft)] text-[17px] font-bold text-[var(--accent-soft-icon)] ring-1 ring-inset ring-[var(--accent-soft-icon)]/10">
                         {branch.name.charAt(0).toUpperCase()}
                       </span>
                       <div className="min-w-0 flex-1">

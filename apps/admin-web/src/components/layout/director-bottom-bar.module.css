@@ -5,13 +5,13 @@
  */
 
 .bar {
-  --rail: #0d241b;
+  --rail: var(--accent-rail);
   background: var(--rail);
-  box-shadow: 0 -12px 32px -14px rgba(5, 40, 28, 0.45);
+  box-shadow: 0 -12px 32px -14px color-mix(in srgb, var(--accent-rail) 45%, transparent);
 }
 
 .slot {
-  color: rgba(226, 244, 236, 0.56);
+  color: color-mix(in srgb, var(--accent-pale) 56%, transparent);
   -webkit-tap-highlight-color: transparent;
   transition: color 0.2s var(--ease-out);
 }
@@ -20,7 +20,7 @@
 }
 .slot:focus-visible {
   outline: none;
-  box-shadow: inset 0 0 0 2px rgba(110, 231, 183, 0.55);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent-light) 55%, transparent);
 }
 .slotIcon {
   transition:
@@ -33,7 +33,7 @@
   transform: translateY(-10px) scale(0.8);
 }
 .labelActive {
-  color: #6ee7b7;
+  color: var(--accent-light);
 }
 
 .indicator {
@@ -55,11 +55,11 @@
   height: 50px;
   margin-left: -25px;
   border-radius: 9999px;
-  background: linear-gradient(145deg, #b5f5d6 0%, #3fd79f 100%);
-  color: #053d2c;
+  background: linear-gradient(145deg, var(--accent-orb-from) 0%, var(--accent-orb-to) 100%);
+  color: var(--accent-orb-ink);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.6),
-    0 8px 20px -6px rgba(52, 211, 153, 0.6);
+    0 8px 20px -6px color-mix(in srgb, var(--accent-bright) 60%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;

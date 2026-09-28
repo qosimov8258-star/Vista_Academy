@@ -14,6 +14,8 @@ export const IOS_TINT = {
   red: "from-[#ff6961] to-[#e8392f]",
   gray: "from-[#a1a1a8] to-[#76767d]",
   emerald: "from-[#3fd79f] to-[#0f9a6c]",
+  /** Tizim rangi (Sozlamalar) — tanlangan rangga qarab o'zgaradi */
+  accent: "from-[var(--accent-bright)] to-[var(--color-primary)]",
 } as const;
 export type IosTint = keyof typeof IOS_TINT;
 

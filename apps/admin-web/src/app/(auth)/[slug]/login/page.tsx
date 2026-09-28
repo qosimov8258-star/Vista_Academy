@@ -48,7 +48,7 @@ export default function LoginPage({ params }: { params: Promise<{ slug: string }
         </div>
         {/* Telefonda ham yumshoq nur — sahifa bo'm-bo'sh ko'rinmasin */}
         <div
-          className="pointer-events-none absolute inset-x-0 top-0 h-[420px] bg-[radial-gradient(420px_320px_at_20%_0%,rgba(16,185,129,0.22),transparent_70%)] lg:hidden"
+          className="pointer-events-none absolute inset-x-0 top-0 h-[420px] bg-[radial-gradient(420px_320px_at_20%_0%,color-mix(in_srgb,var(--accent-bright)_22%,transparent),transparent_70%)] lg:hidden"
           aria-hidden="true"
         />
 
@@ -67,7 +67,7 @@ export default function LoginPage({ params }: { params: Promise<{ slug: string }
 
           <div className={clsx(styles.card, styles.cardEnter, "w-full rounded-[28px] p-6 sm:p-9 lg:max-w-[440px]")}>
             <h1 className="text-[26px] font-bold tracking-[-0.025em] text-white">{t("title")}</h1>
-            <p className="mt-1.5 text-[14.5px] leading-relaxed text-emerald-50/55">{t("subtitle")}</p>
+            <p className="mt-1.5 text-[14.5px] leading-relaxed text-[var(--accent-pale)]/55">{t("subtitle")}</p>
 
             <div className={clsx(styles.fields, "mt-7")}>
               <Suspense fallback={null}>
@@ -76,8 +76,8 @@ export default function LoginPage({ params }: { params: Promise<{ slug: string }
             </div>
 
             <div className={clsx(styles.help, "mt-6 flex items-start gap-3 rounded-[16px] px-4 py-3.5")}>
-              <InfoIcon className="mt-px h-[18px] w-[18px] shrink-0 text-emerald-300/70" />
-              <p className="text-[13px] leading-relaxed text-emerald-50/55">{t("forgotPassword")}</p>
+              <InfoIcon className="mt-px h-[18px] w-[18px] shrink-0 text-[var(--accent-light)]/70" />
+              <p className="text-[13px] leading-relaxed text-[var(--accent-pale)]/55">{t("forgotPassword")}</p>
             </div>
           </div>
         </div>

@@ -96,7 +96,7 @@ export function LoginForm({ slug, submitClassName }: { slug: string; submitClass
         type="submit"
         size="lg"
         fullWidth
-        className={clsx("mt-3 rounded-[16px]! text-[16px]! font-bold! text-[#022c1e]!", submitClassName)}
+        className={clsx("mt-3 rounded-[16px]! text-[16px]! font-bold! text-[var(--accent-orb-ink)]!", submitClassName)}
         loading={isSubmitting}
       >
         {!isSubmitting && <LockIcon className="h-[18px] w-[18px]" />}

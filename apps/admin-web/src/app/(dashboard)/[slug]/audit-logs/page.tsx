@@ -214,7 +214,7 @@ export default function AuditLogsPage({ params }: { params: Promise<{ slug: stri
     <div className="mx-auto w-full max-w-[1040px] space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex items-center gap-3.5">
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] bg-[#0d241b] text-emerald-300 shadow-[0_10px_24px_-12px_rgba(5,40,28,0.55)]">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] bg-[var(--accent-rail)] text-[var(--accent-light)] shadow-[0_10px_24px_-12px_color-mix(in_srgb,var(--accent-rail)_55%,transparent)]">
             <AuditIcon className="h-6 w-6" />
           </span>
           <div>
@@ -269,7 +269,7 @@ export default function AuditLogsPage({ params }: { params: Promise<{ slug: stri
                 className={clsx(
                   "h-9 shrink-0 cursor-pointer rounded-full px-4 text-[13.5px] font-semibold transition-colors",
                   category === c.key
-                    ? "bg-[#0d241b] text-emerald-200"
+                    ? "bg-[var(--accent-rail)] text-[var(--accent-pale)]"
                     : "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
                 )}
               >
@@ -357,7 +357,7 @@ export default function AuditLogsPage({ params }: { params: Promise<{ slug: stri
                           {/* Telefonda amal belgisi shu qatorda — matn uchun joy qoladi */}
                           <span className={clsx("rounded-full px-2 py-0.5 text-[11.5px] font-semibold ring-1 sm:hidden", tone.badge)}>{verb.label}</span>
                           <span className="inline-flex items-center gap-1.5 font-semibold text-[var(--color-text)]">
-                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#0d241b] text-[9px] font-bold text-emerald-300">
+                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--accent-rail)] text-[9px] font-bold text-[var(--accent-light)]">
                               {initials(entry.actorName)}
                             </span>
                             {entry.actorName}

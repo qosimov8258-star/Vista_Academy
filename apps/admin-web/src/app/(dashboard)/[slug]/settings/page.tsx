@@ -21,6 +21,7 @@ import { ROLE_LABEL, canWriteOperational } from "@/lib/permissions";
 import { MAX_UPLOAD_BYTES, resizeToSquare } from "@/lib/resize-image";
 import { EditBranchModal } from "@/features/branches/edit-branch-modal";
 import { ChefLogoutCard } from "@/features/chef/chef-logout-card";
+import { ThemePickerCard } from "@/features/settings/theme-picker-card";
 
 type TabId = "personal" | "security";
 
@@ -330,6 +331,8 @@ export default function SettingsPage({ params }: { params: Promise<{ slug: strin
           </div>
         </div>
       </Card>
+
+      <ThemePickerCard />
 
       {user.branchId && (
         <Card>

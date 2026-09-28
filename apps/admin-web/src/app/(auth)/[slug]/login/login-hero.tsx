@@ -70,16 +70,16 @@ export function LoginHero({ orgName, online }: { orgName: string | null; online:
             <div
               className={clsx(
                 styles.rise,
-                "mb-7 inline-flex items-center gap-2.5 rounded-full border border-white/[0.08] bg-white/[0.03] py-1.5 pl-3 pr-3.5 text-[13px] font-medium text-emerald-100/80",
+                "mb-7 inline-flex items-center gap-2.5 rounded-full border border-white/[0.08] bg-white/[0.03] py-1.5 pl-3 pr-3.5 text-[13px] font-medium text-[var(--accent-pale)]/80",
               )}
             >
-              <span className={clsx(styles.liveDot, "h-2 w-2 rounded-full bg-emerald-400")} aria-hidden="true" />
+              <span className={clsx(styles.liveDot, "h-2 w-2 rounded-full bg-[var(--accent-bright)]")} aria-hidden="true" />
               {t("status")}
             </div>
           )}
 
           <h2
-            className={clsx(styles.rise, "text-[40px] font-extrabold leading-[1.06] tracking-[-0.035em] text-white xl:text-[56px]")}
+            className={clsx(styles.rise, "text-[40px] font-extrabold leading-[1.06] tracking-[-0.035em] text-white xl:text-[48px] 2xl:text-[56px]")}
             style={{ animationDelay: "60ms" }}
           >
             {t("titleLine1")}
@@ -87,7 +87,7 @@ export function LoginHero({ orgName, online }: { orgName: string | null; online:
             <span className={styles.accentText}>{t("titleLine2")}</span>
           </h2>
           <p
-            className={clsx(styles.rise, "mt-5 max-w-[480px] text-[16px] leading-[1.65] text-emerald-50/60 xl:mt-6 xl:text-[17px]")}
+            className={clsx(styles.rise, "mt-5 max-w-[480px] text-[16px] leading-[1.65] text-[var(--accent-pale)]/60 xl:mt-6 xl:text-[17px]")}
             style={{ animationDelay: "120ms" }}
           >
             {t("subtitle")}
@@ -106,7 +106,7 @@ export function LoginHero({ orgName, online }: { orgName: string | null; online:
                   </span>
                   <div className="min-w-0 pt-0.5">
                     <p className="text-[16px] font-bold text-white">{t(`features.${key}.title`)}</p>
-                    <p className="mt-1 text-[14.5px] leading-relaxed text-emerald-50/55">{t(`features.${key}.text`)}</p>
+                    <p className="mt-1 text-[14.5px] leading-relaxed text-[var(--accent-pale)]/55">{t(`features.${key}.text`)}</p>
                   </div>
                 </div>
               ))}
@@ -130,7 +130,7 @@ export function LoginHero({ orgName, online }: { orgName: string | null; online:
                     <span
                       // key: har almashganda chiziq boshidan to'ladi
                       key={active}
-                      className={clsx(styles.progress, "absolute inset-0 origin-left rounded-full bg-emerald-400")}
+                      className={clsx(styles.progress, "absolute inset-0 origin-left rounded-full bg-[var(--accent-bright)]")}
                       onAnimationEnd={() => setActive((a) => (a + 1) % FEATURES.length)}
                     />
                   )}
@@ -140,7 +140,7 @@ export function LoginHero({ orgName, online }: { orgName: string | null; online:
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-[13px] text-emerald-50/35">
+        <div className="flex items-center gap-2 text-[13px] text-[var(--accent-pale)]/35">
           <span>
             © {year} {orgName ?? ""}
           </span>
