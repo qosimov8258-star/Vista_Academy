@@ -1,0 +1,118 @@
+/*
+ * Direktorning telefondagi pastki paneli — kompyuterdagi ustun bilan bir
+ * uslubda: ekran pastidagi to'q yashil panel, faol bo'lim undan yuqoriga silliq
+ * bo'rtib chiqqan zumrad doira. Doira bo'limdan bo'limga suzib o'tadi.
+ */
+
+.bar {
+  --rail: #0d241b;
+  background: var(--rail);
+  box-shadow: 0 -12px 32px -14px rgba(5, 40, 28, 0.45);
+}
+
+.slot {
+  color: rgba(226, 244, 236, 0.56);
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.2s var(--ease-out);
+}
+.slot:active {
+  color: #ffffff;
+}
+.slot:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px rgba(110, 231, 183, 0.55);
+}
+.slotIcon {
+  transition:
+    opacity 0.2s var(--ease-out),
+    transform 0.35s var(--ease-spring);
+}
+/* Faol bo'lim ikonkasi doiraga "ko'tariladi" — pastdagisi yashiriladi */
+.slotIconHidden {
+  opacity: 0;
+  transform: translateY(-10px) scale(0.8);
+}
+.labelActive {
+  color: #6ee7b7;
+}
+
+.indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  transition: transform 0.55s cubic-bezier(0.34, 1.3, 0.64, 1);
+  will-change: transform;
+}
+.bump {
+  display: block;
+  fill: var(--rail);
+}
+.orb {
+  position: absolute;
+  left: 50%;
+  width: 50px;
+  height: 50px;
+  margin-left: -25px;
+  border-radius: 9999px;
+  background: linear-gradient(145deg, #b5f5d6 0%, #3fd79f 100%);
+  color: #053d2c;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 8px 20px -6px rgba(52, 211, 153, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.orbIcon {
+  animation: orbPop 0.45s var(--ease-spring) both;
+}
+
+/* ---------- Pastdan chiquvchi oyna ---------- */
+
+.scrim {
+  animation: fadeIn 0.22s var(--ease-out) both;
+}
+.sheet {
+  animation: sheetUp 0.38s var(--ease-out) both;
+}
+
+@keyframes orbPop {
+  from {
+    opacity: 0;
+    transform: scale(0.6) rotate(-12deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes sheetUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .indicator,
+  .slot,
+  .slotIcon {
+    transition: none;
+  }
+  .orbIcon,
+  .scrim,
+  .sheet {
+    animation: none;
+  }
+}

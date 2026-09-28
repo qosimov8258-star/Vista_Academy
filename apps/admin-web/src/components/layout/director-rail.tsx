@@ -289,10 +289,10 @@ export function DirectorRail({
             setFlyout(null);
             setPanelOpen(true);
           }}
-          aria-label={t("expand")}
+          aria-label="Barcha bo'limlar"
           aria-haspopup="dialog"
           aria-expanded={panelOpen}
-          onMouseEnter={showTip(t("expand"), "menu")}
+          onMouseEnter={showTip("Barcha bo'limlar", "menu")}
           onMouseLeave={hideTip}
           className={clsx(itemBase, styles.item)}
         >
@@ -470,31 +470,54 @@ export function DirectorRail({
 }
 
 /** "Uch chiziq" ochadigan panel — barcha bo'limlar nomi bilan, guruhlab */
-function FullMenu({
+function FullMenu({ left, ...props }: DirectorMenuContentProps & { left: number }) {
+  return (
+    <div className="fixed inset-0 z-[65]" role="dialog" aria-modal="true" aria-label="Barcha bo'limlar">
+      <div className={clsx(styles.scrim, "absolute inset-0 bg-[#0d241b]/20 backdrop-blur-[2px]")} onClick={props.onClose} aria-hidden="true" />
+      <div
+        className={clsx(
+          styles.panel,
+          "absolute bottom-4 top-4 flex w-[320px] flex-col overflow-hidden rounded-[28px] bg-white shadow-[0_32px_64px_-20px_rgba(5,40,28,0.4)]",
+        )}
+        style={{ left }}
+      >
+        <DirectorMenuContent {...props} />
+      </div>
+    </div>
+  );
+}
+
+export interface DirectorMenuContentProps {
+  slug: string;
+  entries: NavEntry[];
+  settingsItem: NavLeaf;
+  isActive: (item: NavLeaf) => boolean;
+  user: TenantAuthenticatedUser | null;
+  /** Filial ichida bo'lsa — "Filiallarga qaytish" uchun uning nomi */
+  branchName: string | null;
+  onClose: () => void;
+  onLogout: () => void;
+  loggingOut: boolean;
+  logoutLabel: string;
+}
+
+/**
+ * Barcha bo'limlar ro'yxati: tepada bog'cha va foydalanuvchi, keyin
+ * guruhlangan havolalar, pastda Sozlamalar va Chiqish. Kompyuterda yon
+ * panel, telefonda pastdan chiquvchi oyna ichida — ikkalasida bir xil.
+ */
+export function DirectorMenuContent({
   slug,
   entries,
   settingsItem,
   isActive,
   user,
   branchName,
-  left,
   onClose,
   onLogout,
   loggingOut,
   logoutLabel,
-}: {
-  slug: string;
-  entries: NavEntry[];
-  settingsItem: NavLeaf;
-  isActive: (item: NavLeaf) => boolean;
-  user: TenantAuthenticatedUser | null;
-  branchName: string | null;
-  left: number;
-  onClose: () => void;
-  onLogout: () => void;
-  loggingOut: boolean;
-  logoutLabel: string;
-}) {
+}: DirectorMenuContentProps) {
   const orgName = user?.organizationName ?? "";
 
   const row = (item: NavLeaf) => {
@@ -508,7 +531,7 @@ function FullMenu({
         aria-current={active ? "page" : undefined}
         className={clsx(
           "group flex h-11 items-center gap-3 rounded-[14px] px-3 text-[14.5px] transition-colors",
-          active ? "bg-emerald-50 font-semibold text-emerald-900" : "font-medium text-[var(--color-text)] hover:bg-[var(--color-surface-sunken)]",
+          active ? "bg-emerald-50 font-semibold text-emerald-900" : "font-medium text-[var(--color-text)] hover:bg-[var(--color-surface-sunken)] active:bg-[var(--color-surface-sunken)]",
         )}
       >
         <Icon filled={active} className={clsx("h-5 w-5 shrink-0", active ? "text-emerald-600" : "text-[var(--color-text-muted)]")} />
@@ -521,77 +544,68 @@ function FullMenu({
   };
 
   return (
-    <div className="fixed inset-0 z-[65]" role="dialog" aria-modal="true" aria-label="Barcha bo'limlar">
-      <div className={clsx(styles.scrim, "absolute inset-0 bg-[#0d241b]/20 backdrop-blur-[2px]")} onClick={onClose} aria-hidden="true" />
-      <div
-        className={clsx(
-          styles.panel,
-          "absolute bottom-4 top-4 flex w-[320px] flex-col overflow-hidden rounded-[28px] bg-white shadow-[0_32px_64px_-20px_rgba(5,40,28,0.4)]",
-        )}
-        style={{ left }}
-      >
-        <div className="flex items-center gap-3 px-5 pb-4 pt-5">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-[#0d241b] text-[16px] font-extrabold text-emerald-300">
-            {orgName ? initials(orgName) : ""}
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[16px] font-bold tracking-[-0.01em] text-[var(--color-text)]">{orgName}</p>
-            <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">
-              {user ? `${user.fullName} · ${ROLE_LABEL[user.role]}` : ""}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Yopish"
-            className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-text)]"
-          >
-            <CloseIcon className="h-5 w-5" />
-          </button>
+    <>
+      <div className="flex shrink-0 items-center gap-3 px-5 pb-4 pt-5">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-[#0d241b] text-[16px] font-extrabold text-emerald-300">
+          {orgName ? initials(orgName) : ""}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[16px] font-bold tracking-[-0.01em] text-[var(--color-text)]">{orgName}</p>
+          <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">
+            {user ? `${user.fullName} · ${ROLE_LABEL[user.role]}` : ""}
+          </p>
         </div>
-
-        {branchName && (
-          <Link
-            href={`/${slug}/branches`}
-            onClick={onClose}
-            className="group mx-4 mb-2 flex items-center gap-2.5 rounded-[16px] bg-emerald-50 px-3.5 py-2.5 transition-colors hover:bg-emerald-100/70"
-          >
-            <ArrowLeftIcon className="h-4 w-4 shrink-0 text-emerald-700 transition-transform group-hover:-translate-x-0.5" />
-            <span className="min-w-0 flex-1">
-              <span className="block text-[11.5px] font-semibold text-emerald-700/80">Filiallarga qaytish</span>
-              <span className="block truncate text-[14px] font-bold text-emerald-900">{branchName}</span>
-            </span>
-          </Link>
-        )}
-
-        <nav className="min-h-0 flex-1 overflow-y-auto px-3 pb-3" aria-label="Bo'limlar">
-          {entries.map((entry) =>
-            isSection(entry) ? (
-              <div key={entry.id} className="pt-3">
-                <p className="px-3 pb-1 text-[11.5px] font-bold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">
-                  {entry.label}
-                </p>
-                {entry.items.map(row)}
-              </div>
-            ) : (
-              row(entry)
-            ),
-          )}
-        </nav>
-
-        <div className="shrink-0 space-y-1 border-t border-[var(--color-separator)] px-3 py-3">
-          {row(settingsItem)}
-          <button
-            type="button"
-            onClick={onLogout}
-            disabled={loggingOut}
-            className="flex h-11 w-full cursor-pointer items-center gap-3 rounded-[14px] px-3 text-[14.5px] font-medium text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger-bg)] disabled:opacity-60"
-          >
-            <LogoutIcon className="h-5 w-5 shrink-0" />
-            {logoutLabel}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Yopish"
+          className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-text)]"
+        >
+          <CloseIcon className="h-5 w-5" />
+        </button>
       </div>
-    </div>
+
+      {branchName && (
+        <Link
+          href={`/${slug}/branches`}
+          onClick={onClose}
+          className="group mx-4 mb-2 flex shrink-0 items-center gap-2.5 rounded-[16px] bg-emerald-50 px-3.5 py-2.5 transition-colors hover:bg-emerald-100/70"
+        >
+          <ArrowLeftIcon className="h-4 w-4 shrink-0 text-emerald-700 transition-transform group-hover:-translate-x-0.5" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-[11.5px] font-semibold text-emerald-700/80">Filiallarga qaytish</span>
+            <span className="block truncate text-[14px] font-bold text-emerald-900">{branchName}</span>
+          </span>
+        </Link>
+      )}
+
+      <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-3" aria-label="Bo'limlar">
+        {entries.map((entry) =>
+          isSection(entry) ? (
+            <div key={entry.id} className="pt-3">
+              <p className="px-3 pb-1 text-[11.5px] font-bold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">
+                {entry.label}
+              </p>
+              {entry.items.map(row)}
+            </div>
+          ) : (
+            row(entry)
+          ),
+        )}
+      </nav>
+
+      <div className="shrink-0 space-y-1 border-t border-[var(--color-separator)] px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        {row(settingsItem)}
+        <button
+          type="button"
+          onClick={onLogout}
+          disabled={loggingOut}
+          className="flex h-11 w-full cursor-pointer items-center gap-3 rounded-[14px] px-3 text-[14.5px] font-medium text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger-bg)] disabled:opacity-60"
+        >
+          <LogoutIcon className="h-5 w-5 shrink-0" />
+          {logoutLabel}
+        </button>
+      </div>
+    </>
   );
 }

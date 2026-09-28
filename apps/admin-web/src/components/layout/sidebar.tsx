@@ -19,6 +19,7 @@ import { formatPositionLabel, isAssistantPosition, isCashierPosition, isSubjectT
 import { Avatar, initials } from "@/components/ui/avatar";
 import { isSection, type NavEntry, type NavLeaf } from "./nav-types";
 import { DirectorRail } from "./director-rail";
+import { DirectorBottomBar } from "./director-bottom-bar";
 import {
   CloseIcon,
   ArrowLeftIcon,
@@ -450,17 +451,31 @@ export function Sidebar({ slug }: { slug: string }) {
   return (
     <>
     {useDirectorRail ? (
-      <DirectorRail
-        slug={slug}
-        entries={user ? entries : []}
-        settingsItem={settingsItem}
-        isActive={isActive}
-        user={user}
-        branchName={branch?.name ?? null}
-        inBranchContext={inBranchContext}
-        onLogout={handleLogout}
-        loggingOut={loggingOut}
-      />
+      <>
+        <DirectorRail
+          slug={slug}
+          entries={user ? entries : []}
+          settingsItem={settingsItem}
+          isActive={isActive}
+          user={user}
+          branchName={branch?.name ?? null}
+          inBranchContext={inBranchContext}
+          onLogout={handleLogout}
+          loggingOut={loggingOut}
+        />
+        {/* Telefonda — xuddi shu uslubdagi pastki panel */}
+        <DirectorBottomBar
+          slug={slug}
+          entries={user ? entries : []}
+          settingsItem={settingsItem}
+          isActive={isActive}
+          user={user}
+          branchName={branch?.name ?? null}
+          inBranchContext={inBranchContext}
+          onLogout={handleLogout}
+          loggingOut={loggingOut}
+        />
+      </>
     ) : (
     <aside
       className={clsx(
