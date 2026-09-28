@@ -9,15 +9,16 @@ import { useTranslations } from "next-intl";
 import type { TenantAuthenticatedUser } from "@/lib/types";
 import { ROLE_LABEL } from "@/lib/permissions";
 import { Avatar, initials } from "@/components/ui/avatar";
-import { ArrowLeftIcon, CloseIcon, LogoutIcon } from "@/components/ui/icons";
+import { ArrowLeftIcon, ChevronRightIcon, CloseIcon, LogoutIcon } from "@/components/ui/icons";
 import { isSection, type NavEntry, type NavIcon, type NavLeaf, type NavSection } from "./nav-types";
 import styles from "./director-rail.module.css";
 
 // Geometriya (px, yon panelning chap chetidan). Bo'rtma va qalqib chiquvchi
-// oynalar shu qiymatlardan hisoblanadi — CSS'dagi --rail-width bilan bir xil.
+// oynalar shu qiymatlardan hisoblanadi — CSS'dagi --rail-collapsed bilan bir xil.
 const RAIL_LEFT = 16;
-const RAIL_WIDTH = 76;
-const RAIL_RIGHT = RAIL_LEFT + RAIL_WIDTH;
+const RAIL_COLLAPSED = 76;
+const RAIL_EXPANDED = 256;
+const RAIL_RIGHT = RAIL_LEFT + RAIL_COLLAPSED;
 const BUMP_W = 24;
 const BUMP_H = 120;
 const ORB_SIZE = 52;
@@ -26,6 +27,8 @@ const ORB_INSET = 10;
 
 /** Ustun chetidan silliq bo'rtib chiqadigan shakl: chetlarida botiq, uchida qavariq */
 const BUMP_PATH = `M0 0 C0 30 ${BUMP_W} 28 ${BUMP_W} ${BUMP_H / 2} C${BUMP_W} ${BUMP_H - 28} 0 ${BUMP_H - 30} 0 ${BUMP_H} Z`;
+
+const OPEN_KEY = "bogcha:director-rail-open";
 
 type Tip = { label: string; top: number; left: number };
 type Flyout = { section: NavSection; top: number; left: number };
@@ -36,6 +39,34 @@ function MenuIcon({ className }: { className?: string }) {
       <path d="M4.5 7h15M4.5 12h15M4.5 17h9" />
     </svg>
   );
+}
+
+/**
+ * Ustun kengaygan yoki yig'ilgan. Tanlov brauzerda saqlanadi. Boshlang'ich
+ * qiymat har doim "yig'ilgan" — server HTML'i ham shunday; saqlangan holat
+ * birinchi renderdan keyin qo'llanadi (aks holda hidratsiya xatosi).
+ */
+function useRailOpen(): [boolean, () => void] {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    try {
+      setOpen(window.localStorage.getItem(OPEN_KEY) === "1");
+    } catch {
+      // Shaxsiy rejimda localStorage yopiq — yig'ilgan holda qolaveradi
+    }
+  }, []);
+  const toggle = useCallback(() => {
+    setOpen((current) => {
+      const next = !current;
+      try {
+        window.localStorage.setItem(OPEN_KEY, next ? "1" : "0");
+      } catch {
+        // yuqoridagi kabi
+      }
+      return next;
+    });
+  }, []);
+  return [open, toggle];
 }
 
 export interface DirectorRailProps {
@@ -52,10 +83,12 @@ export interface DirectorRailProps {
 }
 
 /**
- * Bog'cha direktori (Super Admin) uchun yon panel: ingichka to'q ustun,
- * faqat ikonkalar. Nomi ikonka ustiga borilganda chiqadi, ichida havolalari
- * bor bo'limlar yon tomonga kichik menyu bo'lib ochiladi, tepadagi "uch
- * chiziq" esa barcha bo'limlarni nomi bilan ko'rsatadigan panelni ochadi.
+ * Bog'cha direktori (Super Admin) uchun yon panel — to'q yashil ustun.
+ *
+ * Yig'ilgan holatda faqat ikonkalar: nomi ikonka ustiga borilganda chiqadi,
+ * ichida havolalari bor guruhlar yon tomonga kichik menyu bo'lib ochiladi.
+ * Tepadagi "uch chiziq" ustunning o'zini kengaytiradi: ikonkalar joyida
+ * qoladi, yonida nomlar paydo bo'ladi, guruhlar ustun ichida ochiladi.
  */
 export function DirectorRail({
   slug,
@@ -70,8 +103,9 @@ export function DirectorRail({
 }: DirectorRailProps) {
   const t = useTranslations("sidebar");
   const pathname = usePathname();
+  const [open, toggleOpen] = useRailOpen();
   const asideRef = useRef<HTMLElement>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLElement>(null);
   const itemRefs = useRef(new Map<string, HTMLElement>());
   const flyoutRef = useRef<HTMLDivElement>(null);
 
@@ -80,9 +114,12 @@ export function DirectorRail({
   const [animate, setAnimate] = useState(false);
   const [tip, setTip] = useState<Tip | null>(null);
   const [flyout, setFlyout] = useState<Flyout | null>(null);
-  const [panelOpen, setPanelOpen] = useState(false);
+  // Kengaygan ustundagi guruhlar: foydalanuvchi tanlovi; tanlamagan bo'lsa —
+  // faol havolasi bor guruh ochiq, qolganlari yopiq
+  const [sectionOpen, setSectionOpen] = useState<Record<string, boolean>>({});
 
   const orgName = user?.organizationName ?? "";
+  const isSectionOpen = (s: NavSection) => sectionOpen[s.id] ?? s.items.some(isActive);
 
   // Qaysi bo'lim faol: oddiy havola — o'zi, bo'lim — ichidagi havolalardan biri
   let activeKey: string | null = null;
@@ -126,7 +163,7 @@ export function DirectorRail({
 
   useLayoutEffect(() => {
     measure();
-  }, [measure, entries.length]);
+  }, [measure, entries.length, open]);
 
   // Faol bo'lim aylantirilgan ro'yxatda pastda qolib ketgan bo'lsa — unga aylanadi
   useEffect(() => {
@@ -153,24 +190,18 @@ export function DirectorRail({
     };
   }, [measure]);
 
-  // Sahifa almashganda ochiq oynalar yopiladi
+  // Sahifa almashganda yoki ustun kengayganda qalqib chiquvchilar yopiladi
   useEffect(() => {
     setFlyout(null);
-    setPanelOpen(false);
     setTip(null);
-  }, [pathname]);
+  }, [pathname, open]);
 
   useEffect(() => {
-    if (!flyout && !panelOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setFlyout(null);
-        setPanelOpen(false);
-      }
-    };
+    if (!flyout) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setFlyout(null);
     const onDown = (e: MouseEvent) => {
       const target = e.target as Node;
-      if (flyout && !flyoutRef.current?.contains(target) && !itemRefs.current.get(`s:${flyout.section.id}`)?.contains(target)) {
+      if (!flyoutRef.current?.contains(target) && !itemRefs.current.get(`s:${flyout.section.id}`)?.contains(target)) {
         setFlyout(null);
       }
     };
@@ -180,20 +211,31 @@ export function DirectorRail({
       window.removeEventListener("keydown", onKey);
       document.removeEventListener("mousedown", onDown);
     };
-  }, [flyout, panelOpen]);
+  }, [flyout]);
 
   const railRight = () => (asideRef.current?.getBoundingClientRect().left ?? 0) + RAIL_RIGHT;
 
+  // Nomlar faqat yig'ilgan ustunda qalqib chiqadi — kengayganda ular ko'rinib turibdi
   const showTip = (label: string, key: string) => (e: React.SyntheticEvent<HTMLElement>) => {
-    if (flyout) return;
+    if (open || flyout) return;
     const r = e.currentTarget.getBoundingClientRect();
     const active = key === activeKey;
     setTip({ label, top: r.top + r.height / 2, left: railRight() + (active ? BUMP_W + 12 : 12) });
   };
   const hideTip = () => setTip(null);
+  const tipHandlers = (label: string, key: string) => ({
+    onMouseEnter: showTip(label, key),
+    onMouseLeave: hideTip,
+    onFocus: showTip(label, key),
+    onBlur: hideTip,
+  });
 
-  const toggleFlyout = (section: NavSection) => (e: React.MouseEvent<HTMLElement>) => {
+  const onSectionClick = (section: NavSection) => (e: React.MouseEvent<HTMLElement>) => {
     setTip(null);
+    if (open) {
+      setSectionOpen((m) => ({ ...m, [section.id]: !isSectionOpen(section) }));
+      return;
+    }
     if (flyout?.section.id === section.id) {
       setFlyout(null);
       return;
@@ -205,7 +247,8 @@ export function DirectorRail({
     setFlyout({ section, top, left: railRight() + (active ? BUMP_W + 14 : 14) });
   };
 
-  const itemBase = "relative flex shrink-0 cursor-pointer items-center justify-center rounded-full outline-none";
+  /** Qator holati: yig'ilganda faol ikonka doiraga ko'chadi, kengayganda qator zumrad bo'ladi */
+  const rowState = (active: boolean) => (active ? (open ? styles.rowActive : styles.rowHidden) : undefined);
 
   const renderLeaf = (item: NavLeaf, key = `l:${item.href}`) => {
     const active = key === activeKey;
@@ -215,18 +258,20 @@ export function DirectorRail({
         key={key}
         ref={register(key)}
         href={item.href}
-        aria-label={item.label}
+        aria-label={open ? undefined : item.label}
         aria-current={active ? "page" : undefined}
-        onMouseEnter={showTip(item.label, key)}
-        onMouseLeave={hideTip}
-        onFocus={showTip(item.label, key)}
-        onBlur={hideTip}
+        {...tipHandlers(item.label, key)}
         onClick={hideTip}
-        className={clsx(itemBase, styles.item, active && styles.itemActive)}
+        className={clsx(styles.row, rowState(active))}
       >
-        <Icon className="h-[22px] w-[22px]" />
+        <Icon filled={open && active} className="h-[22px] w-[22px] shrink-0" />
+        <span className={styles.label}>{item.label}</span>
         {item.badge != null && item.badge > 0 && (
-          <span className={clsx(styles.dot, "absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-emerald-400")} aria-hidden="true" />
+          <span
+            className={clsx(styles.dot, "absolute h-2 w-2 rounded-full bg-emerald-400")}
+            style={{ left: "calc((var(--row-size) - 22px) / 2 + 17px)", top: "calc(50% - 11px)" }}
+            aria-hidden="true"
+          />
         )}
       </Link>
     );
@@ -234,84 +279,115 @@ export function DirectorRail({
 
   const renderSection = (section: NavSection) => {
     const key = `s:${section.id}`;
-    const active = key === activeKey;
-    const open = flyout?.section.id === section.id;
+    const hasActiveChild = section.items.some(isActive);
+    const expanded = open && isSectionOpen(section);
+    // Kengaygan ustunda guruh ochiq bo'lsa, faol bo'lib uning ichidagi havola ko'rinadi
+    const active = key === activeKey && !expanded;
     const Icon = section.icon;
-    const hasBadge = section.items.some((i) => (i.badge ?? 0) > 0);
     return (
-      <button
-        key={key}
-        ref={register(key)}
-        type="button"
-        aria-label={section.label}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onMouseEnter={showTip(section.label, key)}
-        onMouseLeave={hideTip}
-        onFocus={showTip(section.label, key)}
-        onBlur={hideTip}
-        onClick={toggleFlyout(section)}
-        className={clsx(itemBase, styles.item, active && styles.itemActive)}
-      >
-        <Icon className="h-[22px] w-[22px]" />
-        {hasBadge && <span className={clsx(styles.dot, "absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-emerald-400")} aria-hidden="true" />}
-      </button>
+      <div key={key} className="flex w-full flex-col">
+        <button
+          ref={register(key)}
+          type="button"
+          aria-label={open ? undefined : section.label}
+          aria-haspopup={open ? undefined : "menu"}
+          aria-expanded={open ? expanded : flyout?.section.id === section.id}
+          data-flyout={!open && flyout?.section.id === section.id ? "open" : undefined}
+          {...tipHandlers(section.label, key)}
+          onClick={onSectionClick(section)}
+          className={clsx(styles.row, rowState(active), open && hasActiveChild && !active && styles.rowParent)}
+        >
+          <Icon className="h-[22px] w-[22px] shrink-0" />
+          <span className={styles.label}>{section.label}</span>
+          {open && <ChevronRightIcon className={clsx(styles.chevron, "h-4 w-4", expanded ? "rotate-90" : "")} />}
+          {!open && section.items.some((i) => (i.badge ?? 0) > 0) && (
+            <span className={clsx(styles.dot, "absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-emerald-400")} aria-hidden="true" />
+          )}
+        </button>
+        {expanded && (
+          <div className={styles.children}>
+            {section.items.map((item) => {
+              const childActive = isActive(item);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={childActive ? "page" : undefined}
+                  className={clsx(styles.child, childActive && styles.rowActive)}
+                >
+                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                  {item.badge != null && item.badge > 0 && (
+                    <span className="ml-2 rounded-full bg-emerald-400/20 px-2 py-0.5 text-[11px] font-bold tabular-nums">{item.badge}</span>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </div>
     );
   };
 
   const settingsKey = `l:${settingsItem.href}`;
+  const railWidth = open ? RAIL_EXPANDED : RAIL_COLLAPSED;
 
   return (
     <aside
       ref={asideRef}
-      className={clsx(styles.aside, "relative z-20 hidden shrink-0 flex-col gap-3 py-4 md:flex")}
-      style={{ width: RAIL_RIGHT + 20, paddingLeft: RAIL_LEFT }}
+      className={clsx(styles.aside, open && styles.open, "relative z-20 hidden shrink-0 flex-col gap-3 py-4 md:flex")}
+      style={{ width: RAIL_LEFT + railWidth + (open ? 16 : 20), paddingLeft: RAIL_LEFT }}
       aria-label="Asosiy menyu"
     >
       {/* Bog'cha belgisi — nomidan olinadi, tizimda bir necha bog'cha bor */}
       <Link
         href={`/${slug}`}
-        title={orgName}
+        title={open ? undefined : orgName}
         aria-label={orgName || "Bosh sahifa"}
-        className={clsx(styles.brand, "flex shrink-0 items-center justify-center rounded-full")}
+        className={clsx(styles.brandLink, "flex shrink-0 items-center gap-3")}
+        style={{ width: railWidth }}
       >
-        {user ? (
-          <span className={clsx(styles.brandText, "text-[24px] font-extrabold tracking-tight")}>{initials(orgName)}</span>
-        ) : (
-          <span className="h-7 w-7 animate-pulse rounded-full bg-white/10" />
-        )}
+        <span className={clsx(styles.brand, "flex shrink-0 items-center justify-center rounded-full")}>
+          {user ? (
+            <span className={clsx(styles.brandText, "text-[24px] font-extrabold tracking-tight")}>{initials(orgName)}</span>
+          ) : (
+            <span className="h-7 w-7 animate-pulse rounded-full bg-white/10" />
+          )}
+        </span>
+        <span className={clsx(styles.brandName, "min-w-0 flex-1")} aria-hidden={!open}>
+          <span className="block truncate text-[17px] font-bold tracking-[-0.01em] text-[var(--color-text)]">{orgName}</span>
+          <span className="block truncate text-[12.5px] text-[var(--color-text-muted)]">{user ? ROLE_LABEL[user.role] : ""}</span>
+        </span>
       </Link>
 
-      <div className={clsx(styles.rail, "flex min-h-0 flex-1 flex-col items-center py-3")}>
-        <button
-          type="button"
-          onClick={() => {
-            setFlyout(null);
-            setPanelOpen(true);
-          }}
-          aria-label="Barcha bo'limlar"
-          aria-haspopup="dialog"
-          aria-expanded={panelOpen}
-          onMouseEnter={showTip("Barcha bo'limlar", "menu")}
-          onMouseLeave={hideTip}
-          className={clsx(itemBase, styles.item)}
-        >
-          <MenuIcon className="h-[22px] w-[22px]" />
-        </button>
-
-        {inBranchContext && (
-          <Link
-            href={`/${slug}/branches`}
-            aria-label={branchName ? `${branchName} — filiallarga qaytish` : "Filiallarga qaytish"}
-            onMouseEnter={showTip(branchName ? `← ${branchName}` : "Filiallar", "back")}
-            onMouseLeave={hideTip}
-            onFocus={showTip(branchName ? `← ${branchName}` : "Filiallar", "back")}
-            onBlur={hideTip}
-            className={clsx(itemBase, styles.item, "mt-1")}
+      <div className={clsx(styles.rail, "flex min-h-0 flex-1 flex-col py-3")} style={{ width: railWidth }}>
+        <div className={clsx(styles.list, "flex shrink-0 flex-col gap-1")}>
+          <button
+            type="button"
+            onClick={toggleOpen}
+            aria-label={open ? "Menyuni yig'ish" : "Menyuni kengaytirish"}
+            aria-expanded={open}
+            {...tipHandlers("Menyuni kengaytirish", "menu")}
+            className={styles.row}
           >
-            <ArrowLeftIcon className="h-5 w-5" />
-          </Link>
-        )}
+            <MenuIcon className="h-[22px] w-[22px] shrink-0" />
+            <span className={styles.label}>Menyuni yig&apos;ish</span>
+          </button>
+
+          {inBranchContext && (
+            <Link
+              href={`/${slug}/branches`}
+              aria-label={branchName ? `${branchName} — filiallarga qaytish` : "Filiallarga qaytish"}
+              {...tipHandlers(branchName ? `← ${branchName}` : "Filiallar", "back")}
+              className={styles.row}
+            >
+              <ArrowLeftIcon className="h-5 w-5 shrink-0" />
+              <span className={clsx(styles.label, "leading-tight")}>
+                <span className="block text-[11px] font-semibold opacity-70">Filiallarga qaytish</span>
+                <span className="block truncate">{branchName ?? "Filiallar"}</span>
+              </span>
+            </Link>
+          )}
+        </div>
 
         <div className={clsx(styles.divider, "my-2 shrink-0")} aria-hidden="true" />
 
@@ -322,7 +398,7 @@ export function DirectorRail({
             setTip(null);
             setFlyout(null);
           }}
-          className={clsx(styles.scroll, "flex min-h-0 w-full flex-1 flex-col items-center overflow-y-auto py-1.5")}
+          className={clsx(styles.scroll, styles.list, "flex min-h-0 w-full flex-1 flex-col overflow-y-auto py-1.5")}
           aria-label="Bo'limlar"
         >
           {entries.map((entry) => (isSection(entry) ? renderSection(entry) : renderLeaf(entry)))}
@@ -330,35 +406,39 @@ export function DirectorRail({
 
         <div className={clsx(styles.divider, "my-2 shrink-0")} aria-hidden="true" />
 
-        <div className="flex shrink-0 flex-col items-center gap-2">
+        <div className={clsx(styles.list, "flex shrink-0 flex-col gap-1.5")}>
           {renderLeaf(settingsItem, settingsKey)}
           <div
-            className="my-1 rounded-full p-[3px] ring-1 ring-white/15"
-            title={user ? `${user.fullName} · ${ROLE_LABEL[user.role]}` : undefined}
+            className={clsx(styles.row, styles.userRow)}
+            title={!open && user ? `${user.fullName} · ${ROLE_LABEL[user.role]}` : undefined}
           >
-            <Avatar user={user} size={36} />
+            <span className="shrink-0 rounded-full ring-2 ring-white/15">
+              <Avatar user={user} size={36} />
+            </span>
+            <span className={clsx(styles.label, "leading-tight")}>
+              <span className="block truncate text-[14px] font-semibold text-white">{user?.fullName ?? ""}</span>
+              <span className="block truncate text-[12px] font-medium">{user ? ROLE_LABEL[user.role] : ""}</span>
+            </span>
           </div>
           <button
             type="button"
             onClick={onLogout}
             disabled={loggingOut}
             aria-label={t("logoutAria")}
-            onMouseEnter={showTip(t("logout"), "logout")}
-            onMouseLeave={hideTip}
-            onFocus={showTip(t("logout"), "logout")}
-            onBlur={hideTip}
-            className={clsx(itemBase, styles.item, styles.logout, "disabled:cursor-not-allowed disabled:opacity-50")}
+            {...tipHandlers(t("logout"), "logout")}
+            className={clsx(styles.row, styles.logout, "disabled:cursor-not-allowed disabled:opacity-50")}
           >
             {loggingOut ? (
-              <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              <span className="h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />
             ) : (
-              <LogoutIcon className="h-[21px] w-[21px]" />
+              <LogoutIcon className="h-[21px] w-[21px] shrink-0" />
             )}
+            <span className={styles.label}>{t("logout")}</span>
           </button>
         </div>
       </div>
 
-      {/* Faol bo'lim: ustundan bo'rtib chiqqan joy va uning ichidagi zumrad doira */}
+      {/* Faol bo'lim (yig'ilgan holatda): ustundan bo'rtib chiqqan joy va zumrad doira */}
       {indicator && ActiveIcon && (
         <div
           className={styles.indicator}
@@ -366,7 +446,7 @@ export function DirectorRail({
           style={{
             left: RAIL_RIGHT - 1,
             transform: `translateY(${indicator.y - BUMP_H / 2}px)`,
-            opacity: indicator.visible ? 1 : 0,
+            opacity: !open && indicator.visible ? 1 : 0,
             transition: animate ? undefined : "none",
           }}
         >
@@ -381,7 +461,6 @@ export function DirectorRail({
 
       {typeof document !== "undefined" &&
         tip &&
-        !panelOpen &&
         createPortal(
           <div
             role="tooltip"
@@ -446,44 +525,7 @@ export function DirectorRail({
           </div>,
           document.body,
         )}
-
-      {typeof document !== "undefined" &&
-        panelOpen &&
-        createPortal(
-          <FullMenu
-            slug={slug}
-            entries={entries}
-            settingsItem={settingsItem}
-            isActive={isActive}
-            user={user}
-            branchName={inBranchContext ? branchName : null}
-            left={railRight() + 14}
-            onClose={() => setPanelOpen(false)}
-            onLogout={onLogout}
-            loggingOut={loggingOut}
-            logoutLabel={t("logout")}
-          />,
-          document.body,
-        )}
     </aside>
-  );
-}
-
-/** "Uch chiziq" ochadigan panel — barcha bo'limlar nomi bilan, guruhlab */
-function FullMenu({ left, ...props }: DirectorMenuContentProps & { left: number }) {
-  return (
-    <div className="fixed inset-0 z-[65]" role="dialog" aria-modal="true" aria-label="Barcha bo'limlar">
-      <div className={clsx(styles.scrim, "absolute inset-0 bg-[#0d241b]/20 backdrop-blur-[2px]")} onClick={props.onClose} aria-hidden="true" />
-      <div
-        className={clsx(
-          styles.panel,
-          "absolute bottom-4 top-4 flex w-[320px] flex-col overflow-hidden rounded-[28px] bg-white shadow-[0_32px_64px_-20px_rgba(5,40,28,0.4)]",
-        )}
-        style={{ left }}
-      >
-        <DirectorMenuContent {...props} />
-      </div>
-    </div>
   );
 }
 

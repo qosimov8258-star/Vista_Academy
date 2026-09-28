@@ -1,27 +1,33 @@
 /*
- * Direktor (Super Admin) yon paneli — ingichka to'q ikonka ustuni.
+ * Direktor (Super Admin) yon paneli — to'q yashil ustun.
  *
- * Faol bo'lim ustundan tashqariga silliq bo'rtib chiqqan zumrad doira
- * bilan belgilanadi. Bo'rtma alohida qatlam: u ustun ichidagi aylantiriladigan
- * ro'yxatdan tashqarida turadi (aks holda `overflow` uni kesib qo'yardi) va
- * faol bo'lim o'zgarganda yangi joyiga suzib o'tadi.
+ * Yig'ilgan holatda faqat ikonkalar; faol bo'lim ustun chetidan silliq
+ * bo'rtib chiqqan zumrad doira bilan belgilanadi (bo'rtma alohida qatlam:
+ * ustun ichidagi aylantiriladigan ro'yxatdan tashqarida turadi, aks holda
+ * `overflow` uni kesib qo'yardi). "Uch chiziq" bosilganda ustunning o'zi
+ * kengayadi: ikonkalar joyida qoladi, yonida nomlar paydo bo'ladi, faol
+ * qator zumrad fonga o'tadi.
  */
 
 .aside {
   --rail: #0d241b;
-  --rail-ink: rgba(226, 244, 236, 0.56);
+  --rail-ink: rgba(226, 244, 236, 0.58);
   --rail-ink-hover: #ffffff;
   --mint-from: #b5f5d6;
   --mint-to: #3fd79f;
   --mint-ink: #053d2c;
-  --rail-width: 76px;
+  --rail-collapsed: 76px;
+  --row-size: 48px;
+  --brand-size: 76px;
+  transition: width 0.38s var(--ease-out);
 }
 
 /* ---------- Tepadagi bog'cha belgisi ---------- */
 
 .brand {
-  width: var(--rail-width);
-  height: var(--rail-width);
+  width: var(--brand-size);
+  height: var(--brand-size);
+  margin-left: calc((var(--rail-collapsed) - var(--brand-size)) / 2);
   background:
     radial-gradient(circle at 30% 25%, rgba(110, 231, 183, 0.22), transparent 60%),
     var(--rail);
@@ -30,7 +36,7 @@
     0 10px 24px -12px rgba(5, 40, 28, 0.55);
   transition: transform 0.3s var(--ease-spring);
 }
-.brand:hover {
+.brandLink:hover .brand {
   transform: scale(1.04);
 }
 .brandText {
@@ -39,20 +45,39 @@
   background-clip: text;
   color: transparent;
 }
+.brandName {
+  opacity: 0;
+  transform: translateX(-6px);
+  transition:
+    opacity 0.2s var(--ease-out),
+    transform 0.3s var(--ease-out);
+  pointer-events: none;
+}
+.open .brandName {
+  opacity: 1;
+  transform: translateX(0);
+  transition-delay: 0.12s;
+  pointer-events: auto;
+}
 
 /* ---------- Ustun ---------- */
 
 .rail {
-  width: var(--rail-width);
   background: var(--rail);
   border-radius: 38px;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.06),
     0 18px 40px -18px rgba(5, 40, 28, 0.55);
+  transition: width 0.38s var(--ease-out);
 }
 
-/* Aylantiriladigan qism: aylantirish chizig'i ko'rinmaydi, chetlari
-   yumshoq so'nadi — ostida yana bo'lim borligi sezilib turadi */
+/* Qatorlar yig'ilgan ustunda markazda turadi, kengayganda ham ikonkalar
+   aynan o'sha joyda qoladi — faqat o'ng tomonda nom paydo bo'ladi */
+.list {
+  padding-left: calc((var(--rail-collapsed) - var(--row-size)) / 2);
+  padding-right: calc((var(--rail-collapsed) - var(--row-size)) / 2);
+}
+
 .scroll {
   gap: 6px;
   scrollbar-width: none;
@@ -63,34 +88,152 @@
   display: none;
 }
 
-
-.item {
-  width: 48px;
-  height: 48px;
+.row {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 14px;
+  width: var(--row-size);
+  height: var(--row-size);
+  padding-left: calc((var(--row-size) - 22px) / 2);
+  padding-right: 12px;
+  border-radius: 9999px;
+  overflow: hidden;
+  cursor: pointer;
+  outline: none;
   color: var(--rail-ink);
+  text-align: left;
   transition:
+    width 0.38s var(--ease-out),
     color 0.2s var(--ease-out),
     background-color 0.2s var(--ease-out),
     opacity 0.2s var(--ease-out);
 }
-.item:hover,
-.item[aria-expanded="true"] {
-  color: var(--rail-ink-hover);
-  background: rgba(255, 255, 255, 0.08);
+.open .row {
+  width: 100%;
 }
-.item:focus-visible {
+.row:hover,
+.row[data-flyout="open"] {
+  color: var(--rail-ink-hover);
+  background-color: rgba(255, 255, 255, 0.08);
+}
+.row:focus-visible {
+  box-shadow: 0 0 0 2px rgba(110, 231, 183, 0.6);
+}
+/* Yig'ilgan holatda faol bo'lim ikonkasi doira ichida chiziladi */
+.rowHidden {
+  opacity: 0;
+}
+/* Kengaygan holatda faol qator — zumrad fon */
+.rowActive,
+.rowActive:hover {
+  color: var(--mint-ink);
+  background: linear-gradient(135deg, var(--mint-from) 0%, var(--mint-to) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 8px 20px -8px rgba(52, 211, 153, 0.55);
+}
+/* Guruh ichida faol havola bor — sarlavhasi yorqinroq */
+.rowParent {
+  color: #ffffff;
+}
+
+.label {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14.5px;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.15s var(--ease-out);
+}
+.open .label {
+  opacity: 1;
+  transition: opacity 0.25s var(--ease-out) 0.12s;
+}
+
+.chevron {
+  flex-shrink: 0;
+  opacity: 0.6;
+  transition: transform 0.25s var(--ease-out);
+}
+
+/* Guruh ichidagi havolalar (faqat kengaygan holatda) */
+.children {
+  position: relative;
+  margin-top: 2px;
+  margin-bottom: 4px;
+  animation: childrenIn 0.25s var(--ease-out) both;
+}
+.children::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--row-size) / 2);
+  top: 2px;
+  bottom: 14px;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.12);
+}
+.child {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 40px;
+  margin-left: calc(var(--row-size) / 2 + 14px);
+  padding: 0 14px;
+  border-radius: 9999px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--rail-ink);
+  white-space: nowrap;
+  transition:
+    color 0.2s var(--ease-out),
+    background-color 0.2s var(--ease-out);
+}
+.child::before {
+  content: "";
+  position: absolute;
+  left: -14px;
+  top: 50%;
+  width: 10px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+}
+.child:hover {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.07);
+}
+/* Faol havola — qator kabi zumrad fon, matn to'q */
+.child.rowActive,
+.child.rowActive:hover {
+  color: var(--mint-ink);
+  font-weight: 600;
+}
+.child:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px rgba(110, 231, 183, 0.6);
 }
-/* Faol bo'lim ikonkasi doira ichida chiziladi — ustundagisi yashiriladi */
-.itemActive {
-  opacity: 0;
+
+.userRow {
+  padding-left: calc((var(--row-size) - 36px) / 2);
+  cursor: default;
+}
+.userRow:hover {
+  background-color: transparent;
 }
 
 .divider {
-  width: 28px;
   height: 1px;
   background: rgba(255, 255, 255, 0.1);
+  margin-left: calc((var(--rail-collapsed) - 28px) / 2);
+  width: 28px;
+  transition: width 0.38s var(--ease-out);
+}
+.open .divider {
+  width: calc(100% - (var(--rail-collapsed) - 28px));
 }
 
 .dot {
@@ -99,10 +242,10 @@
 
 .logout:hover {
   color: #fecaca;
-  background: rgba(248, 113, 113, 0.14);
+  background-color: rgba(248, 113, 113, 0.14);
 }
 
-/* ---------- Bo'rtma va faol doira ---------- */
+/* ---------- Bo'rtma va faol doira (yig'ilgan holatda) ---------- */
 
 .indicator {
   position: absolute;
@@ -110,8 +253,16 @@
   pointer-events: none;
   transition:
     transform 0.55s cubic-bezier(0.34, 1.3, 0.64, 1),
-    opacity 0.25s var(--ease-out);
+    opacity 0.3s var(--ease-out) 0.2s;
   will-change: transform;
+}
+/* Kengayayotganda bo'rtma darhol yo'qoladi, yig'ilganda ustun joyiga
+   tushgach paydo bo'ladi */
+.open .indicator {
+  opacity: 0;
+  transition:
+    transform 0.55s cubic-bezier(0.34, 1.3, 0.64, 1),
+    opacity 0.1s var(--ease-out);
 }
 .bump {
   display: block;
@@ -134,12 +285,11 @@
   align-items: center;
   justify-content: center;
 }
-/* Bo'lim almashganda ikonka yumshoq "chertib" paydo bo'ladi */
 .orbIcon {
   animation: orbPop 0.45s var(--ease-spring) both;
 }
 
-/* ---------- Qalqib chiquvchi qismlar ---------- */
+/* ---------- Qalqib chiquvchi qismlar (yig'ilgan holatda) ---------- */
 
 .tooltip {
   animation: tipIn 0.16s var(--ease-out) both;
@@ -156,17 +306,9 @@
   border-radius: 2px;
   transform: rotate(45deg);
 }
-
 .flyout {
   animation: flyIn 0.22s var(--ease-out) both;
   transform-origin: left center;
-}
-.panel {
-  animation: panelIn 0.32s var(--ease-out) both;
-  transform-origin: left center;
-}
-.scrim {
-  animation: fadeIn 0.2s var(--ease-out) both;
 }
 
 @keyframes orbPop {
@@ -199,37 +341,14 @@
     transform: translateX(0) scale(1);
   }
 }
-@keyframes panelIn {
+@keyframes childrenIn {
   from {
     opacity: 0;
-    transform: translateX(-16px) scale(0.98);
+    transform: translateY(-4px);
   }
   to {
     opacity: 1;
-    transform: translateX(0) scale(1);
-  }
-}
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .indicator,
-  .item,
-  .brand {
-    transition: none;
-  }
-  .orbIcon,
-  .tooltip,
-  .flyout,
-  .panel,
-  .scrim {
-    animation: none;
+    transform: translateY(0);
   }
 }
 
@@ -237,22 +356,39 @@
    uchun ixchamroq — ko'rinish o'zgarmaydi, faqat oraliqlar qisqaradi */
 @media (max-height: 860px) {
   .aside {
+    --row-size: 42px;
+    --brand-size: 60px;
     padding-top: 12px;
     padding-bottom: 12px;
-  }
-  .item {
-    width: 42px;
-    height: 42px;
   }
   .scroll {
     gap: 3px;
   }
-  .brand {
-    width: 60px;
-    height: 60px;
-    margin-left: 8px;
-  }
   .brandText {
     font-size: 21px;
+  }
+  .child {
+    height: 36px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aside,
+  .rail,
+  .row,
+  .divider,
+  .indicator,
+  .open .indicator,
+  .brand,
+  .brandName,
+  .label,
+  .open .label {
+    transition: none;
+  }
+  .orbIcon,
+  .tooltip,
+  .flyout,
+  .children {
+    animation: none;
   }
 }
