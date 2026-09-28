@@ -21,6 +21,7 @@ import { ProfileService } from "./profile.service";
 import { UpdateProfileDto } from "./dto/update-profile.dto";
 import { ChangePasswordDto } from "./dto/change-password.dto";
 import { UpdateAvatarDto } from "./dto/update-avatar.dto";
+import { UpdateThemeDto } from "./dto/update-theme.dto";
 import { AllowChef } from "../iam/decorators/allow-chef.decorator";
 
 @ApiBearerAuth()
@@ -40,6 +41,12 @@ export class ProfileController {
   @Post("password")
   changePassword(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: ChangePasswordDto) {
     return this.profileService.changePassword(user, dto);
+  }
+
+  /** Sozlamalar → Tizim rangi */
+  @Put("theme")
+  updateTheme(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: UpdateThemeDto) {
+    return this.profileService.updateTheme(user, dto);
   }
 
   @Put("avatar")

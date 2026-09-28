@@ -19,6 +19,8 @@ export interface TenantAuthenticatedUser {
   role: TenantUserRole;
   /** Profil rasmi bor bo'lsa — oxirgi yangilangan vaqti (kesh uchun). */
   avatarUpdatedAt: string | null;
+  /** Sozlamalarda tanlangan tizim rangi ("blue" va h.k.); null — sukut (yashil). Hisobda saqlanadi. */
+  themeColor: string | null;
   /** Bog'langan xodim kartochkasidagi lavozim (masalan "Fan o'qituvchisi", "Oshpaz"). Xodimga bog'lanmagan hisoblarda (Super Admin, moliyachi) — null. */
   position: string | null;
   /** "Fan o'qituvchisi" lavozimida tanlangan fan(lar). Boshqa lavozimlarda/bog'lanmagan hisoblarda — bo'sh massiv. */
