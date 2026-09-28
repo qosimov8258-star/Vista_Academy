@@ -7,21 +7,21 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { DashboardSummary, Group, LessonSchedule, Organization, Weekday } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
-import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TodayRemindersCard } from "@/features/child-notes/today-reminders-card";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
-import { formatDate, formatMoney } from "@/lib/format";
+import { formatMoney } from "@/lib/format";
 import { canWriteOperational, canWriteTeaching, isChef, isTeacher } from "@/lib/permissions";
 import { isCashierPosition } from "@/lib/employee-position";
 import { ChefHome } from "@/features/nutrition/chef-home";
 import { CashierHome } from "@/features/cash/cashier-home";
 import { AdminHome } from "@/features/desk/admin-home";
+import { DirectorHome } from "@/features/director/director-home";
 import {
   BellIcon,
   BriefcaseIcon,
-  BuildingIcon,
   CalendarIcon,
   ChecklistIcon,
   ChevronRightIcon,
@@ -310,6 +310,11 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
     );
   }
 
+  // Bog'cha direktori (Super Admin) — tarmoq bo'yicha iOS uslubidagi bosh sahifa
+  if (isNetworkAdmin) {
+    return <DirectorHome slug={slug} org={org} />;
+  }
+
   const summary = summaryQuery.data;
   const children = summary?.childrenCount ?? 0;
   const employees = summary?.employeesCount ?? 0;
@@ -329,11 +334,9 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
             {user?.branchName ?? org.name}
           </h1>
           <p className="text-[13px] text-[var(--color-text-muted)]">
-            {isNetworkAdmin
-              ? `/${org.slug}`
-              : teacher
-                ? `${org.name} · ${groupsQuery.data?.map((g) => g.name).join(", ") || "guruh biriktirilmagan"}`
-                : org.name}
+            {teacher
+              ? `${org.name} · ${groupsQuery.data?.map((g) => g.name).join(", ") || "guruh biriktirilmagan"}`
+              : org.name}
           </p>
         </div>
         <p className="text-[13px] text-[var(--color-text-muted)]">Bugun · {todayLabel()}</p>
@@ -350,31 +353,6 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
               branchId={user.branchId}
               today={new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tashkent" }).format(new Date())}
             />
-          )}
-
-          {/* Tarmoq admini uchun tashkilotning o'zi haqidagi ma'lumot */}
-          {isNetworkAdmin && (
-            <section>
-              <SectionTitle>Tashkilot</SectionTitle>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <StatTile
-                  label="Filiallar"
-                  value={org.branches.length}
-                  icon={BuildingIcon}
-                  href={`/${slug}/branches`}
-                />
-                <StatTile label="Bolalar" value={children} icon={ChildIcon} />
-                <StatTile label="Xodimlar" value={employees} icon={TeacherIcon} />
-                <div className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-3.5 py-3 shadow-[var(--shadow-card)]">
-                  <div className="min-w-0">
-                    <p className="text-[12px] leading-tight text-[var(--color-text-muted)]">Holat</p>
-                    <Badge tone={org.status === "ACTIVE" ? "success" : "danger"} className="mt-0.5">
-                      {org.status === "ACTIVE" ? "Faol" : "To'xtatilgan"}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-            </section>
           )}
 
           {notStartedYet ? (
@@ -419,7 +397,7 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
                     { label: "Keldi", value: summary?.todayAttendance.present ?? 0, tone: "success" },
                     { label: "Kelmadi", value: summary?.todayAttendance.absent ?? 0, tone: "danger" },
                   ]}
-                  href={isNetworkAdmin ? undefined : `/${slug}/attendance`}
+                  href={`/${slug}/attendance`}
                   actionLabel={canTeach ? "Davomatni belgilash" : "Ko'rish"}
                 />
                 {!teacher && (
@@ -432,7 +410,7 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
                       { label: "Keldi", value: summary?.todayStaffAttendance.present ?? 0, tone: "success" },
                       { label: "Kelmadi", value: summary?.todayStaffAttendance.absent ?? 0, tone: "danger" },
                     ]}
-                    href={isNetworkAdmin ? undefined : `/${slug}/staff-attendance`}
+                    href={`/${slug}/staff-attendance`}
                     actionLabel={canWrite ? "Davomatni belgilash" : "Ko'rish"}
                   />
                 )}
@@ -440,7 +418,7 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
             </section>
           )}
 
-          {!isNetworkAdmin && !teacher && summary && (
+          {!teacher && summary && (
             <section>
               <SectionTitle>Diqqat talab qiladi</SectionTitle>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
@@ -585,12 +563,12 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
                 >
                   {formatMoney(debt)}
                 </p>
-                {!isNetworkAdmin && !!summary?.overdueInvoicesCount && (
+                {!!summary?.overdueInvoicesCount && (
                   <p className="mt-1.5 text-[12.5px] text-[var(--color-danger)]">
                     {summary.overdueInvoicesCount} ta hisob-faktura muddati o&apos;tgan
                   </p>
                 )}
-                {!isNetworkAdmin && debt > 0 && (
+                {debt > 0 && (
                   <Link
                     href={`/${slug}/finance`}
                     className="group mt-3 inline-flex items-center gap-0.5 text-[13px] font-medium text-[var(--color-primary)] hover:underline"
@@ -604,7 +582,7 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
           </section>
           )}
 
-          {!isNetworkAdmin && !teacher && (
+          {!teacher && (
             <section>
               <SectionTitle>Filial raqamlari</SectionTitle>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
@@ -704,7 +682,7 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
             </section>
           )}
 
-          {!isNetworkAdmin && !teacher && (
+          {!teacher && (
             <section>
               <SectionTitle>Bo&apos;limlar</SectionTitle>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
@@ -729,55 +707,6 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
             </section>
           )}
 
-          {/* Filiallar ro'yxati tarmoq darajasidagi ish — filialga biriktirilgan
-              foydalanuvchi o'z filialidan boshqasini ko'rmasligi kerak. */}
-          {isNetworkAdmin && (
-            <Card className="overflow-hidden">
-              <CardHeader className="flex items-center justify-between">
-                <CardTitle>Filiallar</CardTitle>
-                <Link
-                  href={`/${slug}/branches`}
-                  className="text-[13px] font-medium text-[var(--color-primary)] hover:underline"
-                >
-                  Barchasi
-                </Link>
-              </CardHeader>
-              <CardBody className="p-0">
-                {org.branches.length === 0 ? (
-                  // Kartochka ichida: bo'sh holat ramkasi karta chetiga
-                  // yopishmasligi uchun kichik ichki bo'shliq qoldiriladi.
-                  <div className="p-3">
-                    <EmptyState icon={<BuildingIcon className="h-[26px] w-[26px]" />} title="Hali filial yo'q" />
-                  </div>
-                ) : (
-                  <ul className="divide-y divide-[var(--color-separator)]">
-                    {org.branches.slice(0, 5).map((branch) => (
-                      <li key={branch.id}>
-                        <Link
-                          href={`/${slug}/branches/${branch.id}`}
-                          className="group flex items-center gap-3 px-5 py-3 transition-colors duration-[var(--dur-fast)] ease-[var(--ease-out)] hover:bg-[var(--color-surface-hover)] sm:px-6"
-                        >
-                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
-                            <BuildingIcon className="h-[18px] w-[18px]" />
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-[14px] font-medium text-[var(--color-text)]">{branch.name}</p>
-                            <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">
-                              {branch.address || "Manzil ko'rsatilmagan"}
-                            </p>
-                          </div>
-                          <span className="hidden text-[12.5px] tabular-nums text-[var(--color-text-muted)] sm:block">
-                            {formatDate(branch.createdAt)}
-                          </span>
-                          <ChevronRightIcon className="h-4 w-4 shrink-0 text-[var(--color-text-muted)]/50 transition-transform group-hover:translate-x-0.5" />
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </CardBody>
-            </Card>
-          )}
         </>
       )}
     </div>
