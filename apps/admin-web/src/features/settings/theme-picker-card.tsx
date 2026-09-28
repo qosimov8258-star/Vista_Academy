@@ -4,8 +4,7 @@ import clsx from "clsx";
 import { CheckIcon, GlobeIcon } from "@/components/ui/icons";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { THEMES, useTheme } from "@/lib/theme";
-import { IosIcon } from "@/features/director/ios-icon";
-import { SettingsGroup, SettingsRow } from "./settings-ui";
+import { RowIcon, SettingsGroup, SettingsRow, usePlainSettingsIcons } from "./settings-ui";
 
 /** Palitra belgisi — "Tizim rangi" qatori uchun */
 function PaletteIcon({ className, style }: { className?: string; style?: React.CSSProperties }) {
@@ -26,6 +25,8 @@ function PaletteIcon({ className, style }: { className?: string; style?: React.C
 export function ThemePickerCard() {
   const { theme, setTheme, saving, error } = useTheme();
   const current = THEMES.find((t) => t.key === theme) ?? THEMES[0];
+  // Namuna va ranglar ikonkadan keyingi matn chizig'idan boshlanadi
+  const indent = usePlainSettingsIcons() ? "sm:ml-[36px]" : "sm:ml-[44px]";
 
   return (
     <SettingsGroup
@@ -40,13 +41,13 @@ export function ThemePickerCard() {
     >
       <div className="px-4 pb-4 pt-3">
         <div className="flex items-center gap-3.5">
-          <IosIcon icon={PaletteIcon} tint="accent" size={30} />
+          <RowIcon icon={PaletteIcon} />
           <span className="min-w-0 flex-1 text-[15.5px] text-[var(--color-text)]">Tizim rangi</span>
           <span className="text-[15px] text-[var(--color-text-muted)]">{saving ? "Saqlanmoqda…" : current.label}</span>
         </div>
 
         {/* Jonli namuna — yon panel va tugma tanlangan rangda */}
-        <div className="mt-3.5 flex items-center gap-3 rounded-[18px] bg-[var(--accent-rail)] p-3 transition-colors duration-300 sm:ml-[44px]" aria-hidden="true">
+        <div className={`mt-3.5 flex items-center gap-3 rounded-[18px] bg-[var(--accent-rail)] p-3 transition-colors duration-300 ${indent}`} aria-hidden="true">
           <span className="flex flex-col gap-1.5 pl-1">
             <span className="h-1.5 w-7 rounded-full bg-white/20" />
             <span className="h-1.5 w-10 rounded-full bg-white/20" />
@@ -58,7 +59,7 @@ export function ThemePickerCard() {
           <span className="ml-auto h-8 w-24 rounded-full bg-[var(--color-primary)] transition-colors duration-300" />
         </div>
 
-        <div className="mt-3.5 grid grid-cols-8 gap-2 sm:ml-[44px] sm:flex sm:flex-wrap sm:gap-3" role="radiogroup" aria-label="Tizim rangi">
+        <div className={`mt-3.5 grid grid-cols-8 gap-2 sm:flex sm:flex-wrap sm:gap-3 ${indent}`} role="radiogroup" aria-label="Tizim rangi">
           {THEMES.map((t) => {
             const active = t.key === theme;
             return (

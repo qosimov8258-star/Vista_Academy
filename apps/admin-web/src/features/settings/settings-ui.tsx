@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type ComponentType, type ReactNode } from "react";
+import { createContext, useContext, useEffect, type ComponentType, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
 import type { IconProps } from "@/components/ui/icons";
@@ -12,6 +12,34 @@ import { IosIcon, type IosTint } from "@/features/director/ios-icon";
  * ro'yxat (sarlavha + oq yumaloq karta + izoh), qator va pastdan chiquvchi
  * oyna (kompyuterda — markazda).
  */
+
+/**
+ * Tarbiyachi kabinetida ikonkalar rangli "squircle" ichida emas — o'zi tizim
+ * rangida chiziladi. Sahifa shu provayder bilan o'rab, qatorlarga aytadi.
+ */
+const PlainIconsContext = createContext(false);
+
+export function SettingsPlainIcons({ enabled, children }: { enabled: boolean; children: ReactNode }) {
+  return <PlainIconsContext.Provider value={enabled}>{children}</PlainIconsContext.Provider>;
+}
+
+export function usePlainSettingsIcons() {
+  return useContext(PlainIconsContext);
+}
+
+/** Qator ikonkasi: odatda iOS "squircle", tarbiyachida — oddiy rangli belgi. */
+export function RowIcon({ icon: Icon, tint = "accent", danger }: { icon: ComponentType<IconProps>; tint?: IosTint; danger?: boolean }) {
+  const plain = usePlainSettingsIcons();
+  if (plain) {
+    return (
+      <Icon
+        className={clsx("h-[22px] w-[22px] shrink-0", danger ? "text-[var(--color-danger)]" : "text-[var(--color-primary)]")}
+        strokeWidth={1.8}
+      />
+    );
+  }
+  return <IosIcon icon={Icon} tint={danger ? "red" : tint} size={30} />;
+}
 
 export function SettingsGroup({
   title,
@@ -66,12 +94,16 @@ export function SettingsRow({
   first?: boolean;
   description?: ReactNode;
 }) {
+  const plain = usePlainSettingsIcons();
   const content = (
     <>
       {!first && (
-        <span className={clsx("absolute right-0 top-0 h-px bg-[var(--color-separator)]", icon ? "left-[60px]" : "left-4")} aria-hidden="true" />
+        <span
+          className={clsx("absolute right-0 top-0 h-px bg-[var(--color-separator)]", icon ? (plain ? "left-[52px]" : "left-[60px]") : "left-4")}
+          aria-hidden="true"
+        />
       )}
-      {icon && <IosIcon icon={icon} tint={danger ? "red" : tint} size={30} />}
+      {icon && <RowIcon icon={icon} tint={tint} danger={danger} />}
       <span className="min-w-0 flex-1">
         <span className={clsx("block truncate text-[15.5px]", danger ? "font-semibold text-[var(--color-danger)]" : "text-[var(--color-text)]")}>
           {label}

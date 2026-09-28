@@ -5,13 +5,13 @@ import Link from "next/link";
 import type { ComponentType, SVGProps } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { DashboardSummary, Group, LessonSchedule, Organization, Weekday } from "@/lib/types";
+import type { DashboardSummary, Organization } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TodayRemindersCard } from "@/features/child-notes/today-reminders-card";
 import { ProgressBar } from "@/components/ui/progress-bar";
-import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
+import { LoadingState, ErrorState } from "@/components/ui/states";
 import { formatMoney } from "@/lib/format";
 import { canWriteOperational, canWriteTeaching, isChef, isTeacher } from "@/lib/permissions";
 import { isCashierPosition } from "@/lib/employee-position";
@@ -19,6 +19,7 @@ import { ChefHome } from "@/features/nutrition/chef-home";
 import { CashierHome } from "@/features/cash/cashier-home";
 import { AdminHome } from "@/features/desk/admin-home";
 import { DirectorHome } from "@/features/director/director-home";
+import { TeacherHome } from "@/features/teacher/teacher-home";
 import {
   BellIcon,
   BriefcaseIcon,
@@ -26,7 +27,6 @@ import {
   ChecklistIcon,
   ChevronRightIcon,
   ChildIcon,
-  ClockIcon,
   GroupIcon,
   MealIcon,
   MoneyIcon,
@@ -34,17 +34,6 @@ import {
   PhoneIcon,
   TeacherIcon,
 } from "@/components/ui/icons";
-
-/** JS `Date.getDay()` (0=yakshanba) dan bazadagi Weekday enumiga o'tkazish. */
-const WEEKDAY_BY_JS_DAY: Weekday[] = [
-  "SUNDAY",
-  "MONDAY",
-  "TUESDAY",
-  "WEDNESDAY",
-  "THURSDAY",
-  "FRIDAY",
-  "SATURDAY",
-];
 
 const QUICK_ACTIONS = [
   { label: "Arizalar (CRM)", icon: PhoneIcon, suffix: "crm" },
@@ -74,17 +63,6 @@ const MONTH_NAMES = [
   "oktabr",
   "noyabr",
   "dekabr",
-];
-
-// Haftalik jadval dushanbadan boshlanadi (JS `getDay()` tartibidan farqli).
-const WEEK_ORDER: { key: Weekday; label: string }[] = [
-  { key: "MONDAY", label: "Dushanba" },
-  { key: "TUESDAY", label: "Seshanba" },
-  { key: "WEDNESDAY", label: "Chorshanba" },
-  { key: "THURSDAY", label: "Payshanba" },
-  { key: "FRIDAY", label: "Juma" },
-  { key: "SATURDAY", label: "Shanba" },
-  { key: "SUNDAY", label: "Yakshanba" },
 ];
 
 const WEEKDAY_NAMES = ["yakshanba", "dushanba", "seshanba", "chorshanba", "payshanba", "juma", "shanba"];
@@ -245,30 +223,6 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
     enabled: !!user && !isChef(user.role),
   });
 
-  // O'qituvchida bu so'rov faqat unga biriktirilgan guruhlarni qaytaradi
-  const groupsQuery = useQuery({
-    queryKey: ["groups", slug],
-    queryFn: () => api.get<Group[]>("/app/groups"),
-    enabled: teacher,
-  });
-
-  // O'qituvchida bu so'rov ham faqat unga biriktirilgan guruhlar darslarini qaytaradi
-  const lessonSchedulesQuery = useQuery({
-    queryKey: ["lesson-schedules", slug, "dashboard"],
-    queryFn: () => api.get<LessonSchedule[]>("/app/lesson-schedules"),
-    enabled: teacher,
-  });
-  const todayWeekday = WEEKDAY_BY_JS_DAY[new Date().getDay()];
-  // Tarbiyachi kun bo'yi bolalar bilan — guruhning bu haftadagi barcha darslari
-  // (qaysi kuni, soat nechida) ko'rinib tursin, shunda bolalar qachon boshqa
-  // o'qituvchi bilan bo'lishini oldindan biladi.
-  const weekPlan = WEEK_ORDER.map((day) => ({
-    ...day,
-    lessons: (lessonSchedulesQuery.data ?? [])
-      .filter((lesson) => lesson.weekday === day.key)
-      .sort((a, b) => a.startTime.localeCompare(b.startTime)),
-  })).filter((day) => day.lessons.length > 0);
-
   if (orgQuery.isLoading) return <LoadingState rows={4} />;
   if (orgQuery.isError) return <ErrorState message={(orgQuery.error as Error).message} />;
   const org = orgQuery.data;
@@ -293,6 +247,11 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
   // (sarlavha va sana ChefHome'ning o'zida).
   if (isChef(user?.role)) {
     return <ChefHome slug={slug} />;
+  }
+
+  // Tarbiyachi (yordamchi va fan o'qituvchisi ham) — iOS uslubidagi o'z bosh sahifasi
+  if (teacher) {
+    return <TeacherHome slug={slug} />;
   }
 
   // Administrator (MANAGER) uchun alohida bosh sahifa: bugungi holat va qo'ng'iroqlar.
@@ -334,9 +293,7 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
             {user?.branchName ?? org.name}
           </h1>
           <p className="text-[13px] text-[var(--color-text-muted)]">
-            {teacher
-              ? `${org.name} · ${groupsQuery.data?.map((g) => g.name).join(", ") || "guruh biriktirilmagan"}`
-              : org.name}
+            {org.name}
           </p>
         </div>
         <p className="text-[13px] text-[var(--color-text-muted)]">Bugun · {todayLabel()}</p>
@@ -358,12 +315,10 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
           {notStartedYet ? (
             <Card className="p-5">
               <p className="text-[17px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
-                {teacher ? "Hozircha ish yo'q" : "Boshlash uchun"}
+                Boshlash uchun
               </p>
               <p className="mt-1.5 text-[14px] leading-relaxed text-[var(--color-text-muted)]">
-                {teacher
-                  ? "Guruhlaringizda hali bola yo'q. Filial admini bolalarni ro'yxatga olgach, davomat va kundalik hisobot shu yerda paydo bo'ladi."
-                  : "Bu filialda hali bola ro'yxatga olinmagan. Guruh ochib, bolalarni qo'shsangiz, davomat va kundalik hisobot shu yerda ko'rina boshlaydi."}
+                Bu filialda hali bola ro&apos;yxatga olinmagan. Guruh ochib, bolalarni qo&apos;shsangiz, davomat va kundalik hisobot shu yerda ko&apos;rina boshlaydi.
               </p>
               {canWrite && (
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -400,25 +355,23 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
                   href={`/${slug}/attendance`}
                   actionLabel={canTeach ? "Davomatni belgilash" : "Ko'rish"}
                 />
-                {!teacher && (
-                  <TodayCard
-                    title="Xodimlar davomati"
-                    icon={CalendarIcon}
-                    done={staffMarked}
-                    total={employees}
-                    breakdown={[
-                      { label: "Keldi", value: summary?.todayStaffAttendance.present ?? 0, tone: "success" },
-                      { label: "Kelmadi", value: summary?.todayStaffAttendance.absent ?? 0, tone: "danger" },
-                    ]}
-                    href={`/${slug}/staff-attendance`}
-                    actionLabel={canWrite ? "Davomatni belgilash" : "Ko'rish"}
-                  />
-                )}
+                <TodayCard
+                  title="Xodimlar davomati"
+                  icon={CalendarIcon}
+                  done={staffMarked}
+                  total={employees}
+                  breakdown={[
+                    { label: "Keldi", value: summary?.todayStaffAttendance.present ?? 0, tone: "success" },
+                    { label: "Kelmadi", value: summary?.todayStaffAttendance.absent ?? 0, tone: "danger" },
+                  ]}
+                  href={`/${slug}/staff-attendance`}
+                  actionLabel={canWrite ? "Davomatni belgilash" : "Ko'rish"}
+                />
               </div>
             </section>
           )}
 
-          {!teacher && summary && (
+          {summary && (
             <section>
               <SectionTitle>Diqqat talab qiladi</SectionTitle>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
@@ -526,7 +479,6 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
             </section>
           )}
 
-          {!teacher && (
           <section>
             <SectionTitle>Moliya</SectionTitle>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -580,132 +532,57 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
               </Card>
             </div>
           </section>
-          )}
 
-          {!teacher && (
-            <section>
-              <SectionTitle>Filial raqamlari</SectionTitle>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
-                <StatTile label="Bolalar" value={children} icon={ChildIcon} href={`/${slug}/children`} />
-                <StatTile
-                  label="Faol guruhlar"
-                  value={summary?.activeGroupsCount ?? 0}
-                  icon={GroupIcon}
-                  href={`/${slug}/groups`}
-                />
-                <StatTile label="Xodimlar" value={employees} icon={TeacherIcon} href={`/${slug}/employees`} />
-                <StatTile
-                  label="Faol arizalar"
-                  value={summary?.activeLeadsCount ?? 0}
-                  icon={PhoneIcon}
-                  href={`/${slug}/crm`}
-                  highlight={(summary?.activeLeadsCount ?? 0) > 0}
-                />
-                <StatTile
-                  label="Yuborilmagan xabar"
-                  value={summary?.pendingNotificationsCount ?? 0}
-                  icon={BellIcon}
-                  href={`/${slug}/notifications`}
-                  highlight={(summary?.pendingNotificationsCount ?? 0) > 0}
-                />
-              </div>
-            </section>
-          )}
+          <section>
+            <SectionTitle>Filial raqamlari</SectionTitle>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+              <StatTile label="Bolalar" value={children} icon={ChildIcon} href={`/${slug}/children`} />
+              <StatTile
+                label="Faol guruhlar"
+                value={summary?.activeGroupsCount ?? 0}
+                icon={GroupIcon}
+                href={`/${slug}/groups`}
+              />
+              <StatTile label="Xodimlar" value={employees} icon={TeacherIcon} href={`/${slug}/employees`} />
+              <StatTile
+                label="Faol arizalar"
+                value={summary?.activeLeadsCount ?? 0}
+                icon={PhoneIcon}
+                href={`/${slug}/crm`}
+                highlight={(summary?.activeLeadsCount ?? 0) > 0}
+              />
+              <StatTile
+                label="Yuborilmagan xabar"
+                value={summary?.pendingNotificationsCount ?? 0}
+                icon={BellIcon}
+                href={`/${slug}/notifications`}
+                highlight={(summary?.pendingNotificationsCount ?? 0) > 0}
+              />
+            </div>
+          </section>
 
-          {teacher && (
-            <section>
-              <SectionTitle>Bu haftaki darslar</SectionTitle>
-              {weekPlan.length > 0 ? (
-                <div className="space-y-4">
-                  {weekPlan.map((day) => (
-                    <div key={day.key} className="space-y-2">
-                      <p className="flex items-center gap-2 text-[13px] font-semibold text-[var(--color-text-muted)]">
-                        {day.label}
-                        {day.key === todayWeekday && <Badge tone="primary">Bugun</Badge>}
-                      </p>
-                      {day.lessons.map((lesson) => (
-                        <Card key={lesson.id} className="flex items-center gap-3 p-3.5">
-                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
-                            <ClockIcon className="h-[18px] w-[18px]" />
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-[var(--color-text)]">
-                              {lesson.startTime} – {lesson.endTime}
-                              {lesson.subject && (
-                                <span className="text-[var(--color-text-muted)]"> · {lesson.subject}</span>
-                              )}
-                            </p>
-                            <p className="text-xs text-[var(--color-text-muted)]">{lesson.group.name} guruhi</p>
-                          </div>
-                        </Card>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <EmptyState icon={<ClockIcon className="h-[26px] w-[26px]" />} title="Bu hafta guruhingizda dars yo'q" />
-              )}
-            </section>
-          )}
-
-          {teacher && (
-            <section>
-              <SectionTitle>Mening guruhlarim</SectionTitle>
-              {groupsQuery.data && groupsQuery.data.length > 0 ? (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {groupsQuery.data.map((group) => (
-                    <Link
-                      key={group.id}
-                      href={`/${slug}/attendance`}
-                      className="group flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-4 py-3.5 shadow-[var(--shadow-card)] transition-all duration-[var(--dur-base)] ease-[var(--ease-out)] hover:-translate-y-0.5 hover:bg-[var(--color-surface-hover)] hover:shadow-[var(--shadow-raised)] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
-                    >
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
-                        <GroupIcon className="h-5 w-5" />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[15px] font-medium text-[var(--color-text)]">{group.name}</p>
-                        <p className="text-[12.5px] tabular-nums text-[var(--color-text-muted)]">
-                          {group._count?.children ?? 0} bola
-                        </p>
-                      </div>
-                      <ChevronRightIcon className="h-4 w-4 shrink-0 text-[var(--color-text-muted)]/50 transition-transform group-hover:translate-x-0.5" />
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <EmptyState
-                  icon={<GroupIcon className="h-[26px] w-[26px]" />}
-                  title="Sizga hali guruh biriktirilmagan"
-                  description="Filial admini guruh biriktirgach, shu yerda ko'rinadi."
-                />
-              )}
-            </section>
-          )}
-
-          {!teacher && (
-            <section>
-              <SectionTitle>Bo&apos;limlar</SectionTitle>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
-                {QUICK_ACTIONS.map((action) => {
-                  const Icon = action.icon;
-                  return (
-                    <Link
-                      key={action.suffix}
-                      href={`/${slug}/${action.suffix}`}
-                      className="group flex flex-col items-center gap-2 rounded-[var(--radius-lg)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-3 py-4 text-center shadow-[var(--shadow-card)] transition-all duration-[var(--dur-base)] ease-[var(--ease-out)] hover:-translate-y-0.5 hover:bg-[var(--color-surface-hover)] hover:shadow-[var(--shadow-raised)] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
-                    >
-                      <span className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-primary)]/10 text-[var(--color-primary)] transition-colors duration-[var(--dur-fast)] group-hover:bg-[var(--color-primary)] group-hover:text-white">
-                        <Icon className="h-5 w-5" />
-                      </span>
-                      <span className="text-[12px] font-medium leading-tight text-[var(--color-text)]">
-                        {action.label}
-                      </span>
-                    </Link>
-                  );
-                })}
-              </div>
-            </section>
-          )}
+          <section>
+            <SectionTitle>Bo&apos;limlar</SectionTitle>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
+              {QUICK_ACTIONS.map((action) => {
+                const Icon = action.icon;
+                return (
+                  <Link
+                    key={action.suffix}
+                    href={`/${slug}/${action.suffix}`}
+                    className="group flex flex-col items-center gap-2 rounded-[var(--radius-lg)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-3 py-4 text-center shadow-[var(--shadow-card)] transition-all duration-[var(--dur-base)] ease-[var(--ease-out)] hover:-translate-y-0.5 hover:bg-[var(--color-surface-hover)] hover:shadow-[var(--shadow-raised)] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+                  >
+                    <span className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-primary)]/10 text-[var(--color-primary)] transition-colors duration-[var(--dur-fast)] group-hover:bg-[var(--color-primary)] group-hover:text-white">
+                      <Icon className="h-5 w-5" />
+                    </span>
+                    <span className="text-[12px] font-medium leading-tight text-[var(--color-text)]">
+                      {action.label}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
 
         </>
       )}

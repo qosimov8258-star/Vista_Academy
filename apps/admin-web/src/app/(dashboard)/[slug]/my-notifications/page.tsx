@@ -10,13 +10,16 @@ import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { BellIcon } from "@/components/ui/icons";
 import { formatDateTime } from "@/lib/format";
 import { useAuth } from "@/lib/use-auth";
-import { isChef } from "@/lib/permissions";
+import { isChef, isTeacher } from "@/lib/permissions";
+import { EmptyRow, Group, GroupAction, LargeTitle, SkeletonRows, TeacherPage } from "@/features/teacher/teacher-ui";
 
 export default function MyNotificationsPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   // Oshpazga dars jadvali haqida emas, unga yuborilgan xabarlar keladi
-  const chef = isChef(useAuth().user?.role);
+  const chef = isChef(user?.role);
+  const teacher = isTeacher(user?.role);
 
   const notificationsQuery = useQuery({
     queryKey: ["employee-notifications", slug],
@@ -35,6 +38,48 @@ export default function MyNotificationsPage({ params }: { params: Promise<{ slug
 
   const notifications = notificationsQuery.data ?? [];
   const unreadCount = notifications.filter((n) => !n.isRead).length;
+
+  // Tarbiyachi kabineti — iOS ro'yxati: o'qilmaganlar oldida tizim rangidagi nuqta
+  if (teacher) {
+    return (
+      <TeacherPage>
+        <LargeTitle title="Xabarlar" subtitle={unreadCount > 0 ? `${unreadCount} ta o'qilmagan` : "Hammasi o'qilgan"} />
+        <Group
+          action={unreadCount > 0 ? <GroupAction onClick={() => markAllReadMutation.mutate()}>Hammasini o&apos;qish</GroupAction> : undefined}
+          title={notifications.length > 0 ? "So'nggi" : undefined}
+          footer="Dars jadvalingiz belgilanganda yoki o'zgarganda shu yerga xabar tushadi."
+        >
+          {notificationsQuery.isLoading ? (
+            <SkeletonRows rows={4} />
+          ) : notificationsQuery.isError ? (
+            <EmptyRow title="Yuklab bo'lmadi" description={(notificationsQuery.error as Error).message} />
+          ) : notifications.length === 0 ? (
+            <EmptyRow icon={BellIcon} title="Hozircha xabar yo'q" />
+          ) : (
+            notifications.map((n, i) => (
+              <button
+                key={n.id}
+                type="button"
+                disabled={n.isRead}
+                onClick={() => markReadMutation.mutate(n.id)}
+                className="relative flex w-full items-start gap-3 py-3 pl-4 pr-4 text-left transition-colors enabled:cursor-pointer enabled:active:bg-black/5"
+              >
+                {i > 0 && <span className="absolute left-9 right-0 top-0 h-px bg-[var(--color-separator)]" aria-hidden="true" />}
+                <span
+                  className={`mt-[7px] h-2.5 w-2.5 shrink-0 rounded-full ${n.isRead ? "bg-transparent" : "bg-[var(--color-primary)]"}`}
+                  aria-label={n.isRead ? undefined : "O'qilmagan"}
+                />
+                <span className="min-w-0 flex-1">
+                  <span className={`block text-[15.5px] leading-snug text-[var(--color-text)] ${n.isRead ? "" : "font-semibold"}`}>{n.message}</span>
+                  <span className="mt-1 block text-[13px] text-[var(--color-text-muted)]">{formatDateTime(n.createdAt)}</span>
+                </span>
+              </button>
+            ))
+          )}
+        </Group>
+      </TeacherPage>
+    );
+  }
 
   return (
     <div className="space-y-5">
