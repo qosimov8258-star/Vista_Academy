@@ -10,7 +10,6 @@ import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import type { EmployeeNotification } from "@/lib/types";
 import { clearTenantTokens, getTenantRefreshToken } from "@/lib/tenant-session";
 import clsx from "clsx";
-import type { ComponentType } from "react";
 import { useAuth } from "@/lib/use-auth";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { useSidebarCollapsed } from "@/lib/use-sidebar-collapsed";
@@ -18,7 +17,8 @@ import { useSidebarSections } from "@/lib/use-sidebar-sections";
 import { ROLE_LABEL, canManageUsers, canViewUseful, isChef, isTeacher, receivesEmployeeNotifications } from "@/lib/permissions";
 import { formatPositionLabel, isAssistantPosition, isCashierPosition, isSubjectTeacherPosition } from "@/lib/employee-position";
 import { Avatar, initials } from "@/components/ui/avatar";
-import type { IconProps } from "@/components/ui/icons";
+import { isSection, type NavEntry, type NavLeaf } from "./nav-types";
+import { DirectorRail } from "./director-rail";
 import {
   CloseIcon,
   ArrowLeftIcon,
@@ -51,35 +51,6 @@ import {
   TeacherIcon,
 } from "@/components/ui/icons";
 
-// `IconProps` — ikonkalar to'plamining o'z tipi: `filled` bayrog'i ham bor,
-// faol bo'lim to'ldirilgan ikonka bilan belgilanadi.
-type NavIcon = ComponentType<IconProps>;
-
-interface NavLeaf {
-  href: string;
-  label: string;
-  icon: NavIcon;
-  show: boolean;
-  exact?: boolean;
-  /** O'ng chetdagi raqamli belgi (masalan yangi arizalar soni). */
-  badge?: number;
-  badgeTone?: "warning" | "success" | "danger";
-}
-
-/** Ochilib-yopiladigan bo'lim: ichidagi havolalar daraxt chizig'i bilan ulanadi. */
-interface NavSection {
-  id: string;
-  label: string;
-  icon: NavIcon;
-  items: NavLeaf[];
-}
-
-type NavEntry = NavLeaf | NavSection;
-
-function isSection(entry: NavEntry): entry is NavSection {
-  return "items" in entry;
-}
-
 const BADGE_TONE: Record<NonNullable<NavLeaf["badgeTone"]>, string> = {
   warning: "bg-[var(--color-warning-bg)] text-[var(--color-warning)]",
   success: "bg-[var(--color-success-bg)] text-[var(--color-success)]",
@@ -98,6 +69,8 @@ function Badge({ value, tone = "warning" }: { value: number; tone?: NavLeaf["bad
     </span>
   );
 }
+
+const RAIL_HINT_KEY = "bogcha:director-rail";
 
 export function Sidebar({ slug }: { slug: string }) {
   const pathname = usePathname();
@@ -133,6 +106,28 @@ export function Sidebar({ slug }: { slug: string }) {
 
   const clearHover = () => setHoverRect(null);
   const isNetworkAdmin = user?.role === "NETWORK_ADMIN";
+
+  // Direktor (Super Admin) uchun yon panel boshqacha — ingichka ikonka ustuni.
+  // Foydalanuvchi ma'lumoti yuklanguncha rol noma'lum; oxirgi marta kim
+  // kirgani brauzerda eslab qolinadi, shunda direktorga sahifa yangilanganda
+  // eski keng panel bir lahza ko'rinib, keyin sakrab o'zgarmaydi.
+  const [railHint, setRailHint] = useState(false);
+  useEffect(() => {
+    try {
+      setRailHint(window.localStorage.getItem(RAIL_HINT_KEY) === "1");
+    } catch {
+      // Shaxsiy rejimda localStorage yopiq — oddiy holatda qolaveradi
+    }
+  }, []);
+  useEffect(() => {
+    if (!user) return;
+    try {
+      window.localStorage.setItem(RAIL_HINT_KEY, user.role === "NETWORK_ADMIN" ? "1" : "0");
+    } catch {
+      // yuqoridagi kabi
+    }
+  }, [user]);
+  const useDirectorRail = isNetworkAdmin || (!user && railHint);
   // "Fan o'qituvchisi" lavozimida tanlangan fan(lar) ko'rsatiladi (masalan
   // "Matematika o'qituvchisi"), boshqa lavozimlarda lavozim nomining o'zi.
   const positionLabel = user?.position ? formatPositionLabel(user.position, user.subjects) : null;
@@ -454,6 +449,19 @@ export function Sidebar({ slug }: { slug: string }) {
 
   return (
     <>
+    {useDirectorRail ? (
+      <DirectorRail
+        slug={slug}
+        entries={user ? entries : []}
+        settingsItem={settingsItem}
+        isActive={isActive}
+        user={user}
+        branchName={branch?.name ?? null}
+        inBranchContext={inBranchContext}
+        onLogout={handleLogout}
+        loggingOut={loggingOut}
+      />
+    ) : (
     <aside
       className={clsx(
         "hidden shrink-0 flex-col bg-[var(--color-sidebar)] md:flex",
@@ -735,6 +743,7 @@ export function Sidebar({ slug }: { slug: string }) {
         </button>
       </div>
     </aside>
+    )}
 
     {/* Mobil to'liq menyu (o'qituvchidan boshqa rollar): Topbar'dagi uch chiziq tugmasi ochadi. */}
     {drawerOpen && (
