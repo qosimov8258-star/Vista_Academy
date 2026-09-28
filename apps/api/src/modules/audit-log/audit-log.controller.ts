@@ -5,7 +5,7 @@ import { TenantJwtAuthGuard } from "../iam/guards/tenant-jwt-auth.guard";
 import { CurrentTenantUser } from "../iam/decorators/current-tenant-user.decorator";
 import { TenantAuthenticatedUser } from "../iam/tenant-auth.types";
 import { AuditLogService } from "./audit-log.service";
-import { AuditLogQueryDto } from "./dto/audit-log-query.dto";
+import { AuditLogFilterDto, AuditLogQueryDto } from "./dto/audit-log-query.dto";
 
 @ApiBearerAuth()
 @ApiTags("Tenant Audit Log")
@@ -14,6 +14,12 @@ import { AuditLogQueryDto } from "./dto/audit-log-query.dto";
 @Controller("app/audit-logs")
 export class AuditLogController {
   constructor(private readonly auditLogService: AuditLogService) {}
+
+  /** Filtr uchun: amal bajargan kishilar ro'yxati */
+  @Get("actors")
+  actors(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query() query: AuditLogFilterDto) {
+    return this.auditLogService.actors(user, query);
+  }
 
   @Get()
   findAll(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query() query: AuditLogQueryDto) {
