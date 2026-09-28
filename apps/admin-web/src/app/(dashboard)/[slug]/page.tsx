@@ -13,8 +13,8 @@ import { TodayRemindersCard } from "@/features/child-notes/today-reminders-card"
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { formatDate, formatMoney } from "@/lib/format";
-import { canWriteOperational, canWriteTeaching, isTeacher } from "@/lib/permissions";
-import { isCashierPosition, isCookPosition } from "@/lib/employee-position";
+import { canWriteOperational, canWriteTeaching, isChef, isTeacher } from "@/lib/permissions";
+import { isCashierPosition } from "@/lib/employee-position";
 import { ChefHome } from "@/features/nutrition/chef-home";
 import { CashierHome } from "@/features/cash/cashier-home";
 import { AdminHome } from "@/features/desk/admin-home";
@@ -241,6 +241,8 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
   const summaryQuery = useQuery({
     queryKey: ["dashboard-summary", slug],
     queryFn: () => api.get<DashboardSummary>("/app/dashboard/summary"),
+    // Oshpazga filial xulosasi (moliya bilan) yopiq — uning sahifasi o'z ma'lumotini oladi
+    enabled: !!user && !isChef(user.role),
   });
 
   // O'qituvchida bu so'rov faqat unga biriktirilgan guruhlarni qaytaradi
@@ -287,19 +289,10 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
     );
   }
 
-  // Oshpaz dars o'tmaydi — unga butun bog'cha bo'yicha bolalar va davomat ko'rsatiladi.
-  if (user?.position && isCookPosition(user.position)) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
-            {user?.branchName ?? org.name}
-          </h1>
-          <p className="text-[13px] text-[var(--color-text-muted)]">Bugun · {todayLabel()}</p>
-        </div>
-        <ChefHome slug={slug} />
-      </div>
-    );
+  // Oshpaz dars o'tmaydi — unga porsiyalar, bugungi taomlar va allergiyalar ko'rsatiladi
+  // (sarlavha va sana ChefHome'ning o'zida).
+  if (isChef(user?.role)) {
+    return <ChefHome slug={slug} />;
   }
 
   // Administrator (MANAGER) uchun alohida bosh sahifa: bugungi holat va qo'ng'iroqlar.

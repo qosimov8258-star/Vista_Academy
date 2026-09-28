@@ -6,6 +6,7 @@ import { TenantJwtAuthGuard } from "../iam/guards/tenant-jwt-auth.guard";
 import { CurrentTenantUser } from "../iam/decorators/current-tenant-user.decorator";
 import { TenantAuthenticatedUser, toTenantScope } from "../iam/tenant-auth.types";
 import { ExportsService } from "./exports.service";
+import { AllowChef } from "../iam/decorators/allow-chef.decorator";
 
 function sendCsv(res: Response, filename: string, csv: string) {
   res.setHeader("Content-Type", "text/csv; charset=utf-8");
@@ -104,6 +105,8 @@ export class ExportsController {
     const csv = await this.exportsService.attendanceCsv(toTenantScope(user), date, branchId, from, to);
     sendCsv(res, from && to ? `davomat-${from}_${to}.csv` : `davomat-${date}.csv`, csv);
   }
+
+  @AllowChef()
 
   @Get("menu")
   async menu(

@@ -31,9 +31,9 @@ export class ChildRemindersService {
     if (!branch) {
       throw new NotFoundException("Filial topilmadi");
     }
-    // Oshpaz ham TEACHER roli bilan kiradi, lekin guruhi yo'q — unga butun filial
-    // eslatmalari (dori, allergiya) ko'rinishi kerak, shuning uchun faqat guruhi
-    // borlar cheklanadi.
+    // Oshpaz (CHEF) butun filial eslatmalarini (dori, allergiya) ko'radi —
+    // resolveTeacherGroupIds unga cheklov qo'ymaydi. O'qituvchilardan faqat
+    // guruhi borlar cheklanadi.
     const groupIds = await resolveTeacherGroupIds(this.prisma, scope);
     const restrict = groupIds !== null && groupIds.length > 0;
     const rows = await this.prisma.childReminder.findMany({

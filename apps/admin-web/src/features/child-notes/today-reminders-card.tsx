@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/use-auth";
 import { canWriteTeaching } from "@/lib/permissions";
-import { isHeadChefPosition } from "@/lib/employee-position";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +15,8 @@ export function TodayRemindersCard({ slug, branchId, today }: { slug: string; br
   const queryClient = useQueryClient();
   const { user } = useAuth();
   // Belgini tarbiyachi (yoki admin) qo'yadi; oshpaz faqat ko'radi.
-  const canMark = canWriteTeaching(user?.role) && !(user?.position && isHeadChefPosition(user.position));
+  // Oshpaz eslatmalarni faqat ko'radi — canWriteTeaching unga yolg'on qaytaradi
+  const canMark = canWriteTeaching(user?.role);
   const doneMutation = useMutation({
     mutationFn: ({ id, done }: { id: string; done: boolean }) => api.post(`/app/reminders/${id}/done`, { done }),
     onSuccess: () => {

@@ -16,10 +16,11 @@ import { downloadCsv } from "@/lib/download";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { EditMenuModal } from "@/features/nutrition/edit-menu-modal";
 import { WeeklyMenuModal } from "@/features/nutrition/weekly-menu-modal";
-import { canWriteOperational } from "@/lib/permissions";
-import { isHeadChefPosition } from "@/lib/employee-position";
+import { canWriteKitchen, isChef } from "@/lib/permissions";
+import { ChefMenu } from "@/features/chef/chef-menu";
 import { TodayRemindersCard } from "@/features/child-notes/today-reminders-card";
 import { TodayChildrenCard } from "@/features/nutrition/today-children-card";
+import { MenuPhotosCard } from "@/features/nutrition/menu-photos-card";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -42,9 +43,15 @@ function addDays(dateString: string, days: number): string {
 export default function NutritionPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const { user } = useAuth();
-  // Bosh oshpaz TEACHER roli bilan kiradi, lekin menyu aynan uning ishi.
-  const isHeadChef = !!user?.position && isHeadChefPosition(user.position);
-  const canWrite = canWriteOperational(user?.role) || isHeadChef;
+  // Oshpazga telefon uchun qurilgan menyu ko'rinishi; qolgan rollarga — haftalik jadval
+  if (isChef(user?.role)) return <ChefMenu slug={slug} />;
+  return <AdminNutritionPage slug={slug} />;
+}
+
+function AdminNutritionPage({ slug }: { slug: string }) {
+  const { user } = useAuth();
+  // Menyu — oshpazning ishi; filial admini va administrator ham yozadi.
+  const canWrite = canWriteKitchen(user?.role);
   const { branchId: forcedBranchId } = useBranchContext(slug);
   const [branchId, setBranchId] = useState("");
   // "Today" depends on the viewer's clock, which can differ between the
@@ -214,6 +221,7 @@ export default function NutritionPage({ params }: { params: Promise<{ slug: stri
 
       {branchId && <TodayChildrenCard slug={slug} branchId={branchId} today={todayDateString()} />}
       {branchId && <TodayRemindersCard slug={slug} branchId={branchId} today={todayDateString()} />}
+      {branchId && <MenuPhotosCard slug={slug} branchId={branchId} date={todayDateString()} canWrite={canWrite} />}
 
       {allergyWarnings.length > 0 && (
         <Card className="border-[var(--color-danger)]/40 shadow-[var(--shadow-raised)]">

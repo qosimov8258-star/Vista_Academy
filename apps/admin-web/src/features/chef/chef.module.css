@@ -1,0 +1,92 @@
+/* Oshpaz kabineti — faqat shu yerda ishlatiladigan harakatlar */
+
+/* Pastdan chiqadigan oyna (bottom sheet) */
+@keyframes sheetUp {
+  from {
+    transform: translate3d(0, 100%, 0);
+  }
+  to {
+    transform: none;
+  }
+}
+.sheet {
+  animation: sheetUp 320ms var(--ease-out) both;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.backdrop {
+  animation: fadeIn 200ms linear both;
+}
+
+/* Faol bo'lim ikonkasi bosilganda yengil "sakraydi" */
+@keyframes tabPop {
+  0% {
+    transform: scale(0.82);
+  }
+  60% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.tabPop {
+  animation: tabPop 320ms var(--ease-spring) both;
+}
+
+/* Raqamlar jonli yangilanayotganini bildiruvchi nuqta */
+@keyframes livePulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 7px rgba(255, 255, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+  }
+}
+.liveDot {
+  animation: livePulse 1.8s ease-out infinite;
+}
+
+/* Surat yuklangach kartada qisqa yashil "tasdiq" */
+@keyframes doneIn {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.doneIn {
+  animation: doneIn 260ms var(--ease-spring) both;
+}
+
+/* Gorizontal surat tasmasi: aylantirish chizig'i ko'rinmasin */
+.strip {
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.strip::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet,
+  .backdrop,
+  .tabPop,
+  .liveDot,
+  .doneIn {
+    animation: none;
+  }
+}

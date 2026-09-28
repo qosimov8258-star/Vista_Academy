@@ -47,9 +47,14 @@ const ROLE_STYLE: Record<TenantUserRole, { avatar: string; chip: string; dot: st
     chip: "bg-rose-50 text-rose-600",
     dot: "bg-rose-400",
   },
+  CHEF: {
+    avatar: "bg-orange-100 text-orange-700",
+    chip: "bg-orange-50 text-orange-700",
+    dot: "bg-orange-500",
+  },
 };
 
-const ROLE_ORDER: TenantUserRole[] = ["NETWORK_ADMIN", "BRANCH_ADMIN", "FINANCE", "MANAGER", "TEACHER"];
+const ROLE_ORDER: TenantUserRole[] = ["NETWORK_ADMIN", "BRANCH_ADMIN", "FINANCE", "MANAGER", "TEACHER", "CHEF"];
 
 function initials(fullName: string): string {
   return (

@@ -1,5 +1,6 @@
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
+import { ChefBottomBar } from "@/features/chef/chef-bottom-bar";
 
 export default async function DashboardLayout({
   children,
@@ -22,8 +23,12 @@ export default async function DashboardLayout({
         {/* min-h-0 bo'lmasa flex elementi mazmunidan kichrayolmaydi va scroll ishlamaydi.
             Pastki bo'shliq mobilda kattaroq — o'qituvchi uchun ekran pastida
             turadigan navigatsiya panel mazmunni yopib qo'ymasligi kerak. */}
-        <main className="min-h-0 flex-1 overflow-y-auto px-6 pb-24 pt-6 md:py-6">{children}</main>
+        <main className="min-h-0 flex-1 overflow-y-auto px-6 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-6 md:py-6">
+          {children}
+        </main>
       </div>
+      {/* Faqat oshpazga, faqat telefonda — boshqa rollar uchun hech narsa chizmaydi */}
+      <ChefBottomBar slug={slug} />
     </div>
   );
 }

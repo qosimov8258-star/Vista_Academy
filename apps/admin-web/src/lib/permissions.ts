@@ -15,6 +15,7 @@ export const ROLE_LABEL: Record<TenantUserRole, string> = {
   FINANCE: "Moliyachi",
   MANAGER: "Administrator",
   TEACHER: "O'qituvchi",
+  CHEF: "Oshpaz",
 };
 
 /** Filialga biriktirilgan har qanday rol (ya'ni Super Admin emas). */
@@ -28,7 +29,7 @@ function isBranchLevel(role: TenantUserRole | undefined): boolean {
  * bo'limlarga umuman kirmaydi.
  */
 export function canWriteMoney(role: TenantUserRole | undefined): boolean {
-  return isBranchLevel(role) && role !== "TEACHER";
+  return isBranchLevel(role) && role !== "TEACHER" && role !== "CHEF";
 }
 
 /**
@@ -37,7 +38,15 @@ export function canWriteMoney(role: TenantUserRole | undefined): boolean {
  * Moliyachi va o'qituvchi bu yerda faqat ko'radi.
  */
 export function canWriteOperational(role: TenantUserRole | undefined): boolean {
-  return isBranchLevel(role) && role !== "FINANCE" && role !== "TEACHER";
+  return isBranchLevel(role) && role !== "FINANCE" && role !== "TEACHER" && role !== "CHEF";
+}
+
+/**
+ * Oshxona (menyu, taomlar ro'yxati, taom suratlari) — API'dagi
+ * `requireKitchenWriteScope`: oshpaz, filial admini va administrator.
+ */
+export function canWriteKitchen(role: TenantUserRole | undefined): boolean {
+  return role === "CHEF" || canWriteOperational(role);
 }
 
 /**
@@ -45,7 +54,7 @@ export function canWriteOperational(role: TenantUserRole | undefined): boolean {
  * O'qituvchi shu yerda ishlaydi (faqat o'z guruhlari doirasida), moliyachi yo'q.
  */
 export function canWriteTeaching(role: TenantUserRole | undefined): boolean {
-  return isBranchLevel(role) && role !== "FINANCE";
+  return isBranchLevel(role) && role !== "FINANCE" && role !== "CHEF";
 }
 
 /**
@@ -56,7 +65,7 @@ export function canWriteTeaching(role: TenantUserRole | undefined): boolean {
  * `requireTeachingScope` bilan bir xil qoida.
  */
 export function canViewUseful(role: TenantUserRole | undefined): boolean {
-  return role !== "FINANCE";
+  return role !== "FINANCE" && role !== "CHEF";
 }
 
 /**
@@ -76,6 +85,16 @@ export function canManageUsers(role: TenantUserRole | undefined): boolean {
 /** O'qituvchi kabineti — yon panel va bosh sahifa u uchun boshqacha. */
 export function isTeacher(role: TenantUserRole | undefined): boolean {
   return role === "TEACHER";
+}
+
+/** Oshpaz kabineti — faqat oshxona bo'limlari (API ham faqat shularni ochadi). */
+export function isChef(role: TenantUserRole | undefined): boolean {
+  return role === "CHEF";
+}
+
+/** "Bildirishnomalarim" — o'qituvchi va oshpazga keladigan shaxsiy xabarlar. */
+export function receivesEmployeeNotifications(role: TenantUserRole | undefined): boolean {
+  return role === "TEACHER" || role === "CHEF";
 }
 
 /**

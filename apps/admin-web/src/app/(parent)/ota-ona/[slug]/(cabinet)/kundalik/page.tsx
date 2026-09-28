@@ -13,6 +13,7 @@ import { DayContent, DayStrip } from "./day-view";
 import { nowMinutes, useDiaryDay, useDiaryDays, type DiaryMedia } from "./diary";
 import { DiaryIcon } from "@/features/diary/kinds";
 import { MediaViewer } from "./media-viewer";
+import { MealsSection } from "./meals-section";
 
 /** Har 30 soniyada yangilanadigan soat — "hozir" belgisi siljib borsin */
 function useNowMinutes(): number {
@@ -27,7 +28,8 @@ function useNowMinutes(): number {
 /**
  * Kundalik — bola bog'chada kuni qanday o'tayotganini ko'rsatadi:
  * tarbiyachi belgilagan mashg'ulotlar vaqt chizig'ida, kun lahzalari
- * (rasm va video) alohida galereyada. Bugungi kun har daqiqada yangilanadi.
+ * (rasm va video) alohida galereyada, ostida shu kungi ovqat tartibi va
+ * taom suratlari. Bugungi kun har daqiqada yangilanadi.
  */
 export default function ParentDiaryPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
@@ -113,12 +115,16 @@ export default function ParentDiaryPage({ params }: { params: Promise<{ slug: st
           </>
         )
       ) : (
-        <DayContent
-          key={`${childId}-${day.date}`}
-          day={day}
-          now={now}
-          onOpenMedia={(items, index) => setViewer({ items, index })}
-        />
+        <>
+          <DayContent
+            key={`${childId}-${day.date}`}
+            day={day}
+            now={now}
+            onOpenMedia={(items, index) => setViewer({ items, index })}
+          />
+          {/* Shu kungi ovqat tartibi va oshpaz yuklagan taom suratlari */}
+          {childId && <MealsSection childId={childId} date={day.date} isFuture={day.date > day.today} />}
+        </>
       )}
 
       {viewer && day && (

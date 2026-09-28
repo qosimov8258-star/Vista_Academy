@@ -7,6 +7,7 @@ import { TenantAuthenticatedUser, toTenantScope } from "../iam/tenant-auth.types
 import { ChildRemindersService } from "./child-reminders.service";
 import { CreateReminderDto } from "./dto/create-reminder.dto";
 import { SetAllergiesDto } from "./dto/set-allergies.dto";
+import { AllowChef } from "../iam/decorators/allow-chef.decorator";
 
 @ApiBearerAuth()
 @ApiTags("Tenant Child Reminders")
@@ -15,6 +16,8 @@ import { SetAllergiesDto } from "./dto/set-allergies.dto";
 @Controller("app")
 export class ChildRemindersController {
   constructor(private readonly service: ChildRemindersService) {}
+
+  @AllowChef()
 
   @Get("reminders")
   list(

@@ -1,4 +1,4 @@
-export type TenantUserRole = "NETWORK_ADMIN" | "BRANCH_ADMIN" | "FINANCE" | "MANAGER" | "TEACHER";
+export type TenantUserRole = "NETWORK_ADMIN" | "BRANCH_ADMIN" | "FINANCE" | "MANAGER" | "TEACHER" | "CHEF";
 
 /** Kirish sahifasida ko'rsatiladigan ochiq ma'lumot (token talab qilinmaydi). */
 export interface PublicOrganization {
@@ -481,6 +481,15 @@ export interface MenuEntry {
   snack: string | null;
 }
 
+/** Oshpaz suratga olib yuklagan taom — qaysi ovqatga tegishli */
+export type MenuMeal = "BREAKFAST" | "LUNCH" | "SNACK";
+
+export interface MenuPhoto {
+  id: string;
+  meal: MenuMeal;
+  createdAt: string;
+}
+
 export type StaffAttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "SICK" | "ON_LEAVE";
 
 export interface StaffAttendanceEmployee {
@@ -495,6 +504,10 @@ export interface StaffAttendanceEmployee {
 
 export interface StaffAttendanceDay {
   date: string;
+  /** Filial admini davomatni saqlab qulflagach true bo'ladi — o'sha kun endi o'zgartirilmaydi. */
+  locked: boolean;
+  lockedAt: string | null;
+  lockedByName: string | null;
   employees: StaffAttendanceEmployee[];
 }
 
@@ -506,12 +519,33 @@ export interface StaffAttendanceSummary {
     employeeId: string;
     fullName: string;
     position: string;
+    subjects: string[];
+    groups: string[];
     present: number;
     absent: number;
     late: number;
     sick: number;
     onLeave: number;
     rate: number | null;
+  }[];
+}
+
+/** `GET /app/staff-attendance/history` javobi — bitta xodimning bir oylik kun-kun tarixi. */
+export interface StaffAttendanceHistory {
+  employee: {
+    id: string;
+    fullName: string;
+    position: string;
+    subjects: string[];
+    groups: string[];
+  };
+  period: string;
+  days: {
+    date: string;
+    status: StaffAttendanceStatus;
+    checkInTime: string | null;
+    checkOutTime: string | null;
+    note: string | null;
   }[];
 }
 
@@ -923,6 +957,8 @@ export interface ParentDay {
     updatedAt: string;
   } | null;
   menu: { breakfast: string | null; lunch: string | null; snack: string | null } | null;
+  /** Oshpaz yuklagan taom suratlari (surat alohida so'raladi) */
+  menuPhotos: { id: string; meal: MenuMeal }[];
 }
 
 export interface ParentAttendanceStrip {
