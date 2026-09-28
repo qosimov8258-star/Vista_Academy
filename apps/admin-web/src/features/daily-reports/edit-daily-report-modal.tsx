@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { DailyReport, HealthProfile } from "@/lib/types";
@@ -40,6 +41,7 @@ export function EditDailyReportModal({
   childName: string;
   report: DailyReport | null;
 }) {
+  const t = useTranslations("dailyReports");
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -83,12 +85,12 @@ export function EditDailyReportModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : t("unexpectedError"));
     },
   });
 
   return (
-    <Modal open={open} onClose={onClose} title={`Kundalik hisobot — ${childName}`}>
+    <Modal open={open} onClose={onClose} title={t("modalTitle", { childName })}>
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
@@ -97,34 +99,34 @@ export function EditDailyReportModal({
         )}
         {hasWarning && (
           <div className="space-y-0.5 rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {health?.allergies && <p>Allergiya: {health.allergies}</p>}
-            {health?.chronicConditions && <p>Surunkali kasallik: {health.chronicConditions}</p>}
+            {health?.allergies && <p>{t("allergyLabel")}: {health.allergies}</p>}
+            {health?.chronicConditions && <p>{t("chronicConditionLabel")}: {health.chronicConditions}</p>}
           </div>
         )}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Select label="Ovqatlanishi" defaultValue="" {...register("eatingQuality")}>
-            <option value="">Belgilanmagan</option>
-            <option value="GOOD">Yaxshi</option>
-            <option value="AVERAGE">O'rtacha</option>
-            <option value="POOR">Yomon</option>
+          <Select label={t("eatingLabel")} defaultValue="" {...register("eatingQuality")}>
+            <option value="">{t("notSet")}</option>
+            <option value="GOOD">{t("eating.good")}</option>
+            <option value="AVERAGE">{t("eating.average")}</option>
+            <option value="POOR">{t("eating.poor")}</option>
           </Select>
-          <Select label="Kayfiyati" defaultValue="" {...register("mood")}>
-            <option value="">Belgilanmagan</option>
-            <option value="HAPPY">Xursand</option>
-            <option value="NEUTRAL">Oddiy</option>
-            <option value="UPSET">Xafa</option>
+          <Select label={t("moodLabel")} defaultValue="" {...register("mood")}>
+            <option value="">{t("notSet")}</option>
+            <option value="HAPPY">{t("mood.happy")}</option>
+            <option value="NEUTRAL">{t("mood.neutral")}</option>
+            <option value="UPSET">{t("mood.upset")}</option>
           </Select>
         </div>
-        <Input label="Uyqu davomiyligi (daqiqa)" type="number" min={0} {...register("sleepMinutes")} />
-        <Textarea label="Tualet holati (ixtiyoriy)" rows={2} {...register("toiletNotes")} />
-        <Textarea label="Kunlik faoliyat" rows={3} placeholder="Bugun nima qildi..." {...register("activityNotes")} />
+        <Input label={t("sleepLabel")} type="number" min={0} {...register("sleepMinutes")} />
+        <Textarea label={t("toiletLabel")} rows={2} {...register("toiletNotes")} />
+        <Textarea label={t("activityLabel")} rows={3} placeholder={t("activityPlaceholder")} {...register("activityNotes")} />
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Bekor qilish
+            {t("cancel")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Saqlash
+            {t("save")}
           </Button>
         </div>
       </form>

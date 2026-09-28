@@ -1,19 +1,25 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { ContentBlockView } from "@/components/content-block-view";
 import { CaregiverHighlights } from "@/components/caregiver-highlights";
 
-export const metadata: Metadata = {
-  title: "Doimiy tarbiyachi — Vista Academy",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("caregiverPage");
+  return { title: t("metaTitle") };
+}
 
-export default function PermanentCaregiverPage() {
+export default async function PermanentCaregiverPage() {
+  const t = await getTranslations("caregiverPage");
+  const tCommon = await getTranslations("common");
+  const tWhyUs = await getTranslations("whyUs");
+
   return (
     <ContentBlockView
       blockKey="doimiy-tarbiyachi"
-      eyebrow="Guruhlarimiz"
-      fallbackTitle="Doimiy tarbiyachi va g'amxo'rlik"
-      fallbackBody="Bolalar keyingi guruhga o'tguncha bir xil tarbiyachi bilan qoladi — bu ishonch va barqarorlik yaratadi."
-      heroImage={{ src: "/rasm/tarbiyachi.jpeg", alt: "Tarbiyachi bolalar bilan mashg'ulot o'tkazmoqda", position: "50% 0%" }}
+      eyebrow={tCommon("pagesEyebrow")}
+      fallbackTitle={t("fallbackTitle")}
+      fallbackBody={tWhyUs("features.teacher")}
+      heroImage={{ src: "/rasm/tarbiyachi.jpeg", alt: t("heroImageAlt"), position: "50% 0%" }}
       afterContent={<CaregiverHighlights />}
     />
   );

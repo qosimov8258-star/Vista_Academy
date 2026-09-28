@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { Dish } from "@/lib/types";
@@ -14,16 +15,17 @@ import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EditDishModal } from "./edit-dish-modal";
 
-const schema = z.object({
-  name: z.string().min(2, "Nomi kamida 2 belgi"),
-  calories: z.coerce.number().int().min(0).optional().or(z.literal("")),
-  allergens: z.string().optional(),
-});
-
-type FormValues = z.infer<typeof schema>;
-
 export function DishCatalogCard({ slug, canWrite }: { slug: string; canWrite: boolean }) {
+  const t = useTranslations("nutrition");
   const queryClient = useQueryClient();
+
+  const schema = z.object({
+    name: z.string().min(2, t("validation.nameMin")),
+    calories: z.coerce.number().int().min(0).optional().or(z.literal("")),
+    allergens: z.string().optional(),
+  });
+
+  type FormValues = z.infer<typeof schema>;
   const [serverError, setServerError] = useState<string | null>(null);
   const [editDish, setEditDish] = useState<Dish | null>(null);
   const [deleteDish, setDeleteDish] = useState<Dish | null>(null);
@@ -63,14 +65,14 @@ export function DishCatalogCard({ slug, canWrite }: { slug: string; canWrite: bo
       setServerError(null);
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : t("unexpectedError"));
     },
   });
 
   return (
     <Card className="overflow-hidden">
       <CardHeader>
-        <CardTitle>Taomlar katalogi</CardTitle>
+        <CardTitle>{t("catalogTitle")}</CardTitle>
       </CardHeader>
       <CardBody className="space-y-4">
         {dishesQuery.isLoading ? (
@@ -78,7 +80,7 @@ export function DishCatalogCard({ slug, canWrite }: { slug: string; canWrite: bo
         ) : dishesQuery.isError ? (
           <ErrorState message={(dishesQuery.error as Error).message} />
         ) : !dishesQuery.data || dishesQuery.data.length === 0 ? (
-          <EmptyState title="Hali taom qo'shilmagan" />
+          <EmptyState title={t("noDishesYet")} />
         ) : (
           <ul className="divide-y divide-[var(--color-separator)]">
             {dishesQuery.data.map((dish) => (
@@ -86,18 +88,18 @@ export function DishCatalogCard({ slug, canWrite }: { slug: string; canWrite: bo
                 <div className="min-w-0">
                   <span className="text-[14px] font-medium text-[var(--color-text)]">{dish.name}</span>
                   <span className="ml-2 text-[12.5px] text-[var(--color-text-muted)]">
-                    {dish.calories != null && `${dish.calories} kkal`}
+                    {dish.calories != null && t("caloriesValue", { value: dish.calories })}
                     {dish.calories != null && dish.allergens && " · "}
-                    {dish.allergens && `Allergen: ${dish.allergens}`}
+                    {dish.allergens && t("allergenValue", { value: dish.allergens })}
                   </span>
                 </div>
                 {canWrite && (
                   <div className="flex shrink-0 gap-1.5">
                     <Button size="sm" variant="outline" onClick={() => setEditDish(dish)}>
-                      Tahrirlash
+                      {t("edit")}
                     </Button>
                     <Button size="sm" variant="danger" onClick={() => setDeleteDish(dish)}>
-                      O&apos;chirish
+                      {t("delete")}
                     </Button>
                   </div>
                 )}
@@ -116,9 +118,9 @@ export function DishCatalogCard({ slug, canWrite }: { slug: string; canWrite: bo
                 {serverError}
               </div>
             )}
-            <Input label="Taom nomi" placeholder="Sutli bo'tqa" error={errors.name?.message} {...register("name")} className="min-w-[160px]" />
+            <Input label={t("dishNameLabel")} placeholder={t("dishNamePlaceholder")} error={errors.name?.message} {...register("name")} className="min-w-[160px]" />
             <Input
-              label="Kaloriya (ixtiyoriy)"
+              label={t("caloriesLabelOptional")}
               type="number"
               min={0}
               placeholder="250"
@@ -127,14 +129,14 @@ export function DishCatalogCard({ slug, canWrite }: { slug: string; canWrite: bo
               className="w-[140px]"
             />
             <Input
-              label="Allergenlar (ixtiyoriy)"
-              placeholder="sut, yong'oq"
+              label={t("allergensLabelOptional")}
+              placeholder={t("allergensPlaceholder")}
               error={errors.allergens?.message}
               {...register("allergens")}
               className="min-w-[160px]"
             />
             <Button type="submit" loading={isSubmitting || mutation.isPending}>
-              Qo&apos;shish
+              {t("add")}
             </Button>
           </form>
         )}
@@ -145,13 +147,13 @@ export function DishCatalogCard({ slug, canWrite }: { slug: string; canWrite: bo
       <ConfirmDialog
         open={!!deleteDish}
         onClose={() => setDeleteDish(null)}
-        title="Taomni o'chirish"
-        confirmLabel="O'chirish"
+        title={t("deleteDishTitle")}
+        confirmLabel={t("delete")}
         tone="danger"
         loading={deleteMutation.isPending}
         description={
           <>
-            <b className="text-[var(--color-text)]">{deleteDish?.name}</b> katalogdan butunlay o&apos;chiriladi.
+            <b className="text-[var(--color-text)]">{deleteDish?.name}</b> {t("deleteDishDescription")}
           </>
         }
         onConfirm={() => deleteDish && deleteMutation.mutate(deleteDish)}

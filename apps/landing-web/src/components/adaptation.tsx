@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { Reveal } from "./reveal";
 
 type AdaptationProps = {
@@ -12,21 +13,6 @@ type AdaptationProps = {
 };
 
 const DEFAULT_INTRO_IMAGE_SRC = "/moslashish/moslashish2.jpeg";
-const DEFAULT_INTRO_IMAGE_ALT =
-  "Bolakay ryukzagini taqib, ota-onasining qo'lidan ushlagancha guruhga birinchi marta kirib kelmoqda, tarbiyachi va do'stlari uni kulib kutib olishmoqda";
-const DEFAULT_INTRO_TEXT =
-  "Bog'chadagi birinchi kunlar farzandingiz uchun yangi va hayajonli bosqich. Shuning uchun shoshilmaymiz: avval u siz bilan birga tanishadi, so'ng asta-sekin guruhda ko'proq vaqt o'tkazadi. Tajribali tarbiyachilarimiz har bir bolaga alohida yondashadi — shunda qo'rquv o'rnini ishonch va quvonch egallaydi.";
-
-const JARAYON_TEXT =
-  "Moslashish davrida tarbiyachilarimiz farzandingiz holatini doimiy kuzatib boradi. Har bir bosqich ota-onalar bilan kelishilgan holda amalga oshiriladi — shu tufayli bola ham, ota-ona ham bog'cha muhitiga xotirjam ko'nikadi.";
-
-const LOVE_TEXT = (
-  <>
-    Har bir bola — bitta katta oilaning bir bo&apos;lagi.
-    <br />
-    Bog&apos;chamizda ular sevgi bilan birlashib, chin do&apos;stlikni his etishadi.
-  </>
-);
 
 function ChevronLeftIcon({ className }: { className?: string }) {
   return (
@@ -79,28 +65,35 @@ function MobileSlide({ slide }: { slide: Slide }) {
 
 export function Adaptation({
   introImageSrc = DEFAULT_INTRO_IMAGE_SRC,
-  introImageAlt = DEFAULT_INTRO_IMAGE_ALT,
-  introText = DEFAULT_INTRO_TEXT,
+  introImageAlt,
+  introText,
 }: AdaptationProps) {
+  const t = useTranslations("adaptation");
   const slides: Slide[] = [
     {
       image: introImageSrc,
-      alt: introImageAlt,
-      eyebrow: "Moslashuv davri",
-      title: "Bog'chaga moslashish — birga, sekin-asta",
-      text: introText,
+      alt: introImageAlt ?? t("defaultImageAlt"),
+      eyebrow: t("eyebrow"),
+      title: t("title"),
+      text: introText ?? t("defaultText"),
     },
     {
       image: "/moslashish/love.jpg",
-      alt: "Bolalar qo'l ushlashib, yurak shaklida do'stlik va sevgi ramzini yasashmoqda",
-      text: LOVE_TEXT,
+      alt: t("loveImageAlt"),
+      text: (
+        <>
+          {t("loveTextLine1")}
+          <br />
+          {t("loveTextLine2")}
+        </>
+      ),
     },
     {
       image: "/moslashish/moslashish1.jpeg",
-      alt: "Bolalar bog'chaga moslashish jarayonida tarbiyachi bilan",
-      eyebrow: "Har bir qadam nazoratda",
-      title: "Moslashish jarayoni — tajribali tarbiyachilar bilan",
-      text: JARAYON_TEXT,
+      alt: t("processImageAlt"),
+      eyebrow: t("processEyebrow"),
+      title: t("processTitle"),
+      text: t("processText"),
     },
   ];
 
@@ -160,7 +153,7 @@ export function Adaptation({
             <button
               type="button"
               onClick={goPrev}
-              aria-label="Oldingi"
+              aria-label={t("prevAria")}
               className="flex h-9 w-9 items-center justify-center rounded-full text-white"
               style={{ background: "var(--color-green)" }}
             >
@@ -172,7 +165,7 @@ export function Adaptation({
             <button
               type="button"
               onClick={goNext}
-              aria-label="Keyingi"
+              aria-label={t("nextAria")}
               className="flex h-9 w-9 items-center justify-center rounded-full text-white"
               style={{ background: "var(--color-green)" }}
             >

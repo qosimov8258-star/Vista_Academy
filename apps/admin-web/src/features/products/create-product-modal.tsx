@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { Product } from "@/lib/types";
@@ -12,16 +13,6 @@ import { Input, Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { PlusIcon, CloseIcon } from "@/components/ui/icons";
 import { prepareProductPhoto } from "@/lib/product-photo";
-
-const schema = z.object({
-  name: z.string().min(2, "Nomi kamida 2 belgi"),
-  description: z.string().max(500, "Izoh 500 belgidan oshmasin").optional(),
-  color: z.string().optional(),
-  priceCoins: z.coerce.number({ invalid_type_error: "Coin miqdorini kiriting" }).int().min(0, "0 dan kichik bo'lmasin"),
-  quantity: z.coerce.number({ invalid_type_error: "Sonini kiriting" }).int().min(0, "Soni 0 dan kichik bo'lmasin"),
-});
-
-type FormValues = z.infer<typeof schema>;
 
 const IMAGE_SLOTS = [1, 2, 3] as const;
 
@@ -36,7 +27,18 @@ export function CreateProductModal({
   slug: string;
   branchId: string;
 }) {
+  const t = useTranslations("products");
   const queryClient = useQueryClient();
+
+  const schema = z.object({
+    name: z.string().min(2, t("validation.nameMin")),
+    description: z.string().max(500, t("validation.descriptionMax")).optional(),
+    color: z.string().optional(),
+    priceCoins: z.coerce.number({ invalid_type_error: t("validation.coinRequired") }).int().min(0, t("validation.nonNegative")),
+    quantity: z.coerce.number({ invalid_type_error: t("validation.quantityRequired") }).int().min(0, t("validation.quantityNonNegative")),
+  });
+
+  type FormValues = z.infer<typeof schema>;
   const [serverError, setServerError] = useState<string | null>(null);
   const [images, setImages] = useState<Record<number, string | null>>({ 1: null, 2: null, 3: null });
   const [imageError, setImageError] = useState<string | null>(null);
@@ -79,7 +81,7 @@ export function CreateProductModal({
       handleClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : t("unexpectedError"));
     },
   });
 
@@ -115,7 +117,7 @@ export function CreateProductModal({
   };
 
   return (
-    <Modal open={open} onClose={handleClose} title="Yangi tovar">
+    <Modal open={open} onClose={handleClose} title={t("newProductTitle")}>
       <form
         className="space-y-4"
         onSubmit={handleSubmit((values) => {
@@ -138,7 +140,7 @@ export function CreateProductModal({
         )}
 
         <div>
-          <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">Rasmlar</span>
+          <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">{t("imagesLabel")}</span>
           <div className="flex gap-3">
             {IMAGE_SLOTS.map((position) => {
               const image = images[position];
@@ -150,13 +152,13 @@ export function CreateProductModal({
                       {/* eslint-disable-next-line @next/next/no-img-element -- data: URL, Next optimizatsiyasi kerak emas */}
                       <img
                         src={image}
-                        alt={`Tovar surati ${position}`}
+                        alt={t("productPhotoAlt", { position })}
                         className="h-full w-full rounded-[var(--radius-md)] object-cover ring-1 ring-inset ring-[rgba(16,24,40,0.06)]"
                       />
                       <button
                         type="button"
                         onClick={() => removeImage(position)}
-                        aria-label="Rasmni olib tashlash"
+                        aria-label={t("removePhotoAria")}
                         className="absolute -right-1.5 -top-1.5 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-[var(--color-danger)] text-white shadow-[var(--shadow-xs)]"
                       >
                         <CloseIcon className="h-3 w-3" />
@@ -192,11 +194,11 @@ export function CreateProductModal({
           {imageError && <p className="mt-1.5 text-[12.5px] text-[var(--color-danger)]">{imageError}</p>}
         </div>
 
-        <Input label="Nomi" placeholder="Konstruktor to'plami" error={errors.name?.message} {...register("name")} />
+        <Input label={t("nameLabel")} placeholder={t("namePlaceholder")} error={errors.name?.message} {...register("name")} />
 
         <Textarea
-          label="Izoh"
-          placeholder="Nima uchun ekanligi haqida qisqacha (ixtiyoriy)"
+          label={t("descriptionLabel")}
+          placeholder={t("descriptionPlaceholder")}
           rows={2}
           error={errors.description?.message}
           {...register("description")}
@@ -204,18 +206,18 @@ export function CreateProductModal({
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
-            label="Narxi (coin)"
+            label={t("priceLabel")}
             type="number"
             min={0}
             placeholder="0"
             error={errors.priceCoins?.message}
             {...register("priceCoins")}
           />
-          <Input label="Rangi" placeholder="Ixtiyoriy" error={errors.color?.message} {...register("color")} />
+          <Input label={t("colorLabel")} placeholder={t("optionalPlaceholder")} error={errors.color?.message} {...register("color")} />
         </div>
 
         <Input
-          label="Soni"
+          label={t("quantityLabel")}
           type="number"
           min={0}
           placeholder="10"
@@ -225,10 +227,10 @@ export function CreateProductModal({
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={handleClose}>
-            Bekor qilish
+            {t("cancel")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Yaratish
+            {t("create")}
           </Button>
         </div>
       </form>

@@ -51,6 +51,7 @@ export class OrganizationsService {
           contactName: dto.contactName,
           contactEmail: dto.contactEmail,
           contactPhone: dto.contactPhone,
+          lendingUrl: dto.lendingUrl,
         },
       });
 

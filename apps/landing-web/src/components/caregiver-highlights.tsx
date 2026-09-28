@@ -1,23 +1,23 @@
+"use client";
+
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import { Reveal } from "./reveal";
 
 export function CaregiverHighlights() {
+  const t = useTranslations("caregiverHighlights");
   return (
     <section className="py-20 sm:py-28" style={{ background: "var(--color-surface)" }}>
       <div className="mx-auto flex max-w-[1120px] flex-col gap-16 px-4 sm:gap-20">
         <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-16">
           <Reveal direction="left" className="order-2 text-center lg:order-1 lg:text-left">
             <p className="text-[13px] font-bold uppercase tracking-[0.08em]" style={{ color: "var(--color-blue)" }}>
-              Bir xil yuz, bir xil mehr
+              {t("block1.eyebrow")}
             </p>
             <h2 className="font-heading mt-3 text-[22px] font-bold leading-tight tracking-tight text-[var(--color-text)] sm:text-[30px] lg:text-[36px]">
-              Tarbiyachi bola bilan birga o&apos;sadi
+              {t("block1.title")}
             </h2>
-            <p className="mt-4 text-[16px] leading-relaxed text-[var(--color-text-muted)]">
-              Guruh keyingi bosqichga o&apos;tganda ham, farzandingiz yoniga hamon tanish va
-              yaqin tarbiyachi qoladi. Bu doimiylik bola uchun har kuni yangi odamlarga
-              o&apos;rganib olish stressini yo&apos;qotadi va uni o&apos;ziga ishonchli qiladi.
-            </p>
+            <p className="mt-4 text-[16px] leading-relaxed text-[var(--color-text-muted)]">{t("block1.body")}</p>
           </Reveal>
 
           <Reveal
@@ -27,7 +27,7 @@ export function CaregiverHighlights() {
           >
             <Image
               src="/tarbiyachi/tarbiyachi2.jpeg"
-              alt="Tarbiyachi bolalar bilan mashg'ulot o'tkazmoqda"
+              alt={t("block1.imageAlt")}
               width={612}
               height={408}
               sizes="(min-width: 1024px) 520px, 100vw"
@@ -40,7 +40,7 @@ export function CaregiverHighlights() {
           <Reveal direction="left" className="overflow-hidden rounded-[var(--radius-xl)] shadow-[var(--shadow-raised)]">
             <Image
               src="/tarbiyachi/tarbiyachi3.jpeg"
-              alt="Tarbiyachi har bir bolaga alohida e'tibor bermoqda"
+              alt={t("block2.imageAlt")}
               width={612}
               height={408}
               sizes="(min-width: 1024px) 520px, 100vw"
@@ -50,16 +50,12 @@ export function CaregiverHighlights() {
 
           <Reveal direction="right" delay={120} className="text-center lg:text-left">
             <p className="text-[13px] font-bold uppercase tracking-[0.08em]" style={{ color: "var(--color-green)" }}>
-              Har bir bolani chuqur bilish
+              {t("block2.eyebrow")}
             </p>
             <h2 className="font-heading mt-3 text-[22px] font-bold leading-tight tracking-tight text-[var(--color-text)] sm:text-[30px] lg:text-[36px]">
-              Xarakter va ehtiyojlarga alohida yondashuv
+              {t("block2.title")}
             </h2>
-            <p className="mt-4 text-[16px] leading-relaxed text-[var(--color-text-muted)]">
-              Doimiy tarbiyachi farzandingizning odatlarini, kayfiyatini va qiziqishlarini
-              vaqt o&apos;tishi bilan chuqur o&apos;rganadi. Shu bilim asosida har bir bolaga
-              individual yondashadi va uning rivojlanishini izchil kuzatib boradi.
-            </p>
+            <p className="mt-4 text-[16px] leading-relaxed text-[var(--color-text-muted)]">{t("block2.body")}</p>
           </Reveal>
         </div>
 
@@ -67,7 +63,7 @@ export function CaregiverHighlights() {
           <Reveal direction="up" className="mx-auto max-w-[600px] overflow-hidden rounded-[var(--radius-xl)] shadow-[var(--shadow-raised)]">
             <Image
               src="/tarbiyachi/tarbiyachi1.jpg"
-              alt="Tarbiyachi bolalar bilan mehr-oqibat bilan mashg'ul bo'lmoqda"
+              alt={t("closingImageAlt")}
               width={612}
               height={472}
               sizes="(min-width: 640px) 600px, 90vw"
@@ -77,9 +73,9 @@ export function CaregiverHighlights() {
 
           <Reveal direction="up" delay={150} className="mx-auto mt-8 max-w-[640px] text-center">
             <p className="font-heading text-[22px] font-bold leading-snug tracking-tight text-[var(--color-text)] sm:text-[26px]">
-              Bog&apos;chamizda har bir kun mehr, sabr va g&apos;amxo&apos;rlik bilan boshlanadi.
+              {t("closingQuoteLine1")}
               <br />
-              Tarbiyachilarimiz farzandingiz uchun ikkinchi ona kabi yonida bo&apos;ladi.
+              {t("closingQuoteLine2")}
             </p>
           </Reveal>
         </div>

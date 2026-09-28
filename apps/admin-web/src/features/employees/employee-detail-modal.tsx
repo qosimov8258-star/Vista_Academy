@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { api, ApiError } from "@/lib/api";
 import type { CreateEmployeeResult, Employee, EmployeeCredentials, Group } from "@/lib/types";
 import { deleteEmployeeWithConfirmation, revealEmployeePassword, webauthnErrorMessage } from "@/lib/webauthn";
@@ -38,6 +39,7 @@ export function EmployeeDetailModal({
   employee: Employee | null;
   canWrite: boolean;
 }) {
+  const t = useTranslations("employees");
   const queryClient = useQueryClient();
 
   const [visiblePassword, setVisiblePassword] = useState<string | null>(null);
@@ -121,11 +123,11 @@ export function EmployeeDetailModal({
       // Yangi parol qo'yilgan bo'lsa, avval ko'rsatilgan eski parol endi eskirgan.
       setVisiblePassword(null);
       queryClient.invalidateQueries({ queryKey: ["employees", slug] });
-      setToast({ type: "success", message: "Saqlandi" });
+      setToast({ type: "success", message: t("saved") });
     },
     onError: (err) => {
-      setCredentialsError(err instanceof ApiError ? err.message : "Saqlab bo'lmadi");
-      setToast({ type: "error", message: "Saqlab bo'lmadi" });
+      setCredentialsError(err instanceof ApiError ? err.message : t("couldNotSave"));
+      setToast({ type: "error", message: t("couldNotSave") });
     },
   });
 
@@ -151,7 +153,7 @@ export function EmployeeDetailModal({
       }
     },
     onError: (err) => {
-      setAccountError(err instanceof ApiError ? err.message : "Kabinet ochib bo'lmadi");
+      setAccountError(err instanceof ApiError ? err.message : t("cannotOpenCabinet"));
     },
   });
 
@@ -172,16 +174,16 @@ export function EmployeeDetailModal({
     if (credentialsDirty) {
       const trimmedLogin = loginInput.trim().toLowerCase();
       if (!LOGIN_PATTERN.test(trimmedLogin)) {
-        setCredentialsError("Login lotin harf, raqam, . _ - dan iborat bo'lishi va kamida 3 belgi bo'lishi kerak");
+        setCredentialsError(t("loginPatternError"));
         return;
       }
       if (newPassword) {
         if (getPasswordRules(newPassword).some((rule) => !rule.met)) {
-          setCredentialsError("Parol talablarga javob bermaydi");
+          setCredentialsError(t("validation.passwordRequirements"));
           return;
         }
         if (newPassword !== confirmNewPassword) {
-          setCredentialsError("Parollar mos kelmadi");
+          setCredentialsError(t("validation.passwordsMismatch"));
           return;
         }
       }
@@ -196,14 +198,14 @@ export function EmployeeDetailModal({
       try {
         await topicsSettingMutation.mutateAsync(topicsManagedByAdmin);
       } catch (err) {
-        setTopicsSaveError(err instanceof ApiError ? err.message : "Saqlab bo'lmadi");
-        setToast({ type: "error", message: "Saqlab bo'lmadi" });
+        setTopicsSaveError(err instanceof ApiError ? err.message : t("couldNotSave"));
+        setToast({ type: "error", message: t("couldNotSave") });
         return;
       }
     }
 
     if (!credentialsDirty) {
-      setToast({ type: "success", message: "Saqlandi" });
+      setToast({ type: "success", message: t("saved") });
     }
   };
 
@@ -245,21 +247,19 @@ export function EmployeeDetailModal({
 
   if (createdCredentials) {
     return (
-      <Modal open={open} onClose={onClose} title="Kabinet ochildi" widthClassName="max-w-md">
+      <Modal open={open} onClose={onClose} title={t("cabinetOpenedTitle")} widthClassName="max-w-md">
         <div className="space-y-4">
           <div className="flex flex-col items-center gap-2 text-center">
             <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-success-bg)] text-[var(--color-success)]">
               <CheckIcon className="h-6 w-6" />
             </span>
-            <p className="text-sm text-[var(--color-text-muted)]">
-              Login va parolni xodimga bering — parol qayta ko&apos;rsatilmaydi.
-            </p>
+            <p className="text-sm text-[var(--color-text-muted)]">{t("giveCredentialsHint")}</p>
           </div>
-          <CredentialRow label="Login" value={createdCredentials.login} />
-          <CredentialRow label="Parol" value={createdCredentials.password} />
+          <CredentialRow label={t("loginLabel")} value={createdCredentials.login} />
+          <CredentialRow label={t("passwordLabel")} value={createdCredentials.password} />
           <div className="flex justify-end pt-1">
             <Button type="button" onClick={onClose}>
-              Yopish
+              {t("close")}
             </Button>
           </div>
         </div>
@@ -268,7 +268,7 @@ export function EmployeeDetailModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Xodim" widthClassName="max-w-md">
+    <Modal open={open} onClose={onClose} title={t("employeeTitle")} widthClassName="max-w-md">
       <div className="space-y-5">
         <div className="flex flex-col items-center gap-2">
           <EmployeePhoto
@@ -285,7 +285,7 @@ export function EmployeeDetailModal({
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Badge tone={employee.isActive ? "success" : "neutral"}>{employee.isActive ? "Faol" : "Nofaol"}</Badge>
+            <Badge tone={employee.isActive ? "success" : "neutral"}>{employee.isActive ? t("statusActive") : t("statusInactive")}</Badge>
             {canWrite && !deleteConfirming && (
               <button
                 type="button"
@@ -293,7 +293,7 @@ export function EmployeeDetailModal({
                 className="flex cursor-pointer items-center gap-1 rounded-full bg-[var(--color-danger-bg)] px-2.5 py-1 text-[12px] font-medium text-[var(--color-danger)] hover:brightness-[0.96]"
               >
                 <TrashIcon className="h-3.5 w-3.5" />
-                O&apos;chirish
+                {t("delete")}
               </button>
             )}
           </div>
@@ -302,8 +302,7 @@ export function EmployeeDetailModal({
         {deleteConfirming && (
           <div className="space-y-2 rounded-[var(--radius-lg)] border border-[var(--color-danger)]/25 bg-[var(--color-danger-bg)] p-3.5">
             <p className="text-[13px] text-[var(--color-danger)]">
-              &quot;{employee.fullName}&quot;ni butunlay o&apos;chirmoqchimisiz? Uning davomat va oylik tarixi ham
-              qaytarib bo&apos;lmas tarzda o&apos;chadi.
+              {t("deleteConfirmMessage", { name: employee.fullName })}
             </p>
             {deleteError && <p className="text-xs text-[var(--color-danger)]">{deleteError}</p>}
             <div className="flex justify-end gap-2">
@@ -317,10 +316,10 @@ export function EmployeeDetailModal({
                   setDeleteError(null);
                 }}
               >
-                Bekor qilish
+                {t("cancel")}
               </Button>
               <Button type="button" variant="danger" size="sm" loading={deleting} onClick={handleDelete}>
-                Ha, o&apos;chirish
+                {t("yesDelete")}
               </Button>
             </div>
           </div>
@@ -328,14 +327,14 @@ export function EmployeeDetailModal({
 
         <div className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-sunken)] px-4 py-3">
           <PhoneIcon className="h-4 w-4 shrink-0 text-[var(--color-text-muted)]" />
-          <span className="text-sm text-[var(--color-text)]">{employee.phone ?? "Telefon raqami kiritilmagan"}</span>
+          <span className="text-sm text-[var(--color-text)]">{employee.phone ?? t("phoneNotProvided")}</span>
         </div>
 
         {employee.teachingGroups?.length ? (
           <div className="flex flex-wrap gap-1.5">
             {employee.teachingGroups.map((link) => (
               <Badge key={link.groupId} tone="primary">
-                {link.group?.name ?? "Guruh"}
+                {link.group?.name ?? t("groupFallback")}
               </Badge>
             ))}
           </div>
@@ -345,7 +344,7 @@ export function EmployeeDetailModal({
           <div className="space-y-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] p-4">
             <div>
               <label className="mb-1.5 block text-[13px] font-medium text-[var(--color-text)]" htmlFor="employee-login">
-                Login
+                {t("loginLabel")}
               </label>
               <input
                 id="employee-login"
@@ -364,7 +363,7 @@ export function EmployeeDetailModal({
 
             <div className="flex items-center justify-between gap-3 border-t border-[var(--color-border)] pt-3">
               <div className="min-w-0">
-                <p className="text-[13px] font-medium text-[var(--color-text)]">Joriy parol</p>
+                <p className="text-[13px] font-medium text-[var(--color-text)]">{t("currentPassword")}</p>
                 <p className="truncate font-mono text-sm text-[var(--color-text-muted)]">
                   {visiblePassword ?? "••••••••••"}
                 </p>
@@ -375,7 +374,7 @@ export function EmployeeDetailModal({
                   onClick={handleShowPassword}
                   disabled={revealing}
                   className="flex shrink-0 cursor-pointer items-center gap-1 rounded-full bg-[var(--color-surface-sunken)] px-2.5 py-1.5 text-[12px] font-medium text-[var(--color-text)] hover:bg-[var(--color-border)] disabled:cursor-wait disabled:opacity-60"
-                  aria-label={visiblePassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+                  aria-label={visiblePassword ? t("hidePassword") : t("showPassword")}
                 >
                   {revealing ? (
                     <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -384,7 +383,7 @@ export function EmployeeDetailModal({
                   ) : (
                     <EyeIcon className="h-3.5 w-3.5" />
                   )}
-                  {revealing ? "Tasdiqlanmoqda..." : visiblePassword ? "Yashirish" : "Ko'rsatish"}
+                  {revealing ? t("confirming") : visiblePassword ? t("hide") : t("show")}
                 </button>
               )}
             </div>
@@ -396,7 +395,7 @@ export function EmployeeDetailModal({
                   className="mb-1.5 block text-[13px] font-medium text-[var(--color-text)]"
                   htmlFor="employee-new-password"
                 >
-                  Yangi parol
+                  {t("newPasswordLabel")}
                 </label>
                 <div className="relative">
                   <input
@@ -410,7 +409,7 @@ export function EmployeeDetailModal({
                         handleSave();
                       }
                     }}
-                    placeholder="O'zgartirmaslik uchun bo'sh qoldiring"
+                    placeholder={t("leaveBlankToKeep")}
                     autoComplete="new-password"
                     disabled={credentialsMutation.isPending}
                     className="w-full rounded-xl border border-[var(--color-border)] bg-white px-3.5 py-2.5 pr-10 text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[var(--color-primary)] disabled:opacity-60"
@@ -418,7 +417,7 @@ export function EmployeeDetailModal({
                   <button
                     type="button"
                     onClick={() => setShowNewPassword((v) => !v)}
-                    aria-label={showNewPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+                    aria-label={showNewPassword ? t("hidePassword") : t("showPassword")}
                     className="absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
                   >
                     {showNewPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
@@ -437,7 +436,7 @@ export function EmployeeDetailModal({
                           handleSave();
                         }
                       }}
-                      placeholder="Yangi parolni tasdiqlang"
+                      placeholder={t("confirmNewPasswordPlaceholder")}
                       autoComplete="new-password"
                       disabled={credentialsMutation.isPending}
                       className="mt-2 w-full rounded-xl border border-[var(--color-border)] bg-white px-3.5 py-2.5 text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[var(--color-primary)] disabled:opacity-60"
@@ -455,10 +454,10 @@ export function EmployeeDetailModal({
         ) : (
           <div className="space-y-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] p-4">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-sm text-[var(--color-text-muted)]">Kabinet ochilmagan</p>
+              <p className="text-sm text-[var(--color-text-muted)]">{t("cabinetNotOpen")}</p>
               {canWrite && !accountOpen && (
                 <Button type="button" variant="outline" size="sm" onClick={() => setAccountOpen(true)}>
-                  Kabinet ochish
+                  {t("openCabinetLabel")}
                 </Button>
               )}
             </div>
@@ -470,15 +469,13 @@ export function EmployeeDetailModal({
                     {accountError}
                   </div>
                 )}
-                <p className="text-xs text-[var(--color-text-muted)]">
-                  Login va parol avtomatik generatsiya qilinadi va bir marta ko&apos;rsatiladi.
-                </p>
+                <p className="text-xs text-[var(--color-text-muted)]">{t("autoGeneratedHint")}</p>
                 <div>
-                  <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">Guruhlari</span>
+                  <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">{t("groupsLabel")}</span>
                   {!groups ? (
-                    <p className="text-xs text-[var(--color-text-muted)]">Guruhlar yuklanmoqda...</p>
+                    <p className="text-xs text-[var(--color-text-muted)]">{t("groupsLoading")}</p>
                   ) : groups.length === 0 ? (
-                    <p className="text-xs text-[var(--color-text-muted)]">Avval guruh oching.</p>
+                    <p className="text-xs text-[var(--color-text-muted)]">{t("createGroupFirst")}</p>
                   ) : (
                     <div className="flex flex-wrap gap-2">
                       {groups.map((group) => {
@@ -504,7 +501,7 @@ export function EmployeeDetailModal({
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="ghost" size="sm" onClick={() => setAccountOpen(false)}>
-                    Bekor qilish
+                    {t("cancel")}
                   </Button>
                   <Button
                     type="button"
@@ -512,14 +509,14 @@ export function EmployeeDetailModal({
                     loading={accountMutation.isPending}
                     onClick={() => {
                       if (groupIds.length === 0) {
-                        setAccountError("Kamida bitta guruh tanlang");
+                        setAccountError(t("selectAtLeastOneGroup"));
                         return;
                       }
                       setAccountError(null);
                       accountMutation.mutate();
                     }}
                   >
-                    Ochish
+                    {t("openAction")}
                   </Button>
                 </div>
               </div>
@@ -546,11 +543,11 @@ export function EmployeeDetailModal({
               loading={credentialsMutation.isPending || topicsSettingMutation.isPending}
               onClick={handleSave}
             >
-              Saqlash
+              {t("save")}
             </Button>
           ) : (
             <Button type="button" variant="secondary" onClick={onClose}>
-              Yopish
+              {t("close")}
             </Button>
           )}
         </div>

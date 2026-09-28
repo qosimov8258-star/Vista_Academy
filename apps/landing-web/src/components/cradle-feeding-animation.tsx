@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import styles from "./cradle-feeding-animation.module.css";
 
 /**
@@ -9,12 +10,13 @@ import styles from "./cradle-feeding-animation.module.css";
  * sahifaning o'z foni orqa fon sifatida ko'rinib turadi.
  */
 export function CradleFeedingAnimation() {
+  const t = useTranslations();
   return (
     <div className={styles.wrapper}>
       <iframe
         src="/animatsiya/beshik_vista.html"
         className={styles.frame}
-        title="Beshikdagi chaqaloqni ovqatlantirish o'yini"
+        title={t("cradleFeeding")}
         loading="lazy"
       />
     </div>

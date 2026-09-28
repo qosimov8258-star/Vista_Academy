@@ -97,6 +97,9 @@ model Organization {
   contactName  String?            @map("contact_name")
   contactEmail String?            @map("contact_email")
   contactPhone String?            @map("contact_phone")
+  // Tashkilotning o'z tashqi marketing/lending sayti bo'lsa — shu yerda
+  // saqlanadi. Bo'lmasa, "Ommaviy sahifa" tugmasi "Tez orada" ko'rsatadi.
+  lendingUrl   String?            @map("lending_url")
   status       OrganizationStatus @default(ACTIVE)
   createdAt    DateTime           @default(now()) @map("created_at")
   updatedAt    DateTime           @updatedAt @map("updated_at")

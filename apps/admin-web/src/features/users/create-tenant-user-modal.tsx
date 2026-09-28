@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { Branch, TenantAuthenticatedUser, TenantUser, TenantUserRole } from "@/lib/types";
@@ -13,19 +14,14 @@ import { Input, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 const LOGIN_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{1,30}[A-Za-z0-9]$/;
-const LOGIN_MESSAGE = "Login lotin harf, raqam, . _ - dan iborat bo'lishi va kamida 3 belgi bo'lishi kerak";
 
-const schema = z.object({
-  branchId: z.string().min(1, "Filialni tanlang").optional(),
-  // Super Admin filial admini yoki moliyachi yaratadi; filial admini uchun bu
-  // maydon ko'rinmaydi va server baribir doim MANAGER yaratadi.
-  role: z.enum(["BRANCH_ADMIN", "FINANCE"]).optional(),
-  fullName: z.string().min(2, "To'liq ism kamida 2 belgi"),
-  login: z.string().regex(LOGIN_PATTERN, LOGIN_MESSAGE),
-  password: z.string().min(8, "Kamida 8 belgi"),
-});
-
-type FormValues = z.infer<typeof schema>;
+type FormValues = {
+  branchId?: string;
+  role?: "BRANCH_ADMIN" | "FINANCE";
+  fullName: string;
+  login: string;
+  password: string;
+};
 
 export function CreateTenantUserModal({
   open,
@@ -40,9 +36,20 @@ export function CreateTenantUserModal({
   currentUser: TenantAuthenticatedUser;
   branches: Branch[];
 }) {
+  const t = useTranslations("users");
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
   const isNetworkAdmin = currentUser.role === "NETWORK_ADMIN";
+
+  const schema = z.object({
+    branchId: z.string().min(1, t("validation.selectBranch")).optional(),
+    // Super Admin filial admini yoki moliyachi yaratadi; filial admini uchun bu
+    // maydon ko'rinmaydi va server baribir doim MANAGER yaratadi.
+    role: z.enum(["BRANCH_ADMIN", "FINANCE"]).optional(),
+    fullName: z.string().min(2, t("validation.fullNameMin")),
+    login: z.string().regex(LOGIN_PATTERN, t("validation.loginPattern")),
+    password: z.string().min(8, t("validation.passwordMin")),
+  });
 
   const {
     register,
@@ -72,7 +79,11 @@ export function CreateTenantUserModal({
   const targetRole: TenantUserRole = isNetworkAdmin ? selectedRole : "MANAGER";
   const targetRoleLabel = ROLE_LABEL[targetRole];
   const loginPlaceholder =
-    targetRole === "FINANCE" ? "moliyachi" : targetRole === "BRANCH_ADMIN" ? "filial_admin" : "administrator";
+    targetRole === "FINANCE"
+      ? t("loginPlaceholder.finance")
+      : targetRole === "BRANCH_ADMIN"
+        ? t("loginPlaceholder.branchAdmin")
+        : t("loginPlaceholder.administrator");
 
   const mutation = useMutation({
     mutationFn: (values: FormValues) =>
@@ -89,12 +100,12 @@ export function CreateTenantUserModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : t("unexpectedError"));
     },
   });
 
   return (
-    <Modal open={open} onClose={onClose} title={`Yangi ${targetRoleLabel.toLowerCase()}`}>
+    <Modal open={open} onClose={onClose} title={t("newRoleTitle", { role: targetRoleLabel.toLowerCase() })}>
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         <h1 className="font-heading text-center text-[28px] font-extrabold tracking-tight text-[var(--color-primary)]">
           Vista Academy
@@ -107,7 +118,7 @@ export function CreateTenantUserModal({
         )}
         {isNetworkAdmin && (
           <>
-            <Select label="Filial" error={errors.branchId?.message} {...register("branchId")}>
+            <Select label={t("branchLabel")} error={errors.branchId?.message} {...register("branchId")}>
               {branches.map((branch) => (
                 <option key={branch.id} value={branch.id}>
                   {branch.name}
@@ -115,13 +126,9 @@ export function CreateTenantUserModal({
               ))}
             </Select>
             <Select
-              label="Rol"
+              label={t("roleLabel")}
               error={errors.role?.message}
-              hint={
-                selectedRole === "FINANCE"
-                  ? "Moliya va Ish haqi bo'limlarida ishlaydi, qolgan bo'limlarni faqat ko'radi"
-                  : "Filialning barcha bo'limlarida to'liq ishlaydi va administrator qo'sha oladi"
-              }
+              hint={selectedRole === "FINANCE" ? t("roleHint.finance") : t("roleHint.branchAdmin")}
               {...register("role")}
             >
               <option value="BRANCH_ADMIN">{ROLE_LABEL.BRANCH_ADMIN}</option>
@@ -129,22 +136,22 @@ export function CreateTenantUserModal({
             </Select>
           </>
         )}
-        <Input label="To'liq ism" placeholder="Aziz Rahimov" error={errors.fullName?.message} {...register("fullName")} />
+        <Input label={t("fullNameLabel")} placeholder={t("fullNamePlaceholder")} error={errors.fullName?.message} {...register("fullName")} />
         <Input
-          label="Login"
+          label={t("loginLabel")}
           type="text"
           placeholder={loginPlaceholder}
           error={errors.login?.message}
           {...register("login")}
         />
-        <Input label="Parol" type="password" placeholder="Kamida 8 belgi" error={errors.password?.message} {...register("password")} />
+        <Input label={t("passwordLabel")} type="password" placeholder={t("passwordPlaceholder")} error={errors.password?.message} {...register("password")} />
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Bekor qilish
+            {t("cancel")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Yaratish
+            {t("create")}
           </Button>
         </div>
       </form>

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import clsx from "clsx";
 
 /**
@@ -11,10 +12,11 @@ import clsx from "clsx";
  */
 export function UsefulTabs({ base }: { base: string }) {
   const pathname = usePathname();
+  const t = useTranslations("useful");
   const tabs = [
-    { href: `${base}/useful/poems`, label: "She'rlar" },
-    { href: `${base}/useful/proverbs`, label: "Maqollar" },
-    { href: `${base}/useful/tales`, label: "Ertaklar" },
+    { href: `${base}/useful/poems`, label: t("tabs.poems") },
+    { href: `${base}/useful/proverbs`, label: t("tabs.proverbs") },
+    { href: `${base}/useful/tales`, label: t("tabs.tales") },
   ];
 
   return (

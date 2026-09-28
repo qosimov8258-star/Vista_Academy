@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { api, ApiError } from "@/lib/api";
 import type { Group, Poem } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
@@ -14,19 +15,19 @@ import { splitIntoBlocks } from "./split-blocks";
 
 const RECOMMENDED_LINE_LENGTH = 45;
 
-function buildSchema(groupRequired: boolean) {
+function buildSchema(t: (key: string) => string, groupRequired: boolean) {
   return z
     .object({
-      title: z.string().min(1, "Sarlavhani kiriting").max(80, "Ko'pi bilan 80 belgi"),
-      author: z.string().max(80, "Ko'pi bilan 80 belgi").optional(),
-      groupId: groupRequired ? z.string().min(1, "Guruhni tanlang") : z.string().optional(),
+      title: z.string().min(1, t("validation.titleRequired")).max(80, t("validation.max80")),
+      author: z.string().max(80, t("validation.max80")).optional(),
+      groupId: groupRequired ? z.string().min(1, t("validation.selectGroup")) : z.string().optional(),
       ageFrom: z.coerce.number().int().min(2).max(7),
       ageTo: z.coerce.number().int().min(2).max(7),
-      text: z.string().min(1, "Matnni kiriting").max(6000),
+      text: z.string().min(1, t("validation.textRequired")).max(6000),
       status: z.enum(["PUBLISHED", "DRAFT"]),
     })
     .refine((v) => v.ageFrom <= v.ageTo, {
-      message: "Boshlanishi tugashidan katta bo'lmasin",
+      message: t("validation.ageOrder"),
       path: ["ageTo"],
     });
 }
@@ -49,10 +50,11 @@ export function PoemModal({
   isTeacher: boolean;
   poem?: Poem | null;
 }) {
+  const t = useTranslations("useful");
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
   const isEdit = !!poem;
-  const schema = useMemo(() => buildSchema(isTeacher), [isTeacher]);
+  const schema = useMemo(() => buildSchema(t, isTeacher), [t, isTeacher]);
 
   const {
     register,
@@ -98,7 +100,7 @@ export function PoemModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : t("unexpectedError"));
     },
   });
 
@@ -108,7 +110,7 @@ export function PoemModal({
   };
 
   return (
-    <Modal open={open} onClose={handleClose} title={isEdit ? "She'rni tahrirlash" : "Yangi she'r"} widthClassName="max-w-3xl">
+    <Modal open={open} onClose={handleClose} title={isEdit ? t("editPoemTitle") : t("newPoemTitle")} widthClassName="max-w-3xl">
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
@@ -117,12 +119,12 @@ export function PoemModal({
         )}
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Input label="Sarlavha" placeholder="Quyoshcha" error={errors.title?.message} {...register("title")} />
-          <Input label="Muallif (ixtiyoriy)" placeholder="Noma'lum bo'lsa bo'sh qoldiring" error={errors.author?.message} {...register("author")} />
+          <Input label={t("titleLabel")} placeholder={t("poemTitlePlaceholder")} error={errors.title?.message} {...register("title")} />
+          <Input label={t("authorLabelOptional")} placeholder={t("authorPlaceholder")} error={errors.author?.message} {...register("author")} />
 
-          <Select label="Guruh" error={errors.groupId?.message} {...register("groupId")}>
-            {!isTeacher && <option value="">Butun filial</option>}
-            {isTeacher && <option value="">Guruhni tanlang</option>}
+          <Select label={t("groupLabel")} error={errors.groupId?.message} {...register("groupId")}>
+            {!isTeacher && <option value="">{t("wholeBranch")}</option>}
+            {isTeacher && <option value="">{t("selectGroupOption")}</option>}
             {groups.map((group) => (
               <option key={group.id} value={group.id}>
                 {group.name}
@@ -130,28 +132,28 @@ export function PoemModal({
             ))}
           </Select>
 
-          <Select label="Ota-onalarga ko'rsatish" error={errors.status?.message} {...register("status")}>
-            <option value="PUBLISHED">Chop etilgan</option>
-            <option value="DRAFT">Qoralama</option>
+          <Select label={t("showToParentsLabel")} error={errors.status?.message} {...register("status")}>
+            <option value="PUBLISHED">{t("status.published")}</option>
+            <option value="DRAFT">{t("status.draft")}</option>
           </Select>
 
-          <Input label="Yosh (dan)" type="number" min={2} max={7} error={errors.ageFrom?.message} {...register("ageFrom")} />
-          <Input label="Yosh (gacha)" type="number" min={2} max={7} error={errors.ageTo?.message} {...register("ageTo")} />
+          <Input label={t("ageFromLabel")} type="number" min={2} max={7} error={errors.ageFrom?.message} {...register("ageFrom")} />
+          <Input label={t("ageToLabel")} type="number" min={2} max={7} error={errors.ageTo?.message} {...register("ageTo")} />
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Textarea
-            label="Matn"
-            hint="Bandlar orasida bitta bo'sh qator qoldiring"
+            label={t("textLabel")}
+            hint={t("stanzaHint")}
             rows={10}
             error={errors.text?.message}
             {...register("text")}
           />
           <div>
-            <span className="mb-2 block text-[13px] font-medium text-[var(--color-text)]">Ko'rinishi</span>
+            <span className="mb-2 block text-[13px] font-medium text-[var(--color-text)]">{t("previewLabel")}</span>
             <div className="h-full min-h-[220px] space-y-3 rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface-sunken)]/40 px-4 py-3.5">
               {preview.length === 0 ? (
-                <p className="text-[13px] text-[var(--color-text-muted)]">Matn kiritilgach shu yerda ko&apos;rinadi</p>
+                <p className="text-[13px] text-[var(--color-text-muted)]">{t("previewEmptyHint")}</p>
               ) : (
                 preview.map((stanza, i) => (
                   <p key={i} className="text-[14px] leading-relaxed text-[var(--color-text)]">
@@ -167,7 +169,7 @@ export function PoemModal({
             </div>
             {hasLongLine && (
               <p className="mt-1.5 text-[13px] text-[var(--color-warning)]">
-                Ba&apos;zi qatorlar tavsiya etilgan {RECOMMENDED_LINE_LENGTH} belgidan uzun — rasmda shrift kichrayishi mumkin.
+                {t("longLineWarning", { length: RECOMMENDED_LINE_LENGTH })}
               </p>
             )}
           </div>
@@ -175,10 +177,10 @@ export function PoemModal({
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={handleClose}>
-            Bekor qilish
+            {t("cancel")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            {isEdit ? "Saqlash" : "Yaratish"}
+            {isEdit ? t("save") : t("create")}
           </Button>
         </div>
       </form>

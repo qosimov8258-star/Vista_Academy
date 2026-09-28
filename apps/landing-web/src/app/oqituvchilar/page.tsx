@@ -1,63 +1,71 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { PageShell } from "@/components/page-shell";
 import { TeacherSubjectHighlights } from "@/components/teacher-subject-highlights";
 import { TeacherGrid } from "@/components/teacher-grid";
 import { fetchLanding } from "@/lib/api";
 import type { LandingTeacher } from "@/lib/types";
 
-export const metadata: Metadata = {
-  title: "O'qituvchilar — Vista Academy",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("teachersPage");
+  return { title: t("metaTitle") };
+}
 
 /**
  * CMS'da hali o'qituvchi kiritilmagan bo'lsa ham sahifa bo'sh ko'rinmasin
  * deb, chinakam ma'lumot ustiga tushguncha shu namunaviy jamoa ko'rsatiladi.
  */
-const PLACEHOLDER_TEACHERS: LandingTeacher[] = [
-  {
-    id: "placeholder-1",
-    fullName: "Dilnoza Qosimova",
-    role: "Bosh tarbiyachi",
-    bio: "Har bir bola menga o'z farzandimdek aziz.",
-    experience: "Maktabgacha ta'lim yo'nalishida 12 yillik tajribaga ega, bir necha filial jamoasini boshqargan.",
-    photoPath: null,
-  },
-  {
-    id: "placeholder-2",
-    fullName: "Malika Yusupova",
-    role: "Ingliz tili o'qituvchisi",
-    bio: "Bolalar bilan o'ynab o'rganish eng samarali usul.",
-    experience: "Ingliz tili bo'yicha 6 yillik tajriba, xalqaro IELTS sertifikatiga ega.",
-    photoPath: null,
-  },
-  {
-    id: "placeholder-3",
-    fullName: "Nodira Karimova",
-    role: "Mental arifmetika o'qituvchisi",
-    bio: "Mental arifmetika bolaning tafakkurini rivojlantiradi.",
-    experience: "Mental arifmetika yo'nalishida 5 yillik tajriba, respublika miqyosidagi bolalar musobaqalarida shogirdlarini tayyorlagan.",
-    photoPath: null,
-  },
-  {
-    id: "placeholder-4",
-    fullName: "Sevara Rashidova",
-    role: "Kichik guruh tarbiyachisi",
-    bio: "Sabr va mehr — ishimning asosi.",
-    experience: "Kichik yoshdagi bolalar bilan ishlashda 8 yillik tajribaga ega, bolalar psixologiyasi bo'yicha qo'shimcha ta'lim olgan.",
-    photoPath: null,
-  },
-];
+async function getPlaceholderTeachers(): Promise<LandingTeacher[]> {
+  const t = await getTranslations("teachersPage.placeholders");
+  return [
+    {
+      id: "placeholder-1",
+      fullName: "Dilnoza Qosimova",
+      role: t("teacher1.role"),
+      bio: t("teacher1.bio"),
+      experience: t("teacher1.experience"),
+      photoPath: null,
+    },
+    {
+      id: "placeholder-2",
+      fullName: "Malika Yusupova",
+      role: t("teacher2.role"),
+      bio: t("teacher2.bio"),
+      experience: t("teacher2.experience"),
+      photoPath: null,
+    },
+    {
+      id: "placeholder-3",
+      fullName: "Nodira Karimova",
+      role: t("teacher3.role"),
+      bio: t("teacher3.bio"),
+      experience: t("teacher3.experience"),
+      photoPath: null,
+    },
+    {
+      id: "placeholder-4",
+      fullName: "Sevara Rashidova",
+      role: t("teacher4.role"),
+      bio: t("teacher4.bio"),
+      experience: t("teacher4.experience"),
+      photoPath: null,
+    },
+  ];
+}
 
 export default async function TeachersPage() {
   const fetched = await fetchLanding<LandingTeacher[]>("/teachers", []);
-  const teachers = fetched.length > 0 ? fetched : PLACEHOLDER_TEACHERS;
+  const teachers = fetched.length > 0 ? fetched : await getPlaceholderTeachers();
+  const t = await getTranslations("teachersPage");
+  const tCommon = await getTranslations("common");
+  const tGroups = await getTranslations("groups");
 
   return (
     <PageShell
-      eyebrow="Guruhlarimiz"
-      title="O'qituvchilar"
-      description="Farzandingiz bilan har kuni birga bo'ladigan mehribon va tajribali jamoamiz."
-      heroImage={{ src: "/rasm/oqtuvchi.png", alt: "O'qituvchi bolalarga darsda yordam bermoqda", position: "50% 0%" }}
+      eyebrow={tCommon("pagesEyebrow")}
+      title={tGroups("teachers")}
+      description={t("description")}
+      heroImage={{ src: "/rasm/oqtuvchi.png", alt: t("heroImageAlt"), position: "50% 0%" }}
       afterContent={<TeacherSubjectHighlights />}
     >
       <div

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import clsx from "clsx";
 import { api, ApiError } from "@/lib/api";
 import type { CoinChildBalance, WeeklyAssessmentQuestionGroup } from "@/lib/types";
@@ -34,6 +35,7 @@ export function WeeklyAssessmentModal({
   branchId: string;
   child: CoinChildBalance;
 }) {
+  const t = useTranslations("coins");
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Record<string, AnswerState>>({});
@@ -66,7 +68,7 @@ export function WeeklyAssessmentModal({
       handleClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : t("unexpectedError"));
     },
   });
 
@@ -84,7 +86,7 @@ export function WeeklyAssessmentModal({
   const groups = questionsQuery.data ?? [];
 
   return (
-    <Modal open={open} onClose={handleClose} title={`${child.fullName} — haftalik baholash`} widthClassName="max-w-2xl">
+    <Modal open={open} onClose={handleClose} title={t("weeklyAssessmentTitle", { childName: child.fullName })} widthClassName="max-w-2xl">
       <div className="space-y-4">
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
@@ -93,8 +95,7 @@ export function WeeklyAssessmentModal({
         )}
 
         <p className="text-sm text-[var(--color-text-muted)]">
-          O&apos;tilgan mavzulardan savol so&apos;rang va har birini belgilang. Coin avtomatik hisoblanadi: savol-javob
-          uchun max {QA_POOL}, she&apos;r yodlash uchun {POEM_POOL} — jami max {QA_POOL + POEM_POOL} coin/hafta.
+          {t("assessmentHint", { qaPool: QA_POOL, poemPool: POEM_POOL, totalPool: QA_POOL + POEM_POOL })}
         </p>
 
         {questionsQuery.isLoading ? (
@@ -102,7 +103,7 @@ export function WeeklyAssessmentModal({
         ) : questionsQuery.isError ? (
           <ErrorState message={(questionsQuery.error as Error).message} />
         ) : groups.length === 0 ? (
-          <EmptyState title="Bu guruh uchun hali savollar banki yo'q" />
+          <EmptyState title={t("noQuestionBank")} />
         ) : (
           <div className="max-h-[45vh] space-y-4 overflow-y-auto scrollbar-thin pr-1">
             {groups.map((group) => (
@@ -130,7 +131,7 @@ export function WeeklyAssessmentModal({
                                 : "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)] hover:bg-[var(--color-border)]",
                             )}
                           >
-                            To&apos;g&apos;ri
+                            {t("correct")}
                           </button>
                           <button
                             type="button"
@@ -142,7 +143,7 @@ export function WeeklyAssessmentModal({
                                 : "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)] hover:bg-[var(--color-border)]",
                             )}
                           >
-                            Noto&apos;g&apos;ri
+                            {t("incorrect")}
                           </button>
                         </div>
                       </li>
@@ -155,21 +156,22 @@ export function WeeklyAssessmentModal({
         )}
 
         <div className="flex items-center justify-between rounded-[var(--radius-lg)] bg-[var(--color-surface-sunken)] px-3 py-2.5">
-          <span className="text-sm font-medium text-[var(--color-text)]">She&apos;r yodladi</span>
-          <Switch checked={poemRecited} onChange={() => setPoemRecited((v) => !v)} aria-label="She'r yodladi" />
+          <span className="text-sm font-medium text-[var(--color-text)]">{t("recitedPoem")}</span>
+          <Switch checked={poemRecited} onChange={() => setPoemRecited((v) => !v)} aria-label={t("recitedPoem")} />
         </div>
 
         <p className="text-sm text-[var(--color-text)]">
-          Hisoblangan coin: <span className="font-semibold">{totalCoins}</span>
+          {t("calculatedCoin")} <span className="font-semibold">{totalCoins}</span>
           <span className="text-[var(--color-text-muted)]">
             {" "}
-            ({correctCount}/{askedEntries.length} to&apos;g&apos;ri javob{poemRecited ? " · she'r bilan" : ""})
+            ({t("correctAnswers", { correct: correctCount, total: askedEntries.length })}
+            {poemRecited ? ` · ${t("withPoem")}` : ""})
           </span>
         </p>
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={handleClose}>
-            Bekor qilish
+            {t("cancel")}
           </Button>
           <Button
             type="button"
@@ -180,7 +182,7 @@ export function WeeklyAssessmentModal({
               mutation.mutate();
             }}
           >
-            Saqlash
+            {t("save")}
           </Button>
         </div>
       </div>

@@ -1,13 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { alternatingDirection, staggerDelay, useReveal } from "./reveal";
-
-const STATS = [
-  { value: 1000, label: "o'quvchi" },
-  { value: 80, label: "professional o'qituvchi" },
-  { value: 45, label: "jihozlangan sinf xonalari" },
-];
 
 const DURATION = 1400;
 
@@ -80,21 +75,23 @@ function StatItem({ value, label, index }: { value: number; label: string; index
 }
 
 export function Stats() {
+  const t = useTranslations("stats");
+  const STATS = [
+    { value: 1000, label: t("labels.students") },
+    { value: 80, label: t("labels.teachers") },
+    { value: 45, label: t("labels.classrooms") },
+  ];
+
   return (
     <section id="about" className="py-20 sm:py-28">
       <div className="mx-auto max-w-[720px] px-4 text-center">
         <p className="text-[13px] font-bold uppercase tracking-[0.08em]" style={{ color: "var(--color-blue)" }}>
-          Biz haqimizda
+          {t("eyebrow")}
         </p>
         <h2 className="font-heading mt-3 text-[22px] font-bold leading-tight tracking-tight text-[var(--color-text)] sm:text-[30px] lg:text-[36px]">
-          Vista bog&apos;chasi haqida
+          {t("heading")}
         </h2>
-        <p className="mt-4 text-[16px] leading-relaxed text-[var(--color-text-muted)]">
-          Vista Academy — farzandingizning har bir kuni bilim, mehr va xavfsizlik bilan
-          to&apos;la o&apos;tishini ta&apos;minlaydigan zamonaviy bog&apos;cha. Malakali
-          tarbiyachilarimiz va zamonaviy jihozlangan sinflarimiz bilan har bir bolaga
-          individual yondashamiz va uni maktab hayotiga ishonch bilan tayyorlaymiz.
-        </p>
+        <p className="mt-4 text-[16px] leading-relaxed text-[var(--color-text-muted)]">{t("body")}</p>
       </div>
 
       <div className="mx-auto mt-12 grid max-w-[720px] grid-cols-3 gap-3 px-4 sm:gap-6">

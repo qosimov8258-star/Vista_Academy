@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { Employee, Group } from "@/lib/types";
@@ -20,6 +21,7 @@ export function ManageTeachersModal({
   slug: string;
   group: Group;
 }) {
+  const t = useTranslations("groups");
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -43,14 +45,14 @@ export function ManageTeachersModal({
       queryClient.invalidateQueries({ queryKey: ["group-overview", slug, group.id] });
       queryClient.invalidateQueries({ queryKey: ["groups", slug] });
     },
-    onError: (err) => setError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi"),
+    onError: (err) => setError(err instanceof ApiError ? err.message : t("unexpectedError")),
     onSettled: () => setPendingId(null),
   });
 
   const employees = employeesQuery.data ?? [];
 
   return (
-    <Modal open={open} onClose={onClose} title={`Tarbiyachilar — ${group.name}`} widthClassName="max-w-lg">
+    <Modal open={open} onClose={onClose} title={t("teachersTitle", { groupName: group.name })} widthClassName="max-w-lg">
       <div className="space-y-3">
         {error && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">{error}</div>
@@ -61,7 +63,7 @@ export function ManageTeachersModal({
         ) : employeesQuery.isError ? (
           <ErrorState message={(employeesQuery.error as Error).message} />
         ) : employees.length === 0 ? (
-          <EmptyState title="Bu filialda xodim yo'q" />
+          <EmptyState title={t("noEmployeesInBranch")} />
         ) : (
           <ul className="divide-y divide-[var(--color-separator)] rounded-[var(--radius-md)] border border-[var(--color-separator)]">
             {employees.map((employee) => {
@@ -79,7 +81,7 @@ export function ManageTeachersModal({
                     <p className="truncate text-[14px] font-medium text-[var(--color-text)]">
                       {employee.fullName}
                       {!employee.isActive && (
-                        <span className="ml-1.5 text-[12px] font-normal text-[var(--color-text-muted)]">(nofaol)</span>
+                        <span className="ml-1.5 text-[12px] font-normal text-[var(--color-text-muted)]">({t("inactive")})</span>
                       )}
                     </p>
                     <p className="text-[12.5px] text-[var(--color-text-muted)]">{employee.position}</p>
@@ -91,7 +93,7 @@ export function ManageTeachersModal({
                     loading={pendingId === employee.id && mutation.isPending}
                     onClick={() => mutation.mutate({ employee, assign: !assigned })}
                   >
-                    {assigned ? "Olib tashlash" : "Biriktirish"}
+                    {assigned ? t("unassign") : t("assign")}
                   </Button>
                 </li>
               );
@@ -101,7 +103,7 @@ export function ManageTeachersModal({
 
         <div className="flex justify-end pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Yopish
+            {t("close")}
           </Button>
         </div>
       </div>

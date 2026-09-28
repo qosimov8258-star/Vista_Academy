@@ -79,6 +79,7 @@ export interface Organization {
   contactName: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
+  lendingUrl: string | null;
   status: OrganizationStatus;
   createdAt: string;
   branches: Branch[];

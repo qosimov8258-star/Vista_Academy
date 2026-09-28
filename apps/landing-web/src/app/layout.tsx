@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Baloo_2 } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
-import { getLocale, getMessages } from "next-intl/server";
+import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import "./globals.css";
 import { BusIntro } from "@/components/bus-intro";
 
@@ -11,11 +11,10 @@ const baloo2 = Baloo_2({
   variable: "--font-baloo",
 });
 
-export const metadata: Metadata = {
-  title: "Vista Academy — Bog'chalar tarmog'i",
-  description:
-    "Vista Academy — bolalarni mehr, xavfsizlik va zamonaviy ta'lim metodikalari bilan o'stiradigan bog'chalar tarmog'i.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("siteMeta");
+  return { title: t("title"), description: t("description") };
+}
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale();

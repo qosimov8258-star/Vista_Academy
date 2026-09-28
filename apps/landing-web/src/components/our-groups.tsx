@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import type { Group } from "@/lib/groups";
 import { alternatingDirection, staggerDelay, useReveal } from "./reveal";
 
@@ -50,20 +51,18 @@ function GroupTile({ group, index }: { group: Group; index: number }) {
 export function OurGroups({ groups }: { groups: Group[] }) {
   const [expanded, setExpanded] = useState(false);
   const visibleGroups = expanded ? groups : groups.slice(0, INITIAL_VISIBLE);
+  const t = useTranslations("ourGroups");
 
   return (
     <section id="guruhlar" className="py-20 sm:py-28" style={{ background: "var(--color-tint)" }}>
       <div className="mx-auto max-w-[720px] px-4 text-center">
         <p className="text-[13px] font-bold uppercase tracking-[0.08em]" style={{ color: "var(--color-blue)" }}>
-          20 ta sara guruh
+          {t("eyebrow")}
         </p>
         <h2 className="font-heading mt-3 text-[22px] font-bold leading-tight tracking-tight text-[var(--color-text)] sm:text-[30px] lg:text-[36px]">
-          Guruhlarimiz
+          {t("heading")}
         </h2>
-        <p className="mt-4 text-[16px] leading-relaxed text-[var(--color-text-muted)]">
-          Har bir guruhimiz o&apos;ziga xos, quvnoq nomga ega — farzandingiz tez orada
-          o&apos;z guruhini sevib qoladi.
-        </p>
+        <p className="mt-4 text-[16px] leading-relaxed text-[var(--color-text-muted)]">{t("description")}</p>
       </div>
 
       <div className="mx-auto mt-12 grid max-w-[1120px] grid-cols-2 gap-4 px-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
@@ -80,7 +79,7 @@ export function OurGroups({ groups }: { groups: Group[] }) {
             className="inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-[15px] font-bold text-white"
             style={{ background: "var(--color-green)" }}
           >
-            {expanded ? "Kamroq ko'rsatish" : "Yana ko'rsatish"}
+            {expanded ? t("showLess") : t("showMore")}
             <ChevronDownIcon className={`h-4 w-4 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`} />
           </button>
         </div>

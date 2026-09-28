@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -12,19 +12,27 @@ import { Modal } from "@/components/ui/modal";
 import { Input, Select } from "@/components/ui/input";
 import { PasswordVeilInput } from "@/components/ui/password-veil-input";
 import { Button } from "@/components/ui/button";
+import { Segmented } from "@/components/ui/segmented";
 import { CheckCircleIcon } from "@/components/ui/icons";
 import { formatMoney } from "@/lib/format";
 
 const LOGIN_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{1,30}[A-Za-z0-9]$/;
 const LOGIN_MESSAGE = "Login lotin harf, raqam, . _ - dan iborat bo'lishi va kamida 3 belgi bo'lishi kerak";
 
-const schema = z.object({
-  name: z.string().min(2, "Nomi kamida 2 belgi"),
-  contactName: z.string().regex(LOGIN_PATTERN, LOGIN_MESSAGE),
-  contactPhone: z.string().optional(),
-  planId: z.string().min(1, "Tarif tanlang"),
-  adminPassword: z.string().min(8, "Kamida 8 belgi"),
-});
+const schema = z
+  .object({
+    name: z.string().min(2, "Nomi kamida 2 belgi"),
+    contactName: z.string().regex(LOGIN_PATTERN, LOGIN_MESSAGE),
+    contactPhone: z.string().optional(),
+    planId: z.string().min(1, "Tarif tanlang"),
+    adminPassword: z.string().min(8, "Kamida 8 belgi"),
+    hasLendingUrl: z.enum(["yes", "no"]),
+    lendingUrl: z.string().optional(),
+  })
+  .refine(
+    (values) => values.hasLendingUrl === "no" || z.string().url().safeParse(values.lendingUrl).success,
+    { message: "To'g'ri havola kiriting (masalan https://... bilan boshlansin)", path: ["lendingUrl"] },
+  );
 
 type FormValues = z.infer<typeof schema>;
 
@@ -44,12 +52,24 @@ export function CreateOrganizationModal({ open, onClose }: { open: boolean; onCl
     register,
     handleSubmit,
     reset,
+    watch,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
+  const hasLendingUrl = watch("hasLendingUrl");
+
   useEffect(() => {
     if (open) {
-      reset({ name: "", contactName: "", contactPhone: "", planId: "", adminPassword: "" });
+      reset({
+        name: "",
+        contactName: "",
+        contactPhone: "",
+        planId: "",
+        adminPassword: "",
+        hasLendingUrl: "no",
+        lendingUrl: "",
+      });
       setServerError(null);
     }
   }, [open, reset]);
@@ -66,6 +86,7 @@ export function CreateOrganizationModal({ open, onClose }: { open: boolean; onCl
         adminFullName: values.contactName,
         adminLogin: values.contactName,
         adminPassword: values.adminPassword,
+        lendingUrl: values.hasLendingUrl === "yes" ? values.lendingUrl : undefined,
       }),
     onSuccess: (organization) => {
       queryClient.invalidateQueries({ queryKey: ["organizations"] });
@@ -161,6 +182,34 @@ export function CreateOrganizationModal({ open, onClose }: { open: boolean; onCl
           error={errors.adminPassword?.message}
           {...register("adminPassword")}
         />
+        <div>
+          <span className="mb-1.5 block text-[13px] font-medium text-[var(--color-text)]">
+            Lending sahifasi bormi?
+          </span>
+          <Controller
+            control={control}
+            name="hasLendingUrl"
+            render={({ field }) => (
+              <Segmented
+                ariaLabel="Lending sahifasi bormi?"
+                value={field.value}
+                onChange={field.onChange}
+                options={[
+                  { value: "no", label: "Yo'q" },
+                  { value: "yes", label: "Ha" },
+                ]}
+              />
+            )}
+          />
+        </div>
+        {hasLendingUrl === "yes" && (
+          <Input
+            label="Lending sahifa manzili"
+            placeholder="https://quyoshcha-bogcha.uz"
+            error={errors.lendingUrl?.message}
+            {...register("lendingUrl")}
+          />
+        )}
         <Select label="Tarif" defaultValue="" error={errors.planId?.message} {...register("planId")}>
           <option value="" disabled>
             Tarif tanlang...

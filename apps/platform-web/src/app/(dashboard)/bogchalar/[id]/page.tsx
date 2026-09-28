@@ -19,7 +19,7 @@ import {
   PlusIcon,
   RefreshIcon,
 } from "@/components/ui/icons";
-import { bogchaPublicUrl, formatDateTime, formatMoney } from "@/lib/format";
+import { formatDateTime, formatMoney } from "@/lib/format";
 import { organizationAccessUrl } from "@/lib/admin-web";
 import {
   subscriptionStatusLabel,
@@ -108,7 +108,6 @@ export default function BogchaDetailPage({
   const org = orgQuery.data;
   if (!org) return null;
 
-  const publicUrl = bogchaPublicUrl(org.slug);
   const accessUrl = organizationAccessUrl(org.slug);
 
   const copyAccessUrl = async () => {
@@ -156,16 +155,27 @@ export default function BogchaDetailPage({
         </CardBody>
 
         <CardBody className="flex flex-wrap items-center gap-2 border-t border-[var(--color-separator)]">
-          {/* Ommaviy (tenant) sahifa havolasi — bosilganda to'g'ridan-to'g'ri ochiladi */}
-          <a
-            href={publicUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-primary-soft)] px-3.5 py-1.5 text-[13px] font-medium text-[var(--color-primary)] transition-opacity hover:opacity-80"
-          >
-            Ommaviy sahifa
-            <ExternalLinkIcon className="h-3.5 w-3.5" />
-          </a>
+          {/* Ommaviy (lending) sahifa havolasi — bog'chaning o'z tashqi sayti
+              bo'lsa, bosilganda to'g'ridan-to'g'ri o'sha yerga ochiladi;
+              bo'lmasa hali sozlanmaganini bildiruvchi band ko'rsatiladi. */}
+          {org.lendingUrl ? (
+            <a
+              href={org.lendingUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-primary-soft)] px-3.5 py-1.5 text-[13px] font-medium text-[var(--color-primary)] transition-opacity hover:opacity-80"
+            >
+              Ommaviy sahifa
+              <ExternalLinkIcon className="h-3.5 w-3.5" />
+            </a>
+          ) : (
+            <span
+              title="Bu bog'cha uchun lending sahifa manzili hali kiritilmagan"
+              className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-surface-sunken)] px-3.5 py-1.5 text-[13px] font-medium text-[var(--color-text-muted)]"
+            >
+              Ommaviy sahifa — Tez orada
+            </span>
+          )}
 
           {/* Boshqaruv paneli havolasi — GitHub'ning "Code" tugmasi kabi popoverda ko'rsatiladi */}
           <div ref={popoverRef} className="relative">

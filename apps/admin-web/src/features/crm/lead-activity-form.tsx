@@ -4,12 +4,15 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
-import type { LeadActivity } from "@/lib/types";
+import type { LeadActivity, LeadActivityType } from "@/lib/types";
 import { Select, Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ACTIVITY_LABEL } from "./labels";
+import { activityLabel } from "./labels";
+
+const ACTIVITY_TYPES: LeadActivityType[] = ["CALL", "MESSAGE", "MEETING", "TRIAL_DAY", "STAGE_CHANGE", "NOTE"];
 
 const schema = z.object({
   type: z.enum(["CALL", "MESSAGE", "MEETING", "TRIAL_DAY", "STAGE_CHANGE", "NOTE"]),
@@ -19,6 +22,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export function LeadActivityForm({ slug, leadId }: { slug: string; leadId: string }) {
+  const t = useTranslations("crm");
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -40,7 +44,7 @@ export function LeadActivityForm({ slug, leadId }: { slug: string; leadId: strin
       reset({ type: "NOTE", note: "" });
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : t("unexpectedError"));
     },
   });
 
@@ -52,18 +56,18 @@ export function LeadActivityForm({ slug, leadId }: { slug: string; leadId: strin
         </div>
       )}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-[200px_1fr]">
-        <Select label="Turi" {...register("type")}>
-          {Object.entries(ACTIVITY_LABEL).map(([value, label]) => (
+        <Select label={t("typeLabel")} {...register("type")}>
+          {ACTIVITY_TYPES.map((value) => (
             <option key={value} value={value}>
-              {label}
+              {activityLabel(t, value)}
             </option>
           ))}
         </Select>
-        <Textarea label="Izoh (ixtiyoriy)" rows={2} placeholder="Qo'shimcha ma'lumot" {...register("note")} />
+        <Textarea label={t("noteLabelOptional")} rows={2} placeholder={t("additionalInfoPlaceholder")} {...register("note")} />
       </div>
       <div className="flex justify-end">
         <Button type="submit" size="sm" loading={isSubmitting || mutation.isPending}>
-          Qo&apos;shish
+          {t("add")}
         </Button>
       </div>
     </form>

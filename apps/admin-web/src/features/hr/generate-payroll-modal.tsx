@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { api, ApiError } from "@/lib/api";
 import type { Employee, PayrollEntry } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
@@ -24,20 +25,21 @@ function currentPeriodString(): string {
   return `${year}-${month}`;
 }
 
-const schema = z.object({
-  employeeId: z.string().min(1, "Xodimni tanlang"),
-  period: z.string().regex(/^\d{4}-\d{2}$/, "YYYY-MM formatida"),
-  bonusAmount: z.coerce.number().min(0).optional(),
-  penaltyAmount: z.coerce.number().min(0).optional(),
-  deductionAmount: z.coerce.number().min(0).optional(),
-  note: z.string().optional(),
-});
-
-type FormValues = z.infer<typeof schema>;
-
 export function GeneratePayrollModal({ open, onClose, slug }: { open: boolean; onClose: () => void; slug: string }) {
+  const t = useTranslations("hr");
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
+
+  const schema = z.object({
+    employeeId: z.string().min(1, t("validation.selectEmployee")),
+    period: z.string().regex(/^\d{4}-\d{2}$/, t("validation.periodFormat")),
+    bonusAmount: z.coerce.number().min(0).optional(),
+    penaltyAmount: z.coerce.number().min(0).optional(),
+    deductionAmount: z.coerce.number().min(0).optional(),
+    note: z.string().optional(),
+  });
+
+  type FormValues = z.infer<typeof schema>;
 
   const { data: employees } = useQuery({
     // Ishdan bo'shagan xodimga oylik hisoblanmasin.
@@ -79,21 +81,21 @@ export function GeneratePayrollModal({ open, onClose, slug }: { open: boolean; o
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : t("unexpectedError"));
     },
   });
 
   return (
-    <Modal open={open} onClose={onClose} title="Ish haqi hisoblash">
+    <Modal open={open} onClose={onClose} title={t("generatePayrollTitle")}>
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
             {serverError}
           </div>
         )}
-        <Select label="Xodim" defaultValue="" error={errors.employeeId?.message} {...register("employeeId")}>
+        <Select label={t("employeeLabel")} defaultValue="" error={errors.employeeId?.message} {...register("employeeId")}>
           <option value="" disabled>
-            Tanlang
+            {t("choose")}
           </option>
           {employees?.map((employee) => (
             <option key={employee.id} value={employee.id}>
@@ -101,17 +103,17 @@ export function GeneratePayrollModal({ open, onClose, slug }: { open: boolean; o
             </option>
           ))}
         </Select>
-        <Input label="Davr (YYYY-MM)" placeholder="2026-09" error={errors.period?.message} {...register("period")} />
+        <Input label={t("periodLabel")} placeholder="2026-09" error={errors.period?.message} {...register("period")} />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
-            label="Mukofot (ixtiyoriy)"
+            label={t("bonusLabel")}
             type="number"
             placeholder="0"
             error={errors.bonusAmount?.message}
             {...register("bonusAmount")}
           />
           <Input
-            label="Jarima (ixtiyoriy)"
+            label={t("penaltyLabel")}
             type="number"
             placeholder="0"
             error={errors.penaltyAmount?.message}
@@ -119,21 +121,21 @@ export function GeneratePayrollModal({ open, onClose, slug }: { open: boolean; o
           />
         </div>
         <Input
-          label="Soliq/ushlab qolish (ixtiyoriy)"
+          label={t("deductionLabel")}
           type="number"
           placeholder="0"
-          hint="Soliq, sug'urta, avans kabi rasmiy ushlab qolish — jarimadan alohida"
+          hint={t("deductionHint")}
           error={errors.deductionAmount?.message}
           {...register("deductionAmount")}
         />
-        <Input label="Izoh (ixtiyoriy)" {...register("note")} />
+        <Input label={t("noteLabelOptional")} {...register("note")} />
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Bekor qilish
+            {t("cancel")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Hisoblash
+            {t("calculate")}
           </Button>
         </div>
       </form>

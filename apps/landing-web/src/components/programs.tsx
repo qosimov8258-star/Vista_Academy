@@ -2,45 +2,49 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import { alternatingDirection, staggerDelay, useReveal } from "./reveal";
 
-const GROUPS = [
-  {
-    image: "/icon/baby1.jpg",
-    title: "Chaqaloqlar",
-    age: "2 oydan 1 yoshgacha",
-    color: "#ef8a63",
-    arch: { topLeft: "99px", topRight: "999px", bottomLeft: "20px", bottomRight: "20px" },
-  },
-  {
-    image: "/icon/kichkintorlar.jpeg",
-    title: "Kichkintoylar",
-    age: "1 dan 3 yoshgacha",
-    color: "#aead45",
-    arch: { topLeft: "999px", topRight: "999px", bottomLeft: "20px", bottomRight: "20px" },
-  },
-  {
-    image: "/icon/orta-guruh.jpeg",
-    title: "O'rta guruh",
-    age: "3 dan 4 yoshgacha",
-    color: "#cf5599",
-    arch: { topLeft: "999px", topRight: "99px", bottomLeft: "20px", bottomRight: "20px" },
-  },
-  {
-    image: "/icon/katta-guruh.jpeg",
-    title: "Katta guruh",
-    age: "4 dan 6 yoshgacha",
-    color: "var(--color-green)",
-    arch: { topLeft: "99px", topRight: "999px", bottomLeft: "20px", bottomRight: "20px" },
-  },
-  {
-    image: "/icon/maktab.jpg",
-    title: "Maktab yoshidagilar",
-    age: "6 dan 12 yoshgacha",
-    color: "var(--color-blue)",
-    arch: { topLeft: "999px", topRight: "99px", bottomLeft: "20px", bottomRight: "20px" },
-  },
-];
+function useGroups() {
+  const t = useTranslations("programs.groups");
+  return [
+    {
+      image: "/icon/baby1.jpg",
+      title: t("babies.title"),
+      age: t("babies.age"),
+      color: "#ef8a63",
+      arch: { topLeft: "99px", topRight: "999px", bottomLeft: "20px", bottomRight: "20px" },
+    },
+    {
+      image: "/icon/kichkintorlar.jpeg",
+      title: t("toddlers.title"),
+      age: t("toddlers.age"),
+      color: "#aead45",
+      arch: { topLeft: "999px", topRight: "999px", bottomLeft: "20px", bottomRight: "20px" },
+    },
+    {
+      image: "/icon/orta-guruh.jpeg",
+      title: t("middle.title"),
+      age: t("middle.age"),
+      color: "#cf5599",
+      arch: { topLeft: "999px", topRight: "99px", bottomLeft: "20px", bottomRight: "20px" },
+    },
+    {
+      image: "/icon/katta-guruh.jpeg",
+      title: t("senior.title"),
+      age: t("senior.age"),
+      color: "var(--color-green)",
+      arch: { topLeft: "99px", topRight: "999px", bottomLeft: "20px", bottomRight: "20px" },
+    },
+    {
+      image: "/icon/maktab.jpg",
+      title: t("schoolAge.title"),
+      age: t("schoolAge.age"),
+      color: "var(--color-blue)",
+      arch: { topLeft: "999px", topRight: "99px", bottomLeft: "20px", bottomRight: "20px" },
+    },
+  ];
+}
 
 function ArrowUpRightIcon({ className }: { className?: string }) {
   return (
@@ -71,7 +75,7 @@ function GroupCard({
   variant = "grid",
   index = 0,
 }: {
-  group: (typeof GROUPS)[number];
+  group: ReturnType<typeof useGroups>[number];
   variant?: "grid" | "carousel";
   index?: number;
 }) {
@@ -140,6 +144,9 @@ function GroupCard({
 }
 
 export function Programs() {
+  const t = useTranslations("programs");
+  const tHero = useTranslations("hero");
+  const GROUPS = useGroups();
   const [firstRow, secondRow] = [GROUPS.slice(0, 3), GROUPS.slice(3)];
   const [activeIndex, setActiveIndex] = useState(0);
   const activeGroup = GROUPS[activeIndex];
@@ -151,10 +158,10 @@ export function Programs() {
     <section id="classrooms" className="py-20 sm:py-28">
       <div className="mx-auto max-w-[720px] px-4 text-center">
         <p className="text-[13px] font-bold uppercase tracking-[0.08em]" style={{ color: "var(--color-green)" }}>
-          Guruhlarimiz
+          {t("eyebrow")}
         </p>
         <h2 className="font-heading mt-3 text-[22px] font-bold leading-tight tracking-tight text-[var(--color-text)] sm:text-[30px] lg:text-[36px]">
-          Har bir yosh bosqichi uchun mos guruh
+          {t("heading")}
         </h2>
       </div>
 
@@ -165,7 +172,7 @@ export function Programs() {
           <button
             type="button"
             onClick={goPrev}
-            aria-label="Oldingi guruh"
+            aria-label={t("prevAria")}
             className="flex h-9 w-9 items-center justify-center rounded-full text-white"
             style={{ background: "var(--color-green)" }}
           >
@@ -177,7 +184,7 @@ export function Programs() {
           <button
             type="button"
             onClick={goNext}
-            aria-label="Keyingi guruh"
+            aria-label={t("nextAria")}
             className="flex h-9 w-9 items-center justify-center rounded-full text-white"
             style={{ background: "var(--color-green)" }}
           >
@@ -201,15 +208,13 @@ export function Programs() {
       </div>
 
       <div className="mx-auto mt-12 max-w-[560px] px-4 text-center">
-        <p className="text-[16px] italic leading-relaxed text-[var(--color-text-muted)]">
-          Shunchaki bog&apos;cha emas — bolalar o&apos;sadigan, o&apos;rganadigan va kashf qiladigan makon.
-        </p>
+        <p className="text-[16px] italic leading-relaxed text-[var(--color-text-muted)]">{t("closingQuote")}</p>
         <a
           href="#apply"
           className="mt-6 inline-flex items-center gap-1.5 text-[15px] font-bold"
           style={{ color: "var(--color-yellow-dark)" }}
         >
-          Batafsil ma&apos;lumot
+          {tHero("ctaSecondary")}
           <ArrowUpRightIcon className="h-4 w-4" />
         </a>
       </div>

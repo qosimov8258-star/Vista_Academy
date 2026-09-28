@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import { assetUrl } from "@/lib/api";
 import type { LandingTeacher } from "@/lib/types";
 import { alternatingDirection, staggerDelay, useReveal } from "./reveal";
@@ -67,6 +68,7 @@ function TeacherTile({ teacher, index = 0, onSelect }: { teacher: LandingTeacher
 }
 
 export function TeacherGrid({ teachers }: { teachers: LandingTeacher[] }) {
+  const t = useTranslations("teacherGrid");
   const [selected, setSelected] = useState<LandingTeacher | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const activeTeacher = teachers[activeIndex];
@@ -98,7 +100,7 @@ export function TeacherGrid({ teachers }: { teachers: LandingTeacher[] }) {
           <button
             type="button"
             onClick={goPrev}
-            aria-label="Oldingi o'qituvchi"
+            aria-label={t("prevAria")}
             className="flex h-9 w-9 items-center justify-center rounded-full text-white"
             style={{ background: "var(--color-green)" }}
           >
@@ -110,7 +112,7 @@ export function TeacherGrid({ teachers }: { teachers: LandingTeacher[] }) {
           <button
             type="button"
             onClick={goNext}
-            aria-label="Keyingi o'qituvchi"
+            aria-label={t("nextAria")}
             className="flex h-9 w-9 items-center justify-center rounded-full text-white"
             style={{ background: "var(--color-green)" }}
           >
@@ -132,6 +134,7 @@ export function TeacherGrid({ teachers }: { teachers: LandingTeacher[] }) {
 }
 
 function TeacherModal({ teacher, onClose }: { teacher: LandingTeacher; onClose: () => void }) {
+  const t = useTranslations("teacherGrid");
   return (
     <div
       role="presentation"
@@ -148,7 +151,7 @@ function TeacherModal({ teacher, onClose }: { teacher: LandingTeacher; onClose: 
         <button
           type="button"
           onClick={onClose}
-          aria-label="Yopish"
+          aria-label={t("closeAria")}
           className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-[var(--color-bg)]/90 text-[var(--color-text)] shadow-[var(--shadow-card)] transition-colors hover:bg-[var(--color-tint-cream)]"
         >
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="h-4 w-4">
@@ -178,7 +181,7 @@ function TeacherModal({ teacher, onClose }: { teacher: LandingTeacher; onClose: 
             {teacher.experience && (
               <div className="mt-4 border-t border-[var(--color-border)] pt-4">
                 <p className="text-[12px] font-semibold uppercase tracking-[0.04em] text-[var(--color-text-muted)]">
-                  Tajriba va ma&apos;lumot
+                  {t("experienceHeading")}
                 </p>
                 <p className="mt-2 whitespace-pre-line text-[14.5px] leading-relaxed text-[var(--color-text)]">{teacher.experience}</p>
               </div>

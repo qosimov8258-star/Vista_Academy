@@ -19,6 +19,12 @@ const schema = z.object({
   name: z.string().min(2, "Nomi kamida 2 belgi"),
   contactName: z.string().optional(),
   contactPhone: z.string().optional(),
+  lendingUrl: z
+    .string()
+    .optional()
+    .refine((value) => !value || z.string().url().safeParse(value).success, {
+      message: "To'g'ri havola kiriting (masalan https://... bilan boshlansin)",
+    }),
   status: z.enum(["ACTIVE", "SUSPENDED"]),
   planId: z.string().optional(),
   subscriptionStatus: z.enum(["ACTIVE", "GRACE_PERIOD", "SUSPENDED", "CANCELLED"]),
@@ -167,6 +173,7 @@ export function EditOrganizationModal({
       name: organization.name,
       contactName: organization.contactName ?? "",
       contactPhone: organization.contactPhone ?? "",
+      lendingUrl: organization.lendingUrl ?? "",
       status: organization.status,
       planId: subscription?.planId ?? "",
       subscriptionStatus: subscription?.status ?? "ACTIVE",
@@ -181,6 +188,7 @@ export function EditOrganizationModal({
         name: values.name.trim(),
         contactName: emptyToNull(values.contactName),
         contactPhone: emptyToNull(values.contactPhone),
+        lendingUrl: emptyToNull(values.lendingUrl),
         status: values.status,
       });
 
@@ -266,6 +274,13 @@ export function EditOrganizationModal({
           <Input label="Aloqa shaxsi" placeholder="Aziza Karimova" {...register("contactName")} />
           <Input label="Telefon" placeholder="+998901234567" {...register("contactPhone")} />
         </div>
+        <Input
+          label="Lending sahifa manzili"
+          placeholder="https://quyoshcha-bogcha.uz"
+          hint="Bo'sh qoldirilsa, ommaviy sahifa o'rniga 'Tez orada' ko'rsatiladi"
+          error={errors.lendingUrl?.message}
+          {...register("lendingUrl")}
+        />
         <div className="space-y-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] p-4">
           <p className="text-[13px] font-medium text-[var(--color-text)]">Kirish ma&apos;lumotlari</p>
           {!adminAccount ? (

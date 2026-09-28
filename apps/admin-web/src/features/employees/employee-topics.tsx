@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import clsx from "clsx";
 import { api, ApiError } from "@/lib/api";
 import type { EmployeeTopic } from "@/lib/types";
@@ -31,6 +32,7 @@ export function EmployeeTopics({
   managedByAdmin: boolean;
   onManagedByAdminChange: (value: boolean) => void;
 }) {
+  const t = useTranslations("employees");
   const queryClient = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [value, setValue] = useState("");
@@ -57,7 +59,7 @@ export function EmployeeTopics({
       setError(null);
     },
     onError: (err) => {
-      setError(err instanceof ApiError ? err.message : "Mavzuni qo'shib bo'lmadi");
+      setError(err instanceof ApiError ? err.message : t("cannotAddTopic"));
     },
   });
 
@@ -85,16 +87,14 @@ export function EmployeeTopics({
     <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] p-4">
       <label className="flex cursor-pointer items-center justify-between gap-3">
         <span>
-          <span className="block text-sm font-medium text-[var(--color-text)]">Mavzu qo&apos;shasizmi?</span>
-          <span className="block text-xs text-[var(--color-text-muted)]">
-            O&apos;tilgan yoki o&apos;tiladigan dars mavzularini shu yerga qo&apos;shib boring.
-          </span>
+          <span className="block text-sm font-medium text-[var(--color-text)]">{t("addTopicsQuestion")}</span>
+          <span className="block text-xs text-[var(--color-text-muted)]">{t("addTopicsHint")}</span>
         </span>
         <button
           type="button"
           role="switch"
           aria-checked={isOn}
-          aria-label="Mavzu qo'shasizmi?"
+          aria-label={t("addTopicsQuestion")}
           onClick={() => onManagedByAdminChange(!isOn)}
           className={clsx(
             "relative h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-[var(--dur-fast)]",
@@ -126,7 +126,7 @@ export function EmployeeTopics({
                   submit(value);
                 }
               }}
-              placeholder="Mavzu nomini kiriting va Enter bosing..."
+              placeholder={t("topicNamePlaceholder")}
               disabled={addMutation.isPending}
               className="w-full rounded-2xl border border-[var(--color-border)] bg-white px-3.5 py-2.5 text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[var(--color-primary)] disabled:opacity-60"
             />
@@ -148,9 +148,9 @@ export function EmployeeTopics({
           </div>
 
           {topicsQuery.isLoading ? (
-            <p className="text-xs text-[var(--color-text-muted)]">Yuklanmoqda...</p>
+            <p className="text-xs text-[var(--color-text-muted)]">{t("loading")}</p>
           ) : topics.length === 0 ? (
-            <p className="text-xs text-[var(--color-text-muted)]">Hali mavzu qo&apos;shilmagan</p>
+            <p className="text-xs text-[var(--color-text-muted)]">{t("noTopicsYet")}</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {topics.map((topic) => {
@@ -170,7 +170,7 @@ export function EmployeeTopics({
                     {selected && (
                       <button
                         type="button"
-                        aria-label="Mavzuni o'chirish"
+                        aria-label={t("deleteTopicAria")}
                         disabled={removeMutation.isPending}
                         onClick={(e) => {
                           e.stopPropagation();

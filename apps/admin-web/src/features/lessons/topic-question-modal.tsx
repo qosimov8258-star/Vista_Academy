@@ -4,21 +4,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { LessonTopic, TopicQuestion } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Input, Select, Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-
-const schema = z.object({
-  topicId: z.string().optional(),
-  question: z.string().min(2, "Savol matnini kiriting"),
-  options: z.string().optional(),
-  answer: z.string().optional(),
-});
-
-type FormValues = z.infer<typeof schema>;
 
 /** "a\nb\nc" -> ["a","b","c"], bo'sh qatorlar tashlab ketiladi. */
 function parseOptions(value: string | undefined): string[] {
@@ -47,10 +39,20 @@ export function TopicQuestionModal({
   /** Tahrirlash uchun — bo'lmasa yangi savol yaratiladi. */
   question?: TopicQuestion | null;
 }) {
+  const t = useTranslations("lessons");
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
   const isEdit = !!question;
   const needsTopicPicker = !isEdit && !topicId;
+
+  const schema = z.object({
+    topicId: z.string().optional(),
+    question: z.string().min(2, t("validation.questionRequired")),
+    options: z.string().optional(),
+    answer: z.string().optional(),
+  });
+
+  type FormValues = z.infer<typeof schema>;
 
   const {
     register,
@@ -87,7 +89,7 @@ export function TopicQuestionModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : t("unexpectedError"));
     },
   });
 
@@ -99,12 +101,12 @@ export function TopicQuestionModal({
   const noTopicsAvailable = needsTopicPicker && (!topics || topics.length === 0);
 
   return (
-    <Modal open={open} onClose={handleClose} title={isEdit ? "Savolni tahrirlash" : "Yangi savol"}>
+    <Modal open={open} onClose={handleClose} title={isEdit ? t("editQuestionTitle") : t("newQuestionTitle")}>
       <form
         className="space-y-4"
         onSubmit={handleSubmit((values) => {
           if (needsTopicPicker && !values.topicId) {
-            setServerError("Mavzuni tanlang");
+            setServerError(t("validation.selectTopic"));
             return;
           }
           setServerError(null);
@@ -117,13 +119,11 @@ export function TopicQuestionModal({
           </div>
         )}
         {noTopicsAvailable ? (
-          <p className="text-sm text-[var(--color-text-muted)]">
-            Hozircha mavzu yo&apos;q — avval mavzu qo&apos;shing, so&apos;ng savolni unga biriktiring.
-          </p>
+          <p className="text-sm text-[var(--color-text-muted)]">{t("noTopicsYetHint")}</p>
         ) : (
           <>
             {needsTopicPicker && (
-              <Select label="Mavzu" {...register("topicId")}>
+              <Select label={t("topicLabel")} {...register("topicId")}>
                 {topics!.map((topic) => (
                   <option key={topic.id} value={topic.id}>
                     {topic.title}
@@ -132,30 +132,30 @@ export function TopicQuestionModal({
               </Select>
             )}
             <Textarea
-              label="Savol matni"
+              label={t("questionTextLabel")}
               rows={2}
-              placeholder="5 + 3 nechiga teng?"
+              placeholder={t("questionTextPlaceholder")}
               error={errors.question?.message}
               {...register("question")}
             />
             <Textarea
-              label="Javob variantlari (ixtiyoriy)"
+              label={t("answerOptionsLabelOptional")}
               rows={4}
-              placeholder={"Har bir variant alohida qatorda:\n6\n7\n8\n9"}
-              hint="Har qatorga bitta variant"
+              placeholder={"6\n7\n8\n9"}
+              hint={t("answerOptionsHint")}
               {...register("options")}
             />
-            <Input label="To'g'ri javob (ixtiyoriy)" placeholder="8" {...register("answer")} />
+            <Input label={t("correctAnswerLabelOptional")} placeholder="8" {...register("answer")} />
           </>
         )}
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={handleClose}>
-            {noTopicsAvailable ? "Yopish" : "Bekor qilish"}
+            {noTopicsAvailable ? t("close") : t("cancel")}
           </Button>
           {!noTopicsAvailable && (
             <Button type="submit" loading={isSubmitting || mutation.isPending}>
-              {isEdit ? "Saqlash" : "Qo'shish"}
+              {isEdit ? t("save") : t("add")}
             </Button>
           )}
         </div>

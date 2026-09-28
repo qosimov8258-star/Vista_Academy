@@ -4,6 +4,7 @@ import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { Child, Group } from "@/lib/types";
@@ -12,16 +13,14 @@ import { Input, Select } from "@/components/ui/input";
 import { DateOfBirthInput } from "@/components/ui/date-of-birth-input";
 import { Button } from "@/components/ui/button";
 
-const schema = z.object({
-  groupId: z.string().optional(),
-  lastName: z.string().min(2, "Familiya kamida 2 belgi"),
-  firstName: z.string().min(2, "Ism kamida 2 belgi"),
-  gender: z.enum(["MALE", "FEMALE"], { message: "Jinsini tanlang" }),
-  birthDate: z.string().optional(),
-  status: z.enum(["ACTIVE", "INACTIVE"]),
-});
-
-type FormValues = z.infer<typeof schema>;
+type FormValues = {
+  groupId?: string;
+  lastName: string;
+  firstName: string;
+  gender: "MALE" | "FEMALE";
+  birthDate?: string;
+  status: "ACTIVE" | "INACTIVE";
+};
 
 export function EditChildModal({
   open,
@@ -34,8 +33,18 @@ export function EditChildModal({
   slug: string;
   child: Child;
 }) {
+  const t = useTranslations("children");
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
+
+  const schema = z.object({
+    groupId: z.string().optional(),
+    lastName: z.string().min(2, t("validation.lastNameMin")),
+    firstName: z.string().min(2, t("validation.firstNameMin")),
+    gender: z.enum(["MALE", "FEMALE"], { message: t("validation.genderRequired") }),
+    birthDate: z.string().optional(),
+    status: z.enum(["ACTIVE", "INACTIVE"]),
+  });
 
   const { data: groups } = useQuery({
     queryKey: ["groups", slug],
@@ -79,12 +88,12 @@ export function EditChildModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : t("unexpectedError"));
     },
   });
 
   return (
-    <Modal open={open} onClose={onClose} title="Bolani tahrirlash">
+    <Modal open={open} onClose={onClose} title={t("editTitle")}>
       <form
         className="space-y-4"
         onSubmit={handleSubmit((values) => {
@@ -99,17 +108,17 @@ export function EditChildModal({
         )}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input label="Familiya" error={errors.lastName?.message} {...register("lastName")} />
-          <Input label="Ism" error={errors.firstName?.message} {...register("firstName")} />
+          <Input label={t("lastNameLabel")} error={errors.lastName?.message} {...register("lastName")} />
+          <Input label={t("firstNameLabel")} error={errors.firstName?.message} {...register("firstName")} />
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Select label="Jinsi" error={errors.gender?.message} {...register("gender")}>
-            <option value="MALE">O&apos;g&apos;il bola</option>
-            <option value="FEMALE">Qiz bola</option>
+          <Select label={t("genderLabel")} error={errors.gender?.message} {...register("gender")}>
+            <option value="MALE">{t("gender.male")}</option>
+            <option value="FEMALE">{t("gender.female")}</option>
           </Select>
-          <Select label="Guruh" {...register("groupId")}>
-            <option value="">Guruhsiz</option>
+          <Select label={t("groupLabel")} {...register("groupId")}>
+            <option value="">{t("noGroup")}</option>
             {/* Bolaning joriy guruhi nofaol bo'lsa ham ro'yxatda ko'rinib
                 tursin — aks holda tanlov shu guruh emasdek ko'rinardi.
                 Boshqa nofaol guruhga o'tkazib bo'lmaydi. */}
@@ -129,7 +138,7 @@ export function EditChildModal({
             name="birthDate"
             render={({ field }) => (
               <DateOfBirthInput
-                label="Tug'ilgan sana"
+                label={t("birthDateLabel")}
                 value={field.value ?? ""}
                 onChange={field.onChange}
                 error={errors.birthDate?.message}
@@ -137,23 +146,23 @@ export function EditChildModal({
             )}
           />
           <Select
-            label="Holati"
+            label={t("statusLabel")}
             error={errors.status?.message}
             disabled={child.status === "QUARANTINED"}
-            hint={child.status === "QUARANTINED" ? "Karantindagi bolaning holatini avval karantinni yopib o'zgartiring" : undefined}
+            hint={child.status === "QUARANTINED" ? t("quarantineHint") : undefined}
             {...register("status")}
           >
-            <option value="ACTIVE">Faol</option>
-            <option value="INACTIVE">Nofaol</option>
+            <option value="ACTIVE">{t("status.active")}</option>
+            <option value="INACTIVE">{t("status.inactive")}</option>
           </Select>
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Bekor qilish
+            {t("cancel")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Saqlash
+            {t("save")}
           </Button>
         </div>
       </form>

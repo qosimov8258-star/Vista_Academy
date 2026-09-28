@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 function ArrowLeftIcon({ className }: { className?: string }) {
   return (
@@ -17,6 +18,7 @@ function ArrowLeftIcon({ className }: { className?: string }) {
  */
 export function BackButton() {
   const router = useRouter();
+  const t = useTranslations();
 
   return (
     <div
@@ -29,7 +31,7 @@ export function BackButton() {
         className="flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-white px-6 py-3.5 text-[14px] font-bold text-[var(--color-text)] shadow-[var(--shadow-raised)] transition-transform duration-150 hover:scale-[1.03] active:scale-[0.98]"
       >
         <ArrowLeftIcon className="h-4 w-4" />
-        Orqaga
+        {t("backButton")}
       </button>
     </div>
   );

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import { getTranslations } from "next-intl/server";
 import { PageShell } from "@/components/page-shell";
 import { Adaptation } from "@/components/adaptation";
 import { fetchLanding } from "@/lib/api";
@@ -7,16 +8,10 @@ import type { LandingScheduleItem, LandingScheduleType } from "@/lib/types";
 import { Reveal } from "@/components/reveal";
 import { alternatingDirection, staggerDelay } from "@/components/reveal-utils";
 
-export const metadata: Metadata = {
-  title: "Moslashuvchan jadval — Vista Academy",
-};
-
-const TYPE_LABELS: Record<LandingScheduleType, string> = {
-  LESSON: "Dars",
-  SLEEP: "Uyqu",
-  MEAL: "Ovqat",
-  OTHER: "Boshqa",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("schedulePage");
+  return { title: t("metaTitle") };
+}
 
 const TYPE_COLORS: Record<LandingScheduleType, string> = {
   LESSON: "var(--color-blue)",
@@ -27,18 +22,21 @@ const TYPE_COLORS: Record<LandingScheduleType, string> = {
 
 export default async function SchedulePage() {
   const items = await fetchLanding<LandingScheduleItem[]>("/schedule", []);
+  const t = await getTranslations("schedulePage");
+  const tCommon = await getTranslations("common");
+  const tGroups = await getTranslations("groups");
 
   return (
     <PageShell
-      eyebrow="Guruhlarimiz"
-      title="Moslashuvchan jadval"
-      description="Hafta davomida bolalar kuni qanday tashkil etilgani — necha dars, qachon uxlashadi va ovqatlanishadi."
-      heroImage={{ src: "/moslashish/moslashish5.jpeg", alt: "Bolalar guruh bo'lib mashg'ulot qilmoqda", position: "50% 0%" }}
+      eyebrow={tCommon("pagesEyebrow")}
+      title={tGroups("schedule")}
+      description={t("description")}
+      heroImage={{ src: "/moslashish/moslashish5.jpeg", alt: t("heroImageAlt"), position: "50% 0%" }}
       afterContent={
         <Adaptation
-          introImageSrc="/rasm/moslashuvchan-bolalar.png"
-          introImageAlt="Bolalar bog'cha guruhida birga o'ynab, do'stlashib ketishmoqda"
-          introText="Har bir bola uchun bog'chadagi birinchi kunlar — yangi va hayajonli bosqich. Shuning uchun biz shoshilmaymiz: dastlab farzandingiz siz bilan birga tanishadi, so'ng qisqa vaqtga guruhda qoladi, so'ngra esa kun bo'yi tengdoshlari bilan o'ynab, o'rganib ulguradi. Tajribali tarbiyachilarimiz har bir bolaning kayfiyati va xarakteriga alohida e'tibor qaratadi — shunda ajralish qo'rquvi o'rnini ishonch va quvonch egallaydi. Natijada farzandingiz bog'chaga yig'lab emas, kulib boradi va u yerda umrbod eslab qoladigan do'stlar topadi."
+          introImageSrc="/moslashish/rasm1.jpeg"
+          introImageAlt={t("adaptationOverride.imageAlt")}
+          introText={t("adaptationOverride.text")}
         />
       }
     >
@@ -46,7 +44,7 @@ export default async function SchedulePage() {
         <Reveal direction="up" className="mx-auto max-w-[720px] overflow-hidden rounded-[var(--radius-xl)]">
           <Image
             src="/rasm/moslashish-text.jpeg"
-            alt="Kun tartibi tez orada shu yerda e'lon qilinadi"
+            alt={t("emptyImageAlt")}
             width={1408}
             height={768}
             sizes="(min-width: 768px) 720px, 100vw"
@@ -76,7 +74,7 @@ export default async function SchedulePage() {
                 className="shrink-0 rounded-full px-2.5 py-1 text-[12px] font-bold"
                 style={{ background: "var(--color-tint)", color: TYPE_COLORS[item.type] }}
               >
-                {TYPE_LABELS[item.type]}
+                {t(`types.${item.type}`)}
               </span>
             </Reveal>
           ))}

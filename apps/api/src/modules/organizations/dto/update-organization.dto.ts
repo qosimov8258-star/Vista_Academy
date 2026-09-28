@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
-import { IsEmail, IsEnum, IsOptional, IsString, MinLength } from "class-validator";
+import { IsEmail, IsEnum, IsOptional, IsString, IsUrl, MinLength } from "class-validator";
 import { OrganizationStatus } from "@prisma/client";
 
 export class UpdateOrganizationDto {
@@ -23,6 +23,11 @@ export class UpdateOrganizationDto {
   @IsOptional()
   @IsString()
   contactPhone?: string | null;
+
+  @ApiPropertyOptional({ nullable: true, description: "null yuborilsa tozalanadi" })
+  @IsOptional()
+  @IsUrl({}, { message: "To'g'ri havola kiriting (masalan https://... bilan boshlansin)" })
+  lendingUrl?: string | null;
 
   @ApiPropertyOptional({ enum: OrganizationStatus })
   @IsOptional()

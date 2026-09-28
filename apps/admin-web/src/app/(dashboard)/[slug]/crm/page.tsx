@@ -2,6 +2,7 @@
 
 import { use, useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import { api, getPaginated } from "@/lib/api";
@@ -16,7 +17,7 @@ import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { formatDate } from "@/lib/format";
 import { downloadCsv } from "@/lib/download";
 import { CreateLeadModal } from "@/features/crm/create-lead-modal";
-import { AGE_GROUP_LABEL, SOURCE_LABEL, SOURCE_ORDER, STAGE_LABEL, STAGE_ORDER, STAGE_TONE } from "@/features/crm/labels";
+import { ageGroupLabel, sourceLabel, SOURCE_ORDER, stageLabel, STAGE_ORDER, STAGE_TONE } from "@/features/crm/labels";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { canWriteOperational } from "@/lib/permissions";
 
@@ -24,6 +25,7 @@ type StageFilter = "ALL" | LeadStage;
 
 export default function CrmPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
+  const t = useTranslations("crm");
   const [page, setPage] = useState(1);
   const [stageFilter, setStageFilter] = useState<StageFilter>("ALL");
   const [createOpen, setCreateOpen] = useState(false);
@@ -39,7 +41,7 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
     try {
       await downloadCsv(`/app/exports/leads${forcedBranchId ? `?branchId=${forcedBranchId}` : ""}`, "arizalar.csv");
     } catch {
-      setExportError("Eksport qilib bo'lmadi — qayta urinib ko'ring");
+      setExportError(t("exportFailed"));
     } finally {
       setExporting(false);
     }
@@ -67,15 +69,15 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
-            Arizalar (CRM)
+            {t("pageTitle")}
           </h1>
-          <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">Yangi mijozlar bilan ishlash bosqichlari</p>
+          <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">{t("pageSubtitle")}</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" loading={exporting} onClick={handleExport}>
-            Eksport (CSV)
+            {t("exportCsv")}
           </Button>
-          {canWrite && <Button onClick={() => setCreateOpen(true)}>+ Yangi ariza</Button>}
+          {canWrite && <Button onClick={() => setCreateOpen(true)}>+ {t("newLeadTitle")}</Button>}
         </div>
       </div>
 
@@ -89,14 +91,14 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <Card className="px-4 py-3.5">
-          <p className="text-[12px] leading-tight text-[var(--color-text-muted)]">Faol arizalar</p>
+          <p className="text-[12px] leading-tight text-[var(--color-text-muted)]">{t("activeApplications")}</p>
           <p className="mt-1.5 text-[22px] font-semibold leading-none tabular-nums text-[var(--color-text)]">
             {totalActive ?? "—"}
           </p>
         </Card>
         {STAGE_ORDER.map((stage) => (
           <Card key={stage} className="px-4 py-3.5">
-            <p className="text-[12px] leading-tight text-[var(--color-text-muted)]">{STAGE_LABEL[stage]}</p>
+            <p className="text-[12px] leading-tight text-[var(--color-text-muted)]">{stageLabel(t, stage)}</p>
             <p className="mt-1.5 text-[22px] font-semibold leading-none tabular-nums text-[var(--color-text)]">
               {byStage ? byStage[stage] : "—"}
             </p>
@@ -107,7 +109,7 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {SOURCE_ORDER.map((source) => (
           <Card key={source} className="px-4 py-3.5">
-            <p className="text-[12px] leading-tight text-[var(--color-text-muted)]">{SOURCE_LABEL[source]}</p>
+            <p className="text-[12px] leading-tight text-[var(--color-text-muted)]">{sourceLabel(t, source)}</p>
             <p className="mt-1.5 text-[18px] font-semibold leading-none tabular-nums text-[var(--color-text)]">
               {statsQuery.data ? statsQuery.data.bySource[source] : "—"}
             </p>
@@ -128,7 +130,7 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
               : "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
           )}
         >
-          Barchasi
+          {t("allFilter")}
         </button>
         {STAGE_ORDER.map((stage) => (
           <button
@@ -144,7 +146,7 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
                 : "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
             )}
           >
-            {STAGE_LABEL[stage]}
+            {stageLabel(t, stage)}
           </button>
         ))}
       </div>
@@ -154,20 +156,20 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
       ) : leadsQuery.isError ? (
         <ErrorState message={(leadsQuery.error as Error).message} />
       ) : !leadsQuery.data || leadsQuery.data.data.length === 0 ? (
-        <EmptyState title="Ariza topilmadi" description={canWrite ? "Yangi ariza qo'shish uchun tugmani bosing" : undefined} />
+        <EmptyState title={t("noApplicationsFound")} description={canWrite ? t("addApplicationHint") : undefined} />
       ) : (
         <Card className="overflow-hidden">
           <DataTable>
             <THead>
               <tr>
-                <Th>Bola</Th>
-                <Th>Ota-ona</Th>
-                <Th>Yosh guruhi</Th>
-                <Th>Manba</Th>
-                <Th>Bosqich</Th>
-                <Th>Mas&apos;ul</Th>
-                <Th>Eslatma</Th>
-                <Th>Sana</Th>
+                <Th>{t("table.child")}</Th>
+                <Th>{t("table.parent")}</Th>
+                <Th>{t("table.ageGroup")}</Th>
+                <Th>{t("table.source")}</Th>
+                <Th>{t("table.stage")}</Th>
+                <Th>{t("table.owner")}</Th>
+                <Th>{t("table.followUp")}</Th>
+                <Th>{t("table.date")}</Th>
               </tr>
             </THead>
             <TBody>
@@ -186,11 +188,11 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
                     </span>
                   </Td>
                   <Td className="text-[var(--color-text-muted)]">
-                    {lead.ageGroup ? AGE_GROUP_LABEL[lead.ageGroup] : "—"}
+                    {lead.ageGroup ? ageGroupLabel(t, lead.ageGroup) : "—"}
                   </Td>
-                  <Td className="text-[var(--color-text-muted)]">{SOURCE_LABEL[lead.source]}</Td>
+                  <Td className="text-[var(--color-text-muted)]">{sourceLabel(t, lead.source)}</Td>
                   <Td>
-                    <Badge tone={STAGE_TONE[lead.stage]}>{STAGE_LABEL[lead.stage]}</Badge>
+                    <Badge tone={STAGE_TONE[lead.stage]}>{stageLabel(t, lead.stage)}</Badge>
                   </Td>
                   <Td className="text-[var(--color-text-muted)]">{lead.assignedTo?.fullName ?? "—"}</Td>
                   <Td className="tabular-nums">
@@ -216,11 +218,11 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
 
           <div className="hairline flex items-center justify-between gap-3 border-t border-[var(--color-separator)] px-5 py-3.5 text-[12.5px] text-[var(--color-text-muted)] sm:px-6">
             <span className="tabular-nums">
-              Jami {leadsQuery.data.meta.total} ta, {leadsQuery.data.meta.page}-sahifa
+              {t("totalCountPage", { total: leadsQuery.data.meta.total, page: leadsQuery.data.meta.page })}
             </span>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-                Oldingi
+                {t("previous")}
               </Button>
               <Button
                 variant="outline"
@@ -228,7 +230,7 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
                 disabled={page * leadsQuery.data.meta.limit >= leadsQuery.data.meta.total}
                 onClick={() => setPage((p) => p + 1)}
               >
-                Keyingi
+                {t("next")}
               </Button>
             </div>
           </div>

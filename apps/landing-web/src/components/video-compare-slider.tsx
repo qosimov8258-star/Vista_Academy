@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 
 /**
  * Ikkita videoni bir freymda ko'rsatadi: video1 old planda, video2 orqada.
@@ -17,6 +18,7 @@ export function VideoCompareSlider({
   videoBack: string;
   className?: string;
 }) {
+  const t = useTranslations("videoCompare");
   const [reveal, setReveal] = useState(0);
   const [transitioning, setTransitioning] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -113,7 +115,7 @@ export function VideoCompareSlider({
             toggle();
           }}
           onPointerDown={(e) => e.stopPropagation()}
-          aria-label="Birinchi video"
+          aria-label={t("firstAria")}
           className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full shadow-[var(--shadow-card)] backdrop-blur-sm"
           style={{ background: "rgba(255,255,255,0.28)" }}
         >
@@ -128,7 +130,7 @@ export function VideoCompareSlider({
             toggle();
           }}
           onPointerDown={(e) => e.stopPropagation()}
-          aria-label="Ikkinchi video"
+          aria-label={t("secondAria")}
           className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full shadow-[var(--shadow-card)] backdrop-blur-sm"
           style={{ background: "rgba(255,255,255,0.28)" }}
         >

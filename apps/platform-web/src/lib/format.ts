@@ -1,9 +1,3 @@
-const TENANT_BASE_URL = (process.env.NEXT_PUBLIC_TENANT_BASE_URL ?? "https://bogcha.uz").replace(/\/+$/, "");
-
-export function bogchaPublicUrl(slug: string): string {
-  return `${TENANT_BASE_URL}/${slug}`;
-}
-
 export function formatMoney(value: string | number, currency = "UZS"): string {
   const num = typeof value === "string" ? Number(value) : value;
   return new Intl.NumberFormat("uz-UZ", { maximumFractionDigits: 0 }).format(num) + " " + currency;

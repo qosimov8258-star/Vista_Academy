@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { Product } from "@/lib/types";
@@ -15,16 +16,6 @@ import { PlusIcon, CloseIcon } from "@/components/ui/icons";
 import { prepareProductPhoto } from "@/lib/product-photo";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
-
-const schema = z.object({
-  name: z.string().min(2, "Nomi kamida 2 belgi"),
-  description: z.string().max(500, "Izoh 500 belgidan oshmasin").optional(),
-  color: z.string().optional(),
-  priceCoins: z.coerce.number({ invalid_type_error: "Coin miqdorini kiriting" }).int().min(0, "0 dan kichik bo'lmasin"),
-  quantity: z.coerce.number({ invalid_type_error: "Sonini kiriting" }).int().min(0, "Soni 0 dan kichik bo'lmasin"),
-});
-
-type FormValues = z.infer<typeof schema>;
 
 const IMAGE_SLOTS = [1, 2, 3] as const;
 
@@ -61,6 +52,7 @@ export function EditProductModal({
   branchId: string;
   product: Product;
 }) {
+  const t = useTranslations("products");
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
   const [slots, setSlots] = useState<Record<number, SlotState>>(() => initialSlots(product));
@@ -68,6 +60,16 @@ export function EditProductModal({
   const [checkingSlot, setCheckingSlot] = useState<number | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const fileInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
+
+  const schema = z.object({
+    name: z.string().min(2, t("validation.nameMin")),
+    description: z.string().max(500, t("validation.descriptionMax")).optional(),
+    color: z.string().optional(),
+    priceCoins: z.coerce.number({ invalid_type_error: t("validation.coinRequired") }).int().min(0, t("validation.nonNegative")),
+    quantity: z.coerce.number({ invalid_type_error: t("validation.quantityRequired") }).int().min(0, t("validation.quantityNonNegative")),
+  });
+
+  type FormValues = z.infer<typeof schema>;
 
   const {
     register,
@@ -111,7 +113,7 @@ export function EditProductModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : t("unexpectedError"));
     },
   });
 
@@ -151,7 +153,7 @@ export function EditProductModal({
   };
 
   return (
-    <Modal open={open} onClose={onClose} title="Tovarni tahrirlash">
+    <Modal open={open} onClose={onClose} title={t("editProductTitle")}>
       <form
         className="space-y-4"
         onSubmit={handleSubmit((values) => {
@@ -166,7 +168,7 @@ export function EditProductModal({
         )}
 
         <div>
-          <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">Rasmlar</span>
+          <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">{t("imagesLabel")}</span>
           <div className="flex gap-3">
             {IMAGE_SLOTS.map((position) => {
               const slot = slots[position];
@@ -185,13 +187,13 @@ export function EditProductModal({
                       {/* eslint-disable-next-line @next/next/no-img-element -- tashqi/data: manzil, Next optimizatsiyasi kerak emas */}
                       <img
                         src={src}
-                        alt={`Tovar surati ${position}`}
+                        alt={t("productPhotoAlt", { position })}
                         className="h-full w-full rounded-[var(--radius-md)] object-cover ring-1 ring-inset ring-[rgba(16,24,40,0.06)]"
                       />
                       <button
                         type="button"
                         onClick={() => removeImage(position)}
-                        aria-label="Rasmni olib tashlash"
+                        aria-label={t("removePhotoAria")}
                         className="absolute -right-1.5 -top-1.5 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-[var(--color-danger)] text-white shadow-[var(--shadow-xs)]"
                       >
                         <CloseIcon className="h-3 w-3" />
@@ -227,11 +229,11 @@ export function EditProductModal({
           {imageError && <p className="mt-1.5 text-[12.5px] text-[var(--color-danger)]">{imageError}</p>}
         </div>
 
-        <Input label="Nomi" placeholder="Konstruktor to'plami" error={errors.name?.message} {...register("name")} />
+        <Input label={t("nameLabel")} placeholder={t("namePlaceholder")} error={errors.name?.message} {...register("name")} />
 
         <Textarea
-          label="Izoh"
-          placeholder="Nima uchun ekanligi haqida qisqacha (ixtiyoriy)"
+          label={t("descriptionLabel")}
+          placeholder={t("descriptionPlaceholder")}
           rows={2}
           error={errors.description?.message}
           {...register("description")}
@@ -239,18 +241,18 @@ export function EditProductModal({
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
-            label="Narxi (coin)"
+            label={t("priceLabel")}
             type="number"
             min={0}
             placeholder="0"
             error={errors.priceCoins?.message}
             {...register("priceCoins")}
           />
-          <Input label="Rangi" placeholder="Ixtiyoriy" error={errors.color?.message} {...register("color")} />
+          <Input label={t("colorLabel")} placeholder={t("optionalPlaceholder")} error={errors.color?.message} {...register("color")} />
         </div>
 
         <Input
-          label="Soni"
+          label={t("quantityLabel")}
           type="number"
           min={0}
           placeholder="10"
@@ -260,14 +262,14 @@ export function EditProductModal({
 
         <div className="flex items-center justify-between gap-2 pt-2">
           <Button type="button" variant="dangerSoft" onClick={() => setDeleteOpen(true)}>
-            Tovarni o&apos;chirish
+            {t("deleteProduct")}
           </Button>
           <div className="flex gap-2">
             <Button type="button" variant="outline" onClick={onClose}>
-              Bekor qilish
+              {t("cancel")}
             </Button>
             <Button type="submit" loading={isSubmitting || mutation.isPending}>
-              Saqlash
+              {t("save")}
             </Button>
           </div>
         </div>
@@ -276,14 +278,14 @@ export function EditProductModal({
       <ConfirmDialog
         open={deleteOpen}
         onClose={() => setDeleteOpen(false)}
-        title="Tovarni o'chirish"
-        confirmLabel="O'chirish"
+        title={t("deleteProductTitle")}
+        confirmLabel={t("delete")}
         tone="danger"
         loading={deleteMutation.isPending}
-        error={deleteMutation.isError ? "Kutilmagan xatolik yuz berdi" : null}
+        error={deleteMutation.isError ? t("unexpectedError") : null}
         description={
           <>
-            <b className="text-[var(--color-text)]">{product.name}</b> do&apos;kondan butunlay o&apos;chiriladi.
+            <b className="text-[var(--color-text)]">{product.name}</b> {t("deleteProductDescription")}
           </>
         }
         onConfirm={() => deleteMutation.mutate()}

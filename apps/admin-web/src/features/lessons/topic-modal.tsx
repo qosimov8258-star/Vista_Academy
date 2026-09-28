@@ -4,19 +4,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { LessonTopic } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-
-const schema = z.object({
-  title: z.string().min(2, "Sarlavha kamida 2 belgi"),
-  date: z.string().min(1, "Sanani tanlang"),
-});
-
-type FormValues = z.infer<typeof schema>;
 
 export function TopicModal({
   open,
@@ -32,9 +26,17 @@ export function TopicModal({
   /** Tahrirlash uchun — bo'lmasa yangi mavzu yaratiladi. */
   topic?: LessonTopic | null;
 }) {
+  const t = useTranslations("lessons");
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
   const isEdit = !!topic;
+
+  const schema = z.object({
+    title: z.string().min(2, t("validation.titleMin")),
+    date: z.string().min(1, t("validation.selectDate")),
+  });
+
+  type FormValues = z.infer<typeof schema>;
 
   const {
     register,
@@ -62,7 +64,7 @@ export function TopicModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : t("unexpectedError"));
     },
   });
 
@@ -72,22 +74,22 @@ export function TopicModal({
   };
 
   return (
-    <Modal open={open} onClose={handleClose} title={isEdit ? "Mavzuni tahrirlash" : "Yangi mavzu"}>
+    <Modal open={open} onClose={handleClose} title={isEdit ? t("editTopicTitle") : t("newTopicTitle")}>
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
             {serverError}
           </div>
         )}
-        <Input label="Mavzu sarlavhasi" placeholder="Sonlar va raqamlar" error={errors.title?.message} {...register("title")} />
-        <Input label="Sana" type="date" error={errors.date?.message} {...register("date")} />
+        <Input label={t("topicTitleLabel")} placeholder={t("topicTitlePlaceholder")} error={errors.title?.message} {...register("title")} />
+        <Input label={t("dateLabel")} type="date" error={errors.date?.message} {...register("date")} />
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={handleClose}>
-            Bekor qilish
+            {t("cancel")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            {isEdit ? "Saqlash" : "Yaratish"}
+            {isEdit ? t("save") : t("create")}
           </Button>
         </div>
       </form>

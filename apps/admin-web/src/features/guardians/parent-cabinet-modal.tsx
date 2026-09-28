@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import clsx from "clsx";
 import { api, ApiError } from "@/lib/api";
 import type { ChildGuardian, GuardianCabinetCredentials } from "@/lib/types";
@@ -12,13 +13,16 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { formatDateTime, formatPhone } from "@/lib/format";
 import { AlertIcon, CheckIcon, GroupIcon } from "@/components/ui/icons";
 
-const RELATION_LABEL: Record<string, string> = {
-  MOTHER: "Onasi",
-  FATHER: "Otasi",
-  GRANDPARENT: "Buvasi/buvisi",
-  GUARDIAN: "Vasiysi",
-  OTHER: "Boshqa",
-};
+function relationLabel(t: (key: string) => string, relation: string): string {
+  const map: Record<string, string> = {
+    MOTHER: t("relation.motherShort"),
+    FATHER: t("relation.fatherShort"),
+    GRANDPARENT: t("relation.grandparentShort"),
+    GUARDIAN: t("relation.guardianShort"),
+    OTHER: t("relation.other"),
+  };
+  return map[relation] ?? relation;
+}
 
 /**
  * Bitta bolaga — bitta kabinet. Ota ham, ona ham shu bitta login bilan
@@ -43,6 +47,7 @@ export function ParentCabinetModal({
   childName: string;
   links: ChildGuardian[];
 }) {
+  const t = useTranslations("guardians");
   const queryClient = useQueryClient();
   const [credentials, setCredentials] = useState<GuardianCabinetCredentials | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +72,7 @@ export function ParentCabinetModal({
       setCredentials(data);
       queryClient.invalidateQueries({ queryKey: ["child-guardians", slug, childId] });
     },
-    onError: (err) => setError(err instanceof ApiError ? err.message : "Amalni bajarib bo'lmadi"),
+    onError: (err) => setError(err instanceof ApiError ? err.message : t("actionFailed")),
   });
 
   const closeMutation = useMutation({
@@ -78,7 +83,7 @@ export function ParentCabinetModal({
       queryClient.invalidateQueries({ queryKey: ["child-guardians", slug, childId] });
       onClose();
     },
-    onError: (err) => setError(err instanceof ApiError ? err.message : "Kabinetni yopib bo'lmadi"),
+    onError: (err) => setError(err instanceof ApiError ? err.message : t("closeCabinetFailed")),
   });
 
   const handleClose = () => {
@@ -93,7 +98,7 @@ export function ParentCabinetModal({
     typeof window !== "undefined" ? `${window.location.origin}/ota-ona/${slug}` : `/ota-ona/${slug}`;
 
   return (
-    <Modal open={open} onClose={handleClose} title="Ota-ona kabineti">
+    <Modal open={open} onClose={handleClose} title={t("cabinetTitle")}>
       <div className="space-y-4">
         {error && (
           <div
@@ -105,7 +110,7 @@ export function ParentCabinetModal({
         )}
 
         <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
-          <p className="text-[13px] text-[var(--color-text-muted)]">Bola</p>
+          <p className="text-[13px] text-[var(--color-text-muted)]">{t("childLabel")}</p>
           <p className="text-[15px] font-medium text-[var(--color-text)]">{childName}</p>
         </div>
 
@@ -115,29 +120,28 @@ export function ParentCabinetModal({
             <div className="rounded-[var(--radius-md)] bg-[var(--color-success-bg)] px-4 py-3.5">
               <p className="flex items-center gap-1.5 text-[14px] font-semibold text-[var(--color-success)]">
                 <CheckIcon className="h-4 w-4" />
-                {issuedAsReset ? "Yangi parol tayyor" : "Kabinet ochildi"}
+                {issuedAsReset ? t("newPasswordReady") : t("cabinetOpened")}
               </p>
               <p className="mt-1 text-[13px] leading-relaxed text-[var(--color-success)]/85">
-                Bu parol boshqa ko&apos;rsatilmaydi — hoziroq ota-onaga yetkazing.
-                {issuedAsReset && " Eski parol shu daqiqadan ishlamaydi."}
+                {t("passwordShownOnceHint")}
+                {issuedAsReset && ` ${t("oldPasswordInvalidated")}`}
               </p>
             </div>
 
-            <Field label="Havola" value={cabinetUrl} />
-            <Field label="Login (telefon)" value={credentials.login} mono />
-            <Field label="Parol" value={credentials.password} mono />
+            <Field label={t("linkLabel")} value={cabinetUrl} />
+            <Field label={t("loginPhoneLabel")} value={credentials.login} mono />
+            <Field label={t("passwordLabel")} value={credentials.password} mono />
 
             <div className="rounded-[var(--radius-md)] bg-[var(--color-warning-bg)] px-3.5 py-3">
               <p className="flex items-start gap-2 text-[13px] leading-relaxed text-[var(--color-warning)]">
                 <AlertIcon className="mt-px h-4 w-4 shrink-0" />
-                Ota va ona shu bitta login bilan kiradi. Parol unutilsa qayta ko&apos;rsatib bo&apos;lmaydi —
-                faqat yangisini yaratasiz.
+                {t("sharedLoginWarning")}
               </p>
             </div>
 
             <div className="flex justify-end pt-1">
               <Button type="button" onClick={handleClose}>
-                Yopish
+                {t("close")}
               </Button>
             </div>
           </>
@@ -147,27 +151,25 @@ export function ParentCabinetModal({
             <div className="rounded-[var(--radius-md)] border border-[var(--color-success)]/30 bg-[var(--color-success-bg)] px-4 py-3.5">
               <p className="flex items-center gap-1.5 text-[14px] font-semibold text-[var(--color-success)]">
                 <CheckIcon className="h-4 w-4" />
-                Kabinet ochiq
+                {t("cabinetOpen")}
               </p>
-              <p className="mt-1 text-[13px] leading-relaxed text-[var(--color-success)]/85">
-                Ota va ona shu bitta login bilan kiradi.
-              </p>
+              <p className="mt-1 text-[13px] leading-relaxed text-[var(--color-success)]/85">{t("sharedLoginNote")}</p>
             </div>
 
-            <Field label="Havola" value={cabinetUrl} />
-            <Field label="Login (telefon)" value={holder.guardian.phone} mono />
+            <Field label={t("linkLabel")} value={cabinetUrl} />
+            <Field label={t("loginPhoneLabel")} value={holder.guardian.phone} mono />
 
             <dl className="grid grid-cols-2 gap-3">
               <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-2.5">
-                <dt className="text-[12.5px] text-[var(--color-text-muted)]">Kimning raqami</dt>
+                <dt className="text-[12.5px] text-[var(--color-text-muted)]">{t("whoseNumber")}</dt>
                 <dd className="truncate text-[14px] font-medium text-[var(--color-text)]">
                   {holder.guardian.fullName}
                 </dd>
               </div>
               <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-2.5">
-                <dt className="text-[12.5px] text-[var(--color-text-muted)]">Oxirgi kirish</dt>
+                <dt className="text-[12.5px] text-[var(--color-text-muted)]">{t("lastLogin")}</dt>
                 <dd className="text-[14px] font-medium text-[var(--color-text)]">
-                  {holder.guardian.lastLoginAt ? formatDateTime(holder.guardian.lastLoginAt) : "Hali kirmagan"}
+                  {holder.guardian.lastLoginAt ? formatDateTime(holder.guardian.lastLoginAt) : t("neverLoggedIn")}
                 </dd>
               </div>
             </dl>
@@ -176,23 +178,19 @@ export function ParentCabinetModal({
               <div className="rounded-[var(--radius-md)] bg-[var(--color-warning-bg)] px-3.5 py-3">
                 <p className="flex items-start gap-2 text-[13px] leading-relaxed text-[var(--color-warning)]">
                   <AlertIcon className="mt-px h-4 w-4 shrink-0" />
-                  Yangi parol yaratilsa, eski parol darhol ishlamay qoladi va ota-ona tizimdan chiqariladi.
-                  Davom etamizmi?
+                  {t("resetPasswordWarning")}
                 </p>
                 <div className="mt-3 flex flex-wrap justify-end gap-2">
                   <Button type="button" size="sm" variant="outline" onClick={() => setConfirmingReset(false)}>
-                    Yo&apos;q
+                    {t("no")}
                   </Button>
                   <Button type="button" size="sm" loading={openMutation.isPending} onClick={() => openMutation.mutate()}>
-                    Ha, yangilansin
+                    {t("yesReset")}
                   </Button>
                 </div>
               </div>
             ) : (
-              <p className="text-[13.5px] leading-relaxed text-[var(--color-text-muted)]">
-                Parolni qayta ko&apos;rsatib bo&apos;lmaydi — u bazada xeshlangan holda saqlanadi. Ota-ona
-                parolni unutgan bo&apos;lsa, yangisini yaratib bering.
-              </p>
+              <p className="text-[13.5px] leading-relaxed text-[var(--color-text-muted)]">{t("passwordHashedHint")}</p>
             )}
 
             {!confirmingReset && (
@@ -203,13 +201,13 @@ export function ParentCabinetModal({
                   loading={closeMutation.isPending}
                   onClick={() => closeMutation.mutate()}
                 >
-                  Kabinetni yopish
+                  {t("closeCabinet")}
                 </Button>
                 <Button type="button" variant="outline" onClick={handleClose}>
-                  Yopish
+                  {t("close")}
                 </Button>
                 <Button type="button" onClick={() => setConfirmingReset(true)}>
-                  Yangi parol yaratish
+                  {t("createNewPassword")}
                 </Button>
               </div>
             )}
@@ -219,23 +217,18 @@ export function ParentCabinetModal({
           <>
             <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-4 py-6 text-center">
               <GroupIcon className="mx-auto h-6 w-6 text-[var(--color-text-muted)]" />
-              <p className="mt-2 text-[14px] text-[var(--color-text-muted)]">
-                Avval bolaga ota-ona biriktiring — kabinet logini uning telefon raqami bo&apos;ladi.
-              </p>
+              <p className="mt-2 text-[14px] text-[var(--color-text-muted)]">{t("attachGuardianFirst")}</p>
             </div>
             <div className="flex justify-end">
               <Button type="button" variant="outline" onClick={handleClose}>
-                Yopish
+                {t("close")}
               </Button>
             </div>
           </>
         ) : (
           /* ---- Kabinet ochish ---- */
           <>
-            <p className="text-[14.5px] leading-relaxed text-[var(--color-text-muted)]">
-              Bolaga bitta kabinet ochiladi — ota ham, ona ham shu login bilan kirib, davomat, ovqat va
-              mashg&apos;ulotlarni ko&apos;radi. Login sifatida qaysi raqam ishlatilsin?
-            </p>
+            <p className="text-[14.5px] leading-relaxed text-[var(--color-text-muted)]">{t("openCabinetHint")}</p>
 
             <ul className="space-y-2">
               {links.map((link) => {
@@ -266,10 +259,10 @@ export function ParentCabinetModal({
                           <span className="truncate text-[15px] font-medium text-[var(--color-text)]">
                             {link.guardian.fullName}
                           </span>
-                          {link.isPrimary && <Badge tone="primary">Asosiy</Badge>}
+                          {link.isPrimary && <Badge tone="primary">{t("primaryBadge")}</Badge>}
                         </span>
                         <span className="mt-0.5 block text-[13px] tabular-nums text-[var(--color-text-muted)]">
-                          {formatPhone(link.guardian.phone)} · {RELATION_LABEL[link.relation] ?? link.relation}
+                          {formatPhone(link.guardian.phone)} · {relationLabel(t, link.relation)}
                         </span>
                       </span>
                     </button>
@@ -280,7 +273,7 @@ export function ParentCabinetModal({
 
             <div className="flex flex-wrap justify-end gap-2 pt-1">
               <Button type="button" variant="outline" onClick={handleClose}>
-                Bekor qilish
+                {t("cancel")}
               </Button>
               <Button
                 type="button"
@@ -288,7 +281,7 @@ export function ParentCabinetModal({
                 loading={openMutation.isPending}
                 onClick={() => openMutation.mutate()}
               >
-                Kabinet ochish
+                {t("openCabinet")}
               </Button>
             </div>
           </>
@@ -299,6 +292,7 @@ export function ParentCabinetModal({
 }
 
 function Field({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  const t = useTranslations("guardians");
   return (
     <div>
       <p className="mb-1.5 text-[13px] font-medium text-[var(--color-text)]">{label}</p>
@@ -306,7 +300,7 @@ function Field({ label, value, mono }: { label: string; value: string; mono?: bo
         <span className={`min-w-0 flex-1 break-all text-[15px] text-[var(--color-text)] ${mono ? "font-mono" : ""}`}>
           {value}
         </span>
-        <CopyButton value={value} label={`${label} nusxalash`} />
+        <CopyButton value={value} label={t("copyLabel", { label })} />
       </div>
     </div>
   );

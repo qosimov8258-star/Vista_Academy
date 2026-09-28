@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
@@ -29,6 +30,7 @@ export function ConvertLeadModal({
   slug: string;
   leadId: string;
 }) {
+  const t = useTranslations("crm");
   const router = useRouter();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -61,24 +63,21 @@ export function ConvertLeadModal({
       router.push(`/${slug}/children/${result.child.id}`);
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : t("unexpectedError"));
     },
   });
 
   return (
-    <Modal open={open} onClose={onClose} title="Bolaga aylantirish">
+    <Modal open={open} onClose={onClose} title={t("convertTitle")}>
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
             {serverError}
           </div>
         )}
-        <p className="text-sm text-[var(--color-text-muted)]">
-          Ushbu ariza asosida yangi bola profili yaratiladi va ariza &quot;Yutildi&quot; bosqichiga o&apos;tkaziladi. Bu amalni
-          ortga qaytarib bo&apos;lmaydi.
-        </p>
-        <Select label="Guruh (ixtiyoriy)" defaultValue="" {...register("groupId")}>
-          <option value="">Tanlanmagan</option>
+        <p className="text-sm text-[var(--color-text-muted)]">{t("convertHint")}</p>
+        <Select label={t("groupLabelOptional")} defaultValue="" {...register("groupId")}>
+          <option value="">{t("notSelected")}</option>
           {groups?.map((group) => (
             <option key={group.id} value={group.id}>
               {group.name}
@@ -88,10 +87,10 @@ export function ConvertLeadModal({
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Bekor qilish
+            {t("cancel")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Tasdiqlash
+            {t("confirm")}
           </Button>
         </div>
       </form>

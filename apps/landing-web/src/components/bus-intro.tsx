@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 
 const STORAGE_KEY = "vista-intro-seen";
 // Animatsiya juda sekin yuklansa yoki xabar yetib kelmasa ham sayt abadiy
@@ -9,6 +10,7 @@ const STORAGE_KEY = "vista-intro-seen";
 const FALLBACK_MS = 25000;
 
 export function BusIntro() {
+  const t = useTranslations();
   const [visible, setVisible] = useState(false);
   const [closing, setClosing] = useState(false);
 
@@ -51,7 +53,7 @@ export function BusIntro() {
     >
       <iframe
         src="/animatsiya/vista-academy-avtobus.html"
-        title="Vista Academy — Sehrli avtobus"
+        title={t("busIntro")}
         className="h-full w-full border-0"
         allow="autoplay"
       />

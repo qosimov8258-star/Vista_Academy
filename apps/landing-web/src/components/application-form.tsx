@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { useTranslations } from "next-intl";
 import { submitLandingApplication } from "@/lib/api";
 import { normalizeUzPhone } from "@/lib/phone";
 
@@ -37,15 +38,15 @@ function formatUzPhoneInput(raw: string): string {
 
 type FormErrors = Partial<Record<keyof FormValues, string>>;
 
-function validate(values: FormValues): FormErrors {
+function validate(values: FormValues, t: (key: string) => string): FormErrors {
   const errors: FormErrors = {};
 
   if (values.fullName.trim().length < 2) {
-    errors.fullName = "Ismingizni to'liq kiriting";
+    errors.fullName = t("nameError");
   }
 
   if (!normalizeUzPhone(values.phone)) {
-    errors.phone = "Telefon raqami noto'g'ri. Namuna: +998 90 123 45 67";
+    errors.phone = t("phoneError");
   }
 
   return errors;
@@ -83,6 +84,7 @@ function fieldClass(hasError: boolean) {
 }
 
 export function ApplicationForm() {
+  const t = useTranslations("applicationForm");
   const [values, setValues] = useState<FormValues>(INITIAL_VALUES);
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
@@ -98,7 +100,7 @@ export function ApplicationForm() {
     e.preventDefault();
     setSubmitError(null);
 
-    const nextErrors = validate(values);
+    const nextErrors = validate(values, t);
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
       return;
@@ -112,7 +114,7 @@ export function ApplicationForm() {
     setSubmitting(false);
 
     if (!result.ok) {
-      setSubmitError(result.message);
+      setSubmitError(result.message ?? t("genericError"));
       return;
     }
 
@@ -130,26 +132,22 @@ export function ApplicationForm() {
             >
               <CheckIcon className="h-8 w-8" />
             </div>
-            <h2 className="font-heading mt-5 text-[22px] font-bold text-[var(--color-text)]">Tashakkur!</h2>
-            <p className="mt-2.5 text-[14px] leading-relaxed text-[var(--color-text-muted)]">
-              Arizangiz qabul qilindi. Tez orada operatorlarimiz siz bilan bog&apos;lanishadi.
-            </p>
+            <h2 className="font-heading mt-5 text-[22px] font-bold text-[var(--color-text)]">{t("successTitle")}</h2>
+            <p className="mt-2.5 text-[14px] leading-relaxed text-[var(--color-text-muted)]">{t("successBody")}</p>
             <a
               href="/"
               className="mt-6 inline-flex rounded-full px-6 py-3 text-[14px] font-bold text-white shadow-[var(--shadow-cta)] transition-transform duration-150 hover:scale-[1.03]"
               style={{ background: "linear-gradient(135deg, var(--color-green) 0%, var(--color-green-dark) 100%)" }}
             >
-              Bosh sahifaga qaytish
+              {t("backHome")}
             </a>
           </div>
         ) : (
           <>
             <h1 className="font-heading text-[24px] font-bold text-[var(--color-text)] sm:text-[26px]">
-              Ariza qoldirish
+              {t("title")}
             </h1>
-            <p className="mt-2 text-[14px] leading-relaxed text-[var(--color-text-muted)]">
-              Ism va telefon raqamingizni qoldiring — tez orada siz bilan bog&apos;lanamiz.
-            </p>
+            <p className="mt-2 text-[14px] leading-relaxed text-[var(--color-text-muted)]">{t("subtitle")}</p>
 
             <form onSubmit={handleSubmit} noValidate className="mt-7">
               <div className="relative flex flex-col gap-4">
@@ -159,7 +157,7 @@ export function ApplicationForm() {
                     <input
                       type="text"
                       autoComplete="name"
-                      placeholder="Ismingiz"
+                      placeholder={t("namePlaceholder")}
                       value={values.fullName}
                       onChange={(e) => setField("fullName", e.target.value)}
                       className="w-full bg-transparent text-[15px] text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-muted)]"
@@ -197,7 +195,7 @@ export function ApplicationForm() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  aria-label="Arizani yuborish"
+                  aria-label={t("submitAria")}
                   className="absolute top-1/2 -right-3 flex h-14 w-14 -translate-y-1/2 items-center justify-center rounded-full text-white shadow-[var(--shadow-cta)] transition-transform duration-150 hover:scale-[1.06] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100 sm:-right-4"
                   style={{ background: "linear-gradient(135deg, var(--color-green) 0%, var(--color-green-dark) 100%)" }}
                 >

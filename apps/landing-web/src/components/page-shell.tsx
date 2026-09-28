@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { SiteHeader } from "./site-header";
 import { Footer } from "./footer";
 import { Reveal } from "./reveal";
+import { HeroImageCarousel } from "./hero-image-carousel";
 
 /**
  * "Guruhlarimiz" ochiladigan menyusidagi har bir bo'lim sahifasi bir xil
@@ -18,8 +19,27 @@ type HeroImage =
       fit?: "cover" | "contain";
       background?: string;
       placeholder?: never;
+      images?: never;
     }
-  | { src?: undefined; alt: string; position?: never; fit?: never; background?: string; placeholder: ReactNode };
+  | {
+      src?: undefined;
+      /** Bitta rasm o'rniga chap/o'ng tugmalari bilan almashadigan rasmlar to'plami. */
+      images: string[];
+      alt: string;
+      position?: string;
+      fit?: "cover" | "contain";
+      background?: string;
+      placeholder?: never;
+    }
+  | {
+      src?: undefined;
+      alt: string;
+      position?: never;
+      fit?: never;
+      background?: string;
+      images?: never;
+      placeholder: ReactNode;
+    };
 
 export function PageShell({
   eyebrow,
@@ -45,8 +65,15 @@ export function PageShell({
       <SiteHeader />
 
       {heroImage && (
-        <Reveal direction="up" className="relative h-[360px] w-full overflow-hidden sm:h-[440px] lg:h-[520px]" style={heroImage.background || !heroImage.src ? { background: heroImage.background ?? "var(--color-tint)" } : undefined}>
-          {heroImage.src ? (
+        <Reveal direction="up" className="relative h-[360px] w-full overflow-hidden sm:h-[440px] lg:h-[520px]" style={heroImage.background || !(heroImage.src || heroImage.images) ? { background: heroImage.background ?? "var(--color-tint)" } : undefined}>
+          {heroImage.images ? (
+            <HeroImageCarousel
+              images={heroImage.images}
+              alt={heroImage.alt}
+              fit={heroImage.fit}
+              position={heroImage.position}
+            />
+          ) : heroImage.src ? (
             // eslint-disable-next-line @next/next/no-img-element -- statik yoki API'dan kelgan dinamik rasm
             <img
               src={heroImage.src}

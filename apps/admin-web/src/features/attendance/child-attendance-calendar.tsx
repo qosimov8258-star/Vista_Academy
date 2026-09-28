@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import clsx from "clsx";
 import { api, ApiError } from "@/lib/api";
 import type { AttendanceStatus } from "@/lib/types";
@@ -11,29 +12,15 @@ import { Button } from "@/components/ui/button";
 import { ChevronRightIcon } from "@/components/ui/icons";
 import { formatDate } from "@/lib/format";
 
-const STATUS_LABEL: Record<AttendanceStatus, string> = {
-  PRESENT: "Keldi",
-  ABSENT: "Kelmadi",
-  LATE: "Kech qoldi",
-  SICK: "Kasal",
-};
-
-const MONTH_LABEL = [
-  "Yanvar",
-  "Fevral",
-  "Mart",
-  "Aprel",
-  "May",
-  "Iyun",
-  "Iyul",
-  "Avgust",
-  "Sentabr",
-  "Oktabr",
-  "Noyabr",
-  "Dekabr",
-];
-
-const WEEKDAY_LABEL = ["Du", "Se", "Cho", "Pa", "Ju", "Sha", "Ya"];
+function statusLabel(t: (key: string) => string, status: AttendanceStatus): string {
+  const map: Record<AttendanceStatus, string> = {
+    PRESENT: t("status.present"),
+    ABSENT: t("status.absent"),
+    LATE: t("status.late"),
+    SICK: t("status.sick"),
+  };
+  return map[status];
+}
 
 type AttendanceRecord = { date: string; status: AttendanceStatus; note: string | null };
 
@@ -86,6 +73,7 @@ function AttendanceDayModal({
   record: AttendanceRecord;
   canEditNote: boolean;
 }) {
+  const t = useTranslations("attendance");
   const queryClient = useQueryClient();
   const [note, setNote] = useState(record.note ?? "");
   const canEdit = canEditNote && record.status !== "PRESENT";
@@ -101,38 +89,38 @@ function AttendanceDayModal({
   return (
     <Modal open={open} onClose={onClose} title={formatDate(record.date)} widthClassName="max-w-sm">
       <div className="space-y-4">
-        <Badge tone={toneFor(record)}>{STATUS_LABEL[record.status]}</Badge>
+        <Badge tone={toneFor(record)}>{statusLabel(t, record.status)}</Badge>
 
         {canEdit ? (
           <div>
-            <span className="mb-1.5 block text-[13px] font-medium text-[var(--color-text)]">Izoh</span>
+            <span className="mb-1.5 block text-[13px] font-medium text-[var(--color-text)]">{t("noteLabel")}</span>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={3}
-              placeholder="Masalan: harorati baland edi, shifokorga bordik..."
+              placeholder={t("notePlaceholder")}
               className="w-full rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-3 py-2 text-[14px] text-[var(--color-text)] outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20"
             />
           </div>
         ) : record.note ? (
           <p className="text-[14px] text-[var(--color-text-muted)]">{record.note}</p>
         ) : record.status !== "PRESENT" ? (
-          <p className="text-[13px] text-[var(--color-text-muted)]">Izoh yozilmagan</p>
+          <p className="text-[13px] text-[var(--color-text-muted)]">{t("noteEmpty")}</p>
         ) : null}
 
         {mutation.isError && (
           <p className="text-[13px] text-[var(--color-danger)]">
-            {mutation.error instanceof ApiError ? mutation.error.message : "Saqlab bo'lmadi — qayta urinib ko'ring"}
+            {mutation.error instanceof ApiError ? mutation.error.message : t("saveError")}
           </p>
         )}
 
         {canEdit && (
           <div className="flex justify-end gap-2 pt-1">
             <Button type="button" variant="outline" onClick={onClose}>
-              Yopish
+              {t("close")}
             </Button>
             <Button type="button" loading={mutation.isPending} onClick={() => mutation.mutate()}>
-              Saqlash
+              {t("save")}
             </Button>
           </div>
         )}
@@ -157,6 +145,9 @@ export function ChildAttendanceCalendar({
   records: AttendanceRecord[];
   canEditNote: boolean;
 }) {
+  const t = useTranslations("attendance");
+  const monthLabels = t.raw("months") as string[];
+  const weekdayLabels = t.raw("weekdaysShort") as string[];
   const currentDate = new Date();
   const defaultMonth =
     year === currentDate.getFullYear()
@@ -179,26 +170,26 @@ export function ChildAttendanceCalendar({
           disabled={month === 0}
           onClick={() => setMonth((m) => Math.max(0, m - 1))}
           className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-text)] disabled:pointer-events-none disabled:opacity-30"
-          aria-label="Oldingi oy"
+          aria-label={t("prevMonth")}
         >
           <ChevronRightIcon className="h-4 w-4 rotate-180" />
         </button>
         <p className="text-[14px] font-medium text-[var(--color-text)]">
-          {MONTH_LABEL[month]} {year}
+          {monthLabels[month]} {year}
         </p>
         <button
           type="button"
           disabled={month === 11}
           onClick={() => setMonth((m) => Math.min(11, m + 1))}
           className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-text)] disabled:pointer-events-none disabled:opacity-30"
-          aria-label="Keyingi oy"
+          aria-label={t("nextMonth")}
         >
           <ChevronRightIcon className="h-4 w-4" />
         </button>
       </div>
 
       <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-medium text-[var(--color-text-muted)]">
-        {WEEKDAY_LABEL.map((d) => (
+        {weekdayLabels.map((d) => (
           <div key={d}>{d}</div>
         ))}
       </div>
@@ -225,13 +216,13 @@ export function ChildAttendanceCalendar({
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-1 text-[12px] text-[var(--color-text-muted)]">
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-[var(--color-success)]" /> Keldi
+          <span className="h-2.5 w-2.5 rounded-full bg-[var(--color-success)]" /> {t("legend.present")}
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-[var(--color-warning)]" /> Sababli kelmadi
+          <span className="h-2.5 w-2.5 rounded-full bg-[var(--color-warning)]" /> {t("legend.excusedAbsence")}
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-[var(--color-danger)]" /> Sababsiz kelmadi
+          <span className="h-2.5 w-2.5 rounded-full bg-[var(--color-danger)]" /> {t("legend.unexcusedAbsence")}
         </span>
       </div>
 

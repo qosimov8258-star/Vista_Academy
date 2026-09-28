@@ -2,6 +2,7 @@
 
 import { use, useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { Lead, LeadActivity } from "@/lib/types";
@@ -12,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { LoadingState, ErrorState } from "@/components/ui/states";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { formatDate, formatDateTime } from "@/lib/format";
-import { ACTIVITY_LABEL, AGE_GROUP_LABEL, SOURCE_LABEL, STAGE_LABEL, STAGE_TONE } from "@/features/crm/labels";
+import { activityLabel, ageGroupLabel, sourceLabel, stageLabel, STAGE_TONE } from "@/features/crm/labels";
 import { ChangeStageModal } from "@/features/crm/change-stage-modal";
 import { ConvertLeadModal } from "@/features/crm/convert-lead-modal";
 import { AssignLeadModal } from "@/features/crm/assign-lead-modal";
@@ -29,6 +30,7 @@ type LeadDetail = Lead & {
 
 export default function LeadDetailPage({ params }: { params: Promise<{ slug: string; leadId: string }> }) {
   const { slug, leadId } = use(params);
+  const t = useTranslations("crm");
   const [stageModalOpen, setStageModalOpen] = useState(false);
   const [convertModalOpen, setConvertModalOpen] = useState(false);
   const [assignModalOpen, setAssignModalOpen] = useState(false);
@@ -56,18 +58,18 @@ export default function LeadDetailPage({ params }: { params: Promise<{ slug: str
     <div className="space-y-6">
       <div>
         <Link href={crmHref} className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
-          ← Arizalar
+          ← {t("pageTitle")}
         </Link>
         <div className="mt-1 flex items-center justify-between">
           <h1 className="text-xl font-semibold text-[var(--color-text)]">{lead.childFullName}</h1>
-          <Badge tone={STAGE_TONE[lead.stage]}>{STAGE_LABEL[lead.stage]}</Badge>
+          <Badge tone={STAGE_TONE[lead.stage]}>{stageLabel(t, lead.stage)}</Badge>
         </div>
         <p className="text-sm text-[var(--color-text-muted)]">
           {lead.parentName} • {lead.parentPhone}
-          {lead.ageGroup ? ` • ${AGE_GROUP_LABEL[lead.ageGroup]}` : ""} • {SOURCE_LABEL[lead.source]}
+          {lead.ageGroup ? ` • ${ageGroupLabel(t, lead.ageGroup)}` : ""} • {sourceLabel(t, lead.source)}
         </p>
         <p className="text-xs text-[var(--color-text-muted)]">
-          Yaratildi: {formatDate(lead.createdAt)} • Mas&apos;ul: {lead.assignedTo?.fullName ?? "—"}
+          {t("createdLabel")}: {formatDate(lead.createdAt)} • {t("table.owner")}: {lead.assignedTo?.fullName ?? "—"}
         </p>
       </div>
 
@@ -75,16 +77,16 @@ export default function LeadDetailPage({ params }: { params: Promise<{ slug: str
 
       {lead.lostReason && (
         <div className="rounded-lg border border-[var(--color-danger)]/30 bg-[var(--color-danger-bg)] px-4 py-3 text-sm text-[var(--color-danger)]">
-          Yo&apos;qotish sababi: {lead.lostReason}
+          {t("lostReasonLabel")}: {lead.lostReason}
         </div>
       )}
 
       {isConverted && (
         <div className="flex items-center justify-between rounded-lg border border-[var(--color-success)]/30 bg-[var(--color-success-bg)] px-4 py-3">
-          <p className="text-sm font-medium text-[var(--color-success)]">Bu ariza bola profiliga aylantirilgan</p>
+          <p className="text-sm font-medium text-[var(--color-success)]">{t("convertedNotice")}</p>
           <Link href={`/${slug}/children/${lead.convertedChildId}`}>
             <Button size="sm" variant="outline">
-              Bola profilini ko&apos;rish →
+              {t("viewChildProfile")} →
             </Button>
           </Link>
         </div>
@@ -93,17 +95,17 @@ export default function LeadDetailPage({ params }: { params: Promise<{ slug: str
       {canWrite && !isConverted && (
         <Card>
           <CardHeader>
-            <CardTitle>Amallar</CardTitle>
+            <CardTitle>{t("actionsTitle")}</CardTitle>
           </CardHeader>
           <CardBody className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => setStageModalOpen(true)}>
-              Bosqichni o&apos;zgartirish
+              {t("changeStageTitle")}
             </Button>
             <Button variant="outline" onClick={() => setAssignModalOpen(true)}>
-              Mas&apos;ulni belgilash
+              {t("assignTitle")}
             </Button>
             {!isFinal && (
-              <Button onClick={() => setConvertModalOpen(true)}>Bolaga aylantirish</Button>
+              <Button onClick={() => setConvertModalOpen(true)}>{t("convertTitle")}</Button>
             )}
           </CardBody>
         </Card>
@@ -111,16 +113,16 @@ export default function LeadDetailPage({ params }: { params: Promise<{ slug: str
 
       <Card>
         <CardHeader className="flex items-center justify-between gap-3">
-          <CardTitle>Tafsilotlar</CardTitle>
+          <CardTitle>{t("detailsTitle")}</CardTitle>
           {canWrite && (
             <Button size="sm" variant="outline" onClick={() => setDetailsModalOpen(true)}>
-              Tahrirlash
+              {t("editAction")}
             </Button>
           )}
         </CardHeader>
         <CardBody className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
-            <p className="text-[12.5px] text-[var(--color-text-muted)]">Keyingi bog&apos;lanish</p>
+            <p className="text-[12.5px] text-[var(--color-text-muted)]">{t("followUpDateLabel")}</p>
             <p
               className={`mt-1 text-[14px] font-medium ${
                 lead.followUpDate && !isFinal && new Date(lead.followUpDate) < new Date()
@@ -128,24 +130,24 @@ export default function LeadDetailPage({ params }: { params: Promise<{ slug: str
                   : "text-[var(--color-text)]"
               }`}
             >
-              {lead.followUpDate ? formatDate(lead.followUpDate) : "Belgilanmagan"}
+              {lead.followUpDate ? formatDate(lead.followUpDate) : t("notSet")}
             </p>
           </div>
           <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
-            <p className="text-[12.5px] text-[var(--color-text-muted)]">Sinov kuni</p>
+            <p className="text-[12.5px] text-[var(--color-text-muted)]">{t("trialDateLabel")}</p>
             <p className="mt-1 text-[14px] font-medium text-[var(--color-text)]">
-              {lead.trialDate ? formatDate(lead.trialDate) : "Belgilanmagan"}
+              {lead.trialDate ? formatDate(lead.trialDate) : t("notSet")}
             </p>
           </div>
           <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
-            <p className="text-[12.5px] text-[var(--color-text-muted)]">Shartnoma sanasi</p>
+            <p className="text-[12.5px] text-[var(--color-text-muted)]">{t("contractDateLabel")}</p>
             <p className="mt-1 text-[14px] font-medium text-[var(--color-text)]">
-              {lead.contractDate ? formatDate(lead.contractDate) : "Belgilanmagan"}
+              {lead.contractDate ? formatDate(lead.contractDate) : t("notSet")}
             </p>
           </div>
           {lead.contractNote && (
             <div className="col-span-2 rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3 sm:col-span-3">
-              <p className="text-[12.5px] text-[var(--color-text-muted)]">Shartnoma izohi</p>
+              <p className="text-[12.5px] text-[var(--color-text-muted)]">{t("contractNoteLabel")}</p>
               <p className="mt-1 text-[14px] text-[var(--color-text)]">{lead.contractNote}</p>
             </div>
           )}
@@ -154,17 +156,17 @@ export default function LeadDetailPage({ params }: { params: Promise<{ slug: str
 
       <Card>
         <CardHeader>
-          <CardTitle>Faoliyat tarixi</CardTitle>
+          <CardTitle>{t("activityHistoryTitle")}</CardTitle>
         </CardHeader>
         <CardBody className="space-y-4">
           {activities.length === 0 ? (
-            <p className="text-sm text-[var(--color-text-muted)]">Hali faoliyat yo&apos;q</p>
+            <p className="text-sm text-[var(--color-text-muted)]">{t("noActivityYet")}</p>
           ) : (
             <ul className="space-y-3">
               {activities.map((activity) => (
                 <li key={activity.id} className="rounded-lg border border-[var(--color-border)] px-4 py-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-[var(--color-text)]">{ACTIVITY_LABEL[activity.type]}</span>
+                    <span className="text-sm font-medium text-[var(--color-text)]">{activityLabel(t, activity.type)}</span>
                     <span className="text-xs text-[var(--color-text-muted)]">{formatDateTime(activity.createdAt)}</span>
                   </div>
                   {activity.note && <p className="mt-1 text-sm text-[var(--color-text-muted)]">{activity.note}</p>}

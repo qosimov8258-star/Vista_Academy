@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { api, ApiError, getPaginated } from "@/lib/api";
 import type { Child, NotificationEventType, NotificationLog } from "@/lib/types";
@@ -11,26 +12,33 @@ import { Modal } from "@/components/ui/modal";
 import { Input, Textarea, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-const eventTypeOptions: { value: NotificationEventType; label: string }[] = [
-  { value: "CUSTOM", label: "Boshqa" },
-  { value: "CHILD_ABSENT", label: "Bola kelmadi" },
-  { value: "DAILY_REPORT_READY", label: "Kundalik hisobot tayyor" },
-  { value: "PAYMENT_DUE", label: "To'lov muddati" },
-];
-
-const schema = z.object({
-  eventType: z.enum(["CHILD_ABSENT", "DAILY_REPORT_READY", "PAYMENT_DUE", "CUSTOM"]),
-  childId: z.string().optional(),
-  recipientName: z.string().min(2, "Qabul qiluvchi ismi kamida 2 belgi"),
-  recipientContact: z.string().optional(),
-  message: z.string().min(2, "Xabar matni kamida 2 belgi"),
-});
-
-type FormValues = z.infer<typeof schema>;
+type FormValues = {
+  eventType: "CHILD_ABSENT" | "DAILY_REPORT_READY" | "PAYMENT_DUE" | "CUSTOM";
+  childId?: string;
+  recipientName: string;
+  recipientContact?: string;
+  message: string;
+};
 
 export function CreateNotificationModal({ open, onClose, slug }: { open: boolean; onClose: () => void; slug: string }) {
+  const t = useTranslations("notifications");
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
+
+  const eventTypeOptions: { value: NotificationEventType; label: string }[] = [
+    { value: "CUSTOM", label: t("eventType.custom") },
+    { value: "CHILD_ABSENT", label: t("eventType.childAbsent") },
+    { value: "DAILY_REPORT_READY", label: t("eventType.dailyReportReady") },
+    { value: "PAYMENT_DUE", label: t("eventType.paymentDue") },
+  ];
+
+  const schema = z.object({
+    eventType: z.enum(["CHILD_ABSENT", "DAILY_REPORT_READY", "PAYMENT_DUE", "CUSTOM"]),
+    childId: z.string().optional(),
+    recipientName: z.string().min(2, t("validation.recipientNameMin")),
+    recipientContact: z.string().optional(),
+    message: z.string().min(2, t("validation.messageMin")),
+  });
 
   const childrenQuery = useQuery({
     queryKey: ["children-for-notification", slug],
@@ -67,7 +75,7 @@ export function CreateNotificationModal({ open, onClose, slug }: { open: boolean
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : t("unexpectedError"));
     },
   });
 
@@ -78,7 +86,7 @@ export function CreateNotificationModal({ open, onClose, slug }: { open: boolean
   };
 
   return (
-    <Modal open={open} onClose={handleClose} title="Yangi bildirishnoma yozuvi">
+    <Modal open={open} onClose={handleClose} title={t("createTitle")}>
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         <h1 className="font-heading text-center text-[28px] font-extrabold tracking-tight text-[var(--color-primary)]">
           Vista Academy
@@ -89,7 +97,7 @@ export function CreateNotificationModal({ open, onClose, slug }: { open: boolean
             {serverError}
           </div>
         )}
-        <Select label="Hodisa turi" error={errors.eventType?.message} {...register("eventType")}>
+        <Select label={t("eventTypeLabel")} error={errors.eventType?.message} {...register("eventType")}>
           {eventTypeOptions.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
@@ -97,11 +105,11 @@ export function CreateNotificationModal({ open, onClose, slug }: { open: boolean
           ))}
         </Select>
         <Select
-          label="Bola (ixtiyoriy)"
+          label={t("childLabelOptional")}
           defaultValue=""
           onChange={(e) => handleChildSelect(e.target.value)}
         >
-          <option value="">Tanlanmagan</option>
+          <option value="">{t("notSelected")}</option>
           {childrenQuery.data?.data.map((child) => (
             <option key={child.id} value={child.id}>
               {child.fullName}
@@ -109,20 +117,20 @@ export function CreateNotificationModal({ open, onClose, slug }: { open: boolean
           ))}
         </Select>
         <Input
-          label="Qabul qiluvchi (ota-ona)"
-          placeholder="Karimova Aziza"
+          label={t("recipientLabel")}
+          placeholder={t("recipientPlaceholder")}
           error={errors.recipientName?.message}
           {...register("recipientName")}
         />
         <Input
-          label="Aloqa (telefon, ixtiyoriy)"
+          label={t("contactLabel")}
           placeholder="+998901234567"
           error={errors.recipientContact?.message}
           {...register("recipientContact")}
         />
         <Textarea
-          label="Xabar matni"
-          placeholder="Xurmatli ota-ona, ..."
+          label={t("messageLabel")}
+          placeholder={t("messagePlaceholder")}
           rows={4}
           error={errors.message?.message}
           {...register("message")}
@@ -130,10 +138,10 @@ export function CreateNotificationModal({ open, onClose, slug }: { open: boolean
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={handleClose}>
-            Bekor qilish
+            {t("cancel")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Yaratish
+            {t("create")}
           </Button>
         </div>
       </form>

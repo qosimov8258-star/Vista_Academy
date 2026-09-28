@@ -1,4 +1,8 @@
 {
+  "siteMeta": {
+    "title": "Vista Academy — Bog'chalar tarmog'i",
+    "description": "Vista Academy — bolalarni mehr, xavfsizlik va zamonaviy ta'lim metodikalari bilan o'stiradigan bog'chalar tarmog'i."
+  },
   "common": {
     "language": "Til",
     "languages": {
@@ -6,7 +10,8 @@
       "ru": "Русский",
       "en": "English"
     },
-    "cta": "Ariza qoldirish"
+    "cta": "Ariza qoldirish",
+    "pagesEyebrow": "Guruhlarimiz"
   },
   "nav": {
     "home": "Bosh sahifa",
@@ -41,5 +46,247 @@
     "headingSuffix": "boshlanadi",
     "paragraph": "Har bir kun — yangi bilim, yangi do'stlik va yangi kulgu bilan to'la.",
     "ctaSecondary": "Batafsil ma'lumot"
+  },
+  "whyUs": {
+    "heading": "Vista Academy'ni nima o'ziga xos qiladi?",
+    "subheading": "Biz farzandingiz muvaffaqiyatiga bag'ishlangan mehribon jamoamiz. Xavfsizlik, mehr, ilhom va ta'lim qadriyatlariga asoslanib, har bir bolaga eng yaxshi boshlanishni beramiz.",
+    "features": {
+      "schedule": "Ertalab 7:00 dan kechqurun 19:00 gacha ochiq — ota-onalar ish bilan bog'chani muvozanatlashtirishi oson.",
+      "meals": "Kun davomida muvozanatli va sifatli ovqatlanish — dastur doirasida qo'shimcha to'lovsiz taqdim etiladi.",
+      "teacher": "Bolalar keyingi guruhga o'tguncha bir xil tarbiyachi bilan qoladi — bu ishonch va barqarorlik yaratadi.",
+      "education": "Zamonaviy dastur asosida yoshiga mos faoliyatlar bilan bolani maktabga tayyorlaymiz."
+    }
+  },
+  "stats": {
+    "eyebrow": "Biz haqimizda",
+    "heading": "Vista bog'chasi haqida",
+    "body": "Vista Academy — farzandingizning har bir kuni bilim, mehr va xavfsizlik bilan to'la o'tishini ta'minlaydigan zamonaviy bog'cha. Malakali tarbiyachilarimiz va zamonaviy jihozlangan sinflarimiz bilan har bir bolaga individual yondashamiz va uni maktab hayotiga ishonch bilan tayyorlaymiz.",
+    "labels": {
+      "students": "o'quvchi",
+      "teachers": "professional o'qituvchi",
+      "classrooms": "jihozlangan sinf xonalari"
+    }
+  },
+  "programs": {
+    "eyebrow": "Guruhlarimiz",
+    "heading": "Har bir yosh bosqichi uchun mos guruh",
+    "groups": {
+      "babies": { "title": "Chaqaloqlar", "age": "2 oydan 1 yoshgacha" },
+      "toddlers": { "title": "Kichkintoylar", "age": "1 dan 3 yoshgacha" },
+      "middle": { "title": "O'rta guruh", "age": "3 dan 4 yoshgacha" },
+      "senior": { "title": "Katta guruh", "age": "4 dan 6 yoshgacha" },
+      "schoolAge": { "title": "Maktab yoshidagilar", "age": "6 dan 12 yoshgacha" }
+    },
+    "prevAria": "Oldingi guruh",
+    "nextAria": "Keyingi guruh",
+    "closingQuote": "Shunchaki bog'cha emas — bolalar o'sadigan, o'rganadigan va kashf qiladigan makon."
+  },
+  "directorQuote": {
+    "headingLine1": "Vista Academy",
+    "headingLine2": "bilim va imkoniyatlarga yo'l ochuvchi maskan.",
+    "body": "Biz farzandingiz bilan birgalikda kelajakni bunyod etib, har bir kunni unutilmas ta'lim sayohatiga aylantirib bormoqdamiz.",
+    "name": "Direktor ismi",
+    "role": "Bosh direktor"
+  },
+  "adaptation": {
+    "eyebrow": "Moslashuv davri",
+    "title": "Bog'chaga moslashish — birga, sekin-asta",
+    "defaultImageAlt": "Bolakay ryukzagini taqib, ota-onasining qo'lidan ushlagancha guruhga birinchi marta kirib kelmoqda, tarbiyachi va do'stlari uni kulib kutib olishmoqda",
+    "defaultText": "Bog'chadagi birinchi kunlar farzandingiz uchun yangi va hayajonli bosqich. Shuning uchun shoshilmaymiz: avval u siz bilan birga tanishadi, so'ng asta-sekin guruhda ko'proq vaqt o'tkazadi. Tajribali tarbiyachilarimiz har bir bolaga alohida yondashadi — shunda qo'rquv o'rnini ishonch va quvonch egallaydi.",
+    "loveImageAlt": "Bolalar qo'l ushlashib, yurak shaklida do'stlik va sevgi ramzini yasashmoqda",
+    "loveTextLine1": "Har bir bola — bitta katta oilaning bir bo'lagi.",
+    "loveTextLine2": "Bog'chamizda ular sevgi bilan birlashib, chin do'stlikni his etishadi.",
+    "processImageAlt": "Bolalar bog'chaga moslashish jarayonida tarbiyachi bilan",
+    "processEyebrow": "Har bir qadam nazoratda",
+    "processTitle": "Moslashish jarayoni — tajribali tarbiyachilar bilan",
+    "processText": "Moslashish davrida tarbiyachilarimiz farzandingiz holatini doimiy kuzatib boradi. Har bir bosqich ota-onalar bilan kelishilgan holda amalga oshiriladi — shu tufayli bola ham, ota-ona ham bog'cha muhitiga xotirjam ko'nikadi.",
+    "prevAria": "Oldingi",
+    "nextAria": "Keyingi"
+  },
+  "ourGroups": {
+    "eyebrow": "20 ta sara guruh",
+    "heading": "Guruhlarimiz",
+    "description": "Har bir guruhimiz o'ziga xos, quvnoq nomga ega — farzandingiz tez orada o'z guruhini sevib qoladi.",
+    "showMore": "Yana ko'rsatish",
+    "showLess": "Kamroq ko'rsatish"
+  },
+  "testimonials": {
+    "imageAlt": "O'ynayotgan bolalar",
+    "quoteLine1": "Har bir bola — o'zgacha rang, o'zgacha kulgu.",
+    "quoteLine2": "Bizning bog'chamizda hammasi birga o'ynab, birga ulg'ayadi.",
+    "teamImageAlt": "Vista Academy jamoasi",
+    "teamHeading": "Bizning jamoa",
+    "teamBody": "Farzandingizga mehr, sabr va bilim bilan yondashadigan, bir-biriga qadrdon jamoamiz bilan tanishing.",
+    "reviews": {
+      "review1": { "role": "4 yoshli qizning onasi", "text": "Farzandim bog'chaga borishni juda yaxshi ko'rib qoldi, har kuni quvnoq qaytadi uydan." },
+      "review2": { "role": "3 yoshli o'g'ilning otasi", "text": "Tarbiyachilar juda mehribon va e'tiborli, har bir bolaga alohida yondashadi." },
+      "review3": { "role": "2 yoshli qizning onasi", "text": "Ovqatlanish va gigiyena juda toza tashkil qilingan, hech qanday xavotirim yo'q." },
+      "review4": { "role": "5 yoshli o'g'ilning otasi", "text": "Ingliz tili va rivojlanish darslari bolamning nutqiga juda katta ijobiy ta'sir ko'rsatdi." },
+      "review5": { "role": "4 yoshli qizning onasi", "text": "Har hafta hisobot va suratlar yuborishadi — farzandim bilan doim aloqada his qilaman." }
+    }
+  },
+  "education": {
+    "block1": {
+      "imageAlt": "Bolalar harflar va raqamlar bilan o'yin orqali tanishmoqda",
+      "eyebrow": "O'yin orqali o'rganish",
+      "title": "Harflar, raqamlar va shakllar bilan tanishuv",
+      "body": "Har bir mashg'ulot bolalar uchun qiziqarli o'yin shaklida quriladi — flesh-kartalar, rang-barang materiallar va guruh bo'lib bajariladigan topshiriqlar orqali bolalar harflar, raqamlar va shakllarni tabiiy ravishda eslab qolishadi. Bu yondashuv diqqatni jamlash, mustaqil fikrlash va tengdoshlar bilan hamkorlik qilish ko'nikmalarini ham rivojlantiradi — maktabga puxta tayyorgarlikning muhim qadami."
+    },
+    "block2": {
+      "imageAlt": "Tarbiyachi bolalarga rasmli kitob o'qib bermoqda",
+      "eyebrow": "Kitobxonlik soati",
+      "title": "Nutq va tafakkurni rivojlantirish",
+      "body": "Tarbiyachilarimiz har kuni bolalarga ovoz chiqarib kitob o'qib beradi — rang-barang rasmli kitoblar orqali bolalar yangi so'zlarni o'rganadi, savol berishni va o'z fikrini bayon qilishni o'rganadi. Muntazam kitobxonlik lug'at boyligini oshiradi, tasavvurni kengaytiradi va bolada kitobga bo'lgan qiziqishni yoshligidan shakllantiradi."
+    },
+    "block3": {
+      "imageAlt": "Tarbiyachi globus va kitoblar yordamida bolalarga dunyo haqida hikoya qilib bermoqda",
+      "eyebrow": "Dunyoni kashf etish",
+      "quote": "Bugun ertak tinglagan bola — ertaga dunyoni o'ziga xos nigoh bilan ko'radi. Har bir hikoya bolamiz uchun yangi bir kashfiyot sari eshikdir."
+    }
+  },
+  "mealsIntro": {
+    "eyebrow": "Har bir tovoqda g'amxo'rlik",
+    "heading": "Farzandingiz nimani yeyotganini biling — biz uni o'z farzandimizdek his qilamiz",
+    "body1": "Bolalik davri — tanamiz umrbod eslab qoladigan davr. Shuning uchun oshxonamizda har bir taom yangi mahsulotlardan, konservantsiz va ortiqcha shakarsiz tayyorlanadi. Haftalik menyu tarbiyachi va dietolog nazorati ostida tuziladi — nonushtadan kechki ovqatgacha bola o'sishi uchun zarur vitamin va energiyani to'liq oladi.",
+    "body2": "Natija — quvnoq, faol va sog'lom bola, ota-onalar esa xotirjam: farzandi doim to'yingan va to'g'ri ovqatlanadi.",
+    "imageAlt": "Bolalar bog'chada sog'lom taom yemoqda"
+  },
+  "teacherSubjects": {
+    "english": {
+      "title": "Ingliz tili o'qituvchisi",
+      "body": "Ingliz tili o'qituvchimiz bolalarga tilni yodlash orqali emas, qo'shiq, she'r va rolli o'yinlar orqali singdiradi. Har bir dars quvnoq muhitda o'tadi — bolalar yangi so'zlarni to'g'ri talaffuz bilan, qo'rquvsiz gapirishni o'rganadi. Bu yondashuv keyinchalik maktabda til o'rganishni ancha osonlashtiradi."
+    },
+    "mentalMath": {
+      "title": "Mental arifmetika o'qituvchisi",
+      "body": "Mental arifmetika o'qituvchimiz bolalarga avval abakus (hisoblash taxtachasi) yordamida sonlar bilan ishlashni, so'ng ularni faqat tasavvur orqali hisoblashga o'rgatadi. Bu mashg'ulotlar diqqatni jamlash, xotira va tez fikrlash qobiliyatini rivojlantiradi — bola nafaqat matematikada, balki boshqa fanlarda ham yutuqqa erishadi."
+    }
+  },
+  "weeklyMenu": {
+    "weekdays": {
+      "MONDAY": "Dushanba",
+      "TUESDAY": "Seshanba",
+      "WEDNESDAY": "Chorshanba",
+      "THURSDAY": "Payshanba",
+      "FRIDAY": "Juma",
+      "SATURDAY": "Shanba",
+      "SUNDAY": "Yakshanba"
+    },
+    "mealTypes": {
+      "BREAKFAST": "Nonushta",
+      "LUNCH": "Tushlik",
+      "SNACK": "Ikkinchi nonushta",
+      "DINNER": "Kechki ovqat",
+      "OTHER": "Boshqa"
+    },
+    "emptyForDay": "{day} kuni uchun menyu hali kiritilmagan.",
+    "otherMeals": "Boshqa taomlar",
+    "prevDayAria": "Oldingi kun",
+    "nextDayAria": "Keyingi kun"
+  },
+  "caregiverHighlights": {
+    "block1": {
+      "imageAlt": "Tarbiyachi bolalar bilan mashg'ulot o'tkazmoqda",
+      "eyebrow": "Bir xil yuz, bir xil mehr",
+      "title": "Tarbiyachi bola bilan birga o'sadi",
+      "body": "Guruh keyingi bosqichga o'tganda ham, farzandingiz yoniga hamon tanish va yaqin tarbiyachi qoladi. Bu doimiylik bola uchun har kuni yangi odamlarga o'rganib olish stressini yo'qotadi va uni o'ziga ishonchli qiladi."
+    },
+    "block2": {
+      "imageAlt": "Tarbiyachi har bir bolaga alohida e'tibor bermoqda",
+      "eyebrow": "Har bir bolani chuqur bilish",
+      "title": "Xarakter va ehtiyojlarga alohida yondashuv",
+      "body": "Doimiy tarbiyachi farzandingizning odatlarini, kayfiyatini va qiziqishlarini vaqt o'tishi bilan chuqur o'rganadi. Shu bilim asosida har bir bolaga individual yondashadi va uning rivojlanishini izchil kuzatib boradi."
+    },
+    "closingImageAlt": "Tarbiyachi bolalar bilan mehr-oqibat bilan mashg'ul bo'lmoqda",
+    "closingQuoteLine1": "Bog'chamizda har bir kun mehr, sabr va g'amxo'rlik bilan boshlanadi.",
+    "closingQuoteLine2": "Tarbiyachilarimiz farzandingiz uchun ikkinchi ona kabi yonida bo'ladi."
+  },
+  "teacherGrid": {
+    "prevAria": "Oldingi o'qituvchi",
+    "nextAria": "Keyingi o'qituvchi",
+    "closeAria": "Yopish",
+    "experienceHeading": "Tajriba va ma'lumot"
+  },
+  "applicationForm": {
+    "successTitle": "Tashakkur!",
+    "successBody": "Arizangiz qabul qilindi. Tez orada operatorlarimiz siz bilan bog'lanishadi.",
+    "backHome": "Bosh sahifaga qaytish",
+    "title": "Ariza qoldirish",
+    "subtitle": "Ism va telefon raqamingizni qoldiring — tez orada siz bilan bog'lanamiz.",
+    "namePlaceholder": "Ismingiz",
+    "nameError": "Ismingizni to'liq kiriting",
+    "phoneError": "Telefon raqami noto'g'ri. Namuna: +998 90 123 45 67",
+    "submitAria": "Arizani yuborish",
+    "genericError": "Xatolik yuz berdi. Birozdan so'ng qayta urinib ko'ring."
+  },
+  "backButton": "Orqaga",
+  "busIntro": "Vista Academy — Sehrli avtobus",
+  "cradleFeeding": "Beshikdagi chaqaloqni ovqatlantirish o'yini",
+  "videoCompare": {
+    "firstAria": "Birinchi video",
+    "secondAria": "Ikkinchi video"
+  },
+  "schedulePage": {
+    "metaTitle": "Moslashuvchan jadval — Vista Academy",
+    "description": "Hafta davomida bolalar kuni qanday tashkil etilgani — necha dars, qachon uxlashadi va ovqatlanishadi.",
+    "heroImageAlt": "Bolalar guruh bo'lib mashg'ulot qilmoqda",
+    "emptyImageAlt": "Kun tartibi tez orada shu yerda e'lon qilinadi",
+    "types": {
+      "LESSON": "Dars",
+      "SLEEP": "Uyqu",
+      "MEAL": "Ovqat",
+      "OTHER": "Boshqa"
+    },
+    "adaptationOverride": {
+      "imageAlt": "Bolalar bog'cha guruhida birga o'ynab, do'stlashib ketishmoqda",
+      "text": "Har bir bola uchun bog'chadagi birinchi kunlar — yangi va hayajonli bosqich. Shuning uchun biz shoshilmaymiz: dastlab farzandingiz siz bilan birga tanishadi, so'ng qisqa vaqtga guruhda qoladi, so'ngra esa kun bo'yi tengdoshlari bilan o'ynab, o'rganib ulguradi. Tajribali tarbiyachilarimiz har bir bolaning kayfiyati va xarakteriga alohida e'tibor qaratadi — shunda ajralish qo'rquvi o'rnini ishonch va quvonch egallaydi. Natijada farzandingiz bog'chaga yig'lab emas, kulib boradi va u yerda umrbod eslab qoladigan do'stlar topadi."
+    }
+  },
+  "mealsPage": {
+    "metaTitle": "Sog'lom taomlar — Vista Academy",
+    "heroImageAlt": "Bolalar oshxonada sog'lom taom yemoqda",
+    "belowHeroTitle": "Shirintoyingizning qornini to'ydiring!",
+    "belowHeroBody": "Kichkintoyingiz bilan birga quyidagi qiziqarli o'yinni sinab ko'ring.",
+    "emptyMenu": "Hozircha menyu kiritilmagan."
+  },
+  "caregiverPage": {
+    "metaTitle": "Doimiy tarbiyachi — Vista Academy",
+    "fallbackTitle": "Doimiy tarbiyachi va g'amxo'rlik",
+    "heroImageAlt": "Tarbiyachi bolalar bilan mashg'ulot o'tkazmoqda"
+  },
+  "educationPage": {
+    "metaTitle": "Ta'lim yo'nalishi — Vista Academy",
+    "fallbackTitle": "Ta'lim yo'nalishi va kelajak",
+    "heroImageAlt": "O'quvchilar darsda qo'l ko'tarib javob bermoqda"
+  },
+  "teachersPage": {
+    "metaTitle": "O'qituvchilar — Vista Academy",
+    "description": "Farzandingiz bilan har kuni birga bo'ladigan mehribon va tajribali jamoamiz.",
+    "heroImageAlt": "O'qituvchi bolalarga darsda yordam bermoqda",
+    "placeholders": {
+      "teacher1": { "role": "Bosh tarbiyachi", "bio": "Har bir bola menga o'z farzandimdek aziz.", "experience": "Maktabgacha ta'lim yo'nalishida 12 yillik tajribaga ega, bir necha filial jamoasini boshqargan." },
+      "teacher2": { "role": "Ingliz tili o'qituvchisi", "bio": "Bolalar bilan o'ynab o'rganish eng samarali usul.", "experience": "Ingliz tili bo'yicha 6 yillik tajriba, xalqaro IELTS sertifikatiga ega." },
+      "teacher3": { "role": "Mental arifmetika o'qituvchisi", "bio": "Mental arifmetika bolaning tafakkurini rivojlantiradi.", "experience": "Mental arifmetika yo'nalishida 5 yillik tajriba, respublika miqyosidagi bolalar musobaqalarida shogirdlarini tayyorlagan." },
+      "teacher4": { "role": "Kichik guruh tarbiyachisi", "bio": "Sabr va mehr — ishimning asosi.", "experience": "Kichik yoshdagi bolalar bilan ishlashda 8 yillik tajribaga ega, bolalar psixologiyasi bo'yicha qo'shimcha ta'lim olgan." }
+    }
+  },
+  "applicationPage": {
+    "metaTitle": "Ariza qoldirish — Vista Academy"
+  },
+  "heroCarousel": {
+    "prevAria": "Oldingi rasm",
+    "nextAria": "Keyingi rasm"
+  },
+  "groupPage": {
+    "description": "Bizning quvnoq guruhlarimizdan biri — farzandingiz shu yerda do'stlar orttiradi va yangi narsalar o'rganadi.",
+    "metaTitleFallback": "Guruh — Vista Academy",
+    "photoComingSoon": "Rasm tez orada qo'shiladi",
+    "introImageAlt": "Bolalar quvnoq qahramonlar bilan o'ynamoqda",
+    "introQuoteLine1": "Har bir bola — o'zicha bir dunyo, o'zicha bir baxt.",
+    "introQuoteLine2": "Biz shu dunyoni mehr, o'yin va bilim bilan boyitamiz.",
+    "groupSuffix": "guruhi",
+    "sectionHeading": "Farzandingiz shu yerda o'sadi va rivojlanadi",
+    "sectionBody": "\"{name}\" guruhida bolalar tajribali tarbiyachilar nazorati ostida do'stlar orttiradi, har kungi mashg'ulotlar orqali yangi bilim va ko'nikmalarga ega bo'ladi. Guruhimizda har bir bolaga alohida e'tibor, mehr va g'amxo'rlik bilan yondashiladi.",
+    "studentFallbackName": "{index}-o'quvchi",
+    "studentFallbackBio": "Ism va rasm tez orada qo'shiladi"
   }
 }

@@ -79,9 +79,9 @@ export function Footer() {
           <div>
             <a href="/#top" className="flex items-center gap-3">
               {/* eslint-disable-next-line @next/next/no-img-element -- statik brend rasmi */}
-              <img src="/logo.png" alt="Vista Academy" className="h-12 w-12 object-contain" />
+              <img src="/homepage/logo.png" alt="Vista Academy" className="h-12 w-12 object-contain" />
               {/* eslint-disable-next-line @next/next/no-img-element -- statik brend rasmi */}
-              <img src="/logo-name.png" alt="Vista Academy" className="h-8 w-auto object-contain" />
+              <img src="/homepage/logo-name.png" alt="Vista Academy" className="h-8 w-auto object-contain" />
             </a>
             <p className="mt-4 max-w-[320px] text-[14px] leading-relaxed text-[var(--color-text-muted)]">
               {t("footer.description")}

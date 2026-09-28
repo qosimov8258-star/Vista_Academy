@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import type { Product } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ export function ProductCard({
   product: Product;
   canWrite: boolean;
 }) {
+  const t = useTranslations("products");
   const [detailOpen, setDetailOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const imagePosition = firstImagePosition(product);
@@ -51,7 +53,7 @@ export function ProductCard({
         <p className="truncate text-[14px] font-medium text-[var(--color-text)]">{product.name}</p>
         {product.color && <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">{product.color}</p>}
         <Badge tone={product.quantity > 0 ? "success" : "danger"}>
-          {product.quantity > 0 ? `${product.quantity} ta` : "Tugagan"}
+          {product.quantity > 0 ? t("quantityUnit", { value: product.quantity }) : t("outOfStock")}
         </Badge>
         <div className="flex items-center gap-1.5 pt-1">
           <div className="flex flex-1 items-center justify-center gap-1 rounded-full bg-[var(--color-warning-bg)] px-3 py-2 text-[14px] font-semibold text-[var(--color-warning)]">
@@ -63,7 +65,7 @@ export function ProductCard({
               size="sm"
               variant="outline"
               isIconOnly
-              aria-label="Tovarni tahrirlash"
+              aria-label={t("editProductAria")}
               onClick={(e) => {
                 e.stopPropagation();
                 setEditOpen(true);

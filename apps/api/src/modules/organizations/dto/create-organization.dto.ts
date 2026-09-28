@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsEmail, IsOptional, IsString, Matches, MinLength } from "class-validator";
+import { IsEmail, IsOptional, IsString, IsUrl, Matches, MinLength } from "class-validator";
 import { LOGIN_PATTERN, LOGIN_PATTERN_MESSAGE } from "../../../common/validators/login";
 
 export class CreateOrganizationDto {
@@ -27,6 +27,14 @@ export class CreateOrganizationDto {
   @IsOptional()
   @IsString()
   contactPhone?: string;
+
+  @ApiPropertyOptional({
+    example: "https://quyoshcha-bogcha.uz",
+    description: "Tashkilotning o'z tashqi lending (marketing) sahifasi — bo'lmasa 'Tez orada' ko'rsatiladi",
+  })
+  @IsOptional()
+  @IsUrl({}, { message: "To'g'ri havola kiriting (masalan https://... bilan boshlansin)" })
+  lendingUrl?: string;
 
   @ApiProperty({ description: "Tarif reja ID — bog'cha yaratilishi bilan shu tarifga obuna ochiladi" })
   @IsString()

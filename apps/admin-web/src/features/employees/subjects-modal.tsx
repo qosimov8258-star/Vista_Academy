@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import clsx from "clsx";
 import { api, ApiError } from "@/lib/api";
 import type { Subject } from "@/lib/types";
@@ -28,6 +29,7 @@ export function SubjectsModal({
   selected: string[];
   onToggle: (name: string) => void;
 }) {
+  const t = useTranslations("employees");
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +49,7 @@ export function SubjectsModal({
       onToggle(created.name);
     },
     onError: (err) => {
-      setError(err instanceof ApiError ? err.message : "Fan yaratib bo'lmadi");
+      setError(err instanceof ApiError ? err.message : t("cannotCreateSubject"));
     },
   });
 
@@ -60,20 +62,20 @@ export function SubjectsModal({
   const handleCreate = () => {
     const trimmed = name.trim();
     if (trimmed.length < 2) {
-      setError("Fan nomi kamida 2 belgi");
+      setError(t("subjectNameMin"));
       return;
     }
     createMutation.mutate(trimmed);
   };
 
   return (
-    <Modal open={open} onClose={handleClose} title="Fanlar" widthClassName="max-w-md">
+    <Modal open={open} onClose={handleClose} title={t("subjectsTitle")} widthClassName="max-w-md">
       <div className="space-y-5">
         <div className="flex items-end gap-2">
           <div className="flex-1">
             <Input
-              label="Fan nomi"
-              placeholder="Masalan, Rus tili"
+              label={t("subjectNameLabel")}
+              placeholder={t("subjectNamePlaceholder")}
               value={name}
               onChange={(e) => {
                 setName(e.target.value);
@@ -89,16 +91,16 @@ export function SubjectsModal({
             />
           </div>
           <Button type="button" onClick={handleCreate} loading={createMutation.isPending}>
-            Yaratish
+            {t("create")}
           </Button>
         </div>
 
         <div>
-          <span className="mb-2 block text-sm font-medium text-[var(--color-text)]">Mavjud fanlar</span>
+          <span className="mb-2 block text-sm font-medium text-[var(--color-text)]">{t("existingSubjects")}</span>
           {!subjects ? (
-            <p className="text-xs text-[var(--color-text-muted)]">Yuklanmoqda...</p>
+            <p className="text-xs text-[var(--color-text-muted)]">{t("loading")}</p>
           ) : subjects.length === 0 ? (
-            <p className="text-xs text-[var(--color-text-muted)]">Hozircha fan yo&apos;q — yuqoridan yarating</p>
+            <p className="text-xs text-[var(--color-text-muted)]">{t("noSubjectsYet")}</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {subjects.map((subject) => {
@@ -126,7 +128,7 @@ export function SubjectsModal({
 
         <div className="flex justify-end pt-1">
           <Button type="button" variant="secondary" onClick={handleClose}>
-            Yopish
+            {t("close")}
           </Button>
         </div>
       </div>

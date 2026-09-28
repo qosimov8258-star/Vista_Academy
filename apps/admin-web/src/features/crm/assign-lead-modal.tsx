@@ -4,18 +4,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { Lead, TenantUser } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-
-const schema = z.object({
-  assignedToUserId: z.string().min(1, "Xodimni tanlang"),
-});
-
-type FormValues = z.infer<typeof schema>;
 
 export function AssignLeadModal({
   open,
@@ -30,8 +25,15 @@ export function AssignLeadModal({
   leadId: string;
   currentAssignedToUserId?: string | null;
 }) {
+  const t = useTranslations("crm");
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
+
+  const schema = z.object({
+    assignedToUserId: z.string().min(1, t("validation.selectEmployee")),
+  });
+
+  type FormValues = z.infer<typeof schema>;
 
   const usersQuery = useQuery({
     queryKey: ["users", slug],
@@ -56,21 +58,21 @@ export function AssignLeadModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : t("unexpectedError"));
     },
   });
 
   return (
-    <Modal open={open} onClose={onClose} title="Mas'ulni belgilash" widthClassName="max-w-md">
+    <Modal open={open} onClose={onClose} title={t("assignTitle")} widthClassName="max-w-md">
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
             {serverError}
           </div>
         )}
-        <Select label="Mas'ul xodim" defaultValue="" error={errors.assignedToUserId?.message} {...register("assignedToUserId")}>
+        <Select label={t("assignedEmployeeLabel")} defaultValue="" error={errors.assignedToUserId?.message} {...register("assignedToUserId")}>
           <option value="" disabled>
-            Tanlang
+            {t("choose")}
           </option>
           {usersQuery.data?.map((u) => (
             <option key={u.id} value={u.id}>
@@ -81,10 +83,10 @@ export function AssignLeadModal({
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Bekor qilish
+            {t("cancel")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Saqlash
+            {t("save")}
           </Button>
         </div>
       </form>

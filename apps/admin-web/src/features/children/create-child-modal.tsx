@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { CreateChildResult, ChildCredentials, Group } from "@/lib/types";
@@ -16,37 +17,49 @@ import { EyeIcon, EyeOffIcon, CheckIcon, PencilIcon } from "@/components/ui/icon
 import { prepareChildPhoto } from "@/lib/child-photo";
 import { initials } from "@/components/ui/avatar";
 
-const schema = z
-  .object({
-    groupId: z.string().optional(),
-    lastName: z.string().min(2, "Familiya kamida 2 belgi"),
-    firstName: z.string().min(2, "Ism kamida 2 belgi"),
-    gender: z.enum(["MALE", "FEMALE"], { message: "Jinsini tanlang" }),
-    birthDate: z.string().optional(),
-    guardianFullName: z.string().min(2, "Ota-ona ismi kamida 2 belgi"),
-    guardianRelation: z.enum(["MOTHER", "FATHER", "GRANDPARENT", "OTHER"]),
-    guardianPhone: z
-      .string()
-      .refine((v) => v.replace(/\D/g, "").length >= 9, "Telefon raqami to'liq emas"),
-    // Ixtiyoriy — bo'sh qoldirilsa backend avtomatik generatsiya qiladi
-    guardianPassword: z.string().optional(),
-    guardianConfirmPassword: z.string().optional(),
-  })
-  .superRefine((values, ctx) => {
-    if (!values.guardianPassword) return;
-    const unmet = getPasswordRules(values.guardianPassword).some((rule) => !rule.met);
-    if (unmet) {
-      ctx.addIssue({ code: "custom", path: ["guardianPassword"], message: "Parol talablarga javob bermaydi" });
-    }
-    if (values.guardianPassword !== values.guardianConfirmPassword) {
-      ctx.addIssue({ code: "custom", path: ["guardianConfirmPassword"], message: "Parollar mos kelmadi" });
-    }
-  });
-
-type FormValues = z.infer<typeof schema>;
+type FormValues = {
+  groupId?: string;
+  lastName: string;
+  firstName: string;
+  gender: "MALE" | "FEMALE";
+  birthDate?: string;
+  guardianFullName: string;
+  guardianRelation: "MOTHER" | "FATHER" | "GRANDPARENT" | "OTHER";
+  guardianPhone: string;
+  guardianPassword?: string;
+  guardianConfirmPassword?: string;
+};
 
 export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClose: () => void; slug: string }) {
+  const t = useTranslations("children");
   const queryClient = useQueryClient();
+
+  const schema = z
+    .object({
+      groupId: z.string().optional(),
+      lastName: z.string().min(2, t("validation.lastNameMin")),
+      firstName: z.string().min(2, t("validation.firstNameMin")),
+      gender: z.enum(["MALE", "FEMALE"], { message: t("validation.genderRequired") }),
+      birthDate: z.string().optional(),
+      guardianFullName: z.string().min(2, t("validation.guardianNameMin")),
+      guardianRelation: z.enum(["MOTHER", "FATHER", "GRANDPARENT", "OTHER"]),
+      guardianPhone: z
+        .string()
+        .refine((v) => v.replace(/\D/g, "").length >= 9, t("validation.phoneIncomplete")),
+      // Ixtiyoriy — bo'sh qoldirilsa backend avtomatik generatsiya qiladi
+      guardianPassword: z.string().optional(),
+      guardianConfirmPassword: z.string().optional(),
+    })
+    .superRefine((values, ctx) => {
+      if (!values.guardianPassword) return;
+      const unmet = getPasswordRules(values.guardianPassword).some((rule) => !rule.met);
+      if (unmet) {
+        ctx.addIssue({ code: "custom", path: ["guardianPassword"], message: t("validation.passwordRequirements") });
+      }
+      if (values.guardianPassword !== values.guardianConfirmPassword) {
+        ctx.addIssue({ code: "custom", path: ["guardianConfirmPassword"], message: t("validation.passwordsMismatch") });
+      }
+    });
   const [serverError, setServerError] = useState<string | null>(null);
   const [photoImage, setPhotoImage] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
@@ -132,7 +145,7 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
       }
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : t("unexpectedError"));
     },
   });
 
@@ -149,21 +162,19 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
 
   if (createdCredentials) {
     return (
-      <Modal open={open} onClose={handleClose} title="Bola qo'shildi">
+      <Modal open={open} onClose={handleClose} title={t("createdTitle")}>
         <div className="space-y-4">
           <div className="flex flex-col items-center gap-2 text-center">
             <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-success-bg)] text-[var(--color-success)]">
               <CheckIcon className="h-6 w-6" />
             </span>
-            <p className="text-sm text-[var(--color-text-muted)]">
-              Ota-ona kabineti ochildi. Login va parolni ota-onaga bering — parol qayta ko&apos;rsatilmaydi.
-            </p>
+            <p className="text-sm text-[var(--color-text-muted)]">{t("createdHint")}</p>
           </div>
-          <CredentialRow label="Login" value={createdCredentials.login} />
-          <CredentialRow label="Parol" value={createdCredentials.password} />
+          <CredentialRow label={t("loginLabel")} value={createdCredentials.login} />
+          <CredentialRow label={t("passwordLabel")} value={createdCredentials.password} />
           <div className="flex justify-end pt-1">
             <Button type="button" onClick={handleClose}>
-              Yopish
+              {t("close")}
             </Button>
           </div>
         </div>
@@ -172,7 +183,7 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
   }
 
   return (
-    <Modal open={open} onClose={handleClose} title="Yangi bola">
+    <Modal open={open} onClose={handleClose} title={t("createTitle")}>
       <form
         className="space-y-4"
         onSubmit={handleSubmit((values) => {
@@ -196,7 +207,7 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
               // eslint-disable-next-line @next/next/no-img-element -- data: URL, Next optimizatsiyasi kerak emas
               <img
                 src={photoImage}
-                alt="Bola surati"
+                alt={t("photoAlt")}
                 width={72}
                 height={72}
                 className="h-[72px] w-[72px] shrink-0 rounded-full object-cover ring-1 ring-inset ring-[rgba(16,24,40,0.06)]"
@@ -210,8 +221,8 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
               type="button"
               onClick={() => photoInputRef.current?.click()}
               disabled={photoChecking}
-              aria-label="Bola suratini tanlash"
-              title="Surat qo'yish"
+              aria-label={t("choosePhotoAria")}
+              title={t("choosePhotoTitle")}
               className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-full bg-black/45 text-white opacity-0 transition-opacity duration-[var(--dur-fast)] hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none disabled:cursor-wait disabled:opacity-100 motion-reduce:transition-none"
             >
               {photoChecking ? (
@@ -234,7 +245,7 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
             disabled={photoChecking}
             className="cursor-pointer text-[12.5px] font-medium text-[var(--color-primary)] hover:underline disabled:opacity-60"
           >
-            {photoChecking ? "Tekshirilmoqda..." : photoImage ? "Rasmni almashtirish" : "Surat qo'yish (ixtiyoriy)"}
+            {photoChecking ? t("photoChecking") : photoImage ? t("photoReplace") : t("photoAddOptional")}
           </button>
           {photoError && (
             <p role="alert" className="max-w-[320px] text-center text-[12.5px] text-[var(--color-danger)]">
@@ -246,24 +257,24 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
         {/* Familiya oldinda: ro'yxatlar va hujjatlar "Familiya Ism" tartibida */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
-            label="Familiya"
-            placeholder="Umaraliyev"
+            label={t("lastNameLabel")}
+            placeholder={t("lastNamePlaceholder")}
             error={errors.lastName?.message}
             {...register("lastName")}
           />
-          <Input label="Ism" placeholder="Usmon" error={errors.firstName?.message} {...register("firstName")} />
+          <Input label={t("firstNameLabel")} placeholder={t("firstNamePlaceholder")} error={errors.firstName?.message} {...register("firstName")} />
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Select label="Jinsi" defaultValue="" error={errors.gender?.message} {...register("gender")}>
+          <Select label={t("genderLabel")} defaultValue="" error={errors.gender?.message} {...register("gender")}>
             <option value="" disabled>
-              Tanlang
+              {t("choose")}
             </option>
-            <option value="MALE">O&apos;g&apos;il bola</option>
-            <option value="FEMALE">Qiz bola</option>
+            <option value="MALE">{t("gender.male")}</option>
+            <option value="FEMALE">{t("gender.female")}</option>
           </Select>
-          <Select label="Guruh (ixtiyoriy)" defaultValue="" {...register("groupId")}>
-            <option value="">Tanlanmagan</option>
+          <Select label={t("groupLabelOptional")} defaultValue="" {...register("groupId")}>
+            <option value="">{t("notSelected")}</option>
             {groups?.filter((group) => group.status === "ACTIVE").map((group) => (
               <option key={group.id} value={group.id}>
                 {group.name} ({group._count?.children ?? 0}/{group.capacity})
@@ -273,34 +284,34 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
         </div>
 
         <Input
-          label="Tug'ilgan sana (ixtiyoriy)"
+          label={t("birthDateLabelOptional")}
           type="date"
           error={errors.birthDate?.message}
-          hint="Saqlanganda bolaga qisqa ID beriladi (masalan id14732)"
+          hint={t("birthDateHint")}
           {...register("birthDate")}
         />
 
         <div className="space-y-4 border-t border-[var(--color-border)] pt-4">
-          <p className="text-sm font-medium text-[var(--color-text)]">Aloqa uchun ota-ona</p>
+          <p className="text-sm font-medium text-[var(--color-text)]">{t("guardianSection")}</p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_140px]">
             <Input
-              label="Ismi va familiyasi"
-              placeholder="Umaraliyeva Aziza"
+              label={t("guardianFullNameLabel")}
+              placeholder={t("guardianFullNamePlaceholder")}
               error={errors.guardianFullName?.message}
               {...register("guardianFullName")}
             />
-            <Select label="Kim bo'ladi" {...register("guardianRelation")}>
-              <option value="MOTHER">Onasi</option>
-              <option value="FATHER">Otasi</option>
-              <option value="GRANDPARENT">Buvi/bobo</option>
-              <option value="OTHER">Boshqa</option>
+            <Select label={t("guardianRelationLabel")} {...register("guardianRelation")}>
+              <option value="MOTHER">{t("relation.mother")}</option>
+              <option value="FATHER">{t("relation.father")}</option>
+              <option value="GRANDPARENT">{t("relation.grandparent")}</option>
+              <option value="OTHER">{t("relation.other")}</option>
             </Select>
           </div>
           <Input
-            label="Telefon raqami"
+            label={t("guardianPhoneLabel")}
             type="tel"
             placeholder="+998 90 123 45 67"
-            hint="Xuddi shu raqam bilan yana bola qo'shilsa, ikkalasi bir ota-onaga bog'lanadi"
+            hint={t("guardianPhoneHint")}
             error={errors.guardianPhone?.message}
             {...register("guardianPhone")}
           />
@@ -308,9 +319,9 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="relative">
               <Input
-                label="Parol (ixtiyoriy)"
+                label={t("passwordLabelOptional")}
                 type={showPassword ? "text" : "password"}
-                placeholder="Bo'sh qoldirilsa avtomatik beriladi"
+                placeholder={t("passwordAutoPlaceholder")}
                 error={errors.guardianPassword?.message}
                 {...register("guardianPassword")}
               />
@@ -318,14 +329,14 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
                 className="absolute right-3 top-[38px] cursor-pointer text-gray-400 hover:text-[var(--color-text)]"
-                aria-label={showPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+                aria-label={showPassword ? t("hidePassword") : t("showPassword")}
               >
                 {showPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
               </button>
             </div>
             <div className="relative">
               <Input
-                label="Parolni tasdiqlang"
+                label={t("confirmPasswordLabel")}
                 type={showConfirmPassword ? "text" : "password"}
                 error={errors.guardianConfirmPassword?.message}
                 {...register("guardianConfirmPassword")}
@@ -334,7 +345,7 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
                 type="button"
                 onClick={() => setShowConfirmPassword((v) => !v)}
                 className="absolute right-3 top-[38px] cursor-pointer text-gray-400 hover:text-[var(--color-text)]"
-                aria-label={showConfirmPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+                aria-label={showConfirmPassword ? t("hidePassword") : t("showPassword")}
               >
                 {showConfirmPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
               </button>
@@ -349,10 +360,10 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={handleClose}>
-            Bekor qilish
+            {t("cancel")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Yaratish
+            {t("create")}
           </Button>
         </div>
       </form>

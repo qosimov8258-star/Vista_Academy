@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { LessonGrade, LessonTopic } from "@/lib/types";
@@ -42,6 +43,7 @@ export function GradeChildModal({
   grade: LessonGrade | null;
   topics: LessonTopic[];
 }) {
+  const t = useTranslations("lessons");
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -73,7 +75,7 @@ export function GradeChildModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : t("unexpectedError"));
     },
   });
 
@@ -83,14 +85,14 @@ export function GradeChildModal({
   };
 
   return (
-    <Modal open={open} onClose={handleClose} title={`Baholash — ${childName}`}>
+    <Modal open={open} onClose={handleClose} title={t("gradeTitle", { childName })}>
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
             {serverError}
           </div>
         )}
-        <Select label="Baho (1–10)" {...register("score")}>
+        <Select label={t("scoreLabel")} {...register("score")}>
           {SCORES.map((score) => (
             <option key={score} value={score}>
               {score}
@@ -98,8 +100,8 @@ export function GradeChildModal({
           ))}
         </Select>
 
-        <Select label="Mavzu bilan bog'lash (ixtiyoriy)" defaultValue="" {...register("topicId")}>
-          <option value="">Bog'lanmagan</option>
+        <Select label={t("linkTopicLabel")} defaultValue="" {...register("topicId")}>
+          <option value="">{t("notLinked")}</option>
           {topics.map((topic) => (
             <option key={topic.id} value={topic.id}>
               {topic.title}
@@ -107,14 +109,14 @@ export function GradeChildModal({
           ))}
         </Select>
 
-        <Textarea label="Izoh (ixtiyoriy)" rows={2} placeholder="Bugungi ishtiroki haqida..." {...register("note")} />
+        <Textarea label={t("noteLabelOptional")} rows={2} placeholder={t("gradeNotePlaceholder")} {...register("note")} />
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={handleClose}>
-            Bekor qilish
+            {t("cancel")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Saqlash
+            {t("save")}
           </Button>
         </div>
       </form>

@@ -38,7 +38,10 @@ export interface LandingApplicationInput {
   phone: string;
 }
 
-type SubmitResult = { ok: true } | { ok: false; message: string };
+/** `message` — backenddan kelgan haqiqiy xabar bo'lsa shu qaytariladi, aks holda
+ *  `null` — chaqiruvchi tomon (tarjima qila oladigan komponent) o'z zaxira
+ *  matnini ko'rsatadi. */
+type SubmitResult = { ok: true } | { ok: false; message: string | null };
 
 /** "Ariza qoldirish" formasini serverga yuboradi. */
 export async function submitLandingApplication(input: LandingApplicationInput): Promise<SubmitResult> {
@@ -50,10 +53,10 @@ export async function submitLandingApplication(input: LandingApplicationInput): 
     });
     const body = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
     if (!res.ok) {
-      return { ok: false, message: body?.error?.message ?? "Xatolik yuz berdi. Birozdan so'ng qayta urinib ko'ring." };
+      return { ok: false, message: body?.error?.message ?? null };
     }
     return { ok: true };
   } catch {
-    return { ok: false, message: "Internet aloqasida muammo. Birozdan so'ng qayta urinib ko'ring." };
+    return { ok: false, message: null };
   }
 }

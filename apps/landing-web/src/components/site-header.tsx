@@ -43,7 +43,6 @@ export function SiteHeader() {
     { label: t("nav.features"), href: "/#classrooms", children: GROUPS_MENU },
     { label: t("nav.schools"), href: "/#schools", badge: t("nav.schoolsBadge") },
     { label: t("nav.about"), href: "/#about" },
-    { label: t("nav.contact"), href: "/#contact" },
   ];
 
   return (
@@ -51,9 +50,9 @@ export function SiteHeader() {
       <div className="mx-auto flex h-[72px] max-w-[1280px] items-center justify-between px-4 lg:px-8">
         <a href="/#top" className="flex items-center gap-3 shrink-0">
           {/* eslint-disable-next-line @next/next/no-img-element -- statik brend rasmi */}
-          <img src="/logo.png" alt="Vista Academy" className="h-14 w-14 object-contain" />
+          <img src="/homepage/logo.png" alt="Vista Academy" className="h-14 w-14 object-contain" />
           {/* eslint-disable-next-line @next/next/no-img-element -- statik brend rasmi */}
-          <img src="/logo-name.png" alt="Vista Academy" className="h-10 w-auto object-contain" />
+          <img src="/homepage/logo-name.png" alt="Vista Academy" className="h-10 w-auto object-contain" />
         </a>
 
         <nav className="hidden items-center gap-7 lg:flex">

@@ -5,6 +5,7 @@ import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { SalaryScheme } from "@/lib/types";
@@ -13,29 +14,6 @@ import { AmountInput } from "@/components/ui/amount-input";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { Button } from "@/components/ui/button";
 import { LoadingState, ErrorState } from "@/components/ui/states";
-
-const RULE_TYPE_OPTIONS = [
-  { value: "FIXED", label: "Belgilangan (oylik summa)" },
-  { value: "PER_HOUR", label: "Soatiga (ish soatlari asosida)" },
-  { value: "PER_CHILD", label: "Boladan (faol bolalar soni asosida)" },
-];
-
-const schema = z
-  .object({
-    ruleType: z.enum(["FIXED", "PER_HOUR", "PER_CHILD"]),
-    fixedAmount: z.coerce.number().min(0).optional(),
-    rate: z.coerce.number().min(0).optional(),
-  })
-  .refine((v) => v.ruleType !== "FIXED" || v.fixedAmount !== undefined, {
-    message: "Belgilangan summani kiriting",
-    path: ["fixedAmount"],
-  })
-  .refine((v) => v.ruleType === "FIXED" || v.rate !== undefined, {
-    message: "Stavkani kiriting",
-    path: ["rate"],
-  });
-
-type FormValues = z.infer<typeof schema>;
 
 export function EditSalarySchemeModal({
   open,
@@ -50,8 +28,32 @@ export function EditSalarySchemeModal({
   employeeId: string;
   employeeName?: string;
 }) {
+  const t = useTranslations("hr");
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
+
+  const RULE_TYPE_OPTIONS = [
+    { value: "FIXED", label: t("ruleType.fixed") },
+    { value: "PER_HOUR", label: t("ruleType.perHour") },
+    { value: "PER_CHILD", label: t("ruleType.perChild") },
+  ];
+
+  const schema = z
+    .object({
+      ruleType: z.enum(["FIXED", "PER_HOUR", "PER_CHILD"]),
+      fixedAmount: z.coerce.number().min(0).optional(),
+      rate: z.coerce.number().min(0).optional(),
+    })
+    .refine((v) => v.ruleType !== "FIXED" || v.fixedAmount !== undefined, {
+      message: t("validation.enterFixedAmount"),
+      path: ["fixedAmount"],
+    })
+    .refine((v) => v.ruleType === "FIXED" || v.rate !== undefined, {
+      message: t("validation.enterRate"),
+      path: ["rate"],
+    });
+
+  type FormValues = z.infer<typeof schema>;
 
   const schemeQuery = useQuery({
     queryKey: ["salary-scheme", slug, employeeId],
@@ -106,7 +108,7 @@ export function EditSalarySchemeModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : t("unexpectedError"));
     },
   });
 
@@ -114,7 +116,7 @@ export function EditSalarySchemeModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={employeeName ? `Maosh sxemasi — ${employeeName}` : "Maosh sxemasi"}
+      title={employeeName ? t("salarySchemeTitleFor", { name: employeeName }) : t("salarySchemeTitle")}
       widthClassName="max-w-md"
     >
       {schemeQuery.isLoading ? (
@@ -133,7 +135,7 @@ export function EditSalarySchemeModal({
             name="ruleType"
             render={({ field }) => (
               <SelectMenu
-                label="Hisoblash turi"
+                label={t("calculationTypeLabel")}
                 options={RULE_TYPE_OPTIONS}
                 value={field.value}
                 onChange={field.onChange}
@@ -148,7 +150,7 @@ export function EditSalarySchemeModal({
               name="fixedAmount"
               render={({ field }) => (
                 <AmountInput
-                  label="Oylik summa (UZS)"
+                  label={t("monthlyAmountLabel")}
                   placeholder="2 500 000"
                   value={field.value}
                   onChange={field.onChange}
@@ -162,7 +164,7 @@ export function EditSalarySchemeModal({
               name="rate"
               render={({ field }) => (
                 <AmountInput
-                  label={ruleType === "PER_HOUR" ? "Bir soat narxi (UZS)" : "Bir bola uchun narx (UZS)"}
+                  label={ruleType === "PER_HOUR" ? t("perHourLabel") : t("perChildLabel")}
                   placeholder="15 000"
                   value={field.value}
                   onChange={field.onChange}
@@ -174,10 +176,10 @@ export function EditSalarySchemeModal({
 
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={onClose}>
-              Bekor qilish
+              {t("cancel")}
             </Button>
             <Button type="submit" loading={isSubmitting || mutation.isPending}>
-              Saqlash
+              {t("save")}
             </Button>
           </div>
         </form>

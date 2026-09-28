@@ -4,23 +4,17 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { Lead, LeadStage } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Select, Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { STAGE_LABEL } from "./labels";
+import { stageLabel } from "./labels";
 
 const CHANGEABLE_STAGES = ["NEW", "TRIAL_DAY_SCHEDULED", "CONTRACT", "LOST"] as const;
 type ChangeableStage = (typeof CHANGEABLE_STAGES)[number];
-
-const schema = z.object({
-  stage: z.enum(["NEW", "TRIAL_DAY_SCHEDULED", "CONTRACT", "LOST"]),
-  lostReason: z.string().optional(),
-});
-
-type FormValues = z.infer<typeof schema>;
 
 function isChangeableStage(stage: LeadStage): stage is ChangeableStage {
   return (CHANGEABLE_STAGES as readonly LeadStage[]).includes(stage);
@@ -39,8 +33,16 @@ export function ChangeStageModal({
   leadId: string;
   currentStage: LeadStage;
 }) {
+  const t = useTranslations("crm");
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
+
+  const schema = z.object({
+    stage: z.enum(["NEW", "TRIAL_DAY_SCHEDULED", "CONTRACT", "LOST"]),
+    lostReason: z.string().optional(),
+  });
+
+  type FormValues = z.infer<typeof schema>;
 
   const {
     register,
@@ -71,17 +73,17 @@ export function ChangeStageModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : t("unexpectedError"));
     },
   });
 
   return (
-    <Modal open={open} onClose={onClose} title="Bosqichni o'zgartirish">
+    <Modal open={open} onClose={onClose} title={t("changeStageTitle")}>
       <form
         className="space-y-4"
         onSubmit={handleSubmit((values) => {
           if (values.stage === "LOST" && !values.lostReason?.trim()) {
-            setError("lostReason", { message: "Yo'qotilgan ariza uchun sabab kiritilishi shart" });
+            setError("lostReason", { message: t("validation.lostReasonRequired") });
             return;
           }
           mutation.mutate(values);
@@ -92,18 +94,18 @@ export function ChangeStageModal({
             {serverError}
           </div>
         )}
-        <Select label="Yangi bosqich" error={errors.stage?.message} {...register("stage")}>
+        <Select label={t("newStageLabel")} error={errors.stage?.message} {...register("stage")}>
           {CHANGEABLE_STAGES.map((s) => (
             <option key={s} value={s}>
-              {STAGE_LABEL[s]}
+              {stageLabel(t, s)}
             </option>
           ))}
         </Select>
         {stage === "LOST" && (
           <Textarea
-            label="Yo'qotish sababi"
+            label={t("lostReasonLabel")}
             rows={3}
-            placeholder="Masalan: narx mos kelmadi"
+            placeholder={t("lostReasonPlaceholder")}
             error={errors.lostReason?.message}
             {...register("lostReason")}
           />
@@ -111,10 +113,10 @@ export function ChangeStageModal({
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Bekor qilish
+            {t("cancel")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Saqlash
+            {t("save")}
           </Button>
         </div>
       </form>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import type { Product } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +19,7 @@ function imagePositions(product: Product): (1 | 2 | 3)[] {
 
 /** Mahsulot suratlari — chapda miniatyuralar, o'ngda katta rasm; o'q tugmalari yoki surish (swipe) bilan almashtiriladi. */
 function ProductImageGallery({ product, positions }: { product: Product; positions: (1 | 2 | 3)[] }) {
+  const t = useTranslations("products");
   const [index, setIndex] = useState(0);
   const dragStartX = useRef<number | null>(null);
   const hasMultiple = positions.length > 1;
@@ -47,7 +49,7 @@ function ProductImageGallery({ product, positions }: { product: Product; positio
               key={pos}
               type="button"
               onClick={() => setIndex(i)}
-              aria-label={`${i + 1}-rasm`}
+              aria-label={t("imageNumber", { number: i + 1 })}
               className={`h-14 w-14 cursor-pointer overflow-hidden rounded-[var(--radius-md)] border-2 transition-colors ${
                 i === index
                   ? "border-[var(--color-primary)]"
@@ -84,7 +86,7 @@ function ProductImageGallery({ product, positions }: { product: Product; positio
               type="button"
               onClick={() => goTo(index - 1)}
               className="absolute left-0 top-1/2 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-[var(--color-surface)] text-[var(--color-text)] shadow-[var(--shadow-raised)] transition-transform hover:scale-105"
-              aria-label="Oldingi rasm"
+              aria-label={t("previousImage")}
             >
               <ChevronRightIcon className="h-4 w-4 -scale-x-100" />
             </button>
@@ -92,7 +94,7 @@ function ProductImageGallery({ product, positions }: { product: Product; positio
               type="button"
               onClick={() => goTo(index + 1)}
               className="absolute right-0 top-1/2 flex h-8 w-8 translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-[var(--color-surface)] text-[var(--color-text)] shadow-[var(--shadow-raised)] transition-transform hover:scale-105"
-              aria-label="Keyingi rasm"
+              aria-label={t("nextImage")}
             >
               <ChevronRightIcon className="h-4 w-4" />
             </button>
@@ -112,6 +114,7 @@ export function ProductDetailModal({
   onClose: () => void;
   product: Product;
 }) {
+  const t = useTranslations("products");
   const positions = imagePositions(product);
   const inStock = product.quantity > 0;
 
@@ -141,12 +144,12 @@ export function ProductDetailModal({
         )}
 
         <div className="flex items-center gap-1.5 text-[15px] font-semibold text-[var(--color-text)]">
-          Qiymati: {product.priceCoins}
+          {t("valueLabel")} {product.priceCoins}
           <CoinIcon className="h-4 w-4 text-[var(--color-warning)]" />
         </div>
 
         <Badge tone={inStock ? "success" : "danger"} className="w-full justify-center py-2 text-[14px]">
-          {inStock ? "Yetarli" : "Yetarli emas"}
+          {inStock ? t("inStock") : t("outOfStockShort")}
         </Badge>
       </div>
     </Modal>

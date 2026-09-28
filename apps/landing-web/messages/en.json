@@ -1,4 +1,8 @@
 {
+  "siteMeta": {
+    "title": "Vista Academy — Kindergarten Network",
+    "description": "Vista Academy — a network of kindergartens raising children with care, safety and modern teaching methods."
+  },
   "common": {
     "language": "Language",
     "languages": {
@@ -6,7 +10,8 @@
       "ru": "Русский",
       "en": "English"
     },
-    "cta": "Apply now"
+    "cta": "Apply now",
+    "pagesEyebrow": "Our groups"
   },
   "nav": {
     "home": "Home",
@@ -41,5 +46,247 @@
     "headingSuffix": "right here",
     "paragraph": "Every day is filled with new knowledge, new friendships and new laughter.",
     "ctaSecondary": "Learn more"
+  },
+  "whyUs": {
+    "heading": "What makes Vista Academy different?",
+    "subheading": "We're a caring team devoted to your child's success. Grounded in safety, care, inspiration and education, we give every child the best possible start.",
+    "features": {
+      "schedule": "Open from 7:00 AM to 7:00 PM — parents can easily balance work with kindergarten.",
+      "meals": "Balanced, quality meals throughout the day — provided at no extra cost as part of the program.",
+      "teacher": "Children stay with the same caregiver until they move up to the next group — building trust and stability.",
+      "education": "We prepare your child for school with age-appropriate activities based on a modern curriculum."
+    }
+  },
+  "stats": {
+    "eyebrow": "About us",
+    "heading": "About Vista kindergarten",
+    "body": "Vista Academy is a modern kindergarten that fills every day of your child's life with knowledge, care and safety. With qualified caregivers and modern, well-equipped classrooms, we take an individual approach to every child and confidently prepare them for school life.",
+    "labels": {
+      "students": "students",
+      "teachers": "professional teachers",
+      "classrooms": "equipped classrooms"
+    }
+  },
+  "programs": {
+    "eyebrow": "Our groups",
+    "heading": "A group suited to every age",
+    "groups": {
+      "babies": { "title": "Babies", "age": "2 months to 1 year" },
+      "toddlers": { "title": "Toddlers", "age": "1 to 3 years" },
+      "middle": { "title": "Middle group", "age": "3 to 4 years" },
+      "senior": { "title": "Senior group", "age": "4 to 6 years" },
+      "schoolAge": { "title": "School age", "age": "6 to 12 years" }
+    },
+    "prevAria": "Previous group",
+    "nextAria": "Next group",
+    "closingQuote": "Not just a kindergarten — a place where children grow, learn and discover."
+  },
+  "directorQuote": {
+    "headingLine1": "Vista Academy",
+    "headingLine2": "a place that opens the door to knowledge and opportunity.",
+    "body": "Together with your child, we're building the future, turning every day into an unforgettable educational journey.",
+    "name": "Director's name",
+    "role": "General Director"
+  },
+  "adaptation": {
+    "eyebrow": "Adaptation period",
+    "title": "Settling into kindergarten — together, step by step",
+    "defaultImageAlt": "A child wearing a backpack enters the group for the first time holding a parent's hand, greeted with smiles by the caregiver and friends",
+    "defaultText": "The first days at kindergarten are a new and exciting stage for your child. That's why we take it slow: at first they get to know the group together with you, then gradually spend more time there on their own. Our experienced caregivers pay special attention to every child — turning fear into trust and joy.",
+    "loveImageAlt": "Children holding hands, forming a heart shape as a symbol of friendship and love",
+    "loveTextLine1": "Every child is part of one big family.",
+    "loveTextLine2": "In our kindergarten they come together with love and feel true friendship.",
+    "processImageAlt": "Children with a caregiver during the adaptation process",
+    "processEyebrow": "Every step is monitored",
+    "processTitle": "The adaptation process — with experienced caregivers",
+    "processText": "During the adaptation period, our caregivers continuously monitor how your child is doing. Every step is agreed with parents — so both the child and the parent settle calmly into kindergarten life.",
+    "prevAria": "Previous",
+    "nextAria": "Next"
+  },
+  "ourGroups": {
+    "eyebrow": "20 wonderful groups",
+    "heading": "Our groups",
+    "description": "Each of our groups has its own unique, cheerful name — your child will soon fall in love with theirs.",
+    "showMore": "Show more",
+    "showLess": "Show less"
+  },
+  "testimonials": {
+    "imageAlt": "Children playing",
+    "quoteLine1": "Every child is a unique color, a unique laugh.",
+    "quoteLine2": "In our kindergarten, everyone plays and grows up together.",
+    "teamImageAlt": "The Vista Academy team",
+    "teamHeading": "Our team",
+    "teamBody": "Meet our close-knit team, who approach your child with care, patience and knowledge.",
+    "reviews": {
+      "review1": { "role": "mother of a 4-year-old daughter", "text": "My child loves going to kindergarten now and comes home happy every day." },
+      "review2": { "role": "father of a 3-year-old son", "text": "The caregivers are very kind and attentive, giving each child individual attention." },
+      "review3": { "role": "mother of a 2-year-old daughter", "text": "Meals and hygiene are kept very clean — I have no worries at all." },
+      "review4": { "role": "father of a 5-year-old son", "text": "The English and development classes have had a huge positive effect on my child's speech." },
+      "review5": { "role": "mother of a 4-year-old daughter", "text": "They send reports and photos every week — I always feel connected to my child." }
+    }
+  },
+  "education": {
+    "block1": {
+      "imageAlt": "Children discovering letters and numbers through play",
+      "eyebrow": "Learning through play",
+      "title": "Getting to know letters, numbers and shapes",
+      "body": "Every activity is built as a fun game for children — through flash cards, colorful materials and group tasks, children naturally memorize letters, numbers and shapes. This approach also develops focus, independent thinking and the ability to work with peers — an important step toward being fully ready for school."
+    },
+    "block2": {
+      "imageAlt": "A caregiver reading a picture book to children",
+      "eyebrow": "Reading hour",
+      "title": "Developing speech and thinking",
+      "body": "Our caregivers read aloud to the children every day — through colorful picture books, children learn new words, ask questions and learn to express their thoughts. Regular reading builds vocabulary, expands imagination and nurtures a love of books from an early age."
+    },
+    "block3": {
+      "imageAlt": "A caregiver telling children about the world using a globe and books",
+      "eyebrow": "Discovering the world",
+      "quote": "A child who hears a story today will see the world in their own light tomorrow. Every story is a door to a new discovery for our child."
+    }
+  },
+  "mealsIntro": {
+    "eyebrow": "Care in every meal",
+    "heading": "Know what your child is eating — we treat them like our own",
+    "body1": "Childhood is a stage the body remembers for a lifetime. That's why every dish in our kitchen is prepared from fresh ingredients, without preservatives or excess sugar. The weekly menu is planned under the supervision of a caregiver and a nutritionist — from breakfast to dinner, your child gets all the vitamins and energy they need to grow.",
+    "body2": "The result is a cheerful, active and healthy child, while parents can relax knowing their child is always well-fed and eating right.",
+    "imageAlt": "Children eating healthy food at kindergarten"
+  },
+  "teacherSubjects": {
+    "english": {
+      "title": "English teacher",
+      "body": "Our English teacher doesn't teach the language through memorization, but through songs, poems and role play. Every lesson is held in a cheerful atmosphere — children learn to pronounce new words correctly and speak without fear. This approach makes learning the language at school much easier later on."
+    },
+    "mentalMath": {
+      "title": "Mental math teacher",
+      "body": "Our mental math teacher first teaches children to work with numbers using an abacus, then trains them to calculate using imagination alone. These sessions develop focus, memory and quick thinking — helping the child succeed not only in math but in other subjects too."
+    }
+  },
+  "weeklyMenu": {
+    "weekdays": {
+      "MONDAY": "Monday",
+      "TUESDAY": "Tuesday",
+      "WEDNESDAY": "Wednesday",
+      "THURSDAY": "Thursday",
+      "FRIDAY": "Friday",
+      "SATURDAY": "Saturday",
+      "SUNDAY": "Sunday"
+    },
+    "mealTypes": {
+      "BREAKFAST": "Breakfast",
+      "LUNCH": "Lunch",
+      "SNACK": "Snack",
+      "DINNER": "Dinner",
+      "OTHER": "Other"
+    },
+    "emptyForDay": "No menu has been added yet for {day}.",
+    "otherMeals": "Other meals",
+    "prevDayAria": "Previous day",
+    "nextDayAria": "Next day"
+  },
+  "caregiverHighlights": {
+    "block1": {
+      "imageAlt": "A caregiver running an activity with children",
+      "eyebrow": "One face, one kind of care",
+      "title": "The caregiver grows together with the child",
+      "body": "Even as the group moves up a stage, your child keeps the same familiar, close caregiver by their side. This continuity removes the stress of getting used to new people every time and makes the child more confident."
+    },
+    "block2": {
+      "imageAlt": "A caregiver giving individual attention to a child",
+      "eyebrow": "Truly getting to know every child",
+      "title": "An individual approach to character and needs",
+      "body": "A dedicated caregiver comes to deeply understand your child's habits, moods and interests over time. Based on that understanding, they take an individual approach to every child and consistently track their development."
+    },
+    "closingImageAlt": "A caregiver working with children with warmth and care",
+    "closingQuoteLine1": "In our kindergarten, every day begins with care, patience and warmth.",
+    "closingQuoteLine2": "Our caregivers are there for your child like a second mother."
+  },
+  "teacherGrid": {
+    "prevAria": "Previous teacher",
+    "nextAria": "Next teacher",
+    "closeAria": "Close",
+    "experienceHeading": "Experience and background"
+  },
+  "applicationForm": {
+    "successTitle": "Thank you!",
+    "successBody": "Your application has been received. Our operators will contact you shortly.",
+    "backHome": "Back to homepage",
+    "title": "Apply now",
+    "subtitle": "Leave your name and phone number — we'll contact you shortly.",
+    "namePlaceholder": "Your name",
+    "nameError": "Please enter your full name",
+    "phoneError": "Invalid phone number. Example: +998 90 123 45 67",
+    "submitAria": "Submit application",
+    "genericError": "Something went wrong. Please try again shortly."
+  },
+  "backButton": "Back",
+  "busIntro": "Vista Academy — The magic bus",
+  "cradleFeeding": "Feed the baby in the cradle game",
+  "videoCompare": {
+    "firstAria": "First video",
+    "secondAria": "Second video"
+  },
+  "schedulePage": {
+    "metaTitle": "Flexible schedule — Vista Academy",
+    "description": "How children's days are organized through the week — how many lessons, when they sleep and when they eat.",
+    "heroImageAlt": "Children doing an activity as a group",
+    "emptyImageAlt": "The daily schedule will be posted here soon",
+    "types": {
+      "LESSON": "Lesson",
+      "SLEEP": "Sleep",
+      "MEAL": "Meal",
+      "OTHER": "Other"
+    },
+    "adaptationOverride": {
+      "imageAlt": "Children playing together and making friends in the kindergarten group",
+      "text": "For every child, the first days at kindergarten are a new and exciting stage. That's why we don't rush: at first your child gets to know the group together with you, then stays in the group for a short while, and later spends the whole day playing and learning with peers. Our experienced caregivers pay close attention to each child's mood and character — turning separation anxiety into trust and joy. As a result, your child goes to kindergarten smiling instead of crying, and makes friends there they'll remember for life."
+    }
+  },
+  "mealsPage": {
+    "metaTitle": "Healthy meals — Vista Academy",
+    "heroImageAlt": "Children eating healthy food in the dining hall",
+    "belowHeroTitle": "Feed your little one's sweet tooth!",
+    "belowHeroBody": "Try this fun game together with your little one.",
+    "emptyMenu": "No menu has been added yet."
+  },
+  "caregiverPage": {
+    "metaTitle": "Dedicated caregiver — Vista Academy",
+    "fallbackTitle": "A dedicated, caring caregiver",
+    "heroImageAlt": "A caregiver running an activity with children"
+  },
+  "educationPage": {
+    "metaTitle": "Education tracks — Vista Academy",
+    "fallbackTitle": "Education tracks and the future",
+    "heroImageAlt": "Students raising their hands to answer in class"
+  },
+  "teachersPage": {
+    "metaTitle": "Teachers — Vista Academy",
+    "description": "Our caring, experienced team, with your child every single day.",
+    "heroImageAlt": "A teacher helping children during a lesson",
+    "placeholders": {
+      "teacher1": { "role": "Head caregiver", "bio": "Every child is as dear to me as my own.", "experience": "12 years of experience in early childhood education, has led teams across several branches." },
+      "teacher2": { "role": "English teacher", "bio": "Learning through play is the most effective method.", "experience": "6 years of experience teaching English, holds an international IELTS certificate." },
+      "teacher3": { "role": "Mental math teacher", "bio": "Mental math develops a child's thinking.", "experience": "5 years of experience in mental math, has prepared students for national children's competitions." },
+      "teacher4": { "role": "Junior group caregiver", "bio": "Patience and care are the foundation of my work.", "experience": "8 years of experience working with young children, with additional training in child psychology." }
+    }
+  },
+  "applicationPage": {
+    "metaTitle": "Apply now — Vista Academy"
+  },
+  "heroCarousel": {
+    "prevAria": "Previous image",
+    "nextAria": "Next image"
+  },
+  "groupPage": {
+    "description": "One of our cheerful groups — your child will make friends and learn new things here.",
+    "metaTitleFallback": "Group — Vista Academy",
+    "photoComingSoon": "Photo coming soon",
+    "introImageAlt": "Children happily playing with beloved characters",
+    "introQuoteLine1": "Every child is their own world, their own happiness.",
+    "introQuoteLine2": "We enrich that world with love, play and knowledge.",
+    "groupSuffix": "group",
+    "sectionHeading": "This is where your child grows and develops",
+    "sectionBody": "In the \"{name}\" group, children make friends under the care of experienced caregivers and gain new knowledge and skills through daily activities. In our group, every child is treated with special attention, care and love.",
+    "studentFallbackName": "Student #{index}",
+    "studentFallbackBio": "Name and photo coming soon"
   }
 }

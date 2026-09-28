@@ -2,6 +2,7 @@
 
 import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { MenuEntry } from "@/lib/types";
@@ -9,8 +10,6 @@ import { Modal } from "@/components/ui/modal";
 import { Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/format";
-
-const WEEKDAY_LABELS = ["Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba", "Yakshanba"];
 
 type FormValues = Record<string, string>;
 
@@ -32,6 +31,8 @@ export function WeeklyMenuModal({
   days: string[];
   entryByDate: Map<string, MenuEntry>;
 }) {
+  const t = useTranslations("nutrition");
+  const WEEKDAY_LABELS = t.raw("weekdays") as string[];
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -67,12 +68,12 @@ export function WeeklyMenuModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : t("unexpectedError"));
     },
   });
 
   return (
-    <Modal open={open} onClose={onClose} title="Haftalik menyu">
+    <Modal open={open} onClose={onClose} title={t("weeklyMenuTitle")}>
       <form className="space-y-5" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
@@ -87,9 +88,9 @@ export function WeeklyMenuModal({
                 {WEEKDAY_LABELS[i]} <span className="font-normal text-[var(--color-text-muted)]">— {formatDate(day)}</span>
               </p>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <Textarea label="Nonushta" rows={2} {...register(fieldName(day, "breakfast"))} />
-                <Textarea label="Tushlik" rows={2} {...register(fieldName(day, "lunch"))} />
-                <Textarea label="Kechki ovqat / gazak" rows={2} {...register(fieldName(day, "snack"))} />
+                <Textarea label={t("breakfastLabel")} rows={2} {...register(fieldName(day, "breakfast"))} />
+                <Textarea label={t("lunchLabel")} rows={2} {...register(fieldName(day, "lunch"))} />
+                <Textarea label={t("snackLabel")} rows={2} {...register(fieldName(day, "snack"))} />
               </div>
             </div>
           ))}
@@ -97,10 +98,10 @@ export function WeeklyMenuModal({
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Bekor qilish
+            {t("cancel")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Saqlash
+            {t("save")}
           </Button>
         </div>
       </form>

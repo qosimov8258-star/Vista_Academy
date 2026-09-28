@@ -3,6 +3,7 @@ import path from "node:path";
 import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { PageShell } from "@/components/page-shell";
 import { fetchLanding } from "@/lib/api";
 import { PLACEHOLDER_GROUPS, getGroupBySlug, toDisplayGroups } from "@/lib/groups";
@@ -68,6 +69,7 @@ const STUDENT_SLOT_COUNT = 4;
  */
 const HERO_IMAGE_OVERRIDES: Record<string, string> = {
   minionlar: "/guruh/minion/minion1.jpeg",
+  akademiklar: "/guruh/akademiklar/talim4.jpeg",
 };
 
 export async function generateMetadata({
@@ -77,7 +79,8 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const group = getGroupBySlug(await loadGroups(), slug);
-  return { title: group ? `${group.name} — Vista Academy` : "Guruh — Vista Academy" };
+  const t = await getTranslations("groupPage");
+  return { title: group ? `${group.name} — Vista Academy` : t("metaTitleFallback") };
 }
 
 export default async function GroupPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -87,22 +90,25 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
   const introImage = findGroupIntroImage(group.slug);
   const closingImage = group.photos[0] ?? findGroupClosingImage(group.slug) ?? group.photo;
   const heroImageSrc = HERO_IMAGE_OVERRIDES[group.slug] ?? group.photo;
+  const t = await getTranslations("groupPage");
+  const tCommon = await getTranslations("common");
+  const groupLabel = `${group.name} ${t("groupSuffix")}`;
 
   return (
     <PageShell
-      eyebrow="Guruhlarimiz"
+      eyebrow={tCommon("pagesEyebrow")}
       title={group.name}
-      description="Bizning quvnoq guruhlarimizdan biri — farzandingiz shu yerda do'stlar orttiradi va yangi narsalar o'rganadi."
+      description={t("description")}
       heroImage={
         heroImageSrc
-          ? { src: heroImageSrc, alt: `${group.name} guruhi`, position: "50% 50%" }
+          ? { src: heroImageSrc, alt: groupLabel, position: "50% 50%" }
           : {
-              alt: `${group.name} guruhi`,
+              alt: groupLabel,
               background: group.color,
               placeholder: (
                 <div className="flex flex-col items-center gap-3 text-white/80">
                   <PhotoPlaceholderIcon className="h-16 w-16" />
-                  <span className="text-[13px] font-bold">Rasm tez orada qo&apos;shiladi</span>
+                  <span className="text-[13px] font-bold">{t("photoComingSoon")}</span>
                 </div>
               ),
             }
@@ -112,18 +118,14 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
         <>
           <Reveal direction="up" className="mx-auto max-w-[520px]">
             {/* eslint-disable-next-line @next/next/no-img-element -- guruh papkasidan dinamik topilgan rasm, o'lchamlari oldindan noma'lum */}
-            <img
-              src={introImage}
-              alt="Bolalar quvnoq qahramonlar bilan o'ynamoqda"
-              className="h-auto w-full object-contain"
-            />
+            <img src={introImage} alt={t("introImageAlt")} className="h-auto w-full object-contain" />
           </Reveal>
 
           <Reveal direction="up" delay={120} className="mx-auto mt-6 max-w-[640px] text-center">
             <p className="font-heading text-[20px] font-bold leading-snug tracking-tight text-[var(--color-text)] sm:text-[24px]">
-              Har bir bola — o&apos;zicha bir dunyo, o&apos;zicha bir baxt.
+              {t("introQuoteLine1")}
               <br />
-              Biz shu dunyoni mehr, o&apos;yin va bilim bilan boyitamiz.
+              {t("introQuoteLine2")}
             </p>
           </Reveal>
         </>
@@ -158,10 +160,10 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
                   )}
                 </div>
                 <p className="font-heading mt-4 text-[17px] font-bold text-[var(--color-text)]">
-                  {student?.name ?? `${index + 1}-o'quvchi`}
+                  {student?.name ?? t("studentFallbackName", { index: index + 1 })}
                 </p>
                 <p className="mx-auto mt-2 max-w-[200px] text-[13.5px] italic leading-relaxed text-[var(--color-text-muted)]">
-                  {student?.bio ?? "Ism va rasm tez orada qo'shiladi"}
+                  {student?.bio ?? t("studentFallbackBio")}
                 </p>
               </Reveal>
             );
@@ -172,29 +174,32 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
       <div className="mx-auto mt-16 grid max-w-[1120px] grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-16">
         <Reveal direction="left" className="order-2 lg:order-1">
           <p className="text-[13px] font-bold uppercase tracking-[0.08em]" style={{ color: "var(--color-green)" }}>
-            {group.name} guruhi
+            {groupLabel}
           </p>
           <h2 className="font-heading mt-3 text-[26px] font-bold leading-tight tracking-tight text-[var(--color-text)] sm:text-[30px]">
-            Farzandingiz shu yerda o&apos;sadi va rivojlanadi
+            {t("sectionHeading")}
           </h2>
           <p className="mt-4 text-[16px] leading-relaxed text-[var(--color-text-muted)]">
-            &quot;{group.name}&quot; guruhida bolalar tajribali tarbiyachilar nazorati ostida do&apos;stlar orttiradi,
-            har kungi mashg&apos;ulotlar orqali yangi bilim va ko&apos;nikmalarga ega bo&apos;ladi. Guruhimizda har bir
-            bolaga alohida e&apos;tibor, mehr va g&apos;amxo&apos;rlik bilan yondashiladi.
+            {t("sectionBody", { name: group.name })}
           </p>
         </Reveal>
 
         <Reveal
           direction="right"
           delay={120}
-          className="order-1 aspect-[3/4] w-full overflow-hidden rounded-[var(--radius-xl)] shadow-[var(--shadow-raised)] lg:order-2"
+          className="order-1 w-full overflow-hidden rounded-[var(--radius-xl)] shadow-[var(--shadow-raised)] lg:order-2"
           style={{ background: group.color }}
         >
           {closingImage ? (
-            // eslint-disable-next-line @next/next/no-img-element -- guruh uchun statik yoki API'dan kelgan dinamik rasm
-            <img src={closingImage} alt={`${group.name} guruhi`} className="h-full w-full object-contain" />
+            // eslint-disable-next-line @next/next/no-img-element -- guruh uchun statik yoki API'dan kelgan dinamik rasm, eniga to'liq moslanadi, tepa-pastidan 50px kesiladi
+            <img
+              src={closingImage}
+              alt={groupLabel}
+              className="block h-auto w-full"
+              style={{ marginTop: "-50px", marginBottom: "-50px" }}
+            />
           ) : (
-            <div className="flex h-full w-full items-center justify-center">
+            <div className="flex aspect-[3/4] h-full w-full items-center justify-center">
               <PhotoPlaceholderIcon className="h-16 w-16 text-white/80" />
             </div>
           )}

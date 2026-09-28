@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { getTranslations } from "next-intl/server";
 import { fetchLanding, assetUrl } from "@/lib/api";
 import type { LandingContentBlock } from "@/lib/types";
 import { Reveal } from "./reveal";
@@ -48,20 +49,18 @@ function PlaceholderFrame({ children }: { children: React.ReactNode }) {
  */
 const HIGHLIGHT_KEYS = ["maxsus-oqituvchi-1", "maxsus-oqituvchi-2"] as const;
 
-const FALLBACKS: Record<(typeof HIGHLIGHT_KEYS)[number], { title: string; body: string; icon: "book" | "abacus" }> = {
-  "maxsus-oqituvchi-1": {
-    title: "Ingliz tili o'qituvchisi",
-    body: "Ingliz tili o'qituvchimiz bolalarga tilni yodlash orqali emas, qo'shiq, she'r va rolli o'yinlar orqali singdiradi. Har bir dars quvnoq muhitda o'tadi — bolalar yangi so'zlarni to'g'ri talaffuz bilan, qo'rquvsiz gapirishni o'rganadi. Bu yondashuv keyinchalik maktabda til o'rganishni ancha osonlashtiradi.",
-    icon: "book",
-  },
-  "maxsus-oqituvchi-2": {
-    title: "Mental arifmetika o'qituvchisi",
-    body: "Mental arifmetika o'qituvchimiz bolalarga avval abakus (hisoblash taxtachasi) yordamida sonlar bilan ishlashni, so'ng ularni faqat tasavvur orqali hisoblashga o'rgatadi. Bu mashg'ulotlar diqqatni jamlash, xotira va tez fikrlash qobiliyatini rivojlantiradi — bola nafaqat matematikada, balki boshqa fanlarda ham yutuqqa erishadi.",
-    icon: "abacus",
-  },
+const FALLBACK_ICON: Record<(typeof HIGHLIGHT_KEYS)[number], "book" | "abacus"> = {
+  "maxsus-oqituvchi-1": "book",
+  "maxsus-oqituvchi-2": "abacus",
+};
+
+const FALLBACK_KEY: Record<(typeof HIGHLIGHT_KEYS)[number], "english" | "mentalMath"> = {
+  "maxsus-oqituvchi-1": "english",
+  "maxsus-oqituvchi-2": "mentalMath",
 };
 
 export async function TeacherSubjectHighlights() {
+  const t = await getTranslations("teacherSubjects");
   const blocks = await Promise.all(
     HIGHLIGHT_KEYS.map((key) => fetchLanding<LandingContentBlock | null>(`/content-blocks/${key}`, null)),
   );
@@ -71,9 +70,10 @@ export async function TeacherSubjectHighlights() {
       <div className="mx-auto flex max-w-[1120px] flex-col gap-16 px-4 sm:gap-20">
         {HIGHLIGHT_KEYS.map((key, index) => {
           const block = blocks[index];
-          const fallback = FALLBACKS[key];
-          const title = block?.title ?? fallback.title;
-          const body = block?.body ?? fallback.body;
+          const fallbackKey = FALLBACK_KEY[key];
+          const icon = FALLBACK_ICON[key];
+          const title = block?.title ?? t(`${fallbackKey}.title`);
+          const body = block?.body ?? t(`${fallbackKey}.body`);
           const imageFirst = index % 2 === 1;
 
           return (
@@ -96,7 +96,7 @@ export async function TeacherSubjectHighlights() {
                     {block?.photoPath ? (
                       // eslint-disable-next-line @next/next/no-img-element -- API'dan kelgan dinamik rasm
                       <img src={assetUrl(block.photoPath) ?? undefined} alt={title} className="h-full w-full object-cover" />
-                    ) : fallback.icon === "book" ? (
+                    ) : icon === "book" ? (
                       <Image src="/icon/book.png" alt="" width={120} height={120} className="h-auto w-[32%] max-w-[130px] opacity-90" />
                     ) : (
                       <AbacusIcon className="h-auto w-[34%] max-w-[130px] opacity-90" />

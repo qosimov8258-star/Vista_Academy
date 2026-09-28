@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { api, ApiError } from "@/lib/api";
 import type { Employee, Shift } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
@@ -17,18 +18,19 @@ function todayDateString(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: DEFAULT_TIMEZONE }).format(new Date());
 }
 
-const schema = z.object({
-  employeeId: z.string().min(1, "Xodimni tanlang"),
-  date: z.string().min(1, "Sanani tanlang"),
-  hours: z.coerce.number().min(0, "Soat manfiy bo'lishi mumkin emas"),
-  note: z.string().optional(),
-});
-
-type FormValues = z.infer<typeof schema>;
-
 export function LogShiftModal({ open, onClose, slug }: { open: boolean; onClose: () => void; slug: string }) {
+  const t = useTranslations("hr");
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
+
+  const schema = z.object({
+    employeeId: z.string().min(1, t("validation.selectEmployee")),
+    date: z.string().min(1, t("validation.selectDate")),
+    hours: z.coerce.number().min(0, t("validation.hoursNonNegative")),
+    note: z.string().optional(),
+  });
+
+  type FormValues = z.infer<typeof schema>;
 
   const { data: employees } = useQuery({
     // Ishdan bo'shagan xodim uchun smena qayd etilmasin.
@@ -64,21 +66,21 @@ export function LogShiftModal({ open, onClose, slug }: { open: boolean; onClose:
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : t("unexpectedError"));
     },
   });
 
   return (
-    <Modal open={open} onClose={onClose} title="Smena qo'shish">
+    <Modal open={open} onClose={onClose} title={t("addShiftTitle")}>
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
             {serverError}
           </div>
         )}
-        <Select label="Xodim" defaultValue="" error={errors.employeeId?.message} {...register("employeeId")}>
+        <Select label={t("employeeLabel")} defaultValue="" error={errors.employeeId?.message} {...register("employeeId")}>
           <option value="" disabled>
-            Tanlang
+            {t("choose")}
           </option>
           {employees?.map((employee) => (
             <option key={employee.id} value={employee.id}>
@@ -87,17 +89,17 @@ export function LogShiftModal({ open, onClose, slug }: { open: boolean; onClose:
           ))}
         </Select>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input label="Sana" type="date" error={errors.date?.message} {...register("date")} />
-          <Input label="Ish soatlari" type="number" step="0.5" placeholder="8" error={errors.hours?.message} {...register("hours")} />
+          <Input label={t("dateLabel")} type="date" error={errors.date?.message} {...register("date")} />
+          <Input label={t("workHoursLabel")} type="number" step="0.5" placeholder="8" error={errors.hours?.message} {...register("hours")} />
         </div>
-        <Input label="Izoh (ixtiyoriy)" {...register("note")} />
+        <Input label={t("noteLabelOptional")} {...register("note")} />
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Bekor qilish
+            {t("cancel")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Saqlash
+            {t("save")}
           </Button>
         </div>
       </form>

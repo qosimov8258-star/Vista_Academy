@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { CreateEmployeeResult, EmployeeCredentials, Group, Position } from "@/lib/types";
@@ -21,52 +22,6 @@ import { prepareChildPhoto } from "@/lib/child-photo";
 import { isSubjectTeacherPosition, isCookPosition } from "@/lib/employee-position";
 import { validateUzbekPhone } from "@/lib/phone";
 
-const schema = z
-  .object({
-    lastName: z.string().min(2, "Familiya kamida 2 belgi"),
-    firstName: z.string().min(2, "Ism kamida 2 belgi"),
-    phone: z
-      .string()
-      .min(1, "Telefon raqami kiritilishi shart")
-      .superRefine((value, ctx) => {
-        const error = validateUzbekPhone(value);
-        if (error === "prefix") {
-          ctx.addIssue({ code: "custom", message: "Telefon raqami +998 bilan boshlanishi kerak" });
-        } else if (error === "length") {
-          ctx.addIssue({ code: "custom", message: "Telefon raqami 9 xonali bo'lishi kerak (+998 dan keyin)" });
-        } else if (error === "code") {
-          ctx.addIssue({
-            code: "custom",
-            message: "Bunday operator kodi mavjud emas (masalan: 90, 91, 93, 94, 95, 97, 98, 99)",
-          });
-        }
-      }),
-    // Kabinet ixtiyoriy: oshpaz yoki farrosh tizimga kirmaydi
-    withAccount: z.boolean(),
-    groupIds: z.array(z.string()),
-    // Login/parol ixtiyoriy — bo'sh qoldirilsa backend avtomatik generatsiya qiladi
-    login: z.string().optional(),
-    password: z.string().optional(),
-    confirmPassword: z.string().optional(),
-  })
-  .superRefine((values, ctx) => {
-    if (!values.withAccount) return;
-    if (values.login && values.login.trim().length < 3) {
-      ctx.addIssue({ code: "custom", path: ["login"], message: "Login kamida 3 belgi bo'lishi kerak" });
-    }
-    if (values.password) {
-      const unmet = getPasswordRules(values.password).some((rule) => !rule.met);
-      if (unmet) {
-        ctx.addIssue({ code: "custom", path: ["password"], message: "Parol talablarga javob bermaydi" });
-      }
-      if (values.password !== values.confirmPassword) {
-        ctx.addIssue({ code: "custom", path: ["confirmPassword"], message: "Parollar mos kelmadi" });
-      }
-    }
-  });
-
-type FormValues = z.infer<typeof schema>;
-
 export function CreateEmployeeModal({
   open,
   onClose,
@@ -78,7 +33,54 @@ export function CreateEmployeeModal({
   slug: string;
   initialPosition?: Position | null;
 }) {
+  const t = useTranslations("employees");
   const queryClient = useQueryClient();
+
+  const schema = z
+    .object({
+      lastName: z.string().min(2, t("validation.lastNameMin")),
+      firstName: z.string().min(2, t("validation.firstNameMin")),
+      phone: z
+        .string()
+        .min(1, t("validation.phoneRequired"))
+        .superRefine((value, ctx) => {
+          const error = validateUzbekPhone(value);
+          if (error === "prefix") {
+            ctx.addIssue({ code: "custom", message: t("validation.phonePrefix") });
+          } else if (error === "length") {
+            ctx.addIssue({ code: "custom", message: t("validation.phoneLength") });
+          } else if (error === "code") {
+            ctx.addIssue({
+              code: "custom",
+              message: t("validation.phoneCode"),
+            });
+          }
+        }),
+      // Kabinet ixtiyoriy: oshpaz yoki farrosh tizimga kirmaydi
+      withAccount: z.boolean(),
+      groupIds: z.array(z.string()),
+      // Login/parol ixtiyoriy — bo'sh qoldirilsa backend avtomatik generatsiya qiladi
+      login: z.string().optional(),
+      password: z.string().optional(),
+      confirmPassword: z.string().optional(),
+    })
+    .superRefine((values, ctx) => {
+      if (!values.withAccount) return;
+      if (values.login && values.login.trim().length < 3) {
+        ctx.addIssue({ code: "custom", path: ["login"], message: t("validation.loginMin") });
+      }
+      if (values.password) {
+        const unmet = getPasswordRules(values.password).some((rule) => !rule.met);
+        if (unmet) {
+          ctx.addIssue({ code: "custom", path: ["password"], message: t("validation.passwordRequirements") });
+        }
+        if (values.password !== values.confirmPassword) {
+          ctx.addIssue({ code: "custom", path: ["confirmPassword"], message: t("validation.passwordsMismatch") });
+        }
+      }
+    });
+
+  type FormValues = z.infer<typeof schema>;
   const [serverError, setServerError] = useState<string | null>(null);
   const [photoImage, setPhotoImage] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
@@ -219,7 +221,7 @@ export function CreateEmployeeModal({
       }
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : t("unexpectedError"));
     },
   });
 
@@ -249,21 +251,19 @@ export function CreateEmployeeModal({
 
   if (createdCredentials) {
     return (
-      <Modal open={open} onClose={handleClose} title="Xodim yaratildi">
+      <Modal open={open} onClose={handleClose} title={t("employeeCreatedTitle")}>
         <div className="space-y-4">
           <div className="flex flex-col items-center gap-2 text-center">
             <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-success-bg)] text-[var(--color-success)]">
               <CheckIcon className="h-6 w-6" />
             </span>
-            <p className="text-sm text-[var(--color-text-muted)]">
-              Kabinet ochildi. Login va parolni xodimga bering — parol qayta ko&apos;rsatilmaydi.
-            </p>
+            <p className="text-sm text-[var(--color-text-muted)]">{t("employeeCreatedHint")}</p>
           </div>
-          <CredentialRow label="Login" value={createdCredentials.login} />
-          <CredentialRow label="Parol" value={createdCredentials.password} />
+          <CredentialRow label={t("loginLabel")} value={createdCredentials.login} />
+          <CredentialRow label={t("passwordLabel")} value={createdCredentials.password} />
           <div className="flex justify-end pt-1">
             <Button type="button" onClick={handleClose}>
-              Yopish
+              {t("close")}
             </Button>
           </div>
         </div>
@@ -272,24 +272,24 @@ export function CreateEmployeeModal({
   }
 
   return (
-    <Modal open={open} onClose={handleClose} title="Yangi xodim">
+    <Modal open={open} onClose={handleClose} title={t("newEmployeeTitle")}>
       <form
         className="space-y-4"
         onSubmit={handleSubmit((values) => {
           if (!photoImage) {
-            setPhotoRequiredError("Xodim surati talab qilinadi");
+            setPhotoRequiredError(t("photoRequired"));
             return;
           }
           if (positionName.trim().length < 2) {
-            setPositionError("Lavozimni tanlang yoki yarating");
+            setPositionError(t("selectOrCreatePosition"));
             return;
           }
           if (isSubjectTeacher && subjects.length === 0) {
-            setSubjectsError("Kamida bitta fan tanlang");
+            setSubjectsError(t("selectAtLeastOneSubject"));
             return;
           }
           if (values.withAccount && !isCookRole && values.groupIds.length === 0) {
-            setGroupsError("Kamida bitta guruh tanlang");
+            setGroupsError(t("selectAtLeastOneGroup"));
             return;
           }
           setServerError(null);
@@ -316,7 +316,7 @@ export function CreateEmployeeModal({
               // eslint-disable-next-line @next/next/no-img-element -- data: URL, Next optimizatsiyasi kerak emas
               <img
                 src={photoImage}
-                alt="Xodim surati"
+                alt={t("employeePhotoAlt")}
                 width={72}
                 height={72}
                 className="h-[72px] w-[72px] shrink-0 rounded-full object-cover ring-1 ring-inset ring-[rgba(16,24,40,0.06)]"
@@ -334,8 +334,8 @@ export function CreateEmployeeModal({
               type="button"
               onClick={() => photoInputRef.current?.click()}
               disabled={photoChecking}
-              aria-label="Xodim suratini tanlash"
-              title="Surat qo'yish"
+              aria-label={t("chooseEmployeePhotoAria")}
+              title={t("addPhotoTitle")}
               className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-full bg-black/45 text-white opacity-0 transition-opacity duration-[var(--dur-fast)] hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none disabled:cursor-wait disabled:opacity-100 motion-reduce:transition-none"
             >
               {photoChecking ? (
@@ -358,7 +358,7 @@ export function CreateEmployeeModal({
             disabled={photoChecking}
             className="cursor-pointer text-[12.5px] font-medium text-[var(--color-primary)] hover:underline disabled:opacity-60"
           >
-            {photoChecking ? "Tekshirilmoqda..." : photoImage ? "Suratni almashtirish" : "Surat qo'yish (majburiy)"}
+            {photoChecking ? t("photoChecking") : photoImage ? t("photoReplace") : t("photoAddRequired")}
           </button>
           {(photoError || photoRequiredError) && (
             <p role="alert" className="max-w-[320px] text-center text-[12.5px] text-[var(--color-danger)]">
@@ -369,7 +369,7 @@ export function CreateEmployeeModal({
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <StatusInput
-            label="Ism"
+            label={t("firstNameLabel")}
             placeholder="Dilnoza"
             error={errors.firstName?.message}
             status={nameFieldStatus(firstName, dirtyFields.firstName, errors.firstName?.message)}
@@ -378,7 +378,7 @@ export function CreateEmployeeModal({
           {/* Fullname birlashtirishda familiya oldinda: ro'yxatlar va
               hujjatlar "Familiya Ism" tartibida saqlanadi */}
           <StatusInput
-            label="Familiya"
+            label={t("lastNameLabel")}
             placeholder="Yusupova"
             error={errors.lastName?.message}
             status={nameFieldStatus(lastName, dirtyFields.lastName, errors.lastName?.message)}
@@ -387,7 +387,7 @@ export function CreateEmployeeModal({
         </div>
 
         <Input
-          label="Telefon raqami"
+          label={t("phoneNumberLabel")}
           type="tel"
           placeholder="+998 90 123 45 67"
           error={errors.phone?.message}
@@ -395,14 +395,14 @@ export function CreateEmployeeModal({
         />
 
         <div>
-          <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">Lavozim</span>
+          <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">{t("positionLabel")}</span>
           <button
             type="button"
             onClick={() => setPositionsModalOpen(true)}
             className="flex w-full cursor-pointer items-center justify-between rounded-2xl border border-[var(--color-border)] bg-white px-3.5 py-2.5 text-left text-sm text-[var(--color-text)] outline-none transition-colors hover:bg-[var(--color-surface-hover)] focus:border-[var(--color-primary)]"
           >
             <span className={positionName ? undefined : "text-gray-400"}>
-              {positionName || "Lavozimni tanlang yoki yarating"}
+              {positionName || t("selectOrCreatePositionPlaceholder")}
             </span>
             <ChevronDownIcon className="h-4 w-4 shrink-0 text-gray-400" />
           </button>
@@ -411,14 +411,14 @@ export function CreateEmployeeModal({
 
         {isSubjectTeacher && (
           <div>
-            <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">Fanlar</span>
+            <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">{t("subjectsLabel")}</span>
             <button
               type="button"
               onClick={() => setSubjectsModalOpen(true)}
               className="flex w-full cursor-pointer items-center justify-between rounded-2xl border border-[var(--color-border)] bg-white px-3.5 py-2.5 text-left text-sm text-[var(--color-text)] outline-none transition-colors hover:bg-[var(--color-surface-hover)] focus:border-[var(--color-primary)]"
             >
               <span className={subjects.length > 0 ? undefined : "text-gray-400"}>
-                {subjects.length > 0 ? subjects.join(", ") : "Fanlarni tanlang yoki yarating"}
+                {subjects.length > 0 ? subjects.join(", ") : t("selectOrCreateSubjectsPlaceholder")}
               </span>
               <ChevronDownIcon className="h-4 w-4 shrink-0 text-gray-400" />
             </button>
@@ -434,24 +434,18 @@ export function CreateEmployeeModal({
               {...register("withAccount")}
             />
             <span>
-              <span className="block text-sm font-medium text-[var(--color-text)]">Kabinet ochish</span>
-              <span className="block text-xs text-[var(--color-text-muted)]">
-                Tarbiyachi tizimga kirib, o&apos;ziga biriktirilgan guruhlarga davomat qo&apos;yadi. Oshpaz yoki
-                farrosh kabi xodimlarga kerak emas.
-              </span>
+              <span className="block text-sm font-medium text-[var(--color-text)]">{t("openCabinetLabel")}</span>
+              <span className="block text-xs text-[var(--color-text-muted)]">{t("openCabinetHint")}</span>
             </span>
           </label>
 
           {withAccount && (
             <div className="mt-4 space-y-4 border-t border-[var(--color-border)] pt-4">
-              <p className="text-xs text-[var(--color-text-muted)]">
-                Login va parolni o&apos;zingiz kiriting yoki bo&apos;sh qoldiring — bo&apos;sh qoldirilsa avtomatik
-                yaratiladi va bir marta ko&apos;rsatiladi.
-              </p>
+              <p className="text-xs text-[var(--color-text-muted)]">{t("loginPasswordHint")}</p>
 
               <Input
-                label="Login"
-                placeholder="dilnoza.yusupova (ixtiyoriy)"
+                label={t("loginLabel")}
+                placeholder={t("loginExamplePlaceholder")}
                 autoComplete="off"
                 error={errors.login?.message}
                 {...register("login")}
@@ -460,13 +454,13 @@ export function CreateEmployeeModal({
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className="mb-2 block text-[13px] font-medium text-[var(--color-text)]" htmlFor="password">
-                    Parol
+                    {t("passwordLabel")}
                   </label>
                   <div className="relative">
                     <input
                       id="password"
                       type={showPassword ? "text" : "password"}
-                      placeholder="Ixtiyoriy"
+                      placeholder={t("optionalPlaceholder")}
                       autoComplete="new-password"
                       className="h-11 w-full rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-3.5 pr-10 text-[15px] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/60 outline-none transition-[border-color,box-shadow] duration-[var(--dur-fast)] ease-[var(--ease-out)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/[0.12]"
                       {...register("password")}
@@ -475,7 +469,7 @@ export function CreateEmployeeModal({
                       type="button"
                       onClick={() => setShowPassword((v) => !v)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400 hover:text-[var(--color-text)]"
-                      aria-label={showPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+                      aria-label={showPassword ? t("hidePassword") : t("showPassword")}
                     >
                       {showPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
                     </button>
@@ -487,13 +481,13 @@ export function CreateEmployeeModal({
 
                 <div>
                   <label className="mb-2 block text-[13px] font-medium text-[var(--color-text)]" htmlFor="confirmPassword">
-                    Parolni tasdiqlang
+                    {t("confirmPasswordLabel")}
                   </label>
                   <div className="relative">
                     <input
                       id="confirmPassword"
                       type={showConfirmPassword ? "text" : "password"}
-                      placeholder="Ixtiyoriy"
+                      placeholder={t("optionalPlaceholder")}
                       autoComplete="new-password"
                       className="h-11 w-full rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-3.5 pr-10 text-[15px] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/60 outline-none transition-[border-color,box-shadow] duration-[var(--dur-fast)] ease-[var(--ease-out)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/[0.12]"
                       {...register("confirmPassword")}
@@ -502,7 +496,7 @@ export function CreateEmployeeModal({
                       type="button"
                       onClick={() => setShowConfirmPassword((v) => !v)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400 hover:text-[var(--color-text)]"
-                      aria-label={showConfirmPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+                      aria-label={showConfirmPassword ? t("hidePassword") : t("showPassword")}
                     >
                       {showConfirmPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
                     </button>
@@ -521,13 +515,11 @@ export function CreateEmployeeModal({
 
               {!isCookRole && (
                 <div>
-                  <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">Guruhlari</span>
+                  <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">{t("groupsLabel")}</span>
                   {!groups ? (
-                    <p className="text-xs text-[var(--color-text-muted)]">Guruhlar yuklanmoqda...</p>
+                    <p className="text-xs text-[var(--color-text-muted)]">{t("groupsLoading")}</p>
                   ) : groups.length === 0 ? (
-                    <p className="text-xs text-[var(--color-text-muted)]">
-                      Avval guruh oching — tarbiyachi qaysi guruhga biriktirilishi kerakligi shundan aniqlanadi.
-                    </p>
+                    <p className="text-xs text-[var(--color-text-muted)]">{t("createGroupFirstHint")}</p>
                   ) : (
                     <div className="flex flex-wrap gap-2">
                       {groups.map((group) => {
@@ -559,10 +551,10 @@ export function CreateEmployeeModal({
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={handleClose}>
-            Bekor qilish
+            {t("cancel")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Yaratish
+            {t("create")}
           </Button>
         </div>
       </form>

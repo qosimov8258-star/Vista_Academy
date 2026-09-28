@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useReveal } from "./reveal";
 
 function QuoteMarkIcon({ className, style }: { className?: string; style?: React.CSSProperties }) {
@@ -13,6 +14,7 @@ function QuoteMarkIcon({ className, style }: { className?: string; style?: React
 
 export function DirectorQuote() {
   const { ref, visible, style } = useReveal<HTMLDivElement>();
+  const t = useTranslations("directorQuote");
 
   return (
     <section className="py-20 sm:py-28">
@@ -24,21 +26,16 @@ export function DirectorQuote() {
         <QuoteMarkIcon className="h-12 w-16" style={{ color: "#e3c690" }} />
 
         <h2 className="font-heading mt-6 text-[22px] font-bold leading-[1.35] tracking-tight sm:text-[28px] lg:text-[34px]">
-          <span style={{ color: "var(--color-blue-dark)" }}>Vista Academy</span>
+          <span style={{ color: "var(--color-blue-dark)" }}>{t("headingLine1")}</span>
           <br />
-          <span style={{ color: "var(--color-green-dark)" }}>
-            bilim va imkoniyatlarga yo&apos;l ochuvchi maskan.
-          </span>
+          <span style={{ color: "var(--color-green-dark)" }}>{t("headingLine2")}</span>
         </h2>
 
-        <p className="mt-5 text-[17px] leading-relaxed text-[var(--color-text-muted)]">
-          Biz farzandingiz bilan birgalikda kelajakni bunyod etib, har bir kunni unutilmas
-          ta&apos;lim sayohatiga aylantirib bormoqdamiz.
-        </p>
+        <p className="mt-5 text-[17px] leading-relaxed text-[var(--color-text-muted)]">{t("body")}</p>
 
         <div className="mt-8 flex items-center">
           {/* eslint-disable-next-line @next/next/no-img-element -- statik brend rasmi */}
-          <img src="/logo.png" alt="Vista Academy" className="h-12 w-12 shrink-0 object-contain" />
+          <img src="/homepage/logo.png" alt="Vista Academy" className="h-12 w-12 shrink-0 object-contain" />
 
           <div className="ml-5 flex items-center gap-3">
             <span
@@ -47,8 +44,8 @@ export function DirectorQuote() {
               aria-hidden="true"
             />
             <div className="text-left">
-              <p className="font-heading text-[15px] font-bold text-[var(--color-text)]">Direktor ismi</p>
-              <p className="text-[14px] text-[var(--color-text-muted)]">Bosh direktor</p>
+              <p className="font-heading text-[15px] font-bold text-[var(--color-text)]">{t("name")}</p>
+              <p className="text-[14px] text-[var(--color-text-muted)]">{t("role")}</p>
             </div>
           </div>
         </div>

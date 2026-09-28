@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import clsx from "clsx";
 import { api, ApiError } from "@/lib/api";
 import type { Position } from "@/lib/types";
@@ -27,6 +28,7 @@ export function PositionsModal({
   selected?: string;
   onSelect: (name: string) => void;
 }) {
+  const t = useTranslations("employees");
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +49,7 @@ export function PositionsModal({
       onClose();
     },
     onError: (err) => {
-      setError(err instanceof ApiError ? err.message : "Lavozim yaratib bo'lmadi");
+      setError(err instanceof ApiError ? err.message : t("cannotCreatePosition"));
     },
   });
 
@@ -60,20 +62,20 @@ export function PositionsModal({
   const handleCreate = () => {
     const trimmed = name.trim();
     if (trimmed.length < 2) {
-      setError("Lavozim nomi kamida 2 belgi");
+      setError(t("positionNameMin"));
       return;
     }
     createMutation.mutate(trimmed);
   };
 
   return (
-    <Modal open={open} onClose={handleClose} title="Lavozimlar" widthClassName="max-w-md">
+    <Modal open={open} onClose={handleClose} title={t("positionsTitle")} widthClassName="max-w-md">
       <div className="space-y-5">
         <div className="flex items-end gap-2">
           <div className="flex-1">
             <Input
-              label="Lavozim nomi"
-              placeholder="Masalan, Hovli farroshi"
+              label={t("positionNameLabel")}
+              placeholder={t("positionNamePlaceholder")}
               value={name}
               onChange={(e) => {
                 setName(e.target.value);
@@ -89,16 +91,16 @@ export function PositionsModal({
             />
           </div>
           <Button type="button" onClick={handleCreate} loading={createMutation.isPending}>
-            Yaratish
+            {t("create")}
           </Button>
         </div>
 
         <div>
-          <span className="mb-2 block text-sm font-medium text-[var(--color-text)]">Mavjud lavozimlar</span>
+          <span className="mb-2 block text-sm font-medium text-[var(--color-text)]">{t("existingPositions")}</span>
           {!positions ? (
-            <p className="text-xs text-[var(--color-text-muted)]">Yuklanmoqda...</p>
+            <p className="text-xs text-[var(--color-text-muted)]">{t("loading")}</p>
           ) : positions.length === 0 ? (
-            <p className="text-xs text-[var(--color-text-muted)]">Hozircha lavozim yo&apos;q — yuqoridan yarating</p>
+            <p className="text-xs text-[var(--color-text-muted)]">{t("noPositionsYet")}</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {positions.map((position) => {
@@ -129,7 +131,7 @@ export function PositionsModal({
 
         <div className="flex justify-end pt-1">
           <Button type="button" variant="secondary" onClick={handleClose}>
-            Yopish
+            {t("close")}
           </Button>
         </div>
       </div>

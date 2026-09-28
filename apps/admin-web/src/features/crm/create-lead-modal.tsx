@@ -4,28 +4,33 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
-import type { Lead } from "@/lib/types";
+import type { AgeGroup, Lead, LeadSource } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Input, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { AGE_GROUP_LABEL, SOURCE_LABEL } from "./labels";
+import { ageGroupLabel, sourceLabel } from "./labels";
 
-const schema = z.object({
-  childFullName: z.string().min(2, "To'liq ism kamida 2 belgi"),
-  childBirthDate: z.string().optional(),
-  ageGroup: z.string().optional(),
-  parentName: z.string().min(2, "To'liq ism kamida 2 belgi"),
-  parentPhone: z.string().min(5, "Telefon raqamini kiriting"),
-  source: z.string().optional(),
-});
-
-type FormValues = z.infer<typeof schema>;
+const AGE_GROUPS: AgeGroup[] = ["AGE_1_2", "AGE_2_3", "AGE_3_4", "AGE_4_5", "AGE_5_6", "AGE_6_7"];
+const SOURCES: LeadSource[] = ["WEBSITE", "REFERRAL", "SOCIAL_MEDIA", "WALK_IN", "OTHER"];
 
 export function CreateLeadModal({ open, onClose, slug }: { open: boolean; onClose: () => void; slug: string }) {
+  const t = useTranslations("crm");
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
+
+  const schema = z.object({
+    childFullName: z.string().min(2, t("validation.fullNameMin")),
+    childBirthDate: z.string().optional(),
+    ageGroup: z.string().optional(),
+    parentName: z.string().min(2, t("validation.fullNameMin")),
+    parentPhone: z.string().min(5, t("validation.phoneRequired")),
+    source: z.string().optional(),
+  });
+
+  type FormValues = z.infer<typeof schema>;
 
   const {
     register,
@@ -49,12 +54,12 @@ export function CreateLeadModal({ open, onClose, slug }: { open: boolean; onClos
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : t("unexpectedError"));
     },
   });
 
   return (
-    <Modal open={open} onClose={onClose} title="Yangi ariza">
+    <Modal open={open} onClose={onClose} title={t("newLeadTitle")}>
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         <h1 className="font-heading text-center text-[28px] font-extrabold tracking-tight text-[var(--color-primary)]">
           Vista Academy
@@ -66,40 +71,40 @@ export function CreateLeadModal({ open, onClose, slug }: { open: boolean; onClos
           </div>
         )}
         <Input
-          label="Bolaning to'liq ismi"
-          placeholder="Aliyev Sardor"
+          label={t("childFullNameLabel")}
+          placeholder={t("childFullNamePlaceholder")}
           error={errors.childFullName?.message}
           {...register("childFullName")}
         />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input label="Tug'ilgan sana (ixtiyoriy)" type="date" error={errors.childBirthDate?.message} {...register("childBirthDate")} />
-          <Select label="Yosh guruhi (ixtiyoriy)" defaultValue="" {...register("ageGroup")}>
-            <option value="">Tanlanmagan</option>
-            {Object.entries(AGE_GROUP_LABEL).map(([value, label]) => (
+          <Input label={t("birthDateLabelOptional")} type="date" error={errors.childBirthDate?.message} {...register("childBirthDate")} />
+          <Select label={t("ageGroupLabelOptional")} defaultValue="" {...register("ageGroup")}>
+            <option value="">{t("notSelected")}</option>
+            {AGE_GROUPS.map((value) => (
               <option key={value} value={value}>
-                {label}
+                {ageGroupLabel(t, value)}
               </option>
             ))}
           </Select>
         </div>
         <Input
-          label="Ota-ona ismi"
-          placeholder="Aziza Karimova"
+          label={t("parentNameLabel")}
+          placeholder={t("parentNamePlaceholder")}
           error={errors.parentName?.message}
           {...register("parentName")}
         />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
-            label="Ota-ona telefoni"
+            label={t("parentPhoneLabel")}
             placeholder="+998901234567"
             error={errors.parentPhone?.message}
             {...register("parentPhone")}
           />
-          <Select label="Manba (ixtiyoriy)" defaultValue="" {...register("source")}>
-            <option value="">Tanlanmagan</option>
-            {Object.entries(SOURCE_LABEL).map(([value, label]) => (
+          <Select label={t("sourceLabelOptional")} defaultValue="" {...register("source")}>
+            <option value="">{t("notSelected")}</option>
+            {SOURCES.map((value) => (
               <option key={value} value={value}>
-                {label}
+                {sourceLabel(t, value)}
               </option>
             ))}
           </Select>
@@ -107,10 +112,10 @@ export function CreateLeadModal({ open, onClose, slug }: { open: boolean; onClos
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Bekor qilish
+            {t("cancel")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Yaratish
+            {t("create")}
           </Button>
         </div>
       </form>
