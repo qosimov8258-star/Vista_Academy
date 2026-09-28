@@ -123,14 +123,6 @@ export function CreateProductModal({
           mutation.mutate(values);
         })}
       >
-        <div className="flex flex-col items-center gap-1.5">
-          {/* eslint-disable-next-line @next/next/no-img-element -- statik brend rasmi, Next optimizatsiyasi kerak emas */}
-          <img src="/logo.png" alt="Vista Academy" className="h-10 w-10 object-contain" />
-          <h1 className="font-heading text-center text-[28px] font-extrabold tracking-tight text-[var(--color-primary)]">
-            Vista Academy
-          </h1>
-        </div>
-
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
             {serverError}

@@ -48,7 +48,7 @@ export function CoinHistoryModal({
   });
 
   return (
-    <Modal open={open} onClose={onClose} title="Vista Academy" widthClassName="max-w-2xl">
+    <Modal open={open} onClose={onClose} title="Coin tarixi" widthClassName="max-w-2xl">
       <div className="space-y-6">
         <div className="flex flex-col items-center gap-3 rounded-[var(--radius-lg)] bg-[var(--color-surface-sunken)] px-4 py-5 text-center">
           <ChildPhoto
