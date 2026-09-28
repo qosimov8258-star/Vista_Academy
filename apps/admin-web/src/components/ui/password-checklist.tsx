@@ -10,8 +10,6 @@ export interface PasswordRule {
 export function getPasswordRules(password: string, confirmPassword?: string): PasswordRule[] {
   const rules: PasswordRule[] = [
     { label: "Kamida 8 ta belgidan iborat bo'lishi kerak", met: password.length >= 8 },
-    { label: "Kamida bitta bosh harf bo'lishi kerak", met: /[A-Z]/.test(password) },
-    { label: "Kamida bitta maxsus belgi bo'lishi kerak", met: /[^A-Za-z0-9]/.test(password) },
   ];
   if (confirmPassword !== undefined) {
     rules.push({ label: "Parollar mos keladi", met: password.length > 0 && password === confirmPassword });

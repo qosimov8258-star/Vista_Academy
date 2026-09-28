@@ -39,8 +39,6 @@ export class EmployeeAccountDto {
   @IsOptional()
   @IsString()
   @MinLength(8, { message: "Parol kamida 8 ta belgidan iborat bo'lishi kerak" })
-  @Matches(/[A-Z]/, { message: "Parolda kamida bitta bosh harf bo'lishi kerak" })
-  @Matches(/[^A-Za-z0-9]/, { message: "Parolda kamida bitta maxsus belgi bo'lishi kerak" })
   password?: string;
 }
 
