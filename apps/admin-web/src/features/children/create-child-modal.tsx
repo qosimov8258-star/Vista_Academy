@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { CreateChildResult, ChildCredentials, Group } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
@@ -16,27 +16,17 @@ import { CredentialRow } from "@/components/ui/credential-row";
 import { EyeIcon, EyeOffIcon, CheckIcon, PencilIcon } from "@/components/ui/icons";
 import { prepareChildPhoto } from "@/lib/child-photo";
 import { initials } from "@/components/ui/avatar";
+import { validateUzbekPhone } from "@/lib/phone";
 
-type FormValues = {
-  groupId?: string;
-  lastName: string;
-  firstName: string;
-  gender: "MALE" | "FEMALE";
-  birthDate?: string;
-  guardianFullName: string;
-  guardianRelation: "MOTHER" | "FATHER" | "GRANDPARENT" | "OTHER";
-  guardianPhone: string;
-  guardianPassword?: string;
-  guardianConfirmPassword?: string;
-};
+type TFunction = (key: string) => string;
 
-export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClose: () => void; slug: string }) {
-  const t = useTranslations("children");
-  const queryClient = useQueryClient();
-
-  const schema = z
+// `hasGroups` mavjud faol guruhlar borligiga qarab qayta quriladi: guruhlar
+// bo'lsa birini tanlash shart, hech qanday faol guruh bo'lmasa (masalan
+// filial hali guruh yaratmagan) bola guruhsiz ham qo'shiladi.
+function buildSchema(hasGroups: boolean, t: TFunction) {
+  return z
     .object({
-      groupId: z.string().optional(),
+      groupId: hasGroups ? z.string().min(1, t("validation.groupRequired")) : z.string().optional(),
       lastName: z.string().min(2, t("validation.lastNameMin")),
       firstName: z.string().min(2, t("validation.firstNameMin")),
       gender: z.enum(["MALE", "FEMALE"], { message: t("validation.genderRequired") }),
@@ -45,12 +35,34 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
       guardianRelation: z.enum(["MOTHER", "FATHER", "GRANDPARENT", "OTHER"]),
       guardianPhone: z
         .string()
-        .refine((v) => v.replace(/\D/g, "").length >= 9, t("validation.phoneIncomplete")),
+        .min(1, t("validation.phoneIncomplete"))
+        .superRefine((value, ctx) => {
+          const error = validateUzbekPhone(value);
+          if (error === "prefix") {
+            ctx.addIssue({ code: "custom", message: t("validation.phonePrefix") });
+          } else if (error === "length") {
+            ctx.addIssue({ code: "custom", message: t("validation.phoneLength") });
+          } else if (error === "code") {
+            ctx.addIssue({ code: "custom", message: t("validation.phoneCode") });
+          }
+        }),
       // Ixtiyoriy — bo'sh qoldirilsa backend avtomatik generatsiya qiladi
       guardianPassword: z.string().optional(),
       guardianConfirmPassword: z.string().optional(),
+      // Birinchi hisob-fakturani bola bilan birga yaratish (ixtiyoriy)
+      createInvoice: z.boolean().optional(),
+      invoiceAmount: z.string().optional(),
+      invoiceDueDate: z.string().optional(),
     })
     .superRefine((values, ctx) => {
+      if (values.createInvoice) {
+        if (!(Number(values.invoiceAmount) > 0)) {
+          ctx.addIssue({ code: "custom", path: ["invoiceAmount"], message: "Summani kiriting" });
+        }
+        if (!values.invoiceDueDate) {
+          ctx.addIssue({ code: "custom", path: ["invoiceDueDate"], message: "To'lov muddatini tanlang" });
+        }
+      }
       if (!values.guardianPassword) return;
       const unmet = getPasswordRules(values.guardianPassword).some((rule) => !rule.met);
       if (unmet) {
@@ -60,6 +72,14 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
         ctx.addIssue({ code: "custom", path: ["guardianConfirmPassword"], message: t("validation.passwordsMismatch") });
       }
     });
+}
+
+type FormValues = z.infer<ReturnType<typeof buildSchema>>;
+
+export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClose: () => void; slug: string }) {
+  const t = useTranslations("children");
+  const queryClient = useQueryClient();
+
   const [serverError, setServerError] = useState<string | null>(null);
   const [photoImage, setPhotoImage] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
@@ -69,6 +89,14 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const { data: groups } = useQuery({
+    queryKey: ["groups", slug],
+    queryFn: () => api.get<Group[]>("/app/groups"),
+    enabled: open,
+  });
+  const activeGroups = useMemo(() => groups?.filter((group) => group.status === "ACTIVE") ?? [], [groups]);
+  const schema = useMemo(() => buildSchema(activeGroups.length > 0, t), [activeGroups.length, t]);
+
   const {
     register,
     handleSubmit,
@@ -77,20 +105,16 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
+    mode: "onChange",
     defaultValues: { guardianRelation: "MOTHER", birthDate: "" },
   });
 
   const lastName = watch("lastName");
   const firstName = watch("firstName");
+  const createInvoice = watch("createInvoice");
   const password = watch("guardianPassword");
   const confirmPassword = watch("guardianConfirmPassword");
   const passwordRules = getPasswordRules(password ?? "", confirmPassword ?? "");
-
-  const { data: groups } = useQuery({
-    queryKey: ["groups", slug],
-    queryFn: () => api.get<Group[]>("/app/groups"),
-    enabled: open,
-  });
 
   const handlePhotoPick = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -128,6 +152,16 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
       // muvaffaqiyatsiz bo'lsa ham bola yozuvi allaqachon yaratilgan hisoblanadi.
       if (photoImage) {
         await api.put(`/app/children/${result.id}/avatar`, { image: photoImage }).catch(() => {});
+      }
+      // Birinchi hisob-faktura: bola allaqachon yaratilgan, shuning uchun xato bo'lsa
+      // ham bola yozuvi qoladi — hisob-fakturani Moliya sahifasidan qayta yaratish mumkin.
+      if (values.createInvoice) {
+        const now = new Date();
+        const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+        await api
+          .post("/app/invoices", { childId: result.id, amount: Number(values.invoiceAmount), period, dueDate: values.invoiceDueDate })
+          .catch(() => {});
+        queryClient.invalidateQueries({ queryKey: ["invoices", slug] });
       }
       return result;
     },
@@ -273,9 +307,16 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
             <option value="MALE">{t("gender.male")}</option>
             <option value="FEMALE">{t("gender.female")}</option>
           </Select>
-          <Select label={t("groupLabelOptional")} defaultValue="" {...register("groupId")}>
-            <option value="">{t("notSelected")}</option>
-            {groups?.filter((group) => group.status === "ACTIVE").map((group) => (
+          <Select
+            label={activeGroups.length > 0 ? t("groupLabel") : t("groupLabelOptional")}
+            defaultValue=""
+            error={errors.groupId?.message}
+            {...register("groupId")}
+          >
+            <option value="" disabled={activeGroups.length > 0}>
+              {activeGroups.length > 0 ? t("choose") : t("notSelected")}
+            </option>
+            {activeGroups.map((group) => (
               <option key={group.id} value={group.id}>
                 {group.name} ({group._count?.children ?? 0}/{group.capacity})
               </option>
@@ -311,6 +352,7 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
             label={t("guardianPhoneLabel")}
             type="tel"
             placeholder="+998 90 123 45 67"
+            maxLength={13}
             hint={t("guardianPhoneHint")}
             error={errors.guardianPhone?.message}
             {...register("guardianPhone")}
@@ -354,6 +396,22 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
           {password && (
             <div className="rounded-[var(--radius-md)] bg-[var(--color-surface)] p-3">
               <PasswordChecklist rules={passwordRules} />
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3.5">
+          <label className="flex cursor-pointer items-start gap-2.5">
+            <input type="checkbox" className="mt-0.5 h-4 w-4 cursor-pointer accent-[var(--color-primary)]" {...register("createInvoice")} />
+            <span>
+              <span className="block text-sm font-medium text-[var(--color-text)]">Birinchi hisob-fakturani yaratish</span>
+              <span className="block text-xs text-[var(--color-text-muted)]">Joriy oy uchun to&apos;lov summasi va muddatini kiriting.</span>
+            </span>
+          </label>
+          {createInvoice && (
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Input label="Summa (UZS)" type="number" placeholder="850000" error={errors.invoiceAmount?.message} {...register("invoiceAmount")} />
+              <Input label="To'lov muddati" type="date" error={errors.invoiceDueDate?.message} {...register("invoiceDueDate")} />
             </div>
           )}
         </div>

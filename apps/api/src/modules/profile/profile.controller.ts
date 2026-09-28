@@ -21,11 +21,13 @@ import { ProfileService } from "./profile.service";
 import { UpdateProfileDto } from "./dto/update-profile.dto";
 import { ChangePasswordDto } from "./dto/change-password.dto";
 import { UpdateAvatarDto } from "./dto/update-avatar.dto";
+import { AllowChef } from "../iam/decorators/allow-chef.decorator";
 
 @ApiBearerAuth()
 @ApiTags("Tenant Profile")
 @Public()
 @UseGuards(TenantJwtAuthGuard)
+@AllowChef()
 @Controller("app/profile")
 export class ProfileController {
   constructor(private readonly profileService: ProfileService) {}

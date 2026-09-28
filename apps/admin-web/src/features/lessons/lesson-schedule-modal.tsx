@@ -12,6 +12,8 @@ import type { Employee, Group, LessonSchedule, Weekday } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Input, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { CheckIcon } from "@/components/ui/icons";
+import clsx from "clsx";
 
 const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -58,7 +60,9 @@ export function LessonScheduleModal({
       groupId: z.string().min(1, t("validation.selectGroup")),
       employeeId: z.string().min(1, t("validation.selectEmployee")),
       subject: z.string().optional(),
-      weekday: z.enum(["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"]),
+      weekdays: z
+        .array(z.enum(["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"]))
+        .min(1, t("validation.selectWeekday")),
       startTime: z.string().regex(TIME_REGEX, t("validation.timeFormat")),
       endTime: z.string().regex(TIME_REGEX, t("validation.timeFormat")),
     })
@@ -80,7 +84,7 @@ export function LessonScheduleModal({
     enabled: open,
   });
   // Guruhi qanday bo'lishidan qat'i nazar — bitta o'qituvchi bir vaqtda ikkita
-  // darsga yozilib qolmasin (bu faqat ogohlantiradi, saqlashni to'xtatmaydi).
+  // darsga yozilib qolmasin (band bo'lsa saqlash tugmasi o'chadi; server ham rad etadi).
   const allSchedulesQuery = useQuery({
     queryKey: ["lesson-schedules", slug, branchId, "all"],
     queryFn: () => api.get<LessonSchedule[]>(`/app/lesson-schedules${branchId ? `?branchId=${branchId}` : ""}`),
@@ -92,6 +96,7 @@ export function LessonScheduleModal({
     handleSubmit,
     reset,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -99,7 +104,7 @@ export function LessonScheduleModal({
       groupId: schedule?.groupId ?? groupId,
       employeeId: schedule?.employeeId ?? "",
       subject: schedule?.subject ?? "",
-      weekday: schedule?.weekday ?? "MONDAY",
+      weekdays: schedule ? [schedule.weekday] : ["MONDAY"],
       startTime: schedule?.startTime ?? "09:00",
       endTime: schedule?.endTime ?? "09:45",
     },
@@ -110,11 +115,17 @@ export function LessonScheduleModal({
   }, [open]);
 
   const mutation = useMutation({
-    mutationFn: (values: FormValues) => {
-      const payload = { ...values, subject: values.subject || undefined };
-      return isEdit
-        ? api.patch<LessonSchedule>(`/app/lesson-schedules/${schedule!.id}`, payload)
-        : api.post<LessonSchedule>("/app/lesson-schedules", payload);
+    mutationFn: ({ weekdays, ...values }: FormValues): Promise<unknown> => {
+      const subject = values.subject || undefined;
+      // Tahrirlashda bitta yozuv = bitta kun; yangi darsda tanlangan hamma kunlar birdan yaratiladi.
+      if (!isEdit) return api.post<LessonSchedule[]>("/app/lesson-schedules", { ...values, subject, weekdays });
+      // Tahrirlashda mavjud yozuv o'z kunida qoladi (agar tanlangan bo'lsa), qo'shimcha
+      // tanlangan kunlar uchun esa xuddi shu ma'lumotlar bilan yangi yozuvlar yaratiladi.
+      const keep = weekdays.includes(schedule!.weekday) ? schedule!.weekday : weekdays[0];
+      const extra = weekdays.filter((day) => day !== keep);
+      return api.patch<LessonSchedule>(`/app/lesson-schedules/${schedule!.id}`, { ...values, subject, weekday: keep }).then(() =>
+        extra.length > 0 ? api.post<LessonSchedule[]>("/app/lesson-schedules", { ...values, subject, weekdays: extra }) : null,
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["lesson-schedules", slug] });
@@ -135,7 +146,7 @@ export function LessonScheduleModal({
   const employees = employeesQuery.data ?? [];
 
   const watchEmployeeId = watch("employeeId");
-  const watchWeekday = watch("weekday");
+  const watchWeekdays = watch("weekdays");
   const watchStartTime = watch("startTime");
   const watchEndTime = watch("endTime");
 
@@ -146,7 +157,7 @@ export function LessonScheduleModal({
     if (endMinutes <= startMinutes) return [];
     return (allSchedulesQuery.data ?? []).filter((row) => {
       if (row.id === schedule?.id) return false;
-      if (row.employeeId !== watchEmployeeId || row.weekday !== watchWeekday) return false;
+      if (row.employeeId !== watchEmployeeId || !watchWeekdays.includes(row.weekday)) return false;
       const rowStart = timeToMinutes(row.startTime);
       const rowEnd = timeToMinutes(row.endTime);
       return startMinutes < rowEnd && rowStart < endMinutes;
@@ -184,13 +195,41 @@ export function LessonScheduleModal({
           ))}
         </Select>
 
-        <Select label={t("weekdayLabel")} error={errors.weekday?.message} {...register("weekday")}>
-          {WEEKDAY_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </Select>
+        <div>
+          <span className="mb-2 block text-[13px] font-medium text-[var(--color-text)]">
+            {t("weekdayLabel")}
+          </span>
+          <div className="flex flex-wrap gap-2">
+            {WEEKDAY_OPTIONS.map((option) => {
+              const selected = watchWeekdays.includes(option.value);
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => {
+                    const next = selected
+                      ? watchWeekdays.filter((day) => day !== option.value)
+                      : [...watchWeekdays, option.value];
+                    setValue("weekdays", next, { shouldValidate: true, shouldDirty: true });
+                  }}
+                  className={clsx(
+                    "inline-flex h-10 items-center gap-1.5 rounded-full border px-3.5 text-[14px] font-medium transition-colors",
+                    selected
+                      ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
+                      : "border-[var(--color-border-hair)] bg-[var(--color-surface)] text-[var(--color-text)] hover:border-[var(--color-primary)]",
+                  )}
+                >
+                  {selected && <CheckIcon className="h-4 w-4" />}
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+          {errors.weekdays?.message && (
+            <p className="mt-1.5 text-[13px] text-[var(--color-danger)]">{errors.weekdays.message}</p>
+          )}
+        </div>
 
         <Input label={t("subjectLabelOptional")} placeholder={t("subjectPlaceholder")} {...register("subject")} />
 
@@ -200,10 +239,17 @@ export function LessonScheduleModal({
         </div>
 
         {teacherConflicts.length > 0 && (
-          <div className="rounded-lg bg-[var(--color-warning-bg)] px-3 py-2 text-sm text-[var(--color-warning)]">
+          <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
             {t("teacherConflictWarning")}{" "}
             {teacherConflicts
-              .map((row) => t("teacherConflictItem", { groupName: row.group.name, start: row.startTime, end: row.endTime }))
+              .map((row) =>
+                t("teacherConflictItem", {
+                  weekday: WEEKDAY_OPTIONS.find((o) => o.value === row.weekday)?.label ?? "",
+                  groupName: row.group.name,
+                  start: row.startTime,
+                  end: row.endTime,
+                }),
+              )
               .join("; ")}
             .
           </div>
@@ -213,7 +259,7 @@ export function LessonScheduleModal({
           <Button type="button" variant="outline" onClick={handleClose}>
             {t("cancel")}
           </Button>
-          <Button type="submit" loading={isSubmitting || mutation.isPending}>
+          <Button type="submit" loading={isSubmitting || mutation.isPending} disabled={teacherConflicts.length > 0}>
             {isEdit ? t("save") : t("create")}
           </Button>
         </div>

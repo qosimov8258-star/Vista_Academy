@@ -20,6 +20,7 @@ import { CameraIcon, EyeIcon, EyeOffIcon, LockIcon, UserIcon } from "@/component
 import { ROLE_LABEL, canWriteOperational } from "@/lib/permissions";
 import { MAX_UPLOAD_BYTES, resizeToSquare } from "@/lib/resize-image";
 import { EditBranchModal } from "@/features/branches/edit-branch-modal";
+import { ChefLogoutCard } from "@/features/chef/chef-logout-card";
 
 type TabId = "personal" | "security";
 
@@ -382,6 +383,8 @@ export default function SettingsPage({ params }: { params: Promise<{ slug: strin
           </CardBody>
         </Card>
       )}
+
+      <ChefLogoutCard slug={slug} />
 
       {canEditBranch && editBranchOpen && branchQuery.data && (
         <EditBranchModal

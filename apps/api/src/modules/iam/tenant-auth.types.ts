@@ -81,6 +81,9 @@ export function requireMoneyScope(scope: TenantScope): string {
   if (scope.role === "TEACHER") {
     throw new ForbiddenException("O'qituvchi moliya bo'limlarida ishlay olmaydi");
   }
+  if (scope.role === "CHEF") {
+    throw new ForbiddenException("Oshpaz moliya bo'limlarida ishlay olmaydi");
+  }
   return branchId;
 }
 
@@ -97,6 +100,9 @@ export function requireOperationalScope(scope: TenantScope): string {
   if (scope.role === "TEACHER") {
     throw new ForbiddenException("O'qituvchi faqat o'z guruhlarining davomatini yuritadi");
   }
+  if (scope.role === "CHEF") {
+    throw new ForbiddenException("Oshpaz faqat oshxona bo'limlarida ishlaydi");
+  }
   return branchId;
 }
 
@@ -109,6 +115,9 @@ export function requireTeachingScope(scope: TenantScope): string {
   const branchId = requireBranchScope(scope);
   if (scope.role === "FINANCE") {
     throw new ForbiddenException("Moliyachi faqat Moliya va Ish haqi bo'limlarida o'zgartirish kirita oladi");
+  }
+  if (scope.role === "CHEF") {
+    throw new ForbiddenException("Oshpaz faqat oshxona bo'limlarida ishlaydi");
   }
   return branchId;
 }

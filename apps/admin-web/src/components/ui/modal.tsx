@@ -33,9 +33,9 @@ export function Modal({ open, onClose, title, children, widthClassName = "max-w-
       {/* Xiralashgan fon — ostidagi sahifa yo'qolmaydi, faqat orqaga chekinadi */}
       <div className="animate-overlay-in absolute inset-0 bg-black/3 backdrop-blur-[7px]" onClick={onClose} />
       <div
-        className={`animate-sheet-in relative w-full ${widthClassName} max-h-[90vh] overflow-y-auto scrollbar-thin rounded-[var(--radius-2xl)] bg-[var(--color-surface)] shadow-[var(--shadow-modal)]`}
+        className={`animate-sheet-in relative w-full ${widthClassName} max-h-[90dvh] overflow-y-auto scrollbar-thin rounded-[var(--radius-2xl)] bg-[var(--color-surface)] shadow-[var(--shadow-modal)]`}
       >
-        <div className="flex items-start justify-between gap-4 px-6 py-5">
+        <div className="sticky top-0 z-10 flex items-start justify-between gap-4 bg-[var(--color-surface)] px-6 py-5">
           <h2 className="text-[17px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
             {title}
           </h2>

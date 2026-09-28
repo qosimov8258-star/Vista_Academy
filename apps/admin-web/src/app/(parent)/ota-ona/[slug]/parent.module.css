@@ -196,23 +196,38 @@
 /*
  * Pastki menyudagi faol tamg'a. Har bir bo'lim uchun alohida fon o'rniga
  * bitta tamg'a suriladi — ko'z uni kuzatib boradi va o'tish uzluksiz
- * ko'rinadi. O'lcham: to'rt bo'lim, oraliqlari 4px, qobiq ichi 8px.
+ * ko'rinadi.
  */
 .tabPill {
   position: absolute;
-  top: 8px;
-  bottom: 8px;
-  left: 8px;
-  width: calc((100% - 16px - 12px) / 4);
+  top: 0;
+  left: 0;
   border-radius: 999px;
   background: rgba(255, 183, 3, 0.16);
   /*
-   * `transform` ataylab shu yerda emas, React tomonidan qatorga yoziladi:
-   * uni CSS o'zgaruvchisiga bog'lab qo'yilsa, o'zgaruvchi almashganda
-   * brauzer `transform` ni qayta hisoblamay, tamg'a joyida qotib qoladi.
-   * Qadam = tamg'a eni (25% - 7px) + oraliq (4px).
+   * O'lchami ham, o'rni ham React tomonidan qatorga yoziladi: ular faol
+   * bo'limning haqiqiy o'lchamidan olinadi (tab-bar.tsx). Shuning uchun
+   * bo'lim qo'shilsa yoki nomi uzaysa, tamg'a o'zi moslashadi.
    */
-  transition: transform 0.34s cubic-bezier(0.32, 0.72, 0, 1);
+  transition:
+    transform 0.34s cubic-bezier(0.32, 0.72, 0, 1),
+    width 0.34s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* "Yana" oynasi menyudan yuqoriga ko'tarilib chiqadi */
+@keyframes pMoreUp {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.moreSheet {
+  transform-origin: bottom center;
+  animation: pMoreUp 0.26s cubic-bezier(0.32, 0.72, 0, 1) both;
 }
 
 /* Faol ikonka bir lahza "nafas oladi" — bosilgani seziladi */
@@ -229,7 +244,8 @@
   .enterRight,
   .enterLeft,
   .enterSoft,
-  .tabIconActive {
+  .tabIconActive,
+  .moreSheet {
     animation: none;
   }
   .tabPill {

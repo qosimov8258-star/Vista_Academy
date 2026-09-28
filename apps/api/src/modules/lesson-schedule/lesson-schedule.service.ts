@@ -75,21 +75,30 @@ export class LessonScheduleService {
     }
 
     await this.assertBelongsToBranch(branchId, dto.groupId, dto.employeeId);
-    await this.assertNoOverlap(dto.groupId, dto.weekday, startMinutes, endMinutes);
+    // Hamma kunlar oldindan tekshiriladi — birortasi band bo'lsa hech biri yaratilmaydi.
+    for (const weekday of dto.weekdays) {
+      await this.assertNoOverlap(dto.groupId, weekday, startMinutes, endMinutes);
+      await this.assertTeacherFree(dto.employeeId, weekday, startMinutes, endMinutes);
+    }
 
-    const created = await this.prisma.lessonSchedule.create({
-      data: {
-        branchId,
-        groupId: dto.groupId,
-        employeeId: dto.employeeId,
-        subject: dto.subject,
-        weekday: dto.weekday,
-        startTime: dto.startTime,
-        endTime: dto.endTime,
-      },
-      include: scheduleInclude,
-    });
-    await this.notifyEmployee(created);
+    const created = await this.prisma.$transaction(
+      dto.weekdays.map((weekday) =>
+        this.prisma.lessonSchedule.create({
+          data: {
+            branchId,
+            groupId: dto.groupId,
+            employeeId: dto.employeeId,
+            subject: dto.subject,
+            weekday,
+            startTime: dto.startTime,
+            endTime: dto.endTime,
+          },
+          include: scheduleInclude,
+        }),
+      ),
+    );
+    // Bir nechta kun tanlangan bo'lsa ham o'qituvchiga bitta xabar boradi.
+    await this.notifyEmployee(created[0], created.map((row) => row.weekday));
     return created;
   }
 
@@ -116,6 +125,7 @@ export class LessonScheduleService {
       await this.assertBelongsToBranch(branchId, groupId, employeeId);
     }
     await this.assertNoOverlap(groupId, weekday, startMinutes, endMinutes, id);
+    await this.assertTeacherFree(employeeId, weekday, startMinutes, endMinutes, id);
 
     const updated = await this.prisma.lessonSchedule.update({
       where: { id },
@@ -131,7 +141,7 @@ export class LessonScheduleService {
     });
     // Xodim, guruh, kun yoki vaqt o'zgarsa — o'qituvchi qayta xabardor qilinadi.
     if (dto.groupId || dto.employeeId || dto.weekday || dto.startTime || dto.endTime) {
-      await this.notifyEmployee(updated);
+      await this.notifyEmployee(updated, [updated.weekday]);
     }
     return updated;
   }
@@ -147,19 +157,22 @@ export class LessonScheduleService {
   }
 
   /** Dars belgilangani/o'zgargani haqida xodimga ko'rinadigan bildirishnoma yozadi. */
-  private async notifyEmployee(schedule: {
-    branchId: string;
-    employeeId: string;
-    weekday: Weekday;
-    startTime: string;
-    endTime: string;
-    group: { name: string };
-  }) {
+  private async notifyEmployee(
+    schedule: {
+      branchId: string;
+      employeeId: string;
+      startTime: string;
+      endTime: string;
+      group: { name: string };
+    },
+    weekdays: Weekday[],
+  ) {
+    const days = weekdays.map((day) => WEEKDAY_LABEL[day]).join(", ");
     await this.prisma.employeeNotification.create({
       data: {
         branchId: schedule.branchId,
         employeeId: schedule.employeeId,
-        message: `"${schedule.group.name}" guruhida har ${WEEKDAY_LABEL[schedule.weekday]} kuni soat ${schedule.startTime}–${schedule.endTime} oralig'ida darsingiz bor.`,
+        message: `"${schedule.group.name}" guruhida har ${days} kuni soat ${schedule.startTime}–${schedule.endTime} oralig'ida darsingiz bor.`,
       },
     });
   }
@@ -196,6 +209,26 @@ export class LessonScheduleService {
     });
     if (overlaps) {
       throw new ConflictException("Bu guruhda shu kun va vaqtda allaqachon dars bor");
+    }
+  }
+
+  /** Bitta o'qituvchi (guruhi qanday bo'lishidan qat'i nazar) bir vaqtda ikkita darsda bo'lmasin. */
+  private async assertTeacherFree(
+    employeeId: string,
+    weekday: Weekday,
+    startMinutes: number,
+    endMinutes: number,
+    excludeId?: string,
+  ) {
+    const existing = await this.prisma.lessonSchedule.findMany({
+      where: { employeeId, weekday, ...(excludeId ? { id: { not: excludeId } } : {}) },
+      select: { startTime: true, endTime: true, group: { select: { name: true } }, employee: { select: { fullName: true } } },
+    });
+    const clash = existing.find((row) => startMinutes < timeToMinutes(row.endTime) && timeToMinutes(row.startTime) < endMinutes);
+    if (clash) {
+      throw new ConflictException(
+        `${clash.employee.fullName} ${WEEKDAY_LABEL[weekday]} kuni shu vaqtda band — "${clash.group.name}" guruhida ${clash.startTime}–${clash.endTime}`,
+      );
     }
   }
 }

@@ -44,7 +44,7 @@ export class ChildHealthService {
         allergies: { not: null, notIn: [""] },
         child: { status: "ACTIVE" },
       },
-      select: { allergies: true, child: { select: { id: true, fullName: true } } },
+      select: { allergies: true, child: { select: { id: true, fullName: true, group: { select: { name: true } } } } },
     });
   }
 

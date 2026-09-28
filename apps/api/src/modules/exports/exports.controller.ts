@@ -6,6 +6,7 @@ import { TenantJwtAuthGuard } from "../iam/guards/tenant-jwt-auth.guard";
 import { CurrentTenantUser } from "../iam/decorators/current-tenant-user.decorator";
 import { TenantAuthenticatedUser, toTenantScope } from "../iam/tenant-auth.types";
 import { ExportsService } from "./exports.service";
+import { AllowChef } from "../iam/decorators/allow-chef.decorator";
 
 function sendCsv(res: Response, filename: string, csv: string) {
   res.setHeader("Content-Type", "text/csv; charset=utf-8");
@@ -76,6 +77,22 @@ export class ExportsController {
     res.send(pdf);
   }
 
+  @Get("children/:id/contract-pdf")
+  async childContractPdf(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string, @Res() res: Response) {
+    const pdf = await this.exportsService.childDocumentPdf(toTenantScope(user), id, "contract");
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="shartnoma-${id}.pdf"`);
+    res.send(pdf);
+  }
+
+  @Get("children/:id/certificate-pdf")
+  async childCertificatePdf(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string, @Res() res: Response) {
+    const pdf = await this.exportsService.childDocumentPdf(toTenantScope(user), id, "certificate");
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="malumotnoma-${id}.pdf"`);
+    res.send(pdf);
+  }
+
   @Get("attendance")
   async attendance(
     @CurrentTenantUser() user: TenantAuthenticatedUser,
@@ -88,6 +105,8 @@ export class ExportsController {
     const csv = await this.exportsService.attendanceCsv(toTenantScope(user), date, branchId, from, to);
     sendCsv(res, from && to ? `davomat-${from}_${to}.csv` : `davomat-${date}.csv`, csv);
   }
+
+  @AllowChef()
 
   @Get("menu")
   async menu(

@@ -14,7 +14,7 @@ import { formatMoney } from "@/lib/format";
 
 const schema = z.object({
   amount: z.coerce.number().positive("Summa musbat bo'lishi kerak"),
-  method: z.enum(["CASH", "BANK_TRANSFER"]),
+  method: z.enum(["CASH", "CARD", "BANK_TRANSFER"]),
   note: z.string().optional(),
 });
 
@@ -72,6 +72,7 @@ export function RecordPaymentModal({
         <Input label="Summa" type="number" error={errors.amount?.message} {...register("amount")} />
         <Select label="To'lov usuli" error={errors.method?.message} {...register("method")}>
           <option value="CASH">Naqd</option>
+          <option value="CARD">Karta</option>
           <option value="BANK_TRANSFER">Bank o'tkazmasi</option>
         </Select>
         <Input label="Izoh (ixtiyoriy)" {...register("note")} />

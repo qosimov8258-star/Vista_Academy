@@ -10,6 +10,45 @@ export function isSubjectTeacherPosition(position: string): boolean {
   return normalizePosition(position) === SUBJECT_TEACHER_POSITION;
 }
 
+/** Bosh oshpaz lavozimi — unga tarbiyachi bo'limlari kerak emas. */
+export const HEAD_CHEF_POSITION = "bosh oshpaz";
+
+export function isHeadChefPosition(position: string): boolean {
+  return normalizePosition(position) === HEAD_CHEF_POSITION;
+}
+
+/** Kabineti bor, lekin guruhga biriktirilmaydigan lavozimlar (kassir moliyada, oshpaz oshxonada ishlaydi). */
+const GROUPLESS_POSITIONS = new Set(["kassir", "bosh oshpaz", "administrator"]);
+
+export function isGrouplessPosition(position: string): boolean {
+  return GROUPLESS_POSITIONS.has(normalizePosition(position));
+}
+
+/** Kassir guruh bilan ishlamaydi — unga tarbiyachi bo'limlari kerak emas. */
+export const CASHIER_POSITION = "kassir";
+
+export function isCashierPosition(position: string): boolean {
+  return normalizePosition(position) === CASHIER_POSITION;
+}
+
+/** Tarbiyachi yordamchisi guruhni ko'radi, lekin davomat va xabar yozmaydi. */
+export const ASSISTANT_POSITION = "tarbiyachi yordamchisi";
+
+export function isAssistantPosition(position: string): boolean {
+  return normalizePosition(position) === ASSISTANT_POSITION;
+}
+
+/**
+ * Tizimga kirmaydigan lavozimlar: ularga kabinet (login/parol) ochilmaydi,
+ * lekin xodimlar ro'yxatida turadi. "yuvuchi" — lavozim katalogidagi yozuv,
+ * "yuvuvchi" — odatiy imlo; ikkalasi ham tanib olinadi.
+ */
+const CABINETLESS_POSITIONS = new Set(["oshpaz yordamchisi", "idish yuvuchi", "idish yuvuvchi"]);
+
+export function isCabinetlessPosition(position: string): boolean {
+  return CABINETLESS_POSITIONS.has(normalizePosition(position));
+}
+
 /** Oshpaz (bosh oshpaz, oshpaz yordamchisi va h.k.) guruhga biriktirilmaydi. */
 export function isCookPosition(position: string): boolean {
   return normalizePosition(position).includes("oshpaz");

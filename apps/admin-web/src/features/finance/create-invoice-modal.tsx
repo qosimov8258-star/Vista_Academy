@@ -5,8 +5,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { api, getPaginated, ApiError } from "@/lib/api";
-import type { Branch, Child, Invoice } from "@/lib/types";
+import { api, ApiError } from "@/lib/api";
+import type { Branch, Invoice } from "@/lib/types";
+import type { GroupChildRow, GroupPaymentSummary } from "@/features/cash/shared";
 import { useAuth } from "@/lib/use-auth";
 import { Modal } from "@/components/ui/modal";
 import { Input, Select } from "@/components/ui/input";
@@ -37,12 +38,6 @@ export function CreateInvoiceModal({ open, onClose, slug }: { open: boolean; onC
   const [serverError, setServerError] = useState<string | null>(null);
   const { user } = useAuth();
 
-  const { data: children } = useQuery({
-    queryKey: ["children", slug, "all"],
-    queryFn: () => getPaginated<Child>("/app/children?page=1&limit=100"),
-    enabled: open,
-  });
-
   const { data: branch } = useQuery({
     queryKey: ["branch", slug, user?.branchId],
     queryFn: () => api.get<Branch>(`/app/organizations/me/branches/${user!.branchId}`),
@@ -55,10 +50,27 @@ export function CreateInvoiceModal({ open, onClose, slug }: { open: boolean; onC
     reset,
     setValue,
     getValues,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { period: currentPeriod() },
+  });
+
+  // Avval guruh, keyin shu guruhdagi bolalar. Tanlangan davr uchun hisob-fakturasi
+  // borlar belgilanib turadi, hisob-fakturasizlari oddiy ro'yxatda qoladi.
+  const period = watch("period");
+  const [groupId, setGroupId] = useState("");
+  const validPeriod = /^\d{4}-\d{2}$/.test(period ?? "");
+  const { data: groups } = useQuery({
+    queryKey: ["cash-groups", slug, period],
+    queryFn: () => api.get<{ groups: GroupPaymentSummary[] }>(`/app/cash/groups?period=${period}`),
+    enabled: open && validPeriod,
+  });
+  const { data: groupChildren } = useQuery({
+    queryKey: ["cash-group-children", slug, groupId, period],
+    queryFn: () => api.get<{ children: GroupChildRow[] }>(`/app/cash/groups/${groupId}?period=${period}`),
+    enabled: open && validPeriod && !!groupId,
   });
 
   // Filialning standart to'lov summasi qo'yilgan bo'lsa — foydalanuvchi hali
@@ -76,6 +88,7 @@ export function CreateInvoiceModal({ open, onClose, slug }: { open: boolean; onC
       queryClient.invalidateQueries({ queryKey: ["invoices", slug] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-summary", slug] });
       reset();
+      setGroupId("");
       onClose();
     },
     onError: (err) => {
@@ -95,13 +108,31 @@ export function CreateInvoiceModal({ open, onClose, slug }: { open: boolean; onC
             {serverError}
           </div>
         )}
-        <Select label="Bola" defaultValue="" error={errors.childId?.message} {...register("childId")}>
+        <Select
+          label="Guruh"
+          value={groupId}
+          onChange={(e) => {
+            setGroupId(e.target.value);
+            setValue("childId", "");
+          }}
+        >
           <option value="" disabled>
-            Tanlang
+            Guruhni tanlang
           </option>
-          {children?.data.map((child) => (
-            <option key={child.id} value={child.id}>
-              {child.fullName}
+          {groups?.groups.map((g) => (
+            <option key={g.groupId} value={g.groupId}>
+              {g.name} ({g.total} bola)
+            </option>
+          ))}
+        </Select>
+        <Select label="Bola" defaultValue="" disabled={!groupId} error={errors.childId?.message} {...register("childId")}>
+          <option value="" disabled>
+            {groupId ? "Bolani tanlang" : "Avval guruhni tanlang"}
+          </option>
+          {groupChildren?.children.map((child) => (
+            <option key={child.childId} value={child.childId}>
+              {child.childName}
+              {child.state === "PAID" ? "  ✓ to'lagan" : child.state !== "NONE" ? "  ✓ hisob-faktura bor" : ""}
             </option>
           ))}
         </Select>

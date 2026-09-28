@@ -19,6 +19,7 @@ import { TenantRefreshDto } from "./dto/tenant-refresh.dto";
 import { TenantAuthenticatedUser } from "./tenant-auth.types";
 import { TenantJwtAuthGuard } from "./guards/tenant-jwt-auth.guard";
 import { CurrentTenantUser } from "./decorators/current-tenant-user.decorator";
+import { AllowChef } from "./decorators/allow-chef.decorator";
 
 const ACCESS_COOKIE = "bogcha_tenant_at";
 const REFRESH_COOKIE = "bogcha_tenant_rt";
@@ -73,6 +74,7 @@ export class TenantAuthController {
 
   @ApiBearerAuth()
   @UseGuards(TenantJwtAuthGuard)
+  @AllowChef()
   @Get("me")
   async me(@CurrentTenantUser() user: TenantAuthenticatedUser) {
     return { user };

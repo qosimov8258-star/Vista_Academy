@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
@@ -290,18 +291,8 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
                 )}
               </Panel>
 
-              {/* Ovqat menyusi */}
-              <Panel title="Bugungi ovqat" accent="sun">
-                {day.menu && (day.menu.breakfast || day.menu.lunch || day.menu.snack) ? (
-                  <ul className="space-y-3">
-                    <Meal label="Nonushta" value={day.menu.breakfast} />
-                    <Meal label="Tushlik" value={day.menu.lunch} />
-                    <Meal label="Kechki" value={day.menu.snack} />
-                  </ul>
-                ) : (
-                  <Empty text="Bugungi menyu kiritilmagan" />
-                )}
-              </Panel>
+              {/* Ovqat tartibi to'liq — Kundalik bo'limida; bu yerda qisqacha va havola */}
+              <TodayMealsLink slug={slug} day={day} />
 
               {day.report?.toiletNotes && (
                 <Panel title="Qo'shimcha" accent="mint">
@@ -434,12 +425,41 @@ function Panel({ title, accent, children }: { title: string; accent: string; chi
   );
 }
 
-function Meal({ label, value }: { label: string; value: string | null }) {
+/** Bugungi ovqat — qisqacha; bosilsa Kundalik'dagi to'liq ovqat tartibiga o'tadi */
+function TodayMealsLink({ slug, day }: { slug: string; day: ParentDay }) {
+  const photos = day.menuPhotos ?? [];
+  const main = day.menu?.lunch || day.menu?.breakfast || day.menu?.snack || null;
+  const firstPhoto = photos[0];
   return (
-    <li>
-      <p className="text-[12px] font-semibold uppercase tracking-[0.05em] text-[var(--p-muted)]">{label}</p>
-      <p className="mt-0.5 text-[15px] leading-relaxed text-[var(--p-ink)]">{value || "—"}</p>
-    </li>
+    <Link
+      href={`/ota-ona/${slug}/kundalik`}
+      className="flex items-center gap-3.5 rounded-[var(--p-radius)] bg-[var(--p-card)] p-4 shadow-[var(--p-shadow)] transition-transform active:scale-[0.99]"
+    >
+      {firstPhoto ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={`${PARENT_API_URL}/app/parent/children/${day.child.id}/menu-photos/${firstPhoto.id}`}
+          alt="Bugungi ovqat"
+          className="h-14 w-14 shrink-0 rounded-2xl object-cover"
+        />
+      ) : (
+        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[var(--p-sun)]/18 text-[var(--p-sun-ink)]">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" className="h-7 w-7" aria-hidden>
+            <path d="M4 13h16a8 8 0 0 1-16 0ZM9 8c0-1.5 1-2 1-3.5M13 8c0-1.5 1-2 1-3.5" />
+          </svg>
+        </span>
+      )}
+      <span className="min-w-0 flex-1">
+        <span className="block text-[15px] font-bold text-[var(--p-ink)]">Bugungi ovqat tartibi</span>
+        <span className="block truncate text-[13.5px] text-[var(--p-muted)]">
+          {main ?? "Menyu hali kiritilmagan"}
+          {photos.length > 0 ? ` · ${photos.length} ta surat` : ""}
+        </span>
+      </span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 shrink-0 text-[var(--p-muted)]" aria-hidden>
+        <path d="m9 6 6 6-6 6" />
+      </svg>
+    </Link>
   );
 }
 

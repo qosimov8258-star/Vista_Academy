@@ -1,5 +1,6 @@
 "use client";
 
+import { TopbarAction } from "@/components/layout/topbar-action";
 import { use, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -16,6 +17,9 @@ import { downloadCsv } from "@/lib/download";
 import { useBranchContext } from "@/lib/use-branch-context";
 import clsx from "clsx";
 import { canWriteTeaching } from "@/lib/permissions";
+import { isAssistantPosition } from "@/lib/employee-position";
+import { ChildNoteModal } from "@/features/child-notes/child-note-modal";
+import { TodayRemindersCard } from "@/features/child-notes/today-reminders-card";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 
@@ -84,7 +88,9 @@ export default function AttendancePage({ params }: { params: Promise<{ slug: str
   const [exportFrom, setExportFrom] = useState("");
   const [exportTo, setExportTo] = useState("");
   const { user } = useAuth();
-  const canWrite = canWriteTeaching(user?.role);
+  // Tarbiyachi yordamchisi davomatni faqat ko'radi — belgilash tarbiyachiniki.
+  const canWrite = canWriteTeaching(user?.role) && !(user?.position && isAssistantPosition(user.position));
+  const [noteChild, setNoteChild] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     setDate((current) => current || todayDateString());
@@ -220,13 +226,21 @@ export default function AttendancePage({ params }: { params: Promise<{ slug: str
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
+        <div className="min-w-0">
           <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">Kunlik hisobot — Davomat</h1>
           <p className="text-[14px] text-[var(--color-text-muted)]">Bolalarning kunlik qatnashuvini belgilang</p>
         </div>
-        <Button variant="outline" loading={exporting} disabled={!date || !branchId} onClick={handleExport}>
-          Eksport (CSV)
-        </Button>
+        {/* Mobilda "Eksport" yuqori panelda (uch chiziq qatorida), kompyuterda avvalgidek o'ngda */}
+        <TopbarAction>
+          <Button variant="outline" loading={exporting} disabled={!date || !branchId} onClick={handleExport}>
+            Eksport (CSV)
+          </Button>
+        </TopbarAction>
+        <div className="hidden md:block">
+          <Button variant="outline" loading={exporting} disabled={!date || !branchId} onClick={handleExport}>
+            Eksport (CSV)
+          </Button>
+        </div>
       </div>
 
       <Card className="flex flex-col gap-3 p-4 sm:flex-row">
@@ -259,7 +273,7 @@ export default function AttendancePage({ params }: { params: Promise<{ slug: str
               max={exportTo || undefined}
               onChange={(e) => setExportFrom(e.target.value)}
               aria-label="Eksport — dan"
-              className="h-11 rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-3.5 text-[15px] text-[var(--color-text)] outline-none transition-[border-color,box-shadow] duration-[var(--dur-fast)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/[0.12]"
+              className="h-11 min-w-0 flex-1 rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-2 text-[13px] sm:px-3.5 sm:text-[15px] sm:flex-none text-[var(--color-text)] outline-none transition-[border-color,box-shadow] duration-[var(--dur-fast)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/[0.12]"
             />
             <span className="text-[13px] text-[var(--color-text-muted)]">—</span>
             <input
@@ -268,7 +282,7 @@ export default function AttendancePage({ params }: { params: Promise<{ slug: str
               min={exportFrom || undefined}
               onChange={(e) => setExportTo(e.target.value)}
               aria-label="Eksport — gacha"
-              className="h-11 rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-3.5 text-[15px] text-[var(--color-text)] outline-none transition-[border-color,box-shadow] duration-[var(--dur-fast)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/[0.12]"
+              className="h-11 min-w-0 flex-1 rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-2 text-[13px] sm:px-3.5 sm:text-[15px] sm:flex-none text-[var(--color-text)] outline-none transition-[border-color,box-shadow] duration-[var(--dur-fast)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/[0.12]"
             />
           </div>
         </div>
@@ -281,6 +295,8 @@ export default function AttendancePage({ params }: { params: Promise<{ slug: str
       )}
 
       {!canWrite && <ViewOnlyNote role={user?.role} />}
+
+      {branchId && date && <TodayRemindersCard slug={slug} branchId={branchId} today={date} />}
 
       {!date ? (
         <LoadingState />
@@ -372,6 +388,15 @@ export default function AttendancePage({ params }: { params: Promise<{ slug: str
                       {/* Bir necha guruhli tarbiyachi kimni belgilayotganini bilsin */}
                       {child.groupName && (
                         <p className="text-xs text-[var(--color-text-muted)]">{child.groupName}</p>
+                      )}
+                      {canWrite && (
+                        <button
+                          type="button"
+                          className="mt-0.5 text-xs font-medium text-[var(--color-primary)] hover:underline"
+                          onClick={() => setNoteChild({ id: child.childId, name: child.fullName })}
+                        >
+                          Xabar / eslatma
+                        </button>
                       )}
                     </div>
                     {canWrite ? (
@@ -468,6 +493,17 @@ export default function AttendancePage({ params }: { params: Promise<{ slug: str
           )}
         </CardBody>
       </Card>
+      {canWrite && noteChild && branchId && date && (
+        <ChildNoteModal
+          open
+          onClose={() => setNoteChild(null)}
+          slug={slug}
+          branchId={branchId}
+          childId={noteChild.id}
+          childName={noteChild.name}
+          date={date}
+        />
+      )}
     </div>
   );
 }

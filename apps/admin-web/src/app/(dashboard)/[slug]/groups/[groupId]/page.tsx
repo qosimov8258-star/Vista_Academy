@@ -410,9 +410,9 @@ const ROSTER_COUNT_TONE = {
 function RosterCount({ label, value, tone }: { label: string; value: number; tone: keyof typeof ROSTER_COUNT_TONE }) {
   const style = ROSTER_COUNT_TONE[tone];
   return (
-    <div className={clsx("px-5 py-3.5 sm:px-6", style.bg)}>
+    <div className={clsx("min-w-0 px-2 py-3.5 sm:px-6", style.bg)}>
       <p className={clsx("text-[22px] font-semibold leading-none tabular-nums", style.text)}>{value}</p>
-      <p className="mt-1.5 text-[12.5px] font-medium text-[var(--color-text-muted)]">{label}</p>
+      <p className="mt-1.5 break-words text-[11px] font-medium text-[var(--color-text-muted)] sm:text-[12.5px]">{label}</p>
     </div>
   );
 }

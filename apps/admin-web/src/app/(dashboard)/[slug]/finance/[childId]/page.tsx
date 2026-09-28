@@ -27,6 +27,7 @@ const LEDGER_TYPE_LABEL: Record<LedgerEntry["type"], string> = {
 
 const METHOD_LABEL: Record<Payment["method"], string> = {
   CASH: "Naqd",
+  CARD: "Karta",
   BANK_TRANSFER: "Bank o'tkazmasi",
 };
 

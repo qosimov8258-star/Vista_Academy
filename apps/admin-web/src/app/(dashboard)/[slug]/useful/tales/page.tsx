@@ -6,7 +6,7 @@ import { api, ApiError } from "@/lib/api";
 import type { Group, Tale } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { useBranchContext } from "@/lib/use-branch-context";
-import { canWriteTeaching } from "@/lib/permissions";
+import { canWriteUseful } from "@/lib/permissions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/input";
@@ -22,7 +22,7 @@ import { TaleModal } from "@/features/useful/tale-modal";
 export default function TalesPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const { user } = useAuth();
-  const canWrite = canWriteTeaching(user?.role);
+  const canWrite = canWriteUseful(user?.role);
   const isTeacher = user?.role === "TEACHER";
   const { branchId: forcedBranchId, branchSlug } = useBranchContext(slug);
   const base = branchSlug ? `/${slug}/${branchSlug}` : `/${slug}`;
@@ -58,15 +58,20 @@ export default function TalesPage({ params }: { params: Promise<{ slug: string }
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+      <div className="flex items-start justify-between gap-3 md:flex-wrap md:items-center">
+        <div className="min-w-0">
           <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">Foydali</h1>
           <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">
             She&apos;rlar, maqollar va ertaklar — ota-ona kabinetida shu yerdan ko&apos;rinadi
           </p>
         </div>
         {canWrite && (
-          <Button onClick={() => setModal({ open: true, tale: null })}>+ Yangi ertak qo&apos;shish</Button>
+          <Button className="shrink-0 max-md:!h-auto max-md:!py-2" onClick={() => setModal({ open: true, tale: null })}>
+            <span className="max-md:text-center max-md:leading-tight">
+              + Yangi ertak
+              <br className="md:hidden" /> qo&apos;shish
+            </span>
+          </Button>
         )}
       </div>
 

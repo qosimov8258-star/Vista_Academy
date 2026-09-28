@@ -1,7 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantScope, requireTeachingScope } from "../iam/tenant-auth.types";
-import { assertTeacherOwnsChild, resolveTeacherGroupIds, teacherChildWhere } from "../iam/teacher-scope";
+import { assertNotAssistant, assertTeacherOwnsChild, resolveTeacherGroupIds, teacherChildWhere } from "../iam/teacher-scope";
 import { NotificationsService } from "../notifications/notifications.service";
 import { UpsertDailyReportDto } from "./dto/upsert-daily-report.dto";
 import { DailyReportQueryDto } from "./dto/daily-report-query.dto";
@@ -25,6 +25,7 @@ export class DailyReportsService {
 
   async upsert(scope: TenantScope, dto: UpsertDailyReportDto) {
     const branchId = requireTeachingScope(scope);
+    await assertNotAssistant(this.prisma, scope);
     const child = await this.prisma.child.findFirst({ where: { id: dto.childId, organizationId: scope.organizationId } });
     if (!child) {
       throw new NotFoundException("Bola topilmadi");

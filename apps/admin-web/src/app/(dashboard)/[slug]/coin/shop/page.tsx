@@ -48,15 +48,17 @@ export default function CoinShopPage({ params }: { params: Promise<{ slug: strin
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+      <div className="flex items-start justify-between gap-3 md:flex-wrap">
+        <div className="min-w-0">
           <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">Coin — Do&apos;kon</h1>
           <p className="text-[14px] text-[var(--color-text-muted)]">Bolalar coinlarini sarflaydigan do&apos;kon</p>
         </div>
         {canWrite && branchId && (
-          <Button onClick={() => setCreateOpen(true)}>
-            <PlusIcon className="h-4 w-4" />
-            Tovar qo&apos;shish
+          <Button className="shrink-0 max-md:!h-auto max-md:!py-2" onClick={() => setCreateOpen(true)}>
+            <PlusIcon className="h-4 w-4 shrink-0" />
+            <span className="max-md:text-center max-md:leading-tight max-md:whitespace-normal">
+              Tovar<br className="md:hidden" /> qo&apos;shish
+            </span>
           </Button>
         )}
       </div>

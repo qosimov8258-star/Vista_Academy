@@ -8,6 +8,7 @@ import { assertMoneyReader } from "../billing/billing.service";
 const PAYMENT_METHOD_LABEL: Record<string, string> = {
   CASH: "Naqd",
   BANK_TRANSFER: "Bank o'tkazmasi",
+  CARD: "Karta",
 };
 
 const INVOICE_STATUS_LABEL: Record<string, string> = {
@@ -347,6 +348,94 @@ export class ExportsService {
     doc.moveDown(2);
     doc.fontSize(9).fillColor("#888").text(`Chop etilgan sana: ${new Date().toISOString().slice(0, 10)}`);
 
+    doc.end();
+    return done;
+  }
+
+  /**
+   * Bola uchun hujjat: shartnoma (`contract`) yoki ma'lumotnoma (`certificate`).
+   * Matn qisqa shablon — tashkilot o'z shartlarini keyinchalik shu yerdan o'zgartiradi.
+   */
+  async childDocumentPdf(scope: TenantScope, childId: string, kind: "contract" | "certificate"): Promise<Buffer> {
+    if (scope.role === "TEACHER" || scope.role === "FINANCE") {
+      throw new ForbiddenException("Hujjatlarni administrator yoki filial admini chiqaradi");
+    }
+    const child = await this.prisma.child.findFirst({
+      where: { id: childId, organizationId: scope.organizationId },
+      include: {
+        organization: { select: { name: true } },
+        branch: { select: { name: true, address: true, defaultTuitionAmount: true } },
+        group: { select: { name: true } },
+        guardians: {
+          orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+          take: 1,
+          select: { guardian: { select: { fullName: true, phone: true } } },
+        },
+      },
+    });
+    if (!child) {
+      throw new NotFoundException("Bola topilmadi");
+    }
+    if (scope.branchId && child.branchId !== scope.branchId) {
+      throw new ForbiddenException("Bu bolaga kirish huquqingiz yo'q");
+    }
+
+    const guardian = child.guardians[0]?.guardian;
+    const today = new Date().toISOString().slice(0, 10);
+    const doc = new PDFDocument({ size: "A4", margin: 60 });
+    const chunks: Buffer[] = [];
+    doc.on("data", (chunk) => chunks.push(chunk));
+    const done = new Promise<Buffer>((resolve) => {
+      doc.on("end", () => resolve(Buffer.concat(chunks)));
+    });
+
+    doc.fontSize(18).fillColor("#000").text(child.organization.name);
+    doc.fontSize(11).fillColor("#555").text(child.branch.name);
+    if (child.branch.address) doc.text(child.branch.address);
+    doc.moveDown(2);
+
+    if (kind === "certificate") {
+      doc.fillColor("#000").fontSize(18).text("MA'LUMOTNOMA", { align: "center" });
+      doc.moveDown(1.5);
+      doc.fontSize(12).text(
+        `Ushbu ma'lumotnoma ${child.fullName}${child.birthDate ? ` (tug'ilgan sana: ${child.birthDate.toISOString().slice(0, 10)})` : ""} ` +
+          `${child.organization.name} ${child.branch.name} filialining ${child.group ? `"${child.group.name}" guruhida ` : ""}` +
+          `tarbiyalanayotganligi haqida berildi.`,
+        { align: "justify", lineGap: 4 },
+      );
+      doc.moveDown(1);
+      doc.text("Ma'lumotnoma talab qilingan joyga taqdim etish uchun berildi.", { lineGap: 4 });
+    } else {
+      doc.fillColor("#000").fontSize(18).text("TA'LIM-TARBIYA SHARTNOMASI", { align: "center" });
+      doc.moveDown(0.5);
+      doc.fontSize(11).fillColor("#555").text(`Sana: ${today}`, { align: "center" });
+      doc.moveDown(1.5);
+      doc.fillColor("#000").fontSize(12);
+      const line = (text: string) => {
+        doc.text(text, { align: "justify", lineGap: 4 });
+        doc.moveDown(0.6);
+      };
+      line(
+        `1. ${child.organization.name} (${child.branch.name}) (keyingi o'rinlarda "Bog'cha") bir tomondan va ` +
+          `${guardian?.fullName ?? "________________"} (keyingi o'rinlarda "Ota-ona") ikkinchi tomondan, ` +
+          `${child.fullName} (ID: ${formatChildPublicId(child.publicId)}) ni Bog'chada tarbiyalash to'g'risida quyidagi shartnomani tuzdilar.`,
+      );
+      line("2. Bog'cha bolani kelishilgan tartibda tarbiyalash, ovqatlantirish va xavfsizligini ta'minlash majburiyatini oladi.");
+      line(
+        `3. Ota-ona oylik to'lovni ${child.branch.defaultTuitionAmount ? `${formatMoney(child.branch.defaultTuitionAmount, "UZS")} miqdorida` : "kelishilgan miqdorda"} ` +
+          "har oyning belgilangan muddatigacha to'lab borish majburiyatini oladi.",
+      );
+      line("4. Ota-ona bolaning sog'lig'i, allergiyasi va dori qabul qilishi haqida Bog'chani o'z vaqtida xabardor qiladi.");
+      line("5. Bolani Bog'chadan faqat Ota-ona yoki u ruxsat bergan shaxslar olib ketadi.");
+      doc.moveDown(2);
+      doc.text("Bog'cha: ______________________          Ota-ona: ______________________");
+      if (guardian?.phone) {
+        doc.moveDown(0.5).fontSize(10).fillColor("#555").text(`Ota-ona telefoni: ${guardian.phone}`);
+      }
+    }
+
+    doc.moveDown(3);
+    doc.fontSize(9).fillColor("#888").text(`Chop etilgan sana: ${today}`);
     doc.end();
     return done;
   }

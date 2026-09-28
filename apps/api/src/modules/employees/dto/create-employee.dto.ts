@@ -16,9 +16,10 @@ export class EmployeeAccountDto {
       "Tarbiyachiga biriktiriladigan guruhlar — u faqat shularni ko'radi. Guruhga bog'liq bo'lmagan " +
       "xodimlar (masalan oshpaz) uchun bo'sh massiv yuboriladi.",
   })
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  groupIds!: string[];
+  groupIds?: string[];
 
   @ApiPropertyOptional({
     example: "dilnoza.yusupova",

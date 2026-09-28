@@ -12,6 +12,7 @@ import { Modal } from "@/components/ui/modal";
 import { Input, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ageGroupLabel, sourceLabel } from "./labels";
+import { validateUzbekPhone } from "@/lib/phone";
 
 const AGE_GROUPS: AgeGroup[] = ["AGE_1_2", "AGE_2_3", "AGE_3_4", "AGE_4_5", "AGE_5_6", "AGE_6_7"];
 const SOURCES: LeadSource[] = ["WEBSITE", "REFERRAL", "SOCIAL_MEDIA", "WALK_IN", "OTHER"];
@@ -26,7 +27,19 @@ export function CreateLeadModal({ open, onClose, slug }: { open: boolean; onClos
     childBirthDate: z.string().optional(),
     ageGroup: z.string().optional(),
     parentName: z.string().min(2, t("validation.fullNameMin")),
-    parentPhone: z.string().min(5, t("validation.phoneRequired")),
+    parentPhone: z
+      .string()
+      .min(1, t("validation.phoneRequired"))
+      .superRefine((value, ctx) => {
+        const error = validateUzbekPhone(value);
+        if (error === "prefix") {
+          ctx.addIssue({ code: "custom", message: t("validation.phonePrefix") });
+        } else if (error === "length") {
+          ctx.addIssue({ code: "custom", message: t("validation.phoneLength") });
+        } else if (error === "code") {
+          ctx.addIssue({ code: "custom", message: t("validation.phoneCode") });
+        }
+      }),
     source: z.string().optional(),
   });
 
@@ -37,7 +50,7 @@ export function CreateLeadModal({ open, onClose, slug }: { open: boolean; onClos
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(schema) });
+  } = useForm<FormValues>({ resolver: zodResolver(schema), mode: "onChange" });
 
   const mutation = useMutation({
     mutationFn: (values: FormValues) =>
@@ -96,7 +109,9 @@ export function CreateLeadModal({ open, onClose, slug }: { open: boolean; onClos
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
             label={t("parentPhoneLabel")}
+            type="tel"
             placeholder="+998901234567"
+            maxLength={13}
             error={errors.parentPhone?.message}
             {...register("parentPhone")}
           />

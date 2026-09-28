@@ -69,8 +69,8 @@ export default function LessonTopicsPage({ params }: { params: Promise<{ slug: s
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+      <div className="flex flex-wrap items-start justify-between gap-3 md:items-center">
+        <div className="min-w-0 flex-1 md:flex-none">
           <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
             Savol-javob
           </h1>
@@ -78,7 +78,30 @@ export default function LessonTopicsPage({ params }: { params: Promise<{ slug: s
             Dars mavzulari va ularga tegishli test savollari banki
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        {/* Mobilda asosiy "+ Yangi mavzu" sarlavha yonida, "+ Savol" esa uning ostida */}
+        {canWriteTopics && (
+          <div className="shrink-0 md:hidden">
+            <Button className="!h-auto !py-2" onClick={() => setTopicModal({ open: true, topic: null })} disabled={!groupId}>
+              <span className="text-center leading-tight">
+                + Yangi mavzu
+                <br />
+                qo&apos;shish
+              </span>
+            </Button>
+          </div>
+        )}
+        {canWriteQuestions && (
+          <div className="w-full md:hidden">
+            <Button
+              variant="outline"
+              onClick={() => setQuickQuestionModalOpen(true)}
+              disabled={!groupId || !topicsQuery.data || topicsQuery.data.length === 0}
+            >
+              + Savol qo&apos;shish
+            </Button>
+          </div>
+        )}
+        <div className="hidden flex-wrap gap-2 md:flex">
           {canWriteQuestions && (
             <Button
               variant="outline"

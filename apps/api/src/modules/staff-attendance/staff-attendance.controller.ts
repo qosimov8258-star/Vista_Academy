@@ -8,6 +8,8 @@ import { StaffAttendanceService } from "./staff-attendance.service";
 import { MarkStaffAttendanceDto } from "./dto/mark-staff-attendance.dto";
 import { StaffAttendanceQueryDto } from "./dto/staff-attendance-query.dto";
 import { StaffAttendanceSummaryQueryDto } from "./dto/staff-attendance-summary-query.dto";
+import { LockStaffAttendanceDto } from "./dto/lock-staff-attendance.dto";
+import { StaffAttendanceHistoryQueryDto } from "./dto/staff-attendance-history-query.dto";
 
 @ApiBearerAuth()
 @ApiTags("Tenant Staff Attendance")
@@ -31,8 +33,26 @@ export class StaffAttendanceController {
     return this.staffAttendanceService.monthlySummary(toTenantScope(user), query);
   }
 
+  /** Oy davomida kelmagan/kasal/ta'til kunlari ro'yxati. */
+  @Get("absences")
+  absences(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query() query: StaffAttendanceSummaryQueryDto) {
+    return this.staffAttendanceService.absences(toTenantScope(user), query);
+  }
+
+  /** Bitta xodimning bir oylik kun-kun tarixi (kasbi + har kuni kelgan/kelmagani). */
+  @Get("history")
+  history(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query() query: StaffAttendanceHistoryQueryDto) {
+    return this.staffAttendanceService.employeeHistory(toTenantScope(user), query);
+  }
+
   @Post()
   mark(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: MarkStaffAttendanceDto) {
     return this.staffAttendanceService.mark(toTenantScope(user), dto);
+  }
+
+  /** Barcha xodim saqlangandan keyin chaqiriladi — kunni qulflab, keyingi o'zgartirishlarni to'sadi. */
+  @Post("lock")
+  lock(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: LockStaffAttendanceDto) {
+    return this.staffAttendanceService.lockDay(toTenantScope(user), user.fullName, dto);
   }
 }

@@ -12,16 +12,10 @@ import { ROLE_LABEL } from "@/lib/permissions";
 import { Modal } from "@/components/ui/modal";
 import { Input, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { EyeIcon, EyeOffIcon } from "@/components/ui/icons";
+import { PasswordChecklist, getPasswordRules } from "@/components/ui/password-checklist";
 
 const LOGIN_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{1,30}[A-Za-z0-9]$/;
-
-type FormValues = {
-  branchId?: string;
-  role?: "BRANCH_ADMIN" | "FINANCE";
-  fullName: string;
-  login: string;
-  password: string;
-};
 
 export function CreateTenantUserModal({
   open,
@@ -39,17 +33,32 @@ export function CreateTenantUserModal({
   const t = useTranslations("users");
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const isNetworkAdmin = currentUser.role === "NETWORK_ADMIN";
 
-  const schema = z.object({
-    branchId: z.string().min(1, t("validation.selectBranch")).optional(),
-    // Super Admin filial admini yoki moliyachi yaratadi; filial admini uchun bu
-    // maydon ko'rinmaydi va server baribir doim MANAGER yaratadi.
-    role: z.enum(["BRANCH_ADMIN", "FINANCE"]).optional(),
-    fullName: z.string().min(2, t("validation.fullNameMin")),
-    login: z.string().regex(LOGIN_PATTERN, t("validation.loginPattern")),
-    password: z.string().min(8, t("validation.passwordMin")),
-  });
+  const schema = z
+    .object({
+      branchId: z.string().min(1, t("validation.selectBranch")).optional(),
+      // Super Admin filial admini yoki moliyachi yaratadi; filial admini uchun bu
+      // maydon ko'rinmaydi va server baribir doim MANAGER yaratadi.
+      role: z.enum(["BRANCH_ADMIN", "FINANCE"]).optional(),
+      fullName: z.string().min(2, t("validation.fullNameMin")),
+      login: z.string().regex(LOGIN_PATTERN, t("validation.loginPattern")),
+      password: z.string(),
+      confirmPassword: z.string(),
+    })
+    .superRefine((values, ctx) => {
+      const unmet = getPasswordRules(values.password).some((rule) => !rule.met);
+      if (unmet) {
+        ctx.addIssue({ code: "custom", path: ["password"], message: t("validation.passwordRequirements") });
+      }
+      if (values.password !== values.confirmPassword) {
+        ctx.addIssue({ code: "custom", path: ["confirmPassword"], message: t("validation.passwordsMismatch") });
+      }
+    });
+
+  type FormValues = z.infer<typeof schema>;
 
   const {
     register,
@@ -59,6 +68,7 @@ export function CreateTenantUserModal({
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
+    mode: "onChange",
     defaultValues: { branchId: "", role: "BRANCH_ADMIN" },
   });
 
@@ -72,7 +82,13 @@ export function CreateTenantUserModal({
     if (!open) return;
     reset({ branchId: firstBranchId, role: "BRANCH_ADMIN" });
     setServerError(null);
+    setShowPassword(false);
+    setShowConfirmPassword(false);
   }, [open, firstBranchId, reset]);
+
+  const password = watch("password");
+  const confirmPassword = watch("confirmPassword");
+  const passwordRules = getPasswordRules(password ?? "", confirmPassword ?? "");
 
   // Sarlavha va login namunasi tanlangan rolga qarab o'zgaradi
   const selectedRole = watch("role") ?? "BRANCH_ADMIN";
@@ -88,7 +104,9 @@ export function CreateTenantUserModal({
   const mutation = useMutation({
     mutationFn: (values: FormValues) =>
       api.post<TenantUser>("/app/users", {
-        ...values,
+        fullName: values.fullName,
+        login: values.login,
+        password: values.password,
         branchId: values.branchId || currentUser.branchId,
         // Rolni faqat Super Admin tanlaydi; filial admini yuborsa ham server
         // e'tiborga olmaydi, shuning uchun umuman yubormaymiz.
@@ -144,7 +162,46 @@ export function CreateTenantUserModal({
           error={errors.login?.message}
           {...register("login")}
         />
-        <Input label={t("passwordLabel")} type="password" placeholder={t("passwordPlaceholder")} error={errors.password?.message} {...register("password")} />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="relative">
+            <Input
+              label={t("passwordLabel")}
+              type={showPassword ? "text" : "password"}
+              error={errors.password?.message}
+              {...register("password")}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute right-3 top-[38px] cursor-pointer text-gray-400 hover:text-[var(--color-text)]"
+              aria-label={showPassword ? t("hidePassword") : t("showPassword")}
+            >
+              {showPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+            </button>
+          </div>
+          <div className="relative">
+            <Input
+              label={t("confirmPasswordLabel")}
+              type={showConfirmPassword ? "text" : "password"}
+              error={errors.confirmPassword?.message}
+              {...register("confirmPassword")}
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword((v) => !v)}
+              className="absolute right-3 top-[38px] cursor-pointer text-gray-400 hover:text-[var(--color-text)]"
+              aria-label={showConfirmPassword ? t("hidePassword") : t("showPassword")}
+            >
+              {showConfirmPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+            </button>
+          </div>
+        </div>
+
+        {password && (
+          <div className="rounded-[var(--radius-md)] bg-[var(--color-surface)] p-3">
+            <PasswordChecklist rules={passwordRules} />
+          </div>
+        )}
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>

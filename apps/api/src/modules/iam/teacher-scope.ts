@@ -88,3 +88,24 @@ export async function assertTeacherOwnsGroup(
     throw new ForbiddenException("Bu guruh sizga biriktirilmagan");
   }
 }
+
+const ASSISTANT_POSITION = "tarbiyachi yordamchisi";
+
+/**
+ * Tarbiyachi yordamchisi guruhni ko'radi va dori kabi eslatmalarni "berildi"
+ * deb belgilaydi, lekin davomat va ota-onaga xabar yozmaydi — bu tarbiyachining
+ * mas'uliyati. UI yashiradi, bu esa serverdagi haqiqiy cheklov.
+ */
+export async function assertNotAssistant(prisma: PrismaService, scope: TenantScope): Promise<void> {
+  if (scope.role !== "TEACHER") {
+    return;
+  }
+  const user = await prisma.tenantUser.findUnique({
+    where: { id: scope.userId },
+    select: { employee: { select: { position: true } } },
+  });
+  const position = user?.employee?.position.trim().toLowerCase().replace(/[‘’`]/g, "'");
+  if (position === ASSISTANT_POSITION) {
+    throw new ForbiddenException("Tarbiyachi yordamchisi bu amalni bajara olmaydi");
+  }
+}

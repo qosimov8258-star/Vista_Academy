@@ -636,7 +636,7 @@ export class BillingService {
       }),
     ]);
 
-    const byMethod = { CASH: { amount: 0, count: 0 }, BANK_TRANSFER: { amount: 0, count: 0 } };
+    const byMethod = { CASH: { amount: 0, count: 0 }, BANK_TRANSFER: { amount: 0, count: 0 }, CARD: { amount: 0, count: 0 } };
     for (const row of byMethodGrouped) {
       byMethod[row.method] = { amount: Number(row._sum.amount ?? 0), count: row._count._all };
     }

@@ -12,6 +12,8 @@ export function ViewOnlyNote({ role }: { role?: TenantUserRole }) {
       ? "Moliyachi Moliya va Ish haqi bo'limlarida o'zgartirish kiritadi."
       : role === "TEACHER"
         ? "O'qituvchi o'z guruhlarining davomatini yuritadi."
+        : role === "CHEF"
+          ? "Oshpaz faqat oshxona bo'limlarida ishlaydi."
         : "Yozish va qo'shish filial darajasidagi foydalanuvchilar uchun.";
 
   return (

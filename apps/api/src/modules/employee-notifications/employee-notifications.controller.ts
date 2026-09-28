@@ -5,11 +5,13 @@ import { TenantJwtAuthGuard } from "../iam/guards/tenant-jwt-auth.guard";
 import { CurrentTenantUser } from "../iam/decorators/current-tenant-user.decorator";
 import { TenantAuthenticatedUser, toTenantScope } from "../iam/tenant-auth.types";
 import { EmployeeNotificationsService } from "./employee-notifications.service";
+import { AllowChef } from "../iam/decorators/allow-chef.decorator";
 
 @ApiBearerAuth()
 @ApiTags("Tenant Employee Notifications")
 @Public()
 @UseGuards(TenantJwtAuthGuard)
+@AllowChef()
 @Controller("app/employee-notifications")
 export class EmployeeNotificationsController {
   constructor(private readonly employeeNotificationsService: EmployeeNotificationsService) {}
