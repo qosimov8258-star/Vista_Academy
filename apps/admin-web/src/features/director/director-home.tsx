@@ -20,6 +20,7 @@ import {
   TeacherIcon,
 } from "@/components/ui/icons";
 import { IosIcon, type IosTint } from "./ios-icon";
+import { compactMoney, fullMoney } from "./money";
 import styles from "./director-home.module.css";
 
 const TZ = "Asia/Tashkent";
@@ -47,17 +48,6 @@ function greeting(hour: number) {
   if (hour >= 17 && hour < 22) return "Xayrli kech";
   return "Xayrli tun";
 }
-
-/** "116,4 mln" — vidjetlarda to'liq summa sig'maydi, to'liqi title'da */
-function compactMoney(value: number) {
-  const abs = Math.abs(value);
-  const fmt = (n: number) => n.toLocaleString("ru-RU", { maximumFractionDigits: 1 }).replace(/ /g, " ");
-  if (abs >= 1_000_000_000) return `${fmt(value / 1_000_000_000)} mlrd`;
-  if (abs >= 1_000_000) return `${fmt(value / 1_000_000)} mln`;
-  if (abs >= 1_000) return `${fmt(value / 1_000)} ming`;
-  return fmt(value);
-}
-const fullMoney = (value: number) => `${Math.round(value).toLocaleString("ru-RU").replace(/ /g, " ")} so'm`;
 
 /**
  * Bog'cha direktori (Super Admin) bosh sahifasi — iOS uslubida: katta
