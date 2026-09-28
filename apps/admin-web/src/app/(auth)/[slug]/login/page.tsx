@@ -48,17 +48,6 @@ export default function LoginPage({ params }: { params: Promise<{ slug: string }
         <KindergartenBackdrop focus="left" name={orgQuery.isPending ? null : (orgName ?? slug)} />
       </div>
 
-      <div className={`${styles.brand} absolute right-4 top-4 z-20 flex items-center gap-2.5 lg:left-8 lg:right-auto lg:top-7`}>
-        {/* eslint-disable-next-line @next/next/no-img-element -- statik brend rasmi, Next optimizatsiyasi kerak emas */}
-        <img src="/logo.png" alt="Vista Academy" className="h-9 w-9 shrink-0 object-contain drop-shadow-sm" />
-        <div className="leading-tight">
-          <p className="text-sm font-semibold">
-            <span style={{ color: "#4CA6D4" }}>Vista</span> <span style={{ color: "#61AE41" }}>Academy</span>
-          </p>
-          <p className="text-[11px] font-medium text-[var(--color-text-muted)]">{t("panelSubtitle")}</p>
-        </div>
-      </div>
-
       <div className="absolute left-4 top-4 z-20 lg:right-8 lg:left-auto lg:top-7">
         <LanguageSwitcher />
       </div>
