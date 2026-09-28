@@ -256,6 +256,27 @@ export function PrimaryButton({
   );
 }
 
+/**
+ * Asosiy amal paneli ("Saqlash") — telefonda pastki tab-bar ustida mahkam
+ * suzib turadi, kompyuterda sahifa pastiga yopishadi. Sahifaning oxirida
+ * qo'yiladi: ostidagi bo'sh joy oxirgi qator tugma ostida qolmasligi uchun.
+ */
+export function FloatingBar({ children }: { children: ReactNode }) {
+  return (
+    <>
+      <div className="h-16 md:hidden" aria-hidden="true" />
+      {/* Tugma va tab-bar ortidagi yumshoq fon — ostidan o'tayotgan ro'yxat ko'zga tashlanmasin */}
+      <div
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-20 h-[calc(max(12px,env(safe-area-inset-bottom))+150px)] bg-gradient-to-t from-[var(--color-bg)] from-60% to-transparent md:hidden"
+        aria-hidden="true"
+      />
+      <div className="pointer-events-none fixed inset-x-0 bottom-[calc(max(12px,env(safe-area-inset-bottom))+70px)] z-30 px-4 md:sticky md:inset-x-auto md:bottom-4 md:px-0">
+        <div className="pointer-events-auto mx-auto max-w-[440px] md:max-w-none">{children}</div>
+      </div>
+    </>
+  );
+}
+
 /** Bo'sh holat — ro'yxat kartasi ichida, markazda. */
 export function EmptyRow({ icon: Icon, title, description }: { icon?: ComponentType<IconProps>; title: string; description?: string }) {
   return (

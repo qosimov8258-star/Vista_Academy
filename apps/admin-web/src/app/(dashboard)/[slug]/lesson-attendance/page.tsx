@@ -13,6 +13,7 @@ import {
   Segmented,
   SkeletonRows,
   TeacherPage,
+  FloatingBar,
   formatDayLong,
   formatDayShort,
 } from "@/features/teacher/teacher-ui";
@@ -237,27 +238,27 @@ export default function LessonAttendancePage({ params }: { params: Promise<{ slu
             </Group>
           )}
 
-          {children.length > 0 && (
-            <div className="sticky bottom-[calc(84px+env(safe-area-inset-bottom))] z-10 md:bottom-4">
-              <PrimaryButton loading={saveMutation.isPending} onClick={() => saveMutation.mutate()} disabled={unsaved === 0 && saveMutation.isSuccess}>
-                {saveMutation.isPending ? (
-                  "Saqlanmoqda…"
-                ) : unsaved === 0 && saveMutation.isSuccess ? (
-                  <>
-                    <CheckIcon className="h-5 w-5" strokeWidth={2.6} /> Saqlandi
-                  </>
-                ) : (
-                  "Saqlash"
-                )}
-              </PrimaryButton>
-              {saveMutation.isError && (
-                <p className="mt-1.5 text-center text-[13px] font-medium text-[var(--color-danger)]">
-                  {(saveMutation.error as Error).message || "Saqlashda xatolik yuz berdi"}
-                </p>
-              )}
-            </div>
-          )}
         </>
+      )}
+      {children.length > 0 && (
+        <FloatingBar>
+          <PrimaryButton loading={saveMutation.isPending} onClick={() => saveMutation.mutate()} disabled={unsaved === 0 && saveMutation.isSuccess}>
+            {saveMutation.isPending ? (
+              "Saqlanmoqda…"
+            ) : unsaved === 0 && saveMutation.isSuccess ? (
+              <>
+                <CheckIcon className="h-5 w-5" strokeWidth={2.6} /> Saqlandi
+              </>
+            ) : (
+              "Saqlash"
+            )}
+          </PrimaryButton>
+          {saveMutation.isError && (
+            <p className="mt-1.5 text-center text-[13px] font-medium text-[var(--color-danger)]">
+              {(saveMutation.error as Error).message || "Saqlashda xatolik yuz berdi"}
+            </p>
+          )}
+        </FloatingBar>
       )}
     </TeacherPage>
   );

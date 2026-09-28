@@ -14,7 +14,7 @@ import { ChildPhoto } from "@/components/ui/child-photo";
 import { initials } from "@/components/ui/avatar";
 import { CalendarIcon, CheckIcon, ChecklistIcon, DocumentIcon, NoteIcon } from "@/components/ui/icons";
 import { ChildNoteModal } from "@/features/child-notes/child-note-modal";
-import { EmptyRow, Group, LargeTitle, PrimaryButton, Row, Segmented, SkeletonRows, TeacherPage, formatDayLong, formatDayShort, todayIso } from "./teacher-ui";
+import { EmptyRow, FloatingBar, Group, LargeTitle, PrimaryButton, Row, Segmented, SkeletonRows, TeacherPage, formatDayLong, formatDayShort, todayIso } from "./teacher-ui";
 import { TeacherReminders } from "./teacher-reminders";
 import styles from "./teacher.module.css";
 
@@ -288,24 +288,6 @@ export function TeacherAttendance({ slug }: { slug: string }) {
         )}
       </div>
 
-      {/* Saqlash paneli — ro'yxat oxirigacha aylantirmasdan ham doim qo'l ostida */}
-      {canWrite && tab === "all" && children.length > 0 && (
-        <div className="sticky bottom-[calc(84px+env(safe-area-inset-bottom))] z-10 md:bottom-4">
-          <PrimaryButton loading={saveMutation.isPending} onClick={() => saveMutation.mutate()} disabled={unsaved === 0 && saveMutation.isSuccess}>
-            {saveMutation.isPending ? "Saqlanmoqda…" : unsaved === 0 && saveMutation.isSuccess ? (
-              <>
-                <CheckIcon className="h-5 w-5" strokeWidth={2.6} /> Saqlandi
-              </>
-            ) : unsaved > 0 && children.some((c) => c.status) ? (
-              `Saqlash · ${unsaved} ta o'zgarish`
-            ) : (
-              "Saqlash"
-            )}
-          </PrimaryButton>
-          {saveMutation.isError && <p className="mt-1.5 text-center text-[13px] font-medium text-[var(--color-danger)]">Saqlashda xatolik — qayta urinib ko&apos;ring</p>}
-        </div>
-      )}
-
       <Group title="So'nggi 14 kun">
         {summaryQuery.isLoading ? (
           <SkeletonRows rows={3} />
@@ -355,6 +337,23 @@ export function TeacherAttendance({ slug }: { slug: string }) {
           childName={noteChild.name}
           date={date}
         />
+      )}
+      {/* Saqlash — tab-bar ustida doim qo'l ostida */}
+      {canWrite && tab === "all" && children.length > 0 && (
+        <FloatingBar>
+          <PrimaryButton loading={saveMutation.isPending} onClick={() => saveMutation.mutate()} disabled={unsaved === 0 && saveMutation.isSuccess}>
+            {saveMutation.isPending ? "Saqlanmoqda…" : unsaved === 0 && saveMutation.isSuccess ? (
+              <>
+                <CheckIcon className="h-5 w-5" strokeWidth={2.6} /> Saqlandi
+              </>
+            ) : unsaved > 0 && children.some((c) => c.status) ? (
+              `Saqlash · ${unsaved} ta o'zgarish`
+            ) : (
+              "Saqlash"
+            )}
+          </PrimaryButton>
+          {saveMutation.isError && <p className="mt-1.5 text-center text-[13px] font-medium text-[var(--color-danger)]">Saqlashda xatolik — qayta urinib ko&apos;ring</p>}
+        </FloatingBar>
       )}
     </TeacherPage>
   );
