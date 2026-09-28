@@ -9,7 +9,7 @@ import { api, ApiError } from "@/lib/api";
 import type { TenantAuthenticatedUser, TenantUser } from "@/lib/types";
 import { ROLE_LABEL, canChangeUserRole } from "@/lib/permissions";
 import { Modal } from "@/components/ui/modal";
-import { Input, Select } from "@/components/ui/input";
+import { Input, PasswordInput, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 const schema = z.object({
@@ -109,9 +109,8 @@ export function EditTenantUserModal({
           </div>
         )}
 
-        <Input
+        <PasswordInput
           label="Yangi parol"
-          type="password"
           placeholder="Bo'sh qoldirilsa o'zgarmaydi"
           hint="Parol almashtirilsa, xodimning ochiq seanslari yopiladi"
           error={errors.password?.message}

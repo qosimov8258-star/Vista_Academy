@@ -9,7 +9,7 @@ import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
 import { setTenantTokens } from "@/lib/tenant-session";
-import { Input } from "@/components/ui/input";
+import { Input, PasswordInput } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import type { TenantAuthenticatedUser } from "@/lib/types";
 
@@ -82,10 +82,9 @@ export function LoginForm({ slug }: { slug: string }) {
         error={errors.login?.message}
         {...register("login")}
       />
-      <Input
+      <PasswordInput
         id="password"
         label={t("passwordLabel")}
-        type="password"
         placeholder="••••••••"
         autoComplete="current-password"
         className="h-11 rounded-xl px-3.5"
