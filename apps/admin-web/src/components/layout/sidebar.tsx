@@ -17,7 +17,7 @@ import { useSidebarCollapsed } from "@/lib/use-sidebar-collapsed";
 import { useSidebarSections } from "@/lib/use-sidebar-sections";
 import { ROLE_LABEL, canManageUsers, canViewUseful, isChef, isTeacher, receivesEmployeeNotifications } from "@/lib/permissions";
 import { formatPositionLabel, isAssistantPosition, isCashierPosition, isSubjectTeacherPosition } from "@/lib/employee-position";
-import { Avatar } from "@/components/ui/avatar";
+import { Avatar, initials } from "@/components/ui/avatar";
 import type { IconProps } from "@/components/ui/icons";
 import {
   CloseIcon,
@@ -471,17 +471,28 @@ export function Sidebar({ slug }: { slug: string }) {
       >
         {!collapsed && (
           <>
-            {/* eslint-disable-next-line @next/next/no-img-element -- statik brend rasmi, Next optimizatsiyasi kerak emas */}
-            <img src="/logo.png" alt="Vista Academy" className="h-9 w-9 shrink-0 object-contain" />
+            {/* Tizimda bir necha bog'cha bor — belgi va nom kirgan foydalanuvchining
+                tashkilotidan olinadi, hech narsa qattiq yozilmaydi */}
+            {user ? (
+              <span
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] bg-gradient-to-br from-[#14b8a6] to-[var(--color-primary)] text-[14px] font-extrabold text-white shadow-[var(--shadow-primary)]"
+                aria-hidden="true"
+              >
+                {initials(user.organizationName)}
+              </span>
+            ) : (
+              <span className="h-9 w-9 shrink-0 animate-pulse rounded-[11px] bg-black/[0.06]" aria-hidden="true" />
+            )}
             <div className="min-w-0 flex-1">
-              <p className="font-heading truncate text-sm font-extrabold leading-tight" style={{ color: "#4CA6D4" }}>
-                Vista
-              </p>
-              <p className="truncate text-xs font-bold leading-tight" style={{ color: "#61AE41" }}>
-                Academy
-              </p>
+              {user ? (
+                <p className="truncate text-[15px] font-bold leading-tight tracking-[-0.01em] text-[var(--color-text)]">
+                  {user.organizationName}
+                </p>
+              ) : (
+                <span className="block h-3.5 w-24 animate-pulse rounded-full bg-black/[0.06]" aria-hidden="true" />
+              )}
               {(positionLabel ?? user?.branchName) && (
-                <p className="truncate text-[11px] leading-tight text-[var(--color-text-muted)]">
+                <p className="mt-0.5 truncate text-[11px] leading-tight text-[var(--color-text-muted)]">
                   {positionLabel ?? user?.branchName}
                 </p>
               )}

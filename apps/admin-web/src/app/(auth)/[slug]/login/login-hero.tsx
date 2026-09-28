@@ -3,6 +3,7 @@
 import { useState } from "react";
 import clsx from "clsx";
 import { useTranslations } from "next-intl";
+import { initials } from "@/components/ui/avatar";
 import { ChecklistIcon, MealIcon, PhoneIcon, WalletIcon } from "@/components/ui/icons";
 import styles from "./login.module.css";
 
@@ -12,13 +13,6 @@ const FEATURES = [
   { key: "kitchen", Icon: MealIcon },
   { key: "parents", Icon: PhoneIcon },
 ] as const;
-
-/** Tashkilot nomidan belgi: ikki so'zning bosh harflari ("Quyosh Bog'chasi" → "QB") */
-export function initialsOf(name: string): string {
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  const letters = words.slice(0, 2).map((w) => w[0]);
-  return (letters.join("") || "?").toUpperCase();
-}
 
 /** Bog'cha belgisi va nomi. Nom yuklanayotganda — joy egallovchi. */
 export function OrgBrand({ name, compact = false }: { name: string | null; compact?: boolean }) {
@@ -40,7 +34,7 @@ export function OrgBrand({ name, compact = false }: { name: string | null; compa
         )}
         aria-hidden="true"
       >
-        {initialsOf(name)}
+        {initials(name)}
       </span>
       <span className="truncate text-[17px] font-bold tracking-[-0.01em] text-white">{name}</span>
     </div>
