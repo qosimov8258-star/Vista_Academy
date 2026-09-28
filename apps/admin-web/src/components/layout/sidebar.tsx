@@ -21,6 +21,7 @@ import { isSection, type NavEntry, type NavLeaf } from "./nav-types";
 import { DirectorRail } from "./director-rail";
 import { DirectorBottomBar } from "./director-bottom-bar";
 import {
+  AuditIcon,
   CloseIcon,
   ArrowLeftIcon,
   BellIcon,
@@ -186,6 +187,8 @@ export function Sidebar({ slug }: { slug: string }) {
     // bu bo'lim uning asosiy ro'yxatida turishi shart. Filial ichiga
     // kirilganda ko'rinmaydi — u yerda filialning kundalik ishi turadi.
     { href: `/${slug}/users`, label: t("nav.employees"), icon: TeacherIcon, show: showUsersNav },
+    // Kim, qachon, nima qilgani — butun tarmoq bo'yicha (filial bo'yicha filtr bilan)
+    { href: `/${slug}/audit-logs`, label: "Audit", icon: AuditIcon, show: true },
   ];
 
   // O'qituvchi kabineti: faqat o'z guruhlariga tegishli uchta bo'lim.
@@ -393,6 +396,8 @@ export function Sidebar({ slug }: { slug: string }) {
         { href: `${base}/lending/groups`, label: t("nav.groups"), icon: GroupIcon, show: true },
       ],
     },
+    // Direktor filial ichida — shu filialdagi amallar jurnali
+    { href: `${base}/audit-logs`, label: "Audit", icon: AuditIcon, show: inBranchContext },
   ];
 
   // Sozlamalar har bir rolda bo'ladi: bu foydalanuvchining o'z hisobi,

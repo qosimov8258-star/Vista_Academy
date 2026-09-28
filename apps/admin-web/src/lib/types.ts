@@ -461,6 +461,15 @@ export interface AuditLogEntry {
   entityId: string | null;
   summary: string;
   createdAt: string;
+  /** Tarmoq bo'yicha ro'yxatda — amal qaysi filialda bo'lgani */
+  branch?: { name: string } | null;
+}
+
+/** Audit filtri uchun: amal bajargan kishi va nechta amal qilgani */
+export interface AuditActor {
+  actorUserId: string | null;
+  actorName: string;
+  count: number;
 }
 
 export interface Dish {
