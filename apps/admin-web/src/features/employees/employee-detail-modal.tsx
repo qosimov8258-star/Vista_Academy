@@ -59,6 +59,10 @@ export function EmployeeDetailModal({
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [credentialsError, setCredentialsError] = useState<string | null>(null);
+  // Maydonga tegishli xatolar o'sha maydon ostida chiqadi — parol to'g'ri
+  // bo'lsa-yu, login xatosi parol ostida chiqib chalg'itmasin
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
 
   const [topicsManagedByAdmin, setTopicsManagedByAdmin] = useState(false);
@@ -167,21 +171,27 @@ export function EmployeeDetailModal({
   // har bir bo'lim uchun alohida tugma bo'lmasin.
   const handleSave = async () => {
     setCredentialsError(null);
+    setLoginError(null);
+    setPasswordError(null);
     setTopicsSaveError(null);
 
     if (credentialsDirty) {
       const trimmedLogin = loginInput.trim().toLowerCase();
-      if (!LOGIN_PATTERN.test(trimmedLogin)) {
-        setCredentialsError("Login lotin harf, raqam, . _ - dan iborat bo'lishi va kamida 3 belgi bo'lishi kerak");
+      // Login faqat o'zgartirilgan bo'lsa tekshiriladi. Eski hisoblarda login
+      // "ism@filial.uz" kabi bo'lishi mumkin — faqat parolni almashtirishda
+      // u yangi login qoidasidan o'tmasligi saqlashga to'sqinlik qilmasin
+      // (server ham faqat o'zgargan loginni oladi va tekshiradi).
+      if (trimmedLogin !== savedLogin && !LOGIN_PATTERN.test(trimmedLogin)) {
+        setLoginError("Login lotin harf, raqam, . _ - dan iborat bo'lishi va kamida 3 belgi bo'lishi kerak");
         return;
       }
       if (newPassword) {
         if (getPasswordRules(newPassword).some((rule) => !rule.met)) {
-          setCredentialsError("Parol talablarga javob bermaydi");
+          setPasswordError("Parol talablarga javob bermaydi");
           return;
         }
         if (newPassword !== confirmNewPassword) {
-          setCredentialsError("Parollar mos kelmadi");
+          setPasswordError("Parollar mos kelmadi");
           return;
         }
       }
@@ -350,7 +360,10 @@ export function EmployeeDetailModal({
               <input
                 id="employee-login"
                 value={loginInput}
-                onChange={(e) => setLoginInput(e.target.value)}
+                onChange={(e) => {
+                  setLoginInput(e.target.value);
+                  setLoginError(null);
+                }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && credentialsDirty && !credentialsMutation.isPending) {
                     e.preventDefault();
@@ -358,8 +371,10 @@ export function EmployeeDetailModal({
                   }
                 }}
                 disabled={!canWrite || credentialsMutation.isPending}
-                className="w-full rounded-xl border border-[var(--color-border)] bg-white px-3.5 py-2.5 text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[var(--color-primary)] disabled:opacity-60"
+                aria-invalid={!!loginError}
+                className={`w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[var(--color-primary)] disabled:opacity-60 ${loginError ? "border-[var(--color-danger)]" : "border-[var(--color-border)]"}`}
               />
+              {loginError && <p className="mt-1.5 text-xs text-[var(--color-danger)]">{loginError}</p>}
             </div>
 
             <div className="flex items-center justify-between gap-3 border-t border-[var(--color-border)] pt-3">
@@ -447,6 +462,7 @@ export function EmployeeDetailModal({
                     </div>
                   </>
                 )}
+                {passwordError && <p className="mt-1.5 text-xs text-[var(--color-danger)]">{passwordError}</p>}
               </div>
             )}
 
