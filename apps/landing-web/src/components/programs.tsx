@@ -3,41 +3,42 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
+import { cdn } from "@/lib/cdn";
 import { alternatingDirection, staggerDelay, useReveal } from "./reveal";
 
 function useGroups() {
   const t = useTranslations("programs.groups");
   return [
     {
-      image: "/icon/baby1.jpg",
+      image: cdn("/icon/baby1.jpg"),
       title: t("babies.title"),
       age: t("babies.age"),
       color: "#ef8a63",
       arch: { topLeft: "99px", topRight: "999px", bottomLeft: "20px", bottomRight: "20px" },
     },
     {
-      image: "/icon/kichkintorlar.jpeg",
+      image: cdn("/icon/kichkintorlar.jpeg"),
       title: t("toddlers.title"),
       age: t("toddlers.age"),
       color: "#aead45",
       arch: { topLeft: "999px", topRight: "999px", bottomLeft: "20px", bottomRight: "20px" },
     },
     {
-      image: "/icon/orta-guruh.jpeg",
+      image: cdn("/icon/orta-guruh.jpeg"),
       title: t("middle.title"),
       age: t("middle.age"),
       color: "#cf5599",
       arch: { topLeft: "999px", topRight: "99px", bottomLeft: "20px", bottomRight: "20px" },
     },
     {
-      image: "/icon/katta-guruh.jpeg",
+      image: cdn("/icon/katta-guruh.jpeg"),
       title: t("senior.title"),
       age: t("senior.age"),
       color: "var(--color-green)",
       arch: { topLeft: "99px", topRight: "999px", bottomLeft: "20px", bottomRight: "20px" },
     },
     {
-      image: "/icon/maktab.jpg",
+      image: cdn("/icon/maktab.jpg"),
       title: t("schoolAge.title"),
       age: t("schoolAge.age"),
       color: "var(--color-blue)",

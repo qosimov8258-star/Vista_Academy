@@ -1,7 +1,19 @@
 {
   "siteMeta": {
-    "title": "Vista Academy — Bog'chalar tarmog'i",
-    "description": "Vista Academy — bolalarni mehr, xavfsizlik va zamonaviy ta'lim metodikalari bilan o'stiradigan bog'chalar tarmog'i."
+    "title": "Vista Academy — Andijondagi bog'chalar tarmog'i",
+    "description": "Vista Academy — Andijondagi eng yaxshi bog'cha: zamonaviy ta'lim metodikalari, mehr va xavfsizlik bilan farzandingizni o'stiruvchi ishonchli xususiy bolalar bog'chasi tarmog'i. Andijon shahridagi bog'cha tanlayotgan bo'lsangiz — Vista Academy siz uchun!",
+    "keywords": [
+      "Vista Academy",
+      "bog'cha",
+      "bolalar bog'chasi",
+      "Andijon bog'cha",
+      "Andijondagi bog'cha",
+      "Andijondagi eng yaxshi bog'cha",
+      "xususiy bog'cha Andijon",
+      "zamonaviy bog'cha",
+      "bolalar rivojlanishi",
+      "bog'chalar tarmog'i"
+    ]
   },
   "common": {
     "language": "Til",
@@ -34,7 +46,7 @@
     "pagesHeading": "Sahifalar",
     "groupsHeading": "Guruhlarimiz",
     "contactHeading": "Bog'lanish",
-    "address": "Toshkent sh., O'zbekiston",
+    "address": "Andijon sh., O'zbekiston",
     "copyright": "© {year} Vista Academy. Barcha huquqlar himoyalangan.",
     "tagline": "Mehr, xavfsizlik va zamonaviy ta'lim bilan."
   },
@@ -85,7 +97,7 @@
     "headingLine1": "Vista Academy",
     "headingLine2": "bilim va imkoniyatlarga yo'l ochuvchi maskan.",
     "body": "Biz farzandingiz bilan birgalikda kelajakni bunyod etib, har bir kunni unutilmas ta'lim sayohatiga aylantirib bormoqdamiz.",
-    "name": "Direktor ismi",
+    "name": "Feruza Nizomova",
     "role": "Bosh direktor"
   },
   "adaptation": {
@@ -223,7 +235,9 @@
   "cradleFeeding": "Beshikdagi chaqaloqni ovqatlantirish o'yini",
   "videoCompare": {
     "firstAria": "Birinchi video",
-    "secondAria": "Ikkinchi video"
+    "secondAria": "Ikkinchi video",
+    "muteAria": "Ovozni o'chirish",
+    "unmuteAria": "Ovozni yoqish"
   },
   "schedulePage": {
     "metaTitle": "Moslashuvchan jadval — Vista Academy",

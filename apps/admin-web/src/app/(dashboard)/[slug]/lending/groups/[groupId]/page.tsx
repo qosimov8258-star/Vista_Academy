@@ -50,6 +50,7 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
   );
   const [deletingStudent, setDeletingStudent] = useState<LandingGroupStudent | null>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
+  const heroInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
   const groupsQuery = useQuery({
@@ -78,6 +79,12 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
 
   const coverMutation = useMutation({
     mutationFn: (file: File) => api.upload<LandingGroup>(`/app/landing/groups/${groupId}/photo`, file),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["landing-groups"] }),
+    onError: (err) => setServerError(err instanceof ApiError ? err.message : "Rasm yuklashda xatolik"),
+  });
+
+  const heroMutation = useMutation({
+    mutationFn: (file: File) => api.upload<LandingGroup>(`/app/landing/groups/${groupId}/hero-photo`, file),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["landing-groups"] }),
     onError: (err) => setServerError(err instanceof ApiError ? err.message : "Rasm yuklashda xatolik"),
   });
@@ -112,6 +119,15 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
     if (file) {
       setServerError(null);
       coverMutation.mutate(file);
+    }
+  };
+
+  const handleHeroPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (file) {
+      setServerError(null);
+      heroMutation.mutate(file);
     }
   };
 
@@ -150,11 +166,16 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
         <ErrorState message="Guruh topilmadi" />
       ) : (
         <>
-          {/* Hero — guruh sahifasidagi bosh rasm bilan bir xil joylashuv (object-contain — saytdagi kabi kesilmasdan to'liq ko'rinadi) */}
+          {/* Hero — guruh sahifasidagi bosh rasm bilan bir xil joylashuv (object-contain — saytdagi kabi kesilmasdan to'liq ko'rinadi).
+              Bosh sahifadagi kartochka rasmidan (pastdagi bo'lim) ATAYLAB alohida: hech narsa tanlanmagan bo'lsa shungaqaytadi. */}
           <div className="relative h-[220px] w-full overflow-hidden rounded-[var(--radius-xl)] bg-[var(--color-surface-sunken)] sm:h-[300px]">
-            {group.photoPath ? (
+            {group.heroPhotoPath || group.photoPath ? (
               // eslint-disable-next-line @next/next/no-img-element -- API'dan kelgan dinamik rasm
-              <img src={assetUrl(group.photoPath) ?? undefined} alt={group.name} className="absolute inset-0 h-full w-full object-contain" />
+              <img
+                src={assetUrl(group.heroPhotoPath ?? group.photoPath) ?? undefined}
+                alt={group.name}
+                className="absolute inset-0 h-full w-full object-contain"
+              />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center">
                 <GroupIcon className="h-10 w-10 text-[var(--color-text-subtle)]" />
@@ -167,26 +188,57 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
             </div>
             {canWrite && (
               <>
-                <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverPick} />
+                <input ref={heroInputRef} type="file" accept="image/*" className="hidden" onChange={handleHeroPick} />
                 <button
                   type="button"
-                  onClick={() => coverInputRef.current?.click()}
-                  disabled={coverMutation.isPending}
-                  title="Tavsiya: kvadrat (1:1) rasm, kamida 800x800px — bosh sahifadagi kartochkada ham, bu yerdagi katta rasmda ham kesilmasdan to'liq chiqadi"
+                  onClick={() => heroInputRef.current?.click()}
+                  disabled={heroMutation.isPending}
+                  title="Tavsiya: kvadrat (1:1) rasm, kamida 800x800px — kesilmasdan to'liq chiqadi. Faqat shu guruhning o'z sahifasida ko'rinadi."
                   className="absolute right-4 top-4 flex items-center gap-1.5 rounded-full bg-black/40 px-3.5 py-2 text-[13px] font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/55 disabled:cursor-wait"
                 >
                   <CameraIcon className="h-3.5 w-3.5" />
-                  {coverMutation.isPending ? "Yuklanmoqda..." : "Bosh rasmni almashtirish"}
+                  {heroMutation.isPending ? "Yuklanmoqda..." : "Guruh sahifasi rasmini almashtirish"}
                 </button>
               </>
             )}
           </div>
           {canWrite && (
             <p className="text-[12.5px] text-[var(--color-text-muted)]">
-              Tavsiya: kvadrat (1:1) rasm, kamida 800×800px, fon oq yoki shaffof — shu rasm bosh sahifadagi
-              kartochkada va guruh sahifasining katta rasmida kesilmasdan to&apos;liq ko&apos;rinadi.
+              Tavsiya: kvadrat (1:1) rasm, kamida 800×800px, fon oq yoki shaffof. Bu rasm faqat &quot;{group.name}
+              &quot; guruhining o&apos;z sahifasi (saytda) ochilganda ko&apos;rinadi — bosh sahifadagi kartochkaga
+              ta&apos;sir qilmaydi. {group.heroPhotoPath ? "" : "Hozircha alohida tanlanmagan — pastdagi kartochka rasmi ko'rsatilmoqda."}
             </p>
           )}
+
+          {/* Bosh sahifadagi kartochka rasmi — guruhlar ro'yxatidagi kichik kartochkada ko'rinadigan rasm, yuqoridagi hero rasmidan mustaqil. */}
+          <div className="flex items-center gap-4 rounded-[var(--radius-xl)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] p-4 sm:p-5">
+            <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-[var(--radius-lg)] bg-[var(--color-surface-sunken)]">
+              {group.photoPath ? (
+                // eslint-disable-next-line @next/next/no-img-element -- API'dan kelgan dinamik rasm
+                <img src={assetUrl(group.photoPath) ?? undefined} alt={group.name} className="h-full w-full object-contain" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center">
+                  <GroupIcon className="h-6 w-6 text-[var(--color-text-subtle)]" />
+                </div>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-[15px] font-semibold text-[var(--color-text)]">Bosh sahifadagi kartochka rasmi</h2>
+              <p className="mt-0.5 text-[12.5px] text-[var(--color-text-muted)]">
+                Bosh sahifadagi guruhlar ro&apos;yxatida shu kichik rasm ko&apos;rinadi. Yuqoridagi guruh sahifasi
+                rasmiga ta&apos;sir qilmaydi.
+              </p>
+            </div>
+            {canWrite && (
+              <>
+                <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverPick} />
+                <Button type="button" size="sm" variant="outline" loading={coverMutation.isPending} onClick={() => coverInputRef.current?.click()}>
+                  <CameraIcon className="h-4 w-4" />
+                  O&apos;zgartirish
+                </Button>
+              </>
+            )}
+          </div>
 
           {/* Nomi va tartib raqami */}
           <div className="rounded-[var(--radius-xl)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] p-4 sm:p-5">
@@ -250,9 +302,13 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
                 return (
                   <div key={student.id} className="group relative">
                     <div className="aspect-[3/4] overflow-hidden rounded-[var(--radius-lg)] bg-[var(--color-surface-sunken)]">
-                      {student.photoPath ? (
-                        // eslint-disable-next-line @next/next/no-img-element -- API'dan kelgan dinamik rasm
-                        <img src={assetUrl(student.photoPath) ?? undefined} alt={student.name} className="h-full w-full object-cover" />
+                      {student.photoPath || group.heroPhotoPath || group.photoPath ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- API'dan kelgan dinamik rasm, o'zining rasmi bo'lmasa guruh rasmi ko'rsatiladi
+                        <img
+                          src={assetUrl(student.photoPath ?? group.heroPhotoPath ?? group.photoPath) ?? undefined}
+                          alt={student.name}
+                          className="h-full w-full object-cover"
+                        />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center">
                           <UserIcon className="h-8 w-8 text-[var(--color-text-subtle)]" />
@@ -279,8 +335,10 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
                         </div>
                       )}
                     </div>
-                    <p className="mt-2 truncate text-[14px] font-semibold text-[var(--color-text)]">{student.name}</p>
-                    {student.bio && <p className="mt-0.5 line-clamp-2 text-[12.5px] text-[var(--color-text-muted)]">{student.bio}</p>}
+                    <p className="font-student-name mt-2 truncate text-[15px] text-[var(--color-text)]">{student.name}</p>
+                    {student.bio && (
+                      <p className="font-student-caption mt-0.5 line-clamp-2 text-[14px] text-[var(--color-text-muted)]">{student.bio}</p>
+                    )}
                   </div>
                 );
               })}

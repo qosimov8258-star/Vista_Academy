@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useTranslations } from "next-intl";
+import { cdn } from "@/lib/cdn";
 import { Reveal } from "./reveal";
 
 export function MealsIntro() {
@@ -21,12 +22,12 @@ export function MealsIntro() {
 
       <Reveal direction="right" delay={120} className="order-1 overflow-hidden rounded-[var(--radius-xl)] shadow-[var(--shadow-raised)] lg:order-2">
         <Image
-          src="/taom/home.jpeg"
+          src={cdn("/taom/home.jpeg")}
           alt={t("imageAlt")}
-          width={600}
-          height={400}
+          width={1280}
+          height={720}
           sizes="(min-width: 1024px) 520px, 100vw"
-          className="-mt-[50px] -mb-[50px] h-auto w-full object-cover"
+          className="h-auto w-full object-cover"
         />
       </Reveal>
     </div>

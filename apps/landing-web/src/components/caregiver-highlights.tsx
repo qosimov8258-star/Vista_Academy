@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useTranslations } from "next-intl";
+import { cdn } from "@/lib/cdn";
 import { Reveal } from "./reveal";
 
 export function CaregiverHighlights() {
@@ -26,7 +27,7 @@ export function CaregiverHighlights() {
             className="order-1 overflow-hidden rounded-[var(--radius-xl)] shadow-[var(--shadow-raised)] lg:order-2"
           >
             <Image
-              src="/tarbiyachi/tarbiyachi2.jpeg"
+              src={cdn("/tarbiyachi/tarbiyachi2.jpeg")}
               alt={t("block1.imageAlt")}
               width={612}
               height={408}
@@ -39,7 +40,7 @@ export function CaregiverHighlights() {
         <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-16">
           <Reveal direction="left" className="overflow-hidden rounded-[var(--radius-xl)] shadow-[var(--shadow-raised)]">
             <Image
-              src="/tarbiyachi/tarbiyachi3.jpeg"
+              src={cdn("/tarbiyachi/tarbiyachi3.jpeg")}
               alt={t("block2.imageAlt")}
               width={612}
               height={408}
@@ -62,7 +63,7 @@ export function CaregiverHighlights() {
         <div>
           <Reveal direction="up" className="mx-auto max-w-[600px] overflow-hidden rounded-[var(--radius-xl)] shadow-[var(--shadow-raised)]">
             <Image
-              src="/tarbiyachi/tarbiyachi1.jpg"
+              src={cdn("/tarbiyachi/tarbiyachi1.jpg")}
               alt={t("closingImageAlt")}
               width={612}
               height={472}

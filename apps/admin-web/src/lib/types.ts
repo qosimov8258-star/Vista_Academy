@@ -1222,6 +1222,7 @@ export interface LandingGroup {
   name: string;
   slug: string;
   photoPath: string | null;
+  heroPhotoPath: string | null;
   order: number;
   photos: LandingGroupPhoto[];
   students: LandingGroupStudent[];

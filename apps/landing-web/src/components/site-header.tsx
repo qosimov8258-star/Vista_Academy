@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import clsx from "clsx";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { cdn } from "@/lib/cdn";
 
 type NavChild = {
   label: string;
@@ -50,9 +51,9 @@ export function SiteHeader() {
       <div className="mx-auto flex h-[72px] max-w-[1280px] items-center justify-between px-4 lg:px-8">
         <a href="/#top" className="flex items-center gap-3 shrink-0">
           {/* eslint-disable-next-line @next/next/no-img-element -- statik brend rasmi */}
-          <img src="/homepage/logo.png" alt="Vista Academy" className="h-14 w-14 object-contain" />
+          <img src={cdn("/homepage/logo.png")} alt="Vista Academy" className="h-14 w-14 object-contain" />
           {/* eslint-disable-next-line @next/next/no-img-element -- statik brend rasmi */}
-          <img src="/homepage/logo-name.png" alt="Vista Academy" className="h-10 w-auto object-contain" />
+          <img src={cdn("/homepage/logo-name.png")} alt="Vista Academy" className="h-10 w-auto object-contain" />
         </a>
 
         <nav className="hidden items-center gap-7 lg:flex">

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { cdn } from "@/lib/cdn";
 
 const STORAGE_KEY = "vista-intro-seen";
 // Animatsiya juda sekin yuklansa yoki xabar yetib kelmasa ham sayt abadiy
@@ -52,7 +53,7 @@ export function BusIntro() {
       style={{ opacity: closing ? 0 : 1, pointerEvents: closing ? "none" : "auto" }}
     >
       <iframe
-        src="/animatsiya/vista-academy-avtobus.html"
+        src={cdn("/animatsiya/vista-academy-avtobus.html")}
         title={t("busIntro")}
         className="h-full w-full border-0"
         allow="autoplay"

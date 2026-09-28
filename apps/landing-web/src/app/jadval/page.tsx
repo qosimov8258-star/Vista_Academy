@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { PageShell } from "@/components/page-shell";
 import { Adaptation } from "@/components/adaptation";
 import { fetchLanding } from "@/lib/api";
+import { cdn } from "@/lib/cdn";
 import type { LandingScheduleItem, LandingScheduleType } from "@/lib/types";
 import { Reveal } from "@/components/reveal";
 import { alternatingDirection, staggerDelay } from "@/components/reveal-utils";
@@ -31,10 +32,10 @@ export default async function SchedulePage() {
       eyebrow={tCommon("pagesEyebrow")}
       title={tGroups("schedule")}
       description={t("description")}
-      heroImage={{ src: "/moslashish/moslashish5.jpeg", alt: t("heroImageAlt"), position: "50% 0%" }}
+      heroImage={{ src: cdn("/moslashish/moslashish5.jpeg"), alt: t("heroImageAlt"), position: "50% 0%" }}
       afterContent={
         <Adaptation
-          introImageSrc="/moslashish/rasm1.jpeg"
+          introImageSrc={cdn("/moslashish/rasm1.jpeg")}
           introImageAlt={t("adaptationOverride.imageAlt")}
           introText={t("adaptationOverride.text")}
         />
@@ -43,7 +44,7 @@ export default async function SchedulePage() {
       {items.length === 0 ? (
         <Reveal direction="up" className="mx-auto max-w-[720px] overflow-hidden rounded-[var(--radius-xl)]">
           <Image
-            src="/rasm/moslashish-text.jpeg"
+            src={cdn("/rasm/moslashish-text.jpeg")}
             alt={t("emptyImageAlt")}
             width={1408}
             height={768}

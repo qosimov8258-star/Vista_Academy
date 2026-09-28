@@ -2043,6 +2043,11 @@ model LandingGroup {
   name      String
   slug      String   @unique
   photoPath String?  @map("photo_path")
+  /// Guruhning o'z sahifasidagi (landing-web `/guruhlar/[slug]`) katta (hero)
+  /// rasmi — `photoPath` (bosh sahifadagi kartochka rasmi)dan ATAYLAB alohida:
+  /// bo'sh bo'lsa frontend `photoPath`ga qaytadi, to'ldirilsa ikkalasi
+  /// mustaqil bo'lib qoladi.
+  heroPhotoPath String? @map("hero_photo_path")
   order     Int      @default(0)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

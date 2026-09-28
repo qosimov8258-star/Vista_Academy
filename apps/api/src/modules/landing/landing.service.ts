@@ -248,6 +248,14 @@ export class LandingService {
     return updated;
   }
 
+  /** Guruh sahifasining katta (hero) rasmini o'rnatadi — kartochka rasmidan (photoPath) mustaqil. */
+  async setGroupHeroPhoto(id: string, heroPhotoPath: string) {
+    const group = await this.findGroup(id);
+    const updated = await this.prisma.landingGroup.update({ where: { id }, data: { heroPhotoPath } });
+    await this.deleteUploadedPhoto(group.heroPhotoPath);
+    return updated;
+  }
+
   /** Guruh sahifasidagi galereyaga rasm qo'shadi — oxiriga qo'shiladi. */
   async addGroupPhoto(groupId: string, path: string) {
     await this.findGroup(groupId);

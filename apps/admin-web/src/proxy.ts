@@ -118,13 +118,13 @@ export function proxy(req: NextRequest) {
 export const config = {
   // `ota-ona` — ota-ona kabineti: u o'z autentifikatsiyasiga ega va xodimlar
   // seansiga bog'liq emas, shuning uchun bu proxy unga umuman tegmaydi.
-  // `face-model`, `logo.png`, `cursor.png`/`cursor@2x.png`,
-  // `pointer.png`/`pointer@2x.png` — public/ dagi statik fayllar (yuzni
-  // aniqlash modeli, brend logotipi, custom kursor rasmlari — @2x
-  // Retina/HiDPI ekranlar uchun). Ular chiqarib tashlanmasa, proxy
-  // birinchi bo'lakni tashkilot slug'i deb o'ylab, so'rovni login
-  // sahifasiga yo'naltiradi.
+  // `face-model`, `logo.png`, `icon.png`, `cursor.png`/`cursor@2x.png`,
+  // `pointer.png`/`pointer@2x.png` — public/ dagi statik fayllar va
+  // app/icon.png favicon konventsiyasi (yuzni aniqlash modeli, brend
+  // logotipi, tab ikonkasi, custom kursor rasmlari — @2x Retina/HiDPI
+  // ekranlar uchun). Ular chiqarib tashlanmasa, proxy birinchi bo'lakni
+  // tashkilot slug'i deb o'ylab, so'rovni login sahifasiga yo'naltiradi.
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|face-model|ota-ona|logo.png|cursor.png|cursor@2x.png|pointer.png|pointer@2x.png).*)",
+    "/((?!_next/static|_next/image|favicon.ico|face-model|ota-ona|logo.png|icon.png|cursor.png|cursor@2x.png|pointer.png|pointer@2x.png).*)",
   ],
 };

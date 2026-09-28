@@ -3,16 +3,17 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { assetUrl } from "@/lib/api";
+import { cdn } from "@/lib/cdn";
 import type { LandingMeal, LandingMealType, LandingWeekday } from "@/lib/types";
 import { staggerDelay, useReveal } from "./reveal";
 
 const WEEKDAYS: LandingWeekday[] = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
 
 const TYPE_ICONS: Partial<Record<LandingMealType, string>> = {
-  BREAKFAST: "/taom/nonushta.png",
-  LUNCH: "/taom/tushlik.png",
-  SNACK: "/taom/ikkinchi-tushlik.png",
-  DINNER: "/taom/kechki.png",
+  BREAKFAST: cdn("/taom/nonushta.png"),
+  LUNCH: cdn("/taom/tushlik.png"),
+  SNACK: cdn("/taom/ikkinchi-tushlik.png"),
+  DINNER: cdn("/taom/kechki.png"),
 };
 
 /** JS'dagi getDay() (0=yakshanba) ni haftani dushanbadan boshlaydigan tartibga o'giradi. Yakshanba menyuda yo'q — shunda dushanba tanlanadi. */

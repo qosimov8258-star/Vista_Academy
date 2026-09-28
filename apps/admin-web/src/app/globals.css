@@ -208,6 +208,14 @@ body {
   font-family: var(--font-baloo), ui-rounded, "SF Pro Rounded", system-ui, sans-serif;
 }
 
+.font-student-name {
+  font-family: var(--font-alfa-slab-one), "Arial Black", sans-serif;
+}
+
+.font-student-caption {
+  font-family: var(--font-courgette), cursive;
+}
+
 .scrollbar-thin::-webkit-scrollbar {
   width: 8px;
   height: 8px;

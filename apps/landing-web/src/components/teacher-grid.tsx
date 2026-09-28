@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { assetUrl } from "@/lib/api";
+import { cdn } from "@/lib/cdn";
 import type { LandingTeacher } from "@/lib/types";
 import { alternatingDirection, staggerDelay, useReveal } from "./reveal";
 
@@ -15,7 +16,7 @@ function TeacherPhoto({ teacher, className }: { teacher: LandingTeacher; classNa
         <img src={assetUrl(teacher.photoPath) ?? undefined} alt={teacher.fullName} className="h-full w-full object-cover" />
       ) : (
         <div className="flex h-full w-full items-center justify-center">
-          <Image src="/icon/teacher.png" alt="" width={96} height={96} className="h-auto w-[45%] max-w-[100px] opacity-80" />
+          <Image src={cdn("/icon/teacher.png")} alt="" width={96} height={96} className="h-auto w-[45%] max-w-[100px] opacity-80" />
         </div>
       )}
     </div>
@@ -53,14 +54,14 @@ function TeacherTile({ teacher, index = 0, onSelect }: { teacher: LandingTeacher
         teacher={teacher}
         className="relative mx-auto aspect-[3/4] w-full max-w-[220px] overflow-hidden rounded-[var(--radius-xl)] shadow-[var(--shadow-card)] transition-transform duration-200 group-hover:scale-[1.02] group-focus-visible:ring-2 group-focus-visible:ring-[var(--color-green)]"
       />
-      <p className="font-heading mt-4 line-clamp-1 min-h-[22px] text-[17px] font-bold text-[var(--color-text)]">{teacher.fullName}</p>
+      <p className="font-student-name mt-4 line-clamp-1 min-h-[22px] text-[18px] text-[var(--color-text)]">{teacher.fullName}</p>
       <p
         className="mt-0.5 line-clamp-2 min-h-[30px] text-[12px] font-semibold uppercase tracking-[0.04em]"
         style={{ color: "var(--color-green)" }}
       >
         {teacher.role}
       </p>
-      <p className="mx-auto mt-2 line-clamp-2 min-h-[44px] max-w-[200px] text-[13.5px] italic leading-relaxed text-[var(--color-text-muted)]">
+      <p className="font-student-caption mx-auto mt-2 line-clamp-2 min-h-[44px] max-w-[200px] text-[15px] leading-relaxed text-[var(--color-text-muted)]">
         {teacher.bio && <>&ldquo;{teacher.bio}&rdquo;</>}
       </p>
     </button>
@@ -170,12 +171,12 @@ function TeacherModal({ teacher, onClose }: { teacher: LandingTeacher; onClose: 
           </div>
 
           <div className="flex flex-col justify-center px-6 py-6 sm:px-8 sm:py-8">
-            <p className="font-heading text-[26px] font-bold leading-tight" style={{ color: "var(--color-green-dark)" }}>
+            <p className="font-student-name text-[26px] leading-tight" style={{ color: "var(--color-green-dark)" }}>
               {teacher.fullName}
             </p>
 
             {teacher.bio && (
-              <p className="mt-4 text-[14.5px] italic leading-relaxed text-[var(--color-text-muted)]">&ldquo;{teacher.bio}&rdquo;</p>
+              <p className="font-student-caption mt-4 text-[16px] leading-relaxed text-[var(--color-text-muted)]">&ldquo;{teacher.bio}&rdquo;</p>
             )}
 
             {teacher.experience && (

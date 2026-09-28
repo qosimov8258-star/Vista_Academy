@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { ContentBlockView } from "@/components/content-block-view";
 import { CaregiverHighlights } from "@/components/caregiver-highlights";
+import { cdn } from "@/lib/cdn";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("caregiverPage");
@@ -19,7 +20,7 @@ export default async function PermanentCaregiverPage() {
       eyebrow={tCommon("pagesEyebrow")}
       fallbackTitle={t("fallbackTitle")}
       fallbackBody={tWhyUs("features.teacher")}
-      heroImage={{ src: "/rasm/tarbiyachi.jpeg", alt: t("heroImageAlt"), position: "50% 0%" }}
+      heroImage={{ src: cdn("/rasm/tarbiyachi.jpeg"), alt: t("heroImageAlt"), position: "50% 0%" }}
       afterContent={<CaregiverHighlights />}
     />
   );

@@ -1,11 +1,10 @@
-import fs from "node:fs";
-import path from "node:path";
 import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { PageShell } from "@/components/page-shell";
 import { fetchLanding } from "@/lib/api";
+import { cdn } from "@/lib/cdn";
 import { PLACEHOLDER_GROUPS, getGroupBySlug, toDisplayGroups } from "@/lib/groups";
 import type { LandingGroup } from "@/lib/types";
 import { Reveal } from "@/components/reveal";
@@ -17,34 +16,35 @@ async function loadGroups() {
 }
 
 /**
- * Har bir guruh uchun `public/guruh/<slug>/` papkasi oldindan tayyorlangan,
- * lekin hozircha faqat ba'zilarida rasm bor — shu bo'lim faqat rasmi mavjud
- * guruhlarda ko'rsatiladi, aks holda hamma guruhda bir xil rasm takrorlanib qolardi.
+ * Ba'zi placeholder guruhlar uchun oldindan tayyorlangan qo'shimcha rasmlar
+ * (`public/guruh/<slug>/...`) — avval bu papka request vaqtida fayl tizimidan
+ * skanerlanardi, lekin fayllar R2'ga ko'chgani uchun endi qo'lda ro'yxatga
+ * olingan (R2'da papka ro'yxatini o'qib bo'lmaydi).
  */
-function findGroupIntroImage(slug: string): string | null {
-  const dir = path.join(process.cwd(), "public", "guruh", slug);
-  try {
-    const file = fs.readdirSync(dir).find((name) => /\.(jpe?g|png|webp)$/i.test(name));
-    return file ? `/guruh/${slug}/${file}` : null;
-  } catch {
-    return null;
-  }
-}
+const GROUP_INTRO_IMAGES: Record<string, string> = {
+  akademiklar: "/guruh/akademiklar/talim1.jpeg",
+  kichkintoylar: "/guruh/kichkintoylar/baby1.jpeg",
+  quyoshcha: "/guruh/quyoshcha/quyosh1.jpeg",
+  "vinni-pux": "/guruh/vinni-pux/vinni1.jpeg",
+};
 
 /**
  * Sahifa oxiridagi "Farzandingiz shu yerda o'sadi va rivojlanadi" bo'limidagi
  * rasm uchun zaxira (fallback) — admin panelda "Guruh sahifasidagi rasmlar"dan
- * hali rasm qo'shilmagan guruhlar uchun ishlatiladi: avval `talim3` statik
- * rasmi, keyin `group.photo` (bosh rasm) tekshiriladi.
+ * hali rasm qo'shilmagan guruhlar uchun ishlatiladi.
  */
+const GROUP_CLOSING_IMAGES: Record<string, string> = {
+  akademiklar: "/guruh/akademiklar/talim3.jpeg",
+};
+
+function findGroupIntroImage(slug: string): string | null {
+  const image = GROUP_INTRO_IMAGES[slug];
+  return image ? cdn(image) : null;
+}
+
 function findGroupClosingImage(slug: string): string | null {
-  const dir = path.join(process.cwd(), "public", "guruh", slug);
-  try {
-    const file = fs.readdirSync(dir).find((name) => /^talim3\.(jpe?g|png|webp)$/i.test(name));
-    return file ? `/guruh/${slug}/${file}` : null;
-  } catch {
-    return null;
-  }
+  const image = GROUP_CLOSING_IMAGES[slug];
+  return image ? cdn(image) : null;
 }
 
 function PhotoPlaceholderIcon({ className }: { className?: string }) {
@@ -68,8 +68,8 @@ const STUDENT_SLOT_COUNT = 4;
  * (kartochkalarga) ta'sir qilmaydi.
  */
 const HERO_IMAGE_OVERRIDES: Record<string, string> = {
-  minionlar: "/guruh/minion/minion1.jpeg",
-  akademiklar: "/guruh/akademiklar/talim4.jpeg",
+  minionlar: cdn("/guruh/minion/minion1.jpeg"),
+  akademiklar: cdn("/guruh/akademiklar/talim4.jpeg"),
 };
 
 export async function generateMetadata({
@@ -138,19 +138,21 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
         <div className="grid grid-cols-2 gap-x-5 gap-y-10 sm:gap-x-6 lg:grid-cols-4">
           {Array.from({ length: STUDENT_SLOT_COUNT }, (_, index) => {
             const student = group.students[index];
+            // O'zining rasmi bo'lmagan o'quvchi uchun guruhning bosh rasmi ko'rsatiladi (butunlay bo'sh joyларда emas).
+            const displayPhoto = student ? (student.photo ?? group.photo) : undefined;
             return (
               <Reveal key={index} direction={alternatingDirection(index)} delay={staggerDelay(index, 90, 360)} className="text-center">
                 <div
                   className="relative mx-auto aspect-[3/4] w-full max-w-[220px] overflow-hidden rounded-[var(--radius-xl)] shadow-[var(--shadow-card)]"
                   style={{ background: "var(--color-tint)" }}
                 >
-                  {student?.photo ? (
+                  {displayPhoto ? (
                     // eslint-disable-next-line @next/next/no-img-element -- API'dan kelgan dinamik rasm
-                    <img src={student.photo} alt={student.name} className="h-full w-full object-cover" />
+                    <img src={displayPhoto} alt={student?.name ?? ""} className="h-full w-full object-cover" />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center">
                       <Image
-                        src="/icon/teacher.png"
+                        src={cdn("/icon/teacher.png")}
                         alt=""
                         width={96}
                         height={96}
@@ -159,10 +161,10 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
                     </div>
                   )}
                 </div>
-                <p className="font-heading mt-4 text-[17px] font-bold text-[var(--color-text)]">
+                <p className="font-student-name mt-4 text-[18px] text-[var(--color-text)]">
                   {student?.name ?? t("studentFallbackName", { index: index + 1 })}
                 </p>
-                <p className="mx-auto mt-2 max-w-[200px] text-[13.5px] italic leading-relaxed text-[var(--color-text-muted)]">
+                <p className="font-student-caption mx-auto mt-2 max-w-[200px] text-[15px] leading-relaxed text-[var(--color-text-muted)]">
                   {student?.bio ?? t("studentFallbackBio")}
                 </p>
               </Reveal>
@@ -187,19 +189,14 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
         <Reveal
           direction="right"
           delay={120}
-          className="order-1 w-full overflow-hidden rounded-[var(--radius-xl)] shadow-[var(--shadow-raised)] lg:order-2"
+          className="order-1 aspect-square w-full overflow-hidden rounded-[var(--radius-xl)] shadow-[var(--shadow-raised)] lg:order-2"
           style={{ background: group.color }}
         >
           {closingImage ? (
-            // eslint-disable-next-line @next/next/no-img-element -- guruh uchun statik yoki API'dan kelgan dinamik rasm, eniga to'liq moslanadi, tepa-pastidan 50px kesiladi
-            <img
-              src={closingImage}
-              alt={groupLabel}
-              className="block h-auto w-full"
-              style={{ marginTop: "-50px", marginBottom: "-50px" }}
-            />
+            // eslint-disable-next-line @next/next/no-img-element -- guruh uchun statik yoki API'dan kelgan dinamik rasm; kvadrat qutiga (aspect-square) markazdan moslab kesiladi, shuning uchun rasm o'lchami yoki nisbatidan qat'i nazar bir xil chiqadi
+            <img src={closingImage} alt={groupLabel} className="h-full w-full object-cover" />
           ) : (
-            <div className="flex aspect-[3/4] h-full w-full items-center justify-center">
+            <div className="flex h-full w-full items-center justify-center">
               <PhotoPlaceholderIcon className="h-16 w-16 text-white/80" />
             </div>
           )}

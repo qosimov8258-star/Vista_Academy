@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { useTranslations } from "next-intl";
+import { cdn } from "@/lib/cdn";
 import { MinionPlayground } from "./minion-playground";
 import { useReveal } from "./reveal";
 
@@ -80,14 +80,13 @@ export function Hero() {
           className={`reveal reveal-right ${image.visible ? "reveal-visible" : ""}`}
           style={image.style}
         >
-          <Image
-            src="/rasm/moslashish.jpeg"
-            alt="Vista Academy bolalari"
-            width={4096}
-            height={1903}
-            priority
-            sizes="100vw"
-            className="h-[400px] w-full object-cover object-[68%] sm:h-[460px] md:h-[520px] lg:h-auto"
+          <video
+            src={cdn("/homepage/home.mp4")}
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="h-[400px] w-full object-cover object-[68%] sm:h-[460px] md:h-[520px] lg:h-[640px]"
           />
         </div>
 

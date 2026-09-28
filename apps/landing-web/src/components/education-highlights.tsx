@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useTranslations } from "next-intl";
+import { cdn } from "@/lib/cdn";
 import { Reveal } from "./reveal";
 
 export function EducationHighlights() {
@@ -15,7 +16,7 @@ export function EducationHighlights() {
             className="aspect-[16/9] overflow-hidden rounded-[var(--radius-xl)] shadow-[var(--shadow-raised)]"
           >
             <Image
-              src="/talim/talim.jpeg"
+              src={cdn("/talim/talim.jpeg")}
               alt={t("block1.imageAlt")}
               width={600}
               height={338}
@@ -52,7 +53,7 @@ export function EducationHighlights() {
             className="order-1 aspect-[3/2] overflow-hidden rounded-[var(--radius-xl)] shadow-[var(--shadow-raised)] lg:order-2"
           >
             <Image
-              src="/talim/talim2.jpeg"
+              src={cdn("/talim/talim2.jpeg")}
               alt={t("block2.imageAlt")}
               width={600}
               height={400}
@@ -68,7 +69,7 @@ export function EducationHighlights() {
             className="mx-auto aspect-[3/2] w-full max-w-[600px] overflow-hidden rounded-[var(--radius-xl)] shadow-[var(--shadow-raised)]"
           >
             <Image
-              src="/talim/talim4.jpg"
+              src={cdn("/talim/talim4.jpg")}
               alt={t("block3.imageAlt")}
               width={600}
               height={400}

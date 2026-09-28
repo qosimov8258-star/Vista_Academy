@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { cdn } from "@/lib/cdn";
 import styles from "./cradle-feeding-animation.module.css";
 
 /**
@@ -14,7 +15,7 @@ export function CradleFeedingAnimation() {
   return (
     <div className={styles.wrapper}>
       <iframe
-        src="/animatsiya/beshik_vista.html"
+        src={cdn("/animatsiya/beshik_vista.html")}
         className={styles.frame}
         title={t("cradleFeeding")}
         loading="lazy"

@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { cdn } from "@/lib/cdn";
 import { useReveal } from "./reveal";
 
 function QuoteMarkIcon({ className, style }: { className?: string; style?: React.CSSProperties }) {
@@ -35,16 +36,18 @@ export function DirectorQuote() {
 
         <div className="mt-8 flex items-center">
           {/* eslint-disable-next-line @next/next/no-img-element -- statik brend rasmi */}
-          <img src="/homepage/logo.png" alt="Vista Academy" className="h-12 w-12 shrink-0 object-contain" />
+          <img src={cdn("/homepage/logo.png")} alt="Vista Academy" className="h-12 w-12 shrink-0 object-contain" />
 
           <div className="ml-5 flex items-center gap-3">
-            <span
-              className="h-14 w-14 shrink-0 rounded-full"
+            {/* eslint-disable-next-line @next/next/no-img-element -- statik direktor surati */}
+            <img
+              src={cdn("/direktor.png")}
+              alt={t("name")}
+              className="h-14 w-14 shrink-0 rounded-full object-cover"
               style={{ background: "var(--color-tint)" }}
-              aria-hidden="true"
             />
             <div className="text-left">
-              <p className="font-heading text-[15px] font-bold text-[var(--color-text)]">{t("name")}</p>
+              <p className="font-student-name text-[15px] text-[var(--color-text)]">{t("name")}</p>
               <p className="text-[14px] text-[var(--color-text-muted)]">{t("role")}</p>
             </div>
           </div>

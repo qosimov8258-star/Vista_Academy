@@ -1,58 +1,17 @@
-import Image from "next/image";
 import { getTranslations } from "next-intl/server";
-import { fetchLanding, assetUrl } from "@/lib/api";
+import { fetchLanding } from "@/lib/api";
+import { cdn } from "@/lib/cdn";
 import type { LandingContentBlock } from "@/lib/types";
 import { Reveal } from "./reveal";
 import { VideoCompareSlider } from "./video-compare-slider";
-
-/**
- * Ushbu ikki fanning o'ziga xos o'qituvchisi hali suratga tushmagan —
- * shuning uchun rasm o'rnida mavzuga mos icon ko'rsatiladi. Chin surat
- * qo'shilganda shu joyga <Image src="..." /> qo'yiladi.
- */
-function AbacusIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 96 96" className={className} aria-hidden="true">
-      <rect x="8" y="10" width="80" height="76" rx="12" fill="none" stroke="#a8794f" strokeWidth="5" />
-      <line x1="16" y1="30" x2="80" y2="30" stroke="#a8794f" strokeWidth="3" />
-      <line x1="16" y1="48" x2="80" y2="48" stroke="#a8794f" strokeWidth="3" />
-      <line x1="16" y1="66" x2="80" y2="66" stroke="#a8794f" strokeWidth="3" />
-      <circle cx="30" cy="30" r="7" fill="var(--color-blue)" />
-      <circle cx="48" cy="30" r="7" fill="var(--color-blue)" />
-      <circle cx="66" cy="30" r="7" fill="var(--color-blue)" />
-      <circle cx="24" cy="48" r="7" fill="var(--color-green)" />
-      <circle cx="42" cy="48" r="7" fill="var(--color-green)" />
-      <circle cx="60" cy="48" r="7" fill="var(--color-green)" />
-      <circle cx="78" cy="48" r="7" fill="var(--color-green)" />
-      <circle cx="36" cy="66" r="7" fill="var(--color-yellow)" />
-      <circle cx="54" cy="66" r="7" fill="var(--color-yellow)" />
-      <circle cx="72" cy="66" r="7" fill="var(--color-yellow)" />
-    </svg>
-  );
-}
-
-function PlaceholderFrame({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      className="mx-auto flex aspect-[3/4] w-full max-w-[320px] items-center justify-center overflow-hidden rounded-[var(--radius-xl)] shadow-[var(--shadow-raised)]"
-      style={{ background: "var(--color-tint)" }}
-    >
-      {children}
-    </div>
-  );
-}
+import { SingleVideoCard } from "./single-video-card";
 
 /**
  * Har bir blok — o'qituvchining yumaloq surati + sarlavha + matn. CMS'da
  * ("Lending sahifa" → "O'qituvchilar", bog'cha panelidan) hali kiritilmagan
- * bo'lsa, shu joyga o'rnatilgan namunaviy matn va icon ko'rsatiladi.
+ * bo'lsa, shu joyga o'rnatilgan namunaviy matn ko'rsatiladi.
  */
 const HIGHLIGHT_KEYS = ["maxsus-oqituvchi-1", "maxsus-oqituvchi-2"] as const;
-
-const FALLBACK_ICON: Record<(typeof HIGHLIGHT_KEYS)[number], "book" | "abacus"> = {
-  "maxsus-oqituvchi-1": "book",
-  "maxsus-oqituvchi-2": "abacus",
-};
 
 const FALLBACK_KEY: Record<(typeof HIGHLIGHT_KEYS)[number], "english" | "mentalMath"> = {
   "maxsus-oqituvchi-1": "english",
@@ -71,7 +30,6 @@ export async function TeacherSubjectHighlights() {
         {HIGHLIGHT_KEYS.map((key, index) => {
           const block = blocks[index];
           const fallbackKey = FALLBACK_KEY[key];
-          const icon = FALLBACK_ICON[key];
           const title = block?.title ?? t(`${fallbackKey}.title`);
           const body = block?.body ?? t(`${fallbackKey}.body`);
           const imageFirst = index % 2 === 1;
@@ -90,18 +48,12 @@ export async function TeacherSubjectHighlights() {
 
               <Reveal direction={imageFirst ? "left" : "right"} delay={120} className={imageFirst ? "order-1" : "order-1 lg:order-2"}>
                 {key === "maxsus-oqituvchi-1" ? (
-                  <VideoCompareSlider videoFront="/video/oqtuvchilar/video1.mp4" videoBack="/video/oqtuvchilar/video2.mp4" />
+                  <VideoCompareSlider
+                    videoFront={cdn("/video/oqtuvchilar/video1.mp4")}
+                    videoBack={cdn("/video/oqtuvchilar/video2.mp4")}
+                  />
                 ) : (
-                  <PlaceholderFrame>
-                    {block?.photoPath ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- API'dan kelgan dinamik rasm
-                      <img src={assetUrl(block.photoPath) ?? undefined} alt={title} className="h-full w-full object-cover" />
-                    ) : icon === "book" ? (
-                      <Image src="/icon/book.png" alt="" width={120} height={120} className="h-auto w-[32%] max-w-[130px] opacity-90" />
-                    ) : (
-                      <AbacusIcon className="h-auto w-[34%] max-w-[130px] opacity-90" />
-                    )}
-                  </PlaceholderFrame>
+                  <SingleVideoCard src={cdn("/rus.mp4")} />
                 )}
               </Reveal>
             </div>

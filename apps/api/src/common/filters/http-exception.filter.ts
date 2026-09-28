@@ -36,9 +36,13 @@ export class HttpExceptionFilter implements ExceptionFilter {
       );
     }
 
+    // Multer fayl hajmi chegarasidan oshganda inglizcha "File too large"
+    // qaytaradi (@nestjs/platform-express) — foydalanuvchiga tushunarli bo'lsin.
+    const finalMessage = status === HttpStatus.PAYLOAD_TOO_LARGE ? "Fayl hajmi juda katta. Kichikroq rasm tanlang." : message;
+
     response.status(status).json({
       success: false,
-      error: { code, message, details },
+      error: { code, message: finalMessage, details },
     });
   }
 }

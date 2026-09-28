@@ -5,6 +5,7 @@ import { CradleFeedingAnimation } from "@/components/cradle-feeding-animation";
 import { MealsIntro } from "@/components/meals-intro";
 import { WeeklyMenu } from "@/components/weekly-menu";
 import { fetchLanding } from "@/lib/api";
+import { cdn } from "@/lib/cdn";
 import type { LandingMeal } from "@/lib/types";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -25,9 +26,9 @@ export default async function MealsPage() {
       title={tGroups("meals")}
       description={tWhyUs("features.meals")}
       heroImage={{
+        src: cdn("/taom/taom.jpeg"),
         alt: t("heroImageAlt"),
         background: "var(--color-tint-cream)",
-        placeholder: null,
       }}
       belowHero={
         <div className="flex flex-col items-center gap-8 sm:flex-row sm:justify-center">

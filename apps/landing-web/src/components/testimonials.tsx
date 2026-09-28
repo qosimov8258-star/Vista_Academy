@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useTranslations } from "next-intl";
+import { cdn } from "@/lib/cdn";
 import { Reveal } from "./reveal";
 
 function useReviews() {
@@ -33,7 +34,7 @@ export function Testimonials() {
     <section className="py-20 sm:py-28">
       <div className="mx-auto max-w-[560px] px-4 text-center">
         <Reveal direction="up" className="relative mx-auto h-[180px] w-full max-w-[560px] sm:h-[220px]">
-          <Image src="/bezak/bezak.jpg" alt={t("imageAlt")} fill sizes="560px" className="object-contain" />
+          <Image src={cdn("/bezak/bezak.jpg")} alt={t("imageAlt")} fill sizes="560px" className="object-contain" />
         </Reveal>
 
         <Reveal direction="up" delay={120} className="mt-6 text-[16px] italic leading-relaxed text-[var(--color-text-muted)]">
@@ -56,7 +57,7 @@ export function Testimonials() {
 
       <Reveal direction="up" delay={180} className="mx-auto mt-20 max-w-[560px] px-4 text-center">
         <div className="relative mx-auto h-[240px] w-full max-w-[420px] overflow-hidden rounded-[var(--radius-lg)] shadow-[var(--shadow-card)] sm:h-[280px]">
-          <Image src="/team.jpeg" alt={t("teamImageAlt")} fill sizes="420px" className="object-cover" />
+          <Image src={cdn("/team.jpeg")} alt={t("teamImageAlt")} fill sizes="420px" className="object-cover" />
         </div>
         <p className="font-heading mt-5 text-[18px] font-bold text-[var(--color-text)]">{t("teamHeading")}</p>
         <p className="mt-2 text-[14px] leading-relaxed text-[var(--color-text-muted)]">{t("teamBody")}</p>

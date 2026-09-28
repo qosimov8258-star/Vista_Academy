@@ -18,7 +18,6 @@ import { LoadingState, ErrorState } from "@/components/ui/states";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { CameraIcon, PencilIcon, TeacherIcon } from "@/components/ui/icons";
 import { LendingTabs } from "@/features/lending/lending-tabs";
-import { TeacherHighlightsSection } from "@/features/lending/teacher-highlights";
 
 const schema = z.object({
   fullName: z.string().min(2, "Ism-familiya kamida 2 belgi"),
@@ -93,8 +92,6 @@ export default function LendingTeachersPage({ params }: { params: Promise<{ slug
       {editing && (
         <TeacherFormModal teacher={editing} onClose={() => setEditing(null)} onPhotoUploaded={setEditing} />
       )}
-
-      <TeacherHighlightsSection canWrite={canWrite} />
     </div>
   );
 }

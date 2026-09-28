@@ -2,15 +2,16 @@
 
 import Image from "next/image";
 import { useTranslations } from "next-intl";
+import { cdn } from "@/lib/cdn";
 import { alternatingDirection, staggerDelay, useReveal } from "./reveal";
 
 function useFeatures() {
   const t = useTranslations();
   return [
-    { icon: "/icon/clock.png", title: t("groups.schedule"), description: t("whyUs.features.schedule"), href: "/jadval" },
-    { icon: "/icon/food.png", title: t("groups.meals"), description: t("whyUs.features.meals"), href: "/taomlar" },
-    { icon: "/icon/teacher.png", title: t("groups.teacher"), description: t("whyUs.features.teacher"), href: "/tarbiyachi" },
-    { icon: "/icon/book.png", title: t("groups.education"), description: t("whyUs.features.education"), href: "/talim-yonalishi" },
+    { icon: cdn("/icon/clock.png"), title: t("groups.schedule"), description: t("whyUs.features.schedule"), href: "/jadval" },
+    { icon: cdn("/icon/food.png"), title: t("groups.meals"), description: t("whyUs.features.meals"), href: "/taomlar" },
+    { icon: cdn("/icon/teacher.png"), title: t("groups.teacher"), description: t("whyUs.features.teacher"), href: "/tarbiyachi" },
+    { icon: cdn("/icon/book.png"), title: t("groups.education"), description: t("whyUs.features.education"), href: "/talim-yonalishi" },
   ];
 }
 

@@ -62,6 +62,14 @@ body {
   font-family: var(--font-baloo), ui-rounded, "SF Pro Rounded", sans-serif;
 }
 
+.font-student-name {
+  font-family: var(--font-alfa-slab-one), "Arial Black", sans-serif;
+}
+
+.font-student-caption {
+  font-family: var(--font-courgette), cursive;
+}
+
 .marqueeWrap {
   position: relative;
   overflow: hidden;

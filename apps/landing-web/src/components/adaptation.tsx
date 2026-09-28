@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
+import { cdn } from "@/lib/cdn";
 import { Reveal } from "./reveal";
 
 type AdaptationProps = {
@@ -12,7 +13,7 @@ type AdaptationProps = {
   introText?: string;
 };
 
-const DEFAULT_INTRO_IMAGE_SRC = "/moslashish/moslashish2.jpeg";
+const DEFAULT_INTRO_IMAGE_SRC = cdn("/moslashish/moslashish2.jpeg");
 
 function ChevronLeftIcon({ className }: { className?: string }) {
   return (
@@ -78,7 +79,7 @@ export function Adaptation({
       text: introText ?? t("defaultText"),
     },
     {
-      image: "/moslashish/love.jpg",
+      image: cdn("/moslashish/love.jpg"),
       alt: t("loveImageAlt"),
       text: (
         <>
@@ -89,7 +90,7 @@ export function Adaptation({
       ),
     },
     {
-      image: "/moslashish/moslashish1.jpeg",
+      image: cdn("/moslashish/moslashish1.jpeg"),
       alt: t("processImageAlt"),
       eyebrow: t("processEyebrow"),
       title: t("processTitle"),

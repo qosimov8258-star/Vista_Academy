@@ -7,7 +7,9 @@ import { diskStorage } from "multer";
 import { LANDING_UPLOAD_DIR } from "../../common/constants/uploads";
 
 const PHOTO_MIME_PATTERN = /^image\/(jpeg|png|webp|gif)$/;
-const PHOTO_MAX_SIZE = 5 * 1024 * 1024;
+/// Telefon kamerasidan to'g'ridan-to'g'ri olingan rasmlar ko'pincha 5 MB'dan
+/// katta chiqadi (masalan, 8-12 MB) — shuning uchun chegara shunga mos keng.
+const PHOTO_MAX_SIZE = 15 * 1024 * 1024;
 
 /** Lending sahifa rasmlari (o'qituvchi, taom, guruh, kontent blok) uchun bitta umumiy yuklash sozlamasi. */
 export const landingPhotoUploadInterceptor = () =>

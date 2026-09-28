@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { ContentBlockView } from "@/components/content-block-view";
 import { EducationHighlights } from "@/components/education-highlights";
+import { cdn } from "@/lib/cdn";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("educationPage");
@@ -19,7 +20,7 @@ export default async function EducationDirectionPage() {
       eyebrow={tCommon("pagesEyebrow")}
       fallbackTitle={t("fallbackTitle")}
       fallbackBody={tWhyUs("features.education")}
-      heroImage={{ src: "/rasm/yonalishlar.png", alt: t("heroImageAlt"), position: "50% 0%" }}
+      heroImage={{ src: cdn("/talim/talim-home.jpeg"), alt: t("heroImageAlt"), position: "50% 0%" }}
       afterContent={<EducationHighlights />}
     />
   );

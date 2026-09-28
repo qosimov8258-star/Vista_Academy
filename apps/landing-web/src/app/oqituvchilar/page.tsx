@@ -4,6 +4,7 @@ import { PageShell } from "@/components/page-shell";
 import { TeacherSubjectHighlights } from "@/components/teacher-subject-highlights";
 import { TeacherGrid } from "@/components/teacher-grid";
 import { fetchLanding } from "@/lib/api";
+import { cdn } from "@/lib/cdn";
 import type { LandingTeacher } from "@/lib/types";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -65,7 +66,7 @@ export default async function TeachersPage() {
       eyebrow={tCommon("pagesEyebrow")}
       title={tGroups("teachers")}
       description={t("description")}
-      heroImage={{ src: "/rasm/oqtuvchi.png", alt: t("heroImageAlt"), position: "50% 0%" }}
+      heroImage={{ src: cdn("/rasm/oqtuvchi.jpeg"), alt: t("heroImageAlt"), position: "50% 90%" }}
       afterContent={<TeacherSubjectHighlights />}
     >
       <div

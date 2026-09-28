@@ -5,9 +5,15 @@ import { useTranslations } from "next-intl";
 
 /**
  * Ikkita videoni bir freymda ko'rsatadi: video1 old planda, video2 orqada.
- * Desktopda kursorni ushlab ongga surish orqali video2 ochiladi (wipe effekti).
- * Mobilda drag qulay bo'lmagani uchun chap/o'ng chetlarda strelka tugmalari
- * beriladi — ular bosilganda faol bo'lmagan video pauza qilinadi.
+ * Kursorni ushlab surish (yoki barmoq bilan drag) orqali video2 ochiladi
+ * (wipe effekti). Bundan tashqari chap/o'ng chetlarda strelka tugmalari ham
+ * bor (barcha ekran o'lchamlarida ko'rinadi) — ular bosilganda faol
+ * bo'lmagan video pauza qilinadi.
+ *
+ * Ovoz: video shu joy ekranga ~yarmi ko'rinadigan darajada kirganda avtomatik
+ * yoqiladi (faol — hozir ustida turgan — videoning ovozi), chiqib ketganda
+ * o'chadi. Foydalanuvchi yuqori o'ngdagi tugma bilan qo'lda o'chirsa/yoqsa,
+ * shu tanlovi ekranga kirib-chiqishdan qat'i nazar saqlanib qoladi.
  */
 export function VideoCompareSlider({
   videoFront,
@@ -21,8 +27,10 @@ export function VideoCompareSlider({
   const t = useTranslations("videoCompare");
   const [reveal, setReveal] = useState(0);
   const [transitioning, setTransitioning] = useState(false);
+  const [soundOn, setSoundOn] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
+  const userToggledSoundRef = useRef(false);
   const frontVideoRef = useRef<HTMLVideoElement>(null);
   const backVideoRef = useRef<HTMLVideoElement>(null);
 
@@ -51,6 +59,33 @@ export function VideoCompareSlider({
       void backVideoRef.current?.play();
     }
   }, [reveal, transitioning]);
+
+  // Har qanday paytda faqat "faol" (hozir tepada ko'rinib turgan) videoning
+  // ovozi ochiq bo'ladi — ikkalasi baravar ovoz chiqarib qolmasligi uchun.
+  const backIsActive = reveal >= 50;
+  useEffect(() => {
+    if (frontVideoRef.current) frontVideoRef.current.muted = !soundOn || backIsActive;
+    if (backVideoRef.current) backVideoRef.current.muted = !soundOn || !backIsActive;
+  }, [soundOn, backIsActive]);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (userToggledSoundRef.current) return;
+        setSoundOn(entry.isIntersecting);
+      },
+      { threshold: 0.5 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const toggleSound = () => {
+    userToggledSoundRef.current = true;
+    setSoundOn((v) => !v);
+  };
 
   const updateFromClientX = useCallback((clientX: number) => {
     const el = containerRef.current;
@@ -94,20 +129,31 @@ export function VideoCompareSlider({
         <video ref={frontVideoRef} src={videoFront} className="h-full w-full object-cover" autoPlay loop muted playsInline />
       </div>
 
-      <div
-        className={`pointer-events-none absolute inset-y-0 hidden w-[3px] -translate-x-1/2 bg-white/90 sm:block ${
-          transitioning ? "transition-[left] duration-500 ease-in-out" : ""
-        }`}
-        style={{ left: `${reveal}%` }}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          toggleSound();
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+        aria-label={soundOn ? t("muteAria") : t("unmuteAria")}
+        className="absolute right-2 top-2 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white shadow-[var(--shadow-card)] backdrop-blur-sm transition hover:bg-black/60"
       >
-        <div className="absolute left-1/2 top-1/2 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-[var(--shadow-card)]">
-          <svg viewBox="0 0 20 20" fill="none" stroke="var(--color-text)" strokeWidth="1.8" strokeLinecap="round" className="h-3.5 w-3.5">
-            <path d="M7 5 3 10l4 5M13 5l4 5-4 5" />
+        {soundOn ? (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+            <path d="M11 5 6 9H3v6h3l5 4V5Z" />
+            <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+            <path d="M18.5 6a9 9 0 0 1 0 12" />
           </svg>
-        </div>
-      </div>
+        ) : (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+            <path d="M11 5 6 9H3v6h3l5 4V5Z" />
+            <path d="m23 9-6 6M17 9l6 6" />
+          </svg>
+        )}
+      </button>
 
-      <div className="pointer-events-none absolute inset-y-0 inset-x-2 flex items-center justify-between sm:hidden">
+      <div className="pointer-events-none absolute inset-y-0 inset-x-2 flex items-center justify-between">
         <button
           type="button"
           onClick={(e) => {
@@ -116,10 +162,9 @@ export function VideoCompareSlider({
           }}
           onPointerDown={(e) => e.stopPropagation()}
           aria-label={t("firstAria")}
-          className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full shadow-[var(--shadow-card)] backdrop-blur-sm"
-          style={{ background: "rgba(255,255,255,0.28)" }}
+          className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white shadow-[var(--shadow-card)] backdrop-blur-sm transition hover:bg-black/60 sm:h-11 sm:w-11"
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
             <path d="M15 5 8 12l7 7" />
           </svg>
         </button>
@@ -131,10 +176,9 @@ export function VideoCompareSlider({
           }}
           onPointerDown={(e) => e.stopPropagation()}
           aria-label={t("secondAria")}
-          className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full shadow-[var(--shadow-card)] backdrop-blur-sm"
-          style={{ background: "rgba(255,255,255,0.28)" }}
+          className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white shadow-[var(--shadow-card)] backdrop-blur-sm transition hover:bg-black/60 sm:h-11 sm:w-11"
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
             <path d="M9 5l7 7-7 7" />
           </svg>
         </button>

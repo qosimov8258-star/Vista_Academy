@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { cdn } from "@/lib/cdn";
 import { Reveal } from "./reveal";
 
 function TelegramIcon({ className }: { className?: string }) {
@@ -79,9 +80,9 @@ export function Footer() {
           <div>
             <a href="/#top" className="flex items-center gap-3">
               {/* eslint-disable-next-line @next/next/no-img-element -- statik brend rasmi */}
-              <img src="/homepage/logo.png" alt="Vista Academy" className="h-12 w-12 object-contain" />
+              <img src={cdn("/homepage/logo.png")} alt="Vista Academy" className="h-12 w-12 object-contain" />
               {/* eslint-disable-next-line @next/next/no-img-element -- statik brend rasmi */}
-              <img src="/homepage/logo-name.png" alt="Vista Academy" className="h-8 w-auto object-contain" />
+              <img src={cdn("/homepage/logo-name.png")} alt="Vista Academy" className="h-8 w-auto object-contain" />
             </a>
             <p className="mt-4 max-w-[320px] text-[14px] leading-relaxed text-[var(--color-text-muted)]">
               {t("footer.description")}
@@ -139,9 +140,16 @@ export function Footer() {
           <div>
             <p className="font-heading text-[15px] font-bold text-[var(--color-text)]">{t("footer.contactHeading")}</p>
             <ul className="mt-4 flex flex-col gap-3">
-              <li className="flex items-start gap-2.5 text-[14px] text-[var(--color-text-muted)]">
-                <PinIcon className="mt-0.5 h-4 w-4 shrink-0" style={{ color: "var(--color-blue)" }} />
-                {t("footer.address")}
+              <li>
+                <a
+                  href="https://maps.app.goo.gl/p4671sbeFZbTn2KN7?g_st=com.olcorporation.olai.Share"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-start gap-2.5 text-[14px] text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
+                >
+                  <PinIcon className="mt-0.5 h-4 w-4 shrink-0" style={{ color: "var(--color-blue)" }} />
+                  {t("footer.address")}
+                </a>
               </li>
               <li>
                 <a

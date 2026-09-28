@@ -1,7 +1,17 @@
 {
   "siteMeta": {
-    "title": "Vista Academy — Kindergarten Network",
-    "description": "Vista Academy — a network of kindergartens raising children with care, safety and modern teaching methods."
+    "title": "Vista Academy — Kindergarten Network in Andijan",
+    "description": "Vista Academy — the best kindergarten in Andijan, Uzbekistan: a trusted private preschool network raising children with care, safety and modern teaching methods. Looking for a kindergarten in Andijan? Meet Vista Academy.",
+    "keywords": [
+      "Vista Academy",
+      "kindergarten",
+      "best kindergarten in Andijan",
+      "preschool Andijan",
+      "private kindergarten Uzbekistan",
+      "daycare Andijan",
+      "childcare Andijan",
+      "kindergarten network"
+    ]
   },
   "common": {
     "language": "Language",
@@ -34,7 +44,7 @@
     "pagesHeading": "Pages",
     "groupsHeading": "Our groups",
     "contactHeading": "Contact",
-    "address": "Tashkent, Uzbekistan",
+    "address": "Andijan, Uzbekistan",
     "copyright": "© {year} Vista Academy. All rights reserved.",
     "tagline": "With care, safety and modern education."
   },
@@ -85,7 +95,7 @@
     "headingLine1": "Vista Academy",
     "headingLine2": "a place that opens the door to knowledge and opportunity.",
     "body": "Together with your child, we're building the future, turning every day into an unforgettable educational journey.",
-    "name": "Director's name",
+    "name": "Feruza Nizomova",
     "role": "General Director"
   },
   "adaptation": {
@@ -223,7 +233,9 @@
   "cradleFeeding": "Feed the baby in the cradle game",
   "videoCompare": {
     "firstAria": "First video",
-    "secondAria": "Second video"
+    "secondAria": "Second video",
+    "muteAria": "Mute sound",
+    "unmuteAria": "Unmute sound"
   },
   "schedulePage": {
     "metaTitle": "Flexible schedule — Vista Academy",

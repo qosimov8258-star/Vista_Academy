@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Baloo_2 } from "next/font/google";
+import { Alfa_Slab_One, Baloo_2, Courgette } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { QueryProvider } from "@/lib/query-provider";
@@ -9,6 +9,18 @@ const baloo2 = Baloo_2({
   subsets: ["latin"],
   weight: ["700", "800"],
   variable: "--font-baloo",
+});
+
+const alfaSlabOne = Alfa_Slab_One({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-alfa-slab-one",
+});
+
+const courgette = Courgette({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-courgette",
 });
 
 export const metadata: Metadata = {
@@ -21,7 +33,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const messages = await getMessages();
 
   return (
-    <html lang={locale} className={baloo2.variable}>
+    <html lang={locale} className={`${baloo2.variable} ${alfaSlabOne.variable} ${courgette.variable}`}>
       <body>
         <NextIntlClientProvider locale={locale} messages={messages}>
           <QueryProvider>{children}</QueryProvider>
