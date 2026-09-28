@@ -7,11 +7,11 @@ import { THEMES, useTheme } from "@/lib/theme";
 
 /**
  * Sozlamalar → Tizim rangi. Bosilishi bilan butun panel (tugmalar, yon
- * panel, faol bo'limlar, qidiruv, ikonkalar) shu rangga o'tadi; tanlov shu
- * brauzerda saqlanadi.
+ * panel, faol bo'limlar, qidiruv, ikonkalar) shu rangga o'tadi; tanlov
+ * hisobda saqlanadi — barcha qurilmalarda bir xil.
  */
 export function ThemePickerCard() {
-  const [theme, setTheme] = useTheme();
+  const { theme, setTheme, saving, error } = useTheme();
   const current = THEMES.find((t) => t.key === theme) ?? THEMES[0];
 
   return (
@@ -40,7 +40,11 @@ export function ThemePickerCard() {
           <p className="text-[17px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">Tizim rangi</p>
           <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">
             Tugmalar, yon panel, faol bo&apos;limlar va ikonkalar shu rangda bo&apos;ladi. Hozir: <span className="font-semibold text-[var(--color-text)]">{current.label}</span>
+            <span className="mt-0.5 block text-[12.5px]">
+              {saving ? "Saqlanmoqda…" : "Hisobingizda saqlanadi — barcha qurilmalarda bir xil."}
+            </span>
           </p>
+          {error && <p className="mt-2 text-[13px] text-[var(--color-danger)]">{error}</p>}
 
           <div className="mt-4 flex flex-wrap gap-3" role="radiogroup" aria-label="Tizim rangi">
             {THEMES.map((t) => {
@@ -53,7 +57,7 @@ export function ThemePickerCard() {
                   aria-checked={active}
                   aria-label={t.label}
                   title={t.label}
-                  onClick={() => setTheme(t.key)}
+                  onClick={() => void setTheme(t.key)}
                   className={clsx(
                     "relative flex h-11 w-11 cursor-pointer items-center justify-center rounded-full transition-transform duration-200 active:scale-90",
                     active ? "ring-2 ring-offset-2 ring-offset-[var(--color-surface)]" : "hover:scale-110",
