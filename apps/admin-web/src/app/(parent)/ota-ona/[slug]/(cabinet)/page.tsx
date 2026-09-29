@@ -207,7 +207,10 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
                 </p>
                 <p className="text-[13px] text-[var(--p-muted)]">
                   {present
-                    ? "Tarbiyachi davomatni belgiladi"
+                    ? day?.attendance?.checkInTime
+                      ? // Yuz tanish terminali yozgan vaqt
+                        `${day.attendance.checkInTime} da keldi${day.attendance.checkOutTime ? ` · ${day.attendance.checkOutTime} da ketdi` : ""}`
+                      : "Tarbiyachi davomatni belgiladi"
                     : absent
                       ? day?.attendance?.parentReason || day?.attendance?.note || "Sabab ko'rsatilmagan"
                       : "Tarbiyachi hali davomat qilmadi"}

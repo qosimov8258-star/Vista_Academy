@@ -401,6 +401,12 @@ function BranchAttendance({ slug }: { slug: string }) {
                       {child.groupName && (
                         <p className="text-xs text-[var(--color-text-muted)]">{child.groupName}</p>
                       )}
+                      {/* Yuz tanish terminali (Face ID) qayd etgan vaqt */}
+                      {child.checkInTime && (
+                        <p className="text-xs font-medium text-[var(--color-success)]">
+                          Face ID: {child.checkInTime} da keldi{child.checkOutTime ? ` · ${child.checkOutTime} da ketdi` : ""}
+                        </p>
+                      )}
                       {canWrite && (
                         <button
                           type="button"
