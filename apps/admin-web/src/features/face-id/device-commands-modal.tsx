@@ -9,7 +9,7 @@ import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { formatDateTime } from "@/lib/format";
 
 const TYPE_LABEL: Record<FaceIdCommandType, string> = {
-  ADD_OR_UPDATE_USER: "Xodimni qo'shish",
+  ADD_OR_UPDATE_USER: "Qo'shish",
   SET_FACE: "Yuzni yuklash",
   DELETE_USER: "O'chirish",
 };
@@ -44,7 +44,7 @@ export function DeviceCommandsModal({ slug, device, onClose }: { slug: string; d
             <li key={c.id} className="flex items-start gap-3 py-2.5">
               <div className="min-w-0 flex-1">
                 <p className="text-[14px] text-[var(--color-text)]">
-                  {TYPE_LABEL[c.type]} · <span className="font-medium">{c.employee?.fullName ?? `№ ${c.employeeNo}`}</span>
+                  {TYPE_LABEL[c.type]} · <span className="font-medium">{c.employee?.fullName ?? c.child?.fullName ?? `№ ${c.employeeNo}`}</span>
                   <span className="text-[var(--color-text-muted)]"> ({c.employeeNo})</span>
                 </p>
                 <p className="mt-0.5 text-[12.5px] text-[var(--color-text-muted)]">

@@ -3,14 +3,15 @@ import { FaceIdCommandType, Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
 import type { AgentDevice } from "./agent/agent-token.guard";
 import type { AgentCommandAckDto } from "./dto/agent-command-ack.dto";
+import { childDeviceNo } from "./device-person";
 
 /** Shu urinishdan keyin buyruq FAILED bo'ladi (qayta navbatga qaytmaydi). */
 export const MAX_COMMAND_ATTEMPTS = 5;
 /** Agent SENT buyruqqa shuncha vaqtda javob bermasa — buyruq qayta navbatga qaytadi. */
 export const SENT_TIMEOUT_MS = 5 * 60_000;
 
-/** Bekor qilingan buyruq sababi (xodim o'chirilgach, uni qo'shish ma'nosiz). */
-const CANCELLED_BY_DELETE = "Xodim o'chirildi — buyruq bekor qilindi";
+/** Bekor qilingan buyruq sababi (terminaldan o'chirilayotgan odamni qo'shish ma'nosiz). */
+const CANCELLED_BY_DELETE = "Terminaldan o'chirildi — buyruq bekor qilindi";
 
 /** Agentga beriladigan buyruq ko'rinishi. */
 export interface AgentCommand {
@@ -21,16 +22,25 @@ export interface AgentCommand {
   attempts: number;
 }
 
-type EnqueueTarget = { organizationId: string; branchId: string; employeeId: string | null; employeeNo: string };
+/** Terminaldagi foydalanuvchi: xodim yoki bola (bittasi to'ldiriladi). */
+type EnqueueTarget = {
+  organizationId: string;
+  branchId: string;
+  employeeId: string | null;
+  childId: string | null;
+  employeeNo: string;
+};
 
 /**
  * Qurilma buyruqlari navbati (ERP → agent → qurilma).
  *
- * - Xodim yaratilsa → ADD_OR_UPDATE_USER (+ surati bo'lsa SET_FACE)
+ * - Xodim/bola yaratilsa → ADD_OR_UPDATE_USER (+ surati bo'lsa SET_FACE)
  * - Surat qo'yilsa/almashsa → SET_FACE
- * - Xodim o'chirilsa → DELETE_USER (navbatdagi qo'shish buyruqlari bekor)
+ * - Xodim o'chirilsa, bola nofaol qilinsa → DELETE_USER (navbatdagi
+ *   qo'shish buyruqlari bekor)
  *
- * Buyruq faqat xodim filialidagi FAOL qurilmalarga yoziladi. Bir xil
+ * Bola terminalda "C" prefiksli raqam bilan turadi (C14732).
+ * Buyruq faqat o'sha filialdagi FAOL qurilmalarga yoziladi. Bir xil
  * (qurilma, xodim, tur) uchun navbatda turgan buyruq takrorlanmaydi —
  * payload'i yangilanadi. Yaratish xodim amalini hech qachon to'xtatmasligi
  * kerak, shuning uchun `enqueue*` xatolari faqat log qilinadi.
@@ -42,7 +52,7 @@ export class FaceIdCommandsService {
   constructor(private readonly prisma: PrismaService) {}
 
   // ---------------------------------------------------------------------
-  // Navbatga qo'yish (xodimlar servisidan chaqiriladi)
+  // Navbatga qo'yish (xodimlar va bolalar servislaridan chaqiriladi)
   // ---------------------------------------------------------------------
 
   /** Xodim yaratildi yoki ma'lumoti o'zgardi: qurilmada foydalanuvchi + (bo'lsa) yuz. */
@@ -55,7 +65,7 @@ export class FaceIdCommandsService {
       if (!employee || !employee.isActive) return;
       const devices = await this.activeDeviceIds(employee.branchId);
       for (const deviceId of devices) {
-        await this.upsertEmployeeCommands(deviceId, employee);
+        await this.upsertPersonCommands(deviceId, this.employeeTarget(employee), employee.fullName, employee.avatarUpdatedAt);
       }
     });
   }
@@ -69,7 +79,7 @@ export class FaceIdCommandsService {
       });
       if (!employee || !employee.isActive || !employee.avatarUpdatedAt) return;
       for (const deviceId of await this.activeDeviceIds(employee.branchId)) {
-        await this.upsertPending(deviceId, this.target(employee), "SET_FACE", {
+        await this.upsertPending(deviceId, this.employeeTarget(employee), "SET_FACE", {
           employeeNo: employee.employeeNo,
           avatarUpdatedAt: employee.avatarUpdatedAt.toISOString(),
         });
@@ -83,34 +93,73 @@ export class FaceIdCommandsService {
    * bekor qilinadi — aks holda agent o'chirilgan xodimni qayta qo'shardi.
    */
   async enqueueDelete(person: { organizationId: string; branchId: string; employeeNo: string }): Promise<void> {
-    await this.safely("xodimni o'chirish", async () => {
-      const devices = await this.activeDeviceIds(person.branchId);
-      if (devices.length === 0) return;
-      await this.prisma.faceIdCommand.updateMany({
-        where: { deviceId: { in: devices }, employeeNo: person.employeeNo, status: { in: ["PENDING", "SENT"] }, type: { not: "DELETE_USER" } },
-        data: { status: "FAILED", lastError: CANCELLED_BY_DELETE, completedAt: new Date() },
+    await this.safely("xodimni o'chirish", () => this.enqueueDeleteFor({ ...person, employeeId: null, childId: null }));
+  }
+
+  // --- Bolalar ----------------------------------------------------------
+
+  /**
+   * Bola qo'shildi yoki ma'lumoti o'zgardi. Faol bo'lsa — terminalga
+   * (surati bo'lsa yuzi bilan); nofaol bo'lsa — terminaldan o'chiriladi
+   * (bog'chadan ketgan bola turniketdan o'tmasin).
+   */
+  async enqueueChildSync(childId: string): Promise<void> {
+    await this.safely("bolani sinxronlash", async () => {
+      const child = await this.prisma.child.findUnique({
+        where: { id: childId },
+        select: { id: true, organizationId: true, branchId: true, publicId: true, fullName: true, status: true, avatarUpdatedAt: true },
       });
-      for (const deviceId of devices) {
-        await this.upsertPending(deviceId, { ...person, employeeId: null }, "DELETE_USER", { employeeNo: person.employeeNo });
+      if (!child) return;
+      const target = this.childTarget(child);
+      if (child.status === "INACTIVE") {
+        await this.enqueueDeleteFor(target);
+        return;
+      }
+      for (const deviceId of await this.activeDeviceIds(child.branchId)) {
+        await this.upsertPersonCommands(deviceId, target, child.fullName, child.avatarUpdatedAt);
+      }
+    });
+  }
+
+  /** Bola surati qo'yildi yoki almashtirildi. */
+  async enqueueChildFace(childId: string): Promise<void> {
+    await this.safely("bola yuzini yuborish", async () => {
+      const child = await this.prisma.child.findUnique({
+        where: { id: childId },
+        select: { id: true, organizationId: true, branchId: true, publicId: true, status: true, avatarUpdatedAt: true },
+      });
+      if (!child || child.status === "INACTIVE" || !child.avatarUpdatedAt) return;
+      const target = this.childTarget(child);
+      for (const deviceId of await this.activeDeviceIds(child.branchId)) {
+        await this.upsertPending(deviceId, target, "SET_FACE", { employeeNo: target.employeeNo, avatarUpdatedAt: child.avatarUpdatedAt.toISOString() });
       }
     });
   }
 
   /**
-   * "Qurilmaga to'liq sinxronlash": filialdagi barcha faol xodimlar uchun
+   * "Qurilmaga to'liq sinxronlash": filialdagi barcha faol xodim va bolalar uchun
    * buyruqlar. Qurilma almashtirilganda yoki tozalanganda ishlatiladi.
-   * Qaytaradi: nechta xodim navbatga qo'yildi.
+   * Qaytaradi: nechta xodim va bola navbatga qo'yildi.
    */
-  async enqueueFullSync(device: { id: string; branchId: string }): Promise<{ employees: number }> {
+  async enqueueFullSync(device: { id: string; branchId: string }): Promise<{ employees: number; children: number }> {
     const employees = await this.prisma.employee.findMany({
       where: { branchId: device.branchId, isActive: true },
       select: { id: true, organizationId: true, branchId: true, employeeNo: true, fullName: true, avatarUpdatedAt: true },
       orderBy: { employeeNo: "asc" },
     });
     for (const employee of employees) {
-      await this.upsertEmployeeCommands(device.id, employee);
+      await this.upsertPersonCommands(device.id, this.employeeTarget(employee), employee.fullName, employee.avatarUpdatedAt);
     }
-    return { employees: employees.length };
+    // Karantindagi bola ham terminalda qoladi — karantin tugagach qayta qo'shish shart bo'lmasin
+    const children = await this.prisma.child.findMany({
+      where: { branchId: device.branchId, status: { not: "INACTIVE" } },
+      select: { id: true, organizationId: true, branchId: true, publicId: true, fullName: true, avatarUpdatedAt: true },
+      orderBy: { publicId: "asc" },
+    });
+    for (const child of children) {
+      await this.upsertPersonCommands(device.id, this.childTarget(child), child.fullName, child.avatarUpdatedAt);
+    }
+    return { employees: employees.length, children: children.length };
   }
 
   // ---------------------------------------------------------------------
@@ -156,7 +205,7 @@ export class FaceIdCommandsService {
   async ack(device: AgentDevice, commandId: string, dto: AgentCommandAckDto, now = new Date()) {
     const command = await this.prisma.faceIdCommand.findFirst({
       where: { id: commandId, deviceId: device.id },
-      select: { id: true, type: true, status: true, attempts: true, employeeId: true },
+      select: { id: true, type: true, status: true, attempts: true, employeeId: true, childId: true },
     });
     if (!command) {
       throw new NotFoundException("Buyruq topilmadi");
@@ -170,7 +219,7 @@ export class FaceIdCommandsService {
         where: { id: command.id },
         data: { status: "DONE", completedAt: now, lastError: null },
       });
-      await this.syncEnrollment(device.id, command.employeeId, command.type, "DONE", null, now);
+      await this.syncEnrollment(device.id, command, command.type, "DONE", null, now);
       return { id: command.id, status: "DONE" as const };
     }
 
@@ -182,28 +231,27 @@ export class FaceIdCommandsService {
       data: { status, lastError: error, completedAt: finalFailure ? now : null },
     });
     if (finalFailure) {
-      await this.syncEnrollment(device.id, command.employeeId, command.type, "FAILED", error, now);
+      await this.syncEnrollment(device.id, command, command.type, "FAILED", error, now);
     }
     return { id: command.id, status };
   }
 
-  /** SET_FACE uchun xodimning joriy surati (agent kichraytirib qurilmaga yuboradi). */
+  /** SET_FACE uchun xodim yoki bolaning joriy surati (agent kichraytirib qurilmaga yuboradi). */
   async faceImage(device: AgentDevice, commandId: string) {
     const command = await this.prisma.faceIdCommand.findFirst({
       where: { id: commandId, deviceId: device.id, type: "SET_FACE" },
-      select: { employeeId: true },
+      select: { employeeId: true, childId: true },
     });
-    if (!command?.employeeId) {
-      throw new NotFoundException("Buyruq yoki xodim topilmadi");
+    if (!command?.employeeId && !command?.childId) {
+      throw new NotFoundException("Buyruq yoki uning egasi topilmadi");
     }
-    const employee = await this.prisma.employee.findUnique({
-      where: { id: command.employeeId },
-      select: { avatar: true, avatarMimeType: true },
-    });
-    if (!employee?.avatar) {
-      throw new NotFoundException("Xodimda surat yo'q");
+    const person = command.employeeId
+      ? await this.prisma.employee.findUnique({ where: { id: command.employeeId }, select: { avatar: true, avatarMimeType: true } })
+      : await this.prisma.child.findUnique({ where: { id: command.childId! }, select: { avatar: true, avatarMimeType: true } });
+    if (!person?.avatar) {
+      throw new NotFoundException(command.employeeId ? "Xodimda surat yo'q" : "Bolada surat yo'q");
     }
-    return { data: Buffer.from(employee.avatar), mimeType: employee.avatarMimeType ?? "image/jpeg" };
+    return { data: Buffer.from(person.avatar), mimeType: person.avatarMimeType ?? "image/jpeg" };
   }
 
   // ---------------------------------------------------------------------
@@ -218,23 +266,34 @@ export class FaceIdCommandsService {
     return devices.map((d) => d.id);
   }
 
-  private target(employee: { id: string; organizationId: string; branchId: string; employeeNo: string }): EnqueueTarget {
-    return { organizationId: employee.organizationId, branchId: employee.branchId, employeeId: employee.id, employeeNo: employee.employeeNo };
+  private employeeTarget(employee: { id: string; organizationId: string; branchId: string; employeeNo: string }): EnqueueTarget {
+    return { organizationId: employee.organizationId, branchId: employee.branchId, employeeId: employee.id, childId: null, employeeNo: employee.employeeNo };
   }
 
-  private async upsertEmployeeCommands(
-    deviceId: string,
-    employee: { id: string; organizationId: string; branchId: string; employeeNo: string; fullName: string; avatarUpdatedAt: Date | null },
-  ) {
-    const target = this.target(employee);
-    await this.upsertPending(deviceId, target, "ADD_OR_UPDATE_USER", { employeeNo: employee.employeeNo, name: employee.fullName });
-    if (employee.avatarUpdatedAt) {
-      await this.upsertPending(deviceId, target, "SET_FACE", {
-        employeeNo: employee.employeeNo,
-        avatarUpdatedAt: employee.avatarUpdatedAt.toISOString(),
-      });
+  private childTarget(child: { id: string; organizationId: string; branchId: string; publicId: number }): EnqueueTarget {
+    return { organizationId: child.organizationId, branchId: child.branchId, employeeId: null, childId: child.id, employeeNo: childDeviceNo(child.publicId) };
+  }
+
+  /** Terminalga foydalanuvchi + (surati bo'lsa) yuz, "Yuz ro'yxati"da yozuv. */
+  private async upsertPersonCommands(deviceId: string, target: EnqueueTarget, name: string, avatarUpdatedAt: Date | null) {
+    await this.upsertPending(deviceId, target, "ADD_OR_UPDATE_USER", { employeeNo: target.employeeNo, name });
+    if (avatarUpdatedAt) {
+      await this.upsertPending(deviceId, target, "SET_FACE", { employeeNo: target.employeeNo, avatarUpdatedAt: avatarUpdatedAt.toISOString() });
     }
     await this.ensureEnrollment(deviceId, target);
+  }
+
+  /** Navbatdagi qo'shish/yuz buyruqlarini bekor qilib, DELETE_USER qo'yadi. */
+  private async enqueueDeleteFor(target: EnqueueTarget) {
+    const devices = await this.activeDeviceIds(target.branchId);
+    if (devices.length === 0) return;
+    await this.prisma.faceIdCommand.updateMany({
+      where: { deviceId: { in: devices }, employeeNo: target.employeeNo, status: { in: ["PENDING", "SENT"] }, type: { not: "DELETE_USER" } },
+      data: { status: "FAILED", lastError: CANCELLED_BY_DELETE, completedAt: new Date() },
+    });
+    for (const deviceId of devices) {
+      await this.upsertPending(deviceId, target, "DELETE_USER", { employeeNo: target.employeeNo });
+    }
   }
 
   /** Navbatda (PENDING) xuddi shunday buyruq bo'lsa — payload yangilanadi, aks holda yangisi. */
@@ -253,6 +312,7 @@ export class FaceIdCommandsService {
         branchId: target.branchId,
         deviceId,
         employeeId: target.employeeId,
+        childId: target.childId,
         employeeNo: target.employeeNo,
         type,
         payload,
@@ -262,19 +322,17 @@ export class FaceIdCommandsService {
 
   /** "Yuz ro'yxati" sahifasida xodim shu qurilma bo'yicha ko'rinib tursin. */
   private async ensureEnrollment(deviceId: string, target: EnqueueTarget) {
-    if (!target.employeeId) return;
-    const existing = await this.prisma.faceEnrollment.findFirst({
-      where: { deviceId, employeeId: target.employeeId },
-      select: { id: true },
-    });
+    const owner = target.employeeId ? { employeeId: target.employeeId } : target.childId ? { childId: target.childId } : null;
+    if (!owner) return;
+    const existing = await this.prisma.faceEnrollment.findFirst({ where: { deviceId, ...owner }, select: { id: true } });
     if (existing) return;
     await this.prisma.faceEnrollment.create({
       data: {
         organizationId: target.organizationId,
         branchId: target.branchId,
         deviceId,
-        personType: "EMPLOYEE",
-        employeeId: target.employeeId,
+        personType: target.employeeId ? "EMPLOYEE" : "CHILD",
+        ...owner,
         status: "PENDING",
       },
     });
@@ -283,14 +341,15 @@ export class FaceIdCommandsService {
   /** Buyruq natijasini "Yuz ro'yxati"dagi holatga ko'chiradi. */
   private async syncEnrollment(
     deviceId: string,
-    employeeId: string | null,
+    person: { employeeId: string | null; childId: string | null },
     type: FaceIdCommandType,
     outcome: "DONE" | "FAILED",
     error: string | null,
     now: Date,
   ) {
-    if (!employeeId) return;
-    const where = { deviceId, employeeId };
+    const owner = person.employeeId ? { employeeId: person.employeeId } : person.childId ? { childId: person.childId } : null;
+    if (!owner) return;
+    const where = { deviceId, ...owner };
     if (outcome === "FAILED") {
       await this.prisma.faceEnrollment.updateMany({ where, data: { status: "FAILED", notes: error } });
       return;

@@ -79,11 +79,11 @@ export default function FaceIdDevicesPage({ params }: { params: Promise<{ slug: 
   });
 
   const syncMutation = useMutation({
-    mutationFn: (device: FaceIdDevice) => api.post<{ employees: number }>(`/app/face-id/devices/${device.id}/sync`, {}),
+    mutationFn: (device: FaceIdDevice) => api.post<{ employees: number; children: number }>(`/app/face-id/devices/${device.id}/sync`, {}),
     onSuccess: (result, device) => {
       queryClient.invalidateQueries({ queryKey: ["face-id-devices", slug] });
       queryClient.invalidateQueries({ queryKey: ["face-id-enrollments", slug] });
-      setNotice(`"${device.name}": ${result.employees} ta xodim qurilmaga yuborish navbatiga qo'yildi`);
+      setNotice(`"${device.name}": ${result.employees} ta xodim va ${result.children} ta bola qurilmaga yuborish navbatiga qo'yildi`);
     },
     onError: (err) => setNotice(err instanceof ApiError ? err.message : "Sinxronlab bo'lmadi"),
   });
@@ -191,7 +191,7 @@ export default function FaceIdDevicesPage({ params }: { params: Promise<{ slug: 
                           disabled={device.status !== "ACTIVE"}
                           loading={syncMutation.isPending && syncMutation.variables?.id === device.id}
                           onClick={() => syncMutation.mutate(device)}
-                          title="Filialdagi barcha faol xodimlarni qurilmaga qayta yuborish"
+                          title="Filialdagi barcha faol xodim va bolalarni qurilmaga qayta yuborish"
                         >
                           Sinxronlash
                         </Button>

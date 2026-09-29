@@ -60,7 +60,7 @@ export class ParentService {
     const [attendance, report, menu, menuPhotos] = await Promise.all([
       this.prisma.attendance.findUnique({
         where: { childId_date: { childId: child.id, date: dateOnly } },
-        select: { status: true, note: true, parentReason: true },
+        select: { status: true, note: true, parentReason: true, checkInTime: true, checkOutTime: true },
       }),
       this.prisma.dailyReport.findUnique({
         where: { childId_date: { childId: child.id, date: dateOnly } },
@@ -95,7 +95,14 @@ export class ParentService {
         avatarUpdatedAt: child.avatarUpdatedAt?.toISOString() ?? null,
       },
       attendance: attendance
-        ? { status: attendance.status, note: attendance.note, parentReason: attendance.parentReason }
+        ? {
+            status: attendance.status,
+            note: attendance.note,
+            parentReason: attendance.parentReason,
+            // Yuz tanish terminali yozgan kelish/ketish vaqti ("HH:MM")
+            checkInTime: attendance.checkInTime,
+            checkOutTime: attendance.checkOutTime,
+          }
         : null,
       report,
       menu,

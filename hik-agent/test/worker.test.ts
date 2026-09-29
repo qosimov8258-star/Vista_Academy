@@ -103,6 +103,20 @@ describe("DeviceWorker (mock ISAPI + mock ERP)", () => {
     assert.deepEqual(face.meta, { faceLibType: "blackFD", FDID: "1", FPID: "1001" });
     assert.equal(isapi.users.has("1003"), false);
     assert.equal(isapi.faces.has("1003"), false);
+    // o'chirish fonda tugashi kutilgan (DeleteProcess so'ralgan)
+    assert.ok(isapi.calls.includes("GET /ISAPI/AccessControl/UserInfoDetail/DeleteProcess"));
+  });
+
+  it("bola C-prefiksli raqam bilan qo'shiladi va o'chiriladi", async () => {
+    erp.commands = [{ id: "c-child", type: "ADD_OR_UPDATE_USER", employeeNo: "C14732", payload: { employeeNo: "C14732", name: "Karimov Ali" }, attempts: 1 }];
+    const worker = makeWorker();
+    await worker.tick();
+    assert.equal(isapi.users.get("C14732")?.name, "Karimov Ali");
+    erp.commands = [{ id: "c-child-del", type: "DELETE_USER", employeeNo: "C14732", payload: { employeeNo: "C14732" }, attempts: 1 }];
+    clock += 10_000;
+    await worker.tick();
+    assert.equal(isapi.users.has("C14732"), false);
+    assert.deepEqual(erp.acks.map((a) => [a.id, a.success]), [["c-child", true], ["c-child-del", true]]);
   });
 
   it("yuz allaqachon bo'lsa — o'chirib, qayta yuklaydi", async () => {
