@@ -11,7 +11,7 @@ export default function ApplicationPage() {
   return (
     <main className="relative z-0 flex min-h-dvh flex-col overflow-hidden px-6 pt-8 pb-32">
       <Image
-        src="/ariza.jpeg"
+        src="/homepage/ariza.jpeg"
         alt=""
         fill
         priority

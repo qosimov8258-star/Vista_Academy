@@ -25,7 +25,7 @@ export function MealsIntro() {
 
       <Reveal direction="right" delay={120} className="order-1 overflow-hidden rounded-[var(--radius-xl)] shadow-[var(--shadow-raised)] lg:order-2">
         <Image
-          src="/taom/taoms.jpeg"
+          src="/taom/taoms.jpg"
           alt="Bolalar bog'chada sog'lom taom yemoqda"
           width={600}
           height={400}
