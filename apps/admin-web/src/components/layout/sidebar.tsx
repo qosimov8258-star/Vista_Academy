@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useParams, useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { useAppPathname } from "@/lib/tenant-host-context";
 import { useEffect, useRef, useState, type SyntheticEvent } from "react";
 import { useTranslations } from "next-intl";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -75,7 +76,7 @@ function Badge({ value, tone = "warning" }: { value: number; tone?: NavLeaf["bad
 const RAIL_HINT_KEY = "bogcha:director-rail";
 
 export function Sidebar({ slug }: { slug: string }) {
-  const pathname = usePathname();
+  const pathname = useAppPathname();
   const router = useRouter();
   const t = useTranslations("sidebar");
   const queryClient = useQueryClient();

@@ -58,13 +58,15 @@
   },
   "login": {
     "title": "Welcome!",
-    "subtitle": "Enter your details to sign in to the admin panel.",
-    "loginLabel": "Login",
+    "subtitle": "Staff sign in with their login, parents with the phone number linked to their child.",
+    "loginLabel": "Login or phone",
+    "loginPlaceholder": "name.surname or +998 90 123 45 67",
     "passwordLabel": "Password",
     "submit": "Sign in",
     "forgotPassword": "Forgot your password? Contact the organization's Super Admin.",
     "loginRequired": "Login is required",
     "passwordMin": "At least 8 characters",
+    "passwordRequired": "Enter your password",
     "unexpectedError": "An unexpected error occurred",
     "hero": {
       "status": "All systems running",
