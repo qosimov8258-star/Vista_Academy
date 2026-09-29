@@ -130,6 +130,8 @@ model Organization {
   tales                  Tale[]
   faceIdDevices          FaceIdDevice[]
   faceEnrollments        FaceEnrollment[]
+  faceIdEvents           FaceIdEvent[]
+  faceIdCommands         FaceIdCommand[]
 
   @@map("organizations")
 }
@@ -307,6 +309,8 @@ model Branch {
   tales                  Tale[]
   faceIdDevices          FaceIdDevice[]
   faceEnrollments        FaceEnrollment[]
+  faceIdEvents           FaceIdEvent[]
+  faceIdCommands         FaceIdCommand[]
 
   @@unique([organizationId, name])
   @@unique([organizationId, slug])
@@ -542,6 +546,12 @@ model Employee {
   // farrosh tizimga kirmaydi, shuning uchun bog'lanish ixtiyoriy.
   tenantUserId String? @unique @map("tenant_user_id")
 
+  // Yuz tanish terminalidagi (Hikvision ISAPI) xodim raqami. UUID qurilmaga
+  // sig'maydi (≤32 belgi, ayrim proshivkalar faqat raqam qabul qiladi) va
+  // qurilma ekranida ham ko'rinadi, shuning uchun alohida global raqam:
+  // 1001, 1002, … — baza ketma-ketligidan (`employee_no_seq`) avtomatik.
+  employeeNo String @unique @default(dbgenerated("(nextval('employee_no_seq'::regclass))::text")) @map("employee_no")
+
   organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   branch         Branch               @relation(fields: [branchId], references: [id], onDelete: Cascade)
   tenantUser     TenantUser?          @relation(fields: [tenantUserId], references: [id], onDelete: SetNull)
@@ -557,6 +567,8 @@ model Employee {
   weeklyCoinAssessments WeeklyCoinAssessment[]
   notifications   EmployeeNotification[]
   faceEnrollments FaceEnrollment[]
+  faceIdEvents    FaceIdEvent[]
+  faceIdCommands  FaceIdCommand[]
 
   @@index([organizationId, branchId])
   @@map("employees")
@@ -1829,9 +1841,11 @@ model PayrollEntry {
 
 // ---------------------------------------------------------------------------
 // Face ID (Hikvision DS-K1T342MX turniket terminali) — xodim va bolalarning
-// yuz ro'yxati boshqaruvi. Bu bosqichda faqat ma'lumotlarni saqlash: qurilma
-// bilan haqiqiy tarmoq/ISAPI ulanishi keyingi bosqichda qo'shiladi, shuning
-// uchun bu yerda faqat qurilma katalogi va ro'yxatga olish holati saqlanadi.
+// yuz ro'yxati boshqaruvi. Qurilma obyektning lokal tarmog'ida (NAT ortida),
+// server unga to'g'ridan-to'g'ri chiqa olmaydi, shuning uchun sxema:
+//   Qurilma ⇄ (LAN, ISAPI) ⇄ hik-agent ⇄ (HTTPS, /agent/*) ⇄ ERP
+// Agent qurilmaga o'z tokeni bilan ulanadi (bazada faqat hash), voqealarni
+// yuboradi va navbatdagi buyruqlarni (xodim qo'shish, yuz, o'chirish) oladi.
 // ---------------------------------------------------------------------------
 
 enum FaceIdDeviceStatus {
@@ -1858,8 +1872,19 @@ model FaceIdDevice {
   branchId       String             @map("branch_id")
   name           String
   model          String             @default("DS-K1T342MX")
-  serialNumber   String?            @map("serial_number")
+  serialNumber   String?            @unique @map("serial_number")
   ipAddress      String?            @map("ip_address")
+  // ISAPI (HTTP) porti va qurilma administratori logini. Parol qaytarib
+  // olinadigan holda shifrlanadi (AES-256-GCM, kalit — DEVICE_SECRET_KEY):
+  // agent uni qurilmaga Digest auth bilan ulanish uchun oladi.
+  port              Int       @default(80)
+  username          String?
+  passwordEncrypted Bytes?    @map("password_encrypted")
+  // Agent tokenining sha256 hash'i. Tokenning o'zi faqat yaratilganda bir
+  // marta ko'rsatiladi.
+  agentTokenHash    String?   @unique @map("agent_token_hash")
+  // Agent oxirgi marta murojaat qilgan payt — "onlayn" belgisi shundan.
+  lastSeenAt        DateTime? @map("last_seen_at")
   location       String?
   status         FaceIdDeviceStatus @default(ACTIVE)
   notes          String?
@@ -1869,6 +1894,8 @@ model FaceIdDevice {
   organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   branch       Branch           @relation(fields: [branchId], references: [id], onDelete: Cascade)
   enrollments  FaceEnrollment[]
+  events       FaceIdEvent[]
+  commands     FaceIdCommand[]
 
   @@index([organizationId])
   @@index([branchId])
@@ -1901,6 +1928,93 @@ model FaceEnrollment {
   @@index([employeeId])
   @@index([childId])
   @@map("face_enrollments")
+}
+
+/**
+ * Qurilmadan kelgan bitta kirish voqeasi (ISAPI AcsEvent). Agent bir xil
+ * voqeani qayta yuborsa (internet uzilib, navbatdan qayta ketsa) takror
+ * yozilmaydi. `serialNo` qurilma zavod holatiga qaytarilsa 1 dan qayta
+ * boshlanadi — shuning uchun unikallik vaqt bilan birga.
+ */
+model FaceIdEvent {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  branchId       String   @map("branch_id")
+  deviceId       String   @map("device_id")
+  serialNo       Int      @map("serial_no")
+  // Qurilmadagi xodim raqami (Employee.employeeNo). Xodim topilmasa ham
+  // voqea saqlanadi — keyin qo'lda tekshirish uchun.
+  employeeNo     String?  @map("employee_no")
+  employeeId     String?  @map("employee_id")
+  eventTime      DateTime @map("event_time")
+  major          Int
+  minor          Int
+  verifyMode     String?  @map("verify_mode")
+  // Qurilmaning LAN manzilidagi surat — serverdan ochilmaydi, faqat ma'lumot uchun.
+  pictureUrl     String?  @map("picture_url")
+  raw            Json
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  device       FaceIdDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  employee     Employee?    @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+
+  @@unique([deviceId, serialNo, eventTime])
+  @@index([employeeId, eventTime])
+  @@index([branchId, eventTime])
+  @@map("face_id_events")
+}
+
+enum FaceIdCommandType {
+  ADD_OR_UPDATE_USER
+  SET_FACE
+  DELETE_USER
+}
+
+enum FaceIdCommandStatus {
+  PENDING
+  SENT
+  DONE
+  FAILED
+}
+
+/**
+ * Agent qurilmada bajarishi kerak bo'lgan buyruq. Agent PENDING'larni oladi
+ * (SENT bo'ladi), bajarib natijasini qaytaradi (DONE yoki qayta PENDING /
+ * urinishlar tugasa FAILED). Javob kelmay qolgan SENT buyruq bir muddatdan
+ * keyin qayta navbatga qaytadi. `seq` — bir xodimning buyruqlari (avval
+ * xodim, keyin yuz) aynan yaratilish tartibida bajarilishi uchun.
+ */
+model FaceIdCommand {
+  id             String              @id @default(uuid())
+  seq            Int                 @default(autoincrement())
+  organizationId String              @map("organization_id")
+  branchId       String              @map("branch_id")
+  deviceId       String              @map("device_id")
+  // Xodim o'chirilgandan keyin ham DELETE_USER bajarilishi kerak — shuning
+  // uchun raqami alohida saqlanadi, bog'lanish esa SetNull.
+  employeeId     String?             @map("employee_id")
+  employeeNo     String              @map("employee_no")
+  type           FaceIdCommandType
+  payload        Json
+  status         FaceIdCommandStatus @default(PENDING)
+  attempts       Int                 @default(0)
+  lastError      String?             @map("last_error")
+  sentAt         DateTime?           @map("sent_at")
+  completedAt    DateTime?           @map("completed_at")
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  device       FaceIdDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  employee     Employee?    @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+
+  @@unique([seq])
+  @@index([deviceId, status, seq])
+  @@index([employeeNo])
+  @@map("face_id_commands")
 }
 
 // ---------------------------------------------------------------------------

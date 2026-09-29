@@ -8,15 +8,20 @@ const AUTH_TAG_LENGTH = 16;
  * olinadigan holda saqlash uchun ishlatiladi (auth esa argon2 hash orqali,
  * bu yerga bog'liq emas). Kalit atrof-muhitdan keladi — bazadan tashqarida,
  * shuning uchun baza dump'i yolg'iz o'zi parollarni ochib bermaydi.
+ *
+ * Face ID qurilmalari parollari alohida kalit bilan shifrlanadi
+ * (`DEVICE_SECRET_KEY`) — bittasi sizib chiqsa, ikkinchisi ochilmasin.
  */
-function requireEncryptionKey(): Buffer {
-  const raw = process.env.EMPLOYEE_SECRET_KEY;
+export type SecretKeyEnv = "EMPLOYEE_SECRET_KEY" | "DEVICE_SECRET_KEY";
+
+function requireEncryptionKey(keyEnv: SecretKeyEnv): Buffer {
+  const raw = process.env[keyEnv];
   if (!raw) {
-    throw new Error("EMPLOYEE_SECRET_KEY env var is required");
+    throw new Error(`${keyEnv} env var is required`);
   }
   const key = Buffer.from(raw, "hex");
   if (key.length !== 32) {
-    throw new Error("EMPLOYEE_SECRET_KEY must be a 64-character hex string (32 bytes)");
+    throw new Error(`${keyEnv} must be a 64-character hex string (32 bytes)`);
   }
   return key;
 }
@@ -26,8 +31,8 @@ function requireEncryptionKey(): Buffer {
  * Yangi `ArrayBuffer`ga tayangan `Uint8Array` qaytariladi (`Buffer.concat`
  * emas) — Prisma'ning `Bytes` maydoni aynan shu generic turni kutadi.
  */
-export function encryptSecret(plainText: string): Uint8Array<ArrayBuffer> {
-  const key = requireEncryptionKey();
+export function encryptSecret(plainText: string, keyEnv: SecretKeyEnv = "EMPLOYEE_SECRET_KEY"): Uint8Array<ArrayBuffer> {
+  const key = requireEncryptionKey(keyEnv);
   const iv = randomBytes(IV_LENGTH);
   const cipher = createCipheriv("aes-256-gcm", key, iv);
   const ciphertext = Buffer.concat([cipher.update(plainText, "utf8"), cipher.final()]);
@@ -40,8 +45,8 @@ export function encryptSecret(plainText: string): Uint8Array<ArrayBuffer> {
   return out;
 }
 
-export function decryptSecret(payload: Uint8Array): string {
-  const key = requireEncryptionKey();
+export function decryptSecret(payload: Uint8Array, keyEnv: SecretKeyEnv = "EMPLOYEE_SECRET_KEY"): string {
+  const key = requireEncryptionKey(keyEnv);
   const iv = payload.subarray(0, IV_LENGTH);
   const authTag = payload.subarray(IV_LENGTH, IV_LENGTH + AUTH_TAG_LENGTH);
   const ciphertext = payload.subarray(IV_LENGTH + AUTH_TAG_LENGTH);

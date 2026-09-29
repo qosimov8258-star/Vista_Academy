@@ -11,6 +11,7 @@ import { TenantAuthenticatedUser, TenantScope, requireOperationalScope, toTenant
 import { verifyRevealToken } from "../webauthn/reveal-token";
 import { AuditLogService } from "../audit-log/audit-log.service";
 import { FaceIdService } from "../face-id/face-id.service";
+import { FaceIdCommandsService } from "../face-id/face-id-commands.service";
 import { CreateEmployeeDto, EmployeeAccountDto } from "./dto/create-employee.dto";
 import { UpdateEmployeeCredentialsDto } from "./dto/update-employee-credentials.dto";
 import { CreateEmployeeTopicDto } from "./dto/create-employee-topic.dto";
@@ -77,6 +78,7 @@ export class EmployeesService {
     private readonly jwt: JwtService,
     private readonly auditLog: AuditLogService,
     private readonly faceIdService: FaceIdService,
+    private readonly faceIdCommands: FaceIdCommandsService,
   ) {}
 
   async create(caller: TenantAuthenticatedUser, dto: CreateEmployeeDto) {
@@ -128,6 +130,8 @@ export class EmployeesService {
         { organizationId: scope.organizationId, branchId },
         { personType: "EMPLOYEE", employeeId: employee.id },
       );
+      // Filialdagi yuz tanish terminallariga xodimni qo'shish buyrug'i (agent bajaradi)
+      await this.faceIdCommands.enqueueEmployeeSync(employee.id);
       return { employee, credentials: null };
     }
 
@@ -183,6 +187,8 @@ export class EmployeesService {
         { organizationId: scope.organizationId, branchId },
         { personType: "EMPLOYEE", employeeId: employee.id },
       );
+      // Filialdagi yuz tanish terminallariga xodimni qo'shish buyrug'i (agent bajaradi)
+      await this.faceIdCommands.enqueueEmployeeSync(employee.id);
       return { employee, credentials: { login, password } };
     } catch (err) {
       throw this.translateLoginConflict(err);
@@ -452,7 +458,7 @@ export class EmployeesService {
     const branchId = requireOperationalScope(scope);
     const employee = await this.prisma.employee.findFirst({
       where: { id, organizationId: scope.organizationId, branchId },
-      select: { id: true, fullName: true, tenantUserId: true },
+      select: { id: true, fullName: true, tenantUserId: true, employeeNo: true, organizationId: true, branchId: true },
     });
     if (!employee) {
       throw new NotFoundException("Xodim topilmadi");
@@ -470,6 +476,12 @@ export class EmployeesService {
       entityId: id,
       branchId,
       summary: `${employee.fullName} xodimi o'chirildi`,
+    });
+    // Yuz tanish terminallaridan ham o'chiriladi (raqami oldindan olingan — xodim yozuvi endi yo'q)
+    await this.faceIdCommands.enqueueDelete({
+      organizationId: employee.organizationId,
+      branchId: employee.branchId,
+      employeeNo: employee.employeeNo,
     });
     return { id: employee.id };
   }
@@ -502,6 +514,8 @@ export class EmployeesService {
       data: { avatar: buffer, avatarMimeType: mimeType, avatarUpdatedAt: new Date() },
       select: { avatarUpdatedAt: true },
     });
+    // Yangi surat yuz tanish terminallariga ham yuboriladi
+    await this.faceIdCommands.enqueueFace(employee.id);
     return { avatarUpdatedAt: updated.avatarUpdatedAt };
   }
 
