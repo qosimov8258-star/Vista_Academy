@@ -241,6 +241,12 @@ export function TeacherAttendance({ slug }: { slug: string }) {
                       <p className="truncate text-[16px] leading-snug text-[var(--color-text)]">{child.fullName}</p>
                       {flags.length > 0 ? (
                         <p className="truncate text-[13px] font-medium text-[var(--color-danger)]">{flags.join(" · ")}</p>
+                      ) : child.checkInTime ? (
+                        // Yuz tanish terminali qayd etgan vaqt
+                        <p className="truncate text-[13px] font-medium text-[var(--color-success)]">
+                          Face ID · {child.checkInTime}
+                          {child.checkOutTime ? ` – ${child.checkOutTime}` : ""}
+                        </p>
                       ) : (
                         child.groupName && <p className="truncate text-[13px] text-[var(--color-text-muted)]">{child.groupName}</p>
                       )}
