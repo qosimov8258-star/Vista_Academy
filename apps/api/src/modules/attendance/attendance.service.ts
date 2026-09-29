@@ -213,6 +213,9 @@ export class AttendanceService {
         note: recordByChild.get(c.id)?.note ?? null,
         parentReason: recordByChild.get(c.id)?.parentReason ?? null,
         contactRequestedAt: recordByChild.get(c.id)?.contactRequestedAt?.toISOString() ?? null,
+        // Yuz tanish terminali yozgan vaqt ("HH:MM") — qo'lda belgilanganda null
+        checkInTime: recordByChild.get(c.id)?.checkInTime ?? null,
+        checkOutTime: recordByChild.get(c.id)?.checkOutTime ?? null,
       })),
     };
   }

@@ -41,6 +41,9 @@ export class MockIsapi {
   readonly calls: string[] = [];
   /** Shu raqamli xodim qo'shilganda qurilma xato qaytaradi */
   rejectEmployeeNo: string | null = null;
+  /** Haqiqiy terminaldagidek: o'chirish fonda, shuncha so'rovdan keyin tugaydi */
+  deletePollsUntilDone = 2;
+  private pendingDelete: { employeeNos: string[]; polls: number } | null = null;
   private readonly nonces = new Set<string>();
   private server!: http.Server;
   port = 0;
@@ -150,11 +153,20 @@ export class MockIsapi {
         return this.ok(res);
       }
       case "PUT /ISAPI/AccessControl/UserInfoDetail/Delete": {
-        for (const { employeeNo } of parse().UserInfoDetail.EmployeeNoList) {
-          this.users.delete(employeeNo);
-          this.faces.delete(employeeNo);
-        }
+        // Darhol OK, lekin o'chirish DeleteProcess so'ralganda tugaydi
+        this.pendingDelete = { employeeNos: parse().UserInfoDetail.EmployeeNoList.map((e: { employeeNo: string }) => e.employeeNo), polls: 0 };
         return this.ok(res);
+      }
+      case "GET /ISAPI/AccessControl/UserInfoDetail/DeleteProcess": {
+        const job = this.pendingDelete;
+        if (job && ++job.polls >= this.deletePollsUntilDone) {
+          for (const no of job.employeeNos) {
+            this.users.delete(no);
+            this.faces.delete(no);
+          }
+          this.pendingDelete = null;
+        }
+        return this.json(res, 200, { UserInfoDetailDeleteProcess: { status: this.pendingDelete ? "processing" : "success" } });
       }
       case "POST /ISAPI/Intelligent/FDLib/FaceDataRecord": {
         const boundary = /boundary=(.+)$/.exec(req.headers["content-type"] ?? "")?.[1];

@@ -120,7 +120,7 @@ describe("FaceIdCommandsService — buyruqlar navbati", () => {
     await prisma.employee.create({ data: { organizationId: ORG, branchId: BRANCH, employeeNo: "1002", fullName: "Suratsiz" } });
     await prisma.employee.create({ data: { organizationId: ORG, branchId: BRANCH, employeeNo: "1003", fullName: "Bo'shagan", isActive: false } });
     const result = await service.enqueueFullSync(device);
-    expect(result.employees).toBe(2);
+    expect(result).toEqual({ employees: 2, children: 0 });
     expect(commands().map((c) => `${c.employeeNo}:${c.type}`)).toEqual(["1001:ADD_OR_UPDATE_USER", "1001:SET_FACE", "1002:ADD_OR_UPDATE_USER"]);
   });
 
@@ -130,5 +130,59 @@ describe("FaceIdCommandsService — buyruqlar navbati", () => {
     const image = await service.faceImage(device, cmd.id);
     expect(image.mimeType).toBe("image/jpeg");
     expect(image.data.toString()).toBe("jpeg");
+  });
+});
+
+describe("FaceIdCommandsService — bolalar", () => {
+  let prisma: FakePrisma;
+  let service: FaceIdCommandsService;
+  let device: AgentDevice;
+  let childId: string;
+
+  beforeEach(async () => {
+    prisma = createFakePrisma();
+    service = new FaceIdCommandsService(prisma as never);
+    const d = await prisma.faceIdDevice.create({ data: { organizationId: ORG, branchId: BRANCH, name: "Kirish" } });
+    device = { id: d.id, organizationId: ORG, branchId: BRANCH, name: "Kirish" };
+    const c = await prisma.child.create({
+      data: { organizationId: ORG, branchId: BRANCH, publicId: 14732, fullName: "Karimov Ali", avatar: Buffer.from("bola-jpeg"), avatarMimeType: "image/jpeg", avatarUpdatedAt: new Date() },
+    });
+    childId = c.id;
+  });
+
+  const commands = () => prisma.faceIdCommand.rows;
+
+  it("bola terminalga C-prefiksli raqam bilan qo'shiladi (yuzi bilan), yuz ro'yxatida CHILD", async () => {
+    await service.enqueueChildSync(childId);
+    expect(commands().map((c) => `${c.employeeNo}:${c.type}`)).toEqual(["C14732:ADD_OR_UPDATE_USER", "C14732:SET_FACE"]);
+    expect(commands()[0]).toMatchObject({ childId, employeeId: null, payload: { employeeNo: "C14732", name: "Karimov Ali" } });
+    expect(prisma.faceEnrollment.rows[0]).toMatchObject({ personType: "CHILD", childId });
+  });
+
+  it("nofaol qilingan bola terminaldan o'chiriladi, navbatdagi qo'shish bekor", async () => {
+    await service.enqueueChildSync(childId);
+    prisma.child.rows[0].status = "INACTIVE";
+    await service.enqueueChildSync(childId);
+    const byType = Object.fromEntries(commands().map((c) => [c.type, c]));
+    expect(byType.ADD_OR_UPDATE_USER.status).toBe("FAILED");
+    expect(byType.DELETE_USER).toMatchObject({ status: "PENDING", employeeNo: "C14732" });
+  });
+
+  it("SET_FACE bajarilsa bola yuzi ro'yxatda REGISTERED; surat agentga beriladi", async () => {
+    await service.enqueueChildSync(childId);
+    const sent = await service.dispatch(device, 10);
+    const face = sent.find((c) => c.type === "SET_FACE")!;
+    expect((await service.faceImage(device, face.id)).data.toString()).toBe("bola-jpeg");
+    for (const c of sent) await service.ack(device, c.id, { success: true });
+    expect(prisma.faceEnrollment.rows[0].status).toBe("REGISTERED");
+  });
+
+  it("to'liq sinxronlash nofaol bolani qo'shmaydi, karantindagini qo'shadi", async () => {
+    await prisma.child.create({ data: { organizationId: ORG, branchId: BRANCH, publicId: 20001, fullName: "Ketgan", status: "INACTIVE" } });
+    await prisma.child.create({ data: { organizationId: ORG, branchId: BRANCH, publicId: 20002, fullName: "Karantinda", status: "QUARANTINED" } });
+    const result = await service.enqueueFullSync(device);
+    expect(result).toEqual({ employees: 0, children: 2 });
+    expect(commands().some((c) => c.employeeNo === "C20001")).toBe(false);
+    expect(commands().some((c) => c.employeeNo === "C20002")).toBe(true);
   });
 });

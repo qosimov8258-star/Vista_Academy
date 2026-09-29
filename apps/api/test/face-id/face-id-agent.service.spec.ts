@@ -100,3 +100,65 @@ describe("FaceIdAgentService — voqealar", () => {
     expect(prisma.faceIdDevice.rows[0].lastSeenAt).toBeInstanceOf(Date);
   });
 });
+
+describe("FaceIdAgentService — bolalar", () => {
+  let prisma: FakePrisma;
+  let service: FaceIdAgentService;
+  let device: AgentDevice;
+  let childId: string;
+  const DAY = new Date("2026-09-29T00:00:00.000Z");
+
+  beforeEach(async () => {
+    prisma = createFakePrisma();
+    service = new FaceIdAgentService(prisma as never);
+    await prisma.branch.create({ data: { id: BRANCH, timezone: "Asia/Tashkent", openTime: "08:00" } });
+    const d = await prisma.faceIdDevice.create({ data: { organizationId: ORG, branchId: BRANCH, name: "Kirish" } });
+    device = { id: d.id, organizationId: ORG, branchId: BRANCH, name: "Kirish" };
+    const c = await prisma.child.create({ data: { organizationId: ORG, branchId: BRANCH, publicId: 14732, fullName: "Karimov Ali" } });
+    childId = c.id;
+  });
+
+  const records = () => prisma.attendance.rows.filter((r) => r.childId === childId);
+
+  it("C-raqamli voqea bolaga bog'lanadi: Keldi + 5 coin, kelish/ketish vaqti bilan", async () => {
+    const result = await service.ingestEvents(device, [
+      event(1, "C14732", "2026-09-29T08:12:00+05:00"),
+      event(2, "C14732", "2026-09-29T17:40:00+05:00"),
+    ]);
+    expect(result.attendanceUpdated).toBe(1);
+    expect(prisma.faceIdEvent.rows[0].childId).toBe(childId);
+    expect(prisma.faceIdEvent.rows[0].employeeId).toBeNull();
+    expect(records()).toHaveLength(1);
+    expect(records()[0]).toMatchObject({ status: "PRESENT", checkInTime: "08:12", checkOutTime: "17:40", note: null });
+    expect(prisma.coinTransaction.rows).toHaveLength(1);
+    expect(prisma.coinTransaction.rows[0]).toMatchObject({ childId, amount: 5, source: "ATTENDANCE" });
+    expect(records()[0].coinTransactionId).toBe(prisma.coinTransaction.rows[0].id);
+  });
+
+  it("takror voqea yoki ikkinchi tanish coin'ni ikki marta bermaydi", async () => {
+    await service.ingestEvents(device, [event(1, "C14732", "2026-09-29T08:12:00+05:00")]);
+    await service.ingestEvents(device, [event(1, "C14732", "2026-09-29T08:12:00+05:00"), event(2, "C14732", "2026-09-29T08:13:00+05:00")]);
+    expect(records()).toHaveLength(1);
+    expect(prisma.coinTransaction.rows).toHaveLength(1);
+  });
+
+  it("tarbiyachi belgilagan/tuzatgan holat ustun: terminal faqat vaqtni yozadi", async () => {
+    await prisma.attendance.create({ data: { childId, branchId: BRANCH, date: DAY, status: "ABSENT", note: "Kasal bo'lib qoldi" } });
+    await service.ingestEvents(device, [event(1, "C14732", "2026-09-29T09:05:00+05:00")]);
+    expect(records()).toHaveLength(1);
+    expect(records()[0]).toMatchObject({ status: "ABSENT", note: "Kasal bo'lib qoldi", checkInTime: "09:05" });
+    expect(prisma.coinTransaction.rows).toHaveLength(0);
+  });
+
+  it("bolalarga kechikish avtomatik qo'yilmaydi", async () => {
+    await service.ingestEvents(device, [event(1, "C14732", "2026-09-29T10:30:00+05:00")]);
+    expect(records()[0].status).toBe("PRESENT");
+  });
+
+  it("boshqa tashkilotning bolasi yoki noma'lum C-raqam bog'lanmaydi", async () => {
+    await prisma.child.create({ data: { organizationId: "org-2", branchId: "b-2", publicId: 55555, fullName: "Begona" } });
+    await service.ingestEvents(device, [event(1, "C55555", "2026-09-29T08:00:00+05:00"), event(2, "C99999", "2026-09-29T08:01:00+05:00")]);
+    expect(prisma.faceIdEvent.rows.every((r) => r.childId === null)).toBe(true);
+    expect(prisma.attendance.rows).toHaveLength(0);
+  });
+});
