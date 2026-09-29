@@ -61,6 +61,20 @@ export function toTenantScope(user: TenantAuthenticatedUser): TenantScope {
 }
 
 /**
+ * O'qish (ro'yxat) so'rovlarida qaysi filial(lar) qaytarilishi. Moliyachi
+ * (FINANCE) o'ziga biriktirilgan filialdan qat'i nazar butun tarmoqni
+ * o'qiy oladi — `branchId` unga faqat kassa/yozish operatsiyalari uchun
+ * kerak. Boshqa filial darajasidagi rollar (masalan BRANCH_ADMIN) esa
+ * faqat o'z filialini ko'radi.
+ */
+export function resolveReadBranchFilter(scope: TenantScope, queryBranchId?: string): string | undefined {
+  if (scope.role === "FINANCE") {
+    return queryBranchId;
+  }
+  return scope.branchId ?? queryBranchId;
+}
+
+/**
  * Asosiy shart: chaqiruvchi filialga biriktirilgan bo'lishi kerak.
  * NETWORK_ADMIN ("Super Admin") tashkilot bo'ylab faqat kuzatadi, shuning
  * uchun bu yerda rad etiladi. To'g'ridan-to'g'ri emas, quyidagi uchta

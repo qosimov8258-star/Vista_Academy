@@ -1,10 +1,18 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
-import { TenantAuthenticatedUser, TenantScope, requireOperationalScope, toTenantScope } from "../iam/tenant-auth.types";
+import {
+  TenantAuthenticatedUser,
+  TenantScope,
+  requireOperationalScope,
+  resolveReadBranchFilter,
+  toTenantScope,
+} from "../iam/tenant-auth.types";
 import { assertTeacherOwnsChild, resolveTeacherGroupIds, teacherChildWhere } from "../iam/teacher-scope";
 import { AuditLogService } from "../audit-log/audit-log.service";
 import { FaceIdService } from "../face-id/face-id.service";
+import { currentPeriodString } from "../billing/billing.service";
+import { FinanceChildStatus } from "../billing/dto/finance-query.dto";
 import { CreateChildDto } from "./dto/create-child.dto";
 import { UpdateChildDto } from "./dto/update-child.dto";
 import { ChildQueryDto } from "./dto/child-query.dto";
@@ -80,12 +88,17 @@ export class ChildrenService {
 
   async findAll(scope: TenantScope, query: ChildQueryDto) {
     const teacherGroupIds = await resolveTeacherGroupIds(this.prisma, scope);
+    const branchId = resolveReadBranchFilter(scope, query.branchId);
+    const paymentStatusFilter = query.paymentStatus
+      ? await this.resolvePaymentStatusFilter(scope, branchId, query.paymentStatus)
+      : null;
     const where: Prisma.ChildWhereInput = teacherChildWhere({
       organizationId: scope.organizationId,
-      branchId: scope.branchId ?? query.branchId,
+      branchId,
       ...(query.groupId ? { groupId: query.groupId } : {}),
       ...(query.status ? { status: query.status } : {}),
       ...(query.search ? { OR: searchFilters(query.search) } : {}),
+      ...(paymentStatusFilter ? { id: paymentStatusFilter } : {}),
     }, teacherGroupIds);
 
     const [items, total] = await this.prisma.$transaction([
@@ -250,6 +263,82 @@ export class ChildrenService {
     });
   }
 
+  /** Joriy oy hisob-fakturalarini bola bo'yicha yig'ib, billed/paid tiyin summasini qaytaradi. */
+  private async loadPaymentBuckets(
+    scope: TenantScope,
+    branchId: string | undefined,
+  ): Promise<Map<string, { billedMinor: number; paidMinor: number }>> {
+    const invoices = await this.prisma.invoice.findMany({
+      where: { organizationId: scope.organizationId, branchId, period: currentPeriodString() },
+      select: { childId: true, amount: true, discountAmount: true, paidAmount: true },
+    });
+
+    const byChild = new Map<string, { billedMinor: number; paidMinor: number }>();
+    for (const invoice of invoices) {
+      const row = byChild.get(invoice.childId) ?? { billedMinor: 0, paidMinor: 0 };
+      row.billedMinor += toMinor(invoice.amount) - toMinor(invoice.discountAmount);
+      row.paidMinor += toMinor(invoice.paidAmount);
+      byChild.set(invoice.childId, row);
+    }
+    return byChild;
+  }
+
+  /**
+   * Bola ID'larini joriy oy hisob-fakturasidagi to'lov holatiga qarab
+   * ajratadi. Hisob-fakturasi umuman yo'q bola ham "UNPAID" ga tushadi —
+   * moliyachi uchun ikkalasi ham bir xil: bu oy hali pul kelmagan.
+   */
+  private async resolvePaymentStatusFilter(
+    scope: TenantScope,
+    branchId: string | undefined,
+    status: FinanceChildStatus,
+  ): Promise<Prisma.StringFilter> {
+    const byChild = await this.loadPaymentBuckets(scope, branchId);
+
+    const paidIds: string[] = [];
+    const partialIds: string[] = [];
+    for (const [childId, { billedMinor, paidMinor }] of byChild) {
+      if (billedMinor - paidMinor <= 0) paidIds.push(childId);
+      else if (paidMinor > 0) partialIds.push(childId);
+    }
+
+    if (status === "PAID") return { in: paidIds };
+    if (status === "PARTIAL") return { in: partialIds };
+    return { notIn: [...paidIds, ...partialIds] };
+  }
+
+  /**
+   * Moliyachi paneli uchun "Bolalar" ro'yxati tepasidagi statistika: to'lagan,
+   * yarim to'lagan, umuman to'lamagan va shu filialda qatnovi to'xtatilgan
+   * (status=INACTIVE) bolalar soni. To'xtatilgan bolalar to'lov hisobiga
+   * kirmaydi — ular allaqachon alohida toifa.
+   */
+  async financeStats(scope: TenantScope, queryBranchId?: string) {
+    const branchId = resolveReadBranchFilter(scope, queryBranchId);
+    const [stopped, activeChildren, byChild] = await Promise.all([
+      this.prisma.child.count({
+        where: { organizationId: scope.organizationId, branchId, status: "INACTIVE" },
+      }),
+      this.prisma.child.findMany({
+        where: { organizationId: scope.organizationId, branchId, status: { not: "INACTIVE" } },
+        select: { id: true },
+      }),
+      this.loadPaymentBuckets(scope, branchId),
+    ]);
+
+    const activeIds = new Set(activeChildren.map((c) => c.id));
+    let paid = 0;
+    let partial = 0;
+    for (const [childId, { billedMinor, paidMinor }] of byChild) {
+      if (!activeIds.has(childId)) continue;
+      if (billedMinor - paidMinor <= 0) paid += 1;
+      else if (paidMinor > 0) partial += 1;
+    }
+    const unpaid = activeIds.size - paid - partial;
+
+    return { paid, partial, unpaid, stopped };
+  }
+
   private async requireGroup(branchId: string, groupId: string) {
     const group = await this.prisma.group.findFirst({ where: { id: groupId, branchId } });
     if (!group) {
@@ -278,4 +367,9 @@ function searchFilters(search: string): Prisma.ChildWhereInput[] {
   }
 
   return filters;
+}
+
+/** Pul tiyin (butun son) sifatida yig'iladi — Decimal qiymatlarni to'g'ridan-to'g'ri qo'shsak tiyinlar surilib ketadi. */
+function toMinor(value: Prisma.Decimal | number | null | undefined): number {
+  return Math.round(Number(value ?? 0) * 100);
 }

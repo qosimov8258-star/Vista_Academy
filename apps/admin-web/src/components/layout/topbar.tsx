@@ -40,8 +40,8 @@ export function Topbar({ slug }: { slug: string }) {
 
   return (
     <header className="hairline flex h-[60px] shrink-0 items-center gap-3 border-b border-[var(--color-separator)] bg-[var(--color-surface)]/80 px-4 backdrop-blur-[20px] md:px-6">
-      {/* Oshpaz, tarbiyachi va direktorda telefon menyusi pastki panelda — bu tugma kerak emas */}
-      {user && !chef && !teacher && user.role !== "NETWORK_ADMIN" && (
+      {/* Oshpaz, tarbiyachi, moliyachi va direktorda telefon menyusi pastki panelda — bu tugma kerak emas */}
+      {user && !chef && !teacher && user.role !== "NETWORK_ADMIN" && user.role !== "FINANCE" && (
         <button
           type="button"
           onClick={() => window.dispatchEvent(new Event("open-mobile-menu"))}

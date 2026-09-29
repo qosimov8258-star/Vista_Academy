@@ -43,6 +43,12 @@ export class ChildrenController {
     return this.childrenService.create(user, dto);
   }
 
+  /** Moliyachi "Bolalar" sahifasidagi to'lov statistikasi (to'lagan/yarim/to'lamagan/to'xtatgan). */
+  @Get("finance-stats")
+  financeStats(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query("branchId") branchId?: string) {
+    return this.childrenService.financeStats(toTenantScope(user), branchId);
+  }
+
   @Get(":id")
   findOne(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string) {
     return this.childrenService.findOne(toTenantScope(user), id);

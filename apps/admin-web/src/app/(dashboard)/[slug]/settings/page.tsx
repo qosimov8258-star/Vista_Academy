@@ -2,12 +2,11 @@
 
 import { use, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { api, ApiError } from "@/lib/api";
-import type { Branch } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { clearTenantTokens, getTenantRefreshToken } from "@/lib/tenant-session";
 import { Input, PasswordInput } from "@/components/ui/input";
@@ -18,28 +17,28 @@ import { Toast, type ToastState } from "@/components/ui/toast";
 import { PasswordChecklist, getPasswordRules } from "@/components/ui/password-checklist";
 import {
   BriefcaseIcon,
-  BuildingIcon,
   CameraIcon,
   CheckIcon,
-  ClockIcon,
-  CoinIcon,
   CopyIcon,
-  GlobeIcon,
   KeyIcon,
   LockIcon,
   LogoutIcon,
-  MoneyIcon,
-  NoteIcon,
   UserIcon,
 } from "@/components/ui/icons";
-import { ROLE_LABEL, canWriteOperational, isTeacher } from "@/lib/permissions";
+import { ROLE_LABEL, isTeacher } from "@/lib/permissions";
 import { MAX_UPLOAD_BYTES, resizeToSquare } from "@/lib/resize-image";
-import { EditBranchModal } from "@/features/branches/edit-branch-modal";
 import { ThemePickerCard } from "@/features/settings/theme-picker-card";
 import { SettingsGroup, SettingsPlainIcons, SettingsRow, SettingsSheet } from "@/features/settings/settings-ui";
 
 const profileSchema = z.object({
   fullName: z.string().trim().min(2, "To'liq ism kamida 2 belgi"),
+});
+
+const loginSchema = z.object({
+  login: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z0-9][A-Za-z0-9._-]{1,30}[A-Za-z0-9]$/, "Login lotin harf, raqam, . _ - dan iborat bo'lishi va kamida 3 belgi bo'lishi kerak"),
 });
 
 const passwordSchema = z
@@ -59,16 +58,16 @@ const passwordSchema = z
   });
 
 type ProfileValues = z.infer<typeof profileSchema>;
+type LoginValues = z.infer<typeof loginSchema>;
 type PasswordValues = z.infer<typeof passwordSchema>;
-type Sheet = "name" | "password" | null;
+type Sheet = "name" | "security" | null;
 
 const errorText = (err: unknown, fallback = "Kutilmagan xatolik") => (err instanceof ApiError ? err.message : fallback);
 
 /**
  * Sozlamalar — iOS "Sozlamalar" ilovasi uslubida: tepada profil kartasi,
- * pastda guruhlangan ro'yxatlar (Hisob, Xavfsizlik, Ko'rinish, Filial).
- * Tahrirlash alohida oynada (telefonda pastdan chiqadi) — sahifaning o'zi
- * toza va o'qishli qoladi. Barcha rollar uchun umumiy sahifa.
+ * pastda guruhlangan ro'yxatlar (Hisob, Xavfsizlik, Ko'rinish).
+ * Barcha rollar uchun umumiy sahifa.
  */
 export default function SettingsPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
@@ -76,25 +75,23 @@ export default function SettingsPage({ params }: { params: Promise<{ slug: strin
   const queryClient = useQueryClient();
   const { user, isLoading } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const canEditBranch = canWriteOperational(user?.role) && !!user?.branchId;
 
   const [sheet, setSheet] = useState<Sheet>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [editBranchOpen, setEditBranchOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-
-  const branchQuery = useQuery({
-    queryKey: ["branch", slug, user?.branchId],
-    queryFn: () => api.get<Branch>(`/app/organizations/me/branches/${user!.branchId}`),
-    enabled: !!user?.branchId,
-  });
 
   const profileForm = useForm<ProfileValues>({
     resolver: zodResolver(profileSchema),
     values: { fullName: user?.fullName ?? "" },
+  });
+
+  const loginForm = useForm<LoginValues>({
+    resolver: zodResolver(loginSchema),
+    values: { login: user?.login ?? "" },
   });
 
   const passwordForm = useForm<PasswordValues>({
@@ -109,9 +106,11 @@ export default function SettingsPage({ params }: { params: Promise<{ slug: strin
   const closeSheet = () => {
     setSheet(null);
     setNameError(null);
+    setLoginError(null);
     setPasswordError(null);
     passwordForm.reset();
     profileForm.reset();
+    loginForm.reset();
   };
 
   const profileMutation = useMutation({
@@ -122,6 +121,16 @@ export default function SettingsPage({ params }: { params: Promise<{ slug: strin
       setToast({ type: "success", message: "Ism saqlandi" });
     },
     onError: (err) => setNameError(errorText(err)),
+  });
+
+  const loginMutation = useMutation({
+    mutationFn: (values: LoginValues) => api.post("/app/profile/login", values),
+    onSuccess: () => {
+      refreshUser();
+      setLoginError(null);
+      setToast({ type: "success", message: "Login o'zgartirildi" });
+    },
+    onError: (err) => setLoginError(errorText(err)),
   });
 
   const passwordMutation = useMutation({
@@ -198,7 +207,6 @@ export default function SettingsPage({ params }: { params: Promise<{ slug: strin
   if (isLoading) return <LoadingState />;
   if (!user) return null;
 
-  const branch = branchQuery.data;
   const avatarBusy = avatarMutation.isPending || removeAvatarMutation.isPending;
 
   return (
@@ -298,54 +306,10 @@ export default function SettingsPage({ params }: { params: Promise<{ slug: strin
         </SettingsGroup>
 
         <SettingsGroup title="Xavfsizlik" footer="Parol o'zgartirilganda boshqa qurilmalardagi barcha seanslar yopiladi.">
-          <SettingsRow first icon={LockIcon} label="Parolni o'zgartirish" onClick={() => setSheet("password")} />
+          <SettingsRow first icon={LockIcon} label="Login va parolni o'zgartirish" onClick={() => setSheet("security")} />
         </SettingsGroup>
 
         <ThemePickerCard />
-
-        {user.branchId && (
-          <SettingsGroup
-            title="Filial"
-            action={
-              canEditBranch && branch ? (
-                <button
-                  type="button"
-                  onClick={() => setEditBranchOpen(true)}
-                  className="cursor-pointer text-[15px] font-medium text-[var(--color-primary)] active:opacity-60"
-                >
-                  Tahrirlash
-                </button>
-              ) : undefined
-            }
-          >
-            {branchQuery.isLoading ? (
-              <div className="p-4">
-                <LoadingState rows={2} />
-              </div>
-            ) : branch ? (
-              <>
-                <SettingsRow first icon={BuildingIcon} label="Nomi" value={branch.name} />
-                <SettingsRow icon={NoteIcon} label="Manzil" value={branch.address || "—"} />
-                <SettingsRow
-                  icon={ClockIcon}
-                  label="Ish vaqti"
-                  value={branch.openTime && branch.closeTime ? `${branch.openTime} — ${branch.closeTime}` : "—"}
-                />
-                <SettingsRow
-                  icon={MoneyIcon}
-                  label="Oylik to'lov"
-                  value={
-                    branch.defaultTuitionAmount
-                      ? `${Number(branch.defaultTuitionAmount).toLocaleString("ru-RU").replace(/ /g, " ")} ${branch.currency}`
-                      : "—"
-                  }
-                />
-                <SettingsRow icon={CoinIcon} label="Valyuta" value={branch.currency} />
-                <SettingsRow icon={GlobeIcon} label="Vaqt zonasi" value={branch.timezone} />
-              </>
-            ) : null}
-          </SettingsGroup>
-        )}
 
         <SettingsGroup>
           <SettingsRow
@@ -383,51 +347,75 @@ export default function SettingsPage({ params }: { params: Promise<{ slug: strin
           </form>
         </SettingsSheet>
 
-        {/* Parol */}
-        <SettingsSheet open={sheet === "password"} onClose={closeSheet} title="Parolni o'zgartirish">
-          <form
-            className="space-y-4"
-            onSubmit={passwordForm.handleSubmit((values) => {
-              setPasswordError(null);
-              passwordMutation.mutate(values);
-            })}
-          >
-            <div className="space-y-4 rounded-[20px] bg-[var(--color-surface)] p-4">
-              <PasswordInput
-                label="Joriy parol"
-                autoComplete="current-password"
-                autoFocus
-                error={passwordForm.formState.errors.currentPassword?.message}
-                {...passwordForm.register("currentPassword")}
-              />
-              <PasswordInput
-                label="Yangi parol"
-                autoComplete="new-password"
-                error={passwordForm.formState.errors.newPassword?.message}
-                {...passwordForm.register("newPassword")}
-              />
-              <PasswordInput
-                label="Yangi parolni takrorlang"
-                autoComplete="new-password"
-                error={passwordForm.formState.errors.repeatPassword?.message}
-                {...passwordForm.register("repeatPassword")}
-              />
+        {/* Login va parol */}
+        <SettingsSheet open={sheet === "security"} onClose={closeSheet} title="Login va parolni o'zgartirish">
+          <div className="space-y-7">
+            <div>
+              <h3 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--color-text-muted)]">Login</h3>
+              <form
+                className="space-y-4"
+                onSubmit={loginForm.handleSubmit((values) => {
+                  setLoginError(null);
+                  loginMutation.mutate(values);
+                })}
+              >
+                <div className="rounded-[20px] bg-[var(--color-surface)] p-4">
+                  <Input
+                    label="Login"
+                    autoFocus
+                    error={loginForm.formState.errors.login?.message}
+                    {...loginForm.register("login")}
+                  />
+                </div>
+                {loginError && <p className="px-1 text-[13px] text-[var(--color-danger)]">{loginError}</p>}
+                <Button type="submit" size="lg" fullWidth loading={loginMutation.isPending}>
+                  Loginni saqlash
+                </Button>
+              </form>
             </div>
-            {newPassword && (
-              <div className="rounded-[20px] bg-[var(--color-surface)] p-4">
-                <PasswordChecklist rules={passwordRules} />
-              </div>
-            )}
-            {passwordError && <p className="px-1 text-[13px] text-[var(--color-danger)]">{passwordError}</p>}
-            <Button type="submit" size="lg" fullWidth loading={passwordMutation.isPending}>
-              Parolni o&apos;zgartirish
-            </Button>
-          </form>
-        </SettingsSheet>
 
-        {canEditBranch && editBranchOpen && branch && (
-          <EditBranchModal open={editBranchOpen} onClose={() => setEditBranchOpen(false)} slug={slug} branch={branch} />
-        )}
+            <div>
+              <h3 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--color-text-muted)]">Parol</h3>
+              <form
+                className="space-y-4"
+                onSubmit={passwordForm.handleSubmit((values) => {
+                  setPasswordError(null);
+                  passwordMutation.mutate(values);
+                })}
+              >
+                <div className="space-y-4 rounded-[20px] bg-[var(--color-surface)] p-4">
+                  <PasswordInput
+                    label="Joriy parol"
+                    autoComplete="current-password"
+                    error={passwordForm.formState.errors.currentPassword?.message}
+                    {...passwordForm.register("currentPassword")}
+                  />
+                  <PasswordInput
+                    label="Yangi parol"
+                    autoComplete="new-password"
+                    error={passwordForm.formState.errors.newPassword?.message}
+                    {...passwordForm.register("newPassword")}
+                  />
+                  <PasswordInput
+                    label="Yangi parolni takrorlang"
+                    autoComplete="new-password"
+                    error={passwordForm.formState.errors.repeatPassword?.message}
+                    {...passwordForm.register("repeatPassword")}
+                  />
+                </div>
+                {newPassword && (
+                  <div className="rounded-[20px] bg-[var(--color-surface)] p-4">
+                    <PasswordChecklist rules={passwordRules} />
+                  </div>
+                )}
+                {passwordError && <p className="px-1 text-[13px] text-[var(--color-danger)]">{passwordError}</p>}
+                <Button type="submit" size="lg" fullWidth loading={passwordMutation.isPending}>
+                  Parolni o&apos;zgartirish
+                </Button>
+              </form>
+            </div>
+          </div>
+        </SettingsSheet>
 
         <Toast toast={toast} onDismiss={() => setToast(null)} />
       </div>

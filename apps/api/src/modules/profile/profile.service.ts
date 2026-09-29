@@ -1,10 +1,12 @@
-import { BadRequestException, Injectable, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 import * as argon2 from "argon2";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantAuthenticatedUser } from "../iam/tenant-auth.types";
 import { UpdateProfileDto } from "./dto/update-profile.dto";
 import { UpdateThemeDto } from "./dto/update-theme.dto";
 import { ChangePasswordDto } from "./dto/change-password.dto";
+import { ChangeLoginDto } from "./dto/change-login.dto";
 import { UpdateAvatarDto } from "./dto/update-avatar.dto";
 
 /** Rasm 256x256 gacha kichraytirilgani uchun bundan oshmasligi kerak. */
@@ -64,6 +66,27 @@ export class ProfileService {
     ]);
 
     return { changed: true };
+  }
+
+  /**
+   * Loginni o'zgartiradi. Parol bilan farqli o'laroq mavjud seanslar
+   * userId bo'yicha ishlayveradi, shuning uchun boshqa qurilmalardan
+   * chiqarib yuborish shart emas.
+   */
+  async changeLogin(user: TenantAuthenticatedUser, dto: ChangeLoginDto) {
+    const login = dto.login.trim().toLowerCase();
+    try {
+      return await this.prisma.tenantUser.update({
+        where: { id: user.id },
+        data: { login },
+        select: { login: true },
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+        throw new ConflictException("Bu login band — boshqasini tanlang");
+      }
+      throw err;
+    }
   }
 
   async updateAvatar(user: TenantAuthenticatedUser, dto: UpdateAvatarDto) {

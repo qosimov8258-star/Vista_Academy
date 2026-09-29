@@ -41,6 +41,14 @@ function MenuIcon({ className }: { className?: string }) {
 export interface DirectorBottomBarProps {
   slug: string;
   entries: NavEntry[];
+  /**
+   * Menyu oynasida ko'rsatiladigan ro'yxat — berilmasa, `entries`ning o'zi
+   * ishlatiladi (pastki panyeldagi to'rtta joy Menyu ichida ham takrorlanadi).
+   * Moliyachi kabi panelda pastki panyeldagi bo'limlarni Menyu ichida qayta
+   * ko'rsatish shart bo'lmasa, shu yerga faqat ortiqcha (overflow) bo'limlar
+   * beriladi.
+   */
+  menuEntries?: NavEntry[];
   settingsItem: NavLeaf;
   isActive: (item: NavLeaf) => boolean;
   user: TenantAuthenticatedUser | null;
@@ -61,6 +69,7 @@ type Sheet = { kind: "menu" } | { kind: "section"; section: NavSection };
 export function DirectorBottomBar({
   slug,
   entries,
+  menuEntries,
   settingsItem,
   isActive,
   user,
@@ -251,7 +260,7 @@ export function DirectorBottomBar({
               {sheet.kind === "menu" ? (
                 <DirectorMenuContent
                   slug={slug}
-                  entries={entries}
+                  entries={menuEntries ?? entries}
                   settingsItem={settingsItem}
                   isActive={isActive}
                   user={user}

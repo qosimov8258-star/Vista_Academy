@@ -20,6 +20,7 @@ import { TenantAuthenticatedUser } from "../iam/tenant-auth.types";
 import { ProfileService } from "./profile.service";
 import { UpdateProfileDto } from "./dto/update-profile.dto";
 import { ChangePasswordDto } from "./dto/change-password.dto";
+import { ChangeLoginDto } from "./dto/change-login.dto";
 import { UpdateAvatarDto } from "./dto/update-avatar.dto";
 import { UpdateThemeDto } from "./dto/update-theme.dto";
 import { AllowChef } from "../iam/decorators/allow-chef.decorator";
@@ -41,6 +42,11 @@ export class ProfileController {
   @Post("password")
   changePassword(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: ChangePasswordDto) {
     return this.profileService.changePassword(user, dto);
+  }
+
+  @Post("login")
+  changeLogin(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: ChangeLoginDto) {
+    return this.profileService.changeLogin(user, dto);
   }
 
   /** Sozlamalar → Tizim rangi */

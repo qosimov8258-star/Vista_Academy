@@ -2,6 +2,7 @@
 
 import { use } from "react";
 import Link from "next/link";
+import clsx from "clsx";
 import type { ComponentType, ReactNode, SVGProps } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -19,9 +20,9 @@ import {
   MoneyIcon,
   NoteIcon,
   TeacherIcon,
-  WalletIcon,
 } from "@/components/ui/icons";
-import { formatMoney } from "@/lib/format";
+import { IosIcon } from "@/features/director/ios-icon";
+import { compactMoney, fullMoney } from "@/features/director/money";
 
 type Tone = "primary" | "success" | "danger";
 
@@ -132,6 +133,10 @@ export default function BranchDashboardPage({ params }: { params: Promise<{ slug
   if (!branch) return <EmptyState title="Filial topilmadi" description="Bu manzilda bunday filial mavjud emas" />;
 
   const summary = summaryQuery.data;
+  const revenue = summary?.monthRevenue ?? 0;
+  const prevRevenue = summary?.previousMonthRevenue ?? 0;
+  const debt = summary?.outstandingDebt ?? 0;
+  const change = prevRevenue > 0 ? Math.round(((revenue - prevRevenue) / prevRevenue) * 100) : null;
 
   return (
     <div className="space-y-5">
@@ -169,20 +174,63 @@ export default function BranchDashboardPage({ params }: { params: Promise<{ slug
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <StatTile
-              icon={MoneyIcon}
-              tone="success"
-              size="md"
-              value={formatMoney(summary?.monthRevenue ?? 0)}
-              label="Joriy oy tushumi"
-            />
-            <StatTile
-              icon={WalletIcon}
-              tone="danger"
-              size="md"
-              value={formatMoney(summary?.outstandingDebt ?? 0)}
-              label="Qarzdorlik"
-            />
+            <Link
+              href={`/${slug}/${branchSlug}/finance`}
+              className="group block rounded-[var(--radius-xl)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)] transition-shadow hover:shadow-[var(--shadow-raised)]"
+            >
+              <div className="flex items-center gap-3">
+                <IosIcon icon={MoneyIcon} tint="accent" size={36} />
+                <p className="text-[15px] font-semibold text-[var(--color-text)]">Joriy oy tushumi</p>
+                {change !== null && (
+                  <span
+                    className={clsx(
+                      "ml-auto rounded-full px-2.5 py-1 text-[12.5px] font-bold tabular-nums",
+                      change >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700",
+                    )}
+                  >
+                    {change >= 0 ? "▲" : "▼"} {Math.abs(change)}%
+                  </span>
+                )}
+              </div>
+              <p
+                className="mt-4 text-[32px] font-bold leading-none tracking-[-0.02em] tabular-nums text-[var(--color-text)]"
+                title={fullMoney(revenue)}
+              >
+                {compactMoney(revenue)}
+                <span className="ml-1.5 text-[16px] font-semibold text-[var(--color-text-muted)]">so&apos;m</span>
+              </p>
+              <p className="mt-2 text-[13px] text-[var(--color-text-muted)]">
+                {change === null ? "O'tgan oy bilan solishtirish uchun ma'lumot yo'q" : `O'tgan oy: ${compactMoney(prevRevenue)} so'm`}
+              </p>
+            </Link>
+
+            <Link
+              href={`/${slug}/${branchSlug}/finance`}
+              className="group block rounded-[var(--radius-xl)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)] transition-shadow hover:shadow-[var(--shadow-raised)]"
+            >
+              <div className="flex items-center gap-3">
+                <IosIcon icon={MoneyIcon} tint={debt > 0 ? "red" : "gray"} size={36} />
+                <p className="text-[15px] font-semibold text-[var(--color-text)]">Qarzdorlik</p>
+                {debt > 0 && (
+                  <span className="ml-auto rounded-full bg-rose-50 px-2.5 py-1 text-[12.5px] font-bold text-rose-700">
+                    To&apos;lanishi kerak
+                  </span>
+                )}
+              </div>
+              <p
+                className={clsx(
+                  "mt-4 text-[32px] font-bold leading-none tracking-[-0.02em] tabular-nums",
+                  debt > 0 ? "text-[#e8392f]" : "text-[var(--color-text)]",
+                )}
+                title={fullMoney(debt)}
+              >
+                {compactMoney(debt)}
+                <span className="ml-1.5 text-[16px] font-semibold text-[var(--color-text-muted)]">so&apos;m</span>
+              </p>
+              <p className="mt-2 text-[13px] text-[var(--color-text-muted)]">
+                {debt > 0 ? "Ushbu filial bo'yicha to'lanmagan qoldiq" : "Qarzdor yo'q"}
+              </p>
+            </Link>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

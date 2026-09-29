@@ -37,6 +37,8 @@ import { LessonGradesModule } from "./modules/lesson-grades/lesson-grades.module
 import { LessonAttendanceModule } from "./modules/lesson-attendance/lesson-attendance.module";
 import { DevelopmentModule } from "./modules/development/development.module";
 import { BillingModule } from "./modules/billing/billing.module";
+import { PaymentRemindersModule } from "./modules/payment-reminders/payment-reminders.module";
+import { PaymentReceiptsModule } from "./modules/payment-receipts/payment-receipts.module";
 import { TenantDashboardModule } from "./modules/tenant-dashboard/tenant-dashboard.module";
 import { TenantUsersModule } from "./modules/tenant-users/tenant-users.module";
 import { ProfileModule } from "./modules/profile/profile.module";
@@ -89,6 +91,8 @@ import { FaceIdModule } from "./modules/face-id/face-id.module";
     LessonAttendanceModule,
     DevelopmentModule,
     BillingModule,
+    PaymentRemindersModule,
+    PaymentReceiptsModule,
     TenantDashboardModule,
     TenantUsersModule,
     ProfileModule,

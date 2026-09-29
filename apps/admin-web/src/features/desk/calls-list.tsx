@@ -11,7 +11,12 @@ import { Modal } from "@/components/ui/modal";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { CALL_KIND_LABEL, RELATION_LABEL, todayTashkent, type CallItem, type CallKind, type CallsResult } from "./shared";
 
-const KIND_TONE: Record<CallKind, "danger" | "warning" | "info"> = { DEBT: "danger", ABSENT: "warning", LEAD: "info" };
+const KIND_TONE: Record<CallKind, "danger" | "warning" | "info"> = {
+  DEBT: "danger",
+  ABSENT: "warning",
+  LEAD: "info",
+  FAKE_RECEIPT: "danger",
+};
 
 /** Ota-ona telefonni olmasa — "qo'ng'iroq qildim" o'rniga shu yozuv saqlanadi. */
 const NO_ANSWER_NOTE = "Aloqa qila olmadim — telefonni olmadi";

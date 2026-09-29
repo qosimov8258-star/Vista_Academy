@@ -44,6 +44,12 @@ export class TenantOrganizationsController {
     // Branch-scoped roles (Kichik admin / menejer) only see their own branch,
     // and org-wide financials (wallet/subscription) are none of their business.
     const { wallet: _wallet, subscription: _subscription, ...rest } = organization;
+    // Moliyachi (FINANCE) filialga biriktirilgan bo'lsa ham butun tarmoqni
+    // ko'radi — yon paneldagi filial tanlovi uchun to'liq filiallar ro'yxati
+    // kerak (platforma hisob-kitobi esa baribir yashirin qoladi).
+    if (user.role === "FINANCE") {
+      return rest;
+    }
     return { ...rest, branches: organization.branches.filter((b) => b.id === user.branchId) };
   }
 

@@ -26,6 +26,8 @@ import { SubmitAbsenceReasonDto } from "./dto/submit-absence-reason.dto";
 import { ParentJwtAuthGuard } from "./guards/parent-jwt-auth.guard";
 import { CurrentParent } from "./decorators/current-parent.decorator";
 import { AuthenticatedParent } from "./parent-auth.types";
+import { PaymentReceiptsService } from "../payment-receipts/payment-receipts.service";
+import { SubmitPaymentReceiptDto } from "../payment-receipts/dto/submit-payment-receipt.dto";
 
 const ACCESS_COOKIE = "bogcha_parent_at";
 const REFRESH_COOKIE = "bogcha_parent_rt";
@@ -41,6 +43,7 @@ export class ParentController {
   constructor(
     private readonly authService: ParentAuthService,
     private readonly parentService: ParentService,
+    private readonly paymentReceiptsService: PaymentReceiptsService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -103,6 +106,46 @@ export class ParentController {
   @UseGuards(ParentJwtAuthGuard)
   attendance(@CurrentParent() parent: AuthenticatedParent, @Param("childId") childId: string) {
     return this.parentService.attendanceStrip(parent, childId);
+  }
+
+  /** To'lov eslatmasi kartasi — faqat moliyani ko'rish huquqi berilgan ota-onaga ko'rinadi. */
+  @Get("children/:childId/payment-reminder")
+  @UseGuards(ParentJwtAuthGuard)
+  paymentReminder(@CurrentParent() parent: AuthenticatedParent, @Param("childId") childId: string) {
+    return this.parentService.paymentReminder(parent, childId);
+  }
+
+  /** Ota-ona to'lov qilganini bildirib chek (skrinshot) yuklaydi — moliyachi tasdiqlamaguncha balansga tegmaydi. */
+  @Post("children/:childId/payment-receipts")
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(ParentJwtAuthGuard)
+  submitPaymentReceipt(
+    @CurrentParent() parent: AuthenticatedParent,
+    @Param("childId") childId: string,
+    @Body() dto: SubmitPaymentReceiptDto,
+  ) {
+    return this.paymentReceiptsService.submitForParent(parent, childId, dto);
+  }
+
+  /** Ota-ona o'zi yuklagan cheklar ro'yxati va ularning holati (kutilmoqda/tasdiqlangan/rad etilgan). */
+  @Get("children/:childId/payment-receipts")
+  @UseGuards(ParentJwtAuthGuard)
+  paymentReceipts(@CurrentParent() parent: AuthenticatedParent, @Param("childId") childId: string) {
+    return this.paymentReceiptsService.listForParent(parent, childId);
+  }
+
+  /** Ota-ona yuklagan chek surati. */
+  @Get("payment-receipts/:id/image")
+  @Header("Cache-Control", "private, max-age=60")
+  @UseGuards(ParentJwtAuthGuard)
+  async paymentReceiptImage(
+    @CurrentParent() parent: AuthenticatedParent,
+    @Param("id") id: string,
+    @Res() res: Response,
+  ) {
+    const record = await this.paymentReceiptsService.readImageForParent(parent, id);
+    res.setHeader("Content-Type", record.mimeType);
+    res.send(Buffer.from(record.image));
   }
 
   /** Coin do'koni: bolaning filialidagi tovarlar ro'yxati va joriy balans. */

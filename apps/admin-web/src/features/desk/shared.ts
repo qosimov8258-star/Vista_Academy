@@ -1,4 +1,4 @@
-export type CallKind = "DEBT" | "ABSENT" | "LEAD";
+export type CallKind = "DEBT" | "ABSENT" | "LEAD" | "FAKE_RECEIPT";
 
 export interface CallItem {
   kind: CallKind;
@@ -24,6 +24,7 @@ export const CALL_KIND_LABEL: Record<CallKind, string> = {
   DEBT: "Qarz",
   ABSENT: "Kelmagan bola",
   LEAD: "Ariza",
+  FAKE_RECEIPT: "Soxta chek",
 };
 
 export interface BoardGroup {

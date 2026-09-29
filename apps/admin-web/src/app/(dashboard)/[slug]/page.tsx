@@ -1,52 +1,26 @@
 "use client";
 
-import { use } from "react";
-import Link from "next/link";
-import type { ComponentType, SVGProps } from "react";
+import { use, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { DashboardSummary, Organization } from "@/lib/types";
+import type { FinanceChildren, FinanceChildStatus, FinanceSummary, Organization } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { TodayRemindersCard } from "@/features/child-notes/today-reminders-card";
-import { ProgressBar } from "@/components/ui/progress-bar";
-import { LoadingState, ErrorState } from "@/components/ui/states";
-import { formatMoney } from "@/lib/format";
-import { canWriteOperational, canWriteTeaching, isChef, isTeacher } from "@/lib/permissions";
+import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
+import { formatMoney, formatChildId } from "@/lib/format";
+import { isChef, isTeacher } from "@/lib/permissions";
 import { isCashierPosition } from "@/lib/employee-position";
 import { ChefHome } from "@/features/nutrition/chef-home";
 import { CashierHome } from "@/features/cash/cashier-home";
 import { AdminHome } from "@/features/desk/admin-home";
 import { DirectorHome } from "@/features/director/director-home";
 import { TeacherHome } from "@/features/teacher/teacher-home";
-import {
-  BellIcon,
-  BriefcaseIcon,
-  CalendarIcon,
-  ChecklistIcon,
-  ChevronRightIcon,
-  ChildIcon,
-  GroupIcon,
-  MealIcon,
-  MoneyIcon,
-  NoteIcon,
-  PhoneIcon,
-  TeacherIcon,
-} from "@/components/ui/icons";
-
-const QUICK_ACTIONS = [
-  { label: "Arizalar (CRM)", icon: PhoneIcon, suffix: "crm" },
-  { label: "Bolalar", icon: ChildIcon, suffix: "children" },
-  { label: "Guruhlar", icon: GroupIcon, suffix: "groups" },
-  { label: "Moliya", icon: MoneyIcon, suffix: "finance" },
-  { label: "Davomat", icon: ChecklistIcon, suffix: "attendance" },
-  { label: "Kundalik hisobot", icon: NoteIcon, suffix: "daily-reports" },
-  { label: "Xodimlar davomati", icon: CalendarIcon, suffix: "staff-attendance" },
-  { label: "Ovqatlanish", icon: MealIcon, suffix: "nutrition" },
-  { label: "Ish haqi (HR)", icon: BriefcaseIcon, suffix: "hr" },
-  { label: "Bildirishnomalar", icon: BellIcon, suffix: "notifications" },
-];
+import { ChildIcon, MoneyIcon } from "@/components/ui/icons";
+import { PeriodPicker } from "@/features/network/period-picker";
+import { IosIcon } from "@/features/director/ios-icon";
+import { formatCompact, formatSum } from "@/features/network/money";
+import clsx from "clsx";
+import styles from "./page.module.css";
 
 // Intl uz-UZ lokali oy va hafta kunini o'zbekcha bermaydi ("M09 8, Tue"),
 // shuning uchun nomlar qo'lda yoziladi.
@@ -72,142 +46,200 @@ function todayLabel(): string {
   return `${now.getDate()}-${MONTH_NAMES[now.getMonth()]}, ${WEEKDAY_NAMES[now.getDay()]}`;
 }
 
-/** Kunlik ish kartasi: bajarilgan / jami, yo'lak va bitta aniq amal. */
-function TodayCard({
-  title,
-  icon: Icon,
-  done,
-  total,
-  breakdown,
-  href,
-  actionLabel,
-  tone = "primary",
+/** "2026-09" -> "sentabr 2026" (Toshkent vaqti bo'yicha joriy oy). */
+function currentPeriod(): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tashkent", year: "numeric", month: "2-digit" })
+    .format(new Date())
+    .slice(0, 7);
+}
+
+function periodLabel(period: string): string {
+  const [year, month] = period.split("-").map(Number);
+  return `${MONTH_NAMES[month - 1]} ${year}`;
+}
+
+const STATUS_META: Record<FinanceChildStatus, { label: string; color: string }> = {
+  PAID: { label: "To'liq to'lagan", color: "var(--color-success)" },
+  PARTIAL: { label: "Yarim to'lagan", color: "var(--color-warning)" },
+  UNPAID: { label: "To'lamagan", color: "var(--color-danger)" },
+};
+
+const STATUS_ORDER: FinanceChildStatus[] = ["PAID", "PARTIAL", "UNPAID"];
+
+/** Doira ustidagi `angleDeg` nuqtaning (soat 12 dan boshlab, soat yo'nalishida) koordinatasi. */
+function polarPoint(cx: number, cy: number, radius: number, angleDeg: number) {
+  const rad = ((angleDeg - 90) * Math.PI) / 180;
+  return { x: cx + radius * Math.cos(rad), y: cy + radius * Math.sin(rad) };
+}
+
+/**
+ * To'lov holati bo'yicha bitta katta doiraviy diagramma (pie chart): to'liq
+ * to'lagan — yashil, yarim to'lagan — sariq, to'lamagan — qizil, har biri
+ * ulushiga mos foiz bilan. Pastidagi ro'yxat bosilsa shu holatdagi
+ * o'quvchilar ro'yxati ochiladi — avvalgi alohida kartalardagi xatti-harakat
+ * shu yerga ko'chdi.
+ */
+function PaymentStatusPie({
+  counts,
+  openStatus,
+  onToggle,
 }: {
-  title: string;
-  icon: ComponentType<SVGProps<SVGSVGElement>>;
-  done: number;
-  total: number;
-  breakdown?: { label: string; value: number; tone: "success" | "danger" }[];
-  href?: string;
-  actionLabel?: string;
-  tone?: "primary" | "success" | "warning";
+  counts: { total: number; paid: number; partial: number; unpaid: number };
+  openStatus: FinanceChildStatus | null;
+  onToggle: (status: FinanceChildStatus) => void;
 }) {
-  const complete = total > 0 && done >= total;
+  const size = 232;
+  const center = size / 2;
+  const radius = center - 3;
+  const total = counts.total;
+
+  let angle = 0;
+  const slices = STATUS_ORDER.map((status) => {
+    const value = status === "PAID" ? counts.paid : status === "PARTIAL" ? counts.partial : counts.unpaid;
+    const fraction = total > 0 ? value / total : 0;
+    const startAngle = angle;
+    angle += fraction * 360;
+    return { status, value, fraction, startAngle, endAngle: angle };
+  });
 
   return (
-    <Card className="flex flex-col p-4">
-      <div className="flex items-center gap-2.5">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)]">
-          <Icon className="h-[18px] w-[18px]" />
-        </span>
-        <p className="text-[13px] font-medium text-[var(--color-text-muted)]">{title}</p>
+    <Card className="flex flex-col items-center gap-7 p-6 sm:flex-row sm:justify-center">
+      <div className="relative shrink-0" style={{ width: size, height: size }}>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+          {total === 0 ? (
+            <circle cx={center} cy={center} r={radius} fill="none" stroke="var(--color-border-hair)" strokeWidth={4} />
+          ) : (
+            slices.map((slice, i) => {
+              if (slice.fraction <= 0) return null;
+              const full = slice.fraction >= 0.999;
+              const start = polarPoint(center, center, radius, slice.startAngle);
+              const end = polarPoint(center, center, radius, slice.endAngle);
+              const largeArc = slice.endAngle - slice.startAngle > 180 ? 1 : 0;
+              const d = full
+                ? `M ${center} ${center - radius} A ${radius} ${radius} 0 1 1 ${center} ${center + radius} A ${radius} ${radius} 0 1 1 ${center} ${center - radius} Z`
+                : `M ${center} ${center} L ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArc} 1 ${end.x} ${end.y} Z`;
+              return (
+                <path
+                  key={slice.status}
+                  d={d}
+                  fill={STATUS_META[slice.status].color}
+                  stroke="var(--color-surface)"
+                  strokeWidth={3}
+                  strokeLinejoin="round"
+                  opacity={openStatus && openStatus !== slice.status ? 0.35 : 1}
+                  className={clsx(styles.slice, "transition-opacity duration-300")}
+                  style={{ animationDelay: `${i * 90}ms` }}
+                />
+              );
+            })
+          )}
+        </svg>
+        {total === 0 ? (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-8 text-center">
+            <span className="text-[13px] font-medium text-[var(--color-text-muted)]">Bu davrda hisob-faktura yo&apos;q</span>
+          </div>
+        ) : (
+          slices.map((slice) => {
+            if (slice.fraction < 0.06) return null;
+            const mid = (slice.startAngle + slice.endAngle) / 2;
+            const pos = polarPoint(center, center, radius * 0.62, mid);
+            return (
+              <span
+                key={slice.status}
+                className="pointer-events-none absolute text-[15px] font-bold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.3)]"
+                style={{ left: pos.x, top: pos.y, transform: "translate(-50%, -50%)" }}
+              >
+                {Math.round(slice.fraction * 100)}%
+              </span>
+            );
+          })
+        )}
       </div>
 
-      <p className="mt-3 flex items-baseline gap-1.5">
-        <span className="text-[26px] font-semibold leading-none tabular-nums text-[var(--color-text)]">{done}</span>
-        <span className="text-[15px] text-[var(--color-text-muted)]">/ {total}</span>
-        {complete && (
-          <Badge tone="success" className="ml-auto">
-            Tugallandi
-          </Badge>
-        )}
-      </p>
-
-      <ProgressBar value={done} total={total} tone={complete ? "success" : tone} className="mt-3" />
-
-      {breakdown && (
-        <div className="mt-3 flex gap-4">
-          {breakdown.map((item) => (
-            <div key={item.label}>
-              <p className="text-[12px] leading-tight text-[var(--color-text-muted)]">{item.label}</p>
-              <p
-                className={`text-[15px] font-semibold tabular-nums ${
-                  item.tone === "success" ? "text-[var(--color-success)]" : "text-[var(--color-danger)]"
-                }`}
-              >
-                {item.value}
-              </p>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {href && actionLabel && (
-        <Link
-          href={href}
-          className="group mt-auto inline-flex items-center gap-0.5 pt-3 text-[13px] font-medium text-[var(--color-primary)] hover:underline"
-        >
-          {actionLabel}
-          <ChevronRightIcon className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-        </Link>
-      )}
+      <div className="flex w-full flex-col gap-1.5 sm:w-auto sm:min-w-[230px]">
+        {slices.map((slice) => (
+          <button
+            key={slice.status}
+            type="button"
+            onClick={() => onToggle(slice.status)}
+            aria-pressed={openStatus === slice.status}
+            className={clsx(
+              "flex cursor-pointer items-center gap-3 rounded-[var(--radius-md)] border px-3.5 py-2.5 text-left transition-colors",
+              openStatus === slice.status
+                ? "border-[var(--color-primary)] bg-[var(--color-primary)]/5"
+                : "border-transparent hover:bg-[var(--color-surface-sunken)]",
+            )}
+          >
+            <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: STATUS_META[slice.status].color }} />
+            <span className="min-w-0 flex-1 truncate text-[14px] font-medium text-[var(--color-text)]">
+              {STATUS_META[slice.status].label}
+            </span>
+            <span className="shrink-0 text-[13.5px] font-semibold tabular-nums text-[var(--color-text)]">
+              {slice.value}
+              <span className="ml-1 font-normal text-[var(--color-text-muted)]">({Math.round(slice.fraction * 100)}%)</span>
+            </span>
+          </button>
+        ))}
+      </div>
     </Card>
   );
 }
 
-/** Bitta raqamli kichik plitka; bosilsa tegishli bo'limga olib boradi. */
-function StatTile({
-  label,
-  value,
-  icon: Icon,
-  href,
-  highlight,
-}: {
-  label: string;
-  value: string | number;
-  icon: ComponentType<SVGProps<SVGSVGElement>>;
-  href?: string;
-  highlight?: boolean;
-}) {
-  const content = (
-    <>
-      <span
-        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] ${
-          highlight
-            ? "bg-[var(--color-warning-bg)] text-[var(--color-warning)]"
-            : "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)]"
-        }`}
-      >
-        <Icon className="h-[18px] w-[18px]" />
-      </span>
-      <div className="min-w-0">
-        <p className="text-[12px] leading-tight text-[var(--color-text-muted)]">{label}</p>
-        <p className="text-[18px] font-semibold leading-tight tabular-nums text-[var(--color-text)]">{value}</p>
-      </div>
-      {href && (
-        <ChevronRightIcon className="ml-auto h-4 w-4 shrink-0 text-[var(--color-text-muted)]/50 transition-transform group-hover:translate-x-0.5" />
-      )}
-    </>
-  );
+/**
+ * Bu oy davomida haftalar kesimida qancha to'lov tushganini ko'rsatadigan
+ * ustunli grafik — bosh sahifada qaysi haftada tushum ko'tarilib-pasayganini
+ * bir qarashda ko'rsatish uchun.
+ */
+function WeeklyPaymentsChart({ weeks, periodText }: { weeks: FinanceSummary["weeklyPayments"]; periodText: string }) {
+  const [hovered, setHovered] = useState<number | null>(null);
+  const max = Math.max(1, ...weeks.map((w) => w.amount));
 
-  const className =
-    "group flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-3.5 py-3 shadow-[var(--shadow-card)]";
-
-  return href ? (
-    <Link
-      href={href}
-      className={`${className} transition-all duration-[var(--dur-base)] ease-[var(--ease-out)] hover:-translate-y-0.5 hover:bg-[var(--color-surface-hover)] hover:shadow-[var(--shadow-raised)] motion-reduce:transition-none motion-reduce:hover:translate-y-0`}
-    >
-      {content}
-    </Link>
-  ) : (
-    <div className={className}>{content}</div>
-  );
-}
-
-function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="mb-3 px-0.5 text-[15px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
-      {children}
-    </h2>
+    <Card className="p-5">
+      <p className="text-[15px] font-semibold text-[var(--color-text)]">To&apos;lovlar — hafta bo&apos;yicha</p>
+      <p className="text-[12.5px] text-[var(--color-text-muted)]">{periodText}, qaysi haftada qancha tushgani</p>
+      <div className="mt-5 flex items-end gap-3 sm:gap-5">
+        {weeks.map((week, i) => {
+          const heightPct = Math.max(week.amount > 0 ? 6 : 2, (week.amount / max) * 100);
+          return (
+            <div key={week.week} className="flex flex-1 flex-col items-center gap-1.5">
+              <span className="text-[11px] font-semibold tabular-nums text-[var(--color-text-muted)]">
+                {week.amount > 0 ? formatCompact(week.amount) : "—"}
+              </span>
+              <div
+                className="relative flex h-[110px] w-full items-end justify-center"
+                tabIndex={0}
+                onMouseEnter={() => setHovered(i)}
+                onMouseLeave={() => setHovered(null)}
+                onFocus={() => setHovered(i)}
+                onBlur={() => setHovered(null)}
+              >
+                {hovered === i && (
+                  <div className="absolute -top-2 z-10 -translate-y-full whitespace-nowrap rounded-[10px] bg-[var(--color-text)] px-2.5 py-1.5 text-center shadow-[var(--shadow-raised)]">
+                    <span className="block text-[12px] font-bold text-[var(--color-surface)]">{formatSum(week.amount)} so&apos;m</span>
+                    <span className="block text-[11px] text-[var(--color-surface)]/70">{week.count} ta to&apos;lov</span>
+                  </div>
+                )}
+                <div
+                  className={clsx(
+                    "w-full max-w-[24px] rounded-t-[4px] bg-[var(--color-primary)] transition-[height,opacity] duration-300 ease-[var(--ease-out)]",
+                    hovered === i ? "opacity-100" : "opacity-85",
+                  )}
+                  style={{ height: `${heightPct}%` }}
+                />
+              </div>
+              <span className="text-[11.5px] font-medium text-[var(--color-text-muted)]">{week.week}-hafta</span>
+            </div>
+          );
+        })}
+      </div>
+    </Card>
   );
 }
 
 export default function DashboardPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const { user } = useAuth();
-  const canWrite = canWriteOperational(user?.role);
-  const canTeach = canWriteTeaching(user?.role);
   const isNetworkAdmin = user?.role === "NETWORK_ADMIN";
   const teacher = isTeacher(user?.role);
 
@@ -216,12 +248,26 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
     queryFn: () => api.get<Organization>("/app/organizations/me"),
   });
 
-  const summaryQuery = useQuery({
-    queryKey: ["dashboard-summary", slug],
-    queryFn: () => api.get<DashboardSummary>("/app/dashboard/summary"),
-    // Oshpazga filial xulosasi (moliya bilan) yopiq — uning sahifasi o'z ma'lumotini oladi
-    enabled: !!user && !isChef(user.role),
+  const [period, setPeriod] = useState<string | null>(null);
+  useEffect(() => {
+    setPeriod((current) => current ?? currentPeriod());
+  }, []);
+
+  const financeQuery = useQuery({
+    queryKey: ["dashboard-finance-children", slug, period],
+    queryFn: () => api.get<FinanceChildren>(`/app/finance/children?period=${period}`),
+    // Oshpaz va tarbiyachiga moliya yopiq — ularning sahifasi o'z ma'lumotini oladi
+    enabled: !!user && !!period && !isChef(user.role) && !isTeacher(user.role),
   });
+
+  // Haftalik to'lov grafigi uchun — o'sha bola ro'yxati bilan bir xil davr.
+  const summaryQuery = useQuery({
+    queryKey: ["dashboard-finance-summary", slug, period],
+    queryFn: () => api.get<FinanceSummary>(`/app/finance/summary?period=${period}`),
+    enabled: !!user && !!period && !isChef(user.role) && !isTeacher(user.role),
+  });
+
+  const [openStatus, setOpenStatus] = useState<FinanceChildStatus | null>(null);
 
   if (orgQuery.isLoading) return <LoadingState rows={4} />;
   if (orgQuery.isError) return <ErrorState message={(orgQuery.error as Error).message} />;
@@ -274,16 +320,12 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
     return <DirectorHome slug={slug} org={org} />;
   }
 
-  const summary = summaryQuery.data;
-  const children = summary?.childrenCount ?? 0;
-  const employees = summary?.employeesCount ?? 0;
-  const attendanceMarked = (summary?.todayAttendance.present ?? 0) + (summary?.todayAttendance.absent ?? 0);
-  const staffMarked = (summary?.todayStaffAttendance.present ?? 0) + (summary?.todayStaffAttendance.absent ?? 0);
-  const debt = summary?.outstandingDebt ?? 0;
-
-  // Bolalar ro'yxatga olinmaguncha kunlik ish kartalari bo'sh raqamlardan
-  // iborat bo'ladi — bunday holatda nima qilish kerakligini aytgan ma'qul.
-  const notStartedYet = !summaryQuery.isLoading && children === 0;
+  // Qolganlar (filial admini, moliyachi): barcha filiallardan shu oygi to'lov
+  // holati — kim to'liq, kim yarim, kim umuman to'lamagan, har birining
+  // qaysi filialga tegishli ekani bilan birga.
+  const financeData = financeQuery.data;
+  const totalPaid = financeData?.items.reduce((sum, item) => sum + item.paid, 0) ?? 0;
+  const visibleItems = financeData?.items.filter((item) => item.status === openStatus) ?? [];
 
   return (
     <div className="space-y-6">
@@ -292,298 +334,75 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
           <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
             {user?.branchName ?? org.name}
           </h1>
-          <p className="text-[13px] text-[var(--color-text-muted)]">
-            {org.name}
-          </p>
+          <p className="text-[13px] text-[var(--color-text-muted)]">{org.name}</p>
         </div>
         <p className="text-[13px] text-[var(--color-text-muted)]">Bugun · {todayLabel()}</p>
       </div>
 
-      {summaryQuery.isError ? (
-        <ErrorState message={(summaryQuery.error as Error).message} />
-      ) : (
+      {!period || financeQuery.isLoading ? (
+        <LoadingState rows={4} />
+      ) : financeQuery.isError ? (
+        <ErrorState message={(financeQuery.error as Error).message} />
+      ) : !financeData ? null : (
         <>
-          {/* Tarbiyachi yozgan bugungi eslatmalar (dori vaqti va h.k.) — filial darajasidagi hamma ko'radi */}
-          {user?.branchId && (
-            <TodayRemindersCard
-              slug={slug}
-              branchId={user.branchId}
-              today={new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tashkent" }).format(new Date())}
-            />
+          <div className="rounded-[var(--radius-xl)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <IosIcon icon={MoneyIcon} tint="accent" size={36} />
+                <p className="text-[15px] font-semibold text-[var(--color-text)]">
+                  Barcha filiallardan {periodLabel(financeData.period)} oyida to&apos;langan summa
+                </p>
+              </div>
+              <PeriodPicker period={period} max={currentPeriod()} onChange={setPeriod} />
+            </div>
+            <p className="mt-4 text-[32px] font-bold leading-none tracking-[-0.02em] tabular-nums text-[var(--color-text)]">
+              {formatMoney(totalPaid)}
+            </p>
+          </div>
+
+          {summaryQuery.data && (
+            <WeeklyPaymentsChart weeks={summaryQuery.data.weeklyPayments} periodText={periodLabel(financeData.period)} />
           )}
 
-          {notStartedYet ? (
-            <Card className="p-5">
-              <p className="text-[17px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
-                Boshlash uchun
-              </p>
-              <p className="mt-1.5 text-[14px] leading-relaxed text-[var(--color-text-muted)]">
-                Bu filialda hali bola ro&apos;yxatga olinmagan. Guruh ochib, bolalarni qo&apos;shsangiz, davomat va kundalik hisobot shu yerda ko&apos;rina boshlaydi.
-              </p>
-              {canWrite && (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {/* Link'lar tugma bo'la olmaydi, shuning uchun Button'ning
-                      `outline` va `primary` ko'rinishi shu yerda takrorlanadi. */}
-                  <Link
-                    href={`/${slug}/groups`}
-                    className="inline-flex h-9 items-center justify-center rounded-full border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-4 text-[14px] font-semibold tracking-[-0.006em] text-[var(--color-text)] shadow-[var(--shadow-xs)] transition-[transform,background-color,box-shadow] duration-[var(--dur-fast)] ease-[var(--ease-out)] hover:bg-[var(--color-surface-hover)] active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100"
-                  >
-                    Guruh ochish
-                  </Link>
-                  <Link
-                    href={`/${slug}/children`}
-                    className="inline-flex h-9 items-center justify-center rounded-full bg-[var(--color-primary)] px-4 text-[14px] font-semibold tracking-[-0.006em] text-white shadow-[var(--shadow-primary)] transition-[transform,background-color,box-shadow] duration-[var(--dur-fast)] ease-[var(--ease-out)] hover:bg-[var(--color-primary-hover)] active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100"
-                  >
-                    Bola qo&apos;shish
-                  </Link>
-                </div>
+          <PaymentStatusPie
+            counts={financeData.counts}
+            openStatus={openStatus}
+            onToggle={(status) => setOpenStatus((s) => (s === status ? null : status))}
+          />
+
+          {openStatus && (
+            <Card className="overflow-hidden">
+              <div className="hairline border-b border-[var(--color-separator)] px-5 py-4 sm:px-6">
+                <h2 className="text-[15px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
+                  {STATUS_META[openStatus].label} — {visibleItems.length} ta o&apos;quvchi
+                </h2>
+              </div>
+              {visibleItems.length === 0 ? (
+                <EmptyState title="Bu holatda o'quvchi yo'q" />
+              ) : (
+                <ul className="divide-y divide-[var(--color-separator)]">
+                  {visibleItems.map((child) => (
+                    <li key={child.childId} className="flex items-center gap-3 px-5 py-3 sm:px-6">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)]">
+                        <ChildIcon className="h-4.5 w-4.5" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[14px] font-medium text-[var(--color-text)]">{child.fullName}</p>
+                        <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">
+                          {formatChildId(child.publicId)} · <span className="font-medium">{child.branchName}</span>
+                          {child.groupName && ` · ${child.groupName}`}
+                        </p>
+                      </div>
+                      <p className="shrink-0 text-[14px] tabular-nums text-[var(--color-text)]">
+                        <b>{formatMoney(child.paid)}</b>
+                        <span className="text-[var(--color-text-muted)]"> / {formatMoney(child.billed)}</span>
+                      </p>
+                    </li>
+                  ))}
+                </ul>
               )}
             </Card>
-          ) : (
-            <section>
-              <SectionTitle>Bugungi ish</SectionTitle>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                <TodayCard
-                  title="Bolalar davomati"
-                  icon={ChecklistIcon}
-                  done={attendanceMarked}
-                  total={children}
-                  breakdown={[
-                    { label: "Keldi", value: summary?.todayAttendance.present ?? 0, tone: "success" },
-                    { label: "Kelmadi", value: summary?.todayAttendance.absent ?? 0, tone: "danger" },
-                  ]}
-                  href={`/${slug}/attendance`}
-                  actionLabel={canTeach ? "Davomatni belgilash" : "Ko'rish"}
-                />
-                <TodayCard
-                  title="Xodimlar davomati"
-                  icon={CalendarIcon}
-                  done={staffMarked}
-                  total={employees}
-                  breakdown={[
-                    { label: "Keldi", value: summary?.todayStaffAttendance.present ?? 0, tone: "success" },
-                    { label: "Kelmadi", value: summary?.todayStaffAttendance.absent ?? 0, tone: "danger" },
-                  ]}
-                  href={`/${slug}/staff-attendance`}
-                  actionLabel={canWrite ? "Davomatni belgilash" : "Ko'rish"}
-                />
-              </div>
-            </section>
           )}
-
-          {summary && (
-            <section>
-              <SectionTitle>Diqqat talab qiladi</SectionTitle>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-                <Card className="p-4">
-                  <p className="text-[13px] font-medium text-[var(--color-text-muted)]">Bugun belgilanmagan</p>
-                  {summary.attention.unmarkedAttendance.length === 0 ? (
-                    <p className="mt-2 text-[13.5px] text-[var(--color-success)]">Hammasi belgilangan</p>
-                  ) : (
-                    <div className="mt-2 space-y-2">
-                      {summary.attention.unmarkedAttendance.length > 0 && (
-                        <p className="text-[12.5px] text-[var(--color-text-muted)]">
-                          Davomat:{" "}
-                          <span className="font-medium text-[var(--color-text)]">
-                            {summary.attention.unmarkedAttendance
-                              .slice(0, 3)
-                              .map((c) => c.fullName)
-                              .join(", ")}
-                            {summary.attention.unmarkedAttendance.length > 3 &&
-                              ` +${summary.attention.unmarkedAttendance.length - 3}`}
-                          </span>
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </Card>
-
-                <Card className="p-4">
-                  <p className="text-[13px] font-medium text-[var(--color-text-muted)]">Vaksinatsiya muddati o&apos;tgan</p>
-                  {summary.attention.overdueVaccinations.length === 0 ? (
-                    <p className="mt-2 text-[13.5px] text-[var(--color-success)]">Yo&apos;q</p>
-                  ) : (
-                    <ul className="mt-2 space-y-1">
-                      {summary.attention.overdueVaccinations.slice(0, 3).map((v) => (
-                        <li key={`${v.childId}-${v.vaccineName}`} className="text-[12.5px] text-[var(--color-text)]">
-                          {v.fullName} <span className="text-[var(--color-text-muted)]">— {v.vaccineName}</span>
-                        </li>
-                      ))}
-                      {summary.attention.overdueVaccinations.length > 3 && (
-                        <li className="text-[12.5px] text-[var(--color-text-muted)]">
-                          +{summary.attention.overdueVaccinations.length - 3} ta
-                        </li>
-                      )}
-                    </ul>
-                  )}
-                </Card>
-
-                <Card className="p-4">
-                  <p className="text-[13px] font-medium text-[var(--color-text-muted)]">Tug&apos;ilgan kunlar (7 kun)</p>
-                  {summary.upcomingBirthdays.length === 0 ? (
-                    <p className="mt-2 text-[13.5px] text-[var(--color-text-muted)]">Yaqin kunlarda yo&apos;q</p>
-                  ) : (
-                    <ul className="mt-2 space-y-1">
-                      {summary.upcomingBirthdays.slice(0, 3).map((b) => (
-                        <li key={b.childId} className="text-[12.5px] text-[var(--color-text)]">
-                          {b.fullName}{" "}
-                          <span className="text-[var(--color-text-muted)]">
-                            — {b.daysUntil === 0 ? "bugun" : `${b.daysUntil} kundan keyin`}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </Card>
-
-                <Card className="p-4">
-                  <p className="text-[13px] font-medium text-[var(--color-text-muted)]">Guruhlar to&apos;lganligi</p>
-                  <p className="mt-1.5 text-[20px] font-semibold leading-none tabular-nums text-[var(--color-text)]">
-                    {summary.groupCapacity.totalCapacity > 0
-                      ? `${Math.round((summary.groupCapacity.totalActive / summary.groupCapacity.totalCapacity) * 100)}%`
-                      : "—"}
-                  </p>
-                  <p className="mt-1 text-[12px] text-[var(--color-text-muted)]">
-                    {summary.groupCapacity.totalActive} / {summary.groupCapacity.totalCapacity}
-                  </p>
-                  {summary.groupCapacity.groups.some((g) => g.percent >= 90) && (
-                    <p className="mt-1.5 text-[12px] text-[var(--color-danger)]">
-                      {summary.groupCapacity.groups.filter((g) => g.percent >= 90).map((g) => g.name).join(", ")} —
-                      to&apos;lib bo&apos;lgan
-                    </p>
-                  )}
-                </Card>
-
-                <Card className="p-4">
-                  <p className="text-[13px] font-medium text-[var(--color-text-muted)]">Eng ko&apos;p qarzdorlar</p>
-                  {summary.topDebtors.length === 0 ? (
-                    <p className="mt-2 text-[13.5px] text-[var(--color-success)]">Qarzdor yo&apos;q</p>
-                  ) : (
-                    <ul className="mt-2 space-y-1">
-                      {summary.topDebtors.slice(0, 3).map((d) => (
-                        <li key={d.childId} className="flex items-center justify-between gap-2 text-[12.5px]">
-                          <span className="truncate text-[var(--color-text)]">{d.fullName}</span>
-                          <span className="shrink-0 tabular-nums text-[var(--color-danger)]">{formatMoney(d.balance)}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  <Link
-                    href={`/${slug}/finance`}
-                    className="mt-2 inline-block text-[12.5px] font-medium text-[var(--color-primary)] hover:underline"
-                  >
-                    Moliya →
-                  </Link>
-                </Card>
-              </div>
-            </section>
-          )}
-
-          <section>
-            <SectionTitle>Moliya</SectionTitle>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Card className="p-4">
-                <p className="text-[13px] text-[var(--color-text-muted)]">Joriy oy tushumi</p>
-                <p className="mt-1.5 text-[26px] font-semibold leading-none tabular-nums text-[var(--color-success)]">
-                  {formatMoney(summary?.monthRevenue ?? 0)}
-                </p>
-                {summary && summary.previousMonthRevenue > 0 && (
-                  <p className="mt-1.5 text-[12.5px] text-[var(--color-text-muted)]">
-                    {(() => {
-                      const change = Math.round(
-                        ((summary.monthRevenue - summary.previousMonthRevenue) / summary.previousMonthRevenue) * 100,
-                      );
-                      return (
-                        <span className={change >= 0 ? "text-[var(--color-success)]" : "text-[var(--color-danger)]"}>
-                          {change >= 0 ? "▲" : "▼"} {Math.abs(change)}%
-                        </span>
-                      );
-                    })()}{" "}
-                    o&apos;tgan oyga nisbatan
-                  </p>
-                )}
-              </Card>
-              <Card className={`p-4 ${debt > 0 ? "border-[var(--color-danger)]/25" : ""}`}>
-                <div className="flex items-start justify-between gap-3">
-                  <p className="text-[13px] text-[var(--color-text-muted)]">Qarzdorlik</p>
-                  {debt > 0 && <Badge tone="danger">To&apos;lanishi kerak</Badge>}
-                </div>
-                <p
-                  className={`mt-1.5 text-[26px] font-semibold leading-none tabular-nums ${
-                    debt > 0 ? "text-[var(--color-danger)]" : "text-[var(--color-text)]"
-                  }`}
-                >
-                  {formatMoney(debt)}
-                </p>
-                {!!summary?.overdueInvoicesCount && (
-                  <p className="mt-1.5 text-[12.5px] text-[var(--color-danger)]">
-                    {summary.overdueInvoicesCount} ta hisob-faktura muddati o&apos;tgan
-                  </p>
-                )}
-                {debt > 0 && (
-                  <Link
-                    href={`/${slug}/finance`}
-                    className="group mt-3 inline-flex items-center gap-0.5 text-[13px] font-medium text-[var(--color-primary)] hover:underline"
-                  >
-                    Hisob-fakturalarni ko&apos;rish
-                    <ChevronRightIcon className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-                  </Link>
-                )}
-              </Card>
-            </div>
-          </section>
-
-          <section>
-            <SectionTitle>Filial raqamlari</SectionTitle>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
-              <StatTile label="Bolalar" value={children} icon={ChildIcon} href={`/${slug}/children`} />
-              <StatTile
-                label="Faol guruhlar"
-                value={summary?.activeGroupsCount ?? 0}
-                icon={GroupIcon}
-                href={`/${slug}/groups`}
-              />
-              <StatTile label="Xodimlar" value={employees} icon={TeacherIcon} href={`/${slug}/employees`} />
-              <StatTile
-                label="Faol arizalar"
-                value={summary?.activeLeadsCount ?? 0}
-                icon={PhoneIcon}
-                href={`/${slug}/crm`}
-                highlight={(summary?.activeLeadsCount ?? 0) > 0}
-              />
-              <StatTile
-                label="Yuborilmagan xabar"
-                value={summary?.pendingNotificationsCount ?? 0}
-                icon={BellIcon}
-                href={`/${slug}/notifications`}
-                highlight={(summary?.pendingNotificationsCount ?? 0) > 0}
-              />
-            </div>
-          </section>
-
-          <section>
-            <SectionTitle>Bo&apos;limlar</SectionTitle>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
-              {QUICK_ACTIONS.map((action) => {
-                const Icon = action.icon;
-                return (
-                  <Link
-                    key={action.suffix}
-                    href={`/${slug}/${action.suffix}`}
-                    className="group flex flex-col items-center gap-2 rounded-[var(--radius-lg)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-3 py-4 text-center shadow-[var(--shadow-card)] transition-all duration-[var(--dur-base)] ease-[var(--ease-out)] hover:-translate-y-0.5 hover:bg-[var(--color-surface-hover)] hover:shadow-[var(--shadow-raised)] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
-                  >
-                    <span className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-primary)]/10 text-[var(--color-primary)] transition-colors duration-[var(--dur-fast)] group-hover:bg-[var(--color-primary)] group-hover:text-white">
-                      <Icon className="h-5 w-5" />
-                    </span>
-                    <span className="text-[12px] font-medium leading-tight text-[var(--color-text)]">
-                      {action.label}
-                    </span>
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
-
         </>
       )}
     </div>

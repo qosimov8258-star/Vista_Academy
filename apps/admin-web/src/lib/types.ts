@@ -404,7 +404,35 @@ export interface Invoice {
   overdue: boolean;
 }
 
-export type PaymentMethod = "CASH" | "BANK_TRANSFER" | "CARD";
+/** `GET/PUT /app/finance/reminder-settings` javobi. */
+export interface PaymentReminderSettings {
+  id: string;
+  organizationId: string;
+  branchId: string;
+  isEnabled: boolean;
+  daysBeforeDue: number;
+  daysAfterDue: number;
+  sendTimes: string[];
+  messageTemplate: string;
+  updatedAt: string;
+}
+
+/** `GET /app/finance/reminder-settings/unpaid-children` satri. */
+export interface UnpaidReminderChild {
+  childId: string;
+  childFullName: string;
+  groupName: string | null;
+  invoiceId: string;
+  dueDate: string;
+  amount: string;
+  paidAmount: string;
+  remainingAmount: string;
+  /** Manfiy bo'lsa — kechikkan kunlar soni. */
+  daysUntilDue: number;
+  status: InvoiceStatus;
+}
+
+export type PaymentMethod = "CASH" | "BANK_TRANSFER" | "CARD" | "CLICK" | "PAYME" | "UZUM" | "MOBILE_APP" | "BANKOMAT";
 export type PaymentStatus = "COMPLETED" | "REFUNDED";
 
 export interface Payment {
@@ -420,6 +448,27 @@ export interface Payment {
   refundedAt: string | null;
   createdAt: string;
   child?: { id: string; fullName: string };
+}
+
+/** Ota-ona to'lov cheki uchun tanlashi mumkin bo'lgan usullar — naqd/karta bu yerda yo'q. */
+export const RECEIPT_PAYMENT_METHODS: PaymentMethod[] = ["CLICK", "PAYME", "UZUM", "MOBILE_APP", "BANKOMAT"];
+
+export type PaymentReceiptStatus = "PENDING" | "APPROVED" | "REJECTED";
+
+/** Ota-ona kabinetidan yuklangan to'lov cheki — moliyachi tasdiqlagunga qadar balansga ta'sir qilmaydi. */
+export interface PaymentReceipt {
+  id: string;
+  childId: string;
+  guardianId: string;
+  claimedAmount: string;
+  currency: string;
+  status: PaymentReceiptStatus;
+  reviewNote: string | null;
+  reviewedByUserId: string | null;
+  reviewedAt: string | null;
+  paymentId: string | null;
+  createdAt: string;
+  guardian?: { fullName: string };
 }
 
 export type LedgerEntryType = "CHARGE" | "DISCOUNT" | "PAYMENT" | "REFUND" | "ADJUSTMENT";
@@ -791,6 +840,8 @@ export interface PayrollEntry {
   penaltyAmount: string;
   deductionAmount: string;
   totalAmount: string;
+  /** Moliyachi qo'lda kiritgan haqiqiy to'langan summa — hisoblangan totalAmount'dan farqli bo'lishi mumkin. */
+  paidAmount: string;
   status: PayrollStatus;
   paidAt: string | null;
   note: string | null;
@@ -798,6 +849,15 @@ export interface PayrollEntry {
   updatedAt: string;
   employee?: { id: string; fullName: string; position: string };
   branch?: { id: string; name: string };
+}
+
+/** `GET /app/employees/:id/payroll` javobi — xodim kartochkasidagi "Moliya" ko'rinishi uchun. */
+export interface EmployeePayrollOverview {
+  scheme: SalaryScheme | null;
+  /** Shu davr uchun allaqachon hisoblangan/to'langan yozuv — bo'lmasa `null`. */
+  entry: PayrollEntry | null;
+  /** Yozuv hali yo'q bo'lsa, sxemadan jonli hisoblangan taxmin (hech narsa saqlanmagan). */
+  preview: { baseAmount: number; totalAmount: number } | null;
 }
 
 // ===== Bildirishnomalar =====
@@ -898,7 +958,8 @@ export interface FinanceSummary {
     branchName: string;
   })[];
   statuses: { status: InvoiceStatus; count: number; billed: number; paid: number }[];
-  byMethod: { CASH: { amount: number; count: number }; BANK_TRANSFER: { amount: number; count: number }; CARD: { amount: number; count: number } };
+  byMethod: Record<PaymentMethod, { amount: number; count: number }>;
+  weeklyPayments: { week: number; label: string; amount: number; count: number }[];
 }
 
 export type FinanceChildStatus = "PAID" | "PARTIAL" | "UNPAID";
@@ -1005,6 +1066,27 @@ export interface ParentAttendanceStrip {
   present: number;
   absent: number;
   marked: number;
+}
+
+/** `GET /app/parent/children/:id/payment-reminder` javobi — to'lov eslatma kartasi. */
+export interface ParentPaymentReminder {
+  visible: boolean;
+  message?: string;
+  amount?: string;
+  dueDate?: string;
+  daysUntilDue?: number;
+  overdue?: boolean;
+}
+
+/** `GET/POST /app/parent/children/:id/payment-receipts` — ota-ona yuklagan to'lov cheklari. */
+export interface ParentPaymentReceipt {
+  id: string;
+  claimedAmount: string;
+  currency: string;
+  status: PaymentReceiptStatus;
+  reviewNote: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
 }
 
 /** `GET /app/parent/children/:id/products` javobi — coin do'koni. */

@@ -1,13 +1,22 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import { ApiError } from "@/lib/api";
 import { PARENT_API_URL, parentApi } from "@/lib/parent-api";
-import type { ParentAccount, ParentAttendanceStrip, ParentChild, ParentDay } from "@/lib/types";
+import type {
+  ParentAccount,
+  ParentAttendanceStrip,
+  ParentChild,
+  ParentDay,
+  ParentPaymentReceipt,
+  ParentPaymentReminder,
+} from "@/lib/types";
+import { formatMoney } from "@/lib/format";
+import { prepareReceiptPhoto } from "@/lib/receipt-photo";
 import { initials } from "@/components/ui/avatar";
 import styles from "../parent.module.css";
 import { CardFx } from "./card-fx";
@@ -94,6 +103,19 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
     queryKey: ["parent-strip", childId],
     queryFn: () => parentApi.get<ParentAttendanceStrip>(`/app/parent/children/${childId}/attendance`),
     enabled: !!childId,
+  });
+
+  const reminderQuery = useQuery({
+    queryKey: ["parent-payment-reminder", childId],
+    queryFn: () => parentApi.get<ParentPaymentReminder>(`/app/parent/children/${childId}/payment-reminder`),
+    enabled: !!childId,
+  });
+
+  const receiptsQuery = useQuery({
+    queryKey: ["parent-payment-receipts", childId],
+    queryFn: () => parentApi.get<ParentPaymentReceipt[]>(`/app/parent/children/${childId}/payment-receipts`),
+    enabled: !!childId,
+    retry: false,
   });
 
   // Kelmagan kun uchun sababni ota-ona shu yerdan yozadi — tarbiyachi buni
@@ -251,6 +273,21 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
 
             {stripQuery.data && <AttendanceCalendar strip={stripQuery.data} />}
           </section>
+        )}
+
+        {/* To'lov eslatmasi — bog'cha sozlagan kunlar oynasida to'lanmagan
+            hisob-faktura bo'lsa chiqadi, to'lov qilingach o'zi yo'qoladi. */}
+        {reminderQuery.data?.visible && <PaymentReminderCard reminder={reminderQuery.data} />}
+
+        {/* Chek yuklash — faqat to'lov kutilayotganda ochiladi (aks holda
+            tasdiqlash uchun ochiq hisob-faktura topilmaydi). Oldingi
+            cheklarning holati esa har doim ko'rinadi. */}
+        {childId && (reminderQuery.data?.visible || (receiptsQuery.data && receiptsQuery.data.length > 0)) && (
+          <PaymentReceiptSection
+            childId={childId}
+            canSubmit={!!reminderQuery.data?.visible}
+            receipts={receiptsQuery.data ?? []}
+          />
         )}
 
         {/* Bugungi kun */}
@@ -465,4 +502,209 @@ function TodayMealsLink({ slug, day }: { slug: string; day: ParentDay }) {
 
 function Empty({ text }: { text: string }) {
   return <p className="text-[15px] text-[var(--p-muted)]">{text}</p>;
+}
+
+/**
+ * To'lov eslatma kartasi. Muddat hali kelmagan bo'lsa sariq, kechikkan
+ * bo'lsa qizil — bola to'lov qilinguncha (invoice PAID bo'lguncha) ko'rinib
+ * turadi, buni backend har safar jonli hisoblab beradi.
+ */
+function PaymentReminderCard({ reminder }: { reminder: ParentPaymentReminder }) {
+  const overdue = !!reminder.overdue;
+  return (
+    <section
+      className={clsx(
+        "mt-4 rounded-[var(--p-radius)] p-4 shadow-[var(--p-shadow)]",
+        overdue ? "bg-[var(--p-coral)]/14" : "bg-[var(--p-sun)]/16",
+      )}
+    >
+      <div className="flex items-start gap-3">
+        <span
+          className={clsx(
+            "flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[18px] font-bold text-white",
+            overdue ? "bg-[var(--p-coral)]" : "bg-[var(--p-sun)]",
+          )}
+        >
+          ₸
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[15px] font-bold text-[var(--p-ink)]">
+            {overdue ? "To'lov muddati o'tib ketdi" : "To'lov muddati yaqinlashmoqda"}
+          </p>
+          <p className="mt-0.5 text-[14px] leading-relaxed text-[var(--p-ink)]/85">{reminder.message}</p>
+          {reminder.amount && (
+            <p className="mt-2 text-[15px] font-bold text-[var(--p-ink)]">{formatMoney(reminder.amount)}</p>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+const RECEIPT_STATUS_LABEL: Record<ParentPaymentReceipt["status"], string> = {
+  PENDING: "Kutilmoqda",
+  APPROVED: "Tasdiqlangan",
+  REJECTED: "Rad etildi",
+};
+
+const RECEIPT_STATUS_TONE: Record<ParentPaymentReceipt["status"], string> = {
+  PENDING: "bg-[var(--p-sun)]/20 text-[var(--p-sun-ink)]",
+  APPROVED: "bg-[var(--p-mint)]/15 text-[var(--p-mint)]",
+  REJECTED: "bg-[var(--p-coral)]/15 text-[var(--p-coral)]",
+};
+
+/**
+ * Ota-ona to'lov qilganini bildirib chek (skrinshot) yuklaydi — moliyachi
+ * tasdiqlamaguncha bola balansiga tegmaydi. Rad etilsa, moliyachi yozgan
+ * izoh shu yerda, chekning holati yonida ko'rinadi.
+ */
+function PaymentReceiptSection({
+  childId,
+  canSubmit,
+  receipts,
+}: {
+  childId: string;
+  canSubmit: boolean;
+  receipts: ParentPaymentReceipt[];
+}) {
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [open, setOpen] = useState(false);
+  const [amount, setAmount] = useState("");
+  const [image, setImage] = useState<string | null>(null);
+  const [preparing, setPreparing] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const closeForm = () => {
+    setOpen(false);
+    setAmount("");
+    setImage(null);
+    setFormError(null);
+  };
+
+  const submitMutation = useMutation({
+    mutationFn: () =>
+      parentApi.post(`/app/parent/children/${childId}/payment-receipts`, { amount: Number(amount), image }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["parent-payment-receipts", childId] });
+      closeForm();
+    },
+    onError: (err) => setFormError(err instanceof ApiError ? err.message : "Yuborib bo'lmadi — qayta urinib ko'ring"),
+  });
+
+  const handlePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setFormError(null);
+    setPreparing(true);
+    try {
+      const result = await prepareReceiptPhoto(file);
+      if (!result.ok) {
+        setFormError(result.reason);
+        return;
+      }
+      setImage(result.image);
+    } finally {
+      setPreparing(false);
+    }
+  };
+
+  return (
+    <section className="mt-4 rounded-[var(--p-radius)] bg-[var(--p-card)] p-4 shadow-[var(--p-shadow)]">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[15px] font-bold text-[var(--p-ink)]">To&apos;lov cheki</p>
+        {canSubmit && !open && (
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="rounded-full bg-[var(--p-coral)] px-3.5 py-1.5 text-[13px] font-semibold text-white"
+          >
+            Chek yuklash
+          </button>
+        )}
+      </div>
+
+      {open && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!image) {
+              setFormError("Chek suratini tanlang");
+              return;
+            }
+            if (!amount || Number(amount) <= 0) {
+              setFormError("Summani kiriting");
+              return;
+            }
+            setFormError(null);
+            submitMutation.mutate();
+          }}
+          className="mt-3 space-y-2.5"
+        >
+          <input
+            type="number"
+            inputMode="decimal"
+            min={1}
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="To'lov summasi (so'm)"
+            className="w-full rounded-[14px] bg-[var(--p-sunken)] px-3.5 py-2.5 text-[14px] text-[var(--p-ink)] outline-none ring-1 ring-[var(--p-muted)]/20 focus:ring-[var(--p-coral)]"
+          />
+          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePick} />
+          {image ? (
+            // eslint-disable-next-line @next/next/no-img-element -- tanlangan fayl, brauzerda tayyorlangan
+            <img
+              src={image}
+              alt="Tanlangan chek"
+              onClick={() => fileInputRef.current?.click()}
+              className="max-h-44 w-full cursor-pointer rounded-[14px] object-contain"
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={preparing}
+              className="w-full rounded-[14px] border border-dashed border-[var(--p-muted)]/40 px-3.5 py-3 text-[13.5px] font-medium text-[var(--p-muted)] disabled:opacity-60"
+            >
+              {preparing ? "Tayyorlanmoqda..." : "Chek suratini tanlash"}
+            </button>
+          )}
+          {formError && <p className="text-[12.5px] text-[var(--p-coral)]">{formError}</p>}
+          <div className="flex gap-2 pt-1">
+            <button
+              type="button"
+              onClick={closeForm}
+              className="flex-1 rounded-full bg-[var(--p-sunken)] px-4 py-2.5 text-[13.5px] font-semibold text-[var(--p-muted)]"
+            >
+              Bekor qilish
+            </button>
+            <button
+              type="submit"
+              disabled={submitMutation.isPending || preparing}
+              className="flex-1 rounded-full bg-[var(--p-coral)] px-4 py-2.5 text-[13.5px] font-semibold text-white disabled:opacity-50"
+            >
+              {submitMutation.isPending ? "Yuborilmoqda..." : "Yuborish"}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {receipts.length > 0 && (
+        <ul className="mt-3 space-y-1.5 border-t border-[var(--p-muted)]/12 pt-3">
+          {receipts.slice(0, 5).map((r) => (
+            <li key={r.id} className="flex items-center justify-between gap-2">
+              <span className="text-[13px] text-[var(--p-muted)]">
+                {formatMoney(r.claimedAmount, r.currency)}
+                {r.status === "REJECTED" && r.reviewNote ? ` — ${r.reviewNote}` : ""}
+              </span>
+              <span className={clsx("shrink-0 rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold", RECEIPT_STATUS_TONE[r.status])}>
+                {RECEIPT_STATUS_LABEL[r.status]}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
 }

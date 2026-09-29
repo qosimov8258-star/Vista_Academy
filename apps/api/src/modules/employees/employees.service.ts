@@ -7,7 +7,13 @@ import { normalizePhone } from "../../common/phone";
 import { encryptSecret, decryptSecret } from "../../common/crypto/reversible-secret";
 import { generateEmployeeLogin, generateEmployeePassword } from "../../common/text/generate-credentials";
 import { DEFAULT_POSITIONS } from "../../common/constants/default-positions";
-import { TenantAuthenticatedUser, TenantScope, requireOperationalScope, toTenantScope } from "../iam/tenant-auth.types";
+import {
+  TenantAuthenticatedUser,
+  TenantScope,
+  requireOperationalScope,
+  resolveReadBranchFilter,
+  toTenantScope,
+} from "../iam/tenant-auth.types";
 import { verifyRevealToken } from "../webauthn/reveal-token";
 import { AuditLogService } from "../audit-log/audit-log.service";
 import { FaceIdService } from "../face-id/face-id.service";
@@ -229,7 +235,7 @@ export class EmployeesService {
   findAll(scope: TenantScope, query: EmployeeQueryDto) {
     const where: Prisma.EmployeeWhereInput = {
       organizationId: scope.organizationId,
-      branchId: scope.branchId ?? query.branchId,
+      branchId: resolveReadBranchFilter(scope, query.branchId),
       ...(query.isActive !== undefined ? { isActive: query.isActive } : {}),
     };
     return this.prisma.employee.findMany({

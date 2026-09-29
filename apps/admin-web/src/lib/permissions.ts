@@ -42,6 +42,15 @@ export function canWriteOperational(role: TenantUserRole | undefined): boolean {
 }
 
 /**
+ * Ish haqi (payroll) yozuvlarini ko'rish huquqi — API'dagi
+ * `assertPayrollReader` bilan aynan bir xil: Super Admin, filial admini va
+ * moliyachi. Administrator va o'qituvchi bu ma'lumotni ko'rmaydi.
+ */
+export function canReadPayroll(role: TenantUserRole | undefined): boolean {
+  return role === "NETWORK_ADMIN" || role === "BRANCH_ADMIN" || role === "FINANCE";
+}
+
+/**
  * Oshxona (menyu, taomlar ro'yxati, taom suratlari) — API'dagi
  * `requireKitchenWriteScope`: oshpaz, filial admini va administrator.
  */
