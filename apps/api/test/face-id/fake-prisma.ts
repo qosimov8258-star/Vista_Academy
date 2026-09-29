@@ -129,6 +129,9 @@ export function createFakePrisma() {
     faceEnrollment: new Table(() => ({ status: "PENDING", notes: null, registeredAt: null })),
     employeeAttendance: new Table(() => ({ note: null, checkInTime: null, checkOutTime: null }), [["employeeId", "date"]]),
     staffAttendanceLock: new Table(() => ({}), [["branchId", "date"]]),
+    child: new Table(() => ({ status: "ACTIVE", avatar: null, avatarMimeType: null, avatarUpdatedAt: null })),
+    attendance: new Table(() => ({ note: null, checkInTime: null, checkOutTime: null, coinTransactionId: null }), [["childId", "date"]]),
+    coinTransaction: new Table(),
     $transaction: async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma),
   };
   return prisma;

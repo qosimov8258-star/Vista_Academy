@@ -59,13 +59,15 @@
   },
   "login": {
     "title": "Xush kelibsiz!",
-    "subtitle": "Boshqaruv paneliga kirish uchun ma'lumotlaringizni kiriting.",
-    "loginLabel": "Login",
+    "subtitle": "Xodimlar — login bilan, ota-onalar — bolaga biriktirilgan telefon raqami bilan kiradi.",
+    "loginLabel": "Login yoki telefon",
+    "loginPlaceholder": "ism.familiya yoki +998 90 123 45 67",
     "passwordLabel": "Parol",
     "submit": "Kirish",
     "forgotPassword": "Parolni unutdingizmi? Tashkilot Super Admini bilan bog'laning.",
     "loginRequired": "Login kiritilishi shart",
     "passwordMin": "Kamida 8 belgi",
+    "passwordRequired": "Parolni kiriting",
     "unexpectedError": "Kutilmagan xatolik yuz berdi",
     "hero": {
       "status": "Tizim ishlamoqda",

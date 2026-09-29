@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useAppPathname } from "@/lib/tenant-host-context";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
@@ -102,7 +102,7 @@ export function DirectorRail({
   loggingOut,
 }: DirectorRailProps) {
   const t = useTranslations("sidebar");
-  const pathname = usePathname();
+  const pathname = useAppPathname();
   const [open, toggleOpen] = useRailOpen();
   const asideRef = useRef<HTMLElement>(null);
   const scrollRef = useRef<HTMLElement>(null);

@@ -9,6 +9,7 @@ import { z } from "zod";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
+import { parentApi } from "@/lib/parent-api";
 import { setTenantTokens } from "@/lib/tenant-session";
 import { Input, PasswordInput } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,8 @@ export function LoginForm({ slug, submitClassName }: { slug: string; submitClass
 
   const schema = z.object({
     login: z.string().min(1, t("loginRequired")),
-    password: z.string().min(8, t("passwordMin")),
+    // Uzunlikni server tekshiradi: xodim paroli 8+, ota-onaniki 6+ belgi
+    password: z.string().min(1, t("passwordRequired")),
   });
   type FormValues = z.infer<typeof schema>;
 
@@ -34,6 +36,26 @@ export function LoginForm({ slug, submitClassName }: { slug: string; submitClass
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
+
+  /**
+   * Bitta forma hamma uchun: avval xodim sifatida, bo'lmasa (kiritilgani
+   * telefon raqamiga o'xshasa) ota-ona sifatida kiriladi. Ota-ona logini —
+   * bolaga biriktirilgan telefon raqami.
+   */
+  const tryParentLogin = async (values: FormValues): Promise<boolean> => {
+    const digits = values.login.replace(/\D/g, "");
+    if (!/^[\d\s()+-]+$/.test(values.login.trim()) || digits.length < 7) return false;
+    try {
+      await parentApi.post("/app/parent/login", { orgSlug: slug, phone: values.login.trim(), password: values.password });
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) return false;
+      throw err;
+    }
+    queryClient.clear();
+    router.push(`/ota-ona/${slug}`);
+    router.refresh();
+    return true;
+  };
 
   const onSubmit = async (values: FormValues) => {
     setServerError(null);
@@ -60,6 +82,14 @@ export function LoginForm({ slug, submitClassName }: { slug: string; submitClass
       router.push(next);
       router.refresh();
     } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        try {
+          if (await tryParentLogin(values)) return;
+        } catch (parentErr) {
+          setServerError(parentErr instanceof ApiError ? parentErr.message : t("unexpectedError"));
+          return;
+        }
+      }
       if (err instanceof ApiError) {
         setServerError(err.message);
       } else {
@@ -79,7 +109,7 @@ export function LoginForm({ slug, submitClassName }: { slug: string; submitClass
         id="login"
         label={t("loginLabel")}
         type="text"
-        placeholder="admin_tarmoq"
+        placeholder={t("loginPlaceholder")}
         autoComplete="username"
         error={errors.login?.message}
         {...register("login")}

@@ -13,6 +13,7 @@ import { AuditLogService } from "../audit-log/audit-log.service";
 import { FaceIdService } from "../face-id/face-id.service";
 import { currentPeriodString } from "../billing/billing.service";
 import { FinanceChildStatus } from "../billing/dto/finance-query.dto";
+import { FaceIdCommandsService } from "../face-id/face-id-commands.service";
 import { CreateChildDto } from "./dto/create-child.dto";
 import { UpdateChildDto } from "./dto/update-child.dto";
 import { ChildQueryDto } from "./dto/child-query.dto";
@@ -38,6 +39,7 @@ export class ChildrenService {
     private readonly prisma: PrismaService,
     private readonly auditLog: AuditLogService,
     private readonly faceIdService: FaceIdService,
+    private readonly faceIdCommands: FaceIdCommandsService,
   ) {}
 
   async create(caller: TenantAuthenticatedUser, dto: CreateChildDto) {
@@ -83,6 +85,8 @@ export class ChildrenService {
       { organizationId: scope.organizationId, branchId },
       { personType: "CHILD", childId: created.child.id },
     );
+    // Filialdagi yuz tanish terminallariga bola qo'shiladi (agent bajaradi)
+    await this.faceIdCommands.enqueueChildSync(created.child.id);
     return { ...created.child, credentials: created.credentials };
   }
 
@@ -182,6 +186,11 @@ export class ChildrenService {
       branchId,
       summary: `${updated.fullName} ma'lumotlari tahrirlandi`,
     });
+    // Ismi yoki holati o'zgarsa terminal ham yangilanadi; nofaol bo'lsa — terminaldan o'chadi
+    const nameChanged = updated.firstName !== existing.firstName || updated.lastName !== existing.lastName;
+    if (nameChanged || (dto.status && dto.status !== existing.status)) {
+      await this.faceIdCommands.enqueueChildSync(updated.id);
+    }
     return updated;
   }
 
@@ -211,6 +220,8 @@ export class ChildrenService {
       data: { avatar: buffer, avatarMimeType: mimeType, avatarUpdatedAt: new Date() },
       select: { avatarUpdatedAt: true },
     });
+    // Yangi surat yuz tanish terminallariga ham yuboriladi
+    await this.faceIdCommands.enqueueChildFace(child.id);
     return { avatarUpdatedAt: updated.avatarUpdatedAt };
   }
 

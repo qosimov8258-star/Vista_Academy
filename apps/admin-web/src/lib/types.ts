@@ -245,6 +245,7 @@ export interface FaceIdCommand {
   createdAt: string;
   completedAt: string | null;
   employee: { id: string; fullName: string } | null;
+  child: { id: string; fullName: string } | null;
 }
 
 /** Xodim yoki bolaning bitta qurilmada yuzini ro'yxatga olish holati. */
@@ -281,6 +282,9 @@ export interface AttendanceChild {
   parentReason: string | null;
   /** Tarbiyachi "Aloqaga chiqish" bosgan payt (ISO) — bosilmagan bo'lsa `null`. */
   contactRequestedAt: string | null;
+  /** Yuz tanish terminali (Face ID) yozgan kelish/ketish vaqti ("HH:MM") — qo'lda belgilanganda `null`. */
+  checkInTime: string | null;
+  checkOutTime: string | null;
 }
 
 export interface AttendanceDay {
@@ -1047,7 +1051,14 @@ export interface ParentChild {
 export interface ParentDay {
   date: string;
   child: { id: string; fullName: string; groupName: string | null; avatarUpdatedAt: string | null };
-  attendance: { status: AttendanceStatus; note: string | null; parentReason: string | null } | null;
+  attendance: {
+    status: AttendanceStatus;
+    note: string | null;
+    parentReason: string | null;
+    /** Yuz tanish terminali yozgan kelish/ketish vaqti ("HH:MM") */
+    checkInTime: string | null;
+    checkOutTime: string | null;
+  } | null;
   report: {
     eatingQuality: "GOOD" | "AVERAGE" | "POOR" | null;
     sleepMinutes: number | null;

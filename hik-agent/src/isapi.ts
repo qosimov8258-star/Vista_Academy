@@ -121,11 +121,36 @@ export async function addOrUpdateUser(client: IsapiClient, opts: IsapiOptions & 
   return "modified" as const;
 }
 
-/** Xodimni qurilmadan o'chiradi (yuz ma'lumoti ham u bilan birga ketadi). */
-export async function deleteUser(client: IsapiClient, employeeNo: string) {
+/**
+ * Foydalanuvchini qurilmadan o'chiradi (yuz ma'lumoti ham u bilan birga
+ * ketadi). DS-K1T342EX (V4.39) da o'chirish fonda bajariladi: so'rov darhol
+ * "OK" qaytaradi, natijani esa `DeleteProcess` ko'rsatadi — shuni kutamiz,
+ * aks holda ERP'ga "bajarildi" deb erta aytib qo'yardik.
+ */
+export async function deleteUser(client: IsapiClient, employeeNo: string, opts: { pollMs?: number; timeoutMs?: number } = {}) {
   await client.json("PUT", "/ISAPI/AccessControl/UserInfoDetail/Delete?format=json", {
     UserInfoDetail: { mode: "byEmployeeNo", EmployeeNoList: [{ employeeNo }] },
   });
+  const pollMs = opts.pollMs ?? 500;
+  const deadline = Date.now() + (opts.timeoutMs ?? 20_000);
+  while (Date.now() < deadline) {
+    let status: string | undefined;
+    try {
+      const res = await client.json<{ UserInfoDetailDeleteProcess?: { status?: string } }>(
+        "GET",
+        "/ISAPI/AccessControl/UserInfoDetail/DeleteProcess?format=json",
+      );
+      status = res.UserInfoDetailDeleteProcess?.status;
+    } catch (err) {
+      // Eski proshivkada bu endpoint yo'q — o'chirish sinxron bo'lgan
+      if (err instanceof IsapiError && !err.network) return;
+      throw err;
+    }
+    if (status === "success" || status === undefined) return;
+    if (status === "failed") throw new IsapiError("O'chirish muvaffaqiyatsiz (DeleteProcess: failed)", 200);
+    await new Promise((resolve) => setTimeout(resolve, pollMs));
+  }
+  throw new IsapiError("O'chirish tugashini kutish vaqti o'tdi (DeleteProcess)", 200);
 }
 
 /**

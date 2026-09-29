@@ -5,6 +5,10 @@ import { decryptSecret } from "../../common/crypto/reversible-secret";
 import type { AgentDevice } from "./agent/agent-token.guard";
 import type { AgentEventDto } from "./dto/agent-events.dto";
 import { computeDailyAttendance, lateGraceMinutes, localDateKey, utcWindowAround } from "./face-id-attendance";
+import { parseChildDeviceNo } from "./device-person";
+
+/** Bolaning kunlik davomati uchun beriladigan coin — `AttendanceService.mark` bilan bir xil. */
+const ATTENDANCE_COINS = 5;
 
 /** Sana ustuni (`@db.Date`) uchun — xodimlar davomatidagi bilan bir xil. */
 function toDateOnly(dateKey: string): Date {
@@ -14,7 +18,7 @@ function toDateOnly(dateKey: string): Date {
 /**
  * Agent tomoni: qurilma sozlamalari va voqealarni qabul qilish.
  * Voqealar idempotent saqlanadi (`@@unique([deviceId, serialNo, eventTime])`),
- * keyin tegishli xodim-kunlar uchun davomat qayta hisoblanadi.
+ * keyin tegishli xodim-kun va bola-kunlar uchun davomat qayta hisoblanadi.
  */
 @Injectable()
 export class FaceIdAgentService {
@@ -79,15 +83,24 @@ export class FaceIdAgentService {
     }
     const rows = [...unique.values()];
 
-    // Xodim raqami → xodim (faqat shu tashkilot ichida)
+    // Terminal raqami → xodim (1001…) yoki bola (C14732), faqat shu tashkilot ichida
     const numbers = [...new Set(rows.map((r) => r.employeeNo).filter((n): n is string => !!n))];
-    const employees = numbers.length
+    const childNumbers = numbers.filter((n) => parseChildDeviceNo(n) !== null);
+    const employeeNumbers = numbers.filter((n) => parseChildDeviceNo(n) === null);
+    const employees = employeeNumbers.length
       ? await this.prisma.employee.findMany({
-          where: { organizationId: device.organizationId, employeeNo: { in: numbers } },
+          where: { organizationId: device.organizationId, employeeNo: { in: employeeNumbers } },
           select: { id: true, employeeNo: true, branchId: true },
         })
       : [];
     const byNo = new Map(employees.map((e) => [e.employeeNo, e]));
+    const children = childNumbers.length
+      ? await this.prisma.child.findMany({
+          where: { organizationId: device.organizationId, publicId: { in: childNumbers.map((n) => parseChildDeviceNo(n)!) } },
+          select: { id: true, publicId: true, branchId: true, organizationId: true },
+        })
+      : [];
+    const childByNo = new Map(children.map((c) => [`C${c.publicId}`, c]));
 
     const created = await this.prisma.faceIdEvent.createMany({
       data: rows.map((r) => ({
@@ -97,6 +110,7 @@ export class FaceIdAgentService {
         serialNo: r.serialNo,
         employeeNo: r.employeeNo ?? null,
         employeeId: (r.employeeNo && byNo.get(r.employeeNo)?.id) || null,
+        childId: (r.employeeNo && childByNo.get(r.employeeNo)?.id) || null,
         eventTime: r.time,
         major: r.major,
         minor: r.minor,
@@ -107,9 +121,9 @@ export class FaceIdAgentService {
       skipDuplicates: true,
     });
 
-    const unknown = numbers.filter((n) => !byNo.has(n));
+    const unknown = numbers.filter((n) => !byNo.has(n) && !childByNo.has(n));
     if (unknown.length) {
-      this.logger.warn(`Qurilma "${device.name}": noma'lum xodim raqamlari ${unknown.join(", ")}`);
+      this.logger.warn(`Qurilma "${device.name}": noma'lum raqamlar ${unknown.join(", ")}`);
     }
 
     // Tegishli (xodim, kun) juftliklari uchun davomat qayta hisoblanadi —
@@ -125,6 +139,16 @@ export class FaceIdAgentService {
     let attendanceUpdated = 0;
     for (const pair of pairs.values()) {
       if (await this.recomputeAttendance(pair.employeeId, pair.branchId, pair.dateKey)) attendanceUpdated++;
+    }
+    const childPairs = new Map<string, { child: (typeof children)[number]; dateKey: string }>();
+    for (const r of rows) {
+      const child = r.employeeNo ? childByNo.get(r.employeeNo) : undefined;
+      if (!child) continue;
+      const dateKey = localDateKey(r.time, timezone);
+      childPairs.set(`${child.id}|${dateKey}`, { child, dateKey });
+    }
+    for (const pair of childPairs.values()) {
+      if (await this.recomputeChildAttendance(pair.child, pair.dateKey)) attendanceUpdated++;
     }
 
     return { received: events.length, inserted: created.count, attendanceUpdated };
@@ -177,6 +201,64 @@ export class FaceIdAgentService {
           note: "Face ID",
         },
       });
+    }
+    return true;
+  }
+
+  /**
+   * Bolaning bir kunlik davomati (terminal voqealaridan):
+   * - Yozuv bo'lmasa — "Keldi" + kunlik coin (+5), kelish/ketish vaqti bilan.
+   *   Coin qo'lda belgilashdagi bilan bir xil yo'l bilan beriladi, shuning
+   *   uchun tarbiyachi keyin "Kelmadi" qilsa — coin o'sha yerda qaytariladi.
+   * - Yozuv bo'lsa (tarbiyachi belgilagan yoki tuzatgan) — holatga tegilmaydi,
+   *   faqat vaqtlar yoziladi: tarbiyachining hisobi ustun.
+   * Bolalarda "Kech qoldi" avtomatik qo'yilmaydi.
+   */
+  async recomputeChildAttendance(
+    child: { id: string; branchId: string; organizationId: string },
+    dateKey: string,
+  ): Promise<boolean> {
+    const branch = await this.prisma.branch.findUniqueOrThrow({ where: { id: child.branchId }, select: { timezone: true } });
+    const window = utcWindowAround(dateKey);
+    const events = await this.prisma.faceIdEvent.findMany({
+      where: { childId: child.id, eventTime: { gte: window.from, lt: window.to } },
+      select: { eventTime: true },
+    });
+    const times = events.map((e) => e.eventTime).filter((t) => localDateKey(t, branch.timezone) === dateKey);
+    const daily = computeDailyAttendance(times, { timeZone: branch.timezone, openTime: null, graceMinutes: 0 });
+    if (!daily) return false;
+    const date = toDateOnly(dateKey);
+    const timeFields = { checkInTime: daily.checkInTime, checkOutTime: daily.checkOutTime };
+
+    const existing = await this.prisma.attendance.findUnique({ where: { childId_date: { childId: child.id, date } }, select: { id: true } });
+    if (existing) {
+      await this.prisma.attendance.update({ where: { id: existing.id }, data: timeFields });
+      return true;
+    }
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        const coin = await tx.coinTransaction.create({
+          data: {
+            organizationId: child.organizationId,
+            branchId: child.branchId,
+            childId: child.id,
+            amount: ATTENDANCE_COINS,
+            source: "ATTENDANCE",
+            reason: `Kunlik davomat — ${dateKey}`,
+          },
+        });
+        await tx.attendance.create({
+          // Izoh bo'sh qoladi — u tarbiyachiniki; terminal yozgani vaqtlardan ko'rinadi
+          data: { childId: child.id, branchId: child.branchId, date, status: "PRESENT", coinTransactionId: coin.id, ...timeFields },
+        });
+      });
+    } catch (err) {
+      // Shu payt tarbiyachi ham belgilagan bo'lsa (unikal kalit) — uning yozuvi qoladi, faqat vaqtlar
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+        await this.prisma.attendance.update({ where: { childId_date: { childId: child.id, date } }, data: timeFields });
+        return true;
+      }
+      throw err;
     }
     return true;
   }

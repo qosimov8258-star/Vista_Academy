@@ -209,7 +209,7 @@ export class FaceIdService {
     return { agentToken };
   }
 
-  /** "Qurilmaga to'liq sinxronlash" — filialdagi barcha faol xodimlar navbatga. */
+  /** "Qurilmaga to'liq sinxronlash" — filialdagi barcha faol xodim va bolalar navbatga. */
   async syncDevice(caller: TenantAuthenticatedUser, id: string) {
     const device = await this.requireWritableDevice(toTenantScope(caller), id);
     const full = await this.prisma.faceIdDevice.findUniqueOrThrow({ where: { id: device.id }, select: { status: true, name: true } });
@@ -222,7 +222,7 @@ export class FaceIdService {
       entityType: "FaceIdDevice",
       entityId: device.id,
       branchId: device.branchId,
-      summary: `"${full.name}" qurilmasiga ${result.employees} xodim sinxronlashga qo'yildi`,
+      summary: `"${full.name}" qurilmasiga ${result.employees} xodim va ${result.children} bola sinxronlashga qo'yildi`,
     });
     return result;
   }
@@ -250,6 +250,7 @@ export class FaceIdService {
         createdAt: true,
         completedAt: true,
         employee: { select: { id: true, fullName: true } },
+        child: { select: { id: true, fullName: true } },
       },
     });
   }

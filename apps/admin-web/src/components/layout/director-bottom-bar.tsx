@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useAppPathname } from "@/lib/tenant-host-context";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
@@ -79,7 +79,7 @@ export function DirectorBottomBar({
   loggingOut,
 }: DirectorBottomBarProps) {
   const t = useTranslations("sidebar");
-  const pathname = usePathname();
+  const pathname = useAppPathname();
   const barRef = useRef<HTMLDivElement>(null);
   const slotRefs = useRef<Array<HTMLElement | null>>([]);
   const [sheet, setSheet] = useState<Sheet | null>(null);

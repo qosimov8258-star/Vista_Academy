@@ -426,6 +426,8 @@ model Child {
   lessonAttendances         LessonAttendance[]
   productSales              ProductSale[]
   faceEnrollments           FaceEnrollment[]
+  faceIdEvents              FaceIdEvent[]
+  faceIdCommands            FaceIdCommand[]
   paymentReminderDispatches PaymentReminderDispatch[]
   paymentReceipts           PaymentReceipt[]
 
@@ -802,6 +804,10 @@ model Attendance {
   date               DateTime         @db.Date
   status             AttendanceStatus
   note               String?
+  // Yuz tanish terminali (Face ID) yozgan kelish/ketish vaqti — "HH:MM",
+  // xodimlar davomatidagi kabi. Qo'lda belgilanganda bo'sh qoladi.
+  checkInTime        String?          @map("check_in_time")
+  checkOutTime       String?          @map("check_out_time")
   // Ota-ona kabinetida yozib qoldirgan sabab (masalan "shifokorga bordik") —
   // tarbiyachining `note`sidan ajratilgan, chunki bittasi xodim, ikkinchisi
   // ota-ona tomonidan yoziladi.
@@ -2062,6 +2068,8 @@ model FaceIdEvent {
   // voqea saqlanadi — keyin qo'lda tekshirish uchun.
   employeeNo     String?  @map("employee_no")
   employeeId     String?  @map("employee_id")
+  // Bola terminalda "C" prefiksli raqam bilan turadi (C14732 — bolaning ID'si)
+  childId        String?  @map("child_id")
   eventTime      DateTime @map("event_time")
   major          Int
   minor          Int
@@ -2075,9 +2083,11 @@ model FaceIdEvent {
   branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
   device       FaceIdDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
   employee     Employee?    @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  child        Child?       @relation(fields: [childId], references: [id], onDelete: SetNull)
 
   @@unique([deviceId, serialNo, eventTime])
   @@index([employeeId, eventTime])
+  @@index([childId, eventTime])
   @@index([branchId, eventTime])
   @@map("face_id_events")
 }
@@ -2111,6 +2121,8 @@ model FaceIdCommand {
   // Xodim o'chirilgandan keyin ham DELETE_USER bajarilishi kerak — shuning
   // uchun raqami alohida saqlanadi, bog'lanish esa SetNull.
   employeeId     String?             @map("employee_id")
+  childId        String?             @map("child_id")
+  // Terminaldagi raqam (ISAPI `employeeNo`): xodimda 1001…, bolada C14732
   employeeNo     String              @map("employee_no")
   type           FaceIdCommandType
   payload        Json
@@ -2126,6 +2138,7 @@ model FaceIdCommand {
   branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
   device       FaceIdDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
   employee     Employee?    @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  child        Child?       @relation(fields: [childId], references: [id], onDelete: SetNull)
 
   @@unique([seq])
   @@index([deviceId, status, seq])
