@@ -171,6 +171,10 @@ model TenantUser {
   avatar          Bytes?         @map("avatar")
   avatarMimeType  String?        @map("avatar_mime_type")
   avatarUpdatedAt DateTime?      @map("avatar_updated_at")
+  // Tizim rangi (Sozlamalar → Tizim rangi): "green", "blue", ... — ro'yxati
+  // profile/dto/update-theme.dto.ts da. Null — sukut (yashil). Hisobda
+  // saqlanadi, shuning uchun barcha qurilmalarda bir xil.
+  themeColor      String?        @map("theme_color")
   isActive        Boolean        @default(true) @map("is_active")
   // Faol/nofaol hisoblarni ajratish uchun — muvaffaqiyatli har bir loginda yangilanadi.
   lastLoginAt     DateTime?      @map("last_login_at")

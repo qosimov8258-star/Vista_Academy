@@ -10,16 +10,18 @@ import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import type { EmployeeNotification } from "@/lib/types";
 import { clearTenantTokens, getTenantRefreshToken } from "@/lib/tenant-session";
 import clsx from "clsx";
-import type { ComponentType } from "react";
 import { useAuth } from "@/lib/use-auth";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { useSidebarCollapsed } from "@/lib/use-sidebar-collapsed";
 import { useSidebarSections } from "@/lib/use-sidebar-sections";
 import { ROLE_LABEL, canManageUsers, canViewUseful, isChef, isTeacher, receivesEmployeeNotifications } from "@/lib/permissions";
 import { formatPositionLabel, isAssistantPosition, isCashierPosition, isSubjectTeacherPosition } from "@/lib/employee-position";
-import { Avatar } from "@/components/ui/avatar";
-import type { IconProps } from "@/components/ui/icons";
+import { Avatar, initials } from "@/components/ui/avatar";
+import { isSection, type NavEntry, type NavLeaf } from "./nav-types";
+import { DirectorRail } from "./director-rail";
+import { DirectorBottomBar } from "./director-bottom-bar";
 import {
+  AuditIcon,
   CloseIcon,
   ArrowLeftIcon,
   BellIcon,
@@ -51,35 +53,6 @@ import {
   TeacherIcon,
 } from "@/components/ui/icons";
 
-// `IconProps` — ikonkalar to'plamining o'z tipi: `filled` bayrog'i ham bor,
-// faol bo'lim to'ldirilgan ikonka bilan belgilanadi.
-type NavIcon = ComponentType<IconProps>;
-
-interface NavLeaf {
-  href: string;
-  label: string;
-  icon: NavIcon;
-  show: boolean;
-  exact?: boolean;
-  /** O'ng chetdagi raqamli belgi (masalan yangi arizalar soni). */
-  badge?: number;
-  badgeTone?: "warning" | "success" | "danger";
-}
-
-/** Ochilib-yopiladigan bo'lim: ichidagi havolalar daraxt chizig'i bilan ulanadi. */
-interface NavSection {
-  id: string;
-  label: string;
-  icon: NavIcon;
-  items: NavLeaf[];
-}
-
-type NavEntry = NavLeaf | NavSection;
-
-function isSection(entry: NavEntry): entry is NavSection {
-  return "items" in entry;
-}
-
 const BADGE_TONE: Record<NonNullable<NavLeaf["badgeTone"]>, string> = {
   warning: "bg-[var(--color-warning-bg)] text-[var(--color-warning)]",
   success: "bg-[var(--color-success-bg)] text-[var(--color-success)]",
@@ -98,6 +71,8 @@ function Badge({ value, tone = "warning" }: { value: number; tone?: NavLeaf["bad
     </span>
   );
 }
+
+const RAIL_HINT_KEY = "bogcha:director-rail";
 
 export function Sidebar({ slug }: { slug: string }) {
   const pathname = usePathname();
@@ -133,6 +108,28 @@ export function Sidebar({ slug }: { slug: string }) {
 
   const clearHover = () => setHoverRect(null);
   const isNetworkAdmin = user?.role === "NETWORK_ADMIN";
+
+  // Direktor (Super Admin) uchun yon panel boshqacha — ingichka ikonka ustuni.
+  // Foydalanuvchi ma'lumoti yuklanguncha rol noma'lum; oxirgi marta kim
+  // kirgani brauzerda eslab qolinadi, shunda direktorga sahifa yangilanganda
+  // eski keng panel bir lahza ko'rinib, keyin sakrab o'zgarmaydi.
+  const [railHint, setRailHint] = useState(false);
+  useEffect(() => {
+    try {
+      setRailHint(window.localStorage.getItem(RAIL_HINT_KEY) === "1");
+    } catch {
+      // Shaxsiy rejimda localStorage yopiq — oddiy holatda qolaveradi
+    }
+  }, []);
+  useEffect(() => {
+    if (!user) return;
+    try {
+      window.localStorage.setItem(RAIL_HINT_KEY, user.role === "NETWORK_ADMIN" ? "1" : "0");
+    } catch {
+      // yuqoridagi kabi
+    }
+  }, [user]);
+  const useDirectorRail = isNetworkAdmin || (!user && railHint);
   // "Fan o'qituvchisi" lavozimida tanlangan fan(lar) ko'rsatiladi (masalan
   // "Matematika o'qituvchisi"), boshqa lavozimlarda lavozim nomining o'zi.
   const positionLabel = user?.position ? formatPositionLabel(user.position, user.subjects) : null;
@@ -190,6 +187,8 @@ export function Sidebar({ slug }: { slug: string }) {
     // bu bo'lim uning asosiy ro'yxatida turishi shart. Filial ichiga
     // kirilganda ko'rinmaydi — u yerda filialning kundalik ishi turadi.
     { href: `/${slug}/users`, label: t("nav.employees"), icon: TeacherIcon, show: showUsersNav },
+    // Kim, qachon, nima qilgani — butun tarmoq bo'yicha (filial bo'yicha filtr bilan)
+    { href: `/${slug}/audit-logs`, label: "Audit", icon: AuditIcon, show: true },
   ];
 
   // O'qituvchi kabineti: faqat o'z guruhlariga tegishli uchta bo'lim.
@@ -397,6 +396,8 @@ export function Sidebar({ slug }: { slug: string }) {
         { href: `${base}/lending/groups`, label: t("nav.groups"), icon: GroupIcon, show: true },
       ],
     },
+    // Direktor filial ichida — shu filialdagi amallar jurnali
+    { href: `${base}/audit-logs`, label: "Audit", icon: AuditIcon, show: inBranchContext },
   ];
 
   // Sozlamalar har bir rolda bo'ladi: bu foydalanuvchining o'z hisobi,
@@ -454,6 +455,33 @@ export function Sidebar({ slug }: { slug: string }) {
 
   return (
     <>
+    {useDirectorRail ? (
+      <>
+        <DirectorRail
+          slug={slug}
+          entries={user ? entries : []}
+          settingsItem={settingsItem}
+          isActive={isActive}
+          user={user}
+          branchName={branch?.name ?? null}
+          inBranchContext={inBranchContext}
+          onLogout={handleLogout}
+          loggingOut={loggingOut}
+        />
+        {/* Telefonda — xuddi shu uslubdagi pastki panel */}
+        <DirectorBottomBar
+          slug={slug}
+          entries={user ? entries : []}
+          settingsItem={settingsItem}
+          isActive={isActive}
+          user={user}
+          branchName={branch?.name ?? null}
+          inBranchContext={inBranchContext}
+          onLogout={handleLogout}
+          loggingOut={loggingOut}
+        />
+      </>
+    ) : (
     <aside
       className={clsx(
         "hidden shrink-0 flex-col bg-[var(--color-sidebar)] md:flex",
@@ -471,17 +499,28 @@ export function Sidebar({ slug }: { slug: string }) {
       >
         {!collapsed && (
           <>
-            {/* eslint-disable-next-line @next/next/no-img-element -- statik brend rasmi, Next optimizatsiyasi kerak emas */}
-            <img src="/logo.png" alt="Vista Academy" className="h-9 w-9 shrink-0 object-contain" />
+            {/* Tizimda bir necha bog'cha bor — belgi va nom kirgan foydalanuvchining
+                tashkilotidan olinadi, hech narsa qattiq yozilmaydi */}
+            {user ? (
+              <span
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] bg-gradient-to-br from-[#14b8a6] to-[var(--color-primary)] text-[14px] font-extrabold text-white shadow-[var(--shadow-primary)]"
+                aria-hidden="true"
+              >
+                {initials(user.organizationName)}
+              </span>
+            ) : (
+              <span className="h-9 w-9 shrink-0 animate-pulse rounded-[11px] bg-black/[0.06]" aria-hidden="true" />
+            )}
             <div className="min-w-0 flex-1">
-              <p className="font-heading truncate text-sm font-extrabold leading-tight" style={{ color: "#4CA6D4" }}>
-                Vista
-              </p>
-              <p className="truncate text-xs font-bold leading-tight" style={{ color: "#61AE41" }}>
-                Academy
-              </p>
+              {user ? (
+                <p className="truncate text-[15px] font-bold leading-tight tracking-[-0.01em] text-[var(--color-text)]">
+                  {user.organizationName}
+                </p>
+              ) : (
+                <span className="block h-3.5 w-24 animate-pulse rounded-full bg-black/[0.06]" aria-hidden="true" />
+              )}
               {(positionLabel ?? user?.branchName) && (
-                <p className="truncate text-[11px] leading-tight text-[var(--color-text-muted)]">
+                <p className="mt-0.5 truncate text-[11px] leading-tight text-[var(--color-text-muted)]">
                   {positionLabel ?? user?.branchName}
                 </p>
               )}
@@ -724,6 +763,7 @@ export function Sidebar({ slug }: { slug: string }) {
         </button>
       </div>
     </aside>
+    )}
 
     {/* Mobil to'liq menyu (o'qituvchidan boshqa rollar): Topbar'dagi uch chiziq tugmasi ochadi. */}
     {drawerOpen && (

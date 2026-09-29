@@ -45,7 +45,9 @@
   --shadow-raised: 0 2px 4px rgba(16, 24, 40, 0.05), 0 12px 28px -8px rgba(16, 24, 40, 0.12);
   --shadow-modal: 0 8px 16px -6px rgba(16, 24, 40, 0.1), 0 32px 64px -12px rgba(16, 24, 40, 0.28);
   /* Asosiy tugma o'z rangida ko'tariladi — neytral soya unda ko'rinmaydi */
-  --shadow-primary: 0 1px 2px rgba(15, 118, 110, 0.24), 0 6px 16px -6px rgba(15, 118, 110, 0.4);
+  --shadow-primary:
+    0 1px 2px color-mix(in srgb, var(--color-primary) 24%, transparent),
+    0 6px 16px -6px color-mix(in srgb, var(--color-primary) 40%, transparent);
 
   /* Sarlavhalar zichroq terilganda qat'iyroq o'qiladi */
   --tracking-title: -0.022em;
@@ -55,6 +57,135 @@
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --dur-fast: 150ms;
   --dur-base: 220ms;
+
+  /*
+   * Tizim rangi (Sozlamalar → Tizim rangi). Sukut — yashil. Tanlangan
+   * rang <html data-theme="..."> orqali quyidagi bloklardan biri bilan
+   * almashadi; tugmalar, faol bo'limlar, yon panel, qidiruv halqasi va
+   * ikonkalar shu o'zgaruvchilardan rang oladi.
+   *   --accent-rail / -2   to'q fon (yon panel, bosh sahifa vidjeti)
+   *   --accent-bright/light to'q fon ustidagi yorqin urg'u va matn
+   *   --accent-orb-*       faol bo'lim doirasi (gradient va ichidagi ikonka)
+   *   --accent-soft*       och fondagi faol qator (menyu, filtr)
+   */
+  --accent-rail: #0d241b;
+  --accent-rail-2: #11302a;
+  --accent-bright: #34d399;
+  --accent-light: #6ee7b7;
+  --accent-pale: #d1fae5;
+  --accent-orb-from: #b5f5d6;
+  --accent-orb-to: #3fd79f;
+  --accent-orb-ink: #053d2c;
+  --accent-soft: #ecfdf5;
+  --accent-soft-ink: #064e3b;
+  --accent-soft-icon: #059669;
+}
+
+/* Tizim rangi to'plamlari — ro'yxati lib/theme.ts da */
+:root[data-theme="blue"] {
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --accent-rail: #0f1b33;
+  --accent-rail-2: #172a4f;
+  --accent-bright: #60a5fa;
+  --accent-light: #93c5fd;
+  --accent-pale: #dbeafe;
+  --accent-orb-from: #c7dcff;
+  --accent-orb-to: #5b9dff;
+  --accent-orb-ink: #0b2a66;
+  --accent-soft: #eff6ff;
+  --accent-soft-ink: #1e3a8a;
+  --accent-soft-icon: #2563eb;
+}
+:root[data-theme="indigo"] {
+  --color-primary: #4f46e5;
+  --color-primary-hover: #4338ca;
+  --accent-rail: #15173b;
+  --accent-rail-2: #1f2355;
+  --accent-bright: #818cf8;
+  --accent-light: #a5b4fc;
+  --accent-pale: #e0e7ff;
+  --accent-orb-from: #d4d9ff;
+  --accent-orb-to: #7c86ff;
+  --accent-orb-ink: #1e1b4b;
+  --accent-soft: #eef2ff;
+  --accent-soft-ink: #312e81;
+  --accent-soft-icon: #4f46e5;
+}
+:root[data-theme="violet"] {
+  --color-primary: #7c3aed;
+  --color-primary-hover: #6d28d9;
+  --accent-rail: #1c1233;
+  --accent-rail-2: #2b1a4d;
+  --accent-bright: #a78bfa;
+  --accent-light: #c4b5fd;
+  --accent-pale: #ede9fe;
+  --accent-orb-from: #ddd0ff;
+  --accent-orb-to: #9b7bff;
+  --accent-orb-ink: #2e1065;
+  --accent-soft: #f5f3ff;
+  --accent-soft-ink: #4c1d95;
+  --accent-soft-icon: #7c3aed;
+}
+:root[data-theme="pink"] {
+  --color-primary: #db2777;
+  --color-primary-hover: #be185d;
+  --accent-rail: #2a0f1e;
+  --accent-rail-2: #3f1631;
+  --accent-bright: #f472b6;
+  --accent-light: #f9a8d4;
+  --accent-pale: #fce7f3;
+  --accent-orb-from: #ffd1e6;
+  --accent-orb-to: #f472b6;
+  --accent-orb-ink: #500724;
+  --accent-soft: #fdf2f8;
+  --accent-soft-ink: #831843;
+  --accent-soft-icon: #db2777;
+}
+:root[data-theme="orange"] {
+  --color-primary: #ea580c;
+  --color-primary-hover: #c2410c;
+  --accent-rail: #2a1608;
+  --accent-rail-2: #3d220e;
+  --accent-bright: #fb923c;
+  --accent-light: #fdba74;
+  --accent-pale: #ffedd5;
+  --accent-orb-from: #ffe0c2;
+  --accent-orb-to: #fb9a4b;
+  --accent-orb-ink: #431407;
+  --accent-soft: #fff7ed;
+  --accent-soft-ink: #7c2d12;
+  --accent-soft-icon: #ea580c;
+}
+:root[data-theme="teal"] {
+  --color-primary: #0891b2;
+  --color-primary-hover: #0e7490;
+  --accent-rail: #08222b;
+  --accent-rail-2: #0d303c;
+  --accent-bright: #22d3ee;
+  --accent-light: #67e8f9;
+  --accent-pale: #cffafe;
+  --accent-orb-from: #c3f4fb;
+  --accent-orb-to: #34cfe6;
+  --accent-orb-ink: #083344;
+  --accent-soft: #ecfeff;
+  --accent-soft-ink: #164e63;
+  --accent-soft-icon: #0891b2;
+}
+:root[data-theme="slate"] {
+  --color-primary: #334155;
+  --color-primary-hover: #1e293b;
+  --accent-rail: #0f141b;
+  --accent-rail-2: #1b2330;
+  --accent-bright: #94a3b8;
+  --accent-light: #cbd5e1;
+  --accent-pale: #e2e8f0;
+  --accent-orb-from: #e5e9f0;
+  --accent-orb-to: #a3b1c6;
+  --accent-orb-ink: #0f172a;
+  --accent-soft: #f1f5f9;
+  --accent-soft-ink: #1e293b;
+  --accent-soft-icon: #475569;
 }
 
 /*

@@ -52,6 +52,7 @@ export class TenantJwtStrategy extends PassportStrategy(Strategy, "tenant-jwt") 
       fullName: tenantUser.fullName,
       role: tenantUser.role,
       avatarUpdatedAt: tenantUser.avatarUpdatedAt?.toISOString() ?? null,
+      themeColor: tenantUser.themeColor ?? null,
       position: tenantUser.employee?.position ?? null,
       subjects: tenantUser.employee?.subjects ?? [],
       topicsManagedByAdmin: tenantUser.employee?.topicsManagedByAdmin ?? false,

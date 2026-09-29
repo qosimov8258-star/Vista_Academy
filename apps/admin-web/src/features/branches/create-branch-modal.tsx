@@ -8,7 +8,7 @@ import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { Branch } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
-import { Input } from "@/components/ui/input";
+import { Input, PasswordInput } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 const LOGIN_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{1,30}[A-Za-z0-9]$/;
@@ -79,9 +79,8 @@ export function CreateBranchModal({ open, onClose, slug }: { open: boolean; onCl
               error={errors.managerLogin?.message}
               {...register("managerLogin")}
             />
-            <Input
+            <PasswordInput
               label="Parol"
-              type="password"
               placeholder="Kamida 8 belgi"
               error={errors.managerPassword?.message}
               {...register("managerPassword")}

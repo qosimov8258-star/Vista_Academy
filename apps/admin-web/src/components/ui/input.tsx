@@ -1,6 +1,8 @@
-import { InputHTMLAttributes, TextareaHTMLAttributes, forwardRef } from "react";
+"use client";
+
+import { InputHTMLAttributes, TextareaHTMLAttributes, forwardRef, useState } from "react";
 import clsx from "clsx";
-import { ChevronDownIcon } from "./icons";
+import { ChevronDownIcon, EyeIcon, EyeOffIcon } from "./icons";
 
 interface FieldWrapperProps {
   label?: string;
@@ -31,6 +33,46 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
   },
 );
 Input.displayName = "Input";
+
+/**
+ * Parol maydoni — o'ng tomonida ko'z tugmasi: bosilsa terilgan parol
+ * ko'rinadi, yana bosilsa yashirinadi. Qo'lda terilgan parolda xato
+ * yo'qligini kirishdan oldin tekshirish uchun.
+ */
+export const PasswordInput = forwardRef<
+  HTMLInputElement,
+  Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & FieldWrapperProps
+>(({ label, error, hint, className, id, ...props }, ref) => {
+  const [visible, setVisible] = useState(false);
+  return (
+    <label className="block" htmlFor={id}>
+      {label && <span className="mb-2 block text-[13px] font-medium text-[var(--color-text)]">{label}</span>}
+      <span className="relative block">
+        <input
+          ref={ref}
+          id={id}
+          type={visible ? "text" : "password"}
+          className={clsx(fieldBase, error && "border-[var(--color-danger)]", className, "pr-12")}
+          {...props}
+        />
+        <button
+          type="button"
+          onClick={() => setVisible((v) => !v)}
+          // Kursor maydondan chiqib ketmasin — terishda davom etish mumkin
+          onMouseDown={(e) => e.preventDefault()}
+          aria-label={visible ? "Parolni yashirish" : "Parolni ko'rsatish"}
+          aria-pressed={visible}
+          className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-black/[0.04] hover:text-[var(--color-text)]"
+        >
+          {visible ? <EyeOffIcon className="h-[18px] w-[18px]" /> : <EyeIcon className="h-[18px] w-[18px]" />}
+        </button>
+      </span>
+      {hint && !error && <span className="mt-1.5 block text-[13px] text-[var(--color-text-muted)]">{hint}</span>}
+      {error && <span className="mt-1.5 block text-[13px] text-[var(--color-danger)]">{error}</span>}
+    </label>
+  );
+});
+PasswordInput.displayName = "PasswordInput";
 
 export const Textarea = forwardRef<
   HTMLTextAreaElement,

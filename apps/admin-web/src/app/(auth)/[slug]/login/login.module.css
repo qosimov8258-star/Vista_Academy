@@ -1,17 +1,303 @@
-/* Kirish kartasi va brend belgisi sahna ustida yumshoq ko'tarilib paydo bo'ladi */
-@keyframes loginCardEnter {
-  from { opacity: 0; transform: translateY(20px) scale(0.985); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+/*
+ * Kirish sahifasi — tizim rangidagi to'q fon va urg'u (Sozlamalar → Tizim rangi).
+ * Bezak ataylab kam: yumshoq nur, xira to'r va bitta orbita. Ko'z
+ * kartaga tushishi kerak, fonga emas.
+ */
+
+.page {
+  background: color-mix(in srgb, var(--accent-rail) 50%, black);
+  color: #ecf5f0;
+  color-scheme: dark;
 }
+
+/* ---------- Chap panel: tizim haqida ---------- */
+
+.hero {
+  background:
+    radial-gradient(900px 620px at 0% 0%, color-mix(in srgb, var(--accent-bright) 20%, transparent), transparent 62%),
+    radial-gradient(640px 520px at 100% 100%, color-mix(in srgb, var(--accent-light) 10%, transparent), transparent 60%),
+    linear-gradient(180deg, color-mix(in srgb, var(--accent-rail) 75%, black) 0%, color-mix(in srgb, var(--accent-rail) 50%, black) 100%);
+}
+
+/* Xira to'r — faqat yuqori chap burchakda ko'rinadi, chetga qarab so'nadi */
+.grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 70% 60% at 25% 20%, #000 10%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 25% 20%, #000 10%, transparent 75%);
+}
+
+/* Pastki o'ng burchakdagi katta orbita va uning bo'ylab sekin yuruvchi nuqta */
+.orbit {
+  position: absolute;
+  width: 560px;
+  height: 560px;
+  right: -250px;
+  bottom: -290px;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in srgb, var(--accent-light) 10%, transparent);
+  pointer-events: none;
+}
+.orbit::before {
+  content: "";
+  position: absolute;
+  inset: 70px;
+  border-radius: inherit;
+  border: 1px dashed color-mix(in srgb, var(--accent-light) 7%, transparent);
+}
+.orbitSpin {
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  animation: spin 60s linear infinite;
+}
+.orbitDot {
+  position: absolute;
+  top: 50%;
+  left: -4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: var(--accent-light);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-light) 12%, transparent), 0 0 18px 4px color-mix(in srgb, var(--accent-bright) 45%, transparent);
+}
+
+.brandMark {
+  background: linear-gradient(145deg, var(--accent-bright) 0%, var(--accent-soft-icon) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 8px 24px -8px color-mix(in srgb, var(--accent-bright) 60%, transparent);
+  color: var(--accent-orb-ink);
+}
+
+/* "Tizim ishlamoqda" nuqtasi — tinch pulsatsiya */
+.liveDot {
+  position: relative;
+}
+.liveDot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: inherit;
+  animation: ping 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.accentText {
+  background: linear-gradient(100deg, var(--accent-pale) 0%, var(--accent-light) 45%, var(--accent-bright) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Imkoniyatlar kartasi */
+.feature {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015));
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+.featureIcon {
+  background: color-mix(in srgb, var(--accent-bright) 12%, transparent);
+  color: var(--accent-light);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-light) 18%, transparent);
+}
+.slide {
+  grid-area: 1 / 1;
+  transition:
+    opacity 0.5s var(--ease-out),
+    transform 0.5s var(--ease-out);
+}
+.slideHidden {
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
+}
+
+/* Ko'rsatkich: faol chiziq 6 soniyada to'ladi, to'lgach keyingisiga o'tadi.
+   Sichqoncha karta ustida bo'lsa — to'xtaydi. */
+.progress {
+  animation: fill 6s linear forwards;
+}
+.carousel:hover .progress,
+.carousel:focus-within .progress {
+  animation-play-state: paused;
+}
+
+/* ---------- O'ng tomon: kirish ---------- */
+
+.stage {
+  background: radial-gradient(640px 560px at 50% 46%, color-mix(in srgb, var(--accent-bright) 13%, transparent), transparent 70%), color-mix(in srgb, var(--accent-rail) 60%, black);
+}
+/* Ikki panel orasidagi nozik nurli chiziq */
+.stage::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 1px;
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--accent-light) 22%, transparent) 45%, transparent);
+}
+
+/* Karta ortidagi konsentrik halqalar */
+.rings {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  pointer-events: none;
+}
+.rings span {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.045);
+  transform: translate(-50%, -50%);
+}
+.rings span:nth-child(1) {
+  width: 560px;
+  height: 560px;
+}
+.rings span:nth-child(2) {
+  width: 760px;
+  height: 760px;
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--accent-light) 8%, transparent);
+  animation: spinCentered 120s linear infinite;
+}
+.rings span:nth-child(3) {
+  width: 980px;
+  height: 980px;
+  border-color: rgba(255, 255, 255, 0.03);
+}
+
 .card {
-  animation: loginCardEnter 0.7s cubic-bezier(0.32, 0.72, 0, 1) 0.15s both;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.025));
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 40px 80px -24px rgba(0, 0, 0, 0.65),
+    0 0 0 1px rgba(0, 0, 0, 0.2);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  backdrop-filter: blur(24px) saturate(140%);
 }
-.brand {
-  animation: loginCardEnter 0.6s cubic-bezier(0.32, 0.72, 0, 1) both;
+
+/*
+ * Forma maydonlari — umumiy Input/PasswordInput/Button komponentlari
+ * token'lar orqali bo'yaladi. Shu yerda token'lar qorong'i qiymatga
+ * almashtiriladi: komponentlarning o'ziga tegilmaydi.
+ */
+.fields {
+  --color-surface: rgba(255, 255, 255, 0.035);
+  --color-text: #ecf5f0;
+  --color-text-muted: color-mix(in srgb, var(--accent-pale) 58%, transparent);
+  --color-border-hair: rgba(255, 255, 255, 0.1);
+  --color-primary: var(--accent-bright);
+  --color-primary-hover: var(--accent-bright);
+  --color-danger: #fca5a5;
+  --color-danger-bg: rgba(239, 68, 68, 0.12);
+  --shadow-primary: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 14px 34px -12px color-mix(in srgb, var(--accent-bright) 60%, transparent);
 }
+.fields input {
+  height: 48px;
+  border-radius: 14px;
+}
+.fields input:hover:not(:focus) {
+  border-color: rgba(255, 255, 255, 0.16);
+}
+/* Parolni ko'rish tugmasi qorong'i fonda ham sezilsin */
+.fields button[aria-pressed]:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+/* Brauzer saqlangan parolni qo'ysa, maydon oq-sariq bo'lib qolmasin */
+.fields input:-webkit-autofill,
+.fields input:-webkit-autofill:hover,
+.fields input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #ecf5f0;
+  caret-color: #ecf5f0;
+  box-shadow: 0 0 0 1000px color-mix(in srgb, var(--accent-rail) 85%, black) inset;
+  transition: background-color 9999s ease-out;
+}
+
+.submit {
+  background-image: linear-gradient(180deg, var(--accent-light) 0%, var(--accent-bright) 48%, var(--accent-orb-to) 100%);
+}
+.submit:hover {
+  filter: brightness(1.06);
+}
+
+.help {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ---------- Paydo bo'lish ---------- */
+
+.rise {
+  animation: rise 0.8s var(--ease-out) both;
+}
+.cardEnter {
+  animation: rise 0.9s var(--ease-out) 0.12s both;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes spinCentered {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+@keyframes ping {
+  75%,
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .card,
-  .brand {
+  .rise,
+  .cardEnter,
+  .orbitSpin,
+  .rings span,
+  .liveDot::after {
     animation: none;
+  }
+  .slide {
+    transition: none;
+  }
+  /* Harakat o'chirilgan bo'lsa, kartalar o'zi almashmaydi — foydalanuvchi
+     chiziqlarni bosib almashtiradi */
+  .progress {
+    animation: none;
+    transform: scaleX(1);
   }
 }

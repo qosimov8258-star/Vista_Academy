@@ -19,6 +19,8 @@ export interface TenantAuthenticatedUser {
   role: TenantUserRole;
   /** Profil rasmi bor bo'lsa — oxirgi yangilangan vaqti (kesh uchun). */
   avatarUpdatedAt: string | null;
+  /** Sozlamalarda tanlangan tizim rangi ("blue" va h.k.); null — sukut (yashil). Hisobda saqlanadi. */
+  themeColor: string | null;
   /** Bog'langan xodim kartochkasidagi lavozim (masalan "Fan o'qituvchisi", "Oshpaz"). Xodimga bog'lanmagan hisoblarda (Super Admin, moliyachi) — null. */
   position: string | null;
   /** "Fan o'qituvchisi" lavozimida tanlangan fan(lar). Boshqa lavozimlarda/bog'lanmagan hisoblarda — bo'sh massiv. */
@@ -461,6 +463,15 @@ export interface AuditLogEntry {
   entityId: string | null;
   summary: string;
   createdAt: string;
+  /** Tarmoq bo'yicha ro'yxatda — amal qaysi filialda bo'lgani */
+  branch?: { name: string } | null;
+}
+
+/** Audit filtri uchun: amal bajargan kishi va nechta amal qilgani */
+export interface AuditActor {
+  actorUserId: string | null;
+  actorName: string;
+  count: number;
 }
 
 export interface Dish {

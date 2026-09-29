@@ -2,12 +2,21 @@
 
 import { use, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import clsx from "clsx";
 import { api } from "@/lib/api";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/input";
-import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
+import { CalendarIcon, CheckIcon, ChecklistIcon, ClockIcon } from "@/components/ui/icons";
+import {
+  EmptyRow,
+  Group,
+  LargeTitle,
+  PrimaryButton,
+  Row,
+  Segmented,
+  SkeletonRows,
+  TeacherPage,
+  FloatingBar,
+  formatDayLong,
+  formatDayShort,
+} from "@/features/teacher/teacher-ui";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 
@@ -53,10 +62,6 @@ function pickCurrentLesson(lessons: MyLesson[], date: string): MyLesson | null {
     lessons.find((l) => l.startTime > now) ??
     lessons[lessons.length - 1]
   );
-}
-
-function lessonLabel(lesson: MyLesson): string {
-  return `${lesson.startTime}–${lesson.endTime} · ${lesson.groupName}${lesson.subject ? ` · ${lesson.subject}` : ""}`;
 }
 
 export default function LessonAttendancePage({ params }: { params: Promise<{ slug: string }> }) {
@@ -132,97 +137,129 @@ export default function LessonAttendancePage({ params }: { params: Promise<{ slu
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scheduleId, date]);
 
-  return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
-          Davomat
-        </h1>
-        <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">
-          O&apos;z darsingiz bo&apos;yicha bolalarning qatnashuvini belgilang
-        </p>
-      </div>
+  const children = dayQuery.data?.children ?? [];
+  const present = children.filter((c) => statusFor(c.childId) === "PRESENT").length;
+  const unsaved = children.filter((c) => c.status !== statusFor(c.childId)).length;
+  const isToday = date === todayDateString();
 
-      <Card className="flex flex-col gap-3 p-4 sm:flex-row">
-        <div className="block">
-          <span className="mb-2 block text-[13px] font-medium text-[var(--color-text)]">Sana</span>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="h-11 w-full rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-3.5 text-[15px] text-[var(--color-text)] outline-none transition-[border-color,box-shadow] duration-[var(--dur-fast)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/[0.12] sm:w-auto"
-          />
-        </div>
-        {lessons && lessons.length > 0 && (
-          <Select label="Dars" value={scheduleId} onChange={(e) => setScheduleId(e.target.value)} className="sm:max-w-md">
-            {lessons.map((lesson) => (
-              <option key={lesson.scheduleId} value={lesson.scheduleId}>
-                {lessonLabel(lesson)}
-              </option>
-            ))}
-          </Select>
-        )}
-      </Card>
+  // Faqat fan o'qituvchisi ochadi — tarbiyachi kabinetining iOS uslubida
+  return (
+    <TeacherPage className="pb-4">
+      <LargeTitle
+        eyebrow={date ? formatDayLong(date) : " "}
+        title="Davomat"
+        trailing={
+          <label className="relative flex h-9 cursor-pointer items-center gap-1.5 rounded-full bg-[var(--color-surface)] px-3.5 text-[15px] font-medium text-[var(--color-primary)] shadow-[0_1px_2px_rgba(16,24,40,0.06)] transition-transform active:scale-95">
+            <CalendarIcon className="h-[18px] w-[18px]" strokeWidth={1.9} />
+            {date ? (isToday ? "Bugun" : formatDayShort(date)) : "…"}
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => e.target.value && setDate(e.target.value)}
+              aria-label="Sanani tanlash"
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+            />
+          </label>
+        }
+      />
 
       {!date || lessonsQuery.isLoading ? (
-        <LoadingState />
+        <Group>
+          <SkeletonRows rows={3} />
+        </Group>
       ) : lessonsQuery.isError ? (
-        <ErrorState message={(lessonsQuery.error as Error).message} />
+        <Group>
+          <EmptyRow title="Yuklab bo'lmadi" description={(lessonsQuery.error as Error).message} />
+        </Group>
       ) : !lessons || lessons.length === 0 ? (
-        <EmptyState
-          title="Bu kunda darsingiz yo'q"
-          description="Dars jadvalida sizga dars belgilanganda shu yerda ko'rinadi"
-        />
-      ) : !selectedLesson || dayQuery.isLoading ? (
-        <LoadingState />
-      ) : dayQuery.isError ? (
-        <ErrorState message={(dayQuery.error as Error).message} />
-      ) : !dayQuery.data || dayQuery.data.children.length === 0 ? (
-        <EmptyState title="Bu guruhda faol bola yo'q" />
+        <Group>
+          <EmptyRow icon={ClockIcon} title="Bu kunda darsingiz yo'q" description="Dars jadvalida sizga dars belgilanganda shu yerda ko'rinadi" />
+        </Group>
       ) : (
-        <Card className="overflow-hidden">
-          <div className="border-b border-[var(--color-separator)] px-5 py-3 text-[14px] text-[var(--color-text-muted)]">
-            {lessonLabel(selectedLesson)}
-          </div>
-          <ul className="divide-y divide-[var(--color-separator)]">
-            {dayQuery.data.children.map((child) => (
-              <li key={child.childId} className="flex flex-wrap items-center justify-between gap-2.5 px-5 py-3">
-                <p className="text-sm font-medium text-[var(--color-text)]">{child.fullName}</p>
-                <div className="flex items-center gap-2">
-                  <Button
+        <>
+          {/* Darslar — bittasini tanlang (hozirgi dars o'zi tanlanadi) */}
+          <Group title="Darslar">
+            {lessons.map((lesson, i) => {
+              const active = lesson.scheduleId === scheduleId;
+              return (
+                <Row
+                  key={lesson.scheduleId}
+                  first={i === 0}
+                  onClick={() => setScheduleId(lesson.scheduleId)}
+                  chevron={false}
+                  leading={
+                    <span className="flex w-[40px] shrink-0 flex-col items-start leading-tight tabular-nums">
+                      <span className="text-[15px] font-semibold text-[var(--color-text)]">{lesson.startTime}</span>
+                      <span className="text-[12.5px] text-[var(--color-text-muted)]">{lesson.endTime}</span>
+                    </span>
+                  }
+                  title={lesson.subject || "Dars"}
+                  subtitle={lesson.groupName}
+                  trailing={active ? <CheckIcon className="h-5 w-5 shrink-0 text-[var(--color-primary)]" strokeWidth={2.6} /> : undefined}
+                />
+              );
+            })}
+          </Group>
+
+          {!selectedLesson || dayQuery.isLoading ? (
+            <Group>
+              <SkeletonRows rows={5} />
+            </Group>
+          ) : dayQuery.isError ? (
+            <Group>
+              <EmptyRow title="Yuklab bo'lmadi" description={(dayQuery.error as Error).message} />
+            </Group>
+          ) : children.length === 0 ? (
+            <Group>
+              <EmptyRow icon={ChecklistIcon} title="Bu guruhda faol bola yo'q" />
+            </Group>
+          ) : (
+            <Group
+              title={`${selectedLesson.groupName} · ${present}/${children.length}`}
+              footer="Hamma «Keldi» bo'lib ochiladi — faqat kelmaganlarni belgilab, «Saqlash»ni bosing."
+            >
+              {children.map((child, i) => (
+                <div key={child.childId} className="relative flex items-center gap-3 px-4 py-2.5">
+                  {i > 0 && <span className="absolute left-4 right-0 top-0 h-px bg-[var(--color-separator)]" aria-hidden="true" />}
+                  <p className="min-w-0 flex-1 truncate text-[16px] text-[var(--color-text)]">{child.fullName}</p>
+                  <Segmented
                     size="sm"
-                    variant={statusFor(child.childId) === "PRESENT" ? "primary" : "tertiary"}
-                    className={clsx(statusFor(child.childId) === "PRESENT" && "bg-[var(--color-success)] hover:opacity-90")}
-                    onClick={() => setLocalStatuses((s) => ({ ...s, [child.childId]: "PRESENT" }))}
-                  >
-                    Keldi
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={statusFor(child.childId) === "ABSENT" ? "danger" : "tertiary"}
-                    onClick={() => setLocalStatuses((s) => ({ ...s, [child.childId]: "ABSENT" }))}
-                  >
-                    Kelmadi
-                  </Button>
+                    className="w-[168px] shrink-0"
+                    label={`${child.fullName} — holat`}
+                    value={statusFor(child.childId)}
+                    onChange={(value) => setLocalStatuses((st) => ({ ...st, [child.childId]: value }))}
+                    options={[
+                      { value: "PRESENT", label: "Keldi", tint: "var(--color-success)" },
+                      { value: "ABSENT", label: "Kelmadi", tint: "var(--color-danger)" },
+                    ]}
+                  />
                 </div>
-              </li>
-            ))}
-          </ul>
-          <div className="hairline flex items-center justify-between gap-3 border-t border-[var(--color-separator)] px-5 py-3.5 sm:px-6">
-            {saveMutation.isError && (
-              <span className="text-[13px] text-[var(--color-danger)]">
-                {(saveMutation.error as Error).message || "Saqlashda xatolik yuz berdi"}
-              </span>
-            )}
-            {saveMutation.isSuccess && !saveMutation.isPending && (
-              <span className="text-[13px] text-[var(--color-success)]">Saqlandi</span>
-            )}
-            <Button className="ml-auto" loading={saveMutation.isPending} onClick={() => saveMutation.mutate()}>
-              Saqlash
-            </Button>
-          </div>
-        </Card>
+              ))}
+            </Group>
+          )}
+
+        </>
       )}
-    </div>
+      {children.length > 0 && (
+        <FloatingBar>
+          <PrimaryButton loading={saveMutation.isPending} onClick={() => saveMutation.mutate()} disabled={unsaved === 0 && saveMutation.isSuccess}>
+            {saveMutation.isPending ? (
+              "Saqlanmoqda…"
+            ) : unsaved === 0 && saveMutation.isSuccess ? (
+              <>
+                <CheckIcon className="h-5 w-5" strokeWidth={2.6} /> Saqlandi
+              </>
+            ) : (
+              "Saqlash"
+            )}
+          </PrimaryButton>
+          {saveMutation.isError && (
+            <p className="mt-1.5 text-center text-[13px] font-medium text-[var(--color-danger)]">
+              {(saveMutation.error as Error).message || "Saqlashda xatolik yuz berdi"}
+            </p>
+          )}
+        </FloatingBar>
+      )}
+    </TeacherPage>
   );
 }

@@ -1,91 +1,64 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useMemo, useState } from "react";
 import Link from "next/link";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import { api } from "@/lib/api";
-import type { DashboardSummary, Organization, TenantUser } from "@/lib/types";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
+import type { Branch, DashboardSummary, Organization, TenantUser } from "@/lib/types";
 import { BranchAvatar } from "@/components/ui/branch-avatar";
-import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
-import { formatMoney } from "@/lib/format";
-import { ChevronRightIcon, PlusIcon, SettingsIcon } from "@/components/ui/icons";
+import { ErrorState } from "@/components/ui/states";
+import type { IconProps } from "@/components/ui/icons";
+import {
+  BuildingIcon,
+  ChevronRightIcon,
+  ChildIcon,
+  CloseIcon,
+  GroupIcon,
+  MoneyIcon,
+  PlusIcon,
+  SearchIcon,
+  SettingsIcon,
+  TeacherIcon,
+} from "@/components/ui/icons";
 import { CreateBranchModal } from "@/features/branches/create-branch-modal";
+import { IosIcon } from "@/features/director/ios-icon";
+import { compactMoney, fullMoney } from "@/features/director/money";
+import styles from "@/features/director/director-home.module.css";
 
 /**
- * Har bir filial o'z rangida — bir necha filial bo'lganda ular bir-biriga
- * o'xshab ketmaydi. Rang ma'no tashimaydi, faqat kartani tanib olishga
- * yordam beradi.
+ * Har bir filialning bosh harfi o'z rangida — bir necha filial bo'lganda
+ * ular bir-biriga o'xshab ketmaydi. Rang ma'no tashimaydi (tizim rangidan
+ * mustaqil), faqat filialni tanib olishga yordam beradi.
  */
 const BRANCH_PALETTE = [
-  { soft: "bg-emerald-50", mono: "bg-emerald-100 text-emerald-700", band: "from-emerald-50/80" },
-  { soft: "bg-sky-50", mono: "bg-sky-100 text-sky-700", band: "from-sky-50/80" },
-  { soft: "bg-violet-50", mono: "bg-violet-100 text-violet-700", band: "from-violet-50/80" },
-  { soft: "bg-amber-50", mono: "bg-amber-100 text-amber-700", band: "from-amber-50/80" },
-  { soft: "bg-rose-50", mono: "bg-rose-100 text-rose-600", band: "from-rose-50/80" },
-  { soft: "bg-teal-50", mono: "bg-teal-100 text-teal-700", band: "from-teal-50/80" },
+  "bg-gradient-to-b from-emerald-50 to-emerald-100 text-emerald-700",
+  "bg-gradient-to-b from-sky-50 to-sky-100 text-sky-700",
+  "bg-gradient-to-b from-violet-50 to-violet-100 text-violet-700",
+  "bg-gradient-to-b from-amber-50 to-amber-100 text-amber-700",
+  "bg-gradient-to-b from-rose-50 to-rose-100 text-rose-600",
+  "bg-gradient-to-b from-teal-50 to-teal-100 text-teal-700",
 ];
 
-function monogram(name: string): string {
-  return name.trim()[0]?.toUpperCase() ?? "?";
-}
-
-function initials(name: string): string {
-  return (
-    name
-      .trim()
-      .split(/\s+/)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase() ?? "")
-      .join("") || "?"
-  );
-}
+const monogram = (name: string) => name.trim()[0]?.toUpperCase() ?? "?";
+const initials = (name: string) =>
+  name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("") || "?";
 
 /**
- * Kartaning pastki qismidagi bitta ko'rsatkich. Ikonka qo'yilmaydi — besh
- * xil belgi yonma-yon turganda karta shovqinli bo'lib ketadi; raqamning
- * o'zi va ustidagi izoh yetarli.
+ * Filiallar — bosh sahifa bilan bir uslubda (iOS): katta sarlavha, tarmoq
+ * bo'yicha jami vidjetlar, qidiruv va har bir filial uchun katta yumaloq
+ * karta. Karta bosilsa — filial ichiga kiriladi, tishli g'ildirak —
+ * filial sozlamalari.
  */
-function Stat({
-  label,
-  value,
-  tone,
-  loading,
-}: {
-  label: string;
-  value: string;
-  tone?: "success" | "danger";
-  loading?: boolean;
-}) {
-  return (
-    <div className="px-5 py-4">
-      <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">{label}</p>
-      {loading ? (
-        <span className="mt-2 block h-4 w-16 animate-pulse rounded-full bg-[var(--color-surface-sunken)]" />
-      ) : (
-        <p
-          className={clsx(
-            "mt-1 truncate text-[19px] font-semibold tabular-nums tracking-[var(--tracking-headline)]",
-            tone === "success"
-              ? "text-[var(--color-success)]"
-              : tone === "danger"
-                ? "text-[var(--color-danger)]"
-                : "text-[var(--color-text)]",
-          )}
-        >
-          {value}
-        </p>
-      )}
-    </div>
-  );
-}
-
 export default function BranchesPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const [createOpen, setCreateOpen] = useState(false);
+  const [search, setSearch] = useState("");
 
   const { data: org, isLoading, isError, error } = useQuery({
     queryKey: ["org", slug],
@@ -97,11 +70,10 @@ export default function BranchesPage({ params }: { params: Promise<{ slug: strin
     queryFn: () => api.get<TenantUser[]>("/app/users"),
   });
 
-  const branches = org?.branches ?? [];
+  const branches = useMemo(() => org?.branches ?? [], [org]);
 
-  // One dashboard-summary request per branch, fetched in parallel so a slow
-  // branch doesn't hold up the others — each row renders its own numbers as
-  // soon as its query settles.
+  // Har bir filial raqamlari alohida so'rov — sekin filial boshqalarini
+  // ushlab turmaydi; bosh sahifa bilan bir xil kalit, kesh umumiy.
   const summaryQueries = useQueries({
     queries: branches.map((branch) => ({
       queryKey: ["dashboard-summary", slug, branch.id],
@@ -109,131 +81,298 @@ export default function BranchesPage({ params }: { params: Promise<{ slug: strin
     })),
   });
 
+  const summaryOf = (branchId: string) => summaryQueries[branches.findIndex((b) => b.id === branchId)];
+  const totalsLoading = summaryQueries.some((q) => q.isLoading);
+  const total = (pick: (s: DashboardSummary) => number) =>
+    summaryQueries.reduce((sum, q) => sum + (q.data ? pick(q.data) : 0), 0);
+
+  const q = search.trim().toLowerCase();
+  const visible = q
+    ? branches.filter((b) => b.name.toLowerCase().includes(q) || (b.address ?? "").toLowerCase().includes(q))
+    : branches;
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="mx-auto w-full max-w-[1120px] space-y-6 pb-4 md:space-y-7">
+      {/* Katta sarlavha — iOS "Large Title" */}
+      <header className={clsx(styles.rise, "flex items-end justify-between gap-3")}>
         <div>
-          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
+          <p className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--color-text-muted)]">
+            {isLoading ? "Tarmoq" : `${branches.length} ta filial`}
+          </p>
+          <h1 className="mt-1 text-[30px] font-bold leading-[1.1] tracking-[-0.025em] text-[var(--color-text)] md:text-[34px]">
             Filiallar
           </h1>
-          <p className="mt-0.5 text-[13px] text-[var(--color-text-muted)]">Tarmoqqa tegishli bog&apos;cha binolari</p>
         </div>
-        <Button onClick={() => setCreateOpen(true)}>
-          <PlusIcon className="h-4 w-4" />
-          Filial qo&apos;shish
-        </Button>
-      </div>
+        <button
+          type="button"
+          onClick={() => setCreateOpen(true)}
+          aria-label="Filial qo'shish"
+          className="flex h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full bg-[var(--color-primary)] px-3 text-[15px] font-semibold text-white shadow-[var(--shadow-primary)] transition-[transform,filter] duration-200 hover:brightness-110 active:scale-95 md:px-5"
+        >
+          <PlusIcon className="h-5 w-5" />
+          <span className="hidden md:inline">Filial qo&apos;shish</span>
+        </button>
+      </header>
 
-      {isLoading ? (
-        <LoadingState rows={3} />
-      ) : isError ? (
+      {isError ? (
         <ErrorState message={(error as Error).message} />
-      ) : !org || org.branches.length === 0 ? (
-        <EmptyState title="Filial topilmadi" description="Yangi filial (bog'cha) qo'shish uchun tugmani bosing" />
       ) : (
-        <div className="flex flex-col gap-4">
-          {branches.map((branch, i) => {
-            const manager = usersQuery.data?.find((u) => u.role === "BRANCH_ADMIN" && u.branchId === branch.id) ?? null;
-            const summaryQuery = summaryQueries[i];
-            const summary = summaryQuery?.data;
-            const loading = summaryQuery?.isLoading ?? true;
-            const num = (v?: number) => String(v ?? 0);
-            const money = (v?: number) => formatMoney(v ?? 0);
-            const hasDebt = (summary?.outstandingDebt ?? 0) > 0;
-            const palette = BRANCH_PALETTE[i % BRANCH_PALETTE.length];
+        <>
+          {/* Tarmoq bo'yicha jami */}
+          <section className={clsx(styles.rise, "grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4")} style={{ animationDelay: "40ms" }}>
+            <Total icon={ChildIcon} label="Bolalar" value={total((s) => s.childrenCount)} loading={isLoading || totalsLoading} />
+            <Total icon={GroupIcon} label="Faol guruhlar" value={total((s) => s.activeGroupsCount)} loading={isLoading || totalsLoading} />
+            <Total icon={TeacherIcon} label="Xodimlar" value={total((s) => s.employeesCount)} loading={isLoading || totalsLoading} />
+            <Total
+              icon={MoneyIcon}
+              label="Shu oy tushumi"
+              value={compactMoney(total((s) => s.monthRevenue))}
+              title={fullMoney(total((s) => s.monthRevenue))}
+              suffix="so'm"
+              loading={isLoading || totalsLoading}
+            />
+          </section>
 
-            return (
-              <Card key={branch.id} interactive className="group relative overflow-hidden">
-                {/* Butun karta filialga kirish havolasi; ustidagi tugmalar z-10 bilan tepada turadi */}
-                <Link
-                  href={`/${slug}/${branch.slug}`}
-                  className="absolute inset-0 z-0"
-                  aria-label={`${branch.name} filialiga kirish`}
-                />
-
-                {/* Yuqori qismga filial rangidan yengil o'tish beriladi */}
-                <div
-                  className={clsx(
-                    "pointer-events-none relative z-10 flex items-center gap-4 bg-gradient-to-r to-transparent px-5 py-4",
-                    palette.band,
-                  )}
+          {/* Qidiruv — iOS uslubida; filial ko'p bo'lganda kerak */}
+          {branches.length > 0 && (
+            <label className={clsx(styles.rise, "relative block")} style={{ animationDelay: "80ms" }}>
+              <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-[var(--color-text-muted)]" />
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Filial nomi yoki manzili"
+                className="h-12 w-full rounded-[16px] bg-black/[0.05] pl-11 pr-11 text-[16px] text-[var(--color-text)] outline-none transition-[background-color,box-shadow] placeholder:text-[var(--color-text-muted)] focus:bg-[var(--color-surface)] focus:ring-4 focus:ring-[var(--color-primary)]/15"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  aria-label="Qidiruvni tozalash"
+                  className="absolute right-3 top-1/2 flex h-6 w-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-[var(--color-text-muted)]/50 text-white"
                 >
-                  {/* Belgi qo'yilgan bo'lsa rasm, aks holda nomning bosh harfi */}
-                  <BranchAvatar
+                  <CloseIcon className="h-3.5 w-3.5" strokeWidth={2.4} />
+                </button>
+              )}
+            </label>
+          )}
+
+          {isLoading ? (
+            <div className="grid gap-4 lg:grid-cols-2" aria-hidden="true">
+              {[0, 1].map((i) => (
+                <div key={i} className={clsx(styles.card, "h-[276px] animate-pulse")} />
+              ))}
+            </div>
+          ) : branches.length === 0 ? (
+            <div className={clsx(styles.card, "flex flex-col items-center px-6 py-12 text-center")}>
+              <IosIcon icon={BuildingIcon} tint="accent" size={60} />
+              <p className="mt-5 text-[19px] font-bold text-[var(--color-text)]">Hali filial yo&apos;q</p>
+              <p className="mt-1 max-w-[320px] text-[14.5px] text-[var(--color-text-muted)]">
+                Birinchi bog&apos;cha binosini qo&apos;shing — keyin guruh, bola va xodimlarni shu yerdan boshqarasiz.
+              </p>
+              <button
+                type="button"
+                onClick={() => setCreateOpen(true)}
+                className="mt-6 h-11 cursor-pointer rounded-full bg-[var(--color-primary)] px-6 text-[15px] font-semibold text-white shadow-[var(--shadow-primary)] active:scale-95"
+              >
+                Filial qo&apos;shish
+              </button>
+            </div>
+          ) : visible.length === 0 ? (
+            <p className="py-10 text-center text-[15px] text-[var(--color-text-muted)]">
+              &ldquo;{search.trim()}&rdquo; bo&apos;yicha filial topilmadi
+            </p>
+          ) : (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {visible.map((branch) => {
+                const index = branches.findIndex((b) => b.id === branch.id);
+                const query = summaryOf(branch.id);
+                return (
+                  <BranchCard
+                    key={branch.id}
+                    slug={slug}
                     branch={branch}
-                    size={48}
-                    className={clsx("text-[19px] font-semibold", !branch.avatarUpdatedAt && palette.mono)}
-                    fallback={monogram(branch.name)}
+                    colorClass={BRANCH_PALETTE[index % BRANCH_PALETTE.length]}
+                    manager={usersQuery.data?.find((u) => u.role === "BRANCH_ADMIN" && u.branchId === branch.id) ?? null}
+                    managersLoading={usersQuery.isLoading}
+                    summary={query?.data}
+                    loading={query?.isLoading ?? true}
+                    delay={120 + index * 50}
                   />
-
-                  <div className="min-w-0 flex-1">
-                    <h3 className="truncate text-[17px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
-                      {branch.name}
-                    </h3>
-                    <p className="mt-0.5 truncate text-[12.5px] text-[var(--color-text-muted)]">
-                      {branch.address || "Manzil ko'rsatilmagan"}
-                    </p>
-                  </div>
-
-                  {/* Filial admini — Xodimlar sahifasidagi kabi bosh harflar bilan */}
-                  <div className="hidden shrink-0 items-center gap-2 sm:flex">
-                    {manager ? (
-                      <span className="inline-flex items-center gap-2 rounded-full bg-[var(--color-surface)]/80 py-1 pl-1 pr-3 text-[13px]">
-                        {/* Bosh harflar Avatar komponentidagi kabi brend rangida — filial rangi bilan raqobatlashmaydi */}
-                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--color-primary)]/10 text-[10px] font-semibold text-[var(--color-primary)] ring-1 ring-inset ring-[rgba(16,24,40,0.06)]">
-                          {initials(manager.fullName)}
-                        </span>
-                        <span className="font-medium text-[var(--color-text)]">{manager.fullName}</span>
-                      </span>
-                    ) : (
-                      <Badge tone="warning">Filial admini tayinlanmagan</Badge>
-                    )}
-                  </div>
-
-                  <div className="pointer-events-auto relative z-10 flex shrink-0 items-center gap-1">
-                    <Link
-                      href={`/${slug}/branches/${branch.id}`}
-                      title="Filial sozlamalari"
-                      aria-label={`${branch.name} sozlamalari`}
-                      className="rounded-full p-2 text-[var(--color-text-muted)] transition-colors duration-[var(--dur-fast)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
-                    >
-                      <SettingsIcon className="h-[18px] w-[18px]" />
-                    </Link>
-                    <ChevronRightIcon className="h-5 w-5 text-[var(--color-text-muted)]/40 transition-transform duration-[var(--dur-base)] ease-[var(--ease-out)] group-hover:translate-x-0.5 group-hover:text-[var(--color-primary)] motion-reduce:transition-none" />
-                  </div>
-                </div>
-
-                <div className="hairline pointer-events-none relative z-10 grid grid-cols-2 divide-x divide-y divide-[var(--color-separator)] border-t border-[var(--color-separator)] sm:grid-cols-4 sm:divide-y-0">
-                  <Stat label="Bolalar" value={num(summary?.childrenCount)} loading={loading} />
-                  <Stat label="Guruhlar" value={num(summary?.activeGroupsCount)} loading={loading} />
-                  <Stat label="Xodimlar" value={num(summary?.employeesCount)} loading={loading} />
-                  <Stat
-                    label="Joriy oy tushumi"
-                    value={money(summary?.monthRevenue)}
-                    tone="success"
-                    loading={loading}
-                  />
-                </div>
-
-                {/* Qarzdorlik ustun emas, ogohlantirish: u bo'lmasa karta ham tinch turadi */}
-                {hasDebt && (
-                  <div className="hairline pointer-events-none relative z-10 flex items-center gap-2 border-t border-[var(--color-separator)] bg-[var(--color-danger-bg)] px-5 py-2.5">
-                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-danger)]" />
-                    <span className="text-[13px] text-[var(--color-danger)]">
-                      To&apos;lanmagan qarzdorlik
-                      <span className="ml-1.5 font-semibold tabular-nums">
-                        {money(summary?.outstandingDebt)}
-                      </span>
-                    </span>
-                  </div>
-                )}
-              </Card>
-            );
-          })}
-        </div>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
 
       <CreateBranchModal open={createOpen} onClose={() => setCreateOpen(false)} slug={slug} />
+    </div>
+  );
+}
+
+/** Tarmoq bo'yicha jami — bosh sahifadagi vidjet bilan bir uslubda */
+function Total({
+  icon,
+  label,
+  value,
+  suffix,
+  title,
+  loading,
+}: {
+  icon: React.ComponentType<IconProps>;
+  label: string;
+  value: number | string;
+  suffix?: string;
+  title?: string;
+  loading?: boolean;
+}) {
+  return (
+    <div className={clsx(styles.card, "flex flex-col p-4 md:p-5")} title={title}>
+      <IosIcon icon={icon} tint="accent" size={36} />
+      <p className="mt-3.5 truncate text-[22px] font-bold leading-none tracking-[-0.02em] tabular-nums text-[var(--color-text)] md:text-[26px]">
+        {loading ? <span className="inline-block h-6 w-14 animate-pulse rounded-lg bg-[var(--color-surface-sunken)] align-middle" /> : value}
+        {/* Telefonda "so'm" sig'maydi — summa title'da to'liq */}
+        {!loading && suffix && <span className="ml-1 hidden text-[14px] font-semibold text-[var(--color-text-muted)] md:inline">{suffix}</span>}
+      </p>
+      <p className="mt-1.5 text-[13.5px] font-medium text-[var(--color-text-muted)]">{label}</p>
+    </div>
+  );
+}
+
+function BranchCard({
+  slug,
+  branch,
+  colorClass,
+  manager,
+  managersLoading,
+  summary,
+  loading,
+  delay,
+}: {
+  slug: string;
+  branch: Branch;
+  colorClass: string;
+  manager: TenantUser | null;
+  managersLoading: boolean;
+  summary?: DashboardSummary;
+  loading: boolean;
+  delay: number;
+}) {
+  const children = summary?.childrenCount ?? 0;
+  const present = summary?.todayAttendance.present ?? 0;
+  const absent = summary?.todayAttendance.absent ?? 0;
+  const marked = present + absent;
+  const debt = summary?.outstandingDebt ?? 0;
+  const revenue = summary?.monthRevenue ?? 0;
+
+  return (
+    <article
+      className={clsx(
+        styles.card,
+        styles.rise,
+        "group relative flex flex-col overflow-hidden p-5 transition-transform active:scale-[0.99] md:p-6",
+      )}
+      style={{ animationDelay: `${delay}ms` }}
+    >
+      {/* Butun karta — filialga kirish; ustidagi tugma z-10 bilan tepada */}
+      <Link href={`/${slug}/${branch.slug}`} className="absolute inset-0 z-0 rounded-[inherit]" aria-label={`${branch.name} filialiga kirish`} />
+
+      <div className="pointer-events-none relative z-10 flex items-center gap-3.5 sm:gap-4">
+        {/* Belgi qo'yilgan bo'lsa rasm, aks holda nomning bosh harfi */}
+        <BranchAvatar
+          branch={branch}
+          size={52}
+          className={clsx("rounded-[18px]! text-[22px] font-bold", !branch.avatarUpdatedAt && colorClass)}
+          fallback={monogram(branch.name)}
+        />
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate text-[18px] font-bold tracking-[-0.015em] text-[var(--color-text)] sm:text-[19px]">{branch.name}</h2>
+          <p className="mt-0.5 truncate text-[14px] text-[var(--color-text-muted)]">{branch.address || "Manzil ko'rsatilmagan"}</p>
+        </div>
+        <Link
+          href={`/${slug}/branches/${branch.id}`}
+          title="Filial sozlamalari"
+          aria-label={`${branch.name} sozlamalari`}
+          className="pointer-events-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-border)] hover:text-[var(--color-text)]"
+        >
+          <SettingsIcon className="h-[19px] w-[19px]" />
+        </Link>
+        {/* Telefonda butun karta bosiladi — strelka nom uchun joyni olmaydi */}
+        <ChevronRightIcon className="hidden h-5 w-5 shrink-0 text-[#c4c4c7] transition-transform duration-200 group-hover:translate-x-0.5 sm:block" />
+      </div>
+
+      {/* Filial admini */}
+      <div className="pointer-events-none relative z-10 mt-4">
+        {managersLoading ? (
+          <span className="block h-8 w-44 animate-pulse rounded-full bg-[var(--color-surface-sunken)]" />
+        ) : manager ? (
+          <span className="inline-flex max-w-full items-center gap-2 rounded-full bg-[var(--accent-soft)] py-1 pl-1 pr-3.5 text-[13.5px]">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)] text-[10px] font-bold text-white">
+              {initials(manager.fullName)}
+            </span>
+            <span className="truncate font-semibold text-[var(--accent-soft-ink)]">{manager.fullName}</span>
+            <span className="shrink-0 text-[var(--accent-soft-icon)]/80">· Filial admini</span>
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-2 rounded-full bg-[var(--color-warning-bg)] px-3.5 py-1.5 text-[13.5px] font-semibold text-[var(--color-warning)]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-warning)]" />
+            Filial admini tayinlanmagan
+          </span>
+        )}
+      </div>
+
+      {/* Raqamlar — iOS guruhlangan plitkalar */}
+      <div className="pointer-events-none relative z-10 mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <Tile label="Bolalar" value={children} loading={loading} />
+        <Tile label="Guruhlar" value={summary?.activeGroupsCount ?? 0} loading={loading} />
+        <Tile label="Xodimlar" value={summary?.employeesCount ?? 0} loading={loading} />
+        <Tile label="Shu oy" value={compactMoney(revenue)} title={fullMoney(revenue)} loading={loading} />
+      </div>
+
+      {/* Bugungi davomat — ingichka chiziq */}
+      <div className="pointer-events-none relative z-10 mt-4">
+        <div className="flex items-baseline justify-between text-[13px]">
+          <span className="font-medium text-[var(--color-text-muted)]">Bugungi davomat</span>
+          <span className="tabular-nums text-[var(--color-text-muted)]">
+            {loading ? "…" : children === 0 ? "bola yo'q" : marked === 0 ? "belgilanmagan" : (
+              <>
+                <span className="font-semibold text-[var(--color-text)]">{present}</span> / {children} keldi
+              </>
+            )}
+          </span>
+        </div>
+        <div className="mt-2 flex h-1.5 overflow-hidden rounded-full bg-[var(--color-surface-sunken)]">
+          {children > 0 && (
+            <>
+              <span className="h-full bg-[var(--color-primary)] transition-[width] duration-700" style={{ width: `${(present / children) * 100}%` }} />
+              <span className="h-full bg-[var(--color-danger)]/50 transition-[width] duration-700" style={{ width: `${(absent / children) * 100}%` }} />
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Qarzdorlik — bo'lsagina, ogohlantirish sifatida */}
+      {!loading && debt > 0 && (
+        <div className="pointer-events-none relative z-10 mt-4 flex items-center gap-2.5 rounded-[16px] bg-[var(--color-danger-bg)] px-4 py-2.5" title={fullMoney(debt)}>
+          <span className="h-2 w-2 shrink-0 rounded-full bg-[var(--color-danger)]" />
+          <span className="flex-1 text-[13.5px] font-medium text-[var(--color-danger)]">To&apos;lanmagan qarzdorlik</span>
+          <span className="text-[14px] font-bold tabular-nums text-[var(--color-danger)]">{compactMoney(debt)} so&apos;m</span>
+        </div>
+      )}
+    </article>
+  );
+}
+
+function Tile({ label, value, title, loading }: { label: string; value: number | string; title?: string; loading?: boolean }) {
+  return (
+    <div className="min-w-0 rounded-[18px] bg-[var(--color-surface-sunken)] px-3 py-3" title={title}>
+      {loading ? (
+        <span className="block h-5 w-10 animate-pulse rounded-md bg-black/[0.06]" />
+      ) : (
+        <p className="truncate text-[18px] font-bold leading-tight tracking-[-0.015em] tabular-nums text-[var(--color-text)]">{value}</p>
+      )}
+      <p className="mt-0.5 text-[12.5px] font-medium text-[var(--color-text-muted)]">{label}</p>
     </div>
   );
 }

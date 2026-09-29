@@ -1,0 +1,394 @@
+/*
+ * Direktor (Super Admin) yon paneli — to'q yashil ustun.
+ *
+ * Yig'ilgan holatda faqat ikonkalar; faol bo'lim ustun chetidan silliq
+ * bo'rtib chiqqan zumrad doira bilan belgilanadi (bo'rtma alohida qatlam:
+ * ustun ichidagi aylantiriladigan ro'yxatdan tashqarida turadi, aks holda
+ * `overflow` uni kesib qo'yardi). "Uch chiziq" bosilganda ustunning o'zi
+ * kengayadi: ikonkalar joyida qoladi, yonida nomlar paydo bo'ladi, faol
+ * qator zumrad fonga o'tadi.
+ */
+
+.aside {
+  --rail: var(--accent-rail);
+  --rail-ink: color-mix(in srgb, var(--accent-pale) 58%, transparent);
+  --rail-ink-hover: #ffffff;
+  --mint-from: var(--accent-orb-from);
+  --mint-to: var(--accent-orb-to);
+  --mint-ink: var(--accent-orb-ink);
+  --rail-collapsed: 76px;
+  --row-size: 48px;
+  --brand-size: 76px;
+  transition: width 0.38s var(--ease-out);
+}
+
+/* ---------- Tepadagi bog'cha belgisi ---------- */
+
+.brand {
+  width: var(--brand-size);
+  height: var(--brand-size);
+  margin-left: calc((var(--rail-collapsed) - var(--brand-size)) / 2);
+  background:
+    radial-gradient(circle at 30% 25%, color-mix(in srgb, var(--accent-light) 22%, transparent), transparent 60%),
+    var(--rail);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 10px 24px -12px color-mix(in srgb, var(--accent-rail) 55%, transparent);
+  transition: transform 0.3s var(--ease-spring);
+}
+.brandLink:hover .brand {
+  transform: scale(1.04);
+}
+.brandText {
+  background: linear-gradient(145deg, var(--accent-pale) 0%, var(--accent-light) 55%, var(--accent-bright) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.brandName {
+  opacity: 0;
+  transform: translateX(-6px);
+  transition:
+    opacity 0.2s var(--ease-out),
+    transform 0.3s var(--ease-out);
+  pointer-events: none;
+}
+.open .brandName {
+  opacity: 1;
+  transform: translateX(0);
+  transition-delay: 0.12s;
+  pointer-events: auto;
+}
+
+/* ---------- Ustun ---------- */
+
+.rail {
+  background: var(--rail);
+  border-radius: 38px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 18px 40px -18px color-mix(in srgb, var(--accent-rail) 55%, transparent);
+  transition: width 0.38s var(--ease-out);
+}
+
+/* Qatorlar yig'ilgan ustunda markazda turadi, kengayganda ham ikonkalar
+   aynan o'sha joyda qoladi — faqat o'ng tomonda nom paydo bo'ladi */
+.list {
+  padding-left: calc((var(--rail-collapsed) - var(--row-size)) / 2);
+  padding-right: calc((var(--rail-collapsed) - var(--row-size)) / 2);
+}
+
+.scroll {
+  gap: 6px;
+  scrollbar-width: none;
+  mask-image: linear-gradient(to bottom, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
+}
+.scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.row {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 14px;
+  width: var(--row-size);
+  height: var(--row-size);
+  padding-left: calc((var(--row-size) - 22px) / 2);
+  padding-right: 12px;
+  border-radius: 9999px;
+  overflow: hidden;
+  cursor: pointer;
+  outline: none;
+  color: var(--rail-ink);
+  text-align: left;
+  transition:
+    width 0.38s var(--ease-out),
+    color 0.2s var(--ease-out),
+    background-color 0.2s var(--ease-out),
+    opacity 0.2s var(--ease-out);
+}
+.open .row {
+  width: 100%;
+}
+.row:hover,
+.row[data-flyout="open"] {
+  color: var(--rail-ink-hover);
+  background-color: rgba(255, 255, 255, 0.08);
+}
+.row:focus-visible {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-light) 60%, transparent);
+}
+/* Yig'ilgan holatda faol bo'lim ikonkasi doira ichida chiziladi */
+.rowHidden {
+  opacity: 0;
+}
+/* Kengaygan holatda faol qator — zumrad fon */
+.rowActive,
+.rowActive:hover {
+  color: var(--mint-ink);
+  background: linear-gradient(135deg, var(--mint-from) 0%, var(--mint-to) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 8px 20px -8px color-mix(in srgb, var(--accent-bright) 55%, transparent);
+}
+/* Guruh ichida faol havola bor — sarlavhasi yorqinroq */
+.rowParent {
+  color: #ffffff;
+}
+
+.label {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14.5px;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.15s var(--ease-out);
+}
+.open .label {
+  opacity: 1;
+  transition: opacity 0.25s var(--ease-out) 0.12s;
+}
+
+.chevron {
+  flex-shrink: 0;
+  opacity: 0.6;
+  transition: transform 0.25s var(--ease-out);
+}
+
+/* Guruh ichidagi havolalar (faqat kengaygan holatda) */
+.children {
+  position: relative;
+  margin-top: 2px;
+  margin-bottom: 4px;
+  animation: childrenIn 0.25s var(--ease-out) both;
+}
+.children::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--row-size) / 2);
+  top: 2px;
+  bottom: 14px;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.12);
+}
+.child {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 40px;
+  margin-left: calc(var(--row-size) / 2 + 14px);
+  padding: 0 14px;
+  border-radius: 9999px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--rail-ink);
+  white-space: nowrap;
+  transition:
+    color 0.2s var(--ease-out),
+    background-color 0.2s var(--ease-out);
+}
+.child::before {
+  content: "";
+  position: absolute;
+  left: -14px;
+  top: 50%;
+  width: 10px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+}
+.child:hover {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.07);
+}
+/* Faol havola — qator kabi zumrad fon, matn to'q */
+.child.rowActive,
+.child.rowActive:hover {
+  color: var(--mint-ink);
+  font-weight: 600;
+}
+.child:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-light) 60%, transparent);
+}
+
+.userRow {
+  padding-left: calc((var(--row-size) - 36px) / 2);
+  cursor: default;
+}
+.userRow:hover {
+  background-color: transparent;
+}
+
+.divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin-left: calc((var(--rail-collapsed) - 28px) / 2);
+  width: 28px;
+  transition: width 0.38s var(--ease-out);
+}
+.open .divider {
+  width: calc(100% - (var(--rail-collapsed) - 28px));
+}
+
+.dot {
+  box-shadow: 0 0 0 2px var(--rail);
+}
+
+.logout:hover {
+  color: #fecaca;
+  background-color: rgba(248, 113, 113, 0.14);
+}
+
+/* ---------- Bo'rtma va faol doira (yig'ilgan holatda) ---------- */
+
+.indicator {
+  position: absolute;
+  top: 0;
+  pointer-events: none;
+  transition:
+    transform 0.55s cubic-bezier(0.34, 1.3, 0.64, 1),
+    opacity 0.3s var(--ease-out) 0.2s;
+  will-change: transform;
+}
+/* Kengayayotganda bo'rtma darhol yo'qoladi, yig'ilganda ustun joyiga
+   tushgach paydo bo'ladi */
+.open .indicator {
+  opacity: 0;
+  transition:
+    transform 0.55s cubic-bezier(0.34, 1.3, 0.64, 1),
+    opacity 0.1s var(--ease-out);
+}
+.bump {
+  display: block;
+  fill: var(--rail);
+  filter: drop-shadow(6px 8px 10px color-mix(in srgb, var(--accent-rail) 18%, transparent));
+}
+.orb {
+  position: absolute;
+  top: 50%;
+  width: 52px;
+  height: 52px;
+  margin-top: -26px;
+  border-radius: 9999px;
+  background: linear-gradient(145deg, var(--mint-from) 0%, var(--mint-to) 100%);
+  color: var(--mint-ink);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 8px 22px -6px color-mix(in srgb, var(--accent-bright) 55%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.orbIcon {
+  animation: orbPop 0.45s var(--ease-spring) both;
+}
+
+/* ---------- Qalqib chiquvchi qismlar (yig'ilgan holatda) ---------- */
+
+.tooltip {
+  animation: tipIn 0.16s var(--ease-out) both;
+}
+.tooltip::before {
+  content: "";
+  position: absolute;
+  left: -4px;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  margin-top: -4.5px;
+  background: inherit;
+  border-radius: 2px;
+  transform: rotate(45deg);
+}
+.flyout {
+  animation: flyIn 0.22s var(--ease-out) both;
+  transform-origin: left center;
+}
+
+@keyframes orbPop {
+  from {
+    opacity: 0;
+    transform: scale(0.6) rotate(-12deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+}
+@keyframes tipIn {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes flyIn {
+  from {
+    opacity: 0;
+    transform: translateX(-8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+@keyframes childrenIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Past ekranlarda (noutbuk, brauzer paneli bilan) hamma bo'lim sig'ishi
+   uchun ixchamroq — ko'rinish o'zgarmaydi, faqat oraliqlar qisqaradi */
+@media (max-height: 860px) {
+  .aside {
+    --row-size: 42px;
+    --brand-size: 60px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+  .scroll {
+    gap: 3px;
+  }
+  .brandText {
+    font-size: 21px;
+  }
+  .child {
+    height: 36px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aside,
+  .rail,
+  .row,
+  .divider,
+  .indicator,
+  .open .indicator,
+  .brand,
+  .brandName,
+  .label,
+  .open .label {
+    transition: none;
+  }
+  .orbIcon,
+  .tooltip,
+  .flyout,
+  .children {
+    animation: none;
+  }
+}

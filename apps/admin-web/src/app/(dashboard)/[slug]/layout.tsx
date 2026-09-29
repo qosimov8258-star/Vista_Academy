@@ -1,6 +1,8 @@
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { ChefBottomBar } from "@/features/chef/chef-bottom-bar";
+import { TeacherTabBar } from "@/features/teacher/teacher-tab-bar";
+import { ThemeSync } from "@/lib/theme";
 
 export default async function DashboardLayout({
   children,
@@ -29,6 +31,10 @@ export default async function DashboardLayout({
       </div>
       {/* Faqat oshpazga, faqat telefonda — boshqa rollar uchun hech narsa chizmaydi */}
       <ChefBottomBar slug={slug} />
+      {/* Faqat tarbiyachiga, faqat telefonda — pastki tab-bar */}
+      <TeacherTabBar slug={slug} />
+      {/* Hisobdagi tizim rangini qo'llaydi — hech narsa chizmaydi */}
+      <ThemeSync />
     </div>
   );
 }

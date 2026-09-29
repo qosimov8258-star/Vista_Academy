@@ -16,10 +16,11 @@ import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { downloadCsv } from "@/lib/download";
 import { useBranchContext } from "@/lib/use-branch-context";
 import clsx from "clsx";
-import { canWriteTeaching } from "@/lib/permissions";
+import { canWriteTeaching, isTeacher } from "@/lib/permissions";
 import { isAssistantPosition } from "@/lib/employee-position";
 import { ChildNoteModal } from "@/features/child-notes/child-note-modal";
 import { TodayRemindersCard } from "@/features/child-notes/today-reminders-card";
+import { TeacherAttendance } from "@/features/teacher/teacher-attendance";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 
@@ -71,8 +72,19 @@ function StatusSegmented({
   );
 }
 
+/**
+ * Tarbiyachi (va yordamchi) telefon uchun qilingan o'z ko'rinishini oladi;
+ * filial admini, administrator va direktor — jadvalli to'liq sahifani.
+ */
 export default function AttendancePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
+  const { user, isLoading } = useAuth();
+  if (isLoading) return <LoadingState />;
+  if (isTeacher(user?.role)) return <TeacherAttendance slug={slug} />;
+  return <BranchAttendance slug={slug} />;
+}
+
+function BranchAttendance({ slug }: { slug: string }) {
   const queryClient = useQueryClient();
   const { branchId: forcedBranchId } = useBranchContext(slug);
   const [branchId, setBranchId] = useState("");

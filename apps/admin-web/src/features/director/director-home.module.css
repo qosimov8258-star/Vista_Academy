@@ -1,0 +1,96 @@
+/*
+ * Direktor bosh sahifasi — iOS uslubi: katta yumaloqlik (28px), chegarasiz
+ * oq kartalar, yumshoq soya, bosilganda sal "botib" ketadi.
+ */
+
+.card {
+  border-radius: 28px;
+  background: var(--color-surface);
+  box-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 8px 24px -12px rgba(16, 24, 40, 0.12);
+  transition:
+    transform 0.25s var(--ease-out),
+    box-shadow 0.25s var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+}
+a.card:hover {
+  box-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.05),
+    0 16px 32px -14px rgba(16, 24, 40, 0.18);
+}
+a.card:active {
+  transform: scale(0.98);
+}
+
+/* Bugungi holat vidjeti — yon paneldagi to'q yashil bilan bir oila */
+.hero {
+  background:
+    radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--accent-bright) 22%, transparent), transparent 55%),
+    linear-gradient(160deg, var(--accent-rail-2) 0%, var(--accent-rail) 55%, color-mix(in srgb, var(--accent-rail) 85%, black) 100%);
+  box-shadow: 0 24px 48px -24px color-mix(in srgb, var(--accent-rail) 60%, transparent);
+}
+.heroGlow {
+  position: absolute;
+  width: 360px;
+  height: 360px;
+  right: -120px;
+  bottom: -200px;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in srgb, var(--accent-light) 12%, transparent);
+  pointer-events: none;
+}
+.heroGlow::after {
+  content: "";
+  position: absolute;
+  inset: 60px;
+  border-radius: inherit;
+  border: 1px dashed color-mix(in srgb, var(--accent-light) 8%, transparent);
+}
+
+.ring {
+  animation: ringIn 1.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Bosh ekrandagi ilova ikonkasi — bosilganda sal kichrayadi */
+.app {
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.2s var(--ease-out);
+}
+.app:active {
+  transform: scale(0.9);
+}
+.app:hover > span:first-child {
+  filter: brightness(1.05);
+}
+
+.rise {
+  animation: rise 0.6s var(--ease-out) both;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes ringIn {
+  from {
+    stroke-dasharray: 0 1000;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .ring {
+    animation: none;
+  }
+  .card,
+  .app {
+    transition: none;
+  }
+}

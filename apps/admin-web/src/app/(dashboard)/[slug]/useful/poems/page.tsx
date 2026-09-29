@@ -18,6 +18,7 @@ import { NoteIcon, PencilIcon, TrashIcon } from "@/components/ui/icons";
 import { formatDate } from "@/lib/format";
 import { UsefulTabs } from "@/features/useful/useful-tabs";
 import { PoemModal } from "@/features/useful/poem-modal";
+import { TeacherUsefulList } from "@/features/teacher/teacher-useful";
 
 export default function PoemsPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
@@ -55,6 +56,63 @@ export default function PoemsPage({ params }: { params: Promise<{ slug: string }
       setDeleting(null);
     },
   });
+
+  const dialogs = (
+    <>
+      {canWrite && (
+        <PoemModal
+          open={modal.open}
+          onClose={() => setModal({ open: false, poem: null })}
+          slug={slug}
+          groups={groups}
+          isTeacher={isTeacher}
+          poem={modal.poem}
+        />
+      )}
+
+      <ConfirmDialog
+        open={!!deleting}
+        onClose={() => setDeleting(null)}
+        title="She'rni o'chirish"
+        confirmLabel="O'chirish"
+        tone="danger"
+        loading={deleteMutation.isPending}
+        error={deleteMutation.isError ? ((deleteMutation.error as Error)?.message ?? null) : null}
+        description={<><b className="text-[var(--color-text)]">{deleting?.title}</b> o&apos;chiriladi.</>}
+        onConfirm={() => deleting && deleteMutation.mutate(deleting.id)}
+      />
+    </>
+  );
+
+  // Tarbiyachi — telefon uchun iOS ro'yxati (rangli fonli ikonkalarsiz)
+  if (isTeacher) {
+    return (
+      <TeacherUsefulList
+        base={base}
+        icon={NoteIcon}
+        noun="she'r"
+        items={(poemsQuery.data ?? []).map((p) => ({
+          id: p.id,
+          title: p.title,
+          detail: null,
+          meta: [p.group?.name ?? "Barcha guruhlar", p.author, formatDate(p.createdAt)].filter(Boolean).join(" · "),
+          published: p.status === "PUBLISHED",
+          canEdit: canWrite && p.createdById === user?.id,
+        }))}
+        loading={poemsQuery.isLoading}
+        error={poemsQuery.isError ? (poemsQuery.error instanceof ApiError ? poemsQuery.error.message : "Xatolik yuz berdi") : null}
+        canWrite={canWrite}
+        groups={groups}
+        groupFilter={groupFilter}
+        onGroupFilter={setGroupFilter}
+        onAdd={() => setModal({ open: true, poem: null })}
+        onEdit={(id) => setModal({ open: true, poem: poemsQuery.data?.find((x) => x.id === id) ?? null })}
+        onDelete={(id) => setDeleting(poemsQuery.data?.find((x) => x.id === id) ?? null)}
+      >
+        {dialogs}
+      </TeacherUsefulList>
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -118,28 +176,7 @@ export default function PoemsPage({ params }: { params: Promise<{ slug: string }
         </div>
       )}
 
-      {canWrite && (
-        <PoemModal
-          open={modal.open}
-          onClose={() => setModal({ open: false, poem: null })}
-          slug={slug}
-          groups={groups}
-          isTeacher={isTeacher}
-          poem={modal.poem}
-        />
-      )}
-
-      <ConfirmDialog
-        open={!!deleting}
-        onClose={() => setDeleting(null)}
-        title="She'rni o'chirish"
-        confirmLabel="O'chirish"
-        tone="danger"
-        loading={deleteMutation.isPending}
-        error={deleteMutation.isError ? ((deleteMutation.error as Error)?.message ?? null) : null}
-        description={<><b className="text-[var(--color-text)]">{deleting?.title}</b> o&apos;chiriladi.</>}
-        onConfirm={() => deleting && deleteMutation.mutate(deleting.id)}
-      />
+      {dialogs}
     </div>
   );
 }

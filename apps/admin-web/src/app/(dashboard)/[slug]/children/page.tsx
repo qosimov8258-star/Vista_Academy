@@ -22,6 +22,7 @@ import { downloadCsv } from "@/lib/download";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { CreateChildModal } from "@/features/children/create-child-modal";
 import { EditChildModal } from "@/features/children/edit-child-modal";
+import { TeacherChildren } from "@/features/teacher/teacher-children";
 import { canWriteOperational, isTeacher } from "@/lib/permissions";
 
 const STATUS_LABEL: Record<string, string> = { ACTIVE: "Faol", INACTIVE: "Nofaol", QUARANTINED: "Karantinda" };
@@ -37,8 +38,16 @@ const RELATION_LABEL: Record<string, string> = {
   OTHER: "Vasiy",
 };
 
+/** Tarbiyachi telefon uchun qilingan o'z ro'yxatini oladi, qolgan rollar — jadvalni. */
 export default function ChildrenPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
+  const { user, isLoading } = useAuth();
+  if (isLoading) return <LoadingState rows={6} />;
+  if (isTeacher(user?.role)) return <TeacherChildren slug={slug} />;
+  return <BranchChildren slug={slug} />;
+}
+
+function BranchChildren({ slug }: { slug: string }) {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [groupFilter, setGroupFilter] = useState("");

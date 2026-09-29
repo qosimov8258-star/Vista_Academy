@@ -3,6 +3,7 @@ import * as argon2 from "argon2";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantAuthenticatedUser } from "../iam/tenant-auth.types";
 import { UpdateProfileDto } from "./dto/update-profile.dto";
+import { UpdateThemeDto } from "./dto/update-theme.dto";
 import { ChangePasswordDto } from "./dto/change-password.dto";
 import { UpdateAvatarDto } from "./dto/update-avatar.dto";
 
@@ -20,6 +21,15 @@ export class ProfileService {
       select: { id: true, fullName: true, login: true },
     });
     return updated;
+  }
+
+  /** Tizim rangini hisobga yozadi — foydalanuvchi qaysi qurilmadan kirmasin, shu rang */
+  async updateTheme(user: TenantAuthenticatedUser, dto: UpdateThemeDto) {
+    return this.prisma.tenantUser.update({
+      where: { id: user.id },
+      data: { themeColor: dto.themeColor },
+      select: { themeColor: true },
+    });
   }
 
   /**

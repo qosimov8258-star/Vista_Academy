@@ -477,6 +477,16 @@ export function LogoutIcon(props: IconProps) {
   );
 }
 
+/** Audit — qalqon ichida belgi: kim nima qilgani nazorat ostida */
+export function AuditIcon({ filled, ...props }: IconProps) {
+  return (
+    <Outline {...props}>
+      <path d="M12 3.2 5 5.9v5.4c0 4.4 2.9 8 7 9.5 4.1-1.5 7-5.1 7-9.5V5.9L12 3.2Z" fill={filled ? "currentColor" : "none"} fillOpacity={filled ? 0.18 : 0} />
+      <path d="m8.9 12.1 2.2 2.2 4-4.3" />
+    </Outline>
+  );
+}
+
 export function EyeIcon(props: IconProps) {
   return (
     <Outline {...props}>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import clsx from "clsx";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,11 +10,13 @@ import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
 import { setTenantTokens } from "@/lib/tenant-session";
-import { Input } from "@/components/ui/input";
+import { Input, PasswordInput } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { LockIcon } from "@/components/ui/icons";
 import type { TenantAuthenticatedUser } from "@/lib/types";
 
-export function LoginForm({ slug }: { slug: string }) {
+/** `submitClassName` — kirish tugmasining sahifaga xos ko'rinishi (gradient) */
+export function LoginForm({ slug, submitClassName }: { slug: string; submitClassName?: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
@@ -66,7 +69,7 @@ export function LoginForm({ slug }: { slug: string }) {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
       {serverError && (
         <div role="alert" className="rounded-xl bg-[var(--color-danger-bg)] px-3.5 py-2.5 text-sm text-[var(--color-danger)]">
           {serverError}
@@ -78,21 +81,25 @@ export function LoginForm({ slug }: { slug: string }) {
         type="text"
         placeholder="admin_tarmoq"
         autoComplete="username"
-        className="h-11 rounded-xl px-3.5"
         error={errors.login?.message}
         {...register("login")}
       />
-      <Input
+      <PasswordInput
         id="password"
         label={t("passwordLabel")}
-        type="password"
         placeholder="••••••••"
         autoComplete="current-password"
-        className="h-11 rounded-xl px-3.5"
         error={errors.password?.message}
         {...register("password")}
       />
-      <Button type="submit" size="lg" fullWidth className="mt-2" loading={isSubmitting}>
+      <Button
+        type="submit"
+        size="lg"
+        fullWidth
+        className={clsx("mt-3 rounded-[16px]! text-[16px]! font-bold! text-[var(--accent-orb-ink)]!", submitClassName)}
+        loading={isSubmitting}
+      >
+        {!isSubmitting && <LockIcon className="h-[18px] w-[18px]" />}
         {t("submit")}
       </Button>
     </form>

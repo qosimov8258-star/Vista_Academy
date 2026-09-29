@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { EmployeeNotification } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
-import { isChef, receivesEmployeeNotifications } from "@/lib/permissions";
+import { isChef, isTeacher, receivesEmployeeNotifications } from "@/lib/permissions";
 import { BellIcon } from "@/components/ui/icons";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 
@@ -25,6 +25,9 @@ export function Topbar({ slug }: { slug: string }) {
   const showNotifications = receivesEmployeeNotifications(user?.role);
   // Oshpazda telefonda pastki panel bor: menyu tugmasi va qo'ng'iroqcha takrorlanmaydi
   const chef = isChef(user?.role);
+  // Tarbiyachida ham telefonda pastki tab-bar bor — menyu tugmasi kerak emas,
+  // til esa Profil (Sozlamalar) ichida
+  const teacher = isTeacher(user?.role);
   const t = useTranslations("sidebar");
 
   const notificationsQuery = useQuery({
@@ -37,7 +40,8 @@ export function Topbar({ slug }: { slug: string }) {
 
   return (
     <header className="hairline flex h-[60px] shrink-0 items-center gap-3 border-b border-[var(--color-separator)] bg-[var(--color-surface)]/80 px-4 backdrop-blur-[20px] md:px-6">
-      {user && !chef && (
+      {/* Oshpaz, tarbiyachi va direktorda telefon menyusi pastki panelda — bu tugma kerak emas */}
+      {user && !chef && !teacher && user.role !== "NETWORK_ADMIN" && (
         <button
           type="button"
           onClick={() => window.dispatchEvent(new Event("open-mobile-menu"))}
@@ -69,7 +73,7 @@ export function Topbar({ slug }: { slug: string }) {
           )}
         </Link>
       )}
-      <div className="md:ml-auto">
+      <div className={teacher ? "hidden md:ml-auto md:block" : "md:ml-auto"}>
         <LanguageSwitcher />
       </div>
     </header>

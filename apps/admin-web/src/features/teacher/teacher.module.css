@@ -1,0 +1,135 @@
+/*
+ * Tarbiyachi kabineti — iOS uslubi, lekin rangli fonli ikonkalarsiz:
+ * belgilar o'zi tizim rangida (SF Symbols kabi), kartalar oq va chegarasiz.
+ */
+
+.page {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.group {
+  border-radius: 22px;
+  background: var(--color-surface);
+  box-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 8px 24px -16px rgba(16, 24, 40, 0.14);
+}
+
+/* Bosiladigan qator: iOS'dagi kabi bosilganda kulrang fon */
+.pressable {
+  transition: background-color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.pressable:active {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+@media (hover: hover) {
+  .pressable:hover {
+    background-color: rgba(0, 0, 0, 0.025);
+  }
+}
+
+/* Katta tugma (Saqlash va h.k.) — bosilganda sal kichrayadi */
+.cta {
+  transition:
+    transform 0.18s var(--ease-out),
+    background-color 0.18s ease,
+    opacity 0.18s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.cta:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* iOS segmented control — oq "slayder" tanlangan bo'lak ostida suriladi */
+.segmented {
+  position: relative;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  padding: 2px;
+  border-radius: 10px;
+  background: rgba(118, 118, 128, 0.12);
+}
+.segmentThumb {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow:
+    0 3px 8px rgba(0, 0, 0, 0.12),
+    0 3px 1px rgba(0, 0, 0, 0.04);
+  transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.segment {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  padding: 6px 4px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--color-text);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.2s ease;
+}
+.segment[aria-checked="true"] {
+  font-weight: 600;
+}
+
+/* Davomat halqasi — sahifa ochilganda to'lib boradi */
+.ring {
+  transition: stroke-dashoffset 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Pastki tab-bar: suzib turuvchi "shisha" kapsula (iOS 26 kabi) */
+.tabBar {
+  background: color-mix(in srgb, var(--color-surface) 78%, transparent);
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  backdrop-filter: saturate(180%) blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow:
+    0 0 0 0.5px rgba(16, 24, 40, 0.08),
+    0 12px 32px -10px rgba(16, 24, 40, 0.28);
+}
+.tab {
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.2s ease;
+}
+.tabPill {
+  position: absolute;
+  inset: 3px 2px;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--color-primary) 11%, transparent);
+  animation: pillIn 0.3s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+@keyframes pillIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+.tabIcon {
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.tab:active .tabIcon {
+  transform: scale(0.86);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .segmentThumb,
+  .ring,
+  .tabPill,
+  .tabIcon,
+  .cta {
+    transition: none;
+    animation: none;
+  }
+}

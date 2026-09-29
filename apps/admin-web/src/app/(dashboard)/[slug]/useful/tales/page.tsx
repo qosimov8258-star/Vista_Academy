@@ -18,6 +18,7 @@ import { BookIcon, PencilIcon, TrashIcon } from "@/components/ui/icons";
 import { formatDate } from "@/lib/format";
 import { UsefulTabs } from "@/features/useful/useful-tabs";
 import { TaleModal } from "@/features/useful/tale-modal";
+import { TeacherUsefulList } from "@/features/teacher/teacher-useful";
 
 export default function TalesPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
@@ -55,6 +56,63 @@ export default function TalesPage({ params }: { params: Promise<{ slug: string }
       setDeleting(null);
     },
   });
+
+  const dialogs = (
+    <>
+      {canWrite && (
+        <TaleModal
+          open={modal.open}
+          onClose={() => setModal({ open: false, tale: null })}
+          slug={slug}
+          groups={groups}
+          isTeacher={isTeacher}
+          tale={modal.tale}
+        />
+      )}
+
+      <ConfirmDialog
+        open={!!deleting}
+        onClose={() => setDeleting(null)}
+        title="Ertakni o'chirish"
+        confirmLabel="O'chirish"
+        tone="danger"
+        loading={deleteMutation.isPending}
+        error={deleteMutation.isError ? ((deleteMutation.error as Error)?.message ?? null) : null}
+        description={<><b className="text-[var(--color-text)]">{deleting?.title}</b> o&apos;chiriladi.</>}
+        onConfirm={() => deleting && deleteMutation.mutate(deleting.id)}
+      />
+    </>
+  );
+
+  // Tarbiyachi — telefon uchun iOS ro'yxati (rangli fonli ikonkalarsiz)
+  if (isTeacher) {
+    return (
+      <TeacherUsefulList
+        base={base}
+        icon={BookIcon}
+        noun="ertak"
+        items={(talesQuery.data ?? []).map((p) => ({
+          id: p.id,
+          title: p.title,
+          detail: null,
+          meta: [p.group?.name ?? "Barcha guruhlar", formatDate(p.createdAt)].filter(Boolean).join(" · "),
+          published: p.status === "PUBLISHED",
+          canEdit: canWrite && p.createdById === user?.id,
+        }))}
+        loading={talesQuery.isLoading}
+        error={talesQuery.isError ? (talesQuery.error instanceof ApiError ? talesQuery.error.message : "Xatolik yuz berdi") : null}
+        canWrite={canWrite}
+        groups={groups}
+        groupFilter={groupFilter}
+        onGroupFilter={setGroupFilter}
+        onAdd={() => setModal({ open: true, tale: null })}
+        onEdit={(id) => setModal({ open: true, tale: talesQuery.data?.find((x) => x.id === id) ?? null })}
+        onDelete={(id) => setDeleting(talesQuery.data?.find((x) => x.id === id) ?? null)}
+      >
+        {dialogs}
+      </TeacherUsefulList>
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -118,28 +176,7 @@ export default function TalesPage({ params }: { params: Promise<{ slug: string }
         </div>
       )}
 
-      {canWrite && (
-        <TaleModal
-          open={modal.open}
-          onClose={() => setModal({ open: false, tale: null })}
-          slug={slug}
-          groups={groups}
-          isTeacher={isTeacher}
-          tale={modal.tale}
-        />
-      )}
-
-      <ConfirmDialog
-        open={!!deleting}
-        onClose={() => setDeleting(null)}
-        title="Ertakni o'chirish"
-        confirmLabel="O'chirish"
-        tone="danger"
-        loading={deleteMutation.isPending}
-        error={deleteMutation.isError ? ((deleteMutation.error as Error)?.message ?? null) : null}
-        description={<><b className="text-[var(--color-text)]">{deleting?.title}</b> o&apos;chiriladi.</>}
-        onConfirm={() => deleting && deleteMutation.mutate(deleting.id)}
-      />
+      {dialogs}
     </div>
   );
 }

@@ -57,7 +57,6 @@
     }
   },
   "login": {
-    "panelSubtitle": "Admin panel",
     "title": "Welcome!",
     "subtitle": "Enter your details to sign in to the admin panel.",
     "loginLabel": "Login",
@@ -66,6 +65,32 @@
     "forgotPassword": "Forgot your password? Contact the organization's Super Admin.",
     "loginRequired": "Login is required",
     "passwordMin": "At least 8 characters",
-    "unexpectedError": "An unexpected error occurred"
+    "unexpectedError": "An unexpected error occurred",
+    "hero": {
+      "status": "All systems running",
+      "titleLine1": "Run your kindergarten",
+      "titleLine2": "from one place",
+      "subtitle": "Children, attendance, payments and the kitchen — in one system. See exactly how every branch is doing, every day.",
+      "featuresLabel": "What the system does",
+      "rights": "All rights reserved",
+      "features": {
+        "attendance": {
+          "title": "Attendance",
+          "text": "Who came in today and who didn't — children and staff at a glance."
+        },
+        "finance": {
+          "title": "Finance",
+          "text": "Payments, debts and the cash desk — per branch, in real time."
+        },
+        "kitchen": {
+          "title": "Kitchen",
+          "text": "Menus, portion counts and photos of the finished meals for parents."
+        },
+        "parents": {
+          "title": "Parent portal",
+          "text": "Diary, messages and payments — right on the parent's phone."
+        }
+      }
+    }
   }
 }
