@@ -17,6 +17,13 @@ const schema = z.object({
   model: z.string().min(2, "Model nomi kamida 2 belgi"),
   serialNumber: z.string().optional(),
   ipAddress: z.string().optional(),
+  port: z
+    .string()
+    .trim()
+    .regex(/^\d{1,5}$/, "Port — raqam")
+    .refine((v) => Number(v) >= 1 && Number(v) <= 65535, "Port 1–65535 oralig'ida"),
+  username: z.string().optional(),
+  password: z.string().optional(),
   location: z.string().optional(),
   notes: z.string().optional(),
 });
@@ -34,11 +41,14 @@ export function DeviceFormModal({
   onClose,
   slug,
   device,
+  onCreated,
 }: {
   open: boolean;
   onClose: () => void;
   slug: string;
   device?: FaceIdDevice | null;
+  /** Yangi qurilma yaratilganda — agent tokeni faqat shu bir marta keladi */
+  onCreated?: (device: FaceIdDevice, agentToken: string) => void;
 }) {
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -57,6 +67,9 @@ export function DeviceFormModal({
       model: device?.model ?? "DS-K1T342MX",
       serialNumber: device?.serialNumber ?? "",
       ipAddress: device?.ipAddress ?? "",
+      port: String(device?.port ?? 80),
+      username: device?.username ?? "admin",
+      password: "",
       location: device?.location ?? "",
       notes: device?.notes ?? "",
     },
@@ -69,6 +82,9 @@ export function DeviceFormModal({
       model: device?.model ?? "DS-K1T342MX",
       serialNumber: device?.serialNumber ?? "",
       ipAddress: device?.ipAddress ?? "",
+      port: String(device?.port ?? 80),
+      username: device?.username ?? "admin",
+      password: "",
       location: device?.location ?? "",
       notes: device?.notes ?? "",
     });
@@ -84,17 +100,24 @@ export function DeviceFormModal({
         model: values.model,
         serialNumber: values.serialNumber?.trim() || undefined,
         ipAddress: values.ipAddress?.trim() || undefined,
+        port: Number(values.port),
+        username: values.username?.trim() || undefined,
+        // Tahrirlashda bo'sh parol — o'zgarmaydi (yuborilmaydi)
+        password: values.password ? values.password : undefined,
         location: values.location?.trim() || undefined,
         notes: values.notes?.trim() || undefined,
         ...(isEditing ? { status } : {}),
       };
-      return isEditing
-        ? api.patch<FaceIdDevice>(`/app/face-id/devices/${device!.id}`, payload)
-        : api.post<FaceIdDevice>("/app/face-id/devices", payload);
+      if (isEditing) {
+        await api.patch<FaceIdDevice>(`/app/face-id/devices/${device!.id}`, payload);
+        return null;
+      }
+      return api.post<{ device: FaceIdDevice; agentToken: string }>("/app/face-id/devices", payload);
     },
-    onSuccess: () => {
+    onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: ["face-id-devices", slug] });
       onClose();
+      if (created) onCreated?.(created.device, created.agentToken);
     },
     onError: (err) => setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi"),
   });
@@ -136,6 +159,26 @@ export function DeviceFormModal({
             {...register("ipAddress")}
           />
         </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_120px]">
+          <Input
+            label="Qurilma logini"
+            placeholder="admin"
+            autoComplete="off"
+            error={errors.username?.message}
+            {...register("username")}
+          />
+          <Input label="Port" inputMode="numeric" placeholder="80" error={errors.port?.message} {...register("port")} />
+        </div>
+        <Input
+          label="Qurilma paroli"
+          type="password"
+          autoComplete="new-password"
+          placeholder={isEditing && device?.hasPassword ? "O'zgartirmaslik uchun bo'sh qoldiring" : "Qurilma administratori paroli"}
+          hint="Shifrlab saqlanadi va faqat obyektdagi agentga beriladi — hech kimga ko'rsatilmaydi."
+          error={errors.password?.message}
+          {...register("password")}
+        />
 
         <Input
           label="Joylashuvi"

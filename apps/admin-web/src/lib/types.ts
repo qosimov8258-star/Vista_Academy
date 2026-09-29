@@ -161,6 +161,8 @@ export interface Employee {
   position: string;
   /** Faqat "Fan o'qituvchisi" lavozimida to'ldiriladi. */
   subjects: string[];
+  /** Yuz tanish terminalidagi (Face ID) raqami — 1001, 1002, … */
+  employeeNo: string;
   isActive: boolean;
   createdAt: string;
   avatarUpdatedAt: string | null;
@@ -211,12 +213,38 @@ export interface FaceIdDevice {
   model: string;
   serialNumber: string | null;
   ipAddress: string | null;
+  /** ISAPI (HTTP) porti */
+  port: number;
+  /** Qurilma administratori logini (parolning o'zi hech qachon kelmaydi) */
+  username: string | null;
+  hasPassword: boolean;
+  hasAgentToken: boolean;
+  /** Agent oxirgi marta murojaat qilgan payt */
+  lastSeenAt: string | null;
+  /** Qurilmaga hali yetib bormagan buyruqlar soni */
+  queuedCommands: number;
   location: string | null;
   status: FaceIdDeviceStatus;
   notes: string | null;
   createdAt: string;
   updatedAt: string;
   branch?: { id: string; name: string };
+}
+
+export type FaceIdCommandType = "ADD_OR_UPDATE_USER" | "SET_FACE" | "DELETE_USER";
+export type FaceIdCommandStatus = "PENDING" | "SENT" | "DONE" | "FAILED";
+
+/** Qurilmaga yuborilgan buyruq (`GET /app/face-id/devices/:id/commands`). */
+export interface FaceIdCommand {
+  id: string;
+  type: FaceIdCommandType;
+  status: FaceIdCommandStatus;
+  employeeNo: string;
+  attempts: number;
+  lastError: string | null;
+  createdAt: string;
+  completedAt: string | null;
+  employee: { id: string; fullName: string } | null;
 }
 
 /** Xodim yoki bolaning bitta qurilmada yuzini ro'yxatga olish holati. */
