@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { usePathname } from "next/navigation";
+import { useAppPathname } from "@/lib/tenant-host-context";
 import styles from "../parent.module.css";
 import { tabIndexOf } from "./tabs";
 
@@ -14,7 +14,7 @@ import { tabIndexOf } from "./tabs";
  * varaqlash hissini beradi, shunchaki "yonib o'chish" emas.
  */
 export function ParentPageTransition({ slug, children }: { slug: string; children: React.ReactNode }) {
-  const pathname = usePathname();
+  const pathname = useAppPathname();
   const base = `/ota-ona/${slug}`;
   const index = tabIndexOf(pathname, base);
 

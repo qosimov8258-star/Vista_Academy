@@ -23,6 +23,7 @@ import { CreateBranchDto } from "./dto/create-branch.dto";
 import { UpdateBranchDto } from "./dto/update-branch.dto";
 import { UpdateBranchAvatarDto } from "./dto/update-branch-avatar.dto";
 import { slugify } from "./slugify";
+import { MAX_TENANT_SLUG_LENGTH, isValidTenantSlug } from "../../common/tenant-domain";
 
 /** Rasm brauzerda 256x256 gacha kichraytirilgani uchun bundan oshmasligi kerak. */
 const MAX_BRANCH_AVATAR_BYTES = 300 * 1024;
@@ -484,8 +485,13 @@ export class OrganizationsService {
     return { id };
   }
 
+  /**
+   * Slug — bog'chaning subdomeni ham (babyland.zeeron.uz), shuning uchun
+   * DNS'ga yaroqli, 40 belgigacha va xizmat nomlari (www, admin, api…) emas.
+   */
   private async generateUniqueSlug(name: string): Promise<string> {
-    const base = slugify(name);
+    let base = slugify(name).slice(0, MAX_TENANT_SLUG_LENGTH - 4).replace(/-+$/, "") || "bogcha";
+    if (!isValidTenantSlug(base)) base = `${base}-bogcha`;
     let candidate = base;
     let suffix = 1;
     // eslint-disable-next-line no-constant-condition

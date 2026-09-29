@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useAppPathname } from "@/lib/tenant-host-context";
 import clsx from "clsx";
 import styles from "../parent.module.css";
 import { CABINET_TABS, TAB_BAR_SLOTS, tabIndexOf } from "./tabs";
@@ -21,7 +21,7 @@ import { CABINET_TABS, TAB_BAR_SLOTS, tabIndexOf } from "./tabs";
  * tugmaning haqiqiy o'lchamidan olinadi — bo'lim qo'shilsa ham adashmaydi.
  */
 export function ParentTabBar({ slug }: { slug: string }) {
-  const pathname = usePathname();
+  const pathname = useAppPathname();
   const base = `/ota-ona/${slug}`;
 
   const overflowing = CABINET_TABS.length > TAB_BAR_SLOTS;

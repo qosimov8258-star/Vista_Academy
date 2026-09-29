@@ -13,9 +13,15 @@ import { WebAuthnChallengeStore } from "./webauthn-challenge.store";
 import { VerifyRegistrationDto } from "./dto/verify-registration.dto";
 import { VerifyAuthenticationDto } from "./dto/verify-authentication.dto";
 import { issueRevealToken } from "./reveal-token";
+import { isTenantOrigin } from "../../common/tenant-domain";
 
+/**
+ * Bog'chalar `*.zeeron.uz` subdomenlarida — passkey hammasi uchun umumiy
+ * asosiy domenga bog'lanadi (TENANT_WEBAUTHN_RP_ID). Platforma admini
+ * o'z domenida qoladi va o'zining WEBAUTHN_RP_ID'sini ishlatadi.
+ */
 function rpID(): string {
-  return process.env.WEBAUTHN_RP_ID ?? "localhost";
+  return process.env.TENANT_WEBAUTHN_RP_ID ?? process.env.WEBAUTHN_RP_ID ?? "localhost";
 }
 
 function rpName(): string {
@@ -25,6 +31,21 @@ function rpName(): string {
 function allowedOrigins(): string[] {
   const raw = process.env.WEBAUTHN_ORIGIN ?? "http://localhost:3101";
   return raw.split(",").map((origin) => origin.trim());
+}
+
+/**
+ * Brauzer imzolagan origin (clientDataJSON ichida) ro'yxatda yoki bog'cha
+ * subdomeni bo'lsa — aynan shu kutiladi; aks holda ro'yxat qaytadi va
+ * tekshiruv o'zi rad etadi.
+ */
+function expectedOrigin(clientDataJSON: string): string | string[] {
+  try {
+    const { origin } = JSON.parse(Buffer.from(clientDataJSON, "base64url").toString("utf8")) as { origin?: string };
+    if (origin && (allowedOrigins().includes(origin) || isTenantOrigin(origin))) return origin;
+  } catch {
+    // Buzilgan clientDataJSON — kutubxona o'zi xato beradi
+  }
+  return allowedOrigins();
 }
 
 /**
@@ -87,7 +108,7 @@ export class WebAuthnService {
     const verification = await verifyRegistrationResponse({
       response: dto.response,
       expectedChallenge,
-      expectedOrigin: allowedOrigins(),
+      expectedOrigin: expectedOrigin(dto.response.response.clientDataJSON),
       expectedRPID: rpID(),
     });
 
@@ -152,7 +173,7 @@ export class WebAuthnService {
     const verification = await verifyAuthenticationResponse({
       response: dto.response,
       expectedChallenge,
-      expectedOrigin: allowedOrigins(),
+      expectedOrigin: expectedOrigin(dto.response.response.clientDataJSON),
       expectedRPID: rpID(),
       credential,
     });

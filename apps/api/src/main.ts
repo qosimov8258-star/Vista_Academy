@@ -8,6 +8,7 @@ import { AppModule } from "./app.module";
 import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
 import { ResponseInterceptor } from "./common/interceptors/response.interceptor";
 import { UPLOADS_ROOT } from "./common/constants/uploads";
+import { isTenantOrigin } from "./common/tenant-domain";
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -18,9 +19,10 @@ async function bootstrap() {
   // mumkin; server tomonda hajm ProfileService'da alohida tekshiriladi.
   app.useBodyParser("json", { limit: "1mb" });
 
-  const corsOrigin = process.env.CORS_ORIGIN ?? "http://localhost:3000";
+  const corsOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:3000").split(",").map((origin) => origin.trim());
   app.enableCors({
-    origin: corsOrigin.split(",").map((origin) => origin.trim()),
+    // Ro'yxatdagi manzillar + har bir bog'chaning subdomeni (babyland.zeeron.uz)
+    origin: (origin, callback) => callback(null, !origin || corsOrigins.includes(origin) || isTenantOrigin(origin)),
     credentials: true,
   });
 

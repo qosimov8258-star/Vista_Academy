@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useAppPathname } from "@/lib/tenant-host-context";
 import clsx from "clsx";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -25,7 +25,7 @@ type Tab = { href: string; label: string; Icon: (p: IconProps) => React.JSX.Elem
  */
 export function ChefBottomBar({ slug }: { slug: string }) {
   const { user } = useAuth();
-  const pathname = usePathname();
+  const pathname = useAppPathname();
   const [sheetOpen, setSheetOpen] = useState(false);
   const chef = isChef(user?.role);
 

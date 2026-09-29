@@ -1,6 +1,7 @@
 "use client";
 
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useAppPathname } from "@/lib/tenant-host-context";
 import clsx from "clsx";
 import type { ComponentType, ReactNode } from "react";
 import type { Group as GroupModel } from "@/lib/types";
@@ -58,7 +59,7 @@ export function TeacherUsefulList({
   children?: ReactNode;
 }) {
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = useAppPathname();
   const tabs = [
     { value: `${base}/useful/poems`, label: "She'rlar" },
     { value: `${base}/useful/proverbs`, label: "Maqollar" },

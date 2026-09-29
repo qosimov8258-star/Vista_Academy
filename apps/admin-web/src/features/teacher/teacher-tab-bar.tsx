@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useAppPathname } from "@/lib/tenant-host-context";
 import clsx from "clsx";
 import type { ComponentType } from "react";
 import { useAuth } from "@/lib/use-auth";
@@ -20,7 +20,7 @@ type Tab = { href: string; label: string; Icon: ComponentType<IconProps>; exact?
  */
 export function TeacherTabBar({ slug }: { slug: string }) {
   const { user } = useAuth();
-  const pathname = usePathname();
+  const pathname = useAppPathname();
 
   if (!user || !isTeacher(user.role)) return null;
 

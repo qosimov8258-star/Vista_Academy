@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useAppPathname } from "@/lib/tenant-host-context";
 import clsx from "clsx";
 
 /**
@@ -10,7 +10,7 @@ import clsx from "clsx";
  * xil manzillarga olib boradi — bu shunchaki sahifa ichidagi tezkor almashtirgich.
  */
 export function LendingTabs({ base }: { base: string }) {
-  const pathname = usePathname();
+  const pathname = useAppPathname();
   const tabs = [
     { href: `${base}/lending/teachers`, label: "O'qituvchilar" },
     { href: `${base}/lending/menu`, label: "Menu" },
