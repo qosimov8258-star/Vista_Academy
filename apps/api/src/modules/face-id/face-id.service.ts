@@ -1,7 +1,11 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
-import { TenantScope, requireOperationalScope } from "../iam/tenant-auth.types";
+import { encryptSecret } from "../../common/crypto/reversible-secret";
+import { TenantAuthenticatedUser, TenantScope, requireOperationalScope, toTenantScope } from "../iam/tenant-auth.types";
+import { AuditLogService } from "../audit-log/audit-log.service";
+import { generateAgentToken, hashAgentToken } from "./agent/agent-token";
+import { FaceIdCommandsService } from "./face-id-commands.service";
 import { CreateDeviceDto } from "./dto/create-device.dto";
 import { UpdateDeviceDto } from "./dto/update-device.dto";
 import { DeviceQueryDto } from "./dto/device-query.dto";
@@ -16,11 +20,57 @@ const enrollmentInclude = {
   child: { select: { id: true, fullName: true, avatarUpdatedAt: true, gender: true } },
 } satisfies Prisma.FaceEnrollmentInclude;
 
+/**
+ * Qurilma javobga shu ko'rinishda chiqadi: parol va token hash'i HECH
+ * QACHON qaytarilmaydi — faqat "bor/yo'q" belgisi.
+ */
+const deviceSelect = {
+  id: true,
+  organizationId: true,
+  branchId: true,
+  name: true,
+  model: true,
+  serialNumber: true,
+  ipAddress: true,
+  port: true,
+  username: true,
+  location: true,
+  status: true,
+  notes: true,
+  lastSeenAt: true,
+  createdAt: true,
+  updatedAt: true,
+  passwordEncrypted: true,
+  agentTokenHash: true,
+  _count: { select: { commands: { where: { status: { in: ["PENDING", "SENT"] } } } } },
+} satisfies Prisma.FaceIdDeviceSelect;
+
+type DeviceRow = Prisma.FaceIdDeviceGetPayload<{ select: typeof deviceSelect }>;
+
+function toPublicDevice(row: DeviceRow) {
+  const { passwordEncrypted, agentTokenHash, _count, ...rest } = row;
+  return { ...rest, hasPassword: !!passwordEncrypted, hasAgentToken: !!agentTokenHash, queuedCommands: _count.commands };
+}
+
+/** Parol maydoni: berilmagan — o'zgarmaydi, bo'sh qator — o'chiriladi. */
+function passwordData(password: string | undefined) {
+  if (password === undefined) return undefined;
+  return password === "" ? null : encryptSecret(password, "DEVICE_SECRET_KEY");
+}
+
+function isUniqueViolation(err: unknown): boolean {
+  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002";
+}
+
 @Injectable()
 export class FaceIdService {
   private readonly logger = new Logger(FaceIdService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly commands: FaceIdCommandsService,
+    private readonly auditLog: AuditLogService,
+  ) {}
 
   /**
    * Xodim yoki bola yaratilganda avtomatik chaqiriladi: shu filialda kamida
@@ -62,44 +112,144 @@ export class FaceIdService {
   // Qurilmalar
   // ---------------------------------------------------------------------
 
-  findDevices(scope: TenantScope, query: DeviceQueryDto) {
-    return this.prisma.faceIdDevice.findMany({
+  async findDevices(scope: TenantScope, query: DeviceQueryDto) {
+    const rows = await this.prisma.faceIdDevice.findMany({
       where: {
         organizationId: scope.organizationId,
         branchId: scope.branchId ?? query.branchId,
       },
+      select: deviceSelect,
       orderBy: { createdAt: "desc" },
     });
+    return rows.map(toPublicDevice);
   }
 
-  async createDevice(scope: TenantScope, dto: CreateDeviceDto) {
+  /**
+   * Qurilma yaratiladi va unga agent tokeni beriladi. Token javobda FAQAT
+   * shu bir marta keladi — bazada sha256 hash'i saqlanadi.
+   */
+  async createDevice(caller: TenantAuthenticatedUser, dto: CreateDeviceDto) {
+    const scope = toTenantScope(caller);
     const branchId = requireOperationalScope(scope);
-    return this.prisma.faceIdDevice.create({
-      data: {
-        organizationId: scope.organizationId,
+    const agentToken = generateAgentToken();
+    try {
+      const row = await this.prisma.faceIdDevice.create({
+        data: {
+          organizationId: scope.organizationId,
+          branchId,
+          name: dto.name.trim(),
+          model: dto.model?.trim() || undefined,
+          serialNumber: dto.serialNumber?.trim() || null,
+          ipAddress: dto.ipAddress?.trim() || null,
+          port: dto.port,
+          username: dto.username?.trim() || null,
+          passwordEncrypted: passwordData(dto.password),
+          agentTokenHash: hashAgentToken(agentToken),
+          location: dto.location?.trim() || null,
+          notes: dto.notes?.trim() || null,
+        },
+        select: deviceSelect,
+      });
+      await this.auditLog.logFromUser(caller, {
+        action: "faceId.device.create",
+        entityType: "FaceIdDevice",
+        entityId: row.id,
         branchId,
-        name: dto.name.trim(),
-        model: dto.model?.trim() || undefined,
-        serialNumber: dto.serialNumber?.trim() || null,
-        ipAddress: dto.ipAddress?.trim() || null,
-        location: dto.location?.trim() || null,
-        notes: dto.notes?.trim() || null,
-      },
-    });
+        summary: `"${row.name}" Face ID qurilmasi qo'shildi`,
+      });
+      return { device: toPublicDevice(row), agentToken };
+    } catch (err) {
+      if (isUniqueViolation(err)) throw new ConflictException("Bu seriya raqamli qurilma allaqachon qo'shilgan");
+      throw err;
+    }
   }
 
   async updateDevice(scope: TenantScope, id: string, dto: UpdateDeviceDto) {
     const device = await this.requireWritableDevice(scope, id);
-    return this.prisma.faceIdDevice.update({
+    try {
+      const row = await this.prisma.faceIdDevice.update({
+        where: { id: device.id },
+        data: {
+          name: dto.name?.trim(),
+          model: dto.model?.trim(),
+          serialNumber: dto.serialNumber !== undefined ? dto.serialNumber.trim() || null : undefined,
+          ipAddress: dto.ipAddress !== undefined ? dto.ipAddress.trim() || null : undefined,
+          port: dto.port,
+          username: dto.username !== undefined ? dto.username.trim() || null : undefined,
+          passwordEncrypted: passwordData(dto.password),
+          location: dto.location !== undefined ? dto.location.trim() || null : undefined,
+          notes: dto.notes !== undefined ? dto.notes.trim() || null : undefined,
+          status: dto.status,
+        },
+        select: deviceSelect,
+      });
+      return toPublicDevice(row);
+    } catch (err) {
+      if (isUniqueViolation(err)) throw new ConflictException("Bu seriya raqamli qurilma allaqachon qo'shilgan");
+      throw err;
+    }
+  }
+
+  /** Yangi agent tokeni — eskisi darhol bekor bo'ladi (masalan token sizib chiqsa). */
+  async regenerateAgentToken(caller: TenantAuthenticatedUser, id: string) {
+    const device = await this.requireWritableDevice(toTenantScope(caller), id);
+    const agentToken = generateAgentToken();
+    const row = await this.prisma.faceIdDevice.update({
       where: { id: device.id },
-      data: {
-        name: dto.name?.trim(),
-        model: dto.model?.trim(),
-        serialNumber: dto.serialNumber !== undefined ? dto.serialNumber.trim() || null : undefined,
-        ipAddress: dto.ipAddress !== undefined ? dto.ipAddress.trim() || null : undefined,
-        location: dto.location !== undefined ? dto.location.trim() || null : undefined,
-        notes: dto.notes !== undefined ? dto.notes.trim() || null : undefined,
-        status: dto.status,
+      data: { agentTokenHash: hashAgentToken(agentToken) },
+      select: { id: true, name: true },
+    });
+    await this.auditLog.logFromUser(caller, {
+      action: "faceId.device.token",
+      entityType: "FaceIdDevice",
+      entityId: row.id,
+      branchId: device.branchId,
+      summary: `"${row.name}" qurilmasi uchun yangi agent tokeni yaratildi`,
+    });
+    return { agentToken };
+  }
+
+  /** "Qurilmaga to'liq sinxronlash" — filialdagi barcha faol xodimlar navbatga. */
+  async syncDevice(caller: TenantAuthenticatedUser, id: string) {
+    const device = await this.requireWritableDevice(toTenantScope(caller), id);
+    const full = await this.prisma.faceIdDevice.findUniqueOrThrow({ where: { id: device.id }, select: { status: true, name: true } });
+    if (full.status !== "ACTIVE") {
+      throw new BadRequestException("Faqat faol qurilmani sinxronlash mumkin");
+    }
+    const result = await this.commands.enqueueFullSync(device);
+    await this.auditLog.logFromUser(caller, {
+      action: "faceId.device.sync",
+      entityType: "FaceIdDevice",
+      entityId: device.id,
+      branchId: device.branchId,
+      summary: `"${full.name}" qurilmasiga ${result.employees} xodim sinxronlashga qo'yildi`,
+    });
+    return result;
+  }
+
+  /** Qurilmaning so'nggi buyruqlari — nima ketdi, nima xato berdi. */
+  async deviceCommands(scope: TenantScope, id: string) {
+    const device = await this.prisma.faceIdDevice.findFirst({
+      where: { id, organizationId: scope.organizationId, ...(scope.branchId ? { branchId: scope.branchId } : {}) },
+      select: { id: true },
+    });
+    if (!device) {
+      throw new NotFoundException("Qurilma topilmadi");
+    }
+    return this.prisma.faceIdCommand.findMany({
+      where: { deviceId: device.id },
+      orderBy: { seq: "desc" },
+      take: 50,
+      select: {
+        id: true,
+        type: true,
+        status: true,
+        employeeNo: true,
+        attempts: true,
+        lastError: true,
+        createdAt: true,
+        completedAt: true,
+        employee: { select: { id: true, fullName: true } },
       },
     });
   }

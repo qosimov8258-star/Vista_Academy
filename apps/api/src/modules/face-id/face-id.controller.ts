@@ -25,9 +25,25 @@ export class FaceIdController {
     return this.faceIdService.findDevices(toTenantScope(user), query);
   }
 
+  /** Javobda `agentToken` faqat shu bir marta keladi. */
   @Post("devices")
   createDevice(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: CreateDeviceDto) {
-    return this.faceIdService.createDevice(toTenantScope(user), dto);
+    return this.faceIdService.createDevice(user, dto);
+  }
+
+  @Post("devices/:id/token")
+  regenerateAgentToken(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string) {
+    return this.faceIdService.regenerateAgentToken(user, id);
+  }
+
+  @Post("devices/:id/sync")
+  syncDevice(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string) {
+    return this.faceIdService.syncDevice(user, id);
+  }
+
+  @Get("devices/:id/commands")
+  deviceCommands(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string) {
+    return this.faceIdService.deviceCommands(toTenantScope(user), id);
   }
 
   @Patch("devices/:id")
