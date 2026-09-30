@@ -38,7 +38,7 @@ export function MenuPhotosCard({
         <p className="text-[13px] text-[var(--color-text-muted)]">
           {canWrite
             ? "Ovqat tayyor bo'lgach suratga olib yuklang — ota-onalar kabinetda menyu ostida ko'radi."
-            : "Oshpaz yuklagan suratlar — ota-onalar ham shularni ko'radi."}
+            : "Suratlarni faqat oshpaz yuklaydi — bu yerda uning yuklaganini kuzatasiz. Ota-onalar ham shularni ko'radi."}
         </p>
         {query.isLoading ? (
           <LoadingState rows={2} />

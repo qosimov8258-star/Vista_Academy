@@ -199,7 +199,7 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
       {tab === "davomat" && (
         <>
           <Card className="flex flex-col gap-3 p-4 sm:flex-row">
-            {!forcedBranchId && (
+            {!forcedBranchId && branches.length > 1 && (
               <Select label="Filial" value={branchId} onChange={(e) => setBranchId(e.target.value)} className="sm:max-w-xs">
                 {branches.map((branch) => (
                   <option key={branch.id} value={branch.id}>

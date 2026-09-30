@@ -484,13 +484,15 @@ export function DirectorRail({
             aria-label={flyout.section.label}
             className={clsx(
               styles.flyout,
-              "fixed z-[70] w-[248px] rounded-[22px] border border-black/[0.04] bg-white p-2 shadow-[0_24px_48px_-16px_color-mix(in_srgb,var(--accent-rail)_28%,transparent),0_2px_6px_color-mix(in_srgb,var(--accent-rail)_6%,transparent)]",
+              "fixed z-[70] w-[248px] overflow-hidden rounded-[22px] border border-black/[0.04] bg-white shadow-[0_24px_48px_-16px_color-mix(in_srgb,var(--accent-rail)_28%,transparent),0_2px_6px_color-mix(in_srgb,var(--accent-rail)_6%,transparent)]",
             )}
             style={{ top: flyout.top, left: flyout.left }}
           >
-            <p className="px-3 pb-1.5 pt-2 text-[11.5px] font-bold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">
+            <p className="flex items-center gap-2 bg-[var(--accent-rail)] px-3.5 py-2.5 text-[12px] font-bold uppercase tracking-[0.08em] text-[var(--accent-light)]">
+              <flyout.section.icon className="h-4 w-4 shrink-0" />
               {flyout.section.label}
             </p>
+            <div className="p-2">
             {flyout.section.items.map((item) => {
               const active = isActive(item);
               const Icon = item.icon;
@@ -522,6 +524,7 @@ export function DirectorRail({
                 </Link>
               );
             })}
+            </div>
           </div>,
           document.body,
         )}
@@ -562,7 +565,8 @@ export function DirectorMenuContent({
 }: DirectorMenuContentProps) {
   const orgName = user?.organizationName ?? "";
 
-  const row = (item: NavLeaf) => {
+  // Barcha bo'limlar bir ekranga sig'sin deb — ikonkali kataklar to'ri (ilovalar ekrani kabi)
+  const tile = (item: NavLeaf) => {
     const active = isActive(item);
     const Icon = item.icon;
     return (
@@ -572,46 +576,67 @@ export function DirectorMenuContent({
         onClick={onClose}
         aria-current={active ? "page" : undefined}
         className={clsx(
-          "group flex h-11 items-center gap-3 rounded-[14px] px-3 text-[14.5px] transition-colors",
-          active ? "bg-[var(--accent-soft)] font-semibold text-[var(--accent-soft-ink)]" : "font-medium text-[var(--color-text)] hover:bg-[var(--color-surface-sunken)] active:bg-[var(--color-surface-sunken)]",
+          "relative flex min-h-[88px] flex-col items-center justify-center gap-1.5 rounded-[20px] px-1.5 py-2.5 text-center transition-all active:scale-[0.96]",
+          active
+            ? "bg-[linear-gradient(145deg,var(--accent-rail)_0%,var(--accent-rail-2)_100%)] text-white shadow-[0_10px_22px_-12px_color-mix(in_srgb,var(--accent-rail)_80%,transparent)]"
+            : "bg-[var(--accent-soft)]/70 text-[var(--color-text)]",
         )}
       >
-        <Icon filled={active} className={clsx("h-5 w-5 shrink-0", active ? "text-[var(--accent-soft-icon)]" : "text-[var(--color-text-muted)]")} />
-        <span className="min-w-0 flex-1 truncate">{item.label}</span>
+        <span
+          className={clsx(
+            "flex h-10 w-10 items-center justify-center rounded-[14px]",
+            active ? "bg-white/10 text-[var(--accent-light)]" : "bg-white text-[var(--accent-soft-icon)] shadow-[var(--shadow-xs)]",
+          )}
+        >
+          <Icon filled={active} className="h-[22px] w-[22px]" />
+        </span>
+        <span className="line-clamp-2 w-full text-[12px] font-semibold leading-tight">{item.label}</span>
         {item.badge != null && item.badge > 0 && (
-          <span className="rounded-full bg-[var(--accent-soft-icon)]/15 px-2 py-0.5 text-[11px] font-bold tabular-nums text-[var(--accent-soft-icon)]">{item.badge}</span>
+          <span className="absolute right-2 top-2 rounded-full bg-[var(--accent-bright)] px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-[var(--accent-rail)]">{item.badge}</span>
         )}
       </Link>
     );
   };
 
+  // Ketma-ket oddiy havolalar bitta guruhga, har bo'lim o'z sarlavhasi bilan
+  const groups: { title: string | null; items: NavLeaf[] }[] = [];
+  for (const entry of entries) {
+    if (isSection(entry)) groups.push({ title: entry.label, items: entry.items });
+    else if (groups.length > 0 && groups[groups.length - 1].title === null) groups[groups.length - 1].items.push(entry);
+    else groups.push({ title: null, items: [entry] });
+  }
+
   return (
     <>
-      <div className="flex shrink-0 items-center gap-3 px-5 pb-4 pt-5">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-[var(--accent-rail)] text-[16px] font-extrabold text-[var(--accent-light)]">
-          {orgName ? initials(orgName) : ""}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[16px] font-bold tracking-[-0.01em] text-[var(--color-text)]">{orgName}</p>
-          <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">
-            {user ? `${user.fullName} · ${ROLE_LABEL[user.role]}` : ""}
-          </p>
+      {/* Tepa qism: to'q yashil kartochka — bog'cha va foydalanuvchi, panel bilan bir xil rangda */}
+      <div className="relative shrink-0 overflow-hidden bg-[linear-gradient(150deg,var(--accent-rail)_0%,var(--accent-rail-2)_100%)] px-5 pb-5 pt-5">
+        <div className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-[var(--accent-bright)]/15 blur-2xl" aria-hidden="true" />
+        <div className="relative flex items-center gap-3">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/10 text-[18px] font-extrabold text-[var(--accent-light)] ring-1 ring-white/15">
+            {orgName ? initials(orgName) : ""}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[17px] font-bold tracking-[-0.01em] text-white">{orgName}</p>
+            <p className="truncate text-[12.5px] text-[var(--accent-pale)]/75">
+              {user ? `${user.fullName} · ${ROLE_LABEL[user.role]}` : ""}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Yopish"
+            className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-white/10 text-white/80 transition-colors active:bg-white/20"
+          >
+            <CloseIcon className="h-5 w-5" />
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Yopish"
-          className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-text)]"
-        >
-          <CloseIcon className="h-5 w-5" />
-        </button>
       </div>
 
       {branchName && (
         <Link
           href={`/${slug}/branches`}
           onClick={onClose}
-          className="group mx-4 mb-2 flex shrink-0 items-center gap-2.5 rounded-[16px] bg-[var(--accent-soft)] px-3.5 py-2.5 transition-colors hover:bg-[var(--accent-soft-icon)]/12"
+          className="group mx-4 mt-3 flex shrink-0 items-center gap-2.5 rounded-[16px] bg-[var(--accent-soft)] px-3.5 py-2.5 transition-colors hover:bg-[var(--accent-soft-icon)]/12"
         >
           <ArrowLeftIcon className="h-4 w-4 shrink-0 text-[var(--accent-soft-icon)] transition-transform group-hover:-translate-x-0.5" />
           <span className="min-w-0 flex-1">
@@ -621,30 +646,33 @@ export function DirectorMenuContent({
         </Link>
       )}
 
-      <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-3" aria-label="Bo'limlar">
-        {entries.map((entry) =>
-          isSection(entry) ? (
-            <div key={entry.id} className="pt-3">
-              <p className="px-3 pb-1 text-[11.5px] font-bold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">
-                {entry.label}
-              </p>
-              {entry.items.map(row)}
-            </div>
-          ) : (
-            row(entry)
-          ),
-        )}
+      <nav className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 pb-3 pt-4" aria-label="Bo'limlar">
+        {groups.map((group, gi) => (
+          <div key={group.title ?? `g${gi}`}>
+            {group.title && (
+              <p className="px-1 pb-2 text-[11.5px] font-bold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">{group.title}</p>
+            )}
+            <div className="grid grid-cols-3 gap-2.5">{group.items.map(tile)}</div>
+          </div>
+        ))}
       </nav>
 
-      <div className="shrink-0 space-y-1 border-t border-[var(--color-separator)] px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        {row(settingsItem)}
+      <div className="grid shrink-0 grid-cols-2 gap-2.5 border-t border-[var(--color-separator)] bg-[var(--color-surface-sunken)]/60 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <Link
+          href={settingsItem.href}
+          onClick={onClose}
+          className="flex h-12 items-center justify-center gap-2 rounded-[16px] bg-white text-[14px] font-semibold text-[var(--color-text)] shadow-[var(--shadow-card)] active:scale-[0.98]"
+        >
+          <settingsItem.icon className="h-[18px] w-[18px] text-[var(--accent-soft-icon)]" />
+          {settingsItem.label}
+        </Link>
         <button
           type="button"
           onClick={onLogout}
           disabled={loggingOut}
-          className="flex h-11 w-full cursor-pointer items-center gap-3 rounded-[14px] px-3 text-[14.5px] font-medium text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger-bg)] disabled:opacity-60"
+          className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded-[16px] bg-[var(--color-danger-bg)] text-[14px] font-semibold text-[var(--color-danger)] active:scale-[0.98] disabled:opacity-60"
         >
-          <LogoutIcon className="h-5 w-5 shrink-0" />
+          <LogoutIcon className="h-[18px] w-[18px]" />
           {logoutLabel}
         </button>
       </div>

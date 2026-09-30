@@ -54,7 +54,7 @@ export default function CoinChildrenPage({ params }: { params: Promise<{ slug: s
         <p className="text-[14px] text-[var(--color-text-muted)]">Bolalarning coin balansi va hisoboti</p>
       </div>
 
-      {!forcedBranchId && (
+      {!forcedBranchId && branches.length > 1 && (
         <Card className="flex flex-col gap-3 p-4 sm:flex-row">
           <Select label="Filial" value={branchId} onChange={(e) => setBranchId(e.target.value)} className="sm:max-w-xs">
             {branches.map((branch) => (

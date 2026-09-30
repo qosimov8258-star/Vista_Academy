@@ -10,6 +10,7 @@ import type { Child, ChildAllergy, Group } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { PhoneIcon } from "@/components/ui/icons";
 import { DataTable, THead, TBody, Tr, Th, Td, rowLinkProps } from "@/components/ui/table";
 import { Input, Select } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -194,7 +195,55 @@ function BranchChildren({ slug }: { slug: string }) {
           }
         />
       ) : (
-        <Card className="overflow-hidden">
+        <>
+        {/* Telefonda jadval o'rniga kartochkalar: surat, ism, guruh, ota-ona telefoni */}
+        <ul className="space-y-3 md:hidden">
+          {childrenQuery.data.data.map((child) => {
+            const g = child.guardians?.[0];
+            return (
+              <li key={child.id} className="rounded-[20px] border border-[var(--color-border-hair)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)]">
+                <div className="flex items-center gap-3">
+                  <ChildPhoto child={child} size={44} fallback={initials(child.fullName)} />
+                  <div className="min-w-0 flex-1">
+                    <Link href={`/${slug}/children/${child.id}`} className="block truncate text-[16px] font-semibold tracking-[-0.01em] text-[var(--color-text)]">
+                      {child.fullName}
+                    </Link>
+                    <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">
+                      {formatChildId(child.publicId)}
+                      {!teacher && child.group?.name ? ` · ${child.group.name}` : ""}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <Badge tone={STATUS_TONE[child.status]}>{STATUS_LABEL[child.status]}</Badge>
+                    {allergyChildIds.has(child.id) && <Badge tone="danger">Allergiya</Badge>}
+                  </div>
+                </div>
+                {g ? (
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                    <p className="min-w-0 text-[13px] text-[var(--color-text-muted)]">
+                      {RELATION_LABEL[g.relation]} · <span className="font-medium text-[var(--color-text)]">{g.guardian.fullName}</span>
+                    </p>
+                    <a
+                      href={`tel:${g.guardian.phone}`}
+                      className="inline-flex min-h-10 items-center gap-2 rounded-full bg-[var(--accent-soft)] px-4 text-[14.5px] font-semibold tabular-nums text-[var(--accent-soft-ink)] active:scale-[0.98]"
+                    >
+                      <PhoneIcon className="h-4 w-4 text-[var(--accent-soft-icon)]" />
+                      {g.guardian.phone}
+                    </a>
+                  </div>
+                ) : null}
+                {canWrite && (
+                  <div className="mt-3">
+                    <Button size="sm" variant="outline" onClick={() => setEditingChild(child)}>
+                      Tahrirlash
+                    </Button>
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+        <Card className="hidden overflow-hidden md:block">
           <DataTable>
             <THead>
               <tr>
@@ -293,6 +342,14 @@ function BranchChildren({ slug }: { slug: string }) {
             </div>
           </div>
         </Card>
+        <div className="flex items-center justify-between gap-3 text-[12.5px] text-[var(--color-text-muted)] md:hidden">
+          <span className="tabular-nums">Jami {childrenQuery.data.meta.total} ta, {childrenQuery.data.meta.page}-sahifa</span>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Oldingi</Button>
+            <Button variant="outline" size="sm" disabled={page * childrenQuery.data.meta.limit >= childrenQuery.data.meta.total} onClick={() => setPage((p) => p + 1)}>Keyingi</Button>
+          </div>
+        </div>
+        </>
       )}
 
       {canWrite && <CreateChildModal open={createOpen} onClose={() => setCreateOpen(false)} slug={slug} />}
