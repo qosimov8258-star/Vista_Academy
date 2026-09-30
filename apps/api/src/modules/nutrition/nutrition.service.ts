@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantScope } from "../iam/tenant-auth.types";
-import { requireKitchenWriteScope } from "./kitchen-scope";
+import { requireChefPhotoScope, requireKitchenWriteScope } from "./kitchen-scope";
 import { UpsertMenuEntryDto } from "./dto/upsert-menu-entry.dto";
 import { MenuQueryDto } from "./dto/menu-query.dto";
 import { UploadMenuPhotoDto } from "./dto/upload-menu-photo.dto";
@@ -76,7 +76,7 @@ export class NutritionService {
    * yuklaydi. Surat ota-ona kabinetida o'sha kunning menyusi ostida ko'rinadi.
    */
   async uploadPhoto(scope: TenantScope, dto: UploadMenuPhotoDto) {
-    const branchId = requireKitchenWriteScope(scope);
+    const branchId = requireChefPhotoScope(scope);
     const date = toDateOnly(dto.date.slice(0, 10));
 
     const [header, base64] = dto.image.split(",", 2);
@@ -101,7 +101,7 @@ export class NutritionService {
   }
 
   async deletePhoto(scope: TenantScope, id: string) {
-    const branchId = requireKitchenWriteScope(scope);
+    const branchId = requireChefPhotoScope(scope);
     const photo = await this.prisma.menuPhoto.findFirst({ where: { id, branchId }, select: { id: true } });
     if (!photo) {
       throw new NotFoundException("Rasm topilmadi");

@@ -35,6 +35,13 @@ function mondayOf(value: string): string {
   return addDays(value, diff);
 }
 
+/** Oylik to'lov muddatidan shuncha kun o'tgach qarzdor call operatorga o'tadi. */
+const DEBT_GRACE_DAYS = 5;
+/** Saytdan tushgan ariza shuncha kun ichida qo'ng'iroq ro'yxatida turadi. */
+const LANDING_LOOKBACK_DAYS = 30;
+/** Frontenddagi "Aloqa qila olmadim" izohi — bunday ariza ertaga yana ro'yxatga chiqadi. */
+const NO_ANSWER_NOTE = "Aloqa qila olmadim — telefonni olmadi";
+
 const GUARDIAN_SELECT = {
   orderBy: [{ isPrimary: "desc" as const }, { createdAt: "asc" as const }],
   select: { relation: true, canPickup: true, canReceiveNotifications: true, guardian: { select: { id: true, fullName: true, phone: true } } },
@@ -57,7 +64,7 @@ export class AdminDeskService {
     const date = assertDate(dateInput);
     const day = toDateOnly(date);
 
-    const [debtors, absences, priorAbsences, leads, logs] = await Promise.all([
+    const [debtors, absences, priorAbsences, leads, logs, landingApps] = await Promise.all([
       this.cashDesk.debtors(scope),
       this.prisma.attendance.findMany({
         where: { branchId, date: day, status: "ABSENT", child: { status: { not: "INACTIVE" } } },
@@ -77,7 +84,24 @@ export class AdminDeskService {
         orderBy: { createdAt: "asc" },
       }),
       this.prisma.callLog.findMany({ where: { branchId, date: day } }),
+      // Lending sahifadan kelgan arizalar — tashkilot bo'yicha (tashkilotning barcha filiallariga)
+      this.prisma.landingApplication.findMany({
+        where: { organizationId: scope.organizationId, createdAt: { gte: new Date(day.getTime() - LANDING_LOOKBACK_DAYS * DAY_MS) } },
+        select: { id: true, fullName: true, phone: true, createdAt: true },
+        orderBy: { createdAt: "asc" },
+      }),
     ]);
+
+    // Javob berilgan ariza ertasi kuni qaytmaydi; "aloqa qila olmadim" bo'lsa qaytadi
+    const landingLogs = landingApps.length
+      ? await this.prisma.callLog.findMany({
+          where: { branchId, kind: "LEAD", subjectId: { in: landingApps.map((a) => `landing:${a.id}`) } },
+          select: { subjectId: true, date: true, note: true },
+        })
+      : [];
+    const landingAnswered = new Set(landingLogs.filter((l) => l.note !== NO_ANSWER_NOTE).map((l) => l.subjectId));
+    const landingToday = new Set(landingLogs.filter((l) => l.date.getTime() === day.getTime()).map((l) => l.subjectId));
+    const debtCutoff = addDays(date, -DEBT_GRACE_DAYS);
 
     const logByKey = new Map(logs.map((l) => [`${l.kind}:${l.subjectId}`, l]));
     const priorCount = new Map<string, number>();
@@ -90,12 +114,12 @@ export class AdminDeskService {
 
     const items = [
       ...debtors.rows
-        .filter((r) => r.overdue > 0)
+        .filter((r) => r.overdue > 0 && !!r.oldestDueDate && r.oldestDueDate.slice(0, 10) <= debtCutoff)
         .map((r) => ({
           kind: "DEBT" as const,
           subjectId: r.childId,
           title: r.childName,
-          subtitle: `Muddati o'tgan qarz: ${new Intl.NumberFormat("uz-UZ", { maximumFractionDigits: 0 }).format(r.overdue)} UZS`,
+          subtitle: `Muddati o'tgan qarz: ${new Intl.NumberFormat("uz-UZ", { maximumFractionDigits: 0 }).format(r.overdue)} UZS · ${Math.round((day.getTime() - toDateOnly(r.oldestDueDate!.slice(0, 10)).getTime()) / DAY_MS)} kun o'tdi`,
           contactName: r.guardianName,
           phone: r.guardianPhone,
           contacts: r.guardianPhone ? [{ name: r.guardianName as string | null, relation: null as string | null, phone: r.guardianPhone as string | null }] : [],
@@ -128,6 +152,19 @@ export class AdminDeskService {
         badge: null as string | null,
         ...withLog("LEAD", l.id),
       })),
+      ...landingApps
+        .filter((a) => !landingAnswered.has(`landing:${a.id}`) || landingToday.has(`landing:${a.id}`))
+        .map((a) => ({
+          kind: "LEAD" as const,
+          subjectId: `landing:${a.id}`,
+          title: a.fullName,
+          subtitle: "Ariza (saytdan)",
+          contactName: a.fullName as string | null,
+          phone: a.phone as string | null,
+          contacts: [{ name: a.fullName as string | null, relation: null as string | null, phone: a.phone as string | null }],
+          badge: null as string | null,
+          ...withLog("LEAD", `landing:${a.id}`),
+        })),
     ];
     return { date, items, open: items.filter((i) => !i.done).length };
   }
