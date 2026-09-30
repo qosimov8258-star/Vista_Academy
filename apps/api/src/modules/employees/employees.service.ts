@@ -18,6 +18,8 @@ import { verifyRevealToken } from "../webauthn/reveal-token";
 import { AuditLogService } from "../audit-log/audit-log.service";
 import { FaceIdService } from "../face-id/face-id.service";
 import { FaceIdCommandsService } from "../face-id/face-id-commands.service";
+import { R2Service } from "../storage/r2.service";
+import { R2_CATEGORY } from "../storage/r2.constants";
 import { CreateEmployeeDto, EmployeeAccountDto } from "./dto/create-employee.dto";
 import { UpdateEmployeeCredentialsDto } from "./dto/update-employee-credentials.dto";
 import { CreateEmployeeTopicDto } from "./dto/create-employee-topic.dto";
@@ -85,6 +87,7 @@ export class EmployeesService {
     private readonly auditLog: AuditLogService,
     private readonly faceIdService: FaceIdService,
     private readonly faceIdCommands: FaceIdCommandsService,
+    private readonly r2: R2Service,
   ) {}
 
   async create(caller: TenantAuthenticatedUser, dto: CreateEmployeeDto) {
@@ -515,11 +518,25 @@ export class EmployeesService {
       throw new BadRequestException("Rasm hajmi juda katta");
     }
 
+    let avatar: Buffer<ArrayBuffer> | null = buffer;
+    let avatarKey: string | null = null;
+    if (this.r2.enabled) {
+      avatarKey = this.r2.buildKey(scope.organizationId, R2_CATEGORY.EMPLOYEE_AVATAR);
+      await this.r2.uploadBuffer(avatarKey, buffer, mimeType);
+      avatar = null;
+    }
+
     const updated = await this.prisma.employee.update({
       where: { id: employee.id },
-      data: { avatar: buffer, avatarMimeType: mimeType, avatarUpdatedAt: new Date() },
+      data: { avatar, avatarKey, avatarMimeType: mimeType, avatarUpdatedAt: new Date() },
       select: { avatarUpdatedAt: true },
     });
+    // DB yozuvi muvaffaqiyatli bo'lgandan KEYIN o'chiriladi — aks holda DB
+    // yozuvi muvaffaqiyatsiz bo'lsa, eski qator allaqachon o'chirilgan keyga
+    // ishora qilib qolib ketardi.
+    if (employee.avatarKey && this.r2.enabled) {
+      await this.r2.deleteObject(employee.avatarKey);
+    }
     // Yangi surat yuz tanish terminallariga ham yuboriladi
     await this.faceIdCommands.enqueueFace(employee.id);
     return { avatarUpdatedAt: updated.avatarUpdatedAt };
@@ -527,10 +544,14 @@ export class EmployeesService {
 
   async removeAvatar(scope: TenantScope, id: string) {
     const employee = await this.requireWritableEmployee(scope, id);
-    await this.prisma.employee.update({
+    const previous = await this.prisma.employee.update({
       where: { id: employee.id },
-      data: { avatar: null, avatarMimeType: null, avatarUpdatedAt: null },
+      data: { avatar: null, avatarKey: null, avatarMimeType: null, avatarUpdatedAt: null },
+      select: { avatarKey: true },
     });
+    if (previous.avatarKey) {
+      await this.r2.deleteObject(previous.avatarKey);
+    }
     return { avatarUpdatedAt: null };
   }
 
@@ -539,7 +560,7 @@ export class EmployeesService {
     await this.requireWritableEmployee(scope, id);
     return this.prisma.employee.findUniqueOrThrow({
       where: { id },
-      select: { avatar: true, avatarMimeType: true },
+      select: { avatar: true, avatarKey: true, avatarMimeType: true },
     });
   }
 
@@ -630,7 +651,7 @@ export class EmployeesService {
     const branchId = requireOperationalScope(scope);
     const employee = await this.prisma.employee.findFirst({
       where: { id, organizationId: scope.organizationId, branchId },
-      select: { id: true, branchId: true },
+      select: { id: true, branchId: true, avatarKey: true },
     });
     if (!employee) {
       throw new NotFoundException("Xodim topilmadi");

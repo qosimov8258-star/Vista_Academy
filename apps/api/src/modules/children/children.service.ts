@@ -14,6 +14,8 @@ import { FaceIdService } from "../face-id/face-id.service";
 import { currentPeriodString } from "../billing/billing.service";
 import { FinanceChildStatus } from "../billing/dto/finance-query.dto";
 import { FaceIdCommandsService } from "../face-id/face-id-commands.service";
+import { R2Service } from "../storage/r2.service";
+import { R2_CATEGORY } from "../storage/r2.constants";
 import { CreateChildDto } from "./dto/create-child.dto";
 import { UpdateChildDto } from "./dto/update-child.dto";
 import { ChildQueryDto } from "./dto/child-query.dto";
@@ -40,6 +42,7 @@ export class ChildrenService {
     private readonly auditLog: AuditLogService,
     private readonly faceIdService: FaceIdService,
     private readonly faceIdCommands: FaceIdCommandsService,
+    private readonly r2: R2Service,
   ) {}
 
   async create(caller: TenantAuthenticatedUser, dto: CreateChildDto) {
@@ -215,11 +218,25 @@ export class ChildrenService {
       throw new BadRequestException("Rasm hajmi juda katta");
     }
 
+    let avatar: Buffer<ArrayBuffer> | null = buffer;
+    let avatarKey: string | null = null;
+    if (this.r2.enabled) {
+      avatarKey = this.r2.buildKey(scope.organizationId, R2_CATEGORY.CHILD_AVATAR);
+      await this.r2.uploadBuffer(avatarKey, buffer, mimeType);
+      avatar = null;
+    }
+
     const updated = await this.prisma.child.update({
       where: { id: child.id },
-      data: { avatar: buffer, avatarMimeType: mimeType, avatarUpdatedAt: new Date() },
+      data: { avatar, avatarKey, avatarMimeType: mimeType, avatarUpdatedAt: new Date() },
       select: { avatarUpdatedAt: true },
     });
+    // DB yozuvi muvaffaqiyatli bo'lgandan KEYIN o'chiriladi — aks holda DB
+    // yozuvi muvaffaqiyatsiz bo'lsa, eski qator allaqachon o'chirilgan keyga
+    // ishora qilib qolib ketardi.
+    if (child.avatarKey && this.r2.enabled) {
+      await this.r2.deleteObject(child.avatarKey);
+    }
     // Yangi surat yuz tanish terminallariga ham yuboriladi
     await this.faceIdCommands.enqueueChildFace(child.id);
     return { avatarUpdatedAt: updated.avatarUpdatedAt };
@@ -227,10 +244,14 @@ export class ChildrenService {
 
   async removeAvatar(scope: TenantScope, id: string) {
     const child = await this.requireWritableChild(scope, id);
-    await this.prisma.child.update({
+    const previous = await this.prisma.child.update({
       where: { id: child.id },
-      data: { avatar: null, avatarMimeType: null, avatarUpdatedAt: null },
+      data: { avatar: null, avatarKey: null, avatarMimeType: null, avatarUpdatedAt: null },
+      select: { avatarKey: true },
     });
+    if (previous.avatarKey) {
+      await this.r2.deleteObject(previous.avatarKey);
+    }
     return { avatarUpdatedAt: null };
   }
 
@@ -239,7 +260,7 @@ export class ChildrenService {
     await this.findOne(scope, id);
     return this.prisma.child.findUniqueOrThrow({
       where: { id },
-      select: { avatar: true, avatarMimeType: true },
+      select: { avatar: true, avatarKey: true, avatarMimeType: true },
     });
   }
 
@@ -248,7 +269,7 @@ export class ChildrenService {
     const branchId = requireOperationalScope(scope);
     const child = await this.prisma.child.findFirst({
       where: { id, organizationId: scope.organizationId },
-      select: { id: true, branchId: true, groupId: true },
+      select: { id: true, branchId: true, groupId: true, avatarKey: true },
     });
     if (!child) {
       throw new NotFoundException("Bola topilmadi");

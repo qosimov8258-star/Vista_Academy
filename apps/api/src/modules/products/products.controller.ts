@@ -1,10 +1,12 @@
-import { Body, Controller, Delete, Get, Header, NotFoundException, Param, Patch, Post, Put, Query, Res, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Header, Param, Patch, Post, Put, Query, Res, UseGuards } from "@nestjs/common";
 import type { Response } from "express";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { Public } from "../../common/decorators/public.decorator";
+import { sendMediaResponse } from "../../common/media-response";
 import { TenantJwtAuthGuard } from "../iam/guards/tenant-jwt-auth.guard";
 import { CurrentTenantUser } from "../iam/decorators/current-tenant-user.decorator";
 import { TenantAuthenticatedUser, toTenantScope } from "../iam/tenant-auth.types";
+import { R2Service } from "../storage/r2.service";
 import { ProductsService } from "./products.service";
 import { ProductsQueryDto } from "./dto/products-query.dto";
 import { CreateProductDto } from "./dto/create-product.dto";
@@ -18,7 +20,10 @@ import { SellProductDto } from "./dto/sell-product.dto";
 @UseGuards(TenantJwtAuthGuard)
 @Controller("app/products")
 export class ProductsController {
-  constructor(private readonly productsService: ProductsService) {}
+  constructor(
+    private readonly productsService: ProductsService,
+    private readonly r2: R2Service,
+  ) {}
 
   @Get()
   findAll(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query() query: ProductsQueryDto) {
@@ -76,11 +81,12 @@ export class ProductsController {
     @Res() res: Response,
   ) {
     const record = await this.productsService.readImage(toTenantScope(user), id, position);
-    if (!record.image) {
-      throw new NotFoundException("Bu rasm o'rni bo'sh");
-    }
-    res.setHeader("Content-Type", record.mimeType ?? "image/jpeg");
-    res.send(Buffer.from(record.image));
+    await sendMediaResponse(
+      res,
+      this.r2,
+      { key: record.key, bytes: record.image, mimeType: record.mimeType ?? "image/jpeg" },
+      "Bu rasm o'rni bo'sh",
+    );
   }
 
   @Post(":id/sell")

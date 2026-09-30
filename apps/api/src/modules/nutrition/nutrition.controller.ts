@@ -2,9 +2,11 @@ import { Body, Controller, Delete, Get, Header, Param, Post, Query, Res, UseGuar
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
 import { Public } from "../../common/decorators/public.decorator";
+import { sendMediaResponse } from "../../common/media-response";
 import { TenantJwtAuthGuard } from "../iam/guards/tenant-jwt-auth.guard";
 import { CurrentTenantUser } from "../iam/decorators/current-tenant-user.decorator";
 import { TenantAuthenticatedUser, toTenantScope } from "../iam/tenant-auth.types";
+import { R2Service } from "../storage/r2.service";
 import { NutritionService } from "./nutrition.service";
 import { UpsertMenuEntryDto } from "./dto/upsert-menu-entry.dto";
 import { MenuQueryDto } from "./dto/menu-query.dto";
@@ -19,7 +21,10 @@ import { AllowChef } from "../iam/decorators/allow-chef.decorator";
 @AllowChef()
 @Controller("app/menu")
 export class NutritionController {
-  constructor(private readonly nutritionService: NutritionService) {}
+  constructor(
+    private readonly nutritionService: NutritionService,
+    private readonly r2: R2Service,
+  ) {}
 
   @Get()
   findRange(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query() query: MenuQueryDto) {
@@ -69,7 +74,11 @@ export class NutritionController {
     @Res() res: Response,
   ) {
     const photo = await this.nutritionService.readPhoto(toTenantScope(user), id);
-    res.setHeader("Content-Type", photo.mimeType);
-    res.send(Buffer.from(photo.image));
+    await sendMediaResponse(
+      res,
+      this.r2,
+      { key: photo.imageKey, bytes: photo.image, mimeType: photo.mimeType },
+      "Rasm topilmadi",
+    );
   }
 }
