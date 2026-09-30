@@ -10,6 +10,7 @@ import { CreateShiftDto } from "./dto/create-shift.dto";
 import { ShiftQueryDto } from "./dto/shift-query.dto";
 import { GeneratePayrollDto } from "./dto/generate-payroll.dto";
 import { PayrollQueryDto } from "./dto/payroll-query.dto";
+import { PayEmployeeSalaryDto } from "./dto/pay-employee-salary.dto";
 
 @ApiBearerAuth()
 @ApiTags("Tenant HR / Payroll")
@@ -27,6 +28,26 @@ export class HrController {
   @Post("employees/:id/salary-scheme")
   upsertSalaryScheme(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string, @Body() dto: UpsertSalarySchemeDto) {
     return this.hrService.upsertSalaryScheme(toTenantScope(user), id, dto);
+  }
+
+  /** Xodim kartochkasi ("Moliya" ko'rinishi): sxema, joriy davr yozuvi/taxmini. */
+  @Get("employees/:id/payroll")
+  getEmployeePayroll(
+    @CurrentTenantUser() user: TenantAuthenticatedUser,
+    @Param("id") id: string,
+    @Query("period") period: string,
+  ) {
+    return this.hrService.getEmployeePayrollOverview(toTenantScope(user), id, period);
+  }
+
+  /** Moliyachi xodim kartochkasidan to'g'ridan-to'g'ri qo'lda summa kiritib to'laydi. */
+  @Post("employees/:id/payroll/pay")
+  payEmployeeSalary(
+    @CurrentTenantUser() user: TenantAuthenticatedUser,
+    @Param("id") id: string,
+    @Body() dto: PayEmployeeSalaryDto,
+  ) {
+    return this.hrService.payEmployeeSalary(user, id, dto);
   }
 
   @Get("shifts")

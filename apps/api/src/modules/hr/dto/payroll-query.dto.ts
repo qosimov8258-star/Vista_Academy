@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsInt, IsOptional, IsString, Max, Min } from "class-validator";
+import { IsIn, IsInt, IsOptional, IsString, Max, Min } from "class-validator";
 
 export class PayrollQueryDto {
   @ApiPropertyOptional({ default: 1 })
@@ -27,4 +27,14 @@ export class PayrollQueryDto {
   @IsOptional()
   @IsString()
   period?: string;
+
+  @ApiPropertyOptional({ description: "Faqat shu xodimning yozuvlari — bitta xodimning to'langan oyliklar tarixi uchun" })
+  @IsOptional()
+  @IsString()
+  employeeId?: string;
+
+  @ApiPropertyOptional({ enum: ["DRAFT", "PAID"] })
+  @IsOptional()
+  @IsIn(["DRAFT", "PAID"])
+  status?: "DRAFT" | "PAID";
 }

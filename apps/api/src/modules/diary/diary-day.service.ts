@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { DiaryActivityKind, DiaryMediaKind, Prisma } from "@prisma/client";
 import type { Request, Response } from "express";
 import { PrismaService } from "../../database/prisma.service";
+import { R2Service } from "../storage/r2.service";
 import { addDays, dateKey, minutesOf, toDateOnly, weekdayOf } from "./diary.constants";
 
 /** Ro'yxatlarda media — faylning o'zisiz (`data` hech qachon tanlanmaydi) */
@@ -94,7 +95,10 @@ function toMediaView(row: MediaRow): DiaryMediaView {
  */
 @Injectable()
 export class DiaryDayService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly r2: R2Service,
+  ) {}
 
   async buildDay(group: { id: string; name: string }, date: string): Promise<DiaryDayView> {
     const dateOnly = toDateOnly(date);
@@ -216,24 +220,43 @@ export class DiaryDayService {
    */
   async send(mediaId: string, variant: "file" | "poster", req: Request, res: Response): Promise<void> {
     let data: Uint8Array | null = null;
+    let key: string | null = null;
     let mimeType: string | null = null;
     if (variant === "file") {
-      const row = await this.prisma.diaryMedia.findUnique({ where: { id: mediaId }, select: { data: true, mimeType: true } });
+      const row = await this.prisma.diaryMedia.findUnique({
+        where: { id: mediaId },
+        select: { data: true, dataKey: true, mimeType: true },
+      });
       data = row?.data ?? null;
+      key = row?.dataKey ?? null;
       mimeType = row?.mimeType ?? null;
     } else {
       const row = await this.prisma.diaryMedia.findUnique({
         where: { id: mediaId },
-        select: { posterData: true, posterMimeType: true },
+        select: { posterData: true, posterKey: true, posterMimeType: true },
       });
       data = row?.posterData ?? null;
+      key = row?.posterKey ?? null;
       mimeType = row?.posterMimeType ?? null;
     }
-    if (!data || !mimeType) {
+    if (!data && !key) {
       throw new NotFoundException(variant === "poster" ? "Muqova yo'q" : "Fayl topilmadi");
     }
 
-    const buffer = Buffer.from(data);
+    if (key) {
+      // R2'ga o'tgan qator: Range so'rovlarini brauzer imzolangan havolaga
+      // to'g'ridan-to'g'ri yuboradi, shuning uchun pastdagi qo'lda Range/206
+      // logikasi kerak emas. Imzo muddati qisqa — uzoq keshlash xato bo'ladi.
+      const url = await this.r2.getPresignedReadUrl(key);
+      res.setHeader("Cache-Control", "private, max-age=60");
+      res.redirect(302, url);
+      return;
+    }
+    if (!mimeType) {
+      throw new NotFoundException(variant === "poster" ? "Muqova yo'q" : "Fayl topilmadi");
+    }
+
+    const buffer = Buffer.from(data!);
     const total = buffer.byteLength;
     // Fayl id bo'yicha o'zgarmaydi — brauzer uzoq saqlasin
     res.setHeader("Cache-Control", "private, max-age=86400, immutable");

@@ -4,6 +4,8 @@ import type { Request, Response } from "express";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantScope, requireTeachingScope } from "../iam/tenant-auth.types";
 import { assertTeacherOwnsGroup } from "../iam/teacher-scope";
+import { R2Service } from "../storage/r2.service";
+import { R2_CATEGORY } from "../storage/r2.constants";
 import { DiaryDayService } from "./diary-day.service";
 import {
   DIARY_LIMITS,
@@ -54,6 +56,7 @@ export class DiaryService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly days: DiaryDayService,
+    private readonly r2: R2Service,
   ) {}
 
   /* ------------------------------------------------------------ shablon */
@@ -294,6 +297,21 @@ export class DiaryService {
       );
     }
 
+    let data: Uint8Array<ArrayBuffer> | null = new Uint8Array(file.buffer);
+    let dataKey: string | null = null;
+    let posterData: Uint8Array<ArrayBuffer> | null = poster ? new Uint8Array(poster.buffer) : null;
+    let posterKey: string | null = null;
+    if (this.r2.enabled) {
+      dataKey = this.r2.buildKey(group.organizationId, R2_CATEGORY.DIARY_MEDIA);
+      await this.r2.uploadBuffer(dataKey, file.buffer, file.mimetype);
+      data = null;
+      if (poster) {
+        posterKey = this.r2.buildKey(group.organizationId, R2_CATEGORY.DIARY_POSTER);
+        await this.r2.uploadBuffer(posterKey, poster.buffer, poster.mimetype);
+        posterData = null;
+      }
+    }
+
     const created = await this.prisma.diaryMedia.create({
       data: {
         organizationId: group.organizationId,
@@ -305,8 +323,10 @@ export class DiaryService {
         mimeType: file.mimetype,
         sizeBytes: file.size,
         // Prisma `Uint8Array<ArrayBuffer>` kutadi; multer Buffer'i umumiy xotirada bo'lishi mumkin
-        data: new Uint8Array(file.buffer),
-        posterData: poster ? new Uint8Array(poster.buffer) : null,
+        data,
+        dataKey,
+        posterData,
+        posterKey,
         posterMimeType: poster?.mimetype ?? null,
         width: dto.width ?? null,
         height: dto.height ?? null,
@@ -344,7 +364,17 @@ export class DiaryService {
 
   async deleteMedia(scope: TenantScope, mediaId: string) {
     const media = await this.requireMedia(scope, mediaId);
+    const keys = await this.prisma.diaryMedia.findUnique({
+      where: { id: media.id },
+      select: { dataKey: true, posterKey: true },
+    });
     await this.prisma.diaryMedia.delete({ where: { id: media.id } });
+    if (keys?.dataKey) {
+      await this.r2.deleteObject(keys.dataKey);
+    }
+    if (keys?.posterKey) {
+      await this.r2.deleteObject(keys.posterKey);
+    }
     return { deleted: true };
   }
 

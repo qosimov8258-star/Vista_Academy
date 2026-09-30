@@ -9,6 +9,11 @@ const PAYMENT_METHOD_LABEL: Record<string, string> = {
   CASH: "Naqd",
   BANK_TRANSFER: "Bank o'tkazmasi",
   CARD: "Karta",
+  CLICK: "Click",
+  PAYME: "Payme",
+  UZUM: "Uzum",
+  MOBILE_APP: "Mobil ilova",
+  BANKOMAT: "Bankomat",
 };
 
 const INVOICE_STATUS_LABEL: Record<string, string> = {

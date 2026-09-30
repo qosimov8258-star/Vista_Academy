@@ -25,7 +25,13 @@ interface Envelope<T> {
 
 let refreshPromise: Promise<boolean> | null = null;
 
-async function tryRefresh(): Promise<boolean> {
+/**
+ * Access token muddati o'tganda yangilaydi. `request()` ichida avtomatik
+ * chaqiriladi; token talab qiladigan lekin JSON javob kutmaydigan so'rovlar
+ * (masalan `<img>` o'rniga blob bilan yuklanadigan surat) ham shu funksiyani
+ * qayta ishlatadi — aks holda ular 401'da hech qachon qayta urinmaydi.
+ */
+export async function tryRefresh(): Promise<boolean> {
   if (!refreshPromise) {
     const refreshToken = getTenantRefreshToken();
     refreshPromise = fetch(`${API_URL}/app/auth/refresh`, {

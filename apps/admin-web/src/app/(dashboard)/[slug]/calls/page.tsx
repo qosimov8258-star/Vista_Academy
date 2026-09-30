@@ -21,7 +21,8 @@ export default function CallsPage({ params }: { params: Promise<{ slug: string }
       <div>
         <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">Bugun qo&apos;ng&apos;iroq qilish</h1>
         <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">
-          Muddati o&apos;tgan qarzdorlar, bugun kelmagan bolalar va bog&apos;lanish kerak bo&apos;lgan arizalar
+          Muddati o&apos;tgan qarzdorlar, bugun kelmagan bolalar, bog&apos;lanish kerak bo&apos;lgan arizalar va soxta
+          to&apos;lov cheki yuborgan ota-onalar
           {query.data ? ` · ochiq: ${query.data.open}` : ""}
         </p>
       </div>
@@ -29,7 +30,7 @@ export default function CallsPage({ params }: { params: Promise<{ slug: string }
         <Button variant={filter === "ALL" ? "primary" : "outline"} size="sm" onClick={() => setFilter("ALL")}>
           Hammasi
         </Button>
-        {(["DEBT", "ABSENT", "LEAD"] as const).map((k) => (
+        {(["DEBT", "ABSENT", "LEAD", "FAKE_RECEIPT"] as const).map((k) => (
           <Button key={k} variant={filter === k ? "primary" : "outline"} size="sm" onClick={() => setFilter(k)}>
             {CALL_KIND_LABEL[k]} ({count(k)})
           </Button>

@@ -11,6 +11,7 @@ const KIND_STYLE: Record<CallKind, { dot: string; suffix: string }> = {
   LEAD: { dot: "bg-[var(--accent-bright)]", suffix: "crm" },
   DEBT: { dot: "bg-[#fb7185]", suffix: "debtors" },
   ABSENT: { dot: "bg-[#fbbf24]", suffix: "calls" },
+  FAKE_RECEIPT: { dot: "bg-[var(--color-danger)]", suffix: "calls" },
 };
 
 const ACTIONS = [

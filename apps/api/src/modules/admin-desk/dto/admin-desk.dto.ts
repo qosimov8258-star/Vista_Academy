@@ -2,9 +2,9 @@ import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { IsDateString, IsIn, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
 
 export class CallDoneDto {
-  @ApiProperty({ enum: ["DEBT", "ABSENT", "LEAD"] })
-  @IsIn(["DEBT", "ABSENT", "LEAD"])
-  kind!: "DEBT" | "ABSENT" | "LEAD";
+  @ApiProperty({ enum: ["DEBT", "ABSENT", "LEAD", "FAKE_RECEIPT"] })
+  @IsIn(["DEBT", "ABSENT", "LEAD", "FAKE_RECEIPT"])
+  kind!: "DEBT" | "ABSENT" | "LEAD" | "FAKE_RECEIPT";
 
   @ApiProperty()
   @IsString()

@@ -1,7 +1,8 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from "class-validator";
+import { IsEnum, IsIn, IsInt, IsOptional, IsString, Max, Min } from "class-validator";
 import { ChildStatus } from "@prisma/client";
+import { FINANCE_CHILD_STATUSES, FinanceChildStatus } from "../../billing/dto/finance-query.dto";
 
 export class ChildQueryDto {
   @ApiPropertyOptional({ default: 1 })
@@ -38,4 +39,12 @@ export class ChildQueryDto {
   @IsOptional()
   @IsEnum(ChildStatus)
   status?: ChildStatus;
+
+  @ApiPropertyOptional({
+    enum: FINANCE_CHILD_STATUSES,
+    description: "To'lov holati — joriy oy hisob-fakturasiga qarab hisoblanadi (moliyachi paneli uchun)",
+  })
+  @IsOptional()
+  @IsIn(FINANCE_CHILD_STATUSES)
+  paymentStatus?: FinanceChildStatus;
 }

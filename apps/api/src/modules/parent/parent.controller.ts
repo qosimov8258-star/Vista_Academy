@@ -5,7 +5,6 @@ import {
   Header,
   HttpCode,
   HttpStatus,
-  NotFoundException,
   Param,
   Post,
   Query,
@@ -17,6 +16,7 @@ import {
 import { ApiTags } from "@nestjs/swagger";
 import type { Request, Response } from "express";
 import { Public } from "../../common/decorators/public.decorator";
+import { sendMediaResponse } from "../../common/media-response";
 import { PrismaService } from "../../database/prisma.service";
 import { ParentAuthService, IssuedParentTokens } from "./parent-auth.service";
 import { ParentService } from "./parent.service";
@@ -26,6 +26,9 @@ import { SubmitAbsenceReasonDto } from "./dto/submit-absence-reason.dto";
 import { ParentJwtAuthGuard } from "./guards/parent-jwt-auth.guard";
 import { CurrentParent } from "./decorators/current-parent.decorator";
 import { AuthenticatedParent } from "./parent-auth.types";
+import { PaymentReceiptsService } from "../payment-receipts/payment-receipts.service";
+import { SubmitPaymentReceiptDto } from "../payment-receipts/dto/submit-payment-receipt.dto";
+import { R2Service } from "../storage/r2.service";
 
 const ACCESS_COOKIE = "bogcha_parent_at";
 const REFRESH_COOKIE = "bogcha_parent_rt";
@@ -41,7 +44,9 @@ export class ParentController {
   constructor(
     private readonly authService: ParentAuthService,
     private readonly parentService: ParentService,
+    private readonly paymentReceiptsService: PaymentReceiptsService,
     private readonly prisma: PrismaService,
+    private readonly r2: R2Service,
   ) {}
 
   @Post("login")
@@ -105,6 +110,50 @@ export class ParentController {
     return this.parentService.attendanceStrip(parent, childId);
   }
 
+  /** To'lov eslatmasi kartasi — faqat moliyani ko'rish huquqi berilgan ota-onaga ko'rinadi. */
+  @Get("children/:childId/payment-reminder")
+  @UseGuards(ParentJwtAuthGuard)
+  paymentReminder(@CurrentParent() parent: AuthenticatedParent, @Param("childId") childId: string) {
+    return this.parentService.paymentReminder(parent, childId);
+  }
+
+  /** Ota-ona to'lov qilganini bildirib chek (skrinshot) yuklaydi — moliyachi tasdiqlamaguncha balansga tegmaydi. */
+  @Post("children/:childId/payment-receipts")
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(ParentJwtAuthGuard)
+  submitPaymentReceipt(
+    @CurrentParent() parent: AuthenticatedParent,
+    @Param("childId") childId: string,
+    @Body() dto: SubmitPaymentReceiptDto,
+  ) {
+    return this.paymentReceiptsService.submitForParent(parent, childId, dto);
+  }
+
+  /** Ota-ona o'zi yuklagan cheklar ro'yxati va ularning holati (kutilmoqda/tasdiqlangan/rad etilgan). */
+  @Get("children/:childId/payment-receipts")
+  @UseGuards(ParentJwtAuthGuard)
+  paymentReceipts(@CurrentParent() parent: AuthenticatedParent, @Param("childId") childId: string) {
+    return this.paymentReceiptsService.listForParent(parent, childId);
+  }
+
+  /** Ota-ona yuklagan chek surati. */
+  @Get("payment-receipts/:id/image")
+  @Header("Cache-Control", "private, max-age=60")
+  @UseGuards(ParentJwtAuthGuard)
+  async paymentReceiptImage(
+    @CurrentParent() parent: AuthenticatedParent,
+    @Param("id") id: string,
+    @Res() res: Response,
+  ) {
+    const record = await this.paymentReceiptsService.readImageForParent(parent, id);
+    await sendMediaResponse(
+      res,
+      this.r2,
+      { key: record.imageKey, bytes: record.image, mimeType: record.mimeType },
+      "Chek surati yo'q",
+    );
+  }
+
   /** Coin do'koni: bolaning filialidagi tovarlar ro'yxati va joriy balans. */
   @Get("children/:childId/products")
   @UseGuards(ParentJwtAuthGuard)
@@ -135,11 +184,12 @@ export class ParentController {
     @Res() res: Response,
   ) {
     const record = await this.parentService.productImage(parent, id, position);
-    if (!record.image) {
-      throw new NotFoundException("Bu rasm o'rni bo'sh");
-    }
-    res.setHeader("Content-Type", record.mimeType ?? "image/jpeg");
-    res.send(Buffer.from(record.image));
+    await sendMediaResponse(
+      res,
+      this.r2,
+      { key: record.key, bytes: record.image, mimeType: record.mimeType ?? "image/jpeg" },
+      "Bu rasm o'rni bo'sh",
+    );
   }
 
   /** Kelmagan kun uchun ota-ona sababini yozadi. */
@@ -168,13 +218,14 @@ export class ParentController {
     await this.parentService.day(parent, childId);
     const record = await this.prisma.child.findUniqueOrThrow({
       where: { id: childId },
-      select: { avatar: true, avatarMimeType: true },
+      select: { avatar: true, avatarKey: true, avatarMimeType: true },
     });
-    if (!record.avatar) {
-      throw new NotFoundException("Surat yo'q");
-    }
-    res.setHeader("Content-Type", record.avatarMimeType ?? "image/jpeg");
-    res.send(Buffer.from(record.avatar));
+    await sendMediaResponse(
+      res,
+      this.r2,
+      { key: record.avatarKey, bytes: record.avatar, mimeType: record.avatarMimeType ?? "image/jpeg" },
+      "Surat yo'q",
+    );
   }
 
   /** Oshpaz yuklagan taom surati — "Bugungi ovqat" bo'limida ko'rsatiladi. */
@@ -188,8 +239,12 @@ export class ParentController {
     @Res() res: Response,
   ) {
     const photo = await this.parentService.readMenuPhoto(parent, childId, photoId);
-    res.setHeader("Content-Type", photo.mimeType);
-    res.send(Buffer.from(photo.image));
+    await sendMediaResponse(
+      res,
+      this.r2,
+      { key: photo.imageKey, bytes: photo.image, mimeType: photo.mimeType },
+      "Rasm topilmadi",
+    );
   }
 }
 

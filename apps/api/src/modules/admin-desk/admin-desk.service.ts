@@ -64,7 +64,7 @@ export class AdminDeskService {
     const date = assertDate(dateInput);
     const day = toDateOnly(date);
 
-    const [debtors, absences, priorAbsences, leads, logs, landingApps] = await Promise.all([
+    const [debtors, absences, priorAbsences, leads, fakeReceiptsToday, logs, landingApps] = await Promise.all([
       this.cashDesk.debtors(scope),
       this.prisma.attendance.findMany({
         where: { branchId, date: day, status: "ABSENT", child: { status: { not: "INACTIVE" } } },
@@ -83,6 +83,17 @@ export class AdminDeskService {
         select: { id: true, childFullName: true, parentName: true, parentPhone: true, stage: true, followUpDate: true },
         orderBy: { createdAt: "asc" },
       }),
+      // Shu kuni rad etilgan cheklar — soxta chek 2-yoki-undan-ko'p marta
+      // takrorlangan ota-onalarni operator qo'ng'iroq ro'yxatiga chiqaradi.
+      this.prisma.paymentReceipt.findMany({
+        where: { branchId, status: "REJECTED", reviewedAt: dayRange(date, date) },
+        select: {
+          id: true,
+          guardianId: true,
+          child: { select: { fullName: true } },
+          guardian: { select: { fullName: true, phone: true } },
+        },
+      }),
       this.prisma.callLog.findMany({ where: { branchId, date: day } }),
       // Lending sahifadan kelgan arizalar — tashkilot bo'yicha (tashkilotning barcha filiallariga)
       this.prisma.landingApplication.findMany({
@@ -91,6 +102,19 @@ export class AdminDeskService {
         orderBy: { createdAt: "asc" },
       }),
     ]);
+
+    // Guardian bo'yicha jami rad etilgan cheklar soni — faqat 2-yoki-undan
+    // ko'p marta soxta chek yuborganlar operator ro'yxatiga chiqadi, birinchi
+    // xato uchun hali qo'ng'iroq talab qilinmaydi.
+    const fakeReceiptGuardianIds = [...new Set(fakeReceiptsToday.map((r) => r.guardianId))];
+    const rejectedCounts = fakeReceiptGuardianIds.length
+      ? await this.prisma.paymentReceipt.groupBy({
+          by: ["guardianId"],
+          where: { branchId, guardianId: { in: fakeReceiptGuardianIds }, status: "REJECTED" },
+          _count: { _all: true },
+        })
+      : [];
+    const rejectedCountByGuardian = new Map(rejectedCounts.map((r) => [r.guardianId, r._count._all]));
 
     // Javob berilgan ariza ertasi kuni qaytmaydi; "aloqa qila olmadim" bo'lsa qaytadi
     const landingLogs = landingApps.length
@@ -152,6 +176,23 @@ export class AdminDeskService {
         badge: null as string | null,
         ...withLog("LEAD", l.id),
       })),
+      ...fakeReceiptsToday
+        .filter((r, i, arr) => arr.findIndex((x) => x.guardianId === r.guardianId) === i)
+        .filter((r) => (rejectedCountByGuardian.get(r.guardianId) ?? 0) >= 2)
+        .map((r) => {
+          const count = rejectedCountByGuardian.get(r.guardianId) ?? 0;
+          return {
+            kind: "FAKE_RECEIPT" as const,
+            subjectId: r.guardianId,
+            title: r.child.fullName,
+            subtitle: `${count}-marta soxta to'lov cheki yubordi`,
+            contactName: r.guardian.fullName,
+            phone: r.guardian.phone,
+            contacts: [{ name: r.guardian.fullName as string | null, relation: null as string | null, phone: r.guardian.phone as string | null }],
+            badge: `${count}-chek`,
+            ...withLog("FAKE_RECEIPT", r.guardianId),
+          };
+        }),
       ...landingApps
         .filter((a) => !landingAnswered.has(`landing:${a.id}`) || landingToday.has(`landing:${a.id}`))
         .map((a) => ({

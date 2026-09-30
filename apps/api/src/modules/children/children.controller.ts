@@ -1,25 +1,13 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Header,
-  NotFoundException,
-  Param,
-  Patch,
-  Post,
-  Put,
-  Query,
-  Res,
-  UseGuards,
-} from "@nestjs/common";
+import { Body, Controller, Delete, Get, Header, Param, Patch, Post, Put, Query, Res, UseGuards } from "@nestjs/common";
 import type { Response } from "express";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { Public } from "../../common/decorators/public.decorator";
+import { sendMediaResponse } from "../../common/media-response";
 import { TenantJwtAuthGuard } from "../iam/guards/tenant-jwt-auth.guard";
 import { DenyCallOperator } from "../iam/decorators/deny-call-operator.decorator";
 import { CurrentTenantUser } from "../iam/decorators/current-tenant-user.decorator";
 import { TenantAuthenticatedUser, toTenantScope } from "../iam/tenant-auth.types";
+import { R2Service } from "../storage/r2.service";
 import { ChildrenService } from "./children.service";
 import { CreateChildDto } from "./dto/create-child.dto";
 import { UpdateChildDto } from "./dto/update-child.dto";
@@ -33,7 +21,10 @@ import { UpdateChildAvatarDto } from "./dto/update-child-avatar.dto";
 @DenyCallOperator()
 @Controller("app/children")
 export class ChildrenController {
-  constructor(private readonly childrenService: ChildrenService) {}
+  constructor(
+    private readonly childrenService: ChildrenService,
+    private readonly r2: R2Service,
+  ) {}
 
   @Get()
   findAll(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query() query: ChildQueryDto) {
@@ -43,6 +34,12 @@ export class ChildrenController {
   @Post()
   create(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: CreateChildDto) {
     return this.childrenService.create(user, dto);
+  }
+
+  /** Moliyachi "Bolalar" sahifasidagi to'lov statistikasi (to'lagan/yarim/to'lamagan/to'xtatgan). */
+  @Get("finance-stats")
+  financeStats(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query("branchId") branchId?: string) {
+    return this.childrenService.financeStats(toTenantScope(user), branchId);
   }
 
   @Get(":id")
@@ -86,10 +83,11 @@ export class ChildrenController {
     @Res() res: Response,
   ) {
     const record = await this.childrenService.readAvatar(toTenantScope(user), id);
-    if (!record.avatar) {
-      throw new NotFoundException("Bolaning surati yo'q");
-    }
-    res.setHeader("Content-Type", record.avatarMimeType ?? "image/jpeg");
-    res.send(Buffer.from(record.avatar));
+    await sendMediaResponse(
+      res,
+      this.r2,
+      { key: record.avatarKey, bytes: record.avatar, mimeType: record.avatarMimeType ?? "image/jpeg" },
+      "Bolaning surati yo'q",
+    );
   }
 }

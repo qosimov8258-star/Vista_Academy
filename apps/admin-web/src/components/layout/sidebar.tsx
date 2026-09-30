@@ -18,7 +18,7 @@ import { useSidebarSections } from "@/lib/use-sidebar-sections";
 import { ROLE_LABEL, canManageUsers, canViewUseful, isChef, isTeacher, ownsLanding, receivesEmployeeNotifications } from "@/lib/permissions";
 import { formatPositionLabel, isAssistantPosition, isCallOperatorUser, isCashierPosition, isSubjectTeacherPosition } from "@/lib/employee-position";
 import { Avatar, initials } from "@/components/ui/avatar";
-import { isSection, type NavEntry, type NavLeaf } from "./nav-types";
+import { isSection, type NavEntry, type NavLeaf, type NavSection } from "./nav-types";
 import { DirectorRail } from "./director-rail";
 import { DirectorBottomBar } from "./director-bottom-bar";
 import {
@@ -35,6 +35,7 @@ import {
   ChecklistIcon,
   ChevronRightIcon,
   ChildIcon,
+  ClockIcon,
   CoinIcon,
   FaceIdIcon,
   GlobeIcon,
@@ -148,6 +149,7 @@ export function Sidebar({ slug }: { slug: string }) {
   // Lending sayt bitta tashkilotniki — boshqa bog'chalarda bo'lim ko'rinmaydi
   const showLandingNav = ownsLanding(user?.organizationSlug);
   const isManager = user?.role === "MANAGER";
+  const isFinance = user?.role === "FINANCE";
   // Yon paneldagi "Bildirishnomalarim" belgisi uchun — daqiqada bir marta yangilanadi.
   const notificationsQuery = useQuery({
     queryKey: ["employee-notifications", slug],
@@ -157,7 +159,11 @@ export function Sidebar({ slug }: { slug: string }) {
   });
   const unreadNotificationsCount = notificationsQuery.data?.filter((n) => !n.isRead).length ?? 0;
   const params = useParams<{ branchSlug?: string }>();
-  const { branch } = useBranchContext(slug);
+  const { branch, branches } = useBranchContext(slug);
+  // Moliyachi (FINANCE) yon paneldagi "Filiallar" bo'limida qaysi filialni
+  // tanlagani — shu filialning O'quvchilar/Xodimlar/Eslatmalar havolalari
+  // pastda ochiladi.
+  const [financeBranchId, setFinanceBranchId] = useState<string | null>(null);
   // A NETWORK_ADMIN who hasn't drilled into a specific branch only manages
   // the network itself (home overview + branch list) — every operational
   // module (children, finance, attendance, ...) only makes sense once a
@@ -177,6 +183,41 @@ export function Sidebar({ slug }: { slug: string }) {
 
   const isActive = (item: NavLeaf) =>
     item.exact ? currentPath === item.href : currentPath.startsWith(item.href);
+
+  // Moliyachi (FINANCE) uchun telefondagi pastki panel: Super Admin ustunidagi
+  // bilan bir xil chiroyli suzuvchi navigatsiya, faqat ichidagi bo'limlar
+  // boshqacha. Birinchi to'rtta joy doim ko'rinadi, "Filiallar" esa Menyu
+  // ichida — bosilganda o'sha filialning Xodimlar sahifasiga o'tadi.
+  const financeActiveBranchSlug = branch?.slug ?? user?.branchSlug ?? branches[0]?.slug ?? null;
+  const financeBase = financeActiveBranchSlug ? `/${slug}/${financeActiveBranchSlug}` : null;
+  // Umumiy `isActive` filialsiz havolalarni kutadi (operatsion rollar uchun
+  // to'g'ri), lekin moliyachining Xodimlar/O'quvchilar/Eslatmalar havolalari
+  // aynan filial prefiksi bilan ishlaydi — shuning uchun ular xom
+  // `pathname`ga solishtiriladi, faqat "Bosh sahifa" kosmetik bookmarkdan
+  // qat'i nazar to'g'ri faollashishi uchun `currentPath`da qoladi.
+  const financeIsActive = (item: NavLeaf) =>
+    item.exact ? currentPath === item.href : pathname.startsWith(item.href);
+  // "Filiallar" alohida o'zgaruvchida — pastki panelda ham (to'rttadan keyingi
+  // joy sifatida), ham Menyu oynasida (yagona bo'lim sifatida, bosh sahifa va
+  // hokazolarni takrorlamasdan) ishlatiladi.
+  const financeFiliallarEntry: NavSection = {
+    id: "filiallar",
+    label: "Filiallar",
+    icon: BuildingIcon,
+    items: branches.map((b) => ({
+      href: `/${slug}/${b.slug}/employees`,
+      label: b.name,
+      icon: BuildingIcon,
+      show: true,
+    })),
+  };
+  const financeMobileEntries: NavEntry[] = [
+    { href: `/${slug}`, label: "Bosh sahifa", icon: HomeIcon, show: true, exact: true },
+    { href: financeBase ? `${financeBase}/employees` : `/${slug}`, label: "Xodimlar", icon: TeacherIcon, show: true },
+    { href: financeBase ? `${financeBase}/children` : `/${slug}`, label: "O'quvchilar", icon: ChildIcon, show: true },
+    { href: financeBase ? `${financeBase}/reminders` : `/${slug}`, label: "Eslatmalar", icon: ClockIcon, show: true },
+    financeFiliallarEntry,
+  ];
 
   const rootEntries: NavEntry[] = [
     { href: `/${slug}`, label: t("nav.home"), icon: HomeIcon, show: true, exact: true },
@@ -400,6 +441,8 @@ export function Sidebar({ slug }: { slug: string }) {
         // Qarzdorlarga qo'ng'iroq qilib eslatish administratorning ishi
         { href: `${base}/debtors`, label: "Qarzdorlar", icon: PhoneIcon, show: true },
         { href: `${base}/notifications`, label: t("nav.notifications"), icon: BellIcon, show: true },
+        // Avtomatik to'lov eslatmasi sozlamalari — ota-ona kabinetidagi kartani boshqaradi
+        { href: `${base}/reminders`, label: t("nav.reminders"), icon: ClockIcon, show: true },
         // Branch/user management stay a network-wide (root-level) concern, never
         // duplicated inside a single branch's panel.
         { href: `/${slug}/users`, label: t("nav.admins"), icon: KeyIcon, show: showUsersNav && !inBranchContext },
@@ -419,6 +462,15 @@ export function Sidebar({ slug }: { slug: string }) {
     { href: `${base}/audit-logs`, label: "Audit", icon: AuditIcon, show: inBranchContext },
   ];
 
+  // Moliyachi (FINANCE): kundalik operatsion ishlarga (bolalar, guruhlar,
+  // xodimlar, ovqatlanish va h.k.) kirmaydi — faqat "Bosh sahifa" va
+  // "Filiallar" ko'rinadi (filial tanlangandan keyingi bo'limlar pastda,
+  // alohida `financeBranchSection`da chiqadi — operationalEntries'dagi kabi
+  // to'liq admin nav emas).
+  const financeEntries: NavEntry[] = [
+    { href: base, label: t("nav.home"), icon: HomeIcon, show: true, exact: true },
+  ];
+
   // Sozlamalar har bir rolda bo'ladi: bu foydalanuvchining o'z hisobi,
   // qaysi bo'limlarga kirishidan qat'i nazar.
   const settingsItem: NavLeaf = {
@@ -428,7 +480,7 @@ export function Sidebar({ slug }: { slug: string }) {
     show: true,
   };
 
-  const entries = (chef ? chefEntries : isCashier ? cashierEntries : teacher ? (isAssistant ? assistantEntries : teacherEntries) : isNetworkAdmin && !inBranchContext ? rootEntries : isCallOperatorUser(user) ? callOperatorEntries : operationalEntries)
+  const entries = (chef ? chefEntries : isCashier ? cashierEntries : teacher ? (isAssistant ? assistantEntries : teacherEntries) : isNetworkAdmin && !inBranchContext ? rootEntries : isFinance ? financeEntries : isCallOperatorUser(user) ? callOperatorEntries : operationalEntries)
     .map((entry) =>
       isSection(entry) ? { ...entry, items: entry.items.filter((item) => item.show) } : entry,
     )
@@ -467,10 +519,18 @@ export function Sidebar({ slug }: { slug: string }) {
     }
   };
 
+  // Moliyachi (FINANCE) paneli Super Admin ustuni bilan bir xil to'q
+  // temada ko'rinadi (faqat rang/shakl — menyu bandlari o'zgarmaydi):
+  // shu tashkilotning tizim rangidagi (--accent-rail/-orb-*) floating karta.
+  const dark = isFinance;
   const rowBase =
     "group relative z-10 flex items-center rounded-[16px] text-[15px] transition-colors duration-150 motion-reduce:transition-none";
-  const activeRow = "bg-white text-[var(--color-text)] font-semibold shadow-[var(--shadow-card)]";
-  const idleRow = "font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text)]";
+  const activeRow = dark
+    ? "bg-gradient-to-br from-[var(--accent-orb-from)] to-[var(--accent-orb-to)] text-[var(--accent-orb-ink)] font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.5),0_8px_20px_-8px_rgba(0,0,0,0.4)]"
+    : "bg-white text-[var(--color-text)] font-semibold shadow-[var(--shadow-card)]";
+  const idleRow = dark
+    ? "font-medium text-white/65 hover:text-white"
+    : "font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text)]";
 
   return (
     <>
@@ -487,9 +547,14 @@ export function Sidebar({ slug }: { slug: string }) {
         loggingOut={loggingOut}
       />
     ) : (
+    <>
     <aside
       className={clsx(
-        "hidden shrink-0 flex-col bg-[var(--color-sidebar)] md:flex",
+        "hidden shrink-0 flex-col md:flex",
+        // Moliyachi panelida "Yulduzlar" nomi Super Admin ustunidagi kabi
+        // menyu kartasidan tashqarida, sahifa foni ustida alohida turadi —
+        // ikkovi orasida bo'shliq bilan (DirectorRail'dagi brend belgisi kabi).
+        dark ? "gap-3 m-3" : "bg-[var(--color-sidebar)]",
         // Kenglik o'zgarishi silliq bo'lsin, lekin harakat sozlamasi
         // o'chirilgan bo'lsa darhol almashsin
         "transition-[width] duration-300 ease-[var(--ease-out)] motion-reduce:transition-none",
@@ -498,39 +563,64 @@ export function Sidebar({ slug }: { slug: string }) {
     >
       <div
         className={clsx(
-          "flex h-16 shrink-0 items-center",
-          collapsed ? "justify-center px-2" : "gap-2.5 pl-4 pr-2.5",
+          "flex shrink-0",
+          collapsed && dark
+            ? "flex-col items-center gap-2 py-3"
+            : collapsed
+              ? "h-16 items-center justify-center px-2"
+              : "h-16 items-center gap-2.5 pl-4 pr-2.5",
         )}
       >
-        {!collapsed && (
-          <>
-            {/* Tizimda bir necha bog'cha bor — belgi va nom kirgan foydalanuvchining
-                tashkilotidan olinadi, hech narsa qattiq yozilmaydi */}
-            {user ? (
-              <span
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] bg-gradient-to-br from-[#14b8a6] to-[var(--color-primary)] text-[14px] font-extrabold text-white shadow-[var(--shadow-primary)]"
-                aria-hidden="true"
-              >
-                {initials(user.organizationName)}
-              </span>
-            ) : (
-              <span className="h-9 w-9 shrink-0 animate-pulse rounded-[11px] bg-black/[0.06]" aria-hidden="true" />
-            )}
-            <div className="min-w-0 flex-1">
-              {user ? (
-                <p className="truncate text-[15px] font-bold leading-tight tracking-[-0.01em] text-[var(--color-text)]">
-                  {user.organizationName}
-                </p>
+        {/* Tizimda bir necha bog'cha bor — belgi va nom kirgan foydalanuvchining
+            tashkilotidan olinadi, hech narsa qattiq yozilmaydi. Moliyachi
+            panelida (dark) bu belgi Super Admin ustunidagidek yig'ilgan
+            holatda ham ko'rinib turadi. */}
+        {(!collapsed || dark) &&
+          (user ? (
+            <span
+              className={clsx(
+                "flex h-9 w-9 shrink-0 items-center justify-center text-[14px] font-extrabold",
+                dark
+                  ? "rounded-full shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_10px_24px_-12px_rgba(0,0,0,0.55)]"
+                  : "rounded-[11px] bg-gradient-to-br from-[#14b8a6] to-[var(--color-primary)] text-white shadow-[var(--shadow-primary)]",
+              )}
+              style={
+                dark
+                  ? {
+                      background:
+                        "radial-gradient(circle at 30% 25%, color-mix(in srgb, var(--accent-light) 22%, transparent), transparent 60%), var(--accent-rail)",
+                    }
+                  : undefined
+              }
+              title={collapsed ? user.organizationName : undefined}
+              aria-hidden="true"
+            >
+              {dark ? (
+                <span className="bg-gradient-to-br from-[var(--accent-pale)] via-[var(--accent-light)] to-[var(--accent-bright)] bg-clip-text text-transparent">
+                  {initials(user.organizationName)}
+                </span>
               ) : (
-                <span className="block h-3.5 w-24 animate-pulse rounded-full bg-black/[0.06]" aria-hidden="true" />
+                initials(user.organizationName)
               )}
-              {(positionLabel ?? user?.branchName) && (
-                <p className="mt-0.5 truncate text-[11px] leading-tight text-[var(--color-text-muted)]">
-                  {positionLabel ?? user?.branchName}
-                </p>
-              )}
-            </div>
-          </>
+            </span>
+          ) : (
+            <span className="h-9 w-9 shrink-0 animate-pulse rounded-[11px] bg-black/[0.06]" aria-hidden="true" />
+          ))}
+        {!collapsed && (
+          <div className="min-w-0 flex-1">
+            {user ? (
+              <p className="truncate text-[15px] font-bold leading-tight tracking-[-0.01em] text-[var(--color-text)]">
+                {user.organizationName}
+              </p>
+            ) : (
+              <span className="block h-3.5 w-24 animate-pulse rounded-full bg-black/[0.06]" aria-hidden="true" />
+            )}
+            {(positionLabel ?? user?.branchName) && (
+              <p className="mt-0.5 truncate text-[11px] leading-tight text-[var(--color-text-muted)]">
+                {positionLabel ?? user?.branchName}
+              </p>
+            )}
+          </div>
         )}
         <button
           type="button"
@@ -544,6 +634,12 @@ export function Sidebar({ slug }: { slug: string }) {
         </button>
       </div>
 
+      <div
+        className={clsx(
+          "flex min-h-0 flex-1 flex-col",
+          dark && "overflow-hidden rounded-[32px] bg-[var(--accent-rail)] shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_18px_40px_-18px_rgba(0,0,0,0.55)]",
+        )}
+      >
       {/* Filial ichidagi Super Admin uchun: qaysi filialda ekani va orqaga yo'l */}
       {inBranchContext && !collapsed && (
         <div className="mx-3 mb-1 rounded-[14px] bg-white/70 px-3 py-2.5">
@@ -570,12 +666,13 @@ export function Sidebar({ slug }: { slug: string }) {
       <nav
         ref={navRef}
         onMouseLeave={clearHover}
-        className={clsx("relative flex-1 overflow-y-auto scrollbar-thin pb-4", collapsed ? "px-3" : "px-3")}
+        className={clsx("relative flex-1 overflow-y-auto scrollbar-thin pb-4", dark && "pt-3", collapsed ? "px-3" : "px-3")}
       >
         <div
           aria-hidden
           className={clsx(
-            "pointer-events-none absolute z-0 bg-black/[0.045] transition-[transform,width,height,opacity] duration-200 ease-out motion-reduce:transition-none",
+            "pointer-events-none absolute z-0 transition-[transform,width,height,opacity] duration-200 ease-out motion-reduce:transition-none",
+            dark ? "bg-white/10" : "bg-black/[0.045]",
             collapsed ? "rounded-full" : "rounded-[16px]",
           )}
           style={{
@@ -588,7 +685,9 @@ export function Sidebar({ slug }: { slug: string }) {
         {collapsed
           ? collapsedGroups.map((group, groupIndex) => (
               <div key={group[0]?.href ?? groupIndex}>
-                {groupIndex > 0 && <div className="mx-2 my-2 border-t border-[var(--color-sidebar-line)]" aria-hidden />}
+                {groupIndex > 0 && (
+                  <div className={clsx("mx-2 my-2 border-t", dark ? "border-white/10" : "border-[var(--color-sidebar-line)]")} aria-hidden />
+                )}
                 {group.map((item) => {
                   const active = isActive(item);
                   const Icon = item.icon;
@@ -608,11 +707,30 @@ export function Sidebar({ slug }: { slug: string }) {
                     >
                       <Icon
                         filled={active}
-                        className={clsx("h-5 w-5", active ? "text-[var(--color-primary)]" : "text-current")}
+                        className={clsx("h-5 w-5", active ? (dark ? "text-[var(--accent-orb-ink)]" : "text-[var(--color-primary)]") : "text-current")}
                       />
                     </Link>
                   );
                 })}
+                {/* Moliyachining "Filiallar" akkordioni yig'ilgan holatda ko'rinmay
+                    qolmasin — bosilsa panel yoziladi va bo'lim ochiq holda kutadi. */}
+                {groupIndex === 0 && isFinance && branches.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      toggleCollapsed();
+                      if (!(openSections["filiallar"] ?? false)) toggleSection("filiallar");
+                    }}
+                    title="Filiallar"
+                    aria-label="Filiallar"
+                    className={clsx(
+                      "group relative z-10 mx-auto mb-1 flex h-11 w-11 cursor-pointer items-center justify-center rounded-full text-[15px] outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/30 motion-reduce:transition-none",
+                      idleRow,
+                    )}
+                  >
+                    <BuildingIcon className="h-5 w-5 text-current" />
+                  </button>
+                )}
               </div>
             ))
           : entries.map((entry) => {
@@ -631,7 +749,7 @@ export function Sidebar({ slug }: { slug: string }) {
                   >
                     <Icon
                       filled={active}
-                      className={clsx("h-5 w-5 shrink-0", active ? "text-[var(--color-primary)]" : "text-current")}
+                      className={clsx("h-5 w-5 shrink-0", active ? (dark ? "text-[var(--accent-orb-ink)]" : "text-[var(--color-primary)]") : "text-current")}
                     />
                     <span className="truncate">{entry.label}</span>
                     {entry.badge != null && <Badge value={entry.badge} tone={entry.badgeTone} />}
@@ -705,9 +823,100 @@ export function Sidebar({ slug }: { slug: string }) {
               );
             })}
 
+        {isFinance && !collapsed && branches.length > 0 && (
+          <div className="mb-1">
+            <button
+              type="button"
+              onClick={() => toggleSection("filiallar")}
+              aria-expanded={openSections["filiallar"] ?? false}
+              onMouseEnter={trackHover}
+              onFocus={trackHover}
+              onBlur={clearHover}
+              className={clsx(rowBase, "h-11 w-full cursor-pointer gap-3 px-3 text-left", idleRow)}
+            >
+              <BuildingIcon className="h-5 w-5 shrink-0 text-current" />
+              <span className="truncate">Filiallar</span>
+              <ChevronRightIcon
+                className={clsx(
+                  "ml-auto h-4 w-4 shrink-0 transition-transform duration-200 motion-reduce:transition-none",
+                  (openSections["filiallar"] ?? false) ? "-rotate-90" : "rotate-90",
+                )}
+              />
+            </button>
+
+            {(openSections["filiallar"] ?? false) && (
+              <div className="relative mt-0.5">
+                {branches.map((b, index) => {
+                  const selected = financeBranchId === b.id;
+                  const last = index === branches.length - 1;
+                  const subLinks = [
+                    { href: `/${slug}/${b.slug}/children`, label: "O'quvchilar", icon: ChildIcon },
+                    { href: `/${slug}/${b.slug}/employees`, label: "Xodimlar", icon: TeacherIcon },
+                    { href: `/${slug}/${b.slug}/reminders`, label: "Eslatmalar", icon: ClockIcon },
+                  ];
+                  return (
+                    <div key={b.id}>
+                      <div className="relative">
+                        <span
+                          aria-hidden
+                          className="absolute left-[21px] top-0 h-1/2 w-[15px] rounded-bl-[11px] border-b border-l border-white/10"
+                        />
+                        {!(last && !selected) && (
+                          <span aria-hidden className="absolute left-[21px] top-1/2 h-1/2 w-px bg-white/10" />
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setFinanceBranchId((current) => (current === b.id ? null : b.id))}
+                          aria-pressed={selected}
+                          className={clsx(
+                            rowBase,
+                            "mb-0.5 ml-9 h-10 w-[calc(100%-2.25rem)] cursor-pointer gap-2 pl-3 pr-3 text-left",
+                            selected ? activeRow : idleRow,
+                          )}
+                        >
+                          <span className="truncate">{b.name}</span>
+                          <ChevronRightIcon
+                            className={clsx(
+                              "ml-auto h-3.5 w-3.5 shrink-0 transition-transform duration-200",
+                              selected ? "-rotate-90" : "rotate-90",
+                            )}
+                          />
+                        </button>
+                      </div>
+
+                      {selected && (
+                        <div className="mb-1 ml-[4.5rem]">
+                          {subLinks.map((item) => {
+                            const active = currentPath.startsWith(item.href);
+                            const Icon = item.icon;
+                            return (
+                              <Link
+                                key={item.href}
+                                href={item.href}
+                                aria-current={active ? "page" : undefined}
+                                onMouseEnter={trackHover}
+                                onFocus={trackHover}
+                                onBlur={clearHover}
+                                className={clsx(rowBase, "mb-0.5 h-10 gap-2 pl-3 pr-3", active ? activeRow : idleRow)}
+                              >
+                                <Icon className="h-4 w-4 shrink-0" />
+                                <span className="truncate">{item.label}</span>
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {!collapsed && (
           <>
-            <div className="mx-2 my-2 border-t border-[var(--color-sidebar-line)]" aria-hidden />
+            <div className={clsx("mx-2 my-2 border-t", dark ? "border-white/10" : "border-[var(--color-sidebar-line)]")} aria-hidden />
             <Link
               href={settingsItem.href}
               aria-current={isActive(settingsItem) ? "page" : undefined}
@@ -720,7 +929,7 @@ export function Sidebar({ slug }: { slug: string }) {
                 filled={isActive(settingsItem)}
                 className={clsx(
                   "h-5 w-5 shrink-0",
-                  isActive(settingsItem) ? "text-[var(--color-primary)]" : "text-current",
+                  isActive(settingsItem) ? (dark ? "text-[var(--accent-orb-ink)]" : "text-[var(--color-primary)]") : "text-current",
                 )}
               />
               <span className="truncate">{settingsItem.label}</span>
@@ -733,7 +942,8 @@ export function Sidebar({ slug }: { slug: string }) {
           bo'limlar ro'yxatidan chetda, alohida qismda turadi. */}
       <div
         className={clsx(
-          "mt-auto border-t border-[var(--color-sidebar-line)] pb-3 pt-3",
+          "mt-auto border-t pb-3 pt-3",
+          dark ? "border-white/10" : "border-[var(--color-sidebar-line)]",
           collapsed ? "px-3" : "px-3",
         )}
       >
@@ -743,7 +953,7 @@ export function Sidebar({ slug }: { slug: string }) {
           </div>
         )}
         <div className={clsx("mb-1 flex", collapsed ? "justify-center" : "justify-end")}>
-          <LanguageSwitcher collapsed={collapsed} dropUp />
+          <LanguageSwitcher collapsed={collapsed} dropUp appearance={dark ? "onDark" : "default"} />
         </div>
         <button
           type="button"
@@ -753,9 +963,11 @@ export function Sidebar({ slug }: { slug: string }) {
           aria-label={t("logoutAria")}
           className={clsx(
             "group flex h-11 w-full cursor-pointer items-center rounded-[16px] text-[15px] font-medium",
-            "text-[var(--color-text-muted)] transition-colors duration-[var(--dur-fast)] ease-[var(--ease-out)]",
-            "hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]",
+            "transition-colors duration-[var(--dur-fast)] ease-[var(--ease-out)]",
             "disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none",
+            dark
+              ? "text-white/55 hover:bg-[rgba(248,113,113,0.14)] hover:text-[#fecaca]"
+              : "text-[var(--color-text-muted)] hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]",
             collapsed ? "justify-center" : "gap-3 px-3",
           )}
         >
@@ -767,7 +979,24 @@ export function Sidebar({ slug }: { slug: string }) {
           {!collapsed && <span className="truncate">{t("logout")}</span>}
         </button>
       </div>
+      </div>
     </aside>
+    {/* Moliyachida ham telefonda — Super Admin ustunidagi bilan bir xil suzuvchi pastki panel */}
+    {isFinance && (
+      <DirectorBottomBar
+        slug={slug}
+        entries={user ? financeMobileEntries : []}
+        menuEntries={user ? [financeFiliallarEntry] : []}
+        settingsItem={settingsItem}
+        isActive={financeIsActive}
+        user={user}
+        branchName={null}
+        inBranchContext={false}
+        onLogout={handleLogout}
+        loggingOut={loggingOut}
+      />
+    )}
+    </>
     )}
 
     {/* Telefonda — direktor/filial admini uchun suzib turuvchi pastki panel */}

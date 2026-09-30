@@ -8,6 +8,7 @@ import { CreateShiftDto } from "./dto/create-shift.dto";
 import { ShiftQueryDto } from "./dto/shift-query.dto";
 import { GeneratePayrollDto } from "./dto/generate-payroll.dto";
 import { PayrollQueryDto } from "./dto/payroll-query.dto";
+import { PayEmployeeSalaryDto } from "./dto/pay-employee-salary.dto";
 
 function currentPeriod(): string {
   const now = new Date();
@@ -86,6 +87,34 @@ export class HrService {
     });
   }
 
+  /**
+   * Maosh sxemasidan bitta oy uchun asosiy summani hisoblaydi — `generatePayroll`
+   * (saqlaydi) va `getEmployeePayrollOverview` (faqat ko'rsatish uchun oldindan
+   * hisoblab beradi, hali saqlamaydi) ikkalasida ham shu formuladan foydalanadi.
+   */
+  private async computeBaseAmount(
+    employee: { id: string; branchId: string },
+    scheme: { ruleType: string; fixedAmount: Prisma.Decimal | number; rate: Prisma.Decimal | number },
+    period: string,
+  ): Promise<number> {
+    if (scheme.ruleType === "FIXED") {
+      return Number(scheme.fixedAmount);
+    }
+    if (scheme.ruleType === "PER_HOUR") {
+      const { start, end } = periodRange(period);
+      const shifts = await this.prisma.shift.aggregate({
+        where: { employeeId: employee.id, date: { gte: start, lt: end } },
+        _sum: { hours: true },
+      });
+      return Number(scheme.rate) * Number(shifts._sum.hours ?? 0);
+    }
+    if (scheme.ruleType === "PER_CHILD") {
+      const childrenCount = await this.prisma.child.count({ where: { branchId: employee.branchId, status: "ACTIVE" } });
+      return Number(scheme.rate) * childrenCount;
+    }
+    return 0;
+  }
+
   async generatePayroll(caller: TenantAuthenticatedUser, dto: GeneratePayrollDto) {
     const scope = toTenantScope(caller);
     const branchId = requireMoneyScope(scope);
@@ -95,21 +124,7 @@ export class HrService {
       throw new NotFoundException("Xodim uchun maosh sxemasi belgilanmagan");
     }
 
-    let baseAmount = 0;
-    if (scheme.ruleType === "FIXED") {
-      baseAmount = Number(scheme.fixedAmount);
-    } else if (scheme.ruleType === "PER_HOUR") {
-      const { start, end } = periodRange(dto.period);
-      const shifts = await this.prisma.shift.aggregate({
-        where: { employeeId: dto.employeeId, date: { gte: start, lt: end } },
-        _sum: { hours: true },
-      });
-      baseAmount = Number(scheme.rate) * Number(shifts._sum.hours ?? 0);
-    } else if (scheme.ruleType === "PER_CHILD") {
-      const childrenCount = await this.prisma.child.count({ where: { branchId: employee.branchId, status: "ACTIVE" } });
-      baseAmount = Number(scheme.rate) * childrenCount;
-    }
-
+    const baseAmount = await this.computeBaseAmount(employee, scheme, dto.period);
     const bonusAmount = dto.bonusAmount ?? 0;
     const penaltyAmount = dto.penaltyAmount ?? 0;
     const deductionAmount = dto.deductionAmount ?? 0;
@@ -152,7 +167,9 @@ export class HrService {
     }
     const updated = await this.prisma.payrollEntry.update({
       where: { id },
-      data: { status: "PAID", paidAt: new Date() },
+      // Bu yo'ldan (eski "To'landi deb belgilash" tugmasi) alohida summa
+      // kiritilmaydi — hisoblangan totalAmount to'liq to'langan deb olinadi.
+      data: { status: "PAID", paidAt: new Date(), paidAmount: entry.totalAmount },
     });
     await this.auditLog.logFromUser(caller, {
       action: "payroll.mark_paid",
@@ -164,12 +181,73 @@ export class HrService {
     return updated;
   }
 
+  /**
+   * Xodim kartochkasida ("Moliya" ko'rinishi) davomat kalendari ostida
+   * ko'rsatiladigan oylik holati: mavjud sxema, shu davr uchun allaqachon
+   * hisoblangan/to'langan yozuv (bo'lsa) va hali yozuv yo'q bo'lsa — sxemadan
+   * jonli hisoblangan taxminiy summa (hech narsa saqlamaydi).
+   */
+  async getEmployeePayrollOverview(scope: TenantScope, employeeId: string, period: string) {
+    assertPayrollReader(scope);
+    const employee = await this.requireEmployee(scope, employeeId);
+    const [scheme, entry] = await Promise.all([
+      this.prisma.salaryScheme.findUnique({ where: { employeeId } }),
+      this.prisma.payrollEntry.findUnique({ where: { employeeId_period: { employeeId, period } } }),
+    ]);
+
+    let preview: { baseAmount: number; totalAmount: number } | null = null;
+    if (!entry && scheme) {
+      const baseAmount = await this.computeBaseAmount(employee, scheme, period);
+      preview = { baseAmount, totalAmount: baseAmount };
+    }
+
+    return { scheme, entry, preview };
+  }
+
+  /**
+   * Moliyachi xodim kartochkasidan to'g'ridan-to'g'ri oylik to'laydi — qo'lda
+   * summa kiritadi (hisoblangan summadan farqli bo'lishi mumkin: qisman
+   * to'lov yoki avans). Shu davr uchun yozuv hali yo'q bo'lsa (masalan, xodimga
+   * hech qachon maosh sxemasi belgilanmagan), shu yerning o'zida yaratiladi —
+   * avval alohida "Hisoblash" bosish shart emas.
+   */
+  async payEmployeeSalary(caller: TenantAuthenticatedUser, employeeId: string, dto: PayEmployeeSalaryDto) {
+    const scope = toTenantScope(caller);
+    const branchId = requireMoneyScope(scope);
+    const employee = await this.requireEmployee(scope, employeeId);
+
+    const entry = await this.prisma.payrollEntry.upsert({
+      where: { employeeId_period: { employeeId, period: dto.period } },
+      create: {
+        employeeId,
+        branchId,
+        period: dto.period,
+        baseAmount: dto.amount,
+        totalAmount: dto.amount,
+        paidAmount: dto.amount,
+        status: "PAID",
+        paidAt: new Date(),
+      },
+      update: { paidAmount: dto.amount, status: "PAID", paidAt: new Date() },
+    });
+    await this.auditLog.logFromUser(caller, {
+      action: "payroll.pay",
+      entityType: "PayrollEntry",
+      entityId: entry.id,
+      branchId,
+      summary: `${employee.fullName}ga ${dto.period} oyi uchun ${dto.amount} to'landi`,
+    });
+    return entry;
+  }
+
   async listPayroll(scope: TenantScope, query: PayrollQueryDto) {
     assertPayrollReader(scope);
     const where: Prisma.PayrollEntryWhereInput = {
       branch: { organizationId: scope.organizationId },
       branchId: scope.branchId ?? query.branchId,
       ...(query.period ? { period: query.period } : {}),
+      ...(query.employeeId ? { employeeId: query.employeeId } : {}),
+      ...(query.status ? { status: query.status } : {}),
     };
     const [items, total] = await this.prisma.$transaction([
       this.prisma.payrollEntry.findMany({

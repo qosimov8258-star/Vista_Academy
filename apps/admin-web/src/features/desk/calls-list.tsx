@@ -17,9 +17,15 @@ const KIND_BAR: Record<CallKind, string> = {
   DEBT: "border-l-[var(--color-danger)]",
   ABSENT: "border-l-[var(--color-warning)]",
   LEAD: "border-l-[var(--accent-soft-icon)]",
+  FAKE_RECEIPT: "border-l-[var(--color-danger)]",
 };
 
-const KIND_TONE: Record<CallKind, "danger" | "warning" | "info"> = { DEBT: "danger", ABSENT: "warning", LEAD: "info" };
+const KIND_TONE: Record<CallKind, "danger" | "warning" | "info"> = {
+  DEBT: "danger",
+  ABSENT: "warning",
+  LEAD: "info",
+  FAKE_RECEIPT: "danger",
+};
 
 /** Ota-ona telefonni olmasa — "qo'ng'iroq qildim" o'rniga shu yozuv saqlanadi. */
 const NO_ANSWER_NOTE = "Aloqa qila olmadim — telefonni olmadi";

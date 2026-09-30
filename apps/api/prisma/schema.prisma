@@ -33,8 +33,8 @@ model PlatformUser {
   createdAt    DateTime         @default(now()) @map("created_at")
   updatedAt    DateTime         @updatedAt @map("updated_at")
 
-  refreshTokens      RefreshToken[]
-  walletTransactions WalletTransaction[] @relation("WalletTransactionCreatedBy")
+  refreshTokens       RefreshToken[]
+  walletTransactions  WalletTransaction[]          @relation("WalletTransactionCreatedBy")
   webauthnCredentials PlatformWebAuthnCredential[]
 
   @@map("platform_users")
@@ -101,38 +101,41 @@ model Organization {
   createdAt    DateTime           @default(now()) @map("created_at")
   updatedAt    DateTime           @updatedAt @map("updated_at")
 
-  branches               Branch[]
-  subscription           Subscription?
-  wallet                 Wallet?
-  tenantUsers            TenantUser[]
-  children               Child[]
-  employees              Employee[]
-  positions              Position[]
-  subjects               Subject[]
-  invoices               Invoice[]
-  payments               Payment[]
-  ledgerEntries          LedgerEntry[]
-  coinTransactions       CoinTransaction[]
-  weeklyCoinAssessments  WeeklyCoinAssessment[]
-  dailyReports           DailyReport[]
-  developmentAssessments DevelopmentAssessment[]
-  leads                  Lead[]
-  landingApplications    LandingApplication[]
-  healthProfiles         HealthProfile[]
-  vaccinations           Vaccination[]
-  medicationLogs         MedicationLog[]
-  guardians              Guardian[]
-  notificationLogs       NotificationLog[]
-  dishes                 Dish[]
-  auditLogs              AuditLog[]
-  products               Product[]
-  poems                  Poem[]
-  proverbs               Proverb[]
-  tales                  Tale[]
-  faceIdDevices          FaceIdDevice[]
-  faceEnrollments        FaceEnrollment[]
-  faceIdEvents           FaceIdEvent[]
-  faceIdCommands         FaceIdCommand[]
+  branches                  Branch[]
+  subscription              Subscription?
+  wallet                    Wallet?
+  tenantUsers               TenantUser[]
+  children                  Child[]
+  employees                 Employee[]
+  positions                 Position[]
+  subjects                  Subject[]
+  invoices                  Invoice[]
+  payments                  Payment[]
+  ledgerEntries             LedgerEntry[]
+  coinTransactions          CoinTransaction[]
+  weeklyCoinAssessments     WeeklyCoinAssessment[]
+  dailyReports              DailyReport[]
+  developmentAssessments    DevelopmentAssessment[]
+  leads                     Lead[]
+  landingApplications       LandingApplication[]
+  healthProfiles            HealthProfile[]
+  vaccinations              Vaccination[]
+  medicationLogs            MedicationLog[]
+  guardians                 Guardian[]
+  notificationLogs          NotificationLog[]
+  dishes                    Dish[]
+  auditLogs                 AuditLog[]
+  products                  Product[]
+  poems                     Poem[]
+  proverbs                  Proverb[]
+  tales                     Tale[]
+  faceIdDevices             FaceIdDevice[]
+  faceEnrollments           FaceEnrollment[]
+  faceIdEvents              FaceIdEvent[]
+  faceIdCommands            FaceIdCommand[]
+  paymentReminderSettings   PaymentReminderSettings[]
+  paymentReminderDispatches PaymentReminderDispatch[]
+  paymentReceipts           PaymentReceipt[]
 
   @@map("organizations")
 }
@@ -153,53 +156,55 @@ enum TenantUserRole {
 }
 
 model TenantUser {
-  id              String         @id @default(uuid())
-  organizationId  String         @map("organization_id")
-  branchId        String?        @map("branch_id")
-  login           String
-  passwordHash    String         @map("password_hash")
+  id                String         @id @default(uuid())
+  organizationId    String         @map("organization_id")
+  branchId          String?        @map("branch_id")
+  login             String
+  passwordHash      String         @map("password_hash")
   // Xodim kabineti paroli "Parolni ko'rsatish" funksiyasi uchun qaytarib
   // olinadigan (AES-256-GCM) shaklda ham saqlanadi — auth esa faqat
   // `passwordHash` orqali. Faqat admin tomonidan WebAuthn bilan tasdiqlangach
   // ochiladi (`WebAuthnCredential`). Admin akkountlarida (login/parolni o'zi
   // biladi) bo'sh qoladi — faqat avtomatik generatsiya qilingan xodim
   // parollarida to'ldiriladi.
-  passwordEncrypted Bytes?       @map("password_encrypted")
-  fullName        String         @map("full_name")
-  role            TenantUserRole @default(NETWORK_ADMIN)
-  // Profil rasmi bazada saqlanadi: fayl xotirasi sozlanmagan va avatar
-  // kichik (256x256 gacha siqiladi), shuning uchun alohida saqlash
-  // xizmatiga bog'lanishdan ko'ra shu soddaroq va deploy'dan keyin
-  // yo'qolmaydi. `avatarUpdatedAt` brauzer keshini yangilash uchun.
-  avatar          Bytes?         @map("avatar")
-  avatarMimeType  String?        @map("avatar_mime_type")
-  avatarUpdatedAt DateTime?      @map("avatar_updated_at")
+  passwordEncrypted Bytes?         @map("password_encrypted")
+  fullName          String         @map("full_name")
+  role              TenantUserRole @default(NETWORK_ADMIN)
+  // Profil rasmi: R2 sozlangan bo'lsa `avatarKey` (obyekt kaliti) to'ldiriladi
+  // va `avatar` bo'sh qoladi; R2 sozlanmagan bo'lsa (yoki eski yozuv) rasm
+  // to'g'ridan-to'g'ri bazada (`avatar`) saqlanadi. `avatarUpdatedAt` brauzer
+  // keshini yangilash uchun.
+  avatar            Bytes?         @map("avatar")
+  avatarKey         String?        @map("avatar_key")
+  avatarMimeType    String?        @map("avatar_mime_type")
+  avatarUpdatedAt   DateTime?      @map("avatar_updated_at")
   // Tizim rangi (Sozlamalar → Tizim rangi): "green", "blue", ... — ro'yxati
   // profile/dto/update-theme.dto.ts da. Null — sukut (yashil). Hisobda
   // saqlanadi, shuning uchun barcha qurilmalarda bir xil.
-  themeColor      String?        @map("theme_color")
-  isActive        Boolean        @default(true) @map("is_active")
+  themeColor        String?        @map("theme_color")
+  isActive          Boolean        @default(true) @map("is_active")
   // Faol/nofaol hisoblarni ajratish uchun — muvaffaqiyatli har bir loginda yangilanadi.
-  lastLoginAt     DateTime?      @map("last_login_at")
-  createdAt       DateTime       @default(now()) @map("created_at")
-  updatedAt       DateTime       @updatedAt @map("updated_at")
+  lastLoginAt       DateTime?      @map("last_login_at")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
 
-  organization      Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  branch            Branch?              @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  refreshTokens     TenantRefreshToken[]
-  recordedPayments  Payment[]
-  coinTransactions  CoinTransaction[]
-  assignedLeads     Lead[]               @relation("LeadAssignedTo")
-  leadActivities    LeadActivity[]       @relation("LeadActivityCreatedBy")
-  medicationLogs    MedicationLog[]
-  sentNotifications NotificationLog[]    @relation("NotificationSentBy")
-  employee          Employee?
-  webauthnCredentials WebAuthnCredential[]
-  auditLogs         AuditLog[]
-  productSales      ProductSale[]
-  poems             Poem[]
-  proverbs          Proverb[]
-  tales             Tale[]
+  organization            Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch                  Branch?              @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  refreshTokens           TenantRefreshToken[]
+  recordedPayments        Payment[]
+  coinTransactions        CoinTransaction[]
+  assignedLeads           Lead[]               @relation("LeadAssignedTo")
+  leadActivities          LeadActivity[]       @relation("LeadActivityCreatedBy")
+  medicationLogs          MedicationLog[]
+  sentNotifications       NotificationLog[]    @relation("NotificationSentBy")
+  employee                Employee?
+  webauthnCredentials     WebAuthnCredential[]
+  auditLogs               AuditLog[]
+  productSales            ProductSale[]
+  poems                   Poem[]
+  proverbs                Proverb[]
+  tales                   Tale[]
+  reviewedPaymentReceipts PaymentReceipt[]     @relation("PaymentReceiptReviewer")
 
   @@unique([organizationId, login])
   @@index([branchId])
@@ -246,72 +251,77 @@ model TenantRefreshToken {
 }
 
 model Branch {
-  id              String    @id @default(uuid())
-  organizationId  String    @map("organization_id")
-  name            String
-  slug            String
-  address         String?
-  timezone        String    @default("Asia/Tashkent")
-  currency        String    @default("UZS")
+  id                   String    @id @default(uuid())
+  organizationId       String    @map("organization_id")
+  name                 String
+  slug                 String
+  address              String?
+  timezone             String    @default("Asia/Tashkent")
+  currency             String    @default("UZS")
   // Ish vaqti ("08:00" / "19:00" shaklida) — Sozlamalarda ko'rsatish uchun,
   // hozircha hech qanday amal (masalan davomat cheklovi) ularga bog'liq emas.
-  openTime            String?  @map("open_time")
-  closeTime           String?  @map("close_time")
+  openTime             String?   @map("open_time")
+  closeTime            String?   @map("close_time")
   // Yangi hisob-faktura yaratishda bo'sh qoldirilsa shu summa taklif etiladi.
-  defaultTuitionAmount Decimal? @map("default_tuition_amount") @db.Decimal(12, 2)
+  defaultTuitionAmount Decimal?  @map("default_tuition_amount") @db.Decimal(12, 2)
   // Filial belgisi (logotip). TenantUser avatari bilan bir xil yondashuv:
-  // rasm 256x256 gacha kichraytiriladi va bevosita bazada saqlanadi.
-  // Blob har bir filial so'roviga tushib ketmasligi uchun Prisma mijozida
-  // global `omit` qo'yilgan (qarang: src/database/prisma.service.ts).
-  avatar          Bytes?    @map("avatar")
-  avatarMimeType  String?   @map("avatar_mime_type")
-  avatarUpdatedAt DateTime? @map("avatar_updated_at")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
+  // rasm 256x256 gacha kichraytiriladi; R2 sozlangan bo'lsa `avatarKey`
+  // (obyekt kaliti) to'ldiriladi, aks holda bevosita bazada (`avatar`)
+  // saqlanadi. Blob har bir filial so'roviga tushib ketmasligi uchun Prisma
+  // mijozida global `omit` qo'yilgan (qarang: src/database/prisma.service.ts).
+  avatar               Bytes?    @map("avatar")
+  avatarKey            String?   @map("avatar_key")
+  avatarMimeType       String?   @map("avatar_mime_type")
+  avatarUpdatedAt      DateTime? @map("avatar_updated_at")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
 
-  organization           Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  tenantUsers            TenantUser[]
-  groups                 Group[]
-  children               Child[]
-  employees              Employee[]
-  attendances            Attendance[]
-  invoices               Invoice[]
-  payments               Payment[]
-  ledgerEntries          LedgerEntry[]
-  coinTransactions       CoinTransaction[]
-  weeklyCoinAssessments  WeeklyCoinAssessment[]
-  menuEntries            MenuEntry[]
-  menuPhotos             MenuPhoto[]
-  childReminders         ChildReminder[]
-  expenses               Expense[]
-  callLogs               CallLog[]
-  pickupLogs             PickupLog[]
-  cashClosings           CashClosing[]
-  employeeAttendances    EmployeeAttendance[]
-  staffAttendanceLocks   StaffAttendanceLock[]
-  dailyReports           DailyReport[]
-  developmentAssessments DevelopmentAssessment[]
-  leads                  Lead[]
-  healthProfiles         HealthProfile[]
-  vaccinations           Vaccination[]
-  medicationLogs         MedicationLog[]
-  shifts                 Shift[]
-  payrollEntries         PayrollEntry[]
-  notificationLogs       NotificationLog[]
-  auditLogs              AuditLog[]
-  lessonSchedules        LessonSchedule[]
-  employeeNotifications  EmployeeNotification[]
-  lessonTopics           LessonTopic[]
-  lessonGrades           LessonGrade[]
-  lessonAttendances      LessonAttendance[]
-  products               Product[]
-  poems                  Poem[]
-  proverbs               Proverb[]
-  tales                  Tale[]
-  faceIdDevices          FaceIdDevice[]
-  faceEnrollments        FaceEnrollment[]
-  faceIdEvents           FaceIdEvent[]
-  faceIdCommands         FaceIdCommand[]
+  organization              Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  tenantUsers               TenantUser[]
+  groups                    Group[]
+  children                  Child[]
+  employees                 Employee[]
+  attendances               Attendance[]
+  invoices                  Invoice[]
+  payments                  Payment[]
+  ledgerEntries             LedgerEntry[]
+  coinTransactions          CoinTransaction[]
+  weeklyCoinAssessments     WeeklyCoinAssessment[]
+  menuEntries               MenuEntry[]
+  menuPhotos                MenuPhoto[]
+  childReminders            ChildReminder[]
+  expenses                  Expense[]
+  callLogs                  CallLog[]
+  pickupLogs                PickupLog[]
+  cashClosings              CashClosing[]
+  employeeAttendances       EmployeeAttendance[]
+  staffAttendanceLocks      StaffAttendanceLock[]
+  dailyReports              DailyReport[]
+  developmentAssessments    DevelopmentAssessment[]
+  leads                     Lead[]
+  healthProfiles            HealthProfile[]
+  vaccinations              Vaccination[]
+  medicationLogs            MedicationLog[]
+  shifts                    Shift[]
+  payrollEntries            PayrollEntry[]
+  notificationLogs          NotificationLog[]
+  auditLogs                 AuditLog[]
+  lessonSchedules           LessonSchedule[]
+  employeeNotifications     EmployeeNotification[]
+  lessonTopics              LessonTopic[]
+  lessonGrades              LessonGrade[]
+  lessonAttendances         LessonAttendance[]
+  products                  Product[]
+  poems                     Poem[]
+  proverbs                  Proverb[]
+  tales                     Tale[]
+  faceIdDevices             FaceIdDevice[]
+  faceEnrollments           FaceEnrollment[]
+  faceIdEvents              FaceIdEvent[]
+  faceIdCommands            FaceIdCommand[]
+  paymentReminderSettings   PaymentReminderSettings?
+  paymentReminderDispatches PaymentReminderDispatch[]
+  paymentReceipts           PaymentReceipt[]
 
   @@unique([organizationId, name])
   @@unique([organizationId, slug])
@@ -339,19 +349,19 @@ model Group {
   createdAt DateTime    @default(now()) @map("created_at")
   updatedAt DateTime    @updatedAt @map("updated_at")
 
-  branch          Branch           @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  children        Child[]
-  teachers        GroupTeacher[]
-  lessonSchedules LessonSchedule[]
-  lessonTopics    LessonTopic[]
-  lessonGrades    LessonGrade[]
+  branch            Branch             @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  children          Child[]
+  teachers          GroupTeacher[]
+  lessonSchedules   LessonSchedule[]
+  lessonTopics      LessonTopic[]
+  lessonGrades      LessonGrade[]
   lessonAttendances LessonAttendance[]
-  poems           Poem[]
-  proverbs        Proverb[]
-  tales           Tale[]
-  diaryRoutine    DiaryRoutineItem[]
-  diaryEntries    DiaryEntry[]
-  diaryMedia      DiaryMedia[]
+  poems             Poem[]
+  proverbs          Proverb[]
+  tales             Tale[]
+  diaryRoutine      DiaryRoutineItem[]
+  diaryEntries      DiaryEntry[]
+  diaryMedia        DiaryMedia[]
 
   @@unique([branchId, name])
   @@index([branchId])
@@ -387,9 +397,11 @@ model Child {
   birthDate        DateTime?   @map("birth_date")
   status           ChildStatus @default(ACTIVE)
   // Bola surati. Filial va foydalanuvchi rasmlari bilan bir xil yondashuv:
-  // brauzerda kichraytirilib, bevosita bazada saqlanadi. Blob oddiy
-  // so'rovlarga tushmasligi uchun Prisma mijozida global `omit` bor.
+  // brauzerda kichraytirilib, R2 sozlangan bo'lsa `avatarKey`ga, aks holda
+  // bevosita bazaga (`avatar`) yoziladi. Blob oddiy so'rovlarga tushmasligi
+  // uchun Prisma mijozida global `omit` bor.
   avatar           Bytes?      @map("avatar")
+  avatarKey        String?     @map("avatar_key")
   avatarMimeType   String?     @map("avatar_mime_type")
   avatarUpdatedAt  DateTime?   @map("avatar_updated_at")
   quarantineUntil  DateTime?   @map("quarantine_until") @db.Date
@@ -397,31 +409,33 @@ model Child {
   createdAt        DateTime    @default(now()) @map("created_at")
   updatedAt        DateTime    @updatedAt @map("updated_at")
 
-  organization           Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  branch                 Branch                  @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  group                  Group?                  @relation(fields: [groupId], references: [id], onDelete: SetNull)
-  attendances            Attendance[]
-  invoices               Invoice[]
-  payments               Payment[]
-  ledgerEntries          LedgerEntry[]
-  coinTransactions       CoinTransaction[]
-  weeklyCoinAssessments  WeeklyCoinAssessment[]
-  dailyReports           DailyReport[]
-  developmentAssessments DevelopmentAssessment[]
-  convertedFromLead      Lead?
-  healthProfile          HealthProfile?
-  vaccinations           Vaccination[]
-  medicationLogs         MedicationLog[]
-  reminders              ChildReminder[]
-  pickupLogs             PickupLog[]
-  guardians              ChildGuardian[]
-  notificationLogs       NotificationLog[]
-  lessonGrades           LessonGrade[]
-  lessonAttendances      LessonAttendance[]
-  productSales           ProductSale[]
-  faceEnrollments        FaceEnrollment[]
-  faceIdEvents           FaceIdEvent[]
-  faceIdCommands         FaceIdCommand[]
+  organization              Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch                    Branch                    @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  group                     Group?                    @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  attendances               Attendance[]
+  invoices                  Invoice[]
+  payments                  Payment[]
+  ledgerEntries             LedgerEntry[]
+  coinTransactions          CoinTransaction[]
+  weeklyCoinAssessments     WeeklyCoinAssessment[]
+  dailyReports              DailyReport[]
+  developmentAssessments    DevelopmentAssessment[]
+  convertedFromLead         Lead?
+  healthProfile             HealthProfile?
+  vaccinations              Vaccination[]
+  medicationLogs            MedicationLog[]
+  reminders                 ChildReminder[]
+  pickupLogs                PickupLog[]
+  guardians                 ChildGuardian[]
+  notificationLogs          NotificationLog[]
+  lessonGrades              LessonGrade[]
+  lessonAttendances         LessonAttendance[]
+  productSales              ProductSale[]
+  faceEnrollments           FaceEnrollment[]
+  faceIdEvents              FaceIdEvent[]
+  faceIdCommands            FaceIdCommand[]
+  paymentReminderDispatches PaymentReminderDispatch[]
+  paymentReceipts           PaymentReceipt[]
 
   @@unique([organizationId, publicId])
   @@index([organizationId, branchId])
@@ -518,32 +532,34 @@ model GroupTeacher {
 }
 
 model Employee {
-  id              String    @id @default(uuid())
-  organizationId  String    @map("organization_id")
-  branchId        String    @map("branch_id")
-  firstName       String    @map("first_name")
-  lastName        String    @map("last_name")
+  id                   String    @id @default(uuid())
+  organizationId       String    @map("organization_id")
+  branchId             String    @map("branch_id")
+  firstName            String    @map("first_name")
+  lastName             String    @map("last_name")
   // Familiya + ism birlashmasi. Bolalardagi kabi ikki qismdan hosil qilinadi,
   // lekin ustun sifatida saqlanadi — ro'yxatlar va eksportlar shundan oladi.
-  fullName        String    @map("full_name")
-  phone           String?
-  position        String
+  fullName             String    @map("full_name")
+  phone                String?
+  position             String
   // Faqat "Fan o'qituvchisi" lavozimi uchun to'ldiriladi — qaysi fanlarni
   // o'qitishini belgilaydi. Boshqa lavozimlarda bo'sh massiv.
-  subjects        String[]  @default([])
-  isActive        Boolean   @default(true) @map("is_active")
+  subjects             String[]  @default([])
+  isActive             Boolean   @default(true) @map("is_active")
   // "Mavzu qo'shasizmi?" (xodim tafsilotidagi) yoqilib saqlansa — mavzularni
   // administrator shu yerdan markazlashtirib boshqaradi va shu xodimning o'zi
   // "Savol-javob" sahifasida ("/my-lessons/topics") yangi mavzu qo'sha olmaydi.
   // O'chirilgan bo'lsa — o'qituvchining o'zi qo'sha oladi (odatdagi holat).
-  topicsManagedByAdmin Boolean @default(false) @map("topics_managed_by_admin")
+  topicsManagedByAdmin Boolean   @default(false) @map("topics_managed_by_admin")
   // Xodim surati. Bolalar/filial/foydalanuvchi rasmlari bilan bir xil
-  // yondashuv: brauzerda kichraytirilib, bevosita bazada saqlanadi.
-  avatar          Bytes?    @map("avatar")
-  avatarMimeType  String?   @map("avatar_mime_type")
-  avatarUpdatedAt DateTime? @map("avatar_updated_at")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
+  // yondashuv: brauzerda kichraytirilib, R2 sozlangan bo'lsa `avatarKey`ga,
+  // aks holda bevosita bazaga (`avatar`) yoziladi.
+  avatar               Bytes?    @map("avatar")
+  avatarKey            String?   @map("avatar_key")
+  avatarMimeType       String?   @map("avatar_mime_type")
+  avatarUpdatedAt      DateTime? @map("avatar_updated_at")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
 
   // Xodimning kabineti (login). Hamma xodimga ham kerak emas — oshpaz yoki
   // farrosh tizimga kirmaydi, shuning uchun bog'lanish ixtiyoriy.
@@ -555,23 +571,23 @@ model Employee {
   // 1001, 1002, … — baza ketma-ketligidan (`employee_no_seq`) avtomatik.
   employeeNo String @unique @default(dbgenerated("(nextval('employee_no_seq'::regclass))::text")) @map("employee_no")
 
-  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  branch         Branch               @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  tenantUser     TenantUser?          @relation(fields: [tenantUserId], references: [id], onDelete: SetNull)
-  teachingGroups  GroupTeacher[]
-  attendances     EmployeeAttendance[]
-  salaryScheme    SalaryScheme?
-  shifts          Shift[]
-  payrollEntries  PayrollEntry[]
-  lessonSchedules LessonSchedule[]
-  lessonTopics    LessonTopic[]
-  lessonGrades    LessonGrade[]
-  lessonAttendances LessonAttendance[]
+  organization          Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch                Branch                 @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  tenantUser            TenantUser?            @relation(fields: [tenantUserId], references: [id], onDelete: SetNull)
+  teachingGroups        GroupTeacher[]
+  attendances           EmployeeAttendance[]
+  salaryScheme          SalaryScheme?
+  shifts                Shift[]
+  payrollEntries        PayrollEntry[]
+  lessonSchedules       LessonSchedule[]
+  lessonTopics          LessonTopic[]
+  lessonGrades          LessonGrade[]
+  lessonAttendances     LessonAttendance[]
   weeklyCoinAssessments WeeklyCoinAssessment[]
-  notifications   EmployeeNotification[]
-  faceEnrollments FaceEnrollment[]
-  faceIdEvents    FaceIdEvent[]
-  faceIdCommands  FaceIdCommand[]
+  notifications         EmployeeNotification[]
+  faceEnrollments       FaceEnrollment[]
+  faceIdEvents          FaceIdEvent[]
+  faceIdCommands        FaceIdCommand[]
 
   @@index([organizationId, branchId])
   @@map("employees")
@@ -624,18 +640,18 @@ enum EmployeeAttendanceStatus {
 }
 
 model EmployeeAttendance {
-  id         String                   @id @default(uuid())
-  employeeId String                   @map("employee_id")
-  branchId   String                   @map("branch_id")
-  date       DateTime                 @db.Date
-  status     EmployeeAttendanceStatus
+  id           String                   @id @default(uuid())
+  employeeId   String                   @map("employee_id")
+  branchId     String                   @map("branch_id")
+  date         DateTime                 @db.Date
+  status       EmployeeAttendanceStatus
   // "HH:MM" shaklida — soatlik hisob-kitob kerak bo'lmagani uchun vaqt
   // oralig'i emas, oddiy matn sifatida saqlanadi.
-  checkInTime  String? @map("check_in_time")
-  checkOutTime String? @map("check_out_time")
-  note       String?
-  createdAt  DateTime                 @default(now()) @map("created_at")
-  updatedAt  DateTime                 @updatedAt @map("updated_at")
+  checkInTime  String?                  @map("check_in_time")
+  checkOutTime String?                  @map("check_out_time")
+  note         String?
+  createdAt    DateTime                 @default(now()) @map("created_at")
+  updatedAt    DateTime                 @updatedAt @map("updated_at")
 
   employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   branch   Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
@@ -689,13 +705,15 @@ enum MenuMeal {
 
 /// Oshpaz tayyorlagan ovqatni suratga olib yuklaydi — ota-ona kabinetida
 /// bugungi menyu ostida ko'rinadi. Surat brauzerda kichraytirilib, boshqa
-/// rasmlar (bola, xodim, tovar) kabi bevosita bazada saqlanadi.
+/// rasmlar (bola, xodim, tovar) kabi R2 sozlangan bo'lsa `imageKey`ga, aks
+/// holda bevosita bazaga (`image`) yoziladi.
 model MenuPhoto {
   id           String   @id @default(uuid())
   branchId     String   @map("branch_id")
   date         DateTime @db.Date
   meal         MenuMeal
-  image        Bytes
+  image        Bytes?
+  imageKey     String?  @map("image_key")
   mimeType     String   @map("mime_type")
   // Kim yuklagani (tarix uchun) — foydalanuvchi o'chirilsa ham surat qoladi
   uploadedById String?  @map("uploaded_by_id")
@@ -713,17 +731,17 @@ model MenuPhoto {
  * xodim keyin o'chirilsa ham kim yozgani qoladi.
  */
 model ChildReminder {
-  id         String   @id @default(uuid())
-  branchId   String   @map("branch_id")
-  childId    String   @map("child_id")
-  date       DateTime @db.Date
+  id         String    @id @default(uuid())
+  branchId   String    @map("branch_id")
+  childId    String    @map("child_id")
+  date       DateTime  @db.Date
   time       String?
   text       String
-  authorName String   @map("author_name")
+  authorName String    @map("author_name")
   // Tarbiyachi bajarilganini belgilaydi ("dori berildi"): qachon va kim.
   doneAt     DateTime? @map("done_at")
   doneByName String?   @map("done_by_name")
-  createdAt  DateTime @default(now()) @map("created_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
 
   branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
   child  Child  @relation(fields: [childId], references: [id], onDelete: Cascade)
@@ -757,7 +775,6 @@ model Dish {
  * Nozik amallar tarixi — kim, qachon, nimani o'zgartirgani. Hozircha
  * hisoblar (TenantUser) va moliya (to'lov/qaytarish) bo'yicha amallar
  * yoziladi; boshqa modullarga bosqichma-bosqich kengaytiriladi.
- *
  * `actorName` maqsadli ravishda ikkilangan (denormalized): `actor` (login)
  * keyinchalik o'chirilishi mumkin (masalan xodim ishdan bo'shaganda), lekin
  * tarixda kim qilgani o'qilishda qolishi kerak.
@@ -791,31 +808,31 @@ enum AttendanceStatus {
 }
 
 model Attendance {
-  id        String           @id @default(uuid())
-  childId   String           @map("child_id")
-  branchId  String           @map("branch_id")
-  date      DateTime         @db.Date
-  status    AttendanceStatus
-  note      String?
+  id                 String           @id @default(uuid())
+  childId            String           @map("child_id")
+  branchId           String           @map("branch_id")
+  date               DateTime         @db.Date
+  status             AttendanceStatus
+  note               String?
   // Yuz tanish terminali (Face ID) yozgan kelish/ketish vaqti — "HH:MM",
   // xodimlar davomatidagi kabi. Qo'lda belgilanganda bo'sh qoladi.
-  checkInTime  String? @map("check_in_time")
-  checkOutTime String? @map("check_out_time")
+  checkInTime        String?          @map("check_in_time")
+  checkOutTime       String?          @map("check_out_time")
   // Ota-ona kabinetida yozib qoldirgan sabab (masalan "shifokorga bordik") —
   // tarbiyachining `note`sidan ajratilgan, chunki bittasi xodim, ikkinchisi
   // ota-ona tomonidan yoziladi.
-  parentReason String? @map("parent_reason")
+  parentReason       String?          @map("parent_reason")
   // Tarbiyachi "Aloqaga chiqish" bosgan payt — ota-ona sabab qoldirmagan
   // bo'lsa, administratorga bildirishnoma shu payt yaratiladi. Qayta
   // bosilganda takror bildirishnoma yuborilmasligi uchun belgi vazifasini
   // ham o'taydi.
-  contactRequestedAt DateTime? @map("contact_requested_at")
+  contactRequestedAt DateTime?        @map("contact_requested_at")
   // PRESENT deb belgilanganda avtomatik yaratiladigan kunlik coin
   // tranzaksiyasiga bog'lanish — status boshqa holatga o'zgartirilsa,
   // shu tranzaksiya topilib bekor qilinadi (coin qaytarib olinadi).
-  coinTransactionId String?  @unique @map("coin_transaction_id")
-  createdAt DateTime         @default(now()) @map("created_at")
-  updatedAt DateTime         @updatedAt @map("updated_at")
+  coinTransactionId  String?          @unique @map("coin_transaction_id")
+  createdAt          DateTime         @default(now()) @map("created_at")
+  updatedAt          DateTime         @updatedAt @map("updated_at")
 
   child           Child            @relation(fields: [childId], references: [id], onDelete: Cascade)
   branch          Branch           @relation(fields: [branchId], references: [id], onDelete: Cascade)
@@ -864,7 +881,9 @@ model LessonSchedule {
   @@map("lesson_schedules")
 }
 
-/** Dars jadvali belgilanganda/o'zgarganda tegishli xodimga (o'qituvchiga) ko'rinadigan bildirishnoma. */
+/**
+ * Dars jadvali belgilanganda/o'zgarganda tegishli xodimga (o'qituvchiga) ko'rinadigan bildirishnoma.
+ */
 model EmployeeNotification {
   id         String   @id @default(uuid())
   branchId   String   @map("branch_id")
@@ -913,7 +932,7 @@ model TopicQuestion {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  topic LessonTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  topic                   LessonTopic                  @relation(fields: [topicId], references: [id], onDelete: Cascade)
   weeklyAssessmentAnswers WeeklyCoinAssessmentAnswer[]
 
   @@index([topicId])
@@ -1121,21 +1140,83 @@ model Invoice {
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
 
-  organization  Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  branch        Branch              @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  child         Child               @relation(fields: [childId], references: [id], onDelete: Cascade)
-  allocations   PaymentAllocation[]
-  ledgerEntries LedgerEntry[]
+  organization       Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch             Branch                    @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  child              Child                     @relation(fields: [childId], references: [id], onDelete: Cascade)
+  allocations        PaymentAllocation[]
+  ledgerEntries      LedgerEntry[]
+  reminderDispatches PaymentReminderDispatch[]
 
   @@index([organizationId, branchId, status])
   @@index([childId])
   @@map("invoices")
 }
 
+// ---------------------------------------------------------------------------
+// To'lov eslatmasi (payment reminder) — ota-ona kabinetida muddati
+// yaqinlashgan/o'tgan hisob-fakturalar haqida ichki (tizim ichi) eslatma.
+// Tashqi SMS/push integratsiyasi yo'q — faqat kabinetda ko'rinadigan karta.
+// ---------------------------------------------------------------------------
+
+model PaymentReminderSettings {
+  id              String   @id @default(uuid())
+  organizationId  String   @map("organization_id")
+  branchId        String   @unique @map("branch_id")
+  isEnabled       Boolean  @default(true) @map("is_enabled")
+  daysBeforeDue   Int      @default(5) @map("days_before_due")
+  daysAfterDue    Int      @default(5) @map("days_after_due")
+  sendTimes       String[] @default(["09:00"]) @map("send_times")
+  messageTemplate String   @default("Hurmatli ota-ona! {childName} uchun to'lov muddati {dueDate}. Iltimos, to'lovni amalga oshiring.") @map("message_template") @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@map("payment_reminder_settings")
+}
+
+/// Yuborilgan eslatmalar tarixi (audit/hisobot uchun) — bir kunda bir slot
+/// (`sendTime`) uchun bitta hisob-fakturaga bitta yozuv (`@@unique`).
+model PaymentReminderDispatch {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  branchId       String   @map("branch_id")
+  childId        String   @map("child_id")
+  invoiceId      String   @map("invoice_id")
+  sendTime       String   @map("send_time") // "09:00" — qaysi slot bo'yicha
+  dispatchDate   DateTime @map("dispatch_date") @db.Date // faqat sana, vaqtsiz — bir kunda bir marta shu slot uchun
+  message        String   @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  child        Child        @relation(fields: [childId], references: [id], onDelete: Cascade)
+  invoice      Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@unique([invoiceId, sendTime, dispatchDate])
+  @@index([branchId, dispatchDate])
+  @@map("payment_reminder_dispatches")
+}
+
 enum PaymentMethod {
   CASH
   BANK_TRANSFER
   CARD
+  CLICK
+  PAYME
+  UZUM
+  MOBILE_APP
+  BANKOMAT
+}
+
+/// Ota-ona ekrandagi chekni tasdiqlashi kutilayotgan (PENDING), moliyachi
+/// haqiqiy to'lov deb tasdiqlagan (APPROVED) yoki rad etgan (REJECTED)
+/// holati. Faqat APPROVED bo'lganda haqiqiy Payment/LedgerEntry yaratiladi.
+enum PaymentReceiptStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum PaymentStatus {
@@ -1164,10 +1245,51 @@ model Payment {
   recordedBy    TenantUser?         @relation(fields: [recordedByUserId], references: [id], onDelete: SetNull)
   allocations   PaymentAllocation[]
   ledgerEntries LedgerEntry[]
+  receipt       PaymentReceipt?
 
   @@index([organizationId, branchId])
   @@index([childId])
   @@map("payments")
+}
+
+/**
+ * Ota-ona kabinetidan yuklangan "to'lov cheki" (screenshot/rasm) — pul
+ * o'tkazgani haqidagi da'vosi. Moliyachi tasdiqlaguncha (APPROVED) bolaning
+ * balansi/ledgeriga hech qanday ta'sir qilmaydi; tasdiqlansa haqiqiy
+ * Payment + LedgerEntry (+ PaymentAllocation) `BillingService.recordPayment`
+ * orqali yaratiladi va shu yerga bog'lanadi (`paymentId`).
+ */
+model PaymentReceipt {
+  id               String               @id @default(uuid())
+  organizationId   String               @map("organization_id")
+  branchId         String               @map("branch_id")
+  childId          String               @map("child_id")
+  guardianId       String               @map("guardian_id")
+  claimedAmount    Decimal              @map("claimed_amount") @db.Decimal(12, 2)
+  currency         String               @default("UZS")
+  image            Bytes?
+  imageKey         String?              @map("image_key")
+  mimeType         String               @map("mime_type")
+  status           PaymentReceiptStatus @default(PENDING)
+  reviewNote       String?              @map("review_note") @db.Text
+  reviewedByUserId String?              @map("reviewed_by_user_id")
+  reviewedAt       DateTime?            @map("reviewed_at")
+  paymentId        String?              @unique @map("payment_id")
+  createdAt        DateTime             @default(now()) @map("created_at")
+  updatedAt        DateTime             @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  child        Child        @relation(fields: [childId], references: [id], onDelete: Cascade)
+  guardian     Guardian     @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+  reviewedBy   TenantUser?  @relation("PaymentReceiptReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  payment      Payment?     @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, branchId])
+  @@index([childId])
+  @@index([status])
+  @@index([guardianId])
+  @@map("payment_receipts")
 }
 
 model PaymentAllocation {
@@ -1220,7 +1342,7 @@ model LedgerEntry {
 model CallLog {
   id           String   @id @default(uuid())
   branchId     String   @map("branch_id")
-  /// DEBT | ABSENT | LEAD
+  /// DEBT | ABSENT | LEAD | FAKE_RECEIPT
   kind         String
   /// Bola yoki ariza id si (kind ga qarab)
   subjectId    String   @map("subject_id")
@@ -1390,12 +1512,15 @@ model Product {
   priceCoins      Int       @default(0) @map("price_coins")
   quantity        Int       @default(0)
   image1          Bytes?    @map("image1")
+  image1Key       String?   @map("image1_key")
   image1MimeType  String?   @map("image1_mime_type")
   hasImage1       Boolean   @default(false) @map("has_image1")
   image2          Bytes?    @map("image2")
+  image2Key       String?   @map("image2_key")
   image2MimeType  String?   @map("image2_mime_type")
   hasImage2       Boolean   @default(false) @map("has_image2")
   image3          Bytes?    @map("image3")
+  image3Key       String?   @map("image3_key")
   image3MimeType  String?   @map("image3_mime_type")
   hasImage3       Boolean   @default(false) @map("has_image3")
   imagesUpdatedAt DateTime? @map("images_updated_at")
@@ -1568,12 +1693,12 @@ model Lead {
   assignedToUserId String?    @map("assigned_to_user_id")
   convertedChildId String?    @unique @map("converted_child_id")
   // Keyingi bog'lanish uchun eslatma — o'tib ketgan bo'lsa UI'da ajratib ko'rsatiladi.
-  followUpDate DateTime? @map("follow_up_date") @db.Date
+  followUpDate     DateTime?  @map("follow_up_date") @db.Date
   // "Sinov kuni belgilandi" bosqichi uchun haqiqiy sana (avval faqat status bo'lgan).
-  trialDate    DateTime? @map("trial_date") @db.Date
+  trialDate        DateTime?  @map("trial_date") @db.Date
   // "Shartnoma" bosqichi uchun shartnoma imzolangan/imzolanadigan sana va izoh.
-  contractDate DateTime? @map("contract_date") @db.Date
-  contractNote String?   @map("contract_note")
+  contractDate     DateTime?  @map("contract_date") @db.Date
+  contractNote     String?    @map("contract_note")
   createdAt        DateTime   @default(now()) @map("created_at")
   updatedAt        DateTime   @updatedAt @map("updated_at")
 
@@ -1710,9 +1835,9 @@ enum GuardianRelation {
 }
 
 model Guardian {
-  id             String   @id @default(uuid())
-  organizationId String   @map("organization_id")
-  fullName       String   @map("full_name")
+  id             String    @id @default(uuid())
+  organizationId String    @map("organization_id")
+  fullName       String    @map("full_name")
   phone          String
   // Ota-ona kabineti. Login — telefon raqami, shuning uchun u tashkilot
   // ichida unikal. Parol qo'yilmagan bo'lsa kabinet hali ochilmagan:
@@ -1720,12 +1845,13 @@ model Guardian {
   passwordHash   String?   @map("password_hash")
   isActive       Boolean   @default(true) @map("is_active")
   lastLoginAt    DateTime? @map("last_login_at")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
-  organization  Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  children      ChildGuardian[]
-  refreshTokens GuardianRefreshToken[]
+  organization    Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  children        ChildGuardian[]
+  refreshTokens   GuardianRefreshToken[]
+  paymentReceipts PaymentReceipt[]
 
   @@unique([organizationId, phone])
   @@index([organizationId])
@@ -1822,21 +1948,24 @@ enum PayrollStatus {
 }
 
 model PayrollEntry {
-  id            String        @id @default(uuid())
-  employeeId    String        @map("employee_id")
-  branchId      String        @map("branch_id")
-  period        String
-  baseAmount    Decimal       @default(0) @map("base_amount") @db.Decimal(14, 2)
-  bonusAmount   Decimal       @default(0) @map("bonus_amount") @db.Decimal(14, 2)
-  penaltyAmount Decimal       @default(0) @map("penalty_amount") @db.Decimal(14, 2)
+  id              String        @id @default(uuid())
+  employeeId      String        @map("employee_id")
+  branchId        String        @map("branch_id")
+  period          String
+  baseAmount      Decimal       @default(0) @map("base_amount") @db.Decimal(14, 2)
+  bonusAmount     Decimal       @default(0) @map("bonus_amount") @db.Decimal(14, 2)
+  penaltyAmount   Decimal       @default(0) @map("penalty_amount") @db.Decimal(14, 2)
   // Jarimadan farqli — soliq, sug'urta, avans kabi rasmiy ushlab qolish.
-  deductionAmount Decimal     @default(0) @map("deduction_amount") @db.Decimal(14, 2)
-  totalAmount   Decimal       @default(0) @map("total_amount") @db.Decimal(14, 2)
-  status        PayrollStatus @default(DRAFT)
-  paidAt        DateTime?     @map("paid_at")
-  note          String?
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @updatedAt @map("updated_at")
+  deductionAmount Decimal       @default(0) @map("deduction_amount") @db.Decimal(14, 2)
+  totalAmount     Decimal       @default(0) @map("total_amount") @db.Decimal(14, 2)
+  // Moliyachi "To'lash" paytida qo'lda kiritgan haqiqiy summa — hisoblangan
+  // totalAmount'dan farq qilishi mumkin (qisman to'lov yoki avans).
+  paidAmount      Decimal       @default(0) @map("paid_amount") @db.Decimal(14, 2)
+  status          PayrollStatus @default(DRAFT)
+  paidAt          DateTime?     @map("paid_at")
+  note            String?
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
 
   employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   branch   Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
@@ -1874,29 +2003,29 @@ enum FacePersonType {
 }
 
 model FaceIdDevice {
-  id             String             @id @default(uuid())
-  organizationId String             @map("organization_id")
-  branchId       String             @map("branch_id")
-  name           String
-  model          String             @default("DS-K1T342MX")
-  serialNumber   String?            @unique @map("serial_number")
-  ipAddress      String?            @map("ip_address")
+  id                String             @id @default(uuid())
+  organizationId    String             @map("organization_id")
+  branchId          String             @map("branch_id")
+  name              String
+  model             String             @default("DS-K1T342MX")
+  serialNumber      String?            @unique @map("serial_number")
+  ipAddress         String?            @map("ip_address")
   // ISAPI (HTTP) porti va qurilma administratori logini. Parol qaytarib
   // olinadigan holda shifrlanadi (AES-256-GCM, kalit — DEVICE_SECRET_KEY):
   // agent uni qurilmaga Digest auth bilan ulanish uchun oladi.
-  port              Int       @default(80)
+  port              Int                @default(80)
   username          String?
-  passwordEncrypted Bytes?    @map("password_encrypted")
+  passwordEncrypted Bytes?             @map("password_encrypted")
   // Agent tokenining sha256 hash'i. Tokenning o'zi faqat yaratilganda bir
   // marta ko'rsatiladi.
-  agentTokenHash    String?   @unique @map("agent_token_hash")
+  agentTokenHash    String?            @unique @map("agent_token_hash")
   // Agent oxirgi marta murojaat qilgan payt — "onlayn" belgisi shundan.
-  lastSeenAt        DateTime? @map("last_seen_at")
-  location       String?
-  status         FaceIdDeviceStatus @default(ACTIVE)
-  notes          String?
-  createdAt      DateTime           @default(now()) @map("created_at")
-  updatedAt      DateTime           @updatedAt @map("updated_at")
+  lastSeenAt        DateTime?          @map("last_seen_at")
+  location          String?
+  status            FaceIdDeviceStatus @default(ACTIVE)
+  notes             String?
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
 
   organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   branch       Branch           @relation(fields: [branchId], references: [id], onDelete: Cascade)
@@ -1910,18 +2039,18 @@ model FaceIdDevice {
 }
 
 model FaceEnrollment {
-  id             String                @id @default(uuid())
-  organizationId String                @map("organization_id")
-  branchId       String                @map("branch_id")
-  deviceId       String                @map("device_id")
-  personType     FacePersonType        @map("person_type")
-  employeeId     String?               @map("employee_id")
-  childId        String?               @map("child_id")
-  status         FaceEnrollmentStatus  @default(PENDING)
+  id             String               @id @default(uuid())
+  organizationId String               @map("organization_id")
+  branchId       String               @map("branch_id")
+  deviceId       String               @map("device_id")
+  personType     FacePersonType       @map("person_type")
+  employeeId     String?              @map("employee_id")
+  childId        String?              @map("child_id")
+  status         FaceEnrollmentStatus @default(PENDING)
   notes          String?
-  registeredAt   DateTime?             @map("registered_at")
-  createdAt      DateTime              @default(now()) @map("created_at")
-  updatedAt      DateTime              @updatedAt @map("updated_at")
+  registeredAt   DateTime?            @map("registered_at")
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
@@ -2169,7 +2298,8 @@ model DiaryEntry {
   @@map("diary_entries")
 }
 
-/// Kun lahzasi — rasm yoki qisqa video. Fayl hozircha bazada saqlanadi;
+/// Kun lahzasi — rasm yoki qisqa video. R2 sozlangan bo'lsa `dataKey`/`posterKey`
+/// (obyekt kaliti) to'ldiriladi, aks holda fayl bevosita bazada saqlanadi;
 /// ro'yxat so'rovlari `data` ustunini hech qachon tanlamaydi.
 model DiaryMedia {
   id              String         @id @default(uuid())
@@ -2182,9 +2312,11 @@ model DiaryMedia {
   kind            DiaryMediaKind
   mimeType        String         @map("mime_type")
   sizeBytes       Int            @map("size_bytes")
-  data            Bytes
+  data            Bytes?
+  dataKey         String?        @map("data_key")
   /// Video uchun muqova kadri (brauzerda olinadi)
   posterData      Bytes?         @map("poster_data")
+  posterKey       String?        @map("poster_key")
   posterMimeType  String?        @map("poster_mime_type")
   width           Int?
   height          Int?
@@ -2285,13 +2417,13 @@ model LandingContentBlock {
 
 /// "Guruhlarimiz" bo'limi — landing-web bosh sahifasidagi guruh kartochkalari.
 model LandingGroup {
-  id        String   @id @default(uuid())
+  id        String                @id @default(uuid())
   name      String
-  slug      String   @unique
-  photoPath String?  @map("photo_path")
-  order     Int      @default(0)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  slug      String                @unique
+  photoPath String?               @map("photo_path")
+  order     Int                   @default(0)
+  createdAt DateTime              @default(now()) @map("created_at")
+  updatedAt DateTime              @updatedAt @map("updated_at")
   photos    LandingGroupPhoto[]
   students  LandingGroupStudent[]
 

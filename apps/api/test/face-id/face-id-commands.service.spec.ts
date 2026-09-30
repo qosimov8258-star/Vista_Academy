@@ -15,7 +15,7 @@ describe("FaceIdCommandsService — buyruqlar navbati", () => {
 
   beforeEach(async () => {
     prisma = createFakePrisma();
-    service = new FaceIdCommandsService(prisma as never);
+    service = new FaceIdCommandsService(prisma as never, {} as never);
     const d = await prisma.faceIdDevice.create({ data: { organizationId: ORG, branchId: BRANCH, name: "Kirish" } });
     // Boshqa filial va o'chirilgan qurilma — ularga buyruq ketmasligi kerak
     await prisma.faceIdDevice.create({ data: { organizationId: ORG, branchId: "branch-2", name: "Boshqa filial" } });
@@ -141,7 +141,7 @@ describe("FaceIdCommandsService — bolalar", () => {
 
   beforeEach(async () => {
     prisma = createFakePrisma();
-    service = new FaceIdCommandsService(prisma as never);
+    service = new FaceIdCommandsService(prisma as never, {} as never);
     const d = await prisma.faceIdDevice.create({ data: { organizationId: ORG, branchId: BRANCH, name: "Kirish" } });
     device = { id: d.id, organizationId: ORG, branchId: BRANCH, name: "Kirish" };
     const c = await prisma.child.create({

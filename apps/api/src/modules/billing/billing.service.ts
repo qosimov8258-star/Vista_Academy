@@ -1,7 +1,13 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { InvoiceStatus, Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
-import { TenantAuthenticatedUser, TenantScope, requireMoneyScope, toTenantScope } from "../iam/tenant-auth.types";
+import {
+  TenantAuthenticatedUser,
+  TenantScope,
+  requireMoneyScope,
+  resolveReadBranchFilter,
+  toTenantScope,
+} from "../iam/tenant-auth.types";
 import { AuditLogService } from "../audit-log/audit-log.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { CreateInvoiceDto } from "./dto/create-invoice.dto";
@@ -590,9 +596,9 @@ export class BillingService {
   async networkSummary(scope: TenantScope, query: FinanceSummaryQueryDto) {
     assertFinanceReader(scope);
     const period = query.period ?? currentPeriodString();
-    const branchId = scope.branchId ?? query.branchId;
+    const branchId = resolveReadBranchFilter(scope, query.branchId);
 
-    const [invoices, branches, groups, collectedThisPeriod, byMethodGrouped] = await Promise.all([
+    const [invoices, branches, groups, collectedThisPeriod, byMethodGrouped, periodPayments] = await Promise.all([
       this.prisma.invoice.findMany({
         where: { organizationId: scope.organizationId, branchId, period },
         select: {
@@ -634,9 +640,28 @@ export class BillingService {
         _sum: { amount: true },
         _count: { _all: true },
       }),
+      // Haftalar bo'yicha to'lov tendensiyasi — bosh sahifadagi grafik uchun.
+      this.prisma.payment.findMany({
+        where: {
+          organizationId: scope.organizationId,
+          branchId,
+          status: "COMPLETED",
+          ...periodRange(period),
+        },
+        select: { amount: true, createdAt: true },
+      }),
     ]);
 
-    const byMethod = { CASH: { amount: 0, count: 0 }, BANK_TRANSFER: { amount: 0, count: 0 }, CARD: { amount: 0, count: 0 } };
+    const byMethod = {
+      CASH: { amount: 0, count: 0 },
+      BANK_TRANSFER: { amount: 0, count: 0 },
+      CARD: { amount: 0, count: 0 },
+      CLICK: { amount: 0, count: 0 },
+      PAYME: { amount: 0, count: 0 },
+      UZUM: { amount: 0, count: 0 },
+      MOBILE_APP: { amount: 0, count: 0 },
+      BANKOMAT: { amount: 0, count: 0 },
+    };
     for (const row of byMethodGrouped) {
       byMethod[row.method] = { amount: Number(row._sum.amount ?? 0), count: row._count._all };
     }
@@ -705,6 +730,7 @@ export class BillingService {
         billed: value.billed / 100,
         paid: value.paid / 100,
       })),
+      weeklyPayments: buildWeeklyPayments(period, periodPayments),
     };
   }
 
@@ -712,7 +738,7 @@ export class BillingService {
   async networkChildren(scope: TenantScope, query: FinanceChildrenQueryDto) {
     assertFinanceReader(scope);
     const period = query.period ?? currentPeriodString();
-    const branchId = scope.branchId ?? query.branchId;
+    const branchId = resolveReadBranchFilter(scope, query.branchId);
 
     const invoices = await this.prisma.invoice.findMany({
       where: {
@@ -891,7 +917,7 @@ function assertFinanceReader(scope: TenantScope) {
   }
 }
 
-function currentPeriodString(): string {
+export function currentPeriodString(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tashkent", year: "numeric", month: "2-digit" })
     .format(new Date())
     .slice(0, 7);
@@ -910,6 +936,36 @@ function periodRange(period: string): { createdAt: { gte: Date; lt: Date } } {
 }
 
 const DEFAULT_TIMEZONE_UTC_OFFSET_HOURS = 5; // Asia/Tashkent, fixed offset (no DST)
+
+function daysInPeriod(period: string): number {
+  const [year, month] = period.split("-").map(Number);
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+function tashkentDayOfMonth(date: Date): number {
+  return Number(new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tashkent", day: "2-digit" }).format(date));
+}
+
+/**
+ * Oyni 7 kunlik haftalarga bo'lib, har biriga shu kunlarda tushgan to'lovlarni
+ * yig'adi — bosh sahifadagi "haftalar bo'yicha to'lov" grafigi uchun.
+ */
+function buildWeeklyPayments(period: string, payments: { amount: Prisma.Decimal; createdAt: Date }[]) {
+  const weekCount = Math.ceil(daysInPeriod(period) / 7);
+  const weeks = Array.from({ length: weekCount }, (_, i) => ({
+    week: i + 1,
+    label: `${i + 1}-hafta`,
+    amount: 0,
+    count: 0,
+  }));
+  for (const payment of payments) {
+    const day = tashkentDayOfMonth(payment.createdAt);
+    const index = Math.min(weekCount - 1, Math.floor((day - 1) / 7));
+    weeks[index].amount += Number(payment.amount);
+    weeks[index].count += 1;
+  }
+  return weeks;
+}
 
 function currentMonthRange(): { start: Date; end: Date } {
   const parts = new Intl.DateTimeFormat("en-CA", {

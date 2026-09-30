@@ -1,10 +1,14 @@
-import { BadRequestException, Injectable, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 import * as argon2 from "argon2";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantAuthenticatedUser } from "../iam/tenant-auth.types";
+import { R2Service } from "../storage/r2.service";
+import { R2_CATEGORY } from "../storage/r2.constants";
 import { UpdateProfileDto } from "./dto/update-profile.dto";
 import { UpdateThemeDto } from "./dto/update-theme.dto";
 import { ChangePasswordDto } from "./dto/change-password.dto";
+import { ChangeLoginDto } from "./dto/change-login.dto";
 import { UpdateAvatarDto } from "./dto/update-avatar.dto";
 
 /** Rasm 256x256 gacha kichraytirilgani uchun bundan oshmasligi kerak. */
@@ -12,7 +16,10 @@ const MAX_AVATAR_BYTES = 300 * 1024;
 
 @Injectable()
 export class ProfileService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly r2: R2Service,
+  ) {}
 
   async updateProfile(user: TenantAuthenticatedUser, dto: UpdateProfileDto) {
     const updated = await this.prisma.tenantUser.update({
@@ -66,6 +73,27 @@ export class ProfileService {
     return { changed: true };
   }
 
+  /**
+   * Loginni o'zgartiradi. Parol bilan farqli o'laroq mavjud seanslar
+   * userId bo'yicha ishlayveradi, shuning uchun boshqa qurilmalardan
+   * chiqarib yuborish shart emas.
+   */
+  async changeLogin(user: TenantAuthenticatedUser, dto: ChangeLoginDto) {
+    const login = dto.login.trim().toLowerCase();
+    try {
+      return await this.prisma.tenantUser.update({
+        where: { id: user.id },
+        data: { login },
+        select: { login: true },
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+        throw new ConflictException("Bu login band — boshqasini tanlang");
+      }
+      throw err;
+    }
+  }
+
   async updateAvatar(user: TenantAuthenticatedUser, dto: UpdateAvatarDto) {
     const [header, base64] = dto.image.split(",", 2);
     const mimeType = header.slice("data:".length, header.indexOf(";"));
@@ -78,26 +106,50 @@ export class ProfileService {
       throw new BadRequestException("Rasm hajmi juda katta");
     }
 
+    let avatar: Buffer<ArrayBuffer> | null = buffer;
+    let avatarKey: string | null = null;
+    let previousKey: string | null = null;
+    if (this.r2.enabled) {
+      const previous = await this.prisma.tenantUser.findUniqueOrThrow({
+        where: { id: user.id },
+        select: { avatarKey: true },
+      });
+      previousKey = previous.avatarKey;
+      avatarKey = this.r2.buildKey(user.organizationId, R2_CATEGORY.TENANT_USER_AVATAR);
+      await this.r2.uploadBuffer(avatarKey, buffer, mimeType);
+      avatar = null;
+    }
+
     const updated = await this.prisma.tenantUser.update({
       where: { id: user.id },
-      data: { avatar: buffer, avatarMimeType: mimeType, avatarUpdatedAt: new Date() },
+      data: { avatar, avatarKey, avatarMimeType: mimeType, avatarUpdatedAt: new Date() },
       select: { avatarUpdatedAt: true },
     });
+    // DB yozuvi muvaffaqiyatli bo'lgandan KEYIN o'chiriladi — aks holda DB
+    // yozuvi muvaffaqiyatsiz bo'lsa, eski qator allaqachon o'chirilgan keyga
+    // ishora qilib qolib ketardi.
+    if (previousKey) {
+      await this.r2.deleteObject(previousKey);
+    }
     return { avatarUpdatedAt: updated.avatarUpdatedAt };
   }
 
   async removeAvatar(user: TenantAuthenticatedUser) {
-    await this.prisma.tenantUser.update({
+    const previous = await this.prisma.tenantUser.update({
       where: { id: user.id },
-      data: { avatar: null, avatarMimeType: null, avatarUpdatedAt: null },
+      data: { avatar: null, avatarKey: null, avatarMimeType: null, avatarUpdatedAt: null },
+      select: { avatarKey: true },
     });
+    if (previous.avatarKey) {
+      await this.r2.deleteObject(previous.avatarKey);
+    }
     return { avatarUpdatedAt: null };
   }
 
   async readAvatar(user: TenantAuthenticatedUser) {
     const record = await this.prisma.tenantUser.findUniqueOrThrow({
       where: { id: user.id },
-      select: { avatar: true, avatarMimeType: true },
+      select: { avatar: true, avatarKey: true, avatarMimeType: true },
     });
     return record;
   }

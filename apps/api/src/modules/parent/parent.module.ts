@@ -10,9 +10,11 @@ import { ParentUsefulService } from "./parent-useful.service";
 import { ParentDiaryController } from "./parent-diary.controller";
 import { ParentDiaryService } from "./parent-diary.service";
 import { DiaryModule } from "../diary/diary.module";
+import { PaymentRemindersModule } from "../payment-reminders/payment-reminders.module";
+import { PaymentReceiptsModule } from "../payment-receipts/payment-receipts.module";
 
 @Module({
-  imports: [PassportModule, JwtModule.register({}), DiaryModule],
+  imports: [PassportModule, JwtModule.register({}), DiaryModule, PaymentRemindersModule, PaymentReceiptsModule],
   controllers: [ParentController, ParentUsefulController, ParentDiaryController],
   providers: [ParentAuthService, ParentService, ParentJwtStrategy, ParentUsefulService, ParentDiaryService],
   exports: [ParentAuthService],

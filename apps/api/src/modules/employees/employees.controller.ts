@@ -1,26 +1,12 @@
-import {
-  BadRequestException,
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Header,
-  Headers,
-  NotFoundException,
-  Param,
-  Patch,
-  Post,
-  Put,
-  Query,
-  Res,
-  UseGuards,
-} from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, Get, Header, Headers, Param, Patch, Post, Put, Query, Res, UseGuards } from "@nestjs/common";
 import type { Response } from "express";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { Public } from "../../common/decorators/public.decorator";
+import { sendMediaResponse } from "../../common/media-response";
 import { TenantJwtAuthGuard } from "../iam/guards/tenant-jwt-auth.guard";
 import { CurrentTenantUser } from "../iam/decorators/current-tenant-user.decorator";
 import { TenantAuthenticatedUser, toTenantScope } from "../iam/tenant-auth.types";
+import { R2Service } from "../storage/r2.service";
 import { EmployeesService } from "./employees.service";
 import { CreateEmployeeDto, EmployeeAccountDto } from "./dto/create-employee.dto";
 import { UpdateEmployeeCredentialsDto } from "./dto/update-employee-credentials.dto";
@@ -36,7 +22,10 @@ import { EmployeeQueryDto } from "./dto/employee-query.dto";
 @UseGuards(TenantJwtAuthGuard)
 @Controller("app/employees")
 export class EmployeesController {
-  constructor(private readonly employeesService: EmployeesService) {}
+  constructor(
+    private readonly employeesService: EmployeesService,
+    private readonly r2: R2Service,
+  ) {}
 
   @Get()
   findAll(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query() query: EmployeeQueryDto) {
@@ -183,10 +172,11 @@ export class EmployeesController {
     @Res() res: Response,
   ) {
     const record = await this.employeesService.readAvatar(toTenantScope(user), id);
-    if (!record.avatar) {
-      throw new NotFoundException("Xodimning surati yo'q");
-    }
-    res.setHeader("Content-Type", record.avatarMimeType ?? "image/jpeg");
-    res.send(Buffer.from(record.avatar));
+    await sendMediaResponse(
+      res,
+      this.r2,
+      { key: record.avatarKey, bytes: record.avatar, mimeType: record.avatarMimeType ?? "image/jpeg" },
+      "Xodimning surati yo'q",
+    );
   }
 }

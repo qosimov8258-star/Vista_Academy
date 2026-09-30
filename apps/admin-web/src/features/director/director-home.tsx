@@ -117,26 +117,25 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
       </header>
 
       {/* Bugun — davomat halqalari */}
-      <section className={clsx(styles.hero, styles.rise, "relative overflow-hidden rounded-[32px] p-5 text-white md:p-7")} style={{ animationDelay: "40ms" }}>
-        <div className={styles.heroGlow} aria-hidden="true" />
+      <section className={clsx(styles.hero, styles.rise, "relative overflow-hidden rounded-[var(--radius-xl)] p-5 md:p-7")} style={{ animationDelay: "40ms" }}>
         <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
           <div className="max-w-[340px]">
-            <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--accent-light)]/70">Bugun bog&apos;chada</p>
-            <p className="mt-2 text-[22px] font-bold leading-snug tracking-[-0.015em] md:text-[26px]">
+            <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">Bugun bog&apos;chada</p>
+            <p className="mt-2 text-[22px] font-bold leading-snug tracking-[-0.015em] text-[var(--color-text)] md:text-[26px]">
               {loading
                 ? "Yuklanmoqda…"
                 : !attendanceStarted
                   ? "Davomat hali belgilanmagan"
                   : `${children} boladan ${childrenPresent} tasi keldi`}
             </p>
-            <p className="mt-1.5 text-[14px] text-[var(--accent-pale)]/60">
+            <p className="mt-1.5 text-[14px] text-[var(--color-text-muted)]">
               {org.branches.length} ta filial · {children} bola · {employees} xodim
             </p>
           </div>
 
           <div className="flex gap-3 md:gap-4">
-            <RingStat label="Bolalar" present={childrenPresent} absent={childrenAbsent} total={children} color="var(--accent-light)" />
-            <RingStat label="Xodimlar" present={staffPresent} absent={staffAbsent} total={employees} color="var(--accent-pale)" />
+            <RingStat label="Bolalar" present={childrenPresent} absent={childrenAbsent} total={children} color="var(--color-primary)" />
+            <RingStat label="Xodimlar" present={staffPresent} absent={staffAbsent} total={employees} color="var(--accent-bright)" />
           </div>
         </div>
       </section>
@@ -313,17 +312,18 @@ function RingStat({ label, present, absent, total, color }: { label: string; pre
   const pct = total > 0 ? Math.min(1, present / total) : 0;
   const absentPct = total > 0 ? Math.min(1 - pct, absent / total) : 0;
   return (
-    <div className="flex min-w-0 flex-1 flex-col items-center rounded-[26px] bg-white/[0.06] px-3 py-4 md:w-[150px] md:flex-none">
+    <div className="flex min-w-0 flex-1 flex-col items-center rounded-[var(--radius-lg)] bg-[var(--color-surface-sunken)] px-3 py-4 md:w-[150px] md:flex-none">
       <div className="relative" style={{ width: size, height: size }}>
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
-          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth={stroke} />
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--color-border-hair)" strokeWidth={stroke} />
           {absentPct > 0 && (
             <circle
               cx={size / 2}
               cy={size / 2}
               r={r}
               fill="none"
-              stroke="rgba(255,107,107,0.55)"
+              stroke="var(--color-danger)"
+              strokeOpacity={0.5}
               strokeWidth={stroke}
               strokeLinecap="round"
               strokeDasharray={`${absentPct * c} ${c}`}
@@ -346,12 +346,12 @@ function RingStat({ label, present, absent, total, color }: { label: string; pre
           )}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-[24px] font-bold leading-none tabular-nums">{present}</span>
-          <span className="mt-0.5 text-[12px] font-medium text-white/55">/ {total}</span>
+          <span className="text-[24px] font-bold leading-none tabular-nums text-[var(--color-text)]">{present}</span>
+          <span className="mt-0.5 text-[12px] font-medium text-[var(--color-text-muted)]">/ {total}</span>
         </div>
       </div>
-      <p className="mt-2.5 text-[14px] font-semibold">{label}</p>
-      <p className="text-[12px] text-white/55">{absent > 0 ? `${absent} kelmadi` : total > 0 && present === 0 ? "belgilanmagan" : "keldi"}</p>
+      <p className="mt-2.5 text-[14px] font-semibold text-[var(--color-text)]">{label}</p>
+      <p className="text-[12px] text-[var(--color-text-muted)]">{absent > 0 ? `${absent} kelmadi` : total > 0 && present === 0 ? "belgilanmagan" : "keldi"}</p>
     </div>
   );
 }

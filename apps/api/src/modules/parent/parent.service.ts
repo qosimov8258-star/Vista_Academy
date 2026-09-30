@@ -1,7 +1,8 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import type { AttendanceStatus } from "@prisma/client";
+import { InvoiceStatus, type AttendanceStatus } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
 import { AuthenticatedParent } from "./parent-auth.types";
+import { PaymentRemindersService, daysBetween, tashkentTodayUtcMidnight } from "../payment-reminders/payment-reminders.service";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 
@@ -21,7 +22,10 @@ function addDays(value: Date, days: number): Date {
 
 @Injectable()
 export class ParentService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly paymentRemindersService: PaymentRemindersService,
+  ) {}
 
   /** Ota-onaga biriktirilgan bolalar. Bittadan ko'p bo'lishi mumkin. */
   async children(parent: AuthenticatedParent) {
@@ -115,7 +119,7 @@ export class ParentService {
     const child = await this.assertOwnsChild(parent, childId);
     const photo = await this.prisma.menuPhoto.findFirst({
       where: { id: photoId, branchId: child.branchId },
-      select: { image: true, mimeType: true },
+      select: { image: true, imageKey: true, mimeType: true },
     });
     if (!photo) {
       throw new NotFoundException("Rasm topilmadi");
@@ -237,19 +241,88 @@ export class ParentService {
       where: { id: productId, organizationId: parent.organizationId, branchId: { in: branchIds } },
       select: {
         image1: position === "1",
+        image1Key: position === "1",
         image1MimeType: position === "1",
         image2: position === "2",
+        image2Key: position === "2",
         image2MimeType: position === "2",
         image3: position === "3",
+        image3Key: position === "3",
         image3MimeType: position === "3",
       },
     });
     if (!product) {
       throw new NotFoundException("Mahsulot topilmadi");
     }
-    if (position === "1") return { image: product.image1, mimeType: product.image1MimeType };
-    if (position === "2") return { image: product.image2, mimeType: product.image2MimeType };
-    return { image: product.image3, mimeType: product.image3MimeType };
+    if (position === "1") return { image: product.image1, key: product.image1Key, mimeType: product.image1MimeType };
+    if (position === "2") return { image: product.image2, key: product.image2Key, mimeType: product.image2MimeType };
+    return { image: product.image3, key: product.image3Key, mimeType: product.image3MimeType };
+  }
+
+  /**
+   * To'lov eslatmasi kartasi — faqat `ChildGuardian.canViewFinance` yoqilgan
+   * ota-onaga ko'rinadi. Hisob-kitob har safar jonli qilinadi (cron/dispatch
+   * tarixiga bog'liq emas), shuning uchun kabinet ochilgan har lahzada aniq
+   * holatni ko'rsatadi. To'lanmaguncha ko'rinishda qoladi — hatto eslatma
+   * oynasidan (`daysAfterDue`) uzoq chiqib ketgan qarzdorlik uchun ham.
+   */
+  async paymentReminder(parent: AuthenticatedParent, childId: string) {
+    const link = await this.prisma.childGuardian.findFirst({
+      where: { guardianId: parent.id, childId },
+      select: {
+        canViewFinance: true,
+        child: { select: { id: true, fullName: true, branchId: true, organizationId: true } },
+      },
+    });
+    if (!link || link.child.organizationId !== parent.organizationId) {
+      throw new NotFoundException("Bola topilmadi");
+    }
+    if (!link.canViewFinance) {
+      return { visible: false as const };
+    }
+
+    const invoice = await this.prisma.invoice.findFirst({
+      where: {
+        childId: link.child.id,
+        status: { in: [InvoiceStatus.PENDING, InvoiceStatus.PARTIALLY_PAID, InvoiceStatus.OVERDUE] },
+      },
+      orderBy: { dueDate: "asc" },
+    });
+    if (!invoice) {
+      return { visible: false as const };
+    }
+
+    const settings = await this.paymentRemindersService.getSettingsForBranch(parent.organizationId, invoice.branchId);
+    if (!settings.isEnabled) {
+      return { visible: false as const };
+    }
+
+    const today = tashkentTodayUtcMidnight();
+    const daysUntilDue = daysBetween(today, invoice.dueDate);
+    // Hali erta — eslatma oynasi boshlanmagan
+    if (daysUntilDue > settings.daysBeforeDue) {
+      return { visible: false as const };
+    }
+
+    const remainingAmount = Math.max(
+      0,
+      Number(invoice.amount) - Number(invoice.discountAmount) - Number(invoice.paidAmount),
+    );
+    const message = this.paymentRemindersService.renderMessage(settings.messageTemplate, {
+      childName: link.child.fullName,
+      amount: remainingAmount,
+      dueDate: invoice.dueDate,
+      daysLeft: daysUntilDue,
+    });
+
+    return {
+      visible: true as const,
+      message,
+      amount: remainingAmount,
+      dueDate: invoice.dueDate,
+      daysUntilDue,
+      overdue: daysUntilDue < 0,
+    };
   }
 
   /** Bolaning joriy coin balansi — barcha tranzaksiyalar yig'indisi. */

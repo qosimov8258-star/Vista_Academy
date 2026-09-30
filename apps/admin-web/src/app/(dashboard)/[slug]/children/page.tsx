@@ -32,12 +32,19 @@ const STATUS_TONE: Record<string, "success" | "neutral" | "danger"> = {
   INACTIVE: "neutral",
   QUARANTINED: "danger",
 };
+const PAYMENT_STATUS_LABEL: Record<string, string> = {
+  PAID: "To'liq to'langan",
+  PARTIAL: "Yarim to'langan",
+  UNPAID: "Umuman to'lamagan",
+};
 const RELATION_LABEL: Record<string, string> = {
   MOTHER: "Onasi",
   FATHER: "Otasi",
   GRANDPARENT: "Buvi/bobo",
   OTHER: "Vasiy",
 };
+
+type ChildrenFinanceStats = { paid: number; partial: number; unpaid: number; stopped: number };
 
 /** Tarbiyachi telefon uchun qilingan o'z ro'yxatini oladi, qolgan rollar — jadvalni. */
 export default function ChildrenPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -61,8 +68,18 @@ function BranchChildren({ slug }: { slug: string }) {
   const canWrite = canWriteOperational(user?.role);
   // Tarbiyachiga bitta guruh biriktiriladi — guruh filtri, guruh va filial ustuni unga keraksiz.
   const teacher = isTeacher(user?.role);
-  const { branchId: forcedBranchId } = useBranchContext(slug);
+  const { branchId: forcedBranchId, branchSlug } = useBranchContext(slug);
   const router = useRouter();
+  // Moliyachi shu ro'yxatdan o'quvchini bosganda to'liq profilga emas, faqat
+  // to'lovlar va moliyaviy tarix ko'rinadigan alohida sahifaga o'tadi —
+  // rivojlanish, sog'liq va shu kabi bo'limlar moliyachiga aloqasi yo'q.
+  const isFinance = user?.role === "FINANCE";
+  const childHref = (childId: string) =>
+    isFinance
+      ? branchSlug
+        ? `/${slug}/${branchSlug}/finance/${childId}`
+        : `/${slug}/finance/${childId}`
+      : `/${slug}/children/${childId}`;
 
   const groupsQuery = useQuery({
     queryKey: ["groups", slug, forcedBranchId],
@@ -77,6 +94,17 @@ function BranchChildren({ slug }: { slug: string }) {
   });
   const allergyChildIds = new Set((allergiesQuery.data ?? []).map((a) => a.child.id));
 
+  // Moliyachi yozish huquqiga ega emas — "faqat ko'rish" ogohlantirishi
+  // o'rniga unga foydali bo'lgan to'lov statistikasi ko'rsatiladi.
+  const financeStatsQuery = useQuery({
+    queryKey: ["children-finance-stats", slug, forcedBranchId],
+    queryFn: () =>
+      api.get<ChildrenFinanceStats>(
+        `/app/children/finance-stats${forcedBranchId ? `?branchId=${forcedBranchId}` : ""}`,
+      ),
+    enabled: isFinance,
+  });
+
   const handleExport = async () => {
     setExporting(true);
     setExportError(null);
@@ -90,14 +118,14 @@ function BranchChildren({ slug }: { slug: string }) {
   };
 
   const childrenQuery = useQuery({
-    queryKey: ["children", slug, page, forcedBranchId, search, groupFilter, statusFilter],
+    queryKey: ["children", slug, page, forcedBranchId, search, groupFilter, statusFilter, isFinance],
     queryFn: () =>
       getPaginated<Child>(
         `/app/children?page=${page}&limit=20` +
           (forcedBranchId ? `&branchId=${forcedBranchId}` : "") +
           (search ? `&search=${encodeURIComponent(search)}` : "") +
           (groupFilter ? `&groupId=${groupFilter}` : "") +
-          (statusFilter ? `&status=${statusFilter}` : ""),
+          (statusFilter ? (isFinance ? `&paymentStatus=${statusFilter}` : `&status=${statusFilter}`) : ""),
       ),
     placeholderData: (prev) => prev,
   });
@@ -139,7 +167,7 @@ function BranchChildren({ slug }: { slug: string }) {
         </div>
       )}
 
-      {!canWrite && <ViewOnlyNote role={user?.role} />}
+      {!canWrite && (isFinance ? <ChildrenFinanceStatsBar stats={financeStatsQuery.data} /> : <ViewOnlyNote role={user?.role} />)}
 
       <Card className={`grid gap-3 p-4 sm:px-6 ${teacher ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
         <Input
@@ -173,9 +201,20 @@ function BranchChildren({ slug }: { slug: string }) {
             setStatusFilter(e.target.value);
           }}
         >
-          <option value="">Barcha holatlar</option>
-          <option value="ACTIVE">{STATUS_LABEL.ACTIVE}</option>
-          <option value="INACTIVE">{STATUS_LABEL.INACTIVE}</option>
+          {isFinance ? (
+            <>
+              <option value="">Barcha to&apos;lovlar</option>
+              <option value="PAID">{PAYMENT_STATUS_LABEL.PAID}</option>
+              <option value="PARTIAL">{PAYMENT_STATUS_LABEL.PARTIAL}</option>
+              <option value="UNPAID">{PAYMENT_STATUS_LABEL.UNPAID}</option>
+            </>
+          ) : (
+            <>
+              <option value="">Barcha holatlar</option>
+              <option value="ACTIVE">{STATUS_LABEL.ACTIVE}</option>
+              <option value="INACTIVE">{STATUS_LABEL.INACTIVE}</option>
+            </>
+          )}
         </Select>
       </Card>
 
@@ -205,7 +244,7 @@ function BranchChildren({ slug }: { slug: string }) {
                 <div className="flex items-center gap-3">
                   <ChildPhoto child={child} size={44} fallback={initials(child.fullName)} />
                   <div className="min-w-0 flex-1">
-                    <Link href={`/${slug}/children/${child.id}`} className="block truncate text-[16px] font-semibold tracking-[-0.01em] text-[var(--color-text)]">
+                    <Link href={childHref(child.id)} className="block truncate text-[16px] font-semibold tracking-[-0.01em] text-[var(--color-text)]">
                       {child.fullName}
                     </Link>
                     <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">
@@ -264,7 +303,7 @@ function BranchChildren({ slug }: { slug: string }) {
             </THead>
             <TBody>
               {childrenQuery.data.data.map((child) => (
-                <Tr key={child.id} {...rowLinkProps(`/${slug}/children/${child.id}`, (href) => router.push(href))}>
+                <Tr key={child.id} {...rowLinkProps(childHref(child.id), (href) => router.push(href))}>
                   <Td className="w-px pr-0">
                     <ChildPhoto child={child} size={36} fallback={initials(child.fullName)} />
                   </Td>
@@ -274,7 +313,7 @@ function BranchChildren({ slug }: { slug: string }) {
                     </span>
                   </Td>
                   <Td className="font-medium">
-                    <Link href={`/${slug}/children/${child.id}`} className="text-[var(--color-primary)] hover:underline">
+                    <Link href={childHref(child.id)} className="text-[var(--color-primary)] hover:underline">
                       {child.fullName}
                     </Link>
                     {allergyChildIds.has(child.id) && (
@@ -357,5 +396,34 @@ function BranchChildren({ slug }: { slug: string }) {
         <EditChildModal open={!!editingChild} onClose={() => setEditingChild(null)} slug={slug} child={editingChild} />
       )}
     </div>
+  );
+}
+
+/**
+ * Moliyachiga "Faqat ko'rish rejimi" ogohlantirishi o'rniga ko'rsatiladi —
+ * unga yozish huquqi yo'qligini takrorlashdan ko'ra, shu filialdagi
+ * bolalarning to'lov holati bo'yicha taqsimoti foydaliroq.
+ */
+function ChildrenFinanceStatsBar({ stats }: { stats: ChildrenFinanceStats | undefined }) {
+  const tiles: { label: string; value: number | undefined; toneClass: string }[] = [
+    { label: "To'lagan", value: stats?.paid, toneClass: "text-[var(--color-success)]" },
+    { label: "Yarim to'lagan", value: stats?.partial, toneClass: "text-[var(--color-warning)]" },
+    { label: "To'lamagan", value: stats?.unpaid, toneClass: "text-[var(--color-danger)]" },
+    { label: "To'xtatgan", value: stats?.stopped, toneClass: "text-[var(--color-text-muted)]" },
+  ];
+
+  return (
+    <Card className="overflow-hidden">
+      <div className="grid grid-cols-2 gap-px bg-[var(--color-separator)] sm:grid-cols-4">
+        {tiles.map((tile) => (
+          <div key={tile.label} className="bg-[var(--color-surface)] px-5 py-3.5 sm:px-6">
+            <p className="text-[12px] font-medium text-[var(--color-text-muted)]">{tile.label}</p>
+            <p className={`mt-1 text-[20px] font-semibold tabular-nums ${tile.toneClass}`}>
+              {tile.value ?? "—"}
+            </p>
+          </div>
+        ))}
+      </div>
+    </Card>
   );
 }

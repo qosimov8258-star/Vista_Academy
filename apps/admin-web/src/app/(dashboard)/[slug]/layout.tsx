@@ -1,5 +1,6 @@
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
+import { MainScroll } from "@/components/layout/main-scroll";
 import { ChefBottomBar } from "@/features/chef/chef-bottom-bar";
 import { TeacherTabBar } from "@/features/teacher/teacher-tab-bar";
 import { ThemeSync } from "@/lib/theme";
@@ -25,9 +26,9 @@ export default async function DashboardLayout({
         {/* min-h-0 bo'lmasa flex elementi mazmunidan kichrayolmaydi va scroll ishlamaydi.
             Pastki bo'shliq mobilda kattaroq — o'qituvchi uchun ekran pastida
             turadigan navigatsiya panel mazmunni yopib qo'ymasligi kerak. */}
-        <main className="min-h-0 flex-1 overflow-y-auto px-6 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-6 md:py-6">
+        <MainScroll className="min-h-0 flex-1 overflow-y-auto px-6 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-6 md:py-6">
           {children}
-        </main>
+        </MainScroll>
       </div>
       {/* Faqat oshpazga, faqat telefonda — boshqa rollar uchun hech narsa chizmaydi */}
       <ChefBottomBar slug={slug} />
