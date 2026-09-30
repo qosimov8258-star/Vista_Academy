@@ -8,8 +8,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
+import { PhoneIcon } from "@/components/ui/icons";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { CALL_KIND_LABEL, RELATION_LABEL, todayTashkent, type CallItem, type CallKind, type CallsResult } from "./shared";
+
+/** Kartaning chap chizig'i: qo'ng'iroq turini bir qarashda ajratish uchun */
+const KIND_BAR: Record<CallKind, string> = {
+  DEBT: "border-l-[var(--color-danger)]",
+  ABSENT: "border-l-[var(--color-warning)]",
+  LEAD: "border-l-[var(--accent-soft-icon)]",
+  FAKE_RECEIPT: "border-l-[var(--color-danger)]",
+};
 
 const KIND_TONE: Record<CallKind, "danger" | "warning" | "info"> = {
   DEBT: "danger",
@@ -79,18 +88,20 @@ export function CallsList({ slug, limit, filter }: { slug: string; limit?: numbe
           <EmptyState title={limit ? "Bugun qo'ng'iroq qilish kerak emas" : "Ro'yxat bo'sh"} />
         </Card>
       ) : (
-        <Card className="overflow-hidden">
-          <ul className="divide-y divide-[var(--color-separator)]">
+        <ul className="space-y-3">
             {items.map((item) => (
-              <li key={`${item.kind}-${item.subjectId}`} className={`flex flex-wrap items-center justify-between gap-3 px-5 py-3 ${item.done ? "opacity-60" : ""}`}>
+              <li
+                key={`${item.kind}-${item.subjectId}`}
+                className={`flex flex-col gap-3 rounded-[20px] border border-l-4 border-[var(--color-border-hair)] bg-[var(--color-surface)] px-4 py-4 shadow-[var(--shadow-card)] sm:flex-row sm:items-center sm:justify-between sm:px-5 ${KIND_BAR[item.kind]} ${item.done ? "opacity-60" : ""}`}
+              >
                 <div className="min-w-0">
-                  <p className="flex flex-wrap items-center gap-2 text-[14px] font-medium text-[var(--color-text)]">
+                  <p className="flex flex-wrap items-center gap-2 text-[16px] font-semibold tracking-[-0.01em] text-[var(--color-text)]">
                     {item.title}
                     <Badge tone={KIND_TONE[item.kind]}>{CALL_KIND_LABEL[item.kind]}</Badge>
                     {item.badge && <Badge tone="danger">{item.badge}</Badge>}
                   </p>
-                  <p className="text-[12.5px] text-[var(--color-text-muted)]">{item.subtitle}</p>
-                  <div className="mt-1.5 flex flex-col items-start gap-1.5">
+                  <p className="mt-0.5 text-[13px] text-[var(--color-text-muted)]">{item.subtitle}</p>
+                  <div className="mt-2.5 flex flex-col items-start gap-2">
                     {(item.contacts && item.contacts.length > 0
                       ? item.contacts
                       : item.phone
@@ -106,8 +117,9 @@ export function CallsList({ slug, limit, filter }: { slug: string; limit?: numbe
                         {c.phone && (
                           <a
                             href={`tel:${c.phone}`}
-                            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-primary)]/10 px-3 py-1.5 text-[14px] font-medium tabular-nums text-[var(--color-primary)] hover:bg-[var(--color-primary)]/[0.16]"
+                            className="inline-flex min-h-10 items-center gap-2 rounded-full bg-[var(--accent-soft)] px-4 py-2 text-[15px] font-semibold tabular-nums text-[var(--accent-soft-ink)] transition-colors hover:bg-[var(--accent-soft-icon)]/15 active:scale-[0.98]"
                           >
+                            <PhoneIcon className="h-4 w-4 text-[var(--accent-soft-icon)]" />
                             {c.phone}
                           </a>
                         )}
@@ -130,7 +142,7 @@ export function CallsList({ slug, limit, filter }: { slug: string; limit?: numbe
                     Qaytarish
                   </Button>
                 ) : (
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
                     <Button size="sm" onClick={() => { setTarget(item); setNote(""); }}>
                       Qo&apos;ng&apos;iroq qildim
                     </Button>
@@ -146,8 +158,7 @@ export function CallsList({ slug, limit, filter }: { slug: string; limit?: numbe
                 )}
               </li>
             ))}
-          </ul>
-        </Card>
+        </ul>
       )}
 
       <Modal open={!!target} onClose={() => setTarget(null)} title={target ? `${target.title} — qo'ng'iroq natijasi` : ""}>

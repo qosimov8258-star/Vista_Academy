@@ -221,7 +221,7 @@ function AdminNutritionPage({ slug }: { slug: string }) {
 
       {branchId && <TodayChildrenCard slug={slug} branchId={branchId} today={todayDateString()} />}
       {branchId && <TodayRemindersCard slug={slug} branchId={branchId} today={todayDateString()} />}
-      {branchId && <MenuPhotosCard slug={slug} branchId={branchId} date={todayDateString()} canWrite={canWrite} />}
+      {branchId && <MenuPhotosCard slug={slug} branchId={branchId} date={todayDateString()} canWrite={false} />}
 
       {allergyWarnings.length > 0 && (
         <Card className="border-[var(--color-danger)]/40 shadow-[var(--shadow-raised)]">

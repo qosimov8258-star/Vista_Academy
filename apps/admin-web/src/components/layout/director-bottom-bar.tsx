@@ -152,7 +152,7 @@ export function DirectorBottomBar({
 
   const slotClass = "relative flex h-full min-w-0 flex-1 basis-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-[26px]";
   const label = (text: string, active: boolean) => (
-    <span className={clsx("w-full truncate px-0.5 text-center text-[10.5px] font-semibold leading-none", active && styles.labelActive)}>
+    <span className={clsx("line-clamp-2 w-full break-words px-0.5 text-center text-[10px] font-semibold leading-[1.1]", active && styles.labelActive)}>
       {text}
     </span>
   );
@@ -197,20 +197,21 @@ export function DirectorBottomBar({
               </>
             );
             if (isSection(entry)) {
+              // Bo'limni bossangiz uning birinchi sahifasiga to'g'ri kirib ketadi;
+              // qolgan sahifalari "Menyu" ichida turadi.
+              const first = { href: entry.mainHref ?? entry.items[0].href };
               return (
-                <button
+                <Link
                   key={entry.id}
                   ref={(el) => {
                     slotRefs.current[i] = el;
                   }}
-                  type="button"
-                  aria-haspopup="dialog"
-                  aria-expanded={sheet?.kind === "section" && sheet.section.id === entry.id}
-                  onClick={() => setSheet({ kind: "section", section: entry })}
+                  href={first.href}
+                  aria-current={active ? "page" : undefined}
                   className={clsx(slotClass, styles.slot, active && "justify-end pb-2.5")}
                 >
                   {content}
-                </button>
+                </Link>
               );
             }
             return (

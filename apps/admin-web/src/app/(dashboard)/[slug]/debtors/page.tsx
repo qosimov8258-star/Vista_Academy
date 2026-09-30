@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { DataTable, THead, TBody, Tr, Th, Td } from "@/components/ui/table";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { formatDate, formatMoney } from "@/lib/format";
+import { PhoneIcon } from "@/components/ui/icons";
+import { isCallOperatorUser } from "@/lib/employee-position";
 import { canWriteMoney } from "@/lib/permissions";
 import { saveCsv, type DebtorsResult } from "@/features/cash/shared";
 
@@ -94,7 +96,59 @@ export default function DebtorsPage({ params }: { params: Promise<{ slug: string
               <EmptyState title="Qarzdor yo'q" />
             </Card>
           ) : (
-            <Card className="overflow-hidden">
+            <>
+            {/* Telefonda jadval o'rniga kartochkalar: kim, qancha, qo'ng'iroq tugmasi */}
+            <ul className="space-y-3 md:hidden">
+              {rows.map((r) => (
+                <li
+                  key={r.childId}
+                  className={`rounded-[20px] border border-l-4 border-[var(--color-border-hair)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)] ${r.overdue > 0 ? "border-l-[var(--color-danger)]" : "border-l-[var(--color-warning)]"}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-[16px] font-semibold tracking-[-0.01em] text-[var(--color-text)]">{r.childName}</p>
+                      <p className="text-[13px] text-[var(--color-text-muted)]">
+                        {[r.groupName, r.guardianName].filter(Boolean).join(" · ") || "—"}
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="text-[16px] font-bold tabular-nums text-[var(--color-text)]">{formatMoney(r.balance)}</p>
+                      {r.overdue > 0 && (
+                        <p className="text-[12px] font-semibold tabular-nums text-[var(--color-danger)]">
+                          shundan {formatMoney(r.overdue)} kechikkan
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  {r.oldestDueDate && r.overdue > 0 && (
+                    <p className="mt-1 text-[12px] text-[var(--color-text-muted)]">{formatDate(r.oldestDueDate)} dan beri</p>
+                  )}
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    {r.guardianPhone && (
+                      <a
+                        href={`tel:${r.guardianPhone}`}
+                        className="inline-flex min-h-10 items-center gap-2 rounded-full bg-[var(--accent-soft)] px-4 text-[14.5px] font-semibold tabular-nums text-[var(--accent-soft-ink)] active:scale-[0.98]"
+                      >
+                        <PhoneIcon className="h-4 w-4 text-[var(--accent-soft-icon)]" />
+                        {r.guardianPhone}
+                      </a>
+                    )}
+                    {canWrite && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={sent.has(r.childId)}
+                        loading={remind.isPending && remind.variables === r.childId}
+                        onClick={() => { setError(null); remind.mutate(r.childId); }}
+                      >
+                        {sent.has(r.childId) ? "Eslatma yuborildi" : "Eslatma"}
+                      </Button>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <Card className="hidden overflow-hidden md:block">
               <DataTable>
                 <THead>
                   <tr>
@@ -150,9 +204,11 @@ export default function DebtorsPage({ params }: { params: Promise<{ slug: string
                               {sent.has(r.childId) ? "Eslatma yuborildi" : "Eslatma"}
                             </Button>
                           )}
-                          <Link href={`/${slug}/finance?search=${encodeURIComponent(r.childName)}`}>
-                            <Button size="sm">To&apos;lov</Button>
-                          </Link>
+                          {!isCallOperatorUser(user) && (
+                            <Link href={`/${slug}/finance?search=${encodeURIComponent(r.childName)}`}>
+                              <Button size="sm">To&apos;lov</Button>
+                            </Link>
+                          )}
                         </div>
                       </Td>
                     </Tr>
@@ -160,6 +216,7 @@ export default function DebtorsPage({ params }: { params: Promise<{ slug: string
                 </TBody>
               </DataTable>
             </Card>
+            </>
           )}
         </>
       )}

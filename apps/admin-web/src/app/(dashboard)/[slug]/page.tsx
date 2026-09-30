@@ -1,5 +1,6 @@
 "use client";
 
+import { OperatorHome } from "@/features/desk/operator-home";
 import { use, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -9,7 +10,7 @@ import { Card } from "@/components/ui/card";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { formatMoney, formatChildId } from "@/lib/format";
 import { isChef, isTeacher } from "@/lib/permissions";
-import { isCashierPosition } from "@/lib/employee-position";
+import { isCallOperatorUser, isCashierPosition } from "@/lib/employee-position";
 import { ChefHome } from "@/features/nutrition/chef-home";
 import { CashierHome } from "@/features/cash/cashier-home";
 import { AdminHome } from "@/features/desk/admin-home";
@@ -298,6 +299,11 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
   // Tarbiyachi (yordamchi va fan o'qituvchisi ham) — iOS uslubidagi o'z bosh sahifasi
   if (teacher) {
     return <TeacherHome slug={slug} />;
+  }
+
+  // Call operator — faqat telefon ishlari: qo'ng'iroq soni va ro'yxat
+  if (isCallOperatorUser(user)) {
+    return <OperatorHome slug={slug} />;
   }
 
   // Administrator (MANAGER) uchun alohida bosh sahifa: bugungi holat va qo'ng'iroqlar.

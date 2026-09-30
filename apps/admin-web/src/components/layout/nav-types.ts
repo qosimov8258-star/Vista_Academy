@@ -22,6 +22,8 @@ export interface NavSection {
   label: string;
   icon: NavIcon;
   items: NavLeaf[];
+  /** Telefondagi pastki panelda bo'limni bossangiz shu sahifa ochiladi (bo'lmasa — birinchi havola). */
+  mainHref?: string;
 }
 
 export type NavEntry = NavLeaf | NavSection;

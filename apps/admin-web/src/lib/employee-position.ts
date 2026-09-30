@@ -18,10 +18,22 @@ export function isHeadChefPosition(position: string): boolean {
 }
 
 /** Kabineti bor, lekin guruhga biriktirilmaydigan lavozimlar (kassir moliyada, oshpaz oshxonada ishlaydi). */
-const GROUPLESS_POSITIONS = new Set(["kassir", "bosh oshpaz", "administrator"]);
+const GROUPLESS_POSITIONS = new Set(["kassir", "bosh oshpaz", "call operator"]);
 
 export function isGrouplessPosition(position: string): boolean {
   return GROUPLESS_POSITIONS.has(normalizePosition(position));
+}
+
+/** Call operator — qo'ng'iroqlar va arizalar bilan ishlaydi, guruhga biriktirilmaydi. */
+export const CALL_OPERATOR_POSITION = "call operator";
+
+export function isCallOperatorPosition(position: string): boolean {
+  return normalizePosition(position) === CALL_OPERATOR_POSITION;
+}
+
+/** Foydalanuvchi call operator lavozimidagi menejermi (yon panel/pastki panel tanlash uchun). */
+export function isCallOperatorUser(user: { role: string; position?: string | null } | null | undefined): boolean {
+  return user?.role === "MANAGER" && !!user.position && isCallOperatorPosition(user.position);
 }
 
 /** Kassir guruh bilan ishlamaydi — unga tarbiyachi bo'limlari kerak emas. */

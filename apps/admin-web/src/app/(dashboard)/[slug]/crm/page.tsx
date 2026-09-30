@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { TopbarAction } from "@/components/layout/topbar-action";
 import clsx from "clsx";
+import { PhoneIcon } from "@/components/ui/icons";
 import { api, getPaginated } from "@/lib/api";
 import type { Lead, LeadStage, LeadStats } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
@@ -101,15 +102,14 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
 
       {!canWrite && <ViewOnlyNote role={user?.role} />}
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <Card className="px-4 py-3.5">
-          <p className="text-[12px] leading-tight text-[var(--color-text-muted)]">Faol arizalar</p>
-          <p className="mt-1.5 text-[22px] font-semibold leading-none tabular-nums text-[var(--color-text)]">
-            {totalActive ?? "—"}
-          </p>
-        </Card>
+      {/* Telefonda raqamlar bir qatorda yonga suriladi — ekranning yarmini egallamaydi */}
+      <div className="-mx-6 flex gap-2.5 overflow-x-auto px-6 pb-1 [scrollbar-width:none] md:mx-0 md:grid md:grid-cols-3 md:gap-3 md:overflow-visible md:px-0 md:pb-0 lg:grid-cols-6 [&::-webkit-scrollbar]:hidden">
+        <div className="min-w-[128px] shrink-0 rounded-[var(--radius-xl)] bg-[linear-gradient(145deg,var(--accent-rail)_0%,var(--accent-rail-2)_100%)] px-4 py-3.5 text-white shadow-[var(--shadow-card)] md:min-w-0">
+          <p className="text-[12px] leading-tight text-[var(--accent-pale)]/80">Faol arizalar</p>
+          <p className="mt-1.5 text-[24px] font-bold leading-none tabular-nums">{totalActive ?? "—"}</p>
+        </div>
         {STAGE_ORDER.map((stage) => (
-          <Card key={stage} className="px-4 py-3.5">
+          <Card key={stage} className="min-w-[128px] shrink-0 px-4 py-3.5 md:min-w-0">
             <p className="text-[12px] leading-tight text-[var(--color-text-muted)]">{STAGE_LABEL[stage]}</p>
             <p className="mt-1.5 text-[22px] font-semibold leading-none tabular-nums text-[var(--color-text)]">
               {byStage ? byStage[stage] : "—"}
@@ -118,9 +118,9 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="-mx-6 flex gap-2 overflow-x-auto px-6 pb-1 [scrollbar-width:none] md:mx-0 md:grid md:grid-cols-3 md:gap-3 md:overflow-visible md:px-0 md:pb-0 lg:grid-cols-5 [&::-webkit-scrollbar]:hidden">
         {SOURCE_ORDER.map((source) => (
-          <Card key={source} className="px-4 py-3.5">
+          <Card key={source} className="min-w-[112px] shrink-0 px-4 py-3 md:min-w-0 md:py-3.5">
             <p className="text-[12px] leading-tight text-[var(--color-text-muted)]">{SOURCE_LABEL[source]}</p>
             <p className="mt-1.5 text-[18px] font-semibold leading-none tabular-nums text-[var(--color-text)]">
               {statsQuery.data ? statsQuery.data.bySource[source] : "—"}
@@ -129,7 +129,7 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
         ))}
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="-mx-6 flex gap-2 overflow-x-auto px-6 pb-1 [scrollbar-width:none] md:mx-0 md:flex-wrap md:overflow-visible md:px-0 [&::-webkit-scrollbar]:hidden [&>button]:shrink-0 [&>button]:whitespace-nowrap">
         <button
           onClick={() => {
             setStageFilter("ALL");
@@ -170,7 +170,43 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
       ) : !leadsQuery.data || leadsQuery.data.data.length === 0 ? (
         <EmptyState title="Ariza topilmadi" description={canWrite ? "Yangi ariza qo'shish uchun tugmani bosing" : undefined} />
       ) : (
-        <Card className="overflow-hidden">
+        <>
+        {/* Telefonda jadval o'rniga kartochkalar: bola, ota-ona telefoni, bosqich */}
+        <ul className="space-y-3 md:hidden">
+          {leadsQuery.data.data.map((lead) => {
+            const overdue =
+              !!lead.followUpDate && lead.stage !== "WON" && lead.stage !== "LOST" && new Date(lead.followUpDate) < new Date();
+            return (
+              <li key={lead.id} className="rounded-[20px] border border-[var(--color-border-hair)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)]">
+                <div className="flex items-start justify-between gap-3">
+                  <Link href={`/${slug}/crm/${lead.id}`} className="min-w-0 text-[16px] font-semibold tracking-[-0.01em] text-[var(--color-text)]">
+                    {lead.childFullName}
+                  </Link>
+                  <Badge tone={STAGE_TONE[lead.stage]}>{STAGE_LABEL[lead.stage]}</Badge>
+                </div>
+                <p className="mt-0.5 text-[13px] text-[var(--color-text-muted)]">
+                  {lead.parentName} · {lead.ageGroup ? AGE_GROUP_LABEL[lead.ageGroup] : SOURCE_LABEL[lead.source]}
+                </p>
+                <div className="mt-3 flex items-center justify-between gap-2">
+                  <a
+                    href={`tel:${lead.parentPhone}`}
+                    className="inline-flex min-h-10 items-center gap-2 rounded-full bg-[var(--accent-soft)] px-4 text-[14.5px] font-semibold tabular-nums text-[var(--accent-soft-ink)] active:scale-[0.98]"
+                  >
+                    <PhoneIcon className="h-4 w-4 text-[var(--accent-soft-icon)]" />
+                    {lead.parentPhone}
+                  </a>
+                  {lead.followUpDate && (
+                    <span className={clsx("text-[12.5px] tabular-nums", overdue ? "font-semibold text-[var(--color-danger)]" : "text-[var(--color-text-muted)]")}>
+                      {overdue ? "Kechikdi · " : "Eslatma · "}
+                      {formatDate(lead.followUpDate)}
+                    </span>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+        <Card className="hidden overflow-hidden md:block">
           <DataTable>
             <THead>
               <tr>
@@ -247,6 +283,14 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
             </div>
           </div>
         </Card>
+        <div className="flex items-center justify-between gap-3 text-[12.5px] text-[var(--color-text-muted)] md:hidden">
+          <span className="tabular-nums">Jami {leadsQuery.data.meta.total} ta, {leadsQuery.data.meta.page}-sahifa</span>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Oldingi</Button>
+            <Button variant="outline" size="sm" disabled={page * leadsQuery.data.meta.limit >= leadsQuery.data.meta.total} onClick={() => setPage((p) => p + 1)}>Keyingi</Button>
+          </div>
+        </div>
+        </>
       )}
 
       {canWrite && <CreateLeadModal open={createOpen} onClose={() => setCreateOpen(false)} slug={slug} />}

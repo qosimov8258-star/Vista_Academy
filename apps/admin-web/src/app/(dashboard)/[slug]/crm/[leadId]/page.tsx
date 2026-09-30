@@ -19,6 +19,7 @@ import { AssignLeadModal } from "@/features/crm/assign-lead-modal";
 import { EditLeadDetailsModal } from "@/features/crm/edit-lead-details-modal";
 import { LeadActivityForm } from "@/features/crm/lead-activity-form";
 import { useBranchContext } from "@/lib/use-branch-context";
+import { isCallOperatorUser } from "@/lib/employee-position";
 import { canWriteOperational } from "@/lib/permissions";
 
 type LeadActivityWithCreator = LeadActivity & { createdBy?: { id: string; fullName: string } | null };
@@ -34,6 +35,7 @@ export default function LeadDetailPage({ params }: { params: Promise<{ slug: str
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const { user } = useAuth();
+  const callOperator = isCallOperatorUser(user);
   const canWrite = canWriteOperational(user?.role);
   const { branchSlug } = useBranchContext(slug);
   const crmHref = branchSlug ? `/${slug}/${branchSlug}/crm` : `/${slug}/crm`;
@@ -82,11 +84,13 @@ export default function LeadDetailPage({ params }: { params: Promise<{ slug: str
       {isConverted && (
         <div className="flex items-center justify-between rounded-lg border border-[var(--color-success)]/30 bg-[var(--color-success-bg)] px-4 py-3">
           <p className="text-sm font-medium text-[var(--color-success)]">Bu ariza bola profiliga aylantirilgan</p>
-          <Link href={`/${slug}/children/${lead.convertedChildId}`}>
-            <Button size="sm" variant="outline">
-              Bola profilini ko&apos;rish →
-            </Button>
-          </Link>
+          {!callOperator && (
+            <Link href={`/${slug}/children/${lead.convertedChildId}`}>
+              <Button size="sm" variant="outline">
+                Bola profilini ko&apos;rish →
+              </Button>
+            </Link>
+          )}
         </div>
       )}
 
@@ -102,9 +106,8 @@ export default function LeadDetailPage({ params }: { params: Promise<{ slug: str
             <Button variant="outline" onClick={() => setAssignModalOpen(true)}>
               Mas&apos;ulni belgilash
             </Button>
-            {!isFinal && (
-              <Button onClick={() => setConvertModalOpen(true)}>Bolaga aylantirish</Button>
-            )}
+            {/* Bola yaratish call operatorning ishi emas — uni administrator qiladi */}
+            {!isFinal && !callOperator && <Button onClick={() => setConvertModalOpen(true)}>Bolaga aylantirish</Button>}
           </CardBody>
         </Card>
       )}
