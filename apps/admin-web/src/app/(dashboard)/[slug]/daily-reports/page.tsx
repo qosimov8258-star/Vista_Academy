@@ -136,7 +136,7 @@ export default function DailyReportsPage({ params }: { params: Promise<{ slug: s
       </div>
 
       <Card className="flex flex-col gap-3 p-4 sm:flex-row">
-        {!forcedBranchId && (
+        {!forcedBranchId && branches.length > 1 && (
           <Select label="Filial" value={branchId} onChange={(e) => setBranchId(e.target.value)} className="sm:max-w-xs">
             {branches.map((branch) => (
               <option key={branch.id} value={branch.id}>

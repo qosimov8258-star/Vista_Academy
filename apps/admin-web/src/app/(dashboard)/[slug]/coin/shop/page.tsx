@@ -63,7 +63,7 @@ export default function CoinShopPage({ params }: { params: Promise<{ slug: strin
         )}
       </div>
 
-      {!forcedBranchId && (
+      {!forcedBranchId && branches.length > 1 && (
         <Card className="flex flex-col gap-3 p-4 sm:flex-row">
           <Select label="Filial" value={branchId} onChange={(e) => setBranchId(e.target.value)} className="sm:max-w-xs">
             {branches.map((branch) => (
@@ -77,7 +77,9 @@ export default function CoinShopPage({ params }: { params: Promise<{ slug: strin
 
       {!canWrite && <ViewOnlyNote role={user?.role} />}
 
-      {!branchId ? (
+      {orgQuery.isLoading || (!branchId && branches.length > 0) ? (
+        <LoadingState rows={3} />
+      ) : !branchId ? (
         <EmptyState title="Filial mavjud emas" />
       ) : productsQuery.isLoading ? (
         <LoadingState />

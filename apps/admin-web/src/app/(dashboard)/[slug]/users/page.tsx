@@ -196,7 +196,7 @@ export default function UsersPage({ params }: { params: Promise<{ slug: string }
 
   const isSuperAdmin = currentUser?.role === "NETWORK_ADMIN";
   const canCreate = canManageUsers(currentUser?.role);
-  const createLabel = isSuperAdmin ? "+ Yangi xodim" : "+ Administrator";
+  const createLabel = isSuperAdmin ? "+ Yangi xodim" : "+ Call Operator";
 
   const people = useMemo(() => usersQuery.data ?? [], [usersQuery.data]);
 
@@ -255,9 +255,9 @@ export default function UsersPage({ params }: { params: Promise<{ slug: string }
         <div>
           {/* Sarlavha yon paneldagi havola nomi bilan bir xil bo'lishi kerak:
               Super Adminda "Xodimlar", filial adminida esa u yerda allaqachon
-              xodim kartochkalari bo'limi borligi uchun "Administratorlar". */}
+              xodim kartochkalari bo'limi borligi uchun "Call Operatorlar". */}
           <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
-            {isSuperAdmin ? "Xodimlar" : "Administratorlar"}
+            {isSuperAdmin ? "Xodimlar" : "Call Operatorlar"}
           </h1>
           <p className="mt-0.5 text-[13px] text-[var(--color-text-muted)]">
             {isSuperAdmin

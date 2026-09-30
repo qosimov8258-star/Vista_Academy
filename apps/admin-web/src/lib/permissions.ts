@@ -13,7 +13,7 @@ export const ROLE_LABEL: Record<TenantUserRole, string> = {
   NETWORK_ADMIN: "Super Admin",
   BRANCH_ADMIN: "Filial admini",
   FINANCE: "Moliyachi",
-  MANAGER: "Administrator",
+  MANAGER: "Call Operator",
   TEACHER: "O'qituvchi",
   CHEF: "Oshpaz",
 };
@@ -88,9 +88,9 @@ export function canWriteUseful(role: TenantUserRole | undefined): boolean {
   return role === "TEACHER";
 }
 
-/** Foydalanuvchi yaratish huquqi: Super Admin va filial admini. */
+/** Foydalanuvchi (Administratorlar) bo'limini ko'rish va yaratish huquqi: faqat Super Admin. */
 export function canManageUsers(role: TenantUserRole | undefined): boolean {
-  return role === "NETWORK_ADMIN" || role === "BRANCH_ADMIN";
+  return role === "NETWORK_ADMIN";
 }
 
 /** O'qituvchi kabineti — yon panel va bosh sahifa u uchun boshqacha. */

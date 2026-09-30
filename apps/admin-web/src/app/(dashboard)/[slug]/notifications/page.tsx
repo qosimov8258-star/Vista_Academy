@@ -17,6 +17,7 @@ import { BroadcastModal } from "@/features/notifications/broadcast-modal";
 import { CreateNotificationModal } from "@/features/notifications/create-notification-modal";
 import { MarkSentModal } from "@/features/notifications/mark-sent-modal";
 import { useBranchContext } from "@/lib/use-branch-context";
+import { isCallOperatorUser } from "@/lib/employee-position";
 import { canWriteOperational } from "@/lib/permissions";
 
 const eventTypeLabels: Record<NotificationEventType, string> = {
@@ -166,9 +167,14 @@ export default function NotificationsPage({ params }: { params: Promise<{ slug: 
                     </td>
                     <td className="px-5 py-3 text-[var(--color-text-muted)]">
                       {n.child ? (
-                        <Link href={`/${slug}/children/${n.child.id}`} className="text-[var(--color-primary)] hover:underline">
-                          {n.child.fullName}
-                        </Link>
+                        // Call operator bola sahifasiga kira olmaydi — faqat ismi
+                        isCallOperatorUser(user) ? (
+                          n.child.fullName
+                        ) : (
+                          <Link href={`/${slug}/children/${n.child.id}`} className="text-[var(--color-primary)] hover:underline">
+                            {n.child.fullName}
+                          </Link>
+                        )
                       ) : (
                         "—"
                       )}

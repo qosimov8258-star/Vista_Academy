@@ -1,5 +1,6 @@
 "use client";
 
+import { OperatorHome } from "@/features/desk/operator-home";
 import { use } from "react";
 import Link from "next/link";
 import type { ComponentType, SVGProps } from "react";
@@ -14,7 +15,7 @@ import { ProgressBar } from "@/components/ui/progress-bar";
 import { LoadingState, ErrorState } from "@/components/ui/states";
 import { formatMoney } from "@/lib/format";
 import { canWriteOperational, canWriteTeaching, isChef, isTeacher } from "@/lib/permissions";
-import { isCashierPosition } from "@/lib/employee-position";
+import { isCallOperatorUser, isCashierPosition } from "@/lib/employee-position";
 import { ChefHome } from "@/features/nutrition/chef-home";
 import { CashierHome } from "@/features/cash/cashier-home";
 import { AdminHome } from "@/features/desk/admin-home";
@@ -95,12 +96,12 @@ function TodayCard({
   const complete = total > 0 && done >= total;
 
   return (
-    <Card className="flex flex-col p-4">
+    <Card className="flex flex-col rounded-[24px] p-4">
       <div className="flex items-center gap-2.5">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)]">
-          <Icon className="h-[18px] w-[18px]" />
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-[var(--accent-soft)] text-[var(--accent-soft-icon)]">
+          <Icon className="h-[20px] w-[20px]" />
         </span>
-        <p className="text-[13px] font-medium text-[var(--color-text-muted)]">{title}</p>
+        <p className="text-[14px] font-semibold text-[var(--color-text)]">{title}</p>
       </div>
 
       <p className="mt-3 flex items-baseline gap-1.5">
@@ -135,7 +136,7 @@ function TodayCard({
       {href && actionLabel && (
         <Link
           href={href}
-          className="group mt-auto inline-flex items-center gap-0.5 pt-3 text-[13px] font-medium text-[var(--color-primary)] hover:underline"
+          className="group mt-3 inline-flex w-fit items-center gap-0.5 rounded-full bg-[var(--accent-soft)] px-3.5 py-2 text-[13px] font-semibold text-[var(--accent-soft-ink)] transition-transform active:scale-[0.97]"
         >
           {actionLabel}
           <ChevronRightIcon className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
@@ -254,6 +255,11 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
     return <TeacherHome slug={slug} />;
   }
 
+  // Call operator — faqat telefon ishlari: qo'ng'iroq soni va ro'yxat
+  if (isCallOperatorUser(user)) {
+    return <OperatorHome slug={slug} />;
+  }
+
   // Administrator (MANAGER) uchun alohida bosh sahifa: bugungi holat va qo'ng'iroqlar.
   if (user?.role === "MANAGER") {
     return (
@@ -287,17 +293,48 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
-            {user?.branchName ?? org.name}
-          </h1>
-          <p className="text-[13px] text-[var(--color-text-muted)]">
-            {org.name}
-          </p>
+      {/* Tepa kartochka: filial, sana va asosiy raqamlar — panel bilan bir xil to'q yashil */}
+      <section className="relative overflow-hidden rounded-[28px] bg-[linear-gradient(145deg,var(--accent-rail)_0%,var(--accent-rail-2)_100%)] p-5 text-white shadow-[0_18px_40px_-20px_color-mix(in_srgb,var(--accent-rail)_70%,transparent)] md:p-6">
+        <div className="pointer-events-none absolute -right-10 -top-14 h-44 w-44 rounded-full bg-[var(--accent-bright)]/15 blur-2xl" aria-hidden="true" />
+        <div className="pointer-events-none absolute -bottom-16 -left-10 h-40 w-40 rounded-full bg-[var(--accent-light)]/10 blur-2xl" aria-hidden="true" />
+        <div className="relative">
+          <p className="text-[13px] font-medium text-[var(--accent-pale)]/80">Bugun · {todayLabel()}</p>
+          <h1 data-hero className="mt-0.5 text-[26px] font-bold tracking-[-0.02em]">{user?.branchName ?? org.name}</h1>
+          <p className="text-[13px] text-[var(--accent-pale)]/70">{org.name}</p>
+
+          <div className="mt-5 grid grid-cols-3 gap-2.5">
+            {[
+              { label: "Bolalar", value: children },
+              { label: "Xodimlar", value: employees },
+              { label: "Keldi", value: summary?.todayAttendance.present ?? 0 },
+            ].map((stat) => (
+              <div key={stat.label} className="rounded-[18px] bg-white/10 px-3 py-3 backdrop-blur">
+                <p className="text-[24px] font-extrabold leading-none tabular-nums text-white">
+                  {summaryQuery.isLoading ? "–" : stat.value}
+                </p>
+                <p className="mt-1.5 text-[12px] font-medium text-[var(--accent-pale)]/80">{stat.label}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link
+              href={`/${slug}/attendance`}
+              className="inline-flex h-10 items-center gap-1.5 rounded-full bg-[var(--accent-bright)] px-4 text-[13.5px] font-bold text-[var(--accent-rail)] transition-transform active:scale-[0.96]"
+            >
+              Bolalar davomati
+              <ChevronRightIcon className="h-3.5 w-3.5" />
+            </Link>
+            <Link
+              href={`/${slug}/staff-attendance`}
+              className="inline-flex h-10 items-center gap-1.5 rounded-full bg-white/10 px-4 text-[13.5px] font-semibold text-white transition-transform active:scale-[0.96]"
+            >
+              Xodimlar davomati
+              <ChevronRightIcon className="h-3.5 w-3.5" />
+            </Link>
+          </div>
         </div>
-        <p className="text-[13px] text-[var(--color-text-muted)]">Bugun · {todayLabel()}</p>
-      </div>
+      </section>
 
       {summaryQuery.isError ? (
         <ErrorState message={(summaryQuery.error as Error).message} />

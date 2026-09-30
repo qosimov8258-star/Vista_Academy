@@ -16,7 +16,7 @@ import { useBranchContext } from "@/lib/use-branch-context";
 import { useSidebarCollapsed } from "@/lib/use-sidebar-collapsed";
 import { useSidebarSections } from "@/lib/use-sidebar-sections";
 import { ROLE_LABEL, canManageUsers, canViewUseful, isChef, isTeacher, ownsLanding, receivesEmployeeNotifications } from "@/lib/permissions";
-import { formatPositionLabel, isAssistantPosition, isCashierPosition, isSubjectTeacherPosition } from "@/lib/employee-position";
+import { formatPositionLabel, isAssistantPosition, isCallOperatorUser, isCashierPosition, isSubjectTeacherPosition } from "@/lib/employee-position";
 import { Avatar, initials } from "@/components/ui/avatar";
 import { isSection, type NavEntry, type NavLeaf } from "./nav-types";
 import { DirectorRail } from "./director-rail";
@@ -125,12 +125,16 @@ export function Sidebar({ slug }: { slug: string }) {
   useEffect(() => {
     if (!user) return;
     try {
-      window.localStorage.setItem(RAIL_HINT_KEY, user.role === "NETWORK_ADMIN" ? "1" : "0");
+      window.localStorage.setItem(RAIL_HINT_KEY, user.role === "NETWORK_ADMIN" || user.role === "BRANCH_ADMIN" || isCallOperatorUser(user) ? "1" : "0");
     } catch {
       // yuqoridagi kabi
     }
   }, [user]);
-  const useDirectorRail = isNetworkAdmin || (!user && railHint);
+  const isBranchAdmin = user?.role === "BRANCH_ADMIN";
+  // Filial admini va call operator ham direktordagi kabi suzuvchi panel oladi —
+  // kompyuterda ingichka ikonka ustuni, telefonda pastki panel.
+  const useDirectorRail = isNetworkAdmin || isBranchAdmin || isCallOperatorUser(user) || (!user && railHint);
+  const useBottomBar = useDirectorRail;
   // "Fan o'qituvchisi" lavozimida tanlangan fan(lar) ko'rsatiladi (masalan
   // "Matematika o'qituvchisi"), boshqa lavozimlarda lavozim nomining o'zi.
   const positionLabel = user?.position ? formatPositionLabel(user.position, user.subjects) : null;
@@ -298,6 +302,16 @@ export function Sidebar({ slug }: { slug: string }) {
         ]),
   ];
 
+  // Call operator: faqat telefon bilan bog'liq ishlar. Telefonda birinchi to'rttasi
+  // pastki panelda turadi, qolganlari "Menyu" ichida — shuning uchun eng kerakligi oldinda.
+  const callOperatorEntries: NavEntry[] = [
+    { href: base, label: t("nav.home"), icon: HomeIcon, show: true, exact: true },
+    { href: `${base}/calls`, label: "Qo'ng'iroqlar", icon: PhoneIcon, show: true },
+    { href: `${base}/crm`, label: t("nav.crm"), icon: PhoneIcon, show: true },
+    { href: `${base}/debtors`, label: "Qarzdorlar", icon: MoneyIcon, show: true },
+    { href: `${base}/notifications`, label: t("nav.notifications"), icon: BellIcon, show: true },
+  ];
+
   const operationalEntries: NavEntry[] = [
     { href: base, label: t("nav.home"), icon: HomeIcon, show: true, exact: true },
     // Administratorning kundalik ishi: qo'ng'iroqlar, olib ketish, bugungi holat.
@@ -330,6 +344,8 @@ export function Sidebar({ slug }: { slug: string }) {
       id: "xodimlar",
       label: t("nav.employees"),
       icon: TeacherIcon,
+      // Pastki panelda "Xodimlar" bosilganda ro'yxat emas, bugungi davomat ochiladi
+      mainHref: `${base}/staff-attendance`,
       items: [
         { href: `${base}/employees`, label: t("nav.employeeList"), icon: TeacherIcon, show: true },
         // Maosh kassirda; administratorga ko'rinmaydi
@@ -412,7 +428,7 @@ export function Sidebar({ slug }: { slug: string }) {
     show: true,
   };
 
-  const entries = (chef ? chefEntries : isCashier ? cashierEntries : teacher ? (isAssistant ? assistantEntries : teacherEntries) : isNetworkAdmin && !inBranchContext ? rootEntries : operationalEntries)
+  const entries = (chef ? chefEntries : isCashier ? cashierEntries : teacher ? (isAssistant ? assistantEntries : teacherEntries) : isNetworkAdmin && !inBranchContext ? rootEntries : isCallOperatorUser(user) ? callOperatorEntries : operationalEntries)
     .map((entry) =>
       isSection(entry) ? { ...entry, items: entry.items.filter((item) => item.show) } : entry,
     )
@@ -459,31 +475,17 @@ export function Sidebar({ slug }: { slug: string }) {
   return (
     <>
     {useDirectorRail ? (
-      <>
-        <DirectorRail
-          slug={slug}
-          entries={user ? entries : []}
-          settingsItem={settingsItem}
-          isActive={isActive}
-          user={user}
-          branchName={branch?.name ?? null}
-          inBranchContext={inBranchContext}
-          onLogout={handleLogout}
-          loggingOut={loggingOut}
-        />
-        {/* Telefonda — xuddi shu uslubdagi pastki panel */}
-        <DirectorBottomBar
-          slug={slug}
-          entries={user ? entries : []}
-          settingsItem={settingsItem}
-          isActive={isActive}
-          user={user}
-          branchName={branch?.name ?? null}
-          inBranchContext={inBranchContext}
-          onLogout={handleLogout}
-          loggingOut={loggingOut}
-        />
-      </>
+      <DirectorRail
+        slug={slug}
+        entries={user ? entries : []}
+        settingsItem={settingsItem}
+        isActive={isActive}
+        user={user}
+        branchName={branch?.name ?? null}
+        inBranchContext={inBranchContext}
+        onLogout={handleLogout}
+        loggingOut={loggingOut}
+      />
     ) : (
     <aside
       className={clsx(
@@ -766,6 +768,21 @@ export function Sidebar({ slug }: { slug: string }) {
         </button>
       </div>
     </aside>
+    )}
+
+    {/* Telefonda — direktor/filial admini uchun suzib turuvchi pastki panel */}
+    {useBottomBar && (
+      <DirectorBottomBar
+        slug={slug}
+        entries={user ? entries : []}
+        settingsItem={settingsItem}
+        isActive={isActive}
+        user={user}
+        branchName={branch?.name ?? null}
+        inBranchContext={inBranchContext}
+        onLogout={handleLogout}
+        loggingOut={loggingOut}
+      />
     )}
 
     {/* Mobil to'liq menyu (o'qituvchidan boshqa rollar): Topbar'dagi uch chiziq tugmasi ochadi. */}

@@ -347,3 +347,21 @@ body {
   background-color: var(--color-border);
   border-radius: 9999px;
 }
+
+/*
+ * Telefonda har bir sahifaning sarlavhasi pastki panel bilan bir uslubda:
+ * oldida yashil chiziqcha. `data-hero` belgili sarlavhalar (to'q kartochka
+ * ichidagilar) bundan mustasno.
+ */
+@media (max-width: 767px) {
+  main h1:not([data-hero])::before {
+    content: "";
+    display: inline-block;
+    width: 5px;
+    height: 0.95em;
+    margin-right: 10px;
+    border-radius: 9999px;
+    vertical-align: -0.1em;
+    background: linear-gradient(180deg, var(--accent-bright), var(--accent-soft-icon));
+  }
+}
