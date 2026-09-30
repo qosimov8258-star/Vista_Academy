@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@ne
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { Public } from "../../common/decorators/public.decorator";
 import { TenantJwtAuthGuard } from "../iam/guards/tenant-jwt-auth.guard";
+import { DenyCallOperator } from "../iam/decorators/deny-call-operator.decorator";
 import { CurrentTenantUser } from "../iam/decorators/current-tenant-user.decorator";
 import { TenantAuthenticatedUser, toTenantScope } from "../iam/tenant-auth.types";
 import { GroupsService } from "./groups.service";
@@ -15,6 +16,7 @@ import { GroupDayQueryDto } from "./dto/group-day-query.dto";
 @ApiTags("Tenant Groups")
 @Public()
 @UseGuards(TenantJwtAuthGuard)
+@DenyCallOperator()
 @Controller("app/groups")
 export class GroupsController {
   constructor(private readonly groupsService: GroupsService) {}

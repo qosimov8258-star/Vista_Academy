@@ -11,7 +11,7 @@ export const DEFAULT_POSITIONS = [
   "Tarbiyachi",
   "Tarbiyachi yordamchisi",
   "Kassir",
-  "Administrator",
+  "Call Operator",
   "Bosh oshpaz",
   "Oshpaz yordamchisi",
   "Idish yuvuchi",
