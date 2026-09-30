@@ -5,6 +5,8 @@ import { TenantAuthenticatedUser, TenantScope, requireMoneyScope, toTenantScope 
 import { AuditLogService } from "../audit-log/audit-log.service";
 import { BillingService, assertMoneyReader } from "../billing/billing.service";
 import { AuthenticatedParent } from "../parent/parent-auth.types";
+import { R2Service } from "../storage/r2.service";
+import { R2_CATEGORY } from "../storage/r2.constants";
 import { SubmitPaymentReceiptDto } from "./dto/submit-payment-receipt.dto";
 import { ApprovePaymentReceiptDto } from "./dto/approve-payment-receipt.dto";
 import { RejectPaymentReceiptDto } from "./dto/reject-payment-receipt.dto";
@@ -38,6 +40,7 @@ export class PaymentReceiptsService {
     private readonly prisma: PrismaService,
     private readonly billingService: BillingService,
     private readonly auditLog: AuditLogService,
+    private readonly r2: R2Service,
   ) {}
 
   // ---------------------------------------------------------------
@@ -78,6 +81,14 @@ export class PaymentReceiptsService {
     const child = await this.assertParentOwnsChildWithFinance(parent, childId);
     const { buffer, mimeType } = this.decodeImage(dto.image);
 
+    let image: Buffer<ArrayBuffer> | null = buffer;
+    let imageKey: string | null = null;
+    if (this.r2.enabled) {
+      imageKey = this.r2.buildKey(child.organizationId, R2_CATEGORY.PAYMENT_RECEIPT);
+      await this.r2.uploadBuffer(imageKey, buffer, mimeType);
+      image = null;
+    }
+
     return this.prisma.paymentReceipt.create({
       data: {
         organizationId: child.organizationId,
@@ -85,7 +96,8 @@ export class PaymentReceiptsService {
         childId: child.id,
         guardianId: parent.id,
         claimedAmount: dto.amount,
-        image: buffer,
+        image,
+        imageKey,
         mimeType,
       },
       select: receiptSummarySelect,
@@ -104,7 +116,7 @@ export class PaymentReceiptsService {
   async readImageForParent(parent: AuthenticatedParent, receiptId: string) {
     const receipt = await this.prisma.paymentReceipt.findFirst({
       where: { id: receiptId, guardianId: parent.id },
-      select: { image: true, mimeType: true },
+      select: { image: true, imageKey: true, mimeType: true },
     });
     if (!receipt) {
       throw new NotFoundException("Chek topilmadi");
@@ -144,7 +156,7 @@ export class PaymentReceiptsService {
     assertMoneyReader(scope);
     const receipt = await this.prisma.paymentReceipt.findFirst({
       where: { id: receiptId, organizationId: scope.organizationId },
-      select: { image: true, mimeType: true, branchId: true },
+      select: { image: true, imageKey: true, mimeType: true, branchId: true },
     });
     if (!receipt) {
       throw new NotFoundException("Chek topilmadi");

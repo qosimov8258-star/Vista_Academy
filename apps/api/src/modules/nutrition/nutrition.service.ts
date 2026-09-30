@@ -1,6 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantScope } from "../iam/tenant-auth.types";
+import { R2Service } from "../storage/r2.service";
+import { R2_CATEGORY } from "../storage/r2.constants";
 import { requireChefPhotoScope, requireKitchenWriteScope } from "./kitchen-scope";
 import { UpsertMenuEntryDto } from "./dto/upsert-menu-entry.dto";
 import { MenuQueryDto } from "./dto/menu-query.dto";
@@ -18,7 +20,10 @@ function toDateOnly(value: string): Date {
 
 @Injectable()
 export class NutritionService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly r2: R2Service,
+  ) {}
 
   async upsert(scope: TenantScope, dto: UpsertMenuEntryDto) {
     const branchId = requireKitchenWriteScope(scope);
@@ -94,19 +99,30 @@ export class NutritionService {
       throw new BadRequestException(`Bitta ovqatga ${MAX_PHOTOS_PER_MEAL} tagacha rasm yuklash mumkin`);
     }
 
+    let image: Buffer<ArrayBuffer> | null = buffer;
+    let imageKey: string | null = null;
+    if (this.r2.enabled) {
+      imageKey = this.r2.buildKey(scope.organizationId, R2_CATEGORY.MENU_PHOTO);
+      await this.r2.uploadBuffer(imageKey, buffer, mimeType);
+      image = null;
+    }
+
     return this.prisma.menuPhoto.create({
-      data: { branchId, date, meal: dto.meal, image: buffer, mimeType, uploadedById: scope.userId },
+      data: { branchId, date, meal: dto.meal, image, imageKey, mimeType, uploadedById: scope.userId },
       select: { id: true, meal: true, createdAt: true },
     });
   }
 
   async deletePhoto(scope: TenantScope, id: string) {
     const branchId = requireChefPhotoScope(scope);
-    const photo = await this.prisma.menuPhoto.findFirst({ where: { id, branchId }, select: { id: true } });
+    const photo = await this.prisma.menuPhoto.findFirst({ where: { id, branchId }, select: { id: true, imageKey: true } });
     if (!photo) {
       throw new NotFoundException("Rasm topilmadi");
     }
     await this.prisma.menuPhoto.delete({ where: { id: photo.id } });
+    if (photo.imageKey) {
+      await this.r2.deleteObject(photo.imageKey);
+    }
     return { id: photo.id };
   }
 
@@ -117,7 +133,7 @@ export class NutritionService {
         branch: { organizationId: scope.organizationId },
         ...(scope.branchId ? { branchId: scope.branchId } : {}),
       },
-      select: { image: true, mimeType: true },
+      select: { image: true, imageKey: true, mimeType: true },
     });
     if (!photo) {
       throw new NotFoundException("Rasm topilmadi");

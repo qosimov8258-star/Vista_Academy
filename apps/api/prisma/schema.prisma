@@ -170,11 +170,12 @@ model TenantUser {
   passwordEncrypted Bytes?         @map("password_encrypted")
   fullName          String         @map("full_name")
   role              TenantUserRole @default(NETWORK_ADMIN)
-  // Profil rasmi bazada saqlanadi: fayl xotirasi sozlanmagan va avatar
-  // kichik (256x256 gacha siqiladi), shuning uchun alohida saqlash
-  // xizmatiga bog'lanishdan ko'ra shu soddaroq va deploy'dan keyin
-  // yo'qolmaydi. `avatarUpdatedAt` brauzer keshini yangilash uchun.
+  // Profil rasmi: R2 sozlangan bo'lsa `avatarKey` (obyekt kaliti) to'ldiriladi
+  // va `avatar` bo'sh qoladi; R2 sozlanmagan bo'lsa (yoki eski yozuv) rasm
+  // to'g'ridan-to'g'ri bazada (`avatar`) saqlanadi. `avatarUpdatedAt` brauzer
+  // keshini yangilash uchun.
   avatar            Bytes?         @map("avatar")
+  avatarKey         String?        @map("avatar_key")
   avatarMimeType    String?        @map("avatar_mime_type")
   avatarUpdatedAt   DateTime?      @map("avatar_updated_at")
   // Tizim rangi (Sozlamalar → Tizim rangi): "green", "blue", ... — ro'yxati
@@ -264,10 +265,12 @@ model Branch {
   // Yangi hisob-faktura yaratishda bo'sh qoldirilsa shu summa taklif etiladi.
   defaultTuitionAmount Decimal?  @map("default_tuition_amount") @db.Decimal(12, 2)
   // Filial belgisi (logotip). TenantUser avatari bilan bir xil yondashuv:
-  // rasm 256x256 gacha kichraytiriladi va bevosita bazada saqlanadi.
-  // Blob har bir filial so'roviga tushib ketmasligi uchun Prisma mijozida
-  // global `omit` qo'yilgan (qarang: src/database/prisma.service.ts).
+  // rasm 256x256 gacha kichraytiriladi; R2 sozlangan bo'lsa `avatarKey`
+  // (obyekt kaliti) to'ldiriladi, aks holda bevosita bazada (`avatar`)
+  // saqlanadi. Blob har bir filial so'roviga tushib ketmasligi uchun Prisma
+  // mijozida global `omit` qo'yilgan (qarang: src/database/prisma.service.ts).
   avatar               Bytes?    @map("avatar")
+  avatarKey            String?   @map("avatar_key")
   avatarMimeType       String?   @map("avatar_mime_type")
   avatarUpdatedAt      DateTime? @map("avatar_updated_at")
   createdAt            DateTime  @default(now()) @map("created_at")
@@ -394,9 +397,11 @@ model Child {
   birthDate        DateTime?   @map("birth_date")
   status           ChildStatus @default(ACTIVE)
   // Bola surati. Filial va foydalanuvchi rasmlari bilan bir xil yondashuv:
-  // brauzerda kichraytirilib, bevosita bazada saqlanadi. Blob oddiy
-  // so'rovlarga tushmasligi uchun Prisma mijozida global `omit` bor.
+  // brauzerda kichraytirilib, R2 sozlangan bo'lsa `avatarKey`ga, aks holda
+  // bevosita bazaga (`avatar`) yoziladi. Blob oddiy so'rovlarga tushmasligi
+  // uchun Prisma mijozida global `omit` bor.
   avatar           Bytes?      @map("avatar")
+  avatarKey        String?     @map("avatar_key")
   avatarMimeType   String?     @map("avatar_mime_type")
   avatarUpdatedAt  DateTime?   @map("avatar_updated_at")
   quarantineUntil  DateTime?   @map("quarantine_until") @db.Date
@@ -547,8 +552,10 @@ model Employee {
   // O'chirilgan bo'lsa — o'qituvchining o'zi qo'sha oladi (odatdagi holat).
   topicsManagedByAdmin Boolean   @default(false) @map("topics_managed_by_admin")
   // Xodim surati. Bolalar/filial/foydalanuvchi rasmlari bilan bir xil
-  // yondashuv: brauzerda kichraytirilib, bevosita bazada saqlanadi.
+  // yondashuv: brauzerda kichraytirilib, R2 sozlangan bo'lsa `avatarKey`ga,
+  // aks holda bevosita bazaga (`avatar`) yoziladi.
   avatar               Bytes?    @map("avatar")
+  avatarKey            String?   @map("avatar_key")
   avatarMimeType       String?   @map("avatar_mime_type")
   avatarUpdatedAt      DateTime? @map("avatar_updated_at")
   createdAt            DateTime  @default(now()) @map("created_at")
@@ -698,13 +705,15 @@ enum MenuMeal {
 
 /// Oshpaz tayyorlagan ovqatni suratga olib yuklaydi — ota-ona kabinetida
 /// bugungi menyu ostida ko'rinadi. Surat brauzerda kichraytirilib, boshqa
-/// rasmlar (bola, xodim, tovar) kabi bevosita bazada saqlanadi.
+/// rasmlar (bola, xodim, tovar) kabi R2 sozlangan bo'lsa `imageKey`ga, aks
+/// holda bevosita bazaga (`image`) yoziladi.
 model MenuPhoto {
   id           String   @id @default(uuid())
   branchId     String   @map("branch_id")
   date         DateTime @db.Date
   meal         MenuMeal
-  image        Bytes
+  image        Bytes?
+  imageKey     String?  @map("image_key")
   mimeType     String   @map("mime_type")
   // Kim yuklagani (tarix uchun) — foydalanuvchi o'chirilsa ham surat qoladi
   uploadedById String?  @map("uploaded_by_id")
@@ -1258,7 +1267,8 @@ model PaymentReceipt {
   guardianId       String               @map("guardian_id")
   claimedAmount    Decimal              @map("claimed_amount") @db.Decimal(12, 2)
   currency         String               @default("UZS")
-  image            Bytes
+  image            Bytes?
+  imageKey         String?              @map("image_key")
   mimeType         String               @map("mime_type")
   status           PaymentReceiptStatus @default(PENDING)
   reviewNote       String?              @map("review_note") @db.Text
@@ -1502,12 +1512,15 @@ model Product {
   priceCoins      Int       @default(0) @map("price_coins")
   quantity        Int       @default(0)
   image1          Bytes?    @map("image1")
+  image1Key       String?   @map("image1_key")
   image1MimeType  String?   @map("image1_mime_type")
   hasImage1       Boolean   @default(false) @map("has_image1")
   image2          Bytes?    @map("image2")
+  image2Key       String?   @map("image2_key")
   image2MimeType  String?   @map("image2_mime_type")
   hasImage2       Boolean   @default(false) @map("has_image2")
   image3          Bytes?    @map("image3")
+  image3Key       String?   @map("image3_key")
   image3MimeType  String?   @map("image3_mime_type")
   hasImage3       Boolean   @default(false) @map("has_image3")
   imagesUpdatedAt DateTime? @map("images_updated_at")
@@ -2285,7 +2298,8 @@ model DiaryEntry {
   @@map("diary_entries")
 }
 
-/// Kun lahzasi — rasm yoki qisqa video. Fayl hozircha bazada saqlanadi;
+/// Kun lahzasi — rasm yoki qisqa video. R2 sozlangan bo'lsa `dataKey`/`posterKey`
+/// (obyekt kaliti) to'ldiriladi, aks holda fayl bevosita bazada saqlanadi;
 /// ro'yxat so'rovlari `data` ustunini hech qachon tanlamaydi.
 model DiaryMedia {
   id              String         @id @default(uuid())
@@ -2298,9 +2312,11 @@ model DiaryMedia {
   kind            DiaryMediaKind
   mimeType        String         @map("mime_type")
   sizeBytes       Int            @map("size_bytes")
-  data            Bytes
+  data            Bytes?
+  dataKey         String?        @map("data_key")
   /// Video uchun muqova kadri (brauzerda olinadi)
   posterData      Bytes?         @map("poster_data")
+  posterKey       String?        @map("poster_key")
   posterMimeType  String?        @map("poster_mime_type")
   width           Int?
   height          Int?

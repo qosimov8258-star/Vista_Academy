@@ -119,7 +119,7 @@ export class ParentService {
     const child = await this.assertOwnsChild(parent, childId);
     const photo = await this.prisma.menuPhoto.findFirst({
       where: { id: photoId, branchId: child.branchId },
-      select: { image: true, mimeType: true },
+      select: { image: true, imageKey: true, mimeType: true },
     });
     if (!photo) {
       throw new NotFoundException("Rasm topilmadi");
@@ -241,19 +241,22 @@ export class ParentService {
       where: { id: productId, organizationId: parent.organizationId, branchId: { in: branchIds } },
       select: {
         image1: position === "1",
+        image1Key: position === "1",
         image1MimeType: position === "1",
         image2: position === "2",
+        image2Key: position === "2",
         image2MimeType: position === "2",
         image3: position === "3",
+        image3Key: position === "3",
         image3MimeType: position === "3",
       },
     });
     if (!product) {
       throw new NotFoundException("Mahsulot topilmadi");
     }
-    if (position === "1") return { image: product.image1, mimeType: product.image1MimeType };
-    if (position === "2") return { image: product.image2, mimeType: product.image2MimeType };
-    return { image: product.image3, mimeType: product.image3MimeType };
+    if (position === "1") return { image: product.image1, key: product.image1Key, mimeType: product.image1MimeType };
+    if (position === "2") return { image: product.image2, key: product.image2Key, mimeType: product.image2MimeType };
+    return { image: product.image3, key: product.image3Key, mimeType: product.image3MimeType };
   }
 
   /**

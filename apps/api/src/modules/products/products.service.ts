@@ -1,6 +1,8 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantScope, requireTeachingScope } from "../iam/tenant-auth.types";
+import { R2Service } from "../storage/r2.service";
+import { R2_CATEGORY } from "../storage/r2.constants";
 import { ProductsQueryDto } from "./dto/products-query.dto";
 import { CreateProductDto } from "./dto/create-product.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
@@ -22,7 +24,10 @@ function parsePosition(position: string): ImagePosition {
 
 @Injectable()
 export class ProductsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly r2: R2Service,
+  ) {}
 
   async findAll(scope: TenantScope, query: ProductsQueryDto) {
     const branchId = scope.branchId ?? query.branchId;
@@ -91,51 +96,70 @@ export class ProductsService {
       throw new BadRequestException("Rasm hajmi juda katta");
     }
 
+    let image: Buffer<ArrayBuffer> | null = buffer;
+    let imageKey: string | null = null;
+    const previousKey = pos === 1 ? product.image1Key : pos === 2 ? product.image2Key : product.image3Key;
+    if (this.r2.enabled) {
+      imageKey = this.r2.buildKey(scope.organizationId, R2_CATEGORY.PRODUCT_IMAGE);
+      await this.r2.uploadBuffer(imageKey, buffer, mimeType);
+      image = null;
+    }
+
     const updated = await (pos === 1
       ? this.prisma.product.update({
           where: { id: product.id },
-          data: { image1: buffer, image1MimeType: mimeType, hasImage1: true, imagesUpdatedAt: new Date() },
+          data: { image1: image, image1Key: imageKey, image1MimeType: mimeType, hasImage1: true, imagesUpdatedAt: new Date() },
           select: { imagesUpdatedAt: true },
         })
       : pos === 2
         ? this.prisma.product.update({
             where: { id: product.id },
-            data: { image2: buffer, image2MimeType: mimeType, hasImage2: true, imagesUpdatedAt: new Date() },
+            data: { image2: image, image2Key: imageKey, image2MimeType: mimeType, hasImage2: true, imagesUpdatedAt: new Date() },
             select: { imagesUpdatedAt: true },
           })
         : this.prisma.product.update({
             where: { id: product.id },
-            data: { image3: buffer, image3MimeType: mimeType, hasImage3: true, imagesUpdatedAt: new Date() },
+            data: { image3: image, image3Key: imageKey, image3MimeType: mimeType, hasImage3: true, imagesUpdatedAt: new Date() },
             select: { imagesUpdatedAt: true },
           }));
+    // DB yozuvi muvaffaqiyatli bo'lgandan KEYIN o'chiriladi — aks holda DB
+    // yozuvi muvaffaqiyatsiz bo'lsa, eski qator allaqachon o'chirilgan keyga
+    // ishora qilib qolib ketardi.
+    if (previousKey && this.r2.enabled) {
+      await this.r2.deleteObject(previousKey);
+    }
     return { imagesUpdatedAt: updated.imagesUpdatedAt };
   }
 
   async removeImage(scope: TenantScope, id: string, position: string) {
     const pos = parsePosition(position);
     const product = await this.requireWritableProduct(scope, id);
+    const previousKey = pos === 1 ? product.image1Key : pos === 2 ? product.image2Key : product.image3Key;
 
     const updated = await (pos === 1
       ? this.prisma.product.update({
           where: { id: product.id },
-          data: { image1: null, image1MimeType: null, hasImage1: false, imagesUpdatedAt: new Date() },
+          data: { image1: null, image1Key: null, image1MimeType: null, hasImage1: false, imagesUpdatedAt: new Date() },
           select: { imagesUpdatedAt: true },
         })
       : pos === 2
         ? this.prisma.product.update({
             where: { id: product.id },
-            data: { image2: null, image2MimeType: null, hasImage2: false, imagesUpdatedAt: new Date() },
+            data: { image2: null, image2Key: null, image2MimeType: null, hasImage2: false, imagesUpdatedAt: new Date() },
             select: { imagesUpdatedAt: true },
           })
         : this.prisma.product.update({
             where: { id: product.id },
-            data: { image3: null, image3MimeType: null, hasImage3: false, imagesUpdatedAt: new Date() },
+            data: { image3: null, image3Key: null, image3MimeType: null, hasImage3: false, imagesUpdatedAt: new Date() },
             select: { imagesUpdatedAt: true },
           }));
+    if (previousKey) {
+      await this.r2.deleteObject(previousKey);
+    }
     return { imagesUpdatedAt: updated.imagesUpdatedAt };
   }
 
-  /** Binar rasm. NETWORK_ADMIN har qanday filialning rasmini ko'ra oladi (ro'yxat kabi). */
+  /** Binar rasm. NETWORK_ADMIN har qanday filialning rasmini ko'ra oladi (ro'yxat kabi). Bo'sh o'rin uchun caller NotFoundException tashlaydi. */
   async readImage(scope: TenantScope, id: string, position: string) {
     const pos = parsePosition(position);
     const branchFilter = scope.branchId ? { branchId: scope.branchId } : {};
@@ -143,40 +167,31 @@ export class ProductsService {
     if (pos === 1) {
       const product = await this.prisma.product.findFirst({
         where: { id, organizationId: scope.organizationId, ...branchFilter },
-        select: { image1: true, image1MimeType: true },
+        select: { image1: true, image1Key: true, image1MimeType: true },
       });
       if (!product) {
         throw new NotFoundException("Mahsulot topilmadi");
       }
-      if (!product.image1) {
-        throw new NotFoundException("Bu rasm o'rni bo'sh");
-      }
-      return { image: product.image1, mimeType: product.image1MimeType };
+      return { image: product.image1, key: product.image1Key, mimeType: product.image1MimeType };
     }
     if (pos === 2) {
       const product = await this.prisma.product.findFirst({
         where: { id, organizationId: scope.organizationId, ...branchFilter },
-        select: { image2: true, image2MimeType: true },
+        select: { image2: true, image2Key: true, image2MimeType: true },
       });
       if (!product) {
         throw new NotFoundException("Mahsulot topilmadi");
       }
-      if (!product.image2) {
-        throw new NotFoundException("Bu rasm o'rni bo'sh");
-      }
-      return { image: product.image2, mimeType: product.image2MimeType };
+      return { image: product.image2, key: product.image2Key, mimeType: product.image2MimeType };
     }
     const product = await this.prisma.product.findFirst({
       where: { id, organizationId: scope.organizationId, ...branchFilter },
-      select: { image3: true, image3MimeType: true },
+      select: { image3: true, image3Key: true, image3MimeType: true },
     });
     if (!product) {
       throw new NotFoundException("Mahsulot topilmadi");
     }
-    if (!product.image3) {
-      throw new NotFoundException("Bu rasm o'rni bo'sh");
-    }
-    return { image: product.image3, mimeType: product.image3MimeType };
+    return { image: product.image3, key: product.image3Key, mimeType: product.image3MimeType };
   }
 
   async sell(scope: TenantScope, id: string, dto: SellProductDto) {

@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { APP_GUARD } from "@nestjs/core";
 import { PrismaModule } from "./database/prisma.module";
+import { StorageModule } from "./modules/storage/storage.module";
 import { JwtAuthGuard } from "./common/guards/jwt-auth.guard";
 import { RolesGuard } from "./common/guards/roles.guard";
 import { HealthModule } from "./modules/health/health.module";
@@ -58,6 +59,7 @@ import { FaceIdModule } from "./modules/face-id/face-id.module";
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
+    StorageModule,
     HealthModule,
     AuthModule,
     IamModule,

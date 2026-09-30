@@ -24,6 +24,8 @@ import { UpdateBranchDto } from "./dto/update-branch.dto";
 import { UpdateBranchAvatarDto } from "./dto/update-branch-avatar.dto";
 import { slugify } from "./slugify";
 import { MAX_TENANT_SLUG_LENGTH, isValidTenantSlug } from "../../common/tenant-domain";
+import { R2Service } from "../storage/r2.service";
+import { R2_CATEGORY } from "../storage/r2.constants";
 
 /** Rasm brauzerda 256x256 gacha kichraytirilgani uchun bundan oshmasligi kerak. */
 const MAX_BRANCH_AVATAR_BYTES = 300 * 1024;
@@ -34,6 +36,7 @@ export class OrganizationsService {
     private readonly prisma: PrismaService,
     private readonly auditLog: AuditLogService,
     private readonly jwt: JwtService,
+    private readonly r2: R2Service,
   ) {}
 
   async create(dto: CreateOrganizationDto) {
@@ -287,7 +290,7 @@ export class OrganizationsService {
    * data URL ko'rinishida keladi — server faqat hajmini tekshiradi.
    */
   async updateBranchAvatar(organizationId: string, branchId: string, dto: UpdateBranchAvatarDto) {
-    await this.getBranch(organizationId, branchId);
+    const branch = await this.getBranch(organizationId, branchId);
     const [header, base64] = dto.image.split(",", 2);
     const mimeType = header.slice("data:".length, header.indexOf(";"));
     const buffer = Buffer.from(base64, "base64");
@@ -299,20 +302,38 @@ export class OrganizationsService {
       throw new BadRequestException("Rasm hajmi juda katta");
     }
 
+    let avatar: Buffer<ArrayBuffer> | null = buffer;
+    let avatarKey: string | null = null;
+    if (this.r2.enabled) {
+      avatarKey = this.r2.buildKey(organizationId, R2_CATEGORY.BRANCH_AVATAR);
+      await this.r2.uploadBuffer(avatarKey, buffer, mimeType);
+      avatar = null;
+    }
+
     const updated = await this.prisma.branch.update({
       where: { id: branchId },
-      data: { avatar: buffer, avatarMimeType: mimeType, avatarUpdatedAt: new Date() },
+      data: { avatar, avatarKey, avatarMimeType: mimeType, avatarUpdatedAt: new Date() },
       select: { avatarUpdatedAt: true },
     });
+    // DB yozuvi muvaffaqiyatli bo'lgandan KEYIN o'chiriladi — aks holda DB
+    // yozuvi muvaffaqiyatsiz bo'lsa, eski qator allaqachon o'chirilgan keyga
+    // ishora qilib qolib ketardi.
+    if (branch.avatarKey && this.r2.enabled) {
+      await this.r2.deleteObject(branch.avatarKey);
+    }
     return { avatarUpdatedAt: updated.avatarUpdatedAt };
   }
 
   async removeBranchAvatar(organizationId: string, branchId: string) {
     await this.getBranch(organizationId, branchId);
-    await this.prisma.branch.update({
+    const previous = await this.prisma.branch.update({
       where: { id: branchId },
-      data: { avatar: null, avatarMimeType: null, avatarUpdatedAt: null },
+      data: { avatar: null, avatarKey: null, avatarMimeType: null, avatarUpdatedAt: null },
+      select: { avatarKey: true },
     });
+    if (previous.avatarKey) {
+      await this.r2.deleteObject(previous.avatarKey);
+    }
     return { avatarUpdatedAt: null };
   }
 
@@ -321,7 +342,7 @@ export class OrganizationsService {
     await this.getBranch(organizationId, branchId);
     return this.prisma.branch.findUniqueOrThrow({
       where: { id: branchId },
-      select: { avatar: true, avatarMimeType: true },
+      select: { avatar: true, avatarKey: true, avatarMimeType: true },
     });
   }
 

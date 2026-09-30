@@ -1,24 +1,12 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  ForbiddenException,
-  Get,
-  Header,
-  NotFoundException,
-  Param,
-  Patch,
-  Post,
-  Put,
-  Res,
-  UseGuards,
-} from "@nestjs/common";
+import { Body, Controller, Delete, ForbiddenException, Get, Header, Param, Patch, Post, Put, Res, UseGuards } from "@nestjs/common";
 import type { Response } from "express";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { Public } from "../../common/decorators/public.decorator";
+import { sendMediaResponse } from "../../common/media-response";
 import { TenantJwtAuthGuard } from "../iam/guards/tenant-jwt-auth.guard";
 import { CurrentTenantUser } from "../iam/decorators/current-tenant-user.decorator";
 import { TenantAuthenticatedUser } from "../iam/tenant-auth.types";
+import { R2Service } from "../storage/r2.service";
 import { OrganizationsService } from "./organizations.service";
 import { CreateBranchDto } from "./dto/create-branch.dto";
 import { UpdateBranchDto } from "./dto/update-branch.dto";
@@ -31,7 +19,10 @@ import { AllowChef } from "../iam/decorators/allow-chef.decorator";
 @UseGuards(TenantJwtAuthGuard)
 @Controller("app/organizations")
 export class TenantOrganizationsController {
-  constructor(private readonly organizationsService: OrganizationsService) {}
+  constructor(
+    private readonly organizationsService: OrganizationsService,
+    private readonly r2: R2Service,
+  ) {}
 
   @AllowChef()
 
@@ -110,11 +101,12 @@ export class TenantOrganizationsController {
   ) {
     this.requireBranchAccess(user, branchId);
     const record = await this.organizationsService.readBranchAvatar(user.organizationId, branchId);
-    if (!record.avatar) {
-      throw new NotFoundException("Filial belgisi yo'q");
-    }
-    res.setHeader("Content-Type", record.avatarMimeType ?? "image/jpeg");
-    res.send(Buffer.from(record.avatar));
+    await sendMediaResponse(
+      res,
+      this.r2,
+      { key: record.avatarKey, bytes: record.avatar, mimeType: record.avatarMimeType ?? "image/jpeg" },
+      "Filial belgisi yo'q",
+    );
   }
 
   private requireBranchAccess(user: TenantAuthenticatedUser, branchId: string) {

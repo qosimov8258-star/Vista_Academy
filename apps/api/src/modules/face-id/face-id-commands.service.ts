@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { FaceIdCommandType, Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
+import { R2Service } from "../storage/r2.service";
 import type { AgentDevice } from "./agent/agent-token.guard";
 import type { AgentCommandAckDto } from "./dto/agent-command-ack.dto";
 import { childDeviceNo } from "./device-person";
@@ -49,7 +50,10 @@ type EnqueueTarget = {
 export class FaceIdCommandsService {
   private readonly logger = new Logger(FaceIdCommandsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly r2: R2Service,
+  ) {}
 
   // ---------------------------------------------------------------------
   // Navbatga qo'yish (xodimlar va bolalar servislaridan chaqiriladi)
@@ -246,12 +250,23 @@ export class FaceIdCommandsService {
       throw new NotFoundException("Buyruq yoki uning egasi topilmadi");
     }
     const person = command.employeeId
-      ? await this.prisma.employee.findUnique({ where: { id: command.employeeId }, select: { avatar: true, avatarMimeType: true } })
-      : await this.prisma.child.findUnique({ where: { id: command.childId! }, select: { avatar: true, avatarMimeType: true } });
-    if (!person?.avatar) {
+      ? await this.prisma.employee.findUnique({
+          where: { id: command.employeeId },
+          select: { avatar: true, avatarKey: true, avatarMimeType: true },
+        })
+      : await this.prisma.child.findUnique({
+          where: { id: command.childId! },
+          select: { avatar: true, avatarKey: true, avatarMimeType: true },
+        });
+    if (!person?.avatar && !person?.avatarKey) {
       throw new NotFoundException(command.employeeId ? "Xodimda surat yo'q" : "Bolada surat yo'q");
     }
-    return { data: Buffer.from(person.avatar), mimeType: person.avatarMimeType ?? "image/jpeg" };
+    // Terminal firmware — redirect emas, bayt server orqali o'qiladi (brauzer endpointlaridan farqli).
+    if (person.avatarKey) {
+      const { buffer, contentType } = await this.r2.getObjectBuffer(person.avatarKey);
+      return { data: buffer, mimeType: contentType ?? person.avatarMimeType ?? "image/jpeg" };
+    }
+    return { data: Buffer.from(person.avatar!), mimeType: person.avatarMimeType ?? "image/jpeg" };
   }
 
   // ---------------------------------------------------------------------
