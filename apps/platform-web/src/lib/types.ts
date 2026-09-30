@@ -76,6 +76,8 @@ export interface Organization {
   id: string;
   name: string;
   slug: string;
+  /** Mustaqil lending sayt domeni (masalan "vista-academy.uz"), protokolsiz. Shu domendan kelgan arizalar shu tashkilotga bog'lanadi. */
+  website: string | null;
   contactName: string | null;
   contactEmail: string | null;
   contactPhone: string | null;

@@ -13,6 +13,12 @@ export class CreateOrganizationDto {
   @IsString()
   firstBranchName?: string;
 
+  /** Mustaqil lending sayt domeni — shu domendan kelgan arizalar shu tashkilotga bog'lanadi. */
+  @ApiPropertyOptional({ example: "vista-academy.uz" })
+  @IsOptional()
+  @IsString()
+  website?: string;
+
   @ApiPropertyOptional({ example: "Aziza Karimova" })
   @IsOptional()
   @IsString()

@@ -94,6 +94,12 @@ model Organization {
   id           String             @id @default(uuid())
   name         String
   slug         String             @unique
+  /// Tashkilotning mustaqil lending (marketing) sayti domeni — masalan
+  /// "vista-academy.uz". Protokol/"www."/yo'lsiz, normallashtirilgan holda
+  /// saqlanadi (qarang: common/website-host.ts). Shu domendan kelgan
+  /// "Ariza qoldirish" so'rovlari shu tashkilotga bog'lanadi — qarang:
+  /// LandingService.resolveApplicationOrganizationId va main.ts'dagi CORS.
+  website      String?            @unique
   contactName  String?            @map("contact_name")
   contactEmail String?            @map("contact_email")
   contactPhone String?            @map("contact_phone")

@@ -22,6 +22,7 @@ const schema = z.object({
   name: z.string().min(2, "Nomi kamida 2 belgi"),
   contactName: z.string().regex(LOGIN_PATTERN, LOGIN_MESSAGE),
   contactPhone: z.string().optional(),
+  website: z.string().optional(),
   planId: z.string().min(1, "Tarif tanlang"),
   adminPassword: z.string().min(8, "Kamida 8 belgi"),
 });
@@ -49,7 +50,7 @@ export function CreateOrganizationModal({ open, onClose }: { open: boolean; onCl
 
   useEffect(() => {
     if (open) {
-      reset({ name: "", contactName: "", contactPhone: "", planId: "", adminPassword: "" });
+      reset({ name: "", contactName: "", contactPhone: "", website: "", planId: "", adminPassword: "" });
       setServerError(null);
     }
   }, [open, reset]);
@@ -60,6 +61,8 @@ export function CreateOrganizationModal({ open, onClose }: { open: boolean; onCl
         name: values.name,
         contactName: values.contactName,
         contactPhone: values.contactPhone,
+        // Bo'sh qoldirilsa umuman yuborilmaydi — keyinroq "Tahrirlash" orqali qo'shish mumkin.
+        ...(values.website?.trim() ? { website: values.website.trim() } : {}),
         planId: values.planId,
         // Ism maydoni Super Admin login sifatida ham ishlatiladi — to'liq ismni
         // keyinroq super admin o'zi panelda o'zgartiradi.
@@ -155,6 +158,13 @@ export function CreateOrganizationModal({ open, onClose }: { open: boolean; onCl
           />
           <Input label="Telefon raqami" placeholder="+998901234567" {...register("contactPhone")} />
         </div>
+        <Input
+          label="Veb-sayt (lending sahifa)"
+          placeholder="vista-academy.uz"
+          hint="Ixtiyoriy — mustaqil lending saytingiz domeni. Kiritilsa, shu saytdan kelgan arizalar avtomatik shu bog'chaga tushadi"
+          error={errors.website?.message}
+          {...register("website")}
+        />
         <PasswordVeilInput
           label="Parol"
           placeholder="Kamida 8 belgi"

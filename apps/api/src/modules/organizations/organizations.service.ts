@@ -24,6 +24,7 @@ import { UpdateBranchDto } from "./dto/update-branch.dto";
 import { UpdateBranchAvatarDto } from "./dto/update-branch-avatar.dto";
 import { slugify } from "./slugify";
 import { MAX_TENANT_SLUG_LENGTH, isValidTenantSlug } from "../../common/tenant-domain";
+import { normalizeWebsiteHost } from "../../common/website-host";
 import { R2Service } from "../storage/r2.service";
 import { R2_CATEGORY } from "../storage/r2.constants";
 
@@ -46,74 +47,83 @@ export class OrganizationsService {
     }
 
     const slug = await this.generateUniqueSlug(dto.name);
+    const website = this.normalizeWebsiteOrThrow(dto.website);
 
-    return this.prisma.$transaction(async (tx) => {
-      const organization = await tx.organization.create({
-        data: {
-          name: dto.name,
-          slug,
-          contactName: dto.contactName,
-          contactEmail: dto.contactEmail,
-          contactPhone: dto.contactPhone,
-        },
-      });
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const organization = await tx.organization.create({
+          data: {
+            name: dto.name,
+            slug,
+            website,
+            contactName: dto.contactName,
+            contactEmail: dto.contactEmail,
+            contactPhone: dto.contactPhone,
+          },
+        });
 
-      const firstBranchName = dto.firstBranchName?.trim() || "Bosh filial";
-      await tx.branch.create({
-        data: {
-          organizationId: organization.id,
-          name: firstBranchName,
-          slug: await this.generateUniqueBranchSlug(organization.id, firstBranchName, tx),
-        },
-      });
+        const firstBranchName = dto.firstBranchName?.trim() || "Bosh filial";
+        await tx.branch.create({
+          data: {
+            organizationId: organization.id,
+            name: firstBranchName,
+            slug: await this.generateUniqueBranchSlug(organization.id, firstBranchName, tx),
+          },
+        });
 
-      await tx.wallet.create({
-        data: { organizationId: organization.id, balance: 0 },
-      });
+        await tx.wallet.create({
+          data: { organizationId: organization.id, balance: 0 },
+        });
 
-      // Xodim qo'shishda tanlash uchun odatiy lavozimlar to'plami tayyor tursin
-      await tx.position.createMany({
-        data: DEFAULT_POSITIONS.map((name) => ({ organizationId: organization.id, name })),
-      });
+        // Xodim qo'shishda tanlash uchun odatiy lavozimlar to'plami tayyor tursin
+        await tx.position.createMany({
+          data: DEFAULT_POSITIONS.map((name) => ({ organizationId: organization.id, name })),
+        });
 
-      // Fan o'qituvchisi uchun tanlash uchun odatiy fanlar to'plami tayyor tursin
-      await tx.subject.createMany({
-        data: DEFAULT_SUBJECTS.map((name) => ({ organizationId: organization.id, name })),
-      });
+        // Fan o'qituvchisi uchun tanlash uchun odatiy fanlar to'plami tayyor tursin
+        await tx.subject.createMany({
+          data: DEFAULT_SUBJECTS.map((name) => ({ organizationId: organization.id, name })),
+        });
 
-      const adminPasswordHash = await argon2.hash(dto.adminPassword);
-      await tx.tenantUser.create({
-        data: {
-          organizationId: organization.id,
-          login: dto.adminLogin.toLowerCase(),
-          passwordHash: adminPasswordHash,
-          // Platform panelida "Login/Parol"ni keyinchalik qayta ko'rsatish
-          // uchun qaytarib olinadigan shaklda ham saqlanadi (xodimlardagi
-          // bilan bir xil yondashuv) — auth esa faqat `passwordHash` orqali.
-          passwordEncrypted: encryptSecret(dto.adminPassword),
-          fullName: dto.adminFullName,
-          role: "NETWORK_ADMIN",
-        },
-      });
+        const adminPasswordHash = await argon2.hash(dto.adminPassword);
+        await tx.tenantUser.create({
+          data: {
+            organizationId: organization.id,
+            login: dto.adminLogin.toLowerCase(),
+            passwordHash: adminPasswordHash,
+            // Platform panelida "Login/Parol"ni keyinchalik qayta ko'rsatish
+            // uchun qaytarib olinadigan shaklda ham saqlanadi (xodimlardagi
+            // bilan bir xil yondashuv) — auth esa faqat `passwordHash` orqali.
+            passwordEncrypted: encryptSecret(dto.adminPassword),
+            fullName: dto.adminFullName,
+            role: "NETWORK_ADMIN",
+          },
+        });
 
-      const now = new Date();
-      const periodEnd = new Date(now);
-      periodEnd.setMonth(periodEnd.getMonth() + 1);
-      await tx.subscription.create({
-        data: {
-          organizationId: organization.id,
-          planId: plan.id,
-          status: "ACTIVE",
-          currentPeriodStart: now,
-          currentPeriodEnd: periodEnd,
-        },
-      });
+        const now = new Date();
+        const periodEnd = new Date(now);
+        periodEnd.setMonth(periodEnd.getMonth() + 1);
+        await tx.subscription.create({
+          data: {
+            organizationId: organization.id,
+            planId: plan.id,
+            status: "ACTIVE",
+            currentPeriodStart: now,
+            currentPeriodEnd: periodEnd,
+          },
+        });
 
-      return tx.organization.findUniqueOrThrow({
-        where: { id: organization.id },
-        include: organizationInclude,
+        return tx.organization.findUniqueOrThrow({
+          where: { id: organization.id },
+          include: organizationInclude,
+        });
       });
-    });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+        throw new ConflictException("Bu veb-sayt allaqachon boshqa bog'chaga bog'langan");
+      }
+      throw err;
+    }
   }
 
   async findAll(query: OrganizationQueryDto) {
@@ -159,11 +169,38 @@ export class OrganizationsService {
 
   async update(id: string, dto: UpdateOrganizationDto) {
     await this.findOne(id);
-    return this.prisma.organization.update({
-      where: { id },
-      data: dto,
-      include: organizationInclude,
-    });
+    const data: Prisma.OrganizationUpdateInput = { ...dto };
+    if (dto.website !== undefined) {
+      data.website = dto.website === null ? null : this.normalizeWebsiteOrThrow(dto.website);
+    }
+    try {
+      return await this.prisma.organization.update({
+        where: { id },
+        data,
+        include: organizationInclude,
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+        throw new ConflictException("Bu veb-sayt allaqachon boshqa bog'chaga bog'langan");
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * Super admin platform panelida kiritgan "Veb-sayt" qiymatini (masalan
+   * "https://Vista-Academy.uz/" yoki "vista-academy.uz") DB'da saqlanadigan
+   * yagona ko'rinishga (host, kichik harf, protokol/"www."/yo'lsiz) keltiradi
+   * — shu qiymat keyin lending saytidan kelgan Origin bilan solishtiriladi
+   * (qarang: LandingService.resolveApplicationOrganizationId).
+   */
+  private normalizeWebsiteOrThrow(raw: string | undefined | null): string | null {
+    if (!raw) return null;
+    const host = normalizeWebsiteHost(raw);
+    if (!host) {
+      throw new BadRequestException("Veb-sayt manzili noto'g'ri");
+    }
+    return host;
   }
 
   /** Tashkilotning Super Admin (NETWORK_ADMIN) kabineti — bog'cha URL'iga shu bilan kiriladi. */

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post } from "@nestjs/common";
+import { Body, Controller, Get, Headers, HttpCode, HttpStatus, Param, Post } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { Public } from "../../common/decorators/public.decorator";
 import { LandingService } from "./landing.service";
@@ -47,9 +47,20 @@ export class PublicLandingController {
     return this.landingService.getContentBlock(key);
   }
 
+  /**
+   * `organizationSlug` yuborilmasa, tashkilot so'rovning Origin (yo'q bo'lsa
+   * Referer) hostidan aniqlanadi — har bir bog'chaning platform panelida
+   * kiritilgan "Veb-sayt" domeni shu bilan solishtiriladi. Shunday qilib
+   * mustaqil lending saytlar (masalan Vista-Academy-web) hech qanday
+   * qo'shimcha sozlamasiz to'g'ri bog'chaga ariza yuboradi.
+   */
   @Post("applications")
   @HttpCode(HttpStatus.CREATED)
-  createApplication(@Body() dto: CreateLandingApplicationDto) {
-    return this.landingService.createApplication(dto);
+  createApplication(
+    @Body() dto: CreateLandingApplicationDto,
+    @Headers("origin") origin: string | undefined,
+    @Headers("referer") referer: string | undefined,
+  ) {
+    return this.landingService.createApplication(dto, origin || referer);
   }
 }
