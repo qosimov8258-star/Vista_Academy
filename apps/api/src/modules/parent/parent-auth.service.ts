@@ -63,6 +63,8 @@ export class ParentAuthService {
 
     const guardian = await this.prisma.guardian.findUnique({
       where: { organizationId_phone: { organizationId: organization.id, phone: normalizePhone(phone) } },
+      // passwordHash global omit qilingan (prisma.service) — parolni tekshirish uchun kerak
+      omit: { passwordHash: false },
     });
     // Bir xil xabar: raqam ro'yxatda bor-yo'qligini tashqaridan bilib
     // bo'lmasligi kerak.
@@ -123,7 +125,7 @@ export class ParentAuthService {
     const tokenHash = hashToken(rawRefreshToken);
     const existing = await this.prisma.guardianRefreshToken.findUnique({
       where: { tokenHash },
-      include: { guardian: { include: { organization: true } } },
+      include: { guardian: { omit: { passwordHash: false }, include: { organization: true } } },
     });
     if (!existing || existing.revokedAt || existing.expiresAt < new Date()) {
       throw new UnauthorizedException("Seans muddati tugagan");

@@ -15,7 +15,7 @@ import { useAuth } from "@/lib/use-auth";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { useSidebarCollapsed } from "@/lib/use-sidebar-collapsed";
 import { useSidebarSections } from "@/lib/use-sidebar-sections";
-import { ROLE_LABEL, canManageUsers, canViewUseful, isChef, isTeacher, receivesEmployeeNotifications } from "@/lib/permissions";
+import { ROLE_LABEL, canManageUsers, canViewUseful, isChef, isTeacher, ownsLanding, receivesEmployeeNotifications } from "@/lib/permissions";
 import { formatPositionLabel, isAssistantPosition, isCashierPosition, isSubjectTeacherPosition } from "@/lib/employee-position";
 import { Avatar, initials } from "@/components/ui/avatar";
 import { isSection, type NavEntry, type NavLeaf } from "./nav-types";
@@ -141,6 +141,8 @@ export function Sidebar({ slug }: { slug: string }) {
   const chef = isChef(user?.role);
   const isAssistant = !!user?.position && isAssistantPosition(user.position);
   const isCashier = !!user?.position && isCashierPosition(user.position);
+  // Lending sayt bitta tashkilotniki — boshqa bog'chalarda bo'lim ko'rinmaydi
+  const showLandingNav = ownsLanding(user?.organizationSlug);
   const isManager = user?.role === "MANAGER";
   // Yon paneldagi "Bildirishnomalarim" belgisi uchun — daqiqada bir marta yangilanadi.
   const notificationsQuery = useQuery({
@@ -392,9 +394,9 @@ export function Sidebar({ slug }: { slug: string }) {
       label: t("nav.landingPage"),
       icon: GlobeIcon,
       items: [
-        { href: `${base}/lending/teachers`, label: t("nav.teachers"), icon: TeacherIcon, show: true },
-        { href: `${base}/lending/menu`, label: t("nav.menu"), icon: MealIcon, show: true },
-        { href: `${base}/lending/groups`, label: t("nav.groups"), icon: GroupIcon, show: true },
+        { href: `${base}/lending/teachers`, label: t("nav.teachers"), icon: TeacherIcon, show: showLandingNav },
+        { href: `${base}/lending/menu`, label: t("nav.menu"), icon: MealIcon, show: showLandingNav },
+        { href: `${base}/lending/groups`, label: t("nav.groups"), icon: GroupIcon, show: showLandingNav },
       ],
     },
     // Direktor filial ichida — shu filialdagi amallar jurnali

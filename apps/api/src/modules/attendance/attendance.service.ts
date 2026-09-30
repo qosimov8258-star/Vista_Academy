@@ -368,8 +368,16 @@ export class AttendanceService {
    */
   async chronicAbsenceFlags(scope: TenantScope, branchId?: string) {
     const resolvedBranchId = scope.branchId ?? branchId;
+    if (scope.branchId && branchId && branchId !== scope.branchId) {
+      throw new ForbiddenException("Bu filialga kirish huquqingiz yo'q");
+    }
     if (!resolvedBranchId) {
       throw new BadRequestException("Filialni tanlang");
+    }
+    // Tarmoq admini branchId ni so'rovda beradi — boshqa tashkilot filiali bo'lmasin
+    const branch = await this.prisma.branch.findFirst({ where: { id: resolvedBranchId, organizationId: scope.organizationId } });
+    if (!branch) {
+      throw new NotFoundException("Filial topilmadi");
     }
     const teacherGroupIds = await resolveTeacherGroupIds(this.prisma, scope);
     const children = await this.prisma.child.findMany({

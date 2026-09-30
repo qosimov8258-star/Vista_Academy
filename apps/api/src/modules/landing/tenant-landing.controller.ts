@@ -19,6 +19,7 @@ import { CurrentTenantUser } from "../iam/decorators/current-tenant-user.decorat
 import { TenantAuthenticatedUser, requireOperationalScope, toTenantScope } from "../iam/tenant-auth.types";
 import { LandingService } from "./landing.service";
 import { landingPhotoUploadInterceptor } from "./landing-upload.util";
+import { LandingOwnerGuard } from "./landing-owner.guard";
 import { CreateMealDto } from "./dto/create-meal.dto";
 import { UpdateMealDto } from "./dto/update-meal.dto";
 import { CreateTeacherDto } from "./dto/create-teacher.dto";
@@ -35,12 +36,13 @@ import { UpdateContentBlockDto } from "./dto/update-content-block.dto";
  * ham, bu tashkilotda uni filial admini/administrator shu yerdan tahrirlaydi;
  * o'qish (`GET`) hamon `PublicLandingController` orqali ochiq.
  * Ruxsat qoidasi operatsion modullar bilan bir xil: Super Admin faqat
- * kuzatadi, moliyachi va o'qituvchi bu yerga kirmaydi.
+ * kuzatadi, moliyachi va o'qituvchi bu yerga kirmaydi. Sayt bitta
+ * tashkilotniki — boshqa bog'chalar uchun LandingOwnerGuard rad etadi.
  */
 @ApiBearerAuth()
 @ApiTags("Tenant Landing")
 @Public()
-@UseGuards(TenantJwtAuthGuard)
+@UseGuards(TenantJwtAuthGuard, LandingOwnerGuard)
 @Controller("app/landing")
 export class TenantLandingController {
   constructor(private readonly landingService: LandingService) {}

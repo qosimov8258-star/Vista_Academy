@@ -108,7 +108,11 @@ export async function createChildWithGuardian<T extends Prisma.ChildInclude>(
 
   // Aka-uka/opa-singil qo'shilganda bir xil telefon bo'yicha mavjud vasiy
   // topiladi va ikkala bola bitta ota-onaga bog'lanadi.
-  const existingGuardian = await tx.guardian.findFirst({ where: { organizationId: input.organizationId, phone } });
+  const existingGuardian = await tx.guardian.findFirst({
+    where: { organizationId: input.organizationId, phone },
+    // passwordHash global omit qilingan — kabinet ochiq-yopiqligini bilish uchun kerak
+    omit: { passwordHash: false },
+  });
 
   let guardianId: string;
   let credentials: GuardianCredentials | null = null;
