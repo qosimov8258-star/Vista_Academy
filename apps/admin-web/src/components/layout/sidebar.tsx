@@ -365,7 +365,7 @@ export function Sidebar({ slug }: { slug: string }) {
       label: "Bugungi ishlar",
       icon: PhoneIcon,
       items: [
-        { href: `${base}/calls`, label: "Qo'ng'iroqlar", icon: PhoneIcon, show: isManager && !inBranchContext },
+        { href: `${base}/calls`, label: "Qo'ng'iroqlar", icon: PhoneIcon, show: (isManager || isBranchAdmin) && !inBranchContext },
         { href: `${base}/pickups`, label: "Olib ketish", icon: ChildIcon, show: !inBranchContext && !isManager },
         { href: `${base}/board`, label: "Bugungi holat", icon: ChartIcon, show: !inBranchContext },
         { href: `${base}/weekly-report`, label: "Haftalik hisobot", icon: NoteIcon, show: !inBranchContext },

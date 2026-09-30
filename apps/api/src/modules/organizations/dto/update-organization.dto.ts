@@ -14,6 +14,12 @@ export class UpdateOrganizationDto {
   @IsString()
   contactName?: string | null;
 
+  /** Mustaqil lending sayt domeni — shu domendan kelgan arizalar shu tashkilotga bog'lanadi. null yuborilsa tozalanadi. */
+  @ApiPropertyOptional({ example: "vista-academy.uz", nullable: true, description: "null yuborilsa tozalanadi" })
+  @IsOptional()
+  @IsString()
+  website?: string | null;
+
   @ApiPropertyOptional({ nullable: true, description: "null yuborilsa tozalanadi" })
   @IsOptional()
   @IsEmail()

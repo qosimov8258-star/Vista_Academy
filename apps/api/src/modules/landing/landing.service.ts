@@ -3,6 +3,7 @@ import { unlink } from "fs/promises";
 import { basename, join } from "path";
 import { PrismaService } from "../../database/prisma.service";
 import { LANDING_UPLOAD_DIR } from "../../common/constants/uploads";
+import { normalizeWebsiteHost } from "../../common/website-host";
 import { CreateScheduleItemDto } from "./dto/create-schedule-item.dto";
 import { UpdateScheduleItemDto } from "./dto/update-schedule-item.dto";
 import { CreateMealDto } from "./dto/create-meal.dto";
@@ -365,21 +366,58 @@ export class LandingService {
   // --- Arizalar ("Ariza qoldirish" sahifasi) ------------------------------------
 
   /**
-   * Ariza qaysi bog'chaniki ekani slug bo'yicha aniqlanadi — shu tashkilotning
-   * call operatori uni "Bugun qo'ng'iroq qilish" ro'yxatida ko'radi.
+   * Ariza qaysi bog'chaniki ekani aniqlanadi — shu tashkilotning call
+   * operatori uni "Bugun qo'ng'iroq qilish" ro'yxatida ko'radi.
    */
-  async createApplication(dto: CreateLandingApplicationDto) {
-    const slug = (dto.organizationSlug || process.env.LANDING_ORGANIZATION_SLUG || "").trim();
-    let organizationId: string | null = null;
-    if (slug) {
-      const org = await this.prisma.organization.findUnique({ where: { slug }, select: { id: true } });
-      if (!org) throw new BadRequestException("Bog'cha topilmadi");
-      organizationId = org.id;
-    } else {
-      this.logger.warn("Lending arizasi tashkilotsiz saqlandi: LANDING_ORGANIZATION_SLUG berilmagan");
-    }
+  async createApplication(dto: CreateLandingApplicationDto, originHeader?: string) {
+    const organizationId = await this.resolveApplicationOrganizationId(dto.organizationSlug, originHeader);
     return this.prisma.landingApplication.create({
       data: { organizationId, fullName: dto.fullName, phone: dto.phone },
     });
+  }
+
+  /**
+   * Aniqlash tartibi:
+   *  1. `dto.organizationSlug` — klient o'zi aniq slug yuborsa (masalan
+   *     kelajakda bitta shablonni bir nechta bog'cha ishlatsa, query orqali).
+   *     Berilgan-u topilmasa — xato (klientning xatosi).
+   *  2. So'rovning Origin (yo'q bo'lsa Referer) hosti — platform panelida
+   *     bog'chaga bog'langan "Veb-sayt" domeni bilan solishtiriladi. Bu —
+   *     asosiy yo'l: mustaqil lending sayt (masalan Vista-Academy-web) hech
+   *     narsa yubormasa ham, brauzer o'zi qo'shadigan Origin sarlavhasi
+   *     orqali to'g'ri bog'chaga bog'lanadi.
+   *  3. `LANDING_ORGANIZATION_SLUG` — eski, bitta-tashkilotli rejimdagi
+   *     server-keng standart (orqaga moslik uchun saqlangan).
+   *  Hech biri topilmasa — ariza tashkilotsiz saqlanadi (eski xatti-harakat).
+   */
+  private async resolveApplicationOrganizationId(
+    explicitSlug: string | undefined,
+    originHeader: string | undefined,
+  ): Promise<string | null> {
+    if (explicitSlug?.trim()) {
+      const org = await this.prisma.organization.findUnique({
+        where: { slug: explicitSlug.trim() },
+        select: { id: true },
+      });
+      if (!org) throw new BadRequestException("Bog'cha topilmadi");
+      return org.id;
+    }
+
+    const host = originHeader ? normalizeWebsiteHost(originHeader) : null;
+    if (host) {
+      const org = await this.prisma.organization.findUnique({ where: { website: host }, select: { id: true } });
+      if (org) return org.id;
+    }
+
+    const fallbackSlug = (process.env.LANDING_ORGANIZATION_SLUG ?? "").trim();
+    if (fallbackSlug) {
+      const org = await this.prisma.organization.findUnique({ where: { slug: fallbackSlug }, select: { id: true } });
+      if (org) return org.id;
+    }
+
+    this.logger.warn(
+      `Lending arizasi tashkilotsiz saqlandi: origin host=${host ?? "-"} fallbackSlug=${fallbackSlug || "-"}`,
+    );
+    return null;
   }
 }

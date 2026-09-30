@@ -19,7 +19,7 @@ import {
   PlusIcon,
   RefreshIcon,
 } from "@/components/ui/icons";
-import { bogchaPublicUrl, formatDateTime, formatMoney } from "@/lib/format";
+import { formatDateTime, formatMoney } from "@/lib/format";
 import { organizationAccessUrl } from "@/lib/admin-web";
 import {
   subscriptionStatusLabel,
@@ -108,8 +108,8 @@ export default function BogchaDetailPage({
   const org = orgQuery.data;
   if (!org) return null;
 
-  const publicUrl = bogchaPublicUrl(org.slug);
   const accessUrl = organizationAccessUrl(org.slug);
+  const websiteUrl = org.website ? `https://${org.website}` : null;
 
   const copyAccessUrl = async () => {
     try {
@@ -156,16 +156,27 @@ export default function BogchaDetailPage({
         </CardBody>
 
         <CardBody className="flex flex-wrap items-center gap-2 border-t border-[var(--color-separator)]">
-          {/* Ommaviy (tenant) sahifa havolasi — bosilganda to'g'ridan-to'g'ri ochiladi */}
-          <a
-            href={publicUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-primary-soft)] px-3.5 py-1.5 text-[13px] font-medium text-[var(--color-primary)] transition-opacity hover:opacity-80"
-          >
-            Ommaviy sahifa
-            <ExternalLinkIcon className="h-3.5 w-3.5" />
-          </a>
+          {/* Bog'chaning mustaqil lending (marketing) sayti — "Tahrirlash"da kiritiladi.
+              Shu saytdan kelgan "Ariza qoldirish" so'rovlari avtomatik shu tashkilotga bog'lanadi. */}
+          {websiteUrl ? (
+            <a
+              href={websiteUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-primary-soft)] px-3.5 py-1.5 text-[13px] font-medium text-[var(--color-primary)] transition-opacity hover:opacity-80"
+            >
+              {org.website}
+              <ExternalLinkIcon className="h-3.5 w-3.5" />
+            </a>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setEditOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-[var(--color-border)] px-3.5 py-1.5 text-[13px] font-medium text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-hover)]"
+            >
+              Veb-sayt kiritilmagan
+            </button>
+          )}
 
           {/* Boshqaruv paneli havolasi — GitHub'ning "Code" tugmasi kabi popoverda ko'rsatiladi */}
           <div ref={popoverRef} className="relative">
