@@ -18,13 +18,12 @@ import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { diskStorage } from "multer";
 import { randomUUID } from "crypto";
-import { extname } from "path";
 import { mkdirSync } from "fs";
 import type { Request, Response } from "express";
 import { Public } from "../../common/decorators/public.decorator";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
-import { AVATAR_UPLOAD_DIR } from "../../common/constants/uploads";
+import { AVATAR_UPLOAD_DIR, imageExtensionForMime } from "../../common/constants/uploads";
 import { AuthService, IssuedTokens } from "./auth.service";
 import { LoginDto } from "./dto/login.dto";
 import { UpdateProfileDto } from "./dto/update-profile.dto";
@@ -103,7 +102,7 @@ export class AuthController {
           cb(null, AVATAR_UPLOAD_DIR);
         },
         filename: (_req, file, cb) => {
-          cb(null, `${randomUUID()}${extname(file.originalname) || ".jpg"}`);
+          cb(null, `${randomUUID()}${imageExtensionForMime(file.mimetype)}`);
         },
       }),
       limits: { fileSize: AVATAR_MAX_SIZE },

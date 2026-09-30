@@ -29,6 +29,8 @@ export class ParentJwtStrategy extends PassportStrategy(Strategy, "parent-jwt") 
     const guardian = await this.prisma.guardian.findUnique({
       where: { id: payload.sub },
       include: { organization: true },
+      // passwordHash global omit qilingan — kabinet yopilganini bilish uchun kerak
+      omit: { passwordHash: false },
     });
     // Kabinet yopilgan yoki paroli olib tashlangan bo'lsa — token bekor.
     // Tekshiruv har so'rovda bajariladi, shuning uchun yopish darhol kuchga kiradi.
