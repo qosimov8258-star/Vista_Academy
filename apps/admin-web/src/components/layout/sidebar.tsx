@@ -160,10 +160,26 @@ export function Sidebar({ slug }: { slug: string }) {
   const unreadNotificationsCount = notificationsQuery.data?.filter((n) => !n.isRead).length ?? 0;
   const params = useParams<{ branchSlug?: string }>();
   const { branch, branches } = useBranchContext(slug);
+  // `useBranchContext` (useParams orqali) filial segmentini bitta filialdan
+  // ikkinchisiga o'tilganda ishonchli yangilamay qolishi mumkin — xodimlar
+  // sahifasida (`employees/page.tsx`) xuddi shu sabab bilan `pathname`dan
+  // o'qish ishlatilgan edi. Shu sabab moliyachi filial tanlovi uchun ham
+  // filialni to'g'ridan-to'g'ri joriy manzildan o'zimiz aniqlaymiz — aks
+  // holda ikkinchi marta boshqa filialga o'tilganda tanlov eskisida qotib
+  // qolardi (masalan mobil "Filiallar" panjarasida).
+  const pathSegments = pathname.split("/").filter(Boolean);
+  const pathBranchSlug = pathSegments[0] === slug ? (pathSegments[1] ?? null) : null;
+  const pathBranch = pathBranchSlug ? (branches.find((b) => b.slug === pathBranchSlug) ?? null) : null;
   // Moliyachi (FINANCE) yon paneldagi "Filiallar" bo'limida qaysi filialni
   // tanlagani — shu filialning O'quvchilar/Xodimlar/Eslatmalar havolalari
-  // pastda ochiladi.
+  // pastda ochiladi. Bitta filial har doim tanlangan holda turishi shart —
+  // shuning uchun joriy manzildagi filialga (URL'dan) sinxronlanadi va hech
+  // qachon "hech narsa tanlanmagan" holatga tushmaydi (pastda fallback bilan).
   const [financeBranchId, setFinanceBranchId] = useState<string | null>(null);
+  useEffect(() => {
+    if (pathBranch?.id) setFinanceBranchId(pathBranch.id);
+  }, [pathBranch?.id]);
+  const financeSelectedBranchId = pathBranch?.id ?? financeBranchId ?? user?.branchId ?? branches[0]?.id ?? null;
   // A NETWORK_ADMIN who hasn't drilled into a specific branch only manages
   // the network itself (home overview + branch list) — every operational
   // module (children, finance, attendance, ...) only makes sense once a
@@ -188,15 +204,20 @@ export function Sidebar({ slug }: { slug: string }) {
   // bilan bir xil chiroyli suzuvchi navigatsiya, faqat ichidagi bo'limlar
   // boshqacha. Birinchi to'rtta joy doim ko'rinadi, "Filiallar" esa Menyu
   // ichida — bosilganda o'sha filialning Xodimlar sahifasiga o'tadi.
-  const financeActiveBranchSlug = branch?.slug ?? user?.branchSlug ?? branches[0]?.slug ?? null;
-  const financeBase = financeActiveBranchSlug ? `/${slug}/${financeActiveBranchSlug}` : null;
-  // Umumiy `isActive` filialsiz havolalarni kutadi (operatsion rollar uchun
-  // to'g'ri), lekin moliyachining Xodimlar/O'quvchilar/Eslatmalar havolalari
-  // aynan filial prefiksi bilan ishlaydi — shuning uchun ular xom
-  // `pathname`ga solishtiriladi, faqat "Bosh sahifa" kosmetik bookmarkdan
-  // qat'i nazar to'g'ri faollashishi uchun `currentPath`da qoladi.
-  const financeIsActive = (item: NavLeaf) =>
-    item.exact ? currentPath === item.href : pathname.startsWith(item.href);
+  // Tezkor havolalar (Xodimlar/O'quvchilar/Eslatmalar) ham xuddi shu — doim
+  // aniq bitta — tanlangan filialga ishora qiladi, joriy manzildan qat'i nazar.
+  // `branches` ro'yxati hali yuklanmagan bo'lishi mumkin (tarmoq so'rovi
+  // tugamagan) — shu daqiqada id->slug moslashtirib bo'lmaydi, shuning uchun
+  // `pathBranch?.slug`/`user?.branchSlug` bilan zudlik bilan mavjud slug'ga
+  // tushiladi; aks holda hamma tezkor havola bir xil `/${slug}` manziliga
+  // tushib, Reactga bir xil `key` beradi (konsolda "duplicate key" xatosi).
+  const financeSelectedBranchSlug =
+    pathBranch?.slug ||
+    (financeBranchId && branches.find((b) => b.id === financeBranchId)?.slug) ||
+    user?.branchSlug ||
+    branches[0]?.slug ||
+    null;
+  const financeBase = financeSelectedBranchSlug ? `/${slug}/${financeSelectedBranchSlug}` : null;
   // "Filiallar" alohida o'zgaruvchida — pastki panelda ham (to'rttadan keyingi
   // joy sifatida), ham Menyu oynasida (yagona bo'lim sifatida, bosh sahifa va
   // hokazolarni takrorlamasdan) ishlatiladi.
@@ -210,6 +231,27 @@ export function Sidebar({ slug }: { slug: string }) {
       icon: BuildingIcon,
       show: true,
     })),
+  };
+  // Umumiy `isActive` filialsiz havolalarni kutadi (operatsion rollar uchun
+  // to'g'ri), lekin moliyachining Xodimlar/O'quvchilar/Eslatmalar havolalari
+  // aynan filial prefiksi bilan ishlaydi — shuning uchun ular xom
+  // `pathname`ga solishtiriladi, faqat "Bosh sahifa" kosmetik bookmarkdan
+  // qat'i nazar to'g'ri faollashishi uchun `currentPath`da qoladi.
+  // "Filiallar" panjarasidagi kataklar bundan mustasno — ular joriy
+  // manzilga emas, tanlangan filialga qarab yoritiladi, aks holda Bosh
+  // sahifa yoki Sozlamalarga o'tilganda tanlov "unutilib", hech qaysi
+  // filial belgilanmagan ko'rinib qolardi. E'tibor bering: "Xodimlar"
+  // tezkor havolasining manzili ham tasodifan xuddi shu shakldadir
+  // (`/{slug}/{filial}/employees`) — shuning uchun bu yerda matn bo'yicha
+  // emas, aynan `financeFiliallarEntry.items`ga tegishli-tegishmasligi
+  // bo'yicha ajratiladi, aks holda "Xodimlar" har doim faol bo'lib qolib,
+  // pastki panel boshqa bo'limga o'tilganda ham siljimay turardi.
+  const financeIsActive = (item: NavLeaf) => {
+    if (financeFiliallarEntry.items.includes(item)) {
+      const branchTile = branches.find((b) => item.href === `/${slug}/${b.slug}/employees`);
+      return branchTile?.id === financeSelectedBranchId;
+    }
+    return item.exact ? currentPath === item.href : pathname.startsWith(item.href);
   };
   const financeMobileEntries: NavEntry[] = [
     { href: `/${slug}`, label: "Bosh sahifa", icon: HomeIcon, show: true, exact: true },
@@ -847,7 +889,7 @@ export function Sidebar({ slug }: { slug: string }) {
             {(openSections["filiallar"] ?? false) && (
               <div className="relative mt-0.5">
                 {branches.map((b, index) => {
-                  const selected = financeBranchId === b.id;
+                  const selected = financeSelectedBranchId === b.id;
                   const last = index === branches.length - 1;
                   const subLinks = [
                     { href: `/${slug}/${b.slug}/children`, label: "O'quvchilar", icon: ChildIcon },
@@ -866,7 +908,13 @@ export function Sidebar({ slug }: { slug: string }) {
                         )}
                         <button
                           type="button"
-                          onClick={() => setFinanceBranchId((current) => (current === b.id ? null : b.id))}
+                          onClick={() => {
+                            setFinanceBranchId(b.id);
+                            // Filial tanlash shu zahoti o'sha filialning ma'lumotini
+                            // ko'rsatishi kerak — mobil "Filiallar" menyusidagi kabi,
+                            // faqat ro'yxatni ochib qo'yish yetarli emas.
+                            router.push(`/${slug}/${b.slug}/employees`);
+                          }}
                           aria-pressed={selected}
                           className={clsx(
                             rowBase,
