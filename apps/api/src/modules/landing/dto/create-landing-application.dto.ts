@@ -1,5 +1,5 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { IsString, Matches, MinLength } from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { IsOptional, IsString, Matches, MinLength } from "class-validator";
 
 export class CreateLandingApplicationDto {
   @ApiProperty({ example: "Dilnoza Qosimova" })
@@ -12,4 +12,10 @@ export class CreateLandingApplicationDto {
   @IsString()
   @Matches(/^\+998\d{9}$/, { message: "Telefon raqami noto'g'ri. Namuna: +998 90 123 45 67" })
   phone!: string;
+
+  /** Landing qaysi bog'chaniki (tashkilot slug'i). Yuborilmasa — serverdagi LANDING_ORGANIZATION_SLUG. */
+  @ApiPropertyOptional({ example: "kids" })
+  @IsOptional()
+  @IsString()
+  organizationSlug?: string;
 }

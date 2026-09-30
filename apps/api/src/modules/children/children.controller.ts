@@ -17,6 +17,7 @@ import type { Response } from "express";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { Public } from "../../common/decorators/public.decorator";
 import { TenantJwtAuthGuard } from "../iam/guards/tenant-jwt-auth.guard";
+import { DenyCallOperator } from "../iam/decorators/deny-call-operator.decorator";
 import { CurrentTenantUser } from "../iam/decorators/current-tenant-user.decorator";
 import { TenantAuthenticatedUser, toTenantScope } from "../iam/tenant-auth.types";
 import { ChildrenService } from "./children.service";
@@ -29,6 +30,7 @@ import { UpdateChildAvatarDto } from "./dto/update-child-avatar.dto";
 @ApiTags("Tenant Children")
 @Public()
 @UseGuards(TenantJwtAuthGuard)
+@DenyCallOperator()
 @Controller("app/children")
 export class ChildrenController {
   constructor(private readonly childrenService: ChildrenService) {}

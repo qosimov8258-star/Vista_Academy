@@ -2,6 +2,7 @@ import { ExecutionContext, ForbiddenException, Injectable } from "@nestjs/common
 import { Reflector } from "@nestjs/core";
 import { AuthGuard } from "@nestjs/passport";
 import { ALLOW_CHEF_KEY } from "../decorators/allow-chef.decorator";
+import { DENY_CALL_OPERATOR_KEY } from "../decorators/deny-call-operator.decorator";
 import type { TenantAuthenticatedUser } from "../tenant-auth.types";
 
 @Injectable()
@@ -26,6 +27,16 @@ export class TenantJwtAuthGuard extends AuthGuard("tenant-jwt") {
       ]);
       if (!allowed) {
         throw new ForbiddenException("Oshpaz bu bo'limga kira olmaydi");
+      }
+    }
+    // Call operator: @DenyCallOperator() bilan belgilangan yo'llarga kirmaydi
+    if (user?.role === "MANAGER" && user.position?.trim().toLowerCase() === "call operator") {
+      const denied = this.reflector.getAllAndOverride<boolean>(DENY_CALL_OPERATOR_KEY, [
+        context.getHandler(),
+        context.getClass(),
+      ]);
+      if (denied) {
+        throw new ForbiddenException("Call operator bu bo'limga kira olmaydi");
       }
     }
     return true;

@@ -7,12 +7,21 @@ import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
 import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
 import { ResponseInterceptor } from "./common/interceptors/response.interceptor";
-import { UPLOADS_ROOT } from "./common/constants/uploads";
-import { isTenantOrigin } from "./common/tenant-domain";
+import { UPLOADS_ROOT, UPLOAD_IMAGE_EXTENSION } from "./common/constants/uploads";
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  app.useStaticAssets(UPLOADS_ROOT, { prefix: "/uploads" });
+  // /uploads har bir hostda (jumladan bog'cha subdomenlarida) API bilan bir
+  // origin'dan beriladi — rasm bo'lmagan fayl brauzerda sahifa bo'lib ochilib,
+  // skript ishga tushirmasin: nosniff + sandbox, rasm bo'lmasa — yuklab olish.
+  app.useStaticAssets(UPLOADS_ROOT, {
+    prefix: "/uploads",
+    setHeaders: (res, path) => {
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.setHeader("Content-Security-Policy", "sandbox");
+      if (!UPLOAD_IMAGE_EXTENSION.test(path)) res.setHeader("Content-Disposition", "attachment");
+    },
+  });
 
   // Profil rasmi so'rov tanasida base64 ko'rinishida keladi. Express'ning
   // standart 100kb chegarasi 256x256 avatar uchun ham tor bo'lib qolishi
@@ -21,8 +30,10 @@ async function bootstrap() {
 
   const corsOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:3000").split(",").map((origin) => origin.trim());
   app.enableCors({
-    // Ro'yxatdagi manzillar + har bir bog'chaning subdomeni (babyland.zeeron.uz)
-    origin: (origin, callback) => callback(null, !origin || corsOrigins.includes(origin) || isTenantOrigin(origin)),
+    // Faqat ro'yxatdagi manzillar. Bog'cha subdomenlari API'ni o'z hostidan
+    // (/api/v1) chaqiradi — CORS kerak emas. Ularga ruxsat berilsa, bitta
+    // subdomendagi skript boshqa bog'cha sessiyasini cookie bilan o'qiy olardi.
+    origin: (origin, callback) => callback(null, !origin || corsOrigins.includes(origin)),
     credentials: true,
   });
 

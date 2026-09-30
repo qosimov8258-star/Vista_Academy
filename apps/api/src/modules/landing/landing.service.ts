@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { unlink } from "fs/promises";
 import { basename, join } from "path";
 import { PrismaService } from "../../database/prisma.service";
@@ -364,9 +364,22 @@ export class LandingService {
 
   // --- Arizalar ("Ariza qoldirish" sahifasi) ------------------------------------
 
-  createApplication(dto: CreateLandingApplicationDto) {
+  /**
+   * Ariza qaysi bog'chaniki ekani slug bo'yicha aniqlanadi — shu tashkilotning
+   * call operatori uni "Bugun qo'ng'iroq qilish" ro'yxatida ko'radi.
+   */
+  async createApplication(dto: CreateLandingApplicationDto) {
+    const slug = (dto.organizationSlug || process.env.LANDING_ORGANIZATION_SLUG || "").trim();
+    let organizationId: string | null = null;
+    if (slug) {
+      const org = await this.prisma.organization.findUnique({ where: { slug }, select: { id: true } });
+      if (!org) throw new BadRequestException("Bog'cha topilmadi");
+      organizationId = org.id;
+    } else {
+      this.logger.warn("Lending arizasi tashkilotsiz saqlandi: LANDING_ORGANIZATION_SLUG berilmagan");
+    }
     return this.prisma.landingApplication.create({
-      data: { fullName: dto.fullName, phone: dto.phone },
+      data: { organizationId, fullName: dto.fullName, phone: dto.phone },
     });
   }
 }
