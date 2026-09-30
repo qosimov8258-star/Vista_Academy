@@ -21,16 +21,20 @@ export const RECEIPT_METHOD_LABEL: Record<PaymentMethod, string> = {
   UZUM: "Uzum",
   MOBILE_APP: "Mobil ilova",
   BANKOMAT: "Bankomat",
+  OTHER: "Boshqa",
 };
 
 const REJECT_WARNING =
   "Diqqat: bu chekni rad etsangiz, tizim buni SOXTA CHEK deb qayd etadi. Ota-ona bunday holatni 2 marta takrorlasa, operator qo'ng'iroqlar ro'yxatiga tushadi. Davom etasizmi?";
 
 /**
- * Bitta to'lov yozuvining tafsilotlari — chek (agar bo'lsa), summa, sana,
- * xizmat turi. Hali ko'rib chiqilmagan chek uchun (`receipt` bor, `payment`
- * yo'q, holati PENDING) — usul tanlab Tasdiqlash yoki Otkaz. Otkaz bosilsa
- * izoh yozish shart emas — ogohlantirish bilan bir marta tasdiqlanadi.
+ * Bitta to'lov yozuvining tafsilotlari. Hali ko'rib chiqilmagan chek uchun
+ * (`receipt` bor, `payment` yo'q, holati PENDING) — sana/summa/kim yukladi
+ * ko'rsatilmaydi (ro'yxat qatorida allaqachon ko'rinadi), faqat chek rasmi
+ * va moliyachi o'zi tanlaydigan to'lov usuli bilan Tasdiqlash/Bekor qilish.
+ * Bekor qilish bosilsa izoh yozish shart emas — ogohlantirish bilan bir
+ * marta tasdiqlanadi. Allaqachon haqiqiy to'lovga aylangan yozuv uchun
+ * (`payment` bor) sana/summa/usul va Kvitansiya/Qaytarish ko'rinadi.
  */
 export function ReceiptReviewModal({
   open,
@@ -114,28 +118,26 @@ export function ReceiptReviewModal({
           </div>
         )}
 
-        <dl className="grid grid-cols-2 gap-3 text-[14px]">
-          <div>
-            <dt className="text-[12px] text-[var(--color-text-muted)]">Sana</dt>
-            <dd className="font-medium tabular-nums text-[var(--color-text)]">{formatDateTime(createdAt)}</dd>
-          </div>
-          <div>
-            <dt className="text-[12px] text-[var(--color-text-muted)]">Summa</dt>
-            <dd className="font-medium tabular-nums text-[var(--color-text)]">{formatMoney(amount, currency)}</dd>
-          </div>
-          {payment && (
+        {/* Sana/summa ro'yxat qatorida allaqachon ko'rinadi, shuning uchun bu
+            yerda faqat allaqachon hisoblangan (haqiqiy) to'lov uchun usul
+            bilan birga qayta ko'rsatiladi. Hali tasdiqlanmagan chek uchun
+            bu joy bo'sh — moliyachiga faqat rasm va pastdagi amal kerak. */}
+        {payment && (
+          <dl className="grid grid-cols-2 gap-3 text-[14px]">
+            <div>
+              <dt className="text-[12px] text-[var(--color-text-muted)]">Sana</dt>
+              <dd className="font-medium tabular-nums text-[var(--color-text)]">{formatDateTime(createdAt)}</dd>
+            </div>
+            <div>
+              <dt className="text-[12px] text-[var(--color-text-muted)]">Summa</dt>
+              <dd className="font-medium tabular-nums text-[var(--color-text)]">{formatMoney(amount, currency)}</dd>
+            </div>
             <div>
               <dt className="text-[12px] text-[var(--color-text-muted)]">Xizmat turi</dt>
               <dd className="font-medium text-[var(--color-text)]">{RECEIPT_METHOD_LABEL[payment.method]}</dd>
             </div>
-          )}
-          {receipt?.guardian && (
-            <div>
-              <dt className="text-[12px] text-[var(--color-text-muted)]">Kim yukladi</dt>
-              <dd className="font-medium text-[var(--color-text)]">{receipt.guardian.fullName}</dd>
-            </div>
-          )}
-        </dl>
+          </dl>
+        )}
 
         {error && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
@@ -169,12 +171,10 @@ export function ReceiptReviewModal({
               ))}
             </Select>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <Button type="button" variant="danger" loading={rejectMutation.isPending} disabled={pending} onClick={handleReject}>
-                Otkaz
-              </Button>
+            <div className="flex flex-col gap-2 pt-2">
               <Button
                 type="button"
+                fullWidth
                 loading={approveMutation.isPending}
                 disabled={pending}
                 onClick={() => {
@@ -183,6 +183,9 @@ export function ReceiptReviewModal({
                 }}
               >
                 Tasdiqlash
+              </Button>
+              <Button type="button" variant="danger" fullWidth loading={rejectMutation.isPending} disabled={pending} onClick={handleReject}>
+                Bekor qilish
               </Button>
             </div>
           </>

@@ -436,7 +436,7 @@ export interface UnpaidReminderChild {
   status: InvoiceStatus;
 }
 
-export type PaymentMethod = "CASH" | "BANK_TRANSFER" | "CARD" | "CLICK" | "PAYME" | "UZUM" | "MOBILE_APP" | "BANKOMAT";
+export type PaymentMethod = "CASH" | "BANK_TRANSFER" | "CARD" | "CLICK" | "PAYME" | "UZUM" | "MOBILE_APP" | "BANKOMAT" | "OTHER";
 export type PaymentStatus = "COMPLETED" | "REFUNDED";
 
 export interface Payment {
@@ -455,7 +455,7 @@ export interface Payment {
 }
 
 /** Ota-ona to'lov cheki uchun tanlashi mumkin bo'lgan usullar — naqd/karta bu yerda yo'q. */
-export const RECEIPT_PAYMENT_METHODS: PaymentMethod[] = ["CLICK", "PAYME", "UZUM", "MOBILE_APP", "BANKOMAT"];
+export const RECEIPT_PAYMENT_METHODS: PaymentMethod[] = ["CLICK", "PAYME", "MOBILE_APP", "BANKOMAT", "OTHER"];
 
 export type PaymentReceiptStatus = "PENDING" | "APPROVED" | "REJECTED";
 
