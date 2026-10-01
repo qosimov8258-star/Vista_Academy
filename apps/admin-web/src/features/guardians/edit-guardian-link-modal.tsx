@@ -10,6 +10,7 @@ import type { ChildGuardian } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useTr } from "@/i18n/tr";
 
 const schema = z.object({
   relation: z.enum(["FATHER", "MOTHER", "GRANDPARENT", "OTHER"]),
@@ -34,6 +35,7 @@ export function EditGuardianLinkModal({
   childId: string;
   link: ChildGuardian;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -61,37 +63,37 @@ export function EditGuardianLinkModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
   return (
-    <Modal open={open} onClose={onClose} title={`Ota-ona ma'lumotini tahrirlash — ${link.guardian.fullName}`}>
+    <Modal open={open} onClose={onClose} title={tr("Ota-ona ma'lumotini tahrirlash — {0}", link.guardian.fullName)}>
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
-        <Select label="Qarindoshlik turi" {...register("relation")}>
-          <option value="FATHER">Ota</option>
-          <option value="MOTHER">Ona</option>
-          <option value="GRANDPARENT">Bobo/Buvi</option>
-          <option value="OTHER">Boshqa</option>
+        <Select label={tr("Qarindoshlik turi")} {...register("relation")}>
+          <option value="FATHER">{tr("Ota")}</option>
+          <option value="MOTHER">{tr("Ona")}</option>
+          <option value="GRANDPARENT">{tr("Bobo/Buvi")}</option>
+          <option value="OTHER">{tr("Boshqa")}</option>
         </Select>
 
         <div className="grid grid-cols-2 gap-2">
           <label className="flex items-center gap-2 text-sm text-[var(--color-text)]">
             <input type="checkbox" className="h-4 w-4 rounded border-[var(--color-border)]" {...register("isPrimary")} />
-            Asosiy vasiy
+            {tr("Asosiy vasiy")}
           </label>
           <label className="flex items-center gap-2 text-sm text-[var(--color-text)]">
             <input type="checkbox" className="h-4 w-4 rounded border-[var(--color-border)]" {...register("canPickup")} />
-            Bolani olib ketishi mumkin
+            {tr("Bolani olib ketishi mumkin")}
           </label>
           <label className="flex items-center gap-2 text-sm text-[var(--color-text)]">
             <input type="checkbox" className="h-4 w-4 rounded border-[var(--color-border)]" {...register("canViewFinance")} />
-            Moliyani ko'ra oladi
+            {tr("Moliyani ko'ra oladi")}
           </label>
           <label className="flex items-center gap-2 text-sm text-[var(--color-text)]">
             <input
@@ -99,16 +101,16 @@ export function EditGuardianLinkModal({
               className="h-4 w-4 rounded border-[var(--color-border)]"
               {...register("canReceiveNotifications")}
             />
-            Bildirishnoma oladi
+            {tr("Bildirishnoma oladi")}
           </label>
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Bekor qilish
+            {tr("Bekor qilish")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Saqlash
+            {tr("Saqlash")}
           </Button>
         </div>
       </form>

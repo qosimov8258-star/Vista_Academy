@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/icons";
 import { IosIcon } from "@/features/director/ios-icon";
 import { compactMoney, fullMoney } from "@/features/director/money";
+import { useTr } from "@/i18n/tr";
 
 type Tone = "primary" | "success" | "danger";
 
@@ -54,6 +55,7 @@ function StatTile({
   value: ReactNode;
   label: ReactNode;
 }) {
+  const tr = useTr();
   return (
     <Card>
       <CardBody>
@@ -67,9 +69,9 @@ function StatTile({
             size === "lg" ? "text-[26px]" : "text-[21px]"
           } ${VALUE_TONE[tone]}`}
         >
-          {value}
+          {tr(value)}
         </p>
-        <p className="mt-2 text-[12.5px] text-[var(--color-text-muted)]">{label}</p>
+        <p className="mt-2 text-[12.5px] text-[var(--color-text-muted)]">{tr(label)}</p>
       </CardBody>
     </Card>
   );
@@ -89,6 +91,7 @@ function AttendanceTile({
   absentLabel: string;
   absent: number;
 }) {
+  const tr = useTr();
   return (
     <Card>
       <CardBody>
@@ -98,13 +101,13 @@ function AttendanceTile({
         <div className="mt-3.5 flex gap-8">
           <div>
             <p className="text-[26px] font-semibold leading-none tabular-nums text-[var(--color-success)]">
-              {present}
+              {tr(present)}
             </p>
-            <p className="mt-2 text-[12.5px] text-[var(--color-text-muted)]">{presentLabel}</p>
+            <p className="mt-2 text-[12.5px] text-[var(--color-text-muted)]">{tr(presentLabel)}</p>
           </div>
           <div>
-            <p className="text-[26px] font-semibold leading-none tabular-nums text-[var(--color-danger)]">{absent}</p>
-            <p className="mt-2 text-[12.5px] text-[var(--color-text-muted)]">{absentLabel}</p>
+            <p className="text-[26px] font-semibold leading-none tabular-nums text-[var(--color-danger)]">{tr(absent)}</p>
+            <p className="mt-2 text-[12.5px] text-[var(--color-text-muted)]">{tr(absentLabel)}</p>
           </div>
         </div>
       </CardBody>
@@ -113,6 +116,7 @@ function AttendanceTile({
 }
 
 export default function BranchDashboardPage({ params }: { params: Promise<{ slug: string; branchSlug: string }> }) {
+  const tr = useTr();
   const { slug, branchSlug } = use(params);
 
   const orgQuery = useQuery({
@@ -129,8 +133,8 @@ export default function BranchDashboardPage({ params }: { params: Promise<{ slug
   });
 
   if (orgQuery.isLoading) return <LoadingState />;
-  if (orgQuery.isError) return <ErrorState message={(orgQuery.error as Error).message} />;
-  if (!branch) return <EmptyState title="Filial topilmadi" description="Bu manzilda bunday filial mavjud emas" />;
+  if (orgQuery.isError) return <ErrorState message={tr((orgQuery.error as Error).message)} />;
+  if (!branch) return <EmptyState title={tr("Filial topilmadi")} description={tr("Bu manzilda bunday filial mavjud emas")} />;
 
   const summary = summaryQuery.data;
   const revenue = summary?.monthRevenue ?? 0;
@@ -146,7 +150,7 @@ export default function BranchDashboardPage({ params }: { params: Promise<{ slug
           className="group inline-flex items-center gap-1.5 text-[14px] font-medium text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
         >
           <ArrowLeftIcon className="h-4 w-4 transition-transform group-hover:-translate-x-0.5 motion-reduce:transition-none" />
-          Tarmoq bo&apos;yicha
+          {tr("Tarmoq bo'yicha")}
         </Link>
         <div className="mt-2 flex items-center gap-3">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
@@ -154,9 +158,9 @@ export default function BranchDashboardPage({ params }: { params: Promise<{ slug
           </span>
           <div className="min-w-0">
             <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
-              {branch.name}
+              {tr(branch.name)}
             </h1>
-            <p className="text-[13px] text-[var(--color-text-muted)]">{branch.address || "Manzil ko'rsatilmagan"}</p>
+            <p className="text-[13px] text-[var(--color-text-muted)]">{branch.address || tr("Manzil ko'rsatilmagan")}</p>
           </div>
         </div>
       </div>
@@ -164,13 +168,13 @@ export default function BranchDashboardPage({ params }: { params: Promise<{ slug
       {summaryQuery.isLoading ? (
         <LoadingState rows={4} />
       ) : summaryQuery.isError ? (
-        <ErrorState message={(summaryQuery.error as Error).message} />
+        <ErrorState message={tr((summaryQuery.error as Error).message)} />
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <StatTile icon={ChildIcon} value={summary?.childrenCount ?? 0} label="Bolalar soni" />
-            <StatTile icon={GroupIcon} value={summary?.activeGroupsCount ?? 0} label="Faol guruhlar" />
-            <StatTile icon={TeacherIcon} value={summary?.employeesCount ?? 0} label="Xodimlar soni" />
+            <StatTile icon={ChildIcon} value={summary?.childrenCount ?? 0} label={tr("Bolalar soni")} />
+            <StatTile icon={GroupIcon} value={summary?.activeGroupsCount ?? 0} label={tr("Faol guruhlar")} />
+            <StatTile icon={TeacherIcon} value={summary?.employeesCount ?? 0} label={tr("Xodimlar soni")} />
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -180,7 +184,7 @@ export default function BranchDashboardPage({ params }: { params: Promise<{ slug
             >
               <div className="flex items-center gap-3">
                 <IosIcon icon={MoneyIcon} tint="accent" size={36} />
-                <p className="text-[15px] font-semibold text-[var(--color-text)]">Joriy oy tushumi</p>
+                <p className="text-[15px] font-semibold text-[var(--color-text)]">{tr("Joriy oy tushumi")}</p>
                 {change !== null && (
                   <span
                     className={clsx(
@@ -194,13 +198,13 @@ export default function BranchDashboardPage({ params }: { params: Promise<{ slug
               </div>
               <p
                 className="mt-4 text-[32px] font-bold leading-none tracking-[-0.02em] tabular-nums text-[var(--color-text)]"
-                title={fullMoney(revenue)}
+                title={fullMoney(revenue, tr)}
               >
-                {compactMoney(revenue)}
-                <span className="ml-1.5 text-[16px] font-semibold text-[var(--color-text-muted)]">so&apos;m</span>
+                {compactMoney(revenue, tr)}
+                <span className="ml-1.5 text-[16px] font-semibold text-[var(--color-text-muted)]">{tr("so'm")}</span>
               </p>
               <p className="mt-2 text-[13px] text-[var(--color-text-muted)]">
-                {change === null ? "O'tgan oy bilan solishtirish uchun ma'lumot yo'q" : `O'tgan oy: ${compactMoney(prevRevenue)} so'm`}
+                {change === null ? tr("O'tgan oy bilan solishtirish uchun ma'lumot yo'q") : tr("O'tgan oy: {0} so'm", compactMoney(prevRevenue, tr))}
               </p>
             </Link>
 
@@ -210,10 +214,10 @@ export default function BranchDashboardPage({ params }: { params: Promise<{ slug
             >
               <div className="flex items-center gap-3">
                 <IosIcon icon={MoneyIcon} tint={debt > 0 ? "red" : "gray"} size={36} />
-                <p className="text-[15px] font-semibold text-[var(--color-text)]">Qarzdorlik</p>
+                <p className="text-[15px] font-semibold text-[var(--color-text)]">{tr("Qarzdorlik")}</p>
                 {debt > 0 && (
                   <span className="ml-auto rounded-full bg-rose-50 px-2.5 py-1 text-[12.5px] font-bold text-rose-700">
-                    To&apos;lanishi kerak
+                    {tr("To'lanishi kerak")}
                   </span>
                 )}
               </div>
@@ -222,13 +226,13 @@ export default function BranchDashboardPage({ params }: { params: Promise<{ slug
                   "mt-4 text-[32px] font-bold leading-none tracking-[-0.02em] tabular-nums",
                   debt > 0 ? "text-[#e8392f]" : "text-[var(--color-text)]",
                 )}
-                title={fullMoney(debt)}
+                title={fullMoney(debt, tr)}
               >
-                {compactMoney(debt)}
-                <span className="ml-1.5 text-[16px] font-semibold text-[var(--color-text-muted)]">so&apos;m</span>
+                {compactMoney(debt, tr)}
+                <span className="ml-1.5 text-[16px] font-semibold text-[var(--color-text-muted)]">{tr("so'm")}</span>
               </p>
               <p className="mt-2 text-[13px] text-[var(--color-text-muted)]">
-                {debt > 0 ? "Ushbu filial bo'yicha to'lanmagan qoldiq" : "Qarzdor yo'q"}
+                {debt > 0 ? tr("Ushbu filial bo'yicha to'lanmagan qoldiq") : tr("Qarzdor yo'q")}
               </p>
             </Link>
           </div>
@@ -258,7 +262,7 @@ export default function BranchDashboardPage({ params }: { params: Promise<{ slug
                   </span>
                 </>
               }
-              label={<>Kundalik hisobotlar to&apos;ldirilgan</>}
+              label={<>{tr("Kundalik hisobotlar to'ldirilgan")}</>}
             />
           </div>
 
@@ -268,15 +272,15 @@ export default function BranchDashboardPage({ params }: { params: Promise<{ slug
                 <InfoIcon className="h-[18px] w-[18px]" />
               </span>
               <p className="text-[13.5px] leading-relaxed text-[var(--color-text-muted)]">
-                Bu ko&apos;rsatkichlar faqat <span className="font-medium text-[var(--color-text)]">{branch.name}</span>{" "}
-                filialiga tegishli. Ushbu filialning boshqaruv sozlamalarini{" "}
+                {tr("Bu ko'rsatkichlar faqat")}{" "}<span className="font-medium text-[var(--color-text)]">{tr(branch.name)}</span>{" "}
+                {tr("filialiga tegishli. Ushbu filialning boshqaruv sozlamalarini")}{" "}
                 <Link
                   href={`/${slug}/branches/${branch.id}`}
                   className="font-medium text-[var(--color-primary)] hover:underline"
                 >
-                  bu yerda
+                  {tr("bu yerda")}
                 </Link>{" "}
-                ko&apos;rishingiz mumkin.
+                {tr("ko'rishingiz mumkin.")}
               </p>
             </CardBody>
           </Card>

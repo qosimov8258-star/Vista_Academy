@@ -13,6 +13,7 @@ import { CapacityRing } from "@/features/network/capacity-ring";
 import { monogram, paletteFor } from "@/features/network/palette";
 import { formatChildId } from "@/lib/format";
 import { ArrowLeftIcon, CheckIcon, CloseIcon, ClockIcon, TeacherIcon } from "@/components/ui/icons";
+import { useTr } from "@/i18n/tr";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 /** Uzbekcha qisqa kun nomlari — Intl uz-UZ da bular chiroyli chiqmaydi. */
@@ -49,6 +50,7 @@ export default function NetworkGroupDetailPage({
 }: {
   params: Promise<{ slug: string; groupId: string }>;
 }) {
+  const tr = useTr();
   const { slug, groupId } = use(params);
   // Sana mijoz soatiga bog'liq — birinchi renderda emas, effektda hisoblanadi,
   // aks holda server va brauzer HTML'i mos kelmaydi.
@@ -98,8 +100,8 @@ export default function NetworkGroupDetailPage({
   }, [attendanceQuery.data]);
 
   if (overviewQuery.isLoading) return <LoadingState />;
-  if (overviewQuery.isError) return <ErrorState message={(overviewQuery.error as Error).message} />;
-  if (!overview) return <EmptyState title="Guruh topilmadi" />;
+  if (overviewQuery.isError) return <ErrorState message={tr((overviewQuery.error as Error).message)} />;
+  if (!overview) return <EmptyState title={tr("Guruh topilmadi")} />;
 
   const { group, branch, teachers, children } = overview;
   const attendanceByChild = new Map(attendanceQuery.data?.children.map((c) => [c.childId, c]) ?? []);
@@ -111,7 +113,7 @@ export default function NetworkGroupDetailPage({
         className="group inline-flex items-center gap-1.5 text-sm font-medium text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
       >
         <ArrowLeftIcon className="h-4 w-4 transition-transform group-hover:-translate-x-0.5 motion-reduce:transition-none" />
-        Guruhlar
+        {tr("Guruhlar")}
       </Link>
 
       {/* Sarlavha: guruh, filial, tarbiyachilar va to'lganlik */}
@@ -122,17 +124,17 @@ export default function NetworkGroupDetailPage({
             <span className={clsx("flex h-7 w-7 items-center justify-center rounded-[9px] text-[11px] font-bold", palette.chip)}>
               {monogram(group.name)}
             </span>
-            <h1 className="text-xl font-semibold text-[var(--color-text)]">{group.name}</h1>
+            <h1 className="text-xl font-semibold text-[var(--color-text)]">{tr(group.name)}</h1>
             <Badge tone={group.status === "ACTIVE" ? "success" : "neutral"}>
               {group.status === "ACTIVE" ? "Faol" : "Nofaol"}
             </Badge>
           </div>
-          <p className="mt-1 text-sm text-[var(--color-text-muted)]">{branch.name}</p>
+          <p className="mt-1 text-sm text-[var(--color-text-muted)]">{tr(branch.name)}</p>
 
           <div className="mt-3 flex flex-wrap gap-2">
             {teachers.length === 0 ? (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-warning-bg)] px-3 py-1 text-xs font-medium text-[var(--color-warning)]">
-                Tarbiyachi biriktirilmagan
+                {tr("Tarbiyachi biriktirilmagan")}
               </span>
             ) : (
               teachers.map((teacher) => (
@@ -141,8 +143,8 @@ export default function NetworkGroupDetailPage({
                   className={clsx("inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium", palette.chip)}
                 >
                   <TeacherIcon className="h-3.5 w-3.5" />
-                  {teacher.fullName}
-                  <span className="opacity-70">· {teacher.position}</span>
+                  {tr(teacher.fullName)}
+                  <span className="opacity-70">· {tr(teacher.position)}</span>
                 </span>
               ))
             )}
@@ -151,10 +153,10 @@ export default function NetworkGroupDetailPage({
       </Card>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatTile label="Faol bolalar" value={children.active} hint={children.total > children.active ? `${children.total} ta ro'yxatda` : undefined} tone="brand" />
-        <StatTile label="O'g'il bolalar" value={children.boys} hint={percentHint(children.boys, children.active)} tone="sky" />
-        <StatTile label="Qiz bolalar" value={children.girls} hint={percentHint(children.girls, children.active)} tone="rose" />
-        <StatTile label="Bo'sh o'rin" value={Math.max(0, group.capacity - children.active)} hint={`Sig'im ${group.capacity}`} tone="neutral" />
+        <StatTile label={tr("Faol bolalar")} value={children.active} hint={children.total > children.active ? tr("{0} ta ro'yxatda", children.total) : undefined} tone="brand" />
+        <StatTile label={tr("O'g'il bolalar")} value={children.boys} hint={percentHint(children.boys, children.active)} tone="sky" />
+        <StatTile label={tr("Qiz bolalar")} value={children.girls} hint={percentHint(children.girls, children.active)} tone="rose" />
+        <StatTile label={tr("Bo'sh o'rin")} value={Math.max(0, group.capacity - children.active)} hint={tr("Sig'im {0}", group.capacity)} tone="neutral" />
       </div>
 
       {/* Kunlik nomli ro'yxat: aynan kim keldi, kim kelmadi */}
@@ -162,9 +164,9 @@ export default function NetworkGroupDetailPage({
         <div className="hairline flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-separator)] px-5 py-4 sm:px-6">
           <div>
             <h2 className="text-[15px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
-              Kim keldi
+              {tr("Kim keldi")}
             </h2>
-            <p className="text-[12.5px] text-[var(--color-text-muted)]">Tanlangan kun uchun ismma-ism ro&apos;yxat</p>
+            <p className="text-[12.5px] text-[var(--color-text-muted)]">{tr("Tanlangan kun uchun ismma-ism ro'yxat")}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {rosterDate &&
@@ -183,7 +185,7 @@ export default function NetworkGroupDetailPage({
                       : "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
                   )}
                 >
-                  {option.label}
+                  {tr(option.label)}
                 </button>
               ))}
             <DateField
@@ -201,34 +203,34 @@ export default function NetworkGroupDetailPage({
           </div>
         ) : rosterQuery.isError ? (
           <div className="px-5 py-5 sm:px-6">
-            <ErrorState message={(rosterQuery.error as Error).message} />
+            <ErrorState message={tr((rosterQuery.error as Error).message)} />
           </div>
         ) : (
           <div className="space-y-4 px-5 py-5 sm:px-6">
             <div className="grid grid-cols-3 gap-3">
-              <RosterCount label="Keldi" value={rosterQuery.data!.counts.present} tone="success" />
-              <RosterCount label="Kelmadi" value={rosterQuery.data!.counts.absent} tone="danger" />
-              <RosterCount label="Belgilanmagan" value={rosterQuery.data!.counts.unmarked} tone="neutral" />
+              <RosterCount label={tr("Keldi")} value={rosterQuery.data!.counts.present} tone="success" />
+              <RosterCount label={tr("Kelmadi")} value={rosterQuery.data!.counts.absent} tone="danger" />
+              <RosterCount label={tr("Belgilanmagan")} value={rosterQuery.data!.counts.unmarked} tone="neutral" />
             </div>
 
             {rosterQuery.data!.total === 0 ? (
-              <EmptyState title="Bu guruhda faol bola yo'q" />
+              <EmptyState title={tr("Bu guruhda faol bola yo'q")} />
             ) : (
               <div className="space-y-3.5">
                 <RosterList
-                  title="Keldi"
+                  title={tr("Keldi")}
                   tone="success"
                   icon={<CheckIcon className="h-3.5 w-3.5" />}
                   names={rosterQuery.data!.items.filter((i) => i.status === "PRESENT")}
                 />
                 <RosterList
-                  title="Kelmadi"
+                  title={tr("Kelmadi")}
                   tone="danger"
                   icon={<CloseIcon className="h-3.5 w-3.5" />}
                   names={rosterQuery.data!.items.filter((i) => i.status === "ABSENT")}
                 />
                 <RosterList
-                  title="Belgilanmagan"
+                  title={tr("Belgilanmagan")}
                   tone="neutral"
                   icon={<ClockIcon className="h-3.5 w-3.5" />}
                   names={rosterQuery.data!.items.filter((i) => i.status === null)}
@@ -243,8 +245,8 @@ export default function NetworkGroupDetailPage({
       <Card className="overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-separator)] px-5 py-4">
           <div>
-            <h2 className="text-sm font-semibold text-[var(--color-text)]">Kunlik davomat</h2>
-            <p className="text-xs text-[var(--color-text-muted)]">Qaysi kuni nechta bola kelgani</p>
+            <h2 className="text-sm font-semibold text-[var(--color-text)]">{tr("Kunlik davomat")}</h2>
+            <p className="text-xs text-[var(--color-text-muted)]">{tr("Qaysi kuni nechta bola kelgani")}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {PRESETS.map((preset) => {
@@ -263,7 +265,7 @@ export default function NetworkGroupDetailPage({
                       : "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
                   )}
                 >
-                  {preset.label}
+                  {tr(preset.label)}
                 </button>
               );
             })}
@@ -288,15 +290,15 @@ export default function NetworkGroupDetailPage({
           </div>
         ) : attendanceQuery.isError ? (
           <div className="px-5 py-6">
-            <ErrorState message={(attendanceQuery.error as Error).message} />
+            <ErrorState message={tr((attendanceQuery.error as Error).message)} />
           </div>
         ) : (
           <>
             {summary && (
               <div className="grid grid-cols-3 divide-x divide-[var(--color-separator)] border-b border-[var(--color-separator)]">
-                <MiniStat label="O'rtacha kelgan" value={`${summary.avgPresent} bola`} />
-                <MiniStat label="Davomat foizi" value={`${summary.rate}%`} />
-                <MiniStat label="Belgilangan kunlar" value={`${summary.markedDays} kun`} />
+                <MiniStat label={tr("O'rtacha kelgan")} value={tr("{0} bola", summary.avgPresent)} />
+                <MiniStat label={tr("Davomat foizi")} value={`${summary.rate}%`} />
+                <MiniStat label={tr("Belgilangan kunlar")} value={tr("{0} kun", summary.markedDays)} />
               </div>
             )}
             <ul className="divide-y divide-[var(--color-separator)]">
@@ -309,9 +311,9 @@ export default function NetworkGroupDetailPage({
                   <li key={day.date} className="flex items-center gap-3 px-5 py-2.5">
                     <div className="w-[86px] shrink-0">
                       <p className={clsx("text-[13px] font-medium", info.isWeekend ? "text-[var(--color-text-muted)]" : "text-[var(--color-text)]")}>
-                        {info.label}
+                        {tr(info.label)}
                       </p>
-                      <p className="text-[11px] text-[var(--color-text-muted)]">{info.weekday}</p>
+                      <p className="text-[11px] text-[var(--color-text-muted)]">{tr(info.weekday)}</p>
                     </div>
                     <div className="h-2.5 min-w-0 flex-1 overflow-hidden rounded-full bg-[var(--color-surface-sunken)]">
                       {marked && <div className={clsx("h-full rounded-full", palette.dot)} style={{ width: `${share}%` }} />}
@@ -319,11 +321,11 @@ export default function NetworkGroupDetailPage({
                     <div className="w-[150px] shrink-0 text-right text-[13px]">
                       {marked ? (
                         <span className="text-[var(--color-text)]">
-                          <b>{day.present}</b> keldi
-                          {day.absent > 0 && <span className="text-[var(--color-text-muted)]"> · {day.absent} kelmadi</span>}
+                          <b>{tr(day.present)}</b> {tr("keldi")}
+                          {day.absent > 0 && <span className="text-[var(--color-text-muted)]"> · {tr(day.absent)} {tr("kelmadi")}</span>}
                         </span>
                       ) : (
-                        <span className="text-[var(--color-text-muted)]">Belgilanmagan</span>
+                        <span className="text-[var(--color-text-muted)]">{tr("Belgilanmagan")}</span>
                       )}
                     </div>
                   </li>
@@ -337,14 +339,14 @@ export default function NetworkGroupDetailPage({
       {/* Guruhdagi bolalar va ularning shu oraliqdagi davomati */}
       <Card className="overflow-hidden">
         <div className="border-b border-[var(--color-separator)] px-5 py-4">
-          <h2 className="text-sm font-semibold text-[var(--color-text)]">O&apos;quvchilar</h2>
+          <h2 className="text-sm font-semibold text-[var(--color-text)]">{tr("O'quvchilar")}</h2>
           <p className="text-xs text-[var(--color-text-muted)]">
-            {children.total} bola{range ? ` · davomat ${range.from} — ${range.to}` : ""}
+            {tr(children.total)} {tr("bola")}{range ? ` · davomat ${range.from} — ${range.to}` : ""}
           </p>
         </div>
         {children.items.length === 0 ? (
           <div className="px-5 py-8">
-            <EmptyState title="Bu guruhda hali bola yo'q" />
+            <EmptyState title={tr("Bu guruhda hali bola yo'q")} />
           </div>
         ) : (
           <ul className="divide-y divide-[var(--color-separator)]">
@@ -369,7 +371,7 @@ export default function NetworkGroupDetailPage({
                       href={`/${slug}/children/${child.id}`}
                       className="truncate text-sm font-medium text-[var(--color-text)] hover:text-[var(--color-primary)]"
                     >
-                      {child.fullName}
+                      {tr(child.fullName)}
                     </Link>
                     <p className="text-[11px] text-[var(--color-text-muted)]">
                       {formatChildId(child.publicId)}
@@ -379,7 +381,7 @@ export default function NetworkGroupDetailPage({
                   {stats && (
                     <div className="shrink-0 text-right text-[13px]">
                       {stats.rate === null ? (
-                        <span className="text-[var(--color-text-muted)]">Belgilanmagan</span>
+                        <span className="text-[var(--color-text-muted)]">{tr("Belgilanmagan")}</span>
                       ) : (
                         <>
                           <span
@@ -392,9 +394,9 @@ export default function NetworkGroupDetailPage({
                                   : "text-[var(--color-danger)]",
                             )}
                           >
-                            {stats.rate}%
+                            {tr(stats.rate)}%
                           </span>
-                          <span className="text-[var(--color-text-muted)]"> · {stats.present}/{stats.present + stats.absent}</span>
+                          <span className="text-[var(--color-text-muted)]"> · {tr(stats.present)}/{stats.present + stats.absent}</span>
                         </>
                       )}
                     </div>
@@ -428,11 +430,12 @@ const ROSTER_TONE = {
 } as const;
 
 function RosterCount({ label, value, tone }: { label: string; value: number; tone: keyof typeof ROSTER_TONE }) {
+  const tr = useTr();
   const style = ROSTER_TONE[tone];
   return (
     <div className={clsx("rounded-[var(--radius-md)] px-4 py-3", style.well)}>
-      <p className={clsx("text-[26px] font-bold leading-none tabular-nums", style.count)}>{value}</p>
-      <p className="mt-1 text-[12.5px] font-medium text-[var(--color-text-muted)]">{label}</p>
+      <p className={clsx("text-[26px] font-bold leading-none tabular-nums", style.count)}>{tr(value)}</p>
+      <p className="mt-1 text-[12.5px] font-medium text-[var(--color-text-muted)]">{tr(label)}</p>
     </div>
   );
 }
@@ -449,13 +452,14 @@ function RosterList({
   icon: React.ReactNode;
   names: { childId: string; fullName: string }[];
 }) {
+  const tr = useTr();
   if (names.length === 0) return null;
   const style = ROSTER_TONE[tone];
   return (
     <div>
       <p className="mb-2 flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.06em] text-[var(--color-text-muted)]">
-        <span className={clsx("flex h-5 w-5 items-center justify-center rounded-full", style.chip)}>{icon}</span>
-        {title} · {names.length}
+        <span className={clsx("flex h-5 w-5 items-center justify-center rounded-full", style.chip)}>{tr(icon)}</span>
+        {tr(title)} · {tr(names.length)}
       </p>
       <div className="flex flex-wrap gap-1.5">
         {names.map((child) => (
@@ -463,7 +467,7 @@ function RosterList({
             key={child.childId}
             className={clsx("rounded-full px-3 py-1.5 text-[13px] font-medium", style.chip)}
           >
-            {child.fullName}
+            {tr(child.fullName)}
           </span>
         ))}
       </div>
@@ -494,20 +498,22 @@ function StatTile({
   hint?: string;
   tone: keyof typeof TILE_TONE;
 }) {
+  const tr = useTr();
   return (
     <Card className="p-4">
-      <span className={clsx("inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold", TILE_TONE[tone])}>{label}</span>
-      <p className="mt-2 text-3xl font-bold leading-none text-[var(--color-text)]">{value}</p>
-      {hint && <p className="mt-1.5 text-xs text-[var(--color-text-muted)]">{hint}</p>}
+      <span className={clsx("inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold", TILE_TONE[tone])}>{tr(label)}</span>
+      <p className="mt-2 text-3xl font-bold leading-none text-[var(--color-text)]">{tr(value)}</p>
+      {hint && <p className="mt-1.5 text-xs text-[var(--color-text-muted)]">{tr(hint)}</p>}
     </Card>
   );
 }
 
 function MiniStat({ label, value }: { label: string; value: string }) {
+  const tr = useTr();
   return (
     <div className="px-5 py-3">
-      <p className="text-[11px] uppercase tracking-wide text-[var(--color-text-muted)]">{label}</p>
-      <p className="mt-0.5 text-lg font-semibold text-[var(--color-text)]">{value}</p>
+      <p className="text-[11px] uppercase tracking-wide text-[var(--color-text-muted)]">{tr(label)}</p>
+      <p className="mt-0.5 text-lg font-semibold text-[var(--color-text)]">{tr(value)}</p>
     </div>
   );
 }
@@ -525,9 +531,10 @@ function DateField({
   max?: string;
   onChange: (value: string) => void;
 }) {
+  const tr = useTr();
   return (
     <label className="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)]">
-      {label}
+      {tr(label)}
       <input
         type="date"
         value={value}

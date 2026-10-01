@@ -13,6 +13,7 @@ import { todayTashkent } from "@/features/desk/shared";
 import { MEALS } from "@/features/nutrition/use-menu-photos";
 import { MEAL_LOOK } from "./meal-card";
 import styles from "./chef.module.css";
+import { useTr } from "@/i18n/tr";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const SHORT_DAYS = ["Du", "Se", "Ch", "Pa", "Ju", "Sh", "Ya"];
@@ -43,6 +44,7 @@ function weekLabel(start: string): string {
  * xavfli so'z uchrasa, shu kunning o'zida ogohlantiriladi.
  */
 export function ChefMenu({ slug }: { slug: string }) {
+  const tr = useTr();
   const { user } = useAuth();
   const branchId = user?.branchId ?? "";
   const today = todayTashkent();
@@ -92,14 +94,14 @@ export function ChefMenu({ slug }: { slug: string }) {
     <div className="mx-auto max-w-[640px] space-y-4">
       <header className="flex items-end justify-between">
         <div>
-          <p className="text-[13px] font-medium text-[var(--color-text-muted)]">Haftalik menyu</p>
+          <p className="text-[13px] font-medium text-[var(--color-text-muted)]">{tr("Haftalik menyu")}</p>
           <h1 className="text-[24px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">{weekLabel(weekStart)}</h1>
         </div>
         <div className="flex gap-1.5">
           <button
             type="button"
             onClick={() => goWeek(-1)}
-            aria-label="Oldingi hafta"
+            aria-label={tr("Oldingi hafta")}
             className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-surface)] shadow-[var(--shadow-xs)] active:bg-[var(--color-surface-sunken)]"
           >
             <ChevronRightIcon className="h-5 w-5 rotate-180" />
@@ -107,7 +109,7 @@ export function ChefMenu({ slug }: { slug: string }) {
           <button
             type="button"
             onClick={() => goWeek(1)}
-            aria-label="Keyingi hafta"
+            aria-label={tr("Keyingi hafta")}
             className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-surface)] shadow-[var(--shadow-xs)] active:bg-[var(--color-surface-sunken)]"
           >
             <ChevronRightIcon className="h-5 w-5" />
@@ -131,7 +133,7 @@ export function ChefMenu({ slug }: { slug: string }) {
                 active ? "bg-orange-500 text-white shadow-[0_6px_14px_-6px_rgba(234,88,12,0.7)]" : "active:bg-[var(--color-surface-sunken)]",
               )}
             >
-              <span className={clsx("text-[11.5px] font-semibold", active ? "text-white/85" : "text-[var(--color-text-muted)]")}>{SHORT_DAYS[i]}</span>
+              <span className={clsx("text-[11.5px] font-semibold", active ? "text-white/85" : "text-[var(--color-text-muted)]")}>{tr(SHORT_DAYS[i])}</span>
               <span className={clsx("text-[17px] font-bold tabular-nums", !active && day === today && "text-orange-600")}>{utc(day).getUTCDate()}</span>
               <span
                 className={clsx("h-1.5 w-1.5 rounded-full", filled ? (active ? "bg-white" : "bg-emerald-500") : "bg-transparent")}
@@ -144,17 +146,17 @@ export function ChefMenu({ slug }: { slug: string }) {
 
       <div className="flex items-center gap-2">
         <h2 className="text-[17px] font-semibold text-[var(--color-text)]">{dayTitle(selected)}</h2>
-        {selected === today && <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[11.5px] font-bold text-orange-700">Bugun</span>}
+        {selected === today && <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[11.5px] font-bold text-orange-700">{tr("Bugun")}</span>}
       </div>
 
       {warnings.length > 0 && (
         <div className="flex gap-3 rounded-[20px] border border-red-200 bg-red-50 p-3.5">
           <AlertIcon className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
           <div className="space-y-1 text-[13.5px] leading-snug text-red-700">
-            <p className="font-semibold">Menyuda allergen bor</p>
+            <p className="font-semibold">{tr("Menyuda allergen bor")}</p>
             {warnings.map((w, i) => (
               <p key={i}>
-                {w.meal}: &quot;{w.token}&quot; — <b>{w.child}</b>
+                {tr(w.meal)}: &quot;{tr(w.token)}&quot; — <b>{tr(w.child)}</b>
               </p>
             ))}
           </div>
@@ -164,7 +166,7 @@ export function ChefMenu({ slug }: { slug: string }) {
       {menuQuery.isLoading ? (
         <LoadingState rows={3} />
       ) : menuQuery.isError ? (
-        <ErrorState message={(menuQuery.error as Error).message} />
+        <ErrorState message={tr((menuQuery.error as Error).message)} />
       ) : (
         <ul className="space-y-3">
           {MEALS.map(({ meal, label }) => {
@@ -181,9 +183,9 @@ export function ChefMenu({ slug }: { slug: string }) {
                     <look.Icon className="h-6 w-6" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[16px] font-semibold text-[var(--color-text)]">{label}</span>
+                    <span className="block text-[16px] font-semibold text-[var(--color-text)]">{tr(label)}</span>
                     <span className={clsx("mt-1 block text-[15px] leading-snug", text ? "text-[var(--color-text)]" : "text-[var(--color-text-muted)]")}>
-                      {text || "Kiritilmagan — qo'shish uchun bosing"}
+                      {text || tr("Kiritilmagan — qo'shish uchun bosing")}
                     </span>
                   </span>
                   <PencilIcon className="mt-1 h-5 w-5 shrink-0 text-[var(--color-text-muted)]" />
@@ -222,6 +224,7 @@ function EditDaySheet({
   slug: string;
   onClose: () => void;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [values, setValues] = useState({ breakfast: "", lunch: "", snack: "" });
 
@@ -260,7 +263,7 @@ function EditDaySheet({
   if (!open || typeof document === "undefined") return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Menyuni tahrirlash">
+    <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={tr("Menyuni tahrirlash")}>
       <div className={clsx("absolute inset-0 bg-black/40", styles.backdrop)} onClick={onClose} aria-hidden />
       <form
         onSubmit={(e) => {
@@ -275,7 +278,7 @@ function EditDaySheet({
       >
         <div className="mx-auto h-1.5 w-10 rounded-full bg-black/15" aria-hidden />
         <h2 className="mt-4 text-[19px] font-semibold text-[var(--color-text)]">{dayTitle(date)}</h2>
-        <p className="mt-0.5 text-[13.5px] text-[var(--color-text-muted)]">Taomlarni vergul bilan ajrating</p>
+        <p className="mt-0.5 text-[13.5px] text-[var(--color-text-muted)]">{tr("Taomlarni vergul bilan ajrating")}</p>
 
         <div className="mt-4 space-y-3">
           {MEALS.map(({ meal, label }) => {
@@ -287,14 +290,14 @@ function EditDaySheet({
                   <span className={clsx("flex h-7 w-7 items-center justify-center rounded-xl", look.tint, look.ink)}>
                     <look.Icon className="h-4 w-4" />
                   </span>
-                  {label}
+                  {tr(label)}
                 </span>
                 <textarea
                   rows={2}
                   autoFocus={meal === focus}
                   value={values[key]}
                   onChange={(e) => setValues((v) => ({ ...v, [key]: e.target.value }))}
-                  placeholder="Masalan: mastava, palov, salat"
+                  placeholder={tr("Masalan: mastava, palov, salat")}
                   className="w-full resize-none rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-sunken)] px-3.5 py-3 text-[16px] leading-snug text-[var(--color-text)] outline-none focus:border-orange-400 focus:bg-white focus:ring-4 focus:ring-orange-100"
                 />
               </label>
@@ -304,7 +307,7 @@ function EditDaySheet({
 
         {save.isError && (
           <p className="mt-3 rounded-2xl bg-[var(--color-danger-bg)] px-3.5 py-2.5 text-[14px] text-[var(--color-danger)]">
-            {(save.error as Error).message}
+            {tr((save.error as Error).message)}
           </p>
         )}
 
@@ -314,7 +317,7 @@ function EditDaySheet({
             onClick={onClose}
             className="h-12 flex-1 rounded-2xl bg-[var(--color-surface-sunken)] text-[15px] font-semibold text-[var(--color-text)] active:bg-black/[0.06]"
           >
-            Bekor qilish
+            {tr("Bekor qilish")}
           </button>
           <button
             type="submit"

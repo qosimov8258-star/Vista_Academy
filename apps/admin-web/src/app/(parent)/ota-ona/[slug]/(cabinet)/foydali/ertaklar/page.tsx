@@ -7,9 +7,11 @@ import styles from "../../../parent.module.css";
 import { useTales } from "../content";
 import { useLearned } from "../store";
 import { Chip, EmptyCard, FoydaliHeader, ListSkeleton, LoadErrorCard, TaleCover, TaleIcon } from "../ui";
+import { useTr } from "@/i18n/tr";
 
 /** Ertaklar ro'yxati — muqovali kartalar */
 export default function TalesPage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const base = `/ota-ona/${slug}/foydali`;
   const talesQuery = useTales();
@@ -21,8 +23,8 @@ export default function TalesPage({ params }: { params: Promise<{ slug: string }
       <FoydaliHeader
         backHref={base}
         backLabel="Foydali"
-        title="Ertaklar"
-        subtitle="Uxlashdan oldin birga o'qing — oxirida bolangizga savollar bor"
+        title={tr("Ertaklar")}
+        subtitle={tr("Uxlashdan oldin birga o'qing — oxirida bolangizga savollar bor")}
       />
 
       {!tales ? (
@@ -35,8 +37,8 @@ export default function TalesPage({ params }: { params: Promise<{ slug: string }
         <EmptyCard
           Icon={TaleIcon}
           tone="sky"
-          title="Hozircha ertak yo'q"
-          text="Tarbiyachi ertak qo'shishi bilan u shu yerda paydo bo'ladi."
+          title={tr("Hozircha ertak yo'q")}
+          text={tr("Tarbiyachi ertak qo'shishi bilan u shu yerda paydo bo'ladi.")}
         />
       ) : (
         <ul className="mt-5 space-y-4">
@@ -52,14 +54,14 @@ export default function TalesPage({ params }: { params: Promise<{ slug: string }
                     <TaleCover kind={tale.cover} className="h-full w-full" />
                   </div>
                   <div className="p-4">
-                    <p className={`${styles.roundedFont} text-[20px] font-extrabold text-[var(--p-ink)]`}>{tale.title}</p>
+                    <p className={`${styles.roundedFont} text-[20px] font-extrabold text-[var(--p-ink)]`}>{tr(tale.title)}</p>
                     <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                      <Chip tone="sky">{tale.origin}</Chip>
+                      <Chip tone="sky">{tr(tale.origin)}</Chip>
                       <Chip>
                         <ClockIcon className="mr-1 h-3.5 w-3.5" />
-                        {tale.minutes} daqiqa
+                        {tr(tale.minutes)} {tr("daqiqa")}
                       </Chip>
-                      {read && <Chip tone="mint">O&apos;qildi</Chip>}
+                      {read && <Chip tone="mint">{tr("O'qildi")}</Chip>}
                     </div>
                   </div>
                 </Link>

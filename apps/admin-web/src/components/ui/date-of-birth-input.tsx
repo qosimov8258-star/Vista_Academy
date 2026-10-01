@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useState } from "react";
 import clsx from "clsx";
+import { useTr } from "@/i18n/tr";
 
 const MONTHS = [
   "Yanvar",
@@ -73,6 +74,7 @@ export function DateOfBirthInput({
   error?: string;
   hint?: string;
 }) {
+  const tr = useTr();
   const groupId = useId();
   const [parts, setParts] = useState<Parts>(() => splitValue(value));
 
@@ -103,51 +105,51 @@ export function DateOfBirthInput({
   return (
     <div>
       <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]" id={groupId}>
-        {label}
+        {tr(label)}
       </span>
       <div className="grid grid-cols-[1fr_1.4fr_1fr] gap-2" role="group" aria-labelledby={groupId}>
         <select
-          aria-label="Kun"
+          aria-label={tr("Kun")}
           value={parts.day}
           onChange={(e) => update({ day: e.target.value })}
           className={clsx(selectClass, error && "border-[var(--color-danger)]")}
         >
-          <option value="">Kun</option>
+          <option value="">{tr("Kun")}</option>
           {Array.from({ length: daysInMonth(parts.year, parts.month) }, (_, i) => i + 1).map((d) => (
             <option key={d} value={d}>
-              {d}
+              {tr(d)}
             </option>
           ))}
         </select>
         <select
-          aria-label="Oy"
+          aria-label={tr("Oy")}
           value={parts.month}
           onChange={(e) => update({ month: e.target.value })}
           className={clsx(selectClass, error && "border-[var(--color-danger)]")}
         >
-          <option value="">Oy</option>
+          <option value="">{tr("Oy")}</option>
           {MONTHS.map((name, index) => (
             <option key={name} value={index + 1}>
-              {name}
+              {tr(name)}
             </option>
           ))}
         </select>
         <select
-          aria-label="Yil"
+          aria-label={tr("Yil")}
           value={parts.year}
           onChange={(e) => update({ year: e.target.value })}
           className={clsx(selectClass, error && "border-[var(--color-danger)]")}
         >
-          <option value="">Yil</option>
+          <option value="">{tr("Yil")}</option>
           {years.map((y) => (
             <option key={y} value={y}>
-              {y}
+              {tr(y)}
             </option>
           ))}
         </select>
       </div>
-      {hint && !error && <span className="mt-1 block text-xs text-[var(--color-text-muted)]">{hint}</span>}
-      {error && <span className="mt-1 block text-xs text-[var(--color-danger)]">{error}</span>}
+      {hint && !error && <span className="mt-1 block text-xs text-[var(--color-text-muted)]">{tr(hint)}</span>}
+      {error && <span className="mt-1 block text-xs text-[var(--color-danger)]">{tr(error)}</span>}
     </div>
   );
 }

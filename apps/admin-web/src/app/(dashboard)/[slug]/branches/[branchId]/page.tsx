@@ -31,6 +31,7 @@ import {
   TrashIcon,
   UnlockIcon,
 } from "@/components/ui/icons";
+import { useTr } from "@/i18n/tr";
 
 /** Har bir rolga o'z rangi — ilgari hammasi bir xil chipda edi. */
 const ROLE_TONE: Record<string, string> = {
@@ -42,6 +43,7 @@ const ROLE_TONE: Record<string, string> = {
 };
 
 export default function BranchDetailPage({ params }: { params: Promise<{ slug: string; branchId: string }> }) {
+  const tr = useTr();
   const { slug, branchId } = use(params);
   const queryClient = useQueryClient();
   const { user: currentUser } = useAuth();
@@ -85,7 +87,7 @@ export default function BranchDetailPage({ params }: { params: Promise<{ slug: s
       setAvatarError(null);
       invalidateBranch();
     },
-    onError: (err) => setAvatarError(err instanceof ApiError ? err.message : "Rasmni saqlab bo'lmadi"),
+    onError: (err) => setAvatarError(err instanceof ApiError ? err.message : tr("Rasmni saqlab bo'lmadi")),
   });
 
   const removeAvatarMutation = useMutation({
@@ -94,7 +96,7 @@ export default function BranchDetailPage({ params }: { params: Promise<{ slug: s
       setAvatarError(null);
       invalidateBranch();
     },
-    onError: (err) => setAvatarError(err instanceof ApiError ? err.message : "Rasmni o'chirib bo'lmadi"),
+    onError: (err) => setAvatarError(err instanceof ApiError ? err.message : tr("Rasmni o'chirib bo'lmadi")),
   });
 
   const handleAvatarPick = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -110,7 +112,7 @@ export default function BranchDetailPage({ params }: { params: Promise<{ slug: s
     try {
       avatarMutation.mutate(await resizeToSquare(file));
     } catch {
-      setAvatarError("Bu faylni rasm sifatida o'qib bo'lmadi");
+      setAvatarError(tr("Bu faylni rasm sifatida o'qib bo'lmadi"));
     }
   };
 
@@ -121,7 +123,7 @@ export default function BranchDetailPage({ params }: { params: Promise<{ slug: s
       invalidateTeam();
       setBlockMember(null);
     },
-    onError: (err) => setActionError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi"),
+    onError: (err) => setActionError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi")),
   });
 
   const deleteMutation = useMutation({
@@ -130,11 +132,11 @@ export default function BranchDetailPage({ params }: { params: Promise<{ slug: s
       invalidateTeam();
       setDeleteMember(null);
     },
-    onError: (err) => setActionError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi"),
+    onError: (err) => setActionError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi")),
   });
 
   if (isLoading) return <LoadingState rows={4} />;
-  if (isError) return <ErrorState message={(error as Error).message} />;
+  if (isError) return <ErrorState message={tr((error as Error).message)} />;
   if (!branch) return null;
 
   const branchTeam = (usersQuery.data ?? []).filter((u) => u.branchId === branch.id);
@@ -160,7 +162,7 @@ export default function BranchDetailPage({ params }: { params: Promise<{ slug: s
           className="group inline-flex items-center gap-1.5 text-[14px] font-medium text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
         >
           <ArrowLeftIcon className="h-4 w-4 transition-transform group-hover:-translate-x-0.5 motion-reduce:transition-none" />
-          Filiallar
+          {tr("Filiallar")}
         </Link>
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3.5">
@@ -171,8 +173,8 @@ export default function BranchDetailPage({ params }: { params: Promise<{ slug: s
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={avatarMutation.isPending}
-                aria-label="Filial belgisini almashtirish"
-                title="Belgini almashtirish"
+                aria-label={tr("Filial belgisini almashtirish")}
+                title={tr("Belgini almashtirish")}
                 className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-[var(--radius-md)] bg-black/45 text-white opacity-0 transition-opacity duration-[var(--dur-fast)] hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none disabled:cursor-wait disabled:opacity-100 motion-reduce:transition-none"
               >
                 {avatarMutation.isPending ? (
@@ -191,16 +193,16 @@ export default function BranchDetailPage({ params }: { params: Promise<{ slug: s
             </div>
             <div className="min-w-0">
               <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
-                {branch.name}
+                {tr(branch.name)}
               </h1>
-              <p className="text-[13px] text-[var(--color-text-muted)]">/{branch.slug}</p>
+              <p className="text-[13px] text-[var(--color-text-muted)]">/{tr(branch.slug)}</p>
               <div className="mt-1 flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className="cursor-pointer text-[12.5px] font-medium text-[var(--color-primary)] hover:underline"
                 >
-                  {branch.avatarUpdatedAt ? "Belgini almashtirish" : "Belgi qo'yish"}
+                  {branch.avatarUpdatedAt ? "Belgini almashtirish" : tr("Belgi qo'yish")}
                 </button>
                 {branch.avatarUpdatedAt && (
                   <>
@@ -211,17 +213,17 @@ export default function BranchDetailPage({ params }: { params: Promise<{ slug: s
                       disabled={removeAvatarMutation.isPending}
                       className="cursor-pointer text-[12.5px] font-medium text-[var(--color-danger)] hover:underline disabled:opacity-60"
                     >
-                      O&apos;chirish
+                      {tr("O'chirish")}
                     </button>
                   </>
                 )}
               </div>
-              {avatarError && <p className="mt-1 text-[12.5px] text-[var(--color-danger)]">{avatarError}</p>}
+              {avatarError && <p className="mt-1 text-[12.5px] text-[var(--color-danger)]">{tr(avatarError)}</p>}
             </div>
           </div>
           <Button size="sm" variant="outline" onClick={() => setEditBranchOpen(true)}>
             <PencilIcon className="h-4 w-4" />
-            Tahrirlash
+            {tr("Tahrirlash")}
           </Button>
         </div>
       </div>
@@ -230,10 +232,10 @@ export default function BranchDetailPage({ params }: { params: Promise<{ slug: s
       <Card className="overflow-hidden">
         <div className="hairline border-b border-[var(--color-separator)] px-5 py-4 sm:px-6">
           <h2 className="text-[15px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
-            Filialning shaxsiy havolasi
+            {tr("Filialning shaxsiy havolasi")}
           </h2>
           <p className="text-[12.5px] text-[var(--color-text-muted)]">
-            Jamoa shu havola orqali kirib, faqat shu filial ma&apos;lumotlarini ko&apos;radi
+            {tr("Jamoa shu havola orqali kirib, faqat shu filial ma'lumotlarini ko'radi")}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 px-5 py-4 sm:px-6">
@@ -244,7 +246,7 @@ export default function BranchDetailPage({ params }: { params: Promise<{ slug: s
               rel="noreferrer"
               className="break-all text-[14px] font-medium text-[var(--color-primary)] hover:underline"
             >
-              {branchUrl}
+              {tr(branchUrl)}
             </a>
           </div>
           <Button type="button" variant={copied ? "secondary" : "outline"} size="sm" onClick={copyLink}>
@@ -258,14 +260,14 @@ export default function BranchDetailPage({ params }: { params: Promise<{ slug: s
       <Card className="overflow-hidden">
         <div className="hairline border-b border-[var(--color-separator)] px-5 py-4 sm:px-6">
           <h2 className="text-[15px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
-            Filial ma&apos;lumotlari
+            {tr("Filial ma'lumotlari")}
           </h2>
         </div>
         <dl className="divide-y divide-[var(--color-separator)]">
-          <InfoRow label="Manzil" value={branch.address || "Ko'rsatilmagan"} muted={!branch.address} />
-          <InfoRow label="Vaqt zonasi" value={branch.timezone} />
-          <InfoRow label="Valyuta" value={branch.currency} />
-          <InfoRow label="Yaratilgan sana" value={formatDate(branch.createdAt)} numeric />
+          <InfoRow label={tr("Manzil")} value={branch.address || tr("Ko'rsatilmagan")} muted={!branch.address} />
+          <InfoRow label={tr("Vaqt zonasi")} value={branch.timezone} />
+          <InfoRow label={tr("Valyuta")} value={branch.currency} />
+          <InfoRow label={tr("Yaratilgan sana")} value={formatDate(branch.createdAt)} numeric />
         </dl>
       </Card>
 
@@ -275,15 +277,15 @@ export default function BranchDetailPage({ params }: { params: Promise<{ slug: s
           <div className="hairline flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-separator)] px-5 py-4 sm:px-6">
             <div>
               <h2 className="text-[15px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
-                Filial jamoasi
+                {tr("Filial jamoasi")}
               </h2>
               <p className="text-[12.5px] text-[var(--color-text-muted)]">
-                {branchTeam.length > 0 ? `${branchTeam.length} ta hisob` : "Hali hech kim tayinlanmagan"}
+                {branchTeam.length > 0 ? tr("{0} ta hisob", branchTeam.length) : tr("Hali hech kim tayinlanmagan")}
               </p>
             </div>
             <Button size="sm" onClick={() => setAssignOpen(true)}>
               <PlusIcon className="h-4 w-4" />
-              Xodim tayinlash
+              {tr("Xodim tayinlash")}
             </Button>
           </div>
 
@@ -293,18 +295,18 @@ export default function BranchDetailPage({ params }: { params: Promise<{ slug: s
             </div>
           ) : usersQuery.isError ? (
             <div className="px-5 py-5 sm:px-6">
-              <ErrorState message={(usersQuery.error as Error).message} />
+              <ErrorState message={tr((usersQuery.error as Error).message)} />
             </div>
           ) : branchTeam.length === 0 ? (
             <div className="px-5 py-5 sm:px-6">
               <EmptyState
-                title="Jamoa hali yig'ilmagan"
-                description="Filial admini yoki moliyachi tayinlang — ular shu filialning kundalik ishini yuritadi."
+                title={tr("Jamoa hali yig'ilmagan")}
+                description={tr("Filial admini yoki moliyachi tayinlang — ular shu filialning kundalik ishini yuritadi.")}
                 icon={<TeacherIcon className="h-[26px] w-[26px]" />}
                 action={
                   <Button size="sm" onClick={() => setAssignOpen(true)}>
                     <PlusIcon className="h-4 w-4" />
-                    Xodim tayinlash
+                    {tr("Xodim tayinlash")}
                   </Button>
                 }
               />
@@ -327,11 +329,11 @@ export default function BranchDetailPage({ params }: { params: Promise<{ slug: s
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <p className="truncate text-[14px] font-medium text-[var(--color-text)]">{member.fullName}</p>
-                        {isSelf && <Badge tone="neutral">Siz</Badge>}
-                        {!member.isActive && <Badge tone="danger">Bloklangan</Badge>}
+                        <p className="truncate text-[14px] font-medium text-[var(--color-text)]">{tr(member.fullName)}</p>
+                        {isSelf && <Badge tone="neutral">{tr("Siz")}</Badge>}
+                        {!member.isActive && <Badge tone="danger">{tr("Bloklangan")}</Badge>}
                       </div>
-                      <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">{member.login}</p>
+                      <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">{tr(member.login)}</p>
                     </div>
 
                     <span
@@ -340,7 +342,7 @@ export default function BranchDetailPage({ params }: { params: Promise<{ slug: s
                         ROLE_TONE[member.role],
                       )}
                     >
-                      {ROLE_LABEL[member.role]}
+                      {tr(ROLE_LABEL[member.role])}
                     </span>
 
                     {manageable && (
@@ -349,8 +351,8 @@ export default function BranchDetailPage({ params }: { params: Promise<{ slug: s
                           size="sm"
                           variant="ghost"
                           isIconOnly
-                          aria-label="Tahrirlash"
-                          title="Tahrirlash"
+                          aria-label={tr("Tahrirlash")}
+                          title={tr("Tahrirlash")}
                           onClick={() => setEditMember(member)}
                         >
                           <PencilIcon className="h-4 w-4" />
@@ -372,8 +374,8 @@ export default function BranchDetailPage({ params }: { params: Promise<{ slug: s
                           size="sm"
                           variant="ghost"
                           isIconOnly
-                          aria-label="O'chirish"
-                          title="O'chirish"
+                          aria-label={tr("O'chirish")}
+                          title={tr("O'chirish")}
                           className="hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]"
                           onClick={() => {
                             setActionError(null);
@@ -423,12 +425,11 @@ export default function BranchDetailPage({ params }: { params: Promise<{ slug: s
         description={
           blockMember?.isActive ? (
             <>
-              <b className="text-[var(--color-text)]">{blockMember?.fullName}</b> tizimga kira olmaydi va ochiq
-              seanslari darhol yopiladi. Ma&apos;lumotlari saqlanib qoladi — istalgan vaqtda blokdan chiqarasiz.
+              <b className="text-[var(--color-text)]">{tr(blockMember?.fullName)}</b> {tr("tizimga kira olmaydi va ochiq seanslari darhol yopiladi. Ma'lumotlari saqlanib qoladi — istalgan vaqtda blokdan chiqarasiz.")}
             </>
           ) : (
             <>
-              <b className="text-[var(--color-text)]">{blockMember?.fullName}</b> yana tizimga kira oladi.
+              <b className="text-[var(--color-text)]">{tr(blockMember?.fullName)}</b> {tr("yana tizimga kira oladi.")}
             </>
           )
         }
@@ -440,22 +441,21 @@ export default function BranchDetailPage({ params }: { params: Promise<{ slug: s
       <ConfirmDialog
         open={!!deleteMember}
         onClose={() => setDeleteMember(null)}
-        title="Loginni o'chirish"
-        confirmLabel="O'chirish"
+        title={tr("Loginni o'chirish")}
+        confirmLabel={tr("O'chirish")}
         tone="danger"
         loading={deleteMutation.isPending}
         error={actionError}
         description={
           <>
-            <b className="text-[var(--color-text)]">{deleteMember?.fullName}</b> hisobi butunlay o&apos;chiriladi va
-            qaytarilmaydi.
+            <b className="text-[var(--color-text)]">{tr(deleteMember?.fullName)}</b> {tr("hisobi butunlay o'chiriladi va qaytarilmaydi.")}
             {deleteMember?.role === "TEACHER" && (
               <>
                 {" "}
-                Xodim kartochkasi va guruh biriktiruvi saqlanib qoladi — u faqat kabinetsiz qoladi.
+                {tr("Xodim kartochkasi va guruh biriktiruvi saqlanib qoladi — u faqat kabinetsiz qoladi.")}
               </>
             )}{" "}
-            Vaqtincha to&apos;xtatish kerak bo&apos;lsa, o&apos;chirish o&apos;rniga bloklang.
+            {tr("Vaqtincha to'xtatish kerak bo'lsa, o'chirish o'rniga bloklang.")}
           </>
         }
         onConfirm={() => deleteMember && deleteMutation.mutate(deleteMember.id)}
@@ -475,9 +475,10 @@ function InfoRow({
   muted?: boolean;
   numeric?: boolean;
 }) {
+  const tr = useTr();
   return (
     <div className="flex items-center justify-between gap-4 px-5 py-3.5 sm:px-6">
-      <dt className="text-[13px] text-[var(--color-text-muted)]">{label}</dt>
+      <dt className="text-[13px] text-[var(--color-text-muted)]">{tr(label)}</dt>
       <dd
         className={clsx(
           "text-[14px] font-medium",
@@ -485,7 +486,7 @@ function InfoRow({
           muted ? "text-[var(--color-text-muted)]" : "text-[var(--color-text)]",
         )}
       >
-        {value}
+        {tr(value)}
       </dd>
     </div>
   );

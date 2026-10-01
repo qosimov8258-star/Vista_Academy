@@ -10,6 +10,7 @@ import type { DevelopmentAssessment } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Select, Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useTr } from "@/i18n/tr";
 
 const ratingField = z.enum(["BELOW_EXPECTED", "ON_TRACK", "ABOVE_EXPECTED", ""]).optional();
 
@@ -41,6 +42,7 @@ export function EditDevelopmentModal({
   childId: string;
   existing: DevelopmentAssessment | null;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
   const period = existing?.period ?? currentPeriod();
@@ -76,7 +78,7 @@ export function EditDevelopmentModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
@@ -85,43 +87,43 @@ export function EditDevelopmentModal({
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Select label="Nutq" defaultValue="" {...register("speechRating")}>
-            <option value="">Baholanmagan</option>
-            <option value="BELOW_EXPECTED">Kutilganidan past</option>
-            <option value="ON_TRACK">Yoshiga mos</option>
-            <option value="ABOVE_EXPECTED">Kutilganidan yuqori</option>
+          <Select label={tr("Nutq")} defaultValue="" {...register("speechRating")}>
+            <option value="">{tr("Baholanmagan")}</option>
+            <option value="BELOW_EXPECTED">{tr("Kutilganidan past")}</option>
+            <option value="ON_TRACK">{tr("Yoshiga mos")}</option>
+            <option value="ABOVE_EXPECTED">{tr("Kutilganidan yuqori")}</option>
           </Select>
-          <Select label="Motorika" defaultValue="" {...register("motorRating")}>
-            <option value="">Baholanmagan</option>
-            <option value="BELOW_EXPECTED">Kutilganidan past</option>
-            <option value="ON_TRACK">Yoshiga mos</option>
-            <option value="ABOVE_EXPECTED">Kutilganidan yuqori</option>
+          <Select label={tr("Motorika")} defaultValue="" {...register("motorRating")}>
+            <option value="">{tr("Baholanmagan")}</option>
+            <option value="BELOW_EXPECTED">{tr("Kutilganidan past")}</option>
+            <option value="ON_TRACK">{tr("Yoshiga mos")}</option>
+            <option value="ABOVE_EXPECTED">{tr("Kutilganidan yuqori")}</option>
           </Select>
-          <Select label="Ijtimoiy ko'nikma" defaultValue="" {...register("socialRating")}>
-            <option value="">Baholanmagan</option>
-            <option value="BELOW_EXPECTED">Kutilganidan past</option>
-            <option value="ON_TRACK">Yoshiga mos</option>
-            <option value="ABOVE_EXPECTED">Kutilganidan yuqori</option>
+          <Select label={tr("Ijtimoiy ko'nikma")} defaultValue="" {...register("socialRating")}>
+            <option value="">{tr("Baholanmagan")}</option>
+            <option value="BELOW_EXPECTED">{tr("Kutilganidan past")}</option>
+            <option value="ON_TRACK">{tr("Yoshiga mos")}</option>
+            <option value="ABOVE_EXPECTED">{tr("Kutilganidan yuqori")}</option>
           </Select>
-          <Select label="Bilim / idrok" defaultValue="" {...register("cognitiveRating")}>
-            <option value="">Baholanmagan</option>
-            <option value="BELOW_EXPECTED">Kutilganidan past</option>
-            <option value="ON_TRACK">Yoshiga mos</option>
-            <option value="ABOVE_EXPECTED">Kutilganidan yuqori</option>
+          <Select label={tr("Bilim / idrok")} defaultValue="" {...register("cognitiveRating")}>
+            <option value="">{tr("Baholanmagan")}</option>
+            <option value="BELOW_EXPECTED">{tr("Kutilganidan past")}</option>
+            <option value="ON_TRACK">{tr("Yoshiga mos")}</option>
+            <option value="ABOVE_EXPECTED">{tr("Kutilganidan yuqori")}</option>
           </Select>
         </div>
-        <Textarea label="Izoh (ixtiyoriy)" rows={3} {...register("note")} />
+        <Textarea label={tr("Izoh (ixtiyoriy)")} rows={3} {...register("note")} />
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Bekor qilish
+            {tr("Bekor qilish")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Saqlash
+            {tr("Saqlash")}
           </Button>
         </div>
       </form>

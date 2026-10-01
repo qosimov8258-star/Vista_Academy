@@ -1,3 +1,4 @@
+import { useTr } from "@/i18n/tr";
 /**
  * To'lganlik halqasi: o'rtasida bolalar soni, tashqarisida sig'im.
  * Nisbat bir qarashda ko'rinsin — raqamni o'qishga hojat qolmaydi.
@@ -13,6 +14,7 @@ export function CapacityRing({
   ringClass: string;
   size?: number;
 }) {
+  const tr = useTr();
   const radius = 26;
   const circumference = 2 * Math.PI * radius;
   const ratio = total > 0 ? Math.min(1, value / total) : 0;
@@ -34,8 +36,8 @@ export function CapacityRing({
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center leading-none">
-        <span className="text-[15px] font-bold text-[var(--color-text)]">{value}</span>
-        <span className="text-[10px] font-medium text-[var(--color-text-muted)]">/ {total}</span>
+        <span className="text-[15px] font-bold text-[var(--color-text)]">{tr(value)}</span>
+        <span className="text-[10px] font-medium text-[var(--color-text-muted)]">/ {tr(total)}</span>
       </div>
     </div>
   );

@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EditDishModal } from "./edit-dish-modal";
+import { useTr } from "@/i18n/tr";
 
 const schema = z.object({
   name: z.string().min(2, "Nomi kamida 2 belgi"),
@@ -23,6 +24,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export function DishCatalogCard({ slug, canWrite }: { slug: string; canWrite: boolean }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
   const [editDish, setEditDish] = useState<Dish | null>(null);
@@ -63,28 +65,28 @@ export function DishCatalogCard({ slug, canWrite }: { slug: string; canWrite: bo
       setServerError(null);
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
   return (
     <Card className="overflow-hidden">
       <CardHeader>
-        <CardTitle>Taomlar katalogi</CardTitle>
+        <CardTitle>{tr("Taomlar katalogi")}</CardTitle>
       </CardHeader>
       <CardBody className="space-y-4">
         {dishesQuery.isLoading ? (
           <LoadingState rows={3} />
         ) : dishesQuery.isError ? (
-          <ErrorState message={(dishesQuery.error as Error).message} />
+          <ErrorState message={tr((dishesQuery.error as Error).message)} />
         ) : !dishesQuery.data || dishesQuery.data.length === 0 ? (
-          <EmptyState title="Hali taom qo'shilmagan" />
+          <EmptyState title={tr("Hali taom qo'shilmagan")} />
         ) : (
           <ul className="divide-y divide-[var(--color-separator)]">
             {dishesQuery.data.map((dish) => (
               <li key={dish.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
                 <div className="min-w-0">
-                  <span className="text-[14px] font-medium text-[var(--color-text)]">{dish.name}</span>
+                  <span className="text-[14px] font-medium text-[var(--color-text)]">{tr(dish.name)}</span>
                   <span className="ml-2 text-[12.5px] text-[var(--color-text-muted)]">
                     {dish.calories != null && `${dish.calories} kkal`}
                     {dish.calories != null && dish.allergens && " · "}
@@ -94,10 +96,10 @@ export function DishCatalogCard({ slug, canWrite }: { slug: string; canWrite: bo
                 {canWrite && (
                   <div className="flex shrink-0 gap-1.5">
                     <Button size="sm" variant="outline" onClick={() => setEditDish(dish)}>
-                      Tahrirlash
+                      {tr("Tahrirlash")}
                     </Button>
                     <Button size="sm" variant="danger" onClick={() => setDeleteDish(dish)}>
-                      O&apos;chirish
+                      {tr("O'chirish")}
                     </Button>
                   </div>
                 )}
@@ -113,12 +115,12 @@ export function DishCatalogCard({ slug, canWrite }: { slug: string; canWrite: bo
           >
             {serverError && (
               <div className="w-full rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-                {serverError}
+                {tr(serverError)}
               </div>
             )}
-            <Input label="Taom nomi" placeholder="Sutli bo'tqa" error={errors.name?.message} {...register("name")} className="min-w-[160px]" />
+            <Input label={tr("Taom nomi")} placeholder={tr("Sutli bo'tqa")} error={errors.name?.message} {...register("name")} className="min-w-[160px]" />
             <Input
-              label="Kaloriya (ixtiyoriy)"
+              label={tr("Kaloriya (ixtiyoriy)")}
               type="number"
               min={0}
               placeholder="250"
@@ -127,14 +129,14 @@ export function DishCatalogCard({ slug, canWrite }: { slug: string; canWrite: bo
               className="w-[140px]"
             />
             <Input
-              label="Allergenlar (ixtiyoriy)"
-              placeholder="sut, yong'oq"
+              label={tr("Allergenlar (ixtiyoriy)")}
+              placeholder={tr("sut, yong'oq")}
               error={errors.allergens?.message}
               {...register("allergens")}
               className="min-w-[160px]"
             />
             <Button type="submit" loading={isSubmitting || mutation.isPending}>
-              Qo&apos;shish
+              {tr("Qo'shish")}
             </Button>
           </form>
         )}
@@ -145,13 +147,13 @@ export function DishCatalogCard({ slug, canWrite }: { slug: string; canWrite: bo
       <ConfirmDialog
         open={!!deleteDish}
         onClose={() => setDeleteDish(null)}
-        title="Taomni o'chirish"
-        confirmLabel="O'chirish"
+        title={tr("Taomni o'chirish")}
+        confirmLabel={tr("O'chirish")}
         tone="danger"
         loading={deleteMutation.isPending}
         description={
           <>
-            <b className="text-[var(--color-text)]">{deleteDish?.name}</b> katalogdan butunlay o&apos;chiriladi.
+            <b className="text-[var(--color-text)]">{tr(deleteDish?.name)}</b> {tr("katalogdan butunlay o'chiriladi.")}
           </>
         }
         onConfirm={() => deleteDish && deleteMutation.mutate(deleteDish)}

@@ -1,6 +1,7 @@
 "use client";
 
 import clsx from "clsx";
+import { useTr } from "@/i18n/tr";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
 
@@ -26,6 +27,7 @@ export function EmployeePhoto({
   className?: string;
   fallback: React.ReactNode;
 }) {
+  const tr = useTr();
   const url = employeePhotoUrl(employee);
   const shapeClass = shape === "square" ? "rounded-2xl" : "rounded-full";
 
@@ -34,7 +36,7 @@ export function EmployeePhoto({
       // eslint-disable-next-line @next/next/no-img-element -- tashqi manzil, Next optimizatsiyasi sozlanmagan
       <img
         src={url}
-        alt={employee.fullName}
+        alt={tr(employee.fullName)}
         width={size}
         height={size}
         className={clsx("shrink-0 object-cover ring-1 ring-inset ring-[rgba(16,24,40,0.06)]", shapeClass, className)}
@@ -52,7 +54,7 @@ export function EmployeePhoto({
       )}
       style={{ width: size, height: size, fontSize: Math.round(size * 0.36) }}
     >
-      {fallback}
+      {tr(fallback)}
     </span>
   );
 }

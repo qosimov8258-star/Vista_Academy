@@ -16,6 +16,7 @@ import { EyeIcon, EyeOffIcon, CheckIcon, PencilIcon } from "@/components/ui/icon
 import { prepareChildPhoto } from "@/lib/child-photo";
 import { initials } from "@/components/ui/avatar";
 import { validateUzbekPhone } from "@/lib/phone";
+import { useTr } from "@/i18n/tr";
 
 // `hasGroups` mavjud faol guruhlar borligiga qarab qayta quriladi: guruhlar
 // bo'lsa birini tanlash shart, hech qanday faol guruh bo'lmasa (masalan
@@ -77,6 +78,7 @@ function buildSchema(hasGroups: boolean) {
 type FormValues = z.infer<ReturnType<typeof buildSchema>>;
 
 export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClose: () => void; slug: string }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
   const [photoImage, setPhotoImage] = useState<string | null>(null);
@@ -177,7 +179,7 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
       }
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
@@ -194,21 +196,21 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
 
   if (createdCredentials) {
     return (
-      <Modal open={open} onClose={handleClose} title="Bola qo'shildi">
+      <Modal open={open} onClose={handleClose} title={tr("Bola qo'shildi")}>
         <div className="space-y-4">
           <div className="flex flex-col items-center gap-2 text-center">
             <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-success-bg)] text-[var(--color-success)]">
               <CheckIcon className="h-6 w-6" />
             </span>
             <p className="text-sm text-[var(--color-text-muted)]">
-              Ota-ona kabineti ochildi. Login va parolni ota-onaga bering — parol qayta ko&apos;rsatilmaydi.
+              {tr("Ota-ona kabineti ochildi. Login va parolni ota-onaga bering — parol qayta ko'rsatilmaydi.")}
             </p>
           </div>
-          <CredentialRow label="Login" value={createdCredentials.login} />
-          <CredentialRow label="Parol" value={createdCredentials.password} />
+          <CredentialRow label={tr("Login")} value={createdCredentials.login} />
+          <CredentialRow label={tr("Parol")} value={createdCredentials.password} />
           <div className="flex justify-end pt-1">
             <Button type="button" onClick={handleClose}>
-              Yopish
+              {tr("Yopish")}
             </Button>
           </div>
         </div>
@@ -217,7 +219,7 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
   }
 
   return (
-    <Modal open={open} onClose={handleClose} title="Yangi bola">
+    <Modal open={open} onClose={handleClose} title={tr("Yangi bola")}>
       <form
         className="space-y-4"
         onSubmit={handleSubmit((values) => {
@@ -227,7 +229,7 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
       >
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
 
@@ -237,7 +239,7 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
               // eslint-disable-next-line @next/next/no-img-element -- data: URL, Next optimizatsiyasi kerak emas
               <img
                 src={photoImage}
-                alt="Bola surati"
+                alt={tr("Bola surati")}
                 width={72}
                 height={72}
                 className="h-[72px] w-[72px] shrink-0 rounded-full object-cover ring-1 ring-inset ring-[rgba(16,24,40,0.06)]"
@@ -251,8 +253,8 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
               type="button"
               onClick={() => photoInputRef.current?.click()}
               disabled={photoChecking}
-              aria-label="Bola suratini tanlash"
-              title="Surat qo'yish"
+              aria-label={tr("Bola suratini tanlash")}
+              title={tr("Surat qo'yish")}
               className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-full bg-black/45 text-white opacity-0 transition-opacity duration-[var(--dur-fast)] hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none disabled:cursor-wait disabled:opacity-100 motion-reduce:transition-none"
             >
               {photoChecking ? (
@@ -275,11 +277,11 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
             disabled={photoChecking}
             className="cursor-pointer text-[12.5px] font-medium text-[var(--color-primary)] hover:underline disabled:opacity-60"
           >
-            {photoChecking ? "Tekshirilmoqda..." : photoImage ? "Rasmni almashtirish" : "Surat qo'yish (ixtiyoriy)"}
+            {photoChecking ? "Tekshirilmoqda..." : photoImage ? "Rasmni almashtirish" : tr("Surat qo'yish (ixtiyoriy)")}
           </button>
           {photoError && (
             <p role="alert" className="max-w-[320px] text-center text-[12.5px] text-[var(--color-danger)]">
-              {photoError}
+              {tr(photoError)}
             </p>
           )}
         </div>
@@ -287,69 +289,69 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
         {/* Familiya oldinda: ro'yxatlar va hujjatlar "Familiya Ism" tartibida */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
-            label="Familiya"
-            placeholder="Umaraliyev"
+            label={tr("Familiya")}
+            placeholder={tr("Umaraliyev")}
             error={errors.lastName?.message}
             {...register("lastName")}
           />
-          <Input label="Ism" placeholder="Usmon" error={errors.firstName?.message} {...register("firstName")} />
+          <Input label={tr("Ism")} placeholder={tr("Usmon")} error={errors.firstName?.message} {...register("firstName")} />
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Select label="Jinsi" defaultValue="" error={errors.gender?.message} {...register("gender")}>
+          <Select label={tr("Jinsi")} defaultValue="" error={errors.gender?.message} {...register("gender")}>
             <option value="" disabled>
-              Tanlang
+              {tr("Tanlang")}
             </option>
-            <option value="MALE">O&apos;g&apos;il bola</option>
-            <option value="FEMALE">Qiz bola</option>
+            <option value="MALE">{tr("O'g'il bola")}</option>
+            <option value="FEMALE">{tr("Qiz bola")}</option>
           </Select>
           <Select
-            label={activeGroups.length > 0 ? "Guruh" : "Guruh (ixtiyoriy)"}
+            label={activeGroups.length > 0 ? tr("Guruh") : tr("Guruh (ixtiyoriy)")}
             defaultValue=""
             error={errors.groupId?.message}
             {...register("groupId")}
           >
             <option value="" disabled={activeGroups.length > 0}>
-              {activeGroups.length > 0 ? "Tanlang" : "Tanlanmagan"}
+              {activeGroups.length > 0 ? tr("Tanlang") : "Tanlanmagan"}
             </option>
             {activeGroups.map((group) => (
               <option key={group.id} value={group.id}>
-                {group.name} ({group._count?.children ?? 0}/{group.capacity})
+                {tr(group.name)} ({group._count?.children ?? 0}/{tr(group.capacity)})
               </option>
             ))}
           </Select>
         </div>
 
         <Input
-          label="Tug'ilgan sana (ixtiyoriy)"
+          label={tr("Tug'ilgan sana (ixtiyoriy)")}
           type="date"
           error={errors.birthDate?.message}
-          hint="Saqlanganda bolaga qisqa ID beriladi (masalan id14732)"
+          hint={tr("Saqlanganda bolaga qisqa ID beriladi (masalan id14732)")}
           {...register("birthDate")}
         />
 
         <div className="space-y-4 border-t border-[var(--color-border)] pt-4">
-          <p className="text-sm font-medium text-[var(--color-text)]">Aloqa uchun ota-ona</p>
+          <p className="text-sm font-medium text-[var(--color-text)]">{tr("Aloqa uchun ota-ona")}</p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_140px]">
             <Input
-              label="Ismi va familiyasi"
-              placeholder="Umaraliyeva Aziza"
+              label={tr("Ismi va familiyasi")}
+              placeholder={tr("Umaraliyeva Aziza")}
               error={errors.guardianFullName?.message}
               {...register("guardianFullName")}
             />
-            <Select label="Kim bo'ladi" {...register("guardianRelation")}>
-              <option value="MOTHER">Onasi</option>
-              <option value="FATHER">Otasi</option>
-              <option value="GRANDPARENT">Buvi/bobo</option>
-              <option value="OTHER">Boshqa</option>
+            <Select label={tr("Kim bo'ladi")} {...register("guardianRelation")}>
+              <option value="MOTHER">{tr("Onasi")}</option>
+              <option value="FATHER">{tr("Otasi")}</option>
+              <option value="GRANDPARENT">{tr("Buvi/bobo")}</option>
+              <option value="OTHER">{tr("Boshqa")}</option>
             </Select>
           </div>
           <Input
-            label="Telefon raqami"
+            label={tr("Telefon raqami")}
             type="tel"
             placeholder="+998 90 123 45 67"
             maxLength={13}
-            hint="Xuddi shu raqam bilan yana bola qo'shilsa, ikkalasi bir ota-onaga bog'lanadi"
+            hint={tr("Xuddi shu raqam bilan yana bola qo'shilsa, ikkalasi bir ota-onaga bog'lanadi")}
             error={errors.guardianPhone?.message}
             {...register("guardianPhone")}
           />
@@ -357,9 +359,9 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="relative">
               <Input
-                label="Parol (ixtiyoriy)"
+                label={tr("Parol (ixtiyoriy)")}
                 type={showPassword ? "text" : "password"}
-                placeholder="Bo'sh qoldirilsa avtomatik beriladi"
+                placeholder={tr("Bo'sh qoldirilsa avtomatik beriladi")}
                 error={errors.guardianPassword?.message}
                 {...register("guardianPassword")}
               />
@@ -367,14 +369,14 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
                 className="absolute right-3 top-[38px] cursor-pointer text-gray-400 hover:text-[var(--color-text)]"
-                aria-label={showPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+                aria-label={showPassword ? "Parolni yashirish" : tr("Parolni ko'rsatish")}
               >
                 {showPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
               </button>
             </div>
             <div className="relative">
               <Input
-                label="Parolni tasdiqlang"
+                label={tr("Parolni tasdiqlang")}
                 type={showConfirmPassword ? "text" : "password"}
                 error={errors.guardianConfirmPassword?.message}
                 {...register("guardianConfirmPassword")}
@@ -383,7 +385,7 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
                 type="button"
                 onClick={() => setShowConfirmPassword((v) => !v)}
                 className="absolute right-3 top-[38px] cursor-pointer text-gray-400 hover:text-[var(--color-text)]"
-                aria-label={showConfirmPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+                aria-label={showConfirmPassword ? "Parolni yashirish" : tr("Parolni ko'rsatish")}
               >
                 {showConfirmPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
               </button>
@@ -400,24 +402,24 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
           <label className="flex cursor-pointer items-start gap-2.5">
             <input type="checkbox" className="mt-0.5 h-4 w-4 cursor-pointer accent-[var(--color-primary)]" {...register("createInvoice")} />
             <span>
-              <span className="block text-sm font-medium text-[var(--color-text)]">Birinchi hisob-fakturani yaratish</span>
-              <span className="block text-xs text-[var(--color-text-muted)]">Joriy oy uchun to&apos;lov summasi va muddatini kiriting.</span>
+              <span className="block text-sm font-medium text-[var(--color-text)]">{tr("Birinchi hisob-fakturani yaratish")}</span>
+              <span className="block text-xs text-[var(--color-text-muted)]">{tr("Joriy oy uchun to'lov summasi va muddatini kiriting.")}</span>
             </span>
           </label>
           {createInvoice && (
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Input label="Summa (UZS)" type="number" placeholder="850000" error={errors.invoiceAmount?.message} {...register("invoiceAmount")} />
-              <Input label="To'lov muddati" type="date" error={errors.invoiceDueDate?.message} {...register("invoiceDueDate")} />
+              <Input label={tr("Summa (UZS)")} type="number" placeholder="850000" error={errors.invoiceAmount?.message} {...register("invoiceAmount")} />
+              <Input label={tr("To'lov muddati")} type="date" error={errors.invoiceDueDate?.message} {...register("invoiceDueDate")} />
             </div>
           )}
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={handleClose}>
-            Bekor qilish
+            {tr("Bekor qilish")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Yaratish
+            {tr("Yaratish")}
           </Button>
         </div>
       </form>

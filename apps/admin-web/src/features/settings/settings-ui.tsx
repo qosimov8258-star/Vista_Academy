@@ -6,6 +6,7 @@ import clsx from "clsx";
 import type { IconProps } from "@/components/ui/icons";
 import { ChevronRightIcon, CloseIcon } from "@/components/ui/icons";
 import { IosIcon, type IosTint } from "@/features/director/ios-icon";
+import { useTr } from "@/i18n/tr";
 
 /**
  * Sozlamalar sahifasining iOS uslubidagi qurilish bloklari: guruhlangan
@@ -52,18 +53,19 @@ export function SettingsGroup({
   action?: ReactNode;
   children: ReactNode;
 }) {
+  const tr = useTr();
   return (
     <section>
       {(title || action) && (
         <div className="mb-2 flex items-end justify-between px-4">
-          {title && <h2 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--color-text-muted)]">{title}</h2>}
-          {action}
+          {title && <h2 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--color-text-muted)]">{tr(title)}</h2>}
+          {tr(action)}
         </div>
       )}
       <div className="overflow-hidden rounded-[24px] bg-[var(--color-surface)] shadow-[0_1px_2px_rgba(16,24,40,0.04),0_8px_24px_-14px_rgba(16,24,40,0.14)]">
         {children}
       </div>
-      {footer && <p className="mt-2 px-4 text-[13px] leading-relaxed text-[var(--color-text-muted)]">{footer}</p>}
+      {footer && <p className="mt-2 px-4 text-[13px] leading-relaxed text-[var(--color-text-muted)]">{tr(footer)}</p>}
     </section>
   );
 }
@@ -94,6 +96,7 @@ export function SettingsRow({
   first?: boolean;
   description?: ReactNode;
 }) {
+  const tr = useTr();
   const plain = usePlainSettingsIcons();
   const content = (
     <>
@@ -106,14 +109,14 @@ export function SettingsRow({
       {icon && <RowIcon icon={icon} tint={tint} danger={danger} />}
       <span className="min-w-0 flex-1">
         <span className={clsx("block truncate text-[15.5px]", danger ? "font-semibold text-[var(--color-danger)]" : "text-[var(--color-text)]")}>
-          {label}
+          {tr(label)}
         </span>
-        {description && <span className="mt-0.5 block text-[13px] leading-snug text-[var(--color-text-muted)]">{description}</span>}
+        {description && <span className="mt-0.5 block text-[13px] leading-snug text-[var(--color-text-muted)]">{tr(description)}</span>}
       </span>
       {value != null && (
-        <span className="min-w-0 max-w-[55%] truncate text-right text-[15px] text-[var(--color-text-muted)]">{value}</span>
+        <span className="min-w-0 max-w-[55%] truncate text-right text-[15px] text-[var(--color-text-muted)]">{tr(value)}</span>
       )}
-      {trailing}
+      {tr(trailing)}
       {onClick && !danger && <ChevronRightIcon className="h-4 w-4 shrink-0 text-[#c4c4c7]" />}
     </>
   );
@@ -127,10 +130,10 @@ export function SettingsRow({
         "cursor-pointer transition-colors active:bg-black/[0.05] md:hover:bg-black/[0.025] focus-visible:bg-black/[0.04] focus-visible:outline-none",
       )}
     >
-      {content}
+      {tr(content)}
     </button>
   ) : (
-    <div className={className}>{content}</div>
+    <div className={className}>{tr(content)}</div>
   );
 }
 
@@ -149,6 +152,7 @@ export function SettingsSheet({
   title: string;
   children: ReactNode;
 }) {
+  const tr = useTr();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -164,7 +168,7 @@ export function SettingsSheet({
   if (!open || typeof document === "undefined") return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[65] flex items-end justify-center md:items-center md:p-6" role="dialog" aria-modal="true" aria-label={title}>
+    <div className="fixed inset-0 z-[65] flex items-end justify-center md:items-center md:p-6" role="dialog" aria-modal="true" aria-label={tr(title)}>
       <div className="animate-overlay-in absolute inset-0 bg-black/30 backdrop-blur-[3px]" onClick={onClose} aria-hidden="true" />
       <div
         className="animate-sheet-in relative flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[28px] bg-[var(--color-bg)] shadow-[var(--shadow-modal)] md:max-w-[480px] md:rounded-[28px]"
@@ -172,11 +176,11 @@ export function SettingsSheet({
       >
         <div className="mx-auto mt-2.5 h-1.5 w-10 shrink-0 rounded-full bg-black/15 md:hidden" aria-hidden="true" />
         <div className="flex shrink-0 items-center justify-between gap-3 px-5 pb-3 pt-3 md:pt-5">
-          <h2 className="text-[19px] font-bold tracking-[-0.015em] text-[var(--color-text)]">{title}</h2>
+          <h2 className="text-[19px] font-bold tracking-[-0.015em] text-[var(--color-text)]">{tr(title)}</h2>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Yopish"
+            aria-label={tr("Yopish")}
             className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-black/[0.06] text-[var(--color-text-muted)] transition-colors hover:bg-black/[0.1] hover:text-[var(--color-text)]"
           >
             <CloseIcon className="h-4 w-4" />

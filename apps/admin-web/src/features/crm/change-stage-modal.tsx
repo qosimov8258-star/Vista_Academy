@@ -11,6 +11,7 @@ import { Modal } from "@/components/ui/modal";
 import { Select, Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { STAGE_LABEL } from "./labels";
+import { useTr } from "@/i18n/tr";
 
 const CHANGEABLE_STAGES = ["NEW", "TRIAL_DAY_SCHEDULED", "CONTRACT", "LOST"] as const;
 type ChangeableStage = (typeof CHANGEABLE_STAGES)[number];
@@ -39,6 +40,7 @@ export function ChangeStageModal({
   leadId: string;
   currentStage: LeadStage;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -71,17 +73,17 @@ export function ChangeStageModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
   return (
-    <Modal open={open} onClose={onClose} title="Bosqichni o'zgartirish">
+    <Modal open={open} onClose={onClose} title={tr("Bosqichni o'zgartirish")}>
       <form
         className="space-y-4"
         onSubmit={handleSubmit((values) => {
           if (values.stage === "LOST" && !values.lostReason?.trim()) {
-            setError("lostReason", { message: "Yo'qotilgan ariza uchun sabab kiritilishi shart" });
+            setError("lostReason", { message: tr("Yo'qotilgan ariza uchun sabab kiritilishi shart") });
             return;
           }
           mutation.mutate(values);
@@ -89,21 +91,21 @@ export function ChangeStageModal({
       >
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
-        <Select label="Yangi bosqich" error={errors.stage?.message} {...register("stage")}>
+        <Select label={tr("Yangi bosqich")} error={errors.stage?.message} {...register("stage")}>
           {CHANGEABLE_STAGES.map((s) => (
             <option key={s} value={s}>
-              {STAGE_LABEL[s]}
+              {tr(STAGE_LABEL[s])}
             </option>
           ))}
         </Select>
         {stage === "LOST" && (
           <Textarea
-            label="Yo'qotish sababi"
+            label={tr("Yo'qotish sababi")}
             rows={3}
-            placeholder="Masalan: narx mos kelmadi"
+            placeholder={tr("Masalan: narx mos kelmadi")}
             error={errors.lostReason?.message}
             {...register("lostReason")}
           />
@@ -111,10 +113,10 @@ export function ChangeStageModal({
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Bekor qilish
+            {tr("Bekor qilish")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Saqlash
+            {tr("Saqlash")}
           </Button>
         </div>
       </form>

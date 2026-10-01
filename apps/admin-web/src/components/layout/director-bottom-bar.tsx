@@ -10,6 +10,7 @@ import type { TenantAuthenticatedUser } from "@/lib/types";
 import { isSection, type NavEntry, type NavIcon, type NavLeaf, type NavSection } from "./nav-types";
 import { DirectorMenuContent } from "./director-rail";
 import styles from "./director-bottom-bar.module.css";
+import { useTr } from "@/i18n/tr";
 
 /** Panelda nechta joy: oxirgisi har doim "Menyu" */
 const SLOTS = 5;
@@ -78,6 +79,7 @@ export function DirectorBottomBar({
   onLogout,
   loggingOut,
 }: DirectorBottomBarProps) {
+  const tr = useTr();
   const t = useTranslations("sidebar");
   const pathname = useAppPathname();
   const barRef = useRef<HTMLDivElement>(null);
@@ -153,7 +155,7 @@ export function DirectorBottomBar({
   const slotClass = "relative flex h-full min-w-0 flex-1 basis-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-[26px]";
   const label = (text: string, active: boolean) => (
     <span className={clsx("line-clamp-2 w-full break-words px-0.5 text-center text-[10px] font-semibold leading-[1.1]", active && styles.labelActive)}>
-      {text}
+      {tr(text)}
     </span>
   );
 
@@ -164,7 +166,7 @@ export function DirectorBottomBar({
       <div className="fixed inset-x-0 bottom-0 z-40 overflow-x-clip md:hidden">
         <nav
           ref={barRef}
-          aria-label="Asosiy menyu"
+          aria-label={tr("Asosiy menyu")}
           className={clsx(styles.bar, "relative flex items-stretch px-1.5")}
           style={{ borderRadius: `${CORNER}px ${CORNER}px 0 0`, height: "calc(66px + env(safe-area-inset-bottom))", paddingBottom: "env(safe-area-inset-bottom)" }}
         >
@@ -210,7 +212,7 @@ export function DirectorBottomBar({
                   aria-current={active ? "page" : undefined}
                   className={clsx(slotClass, styles.slot, active && "justify-end pb-2.5")}
                 >
-                  {content}
+                  {tr(content)}
                 </Link>
               );
             }
@@ -224,7 +226,7 @@ export function DirectorBottomBar({
                 aria-current={active ? "page" : undefined}
                 className={clsx(slotClass, styles.slot, active && "justify-end pb-2.5")}
               >
-                {content}
+                {tr(content)}
               </Link>
             );
           })}
@@ -236,7 +238,7 @@ export function DirectorBottomBar({
             type="button"
             aria-haspopup="dialog"
             aria-expanded={sheet?.kind === "menu"}
-            aria-label="Barcha bo'limlar"
+            aria-label={tr("Barcha bo'limlar")}
             onClick={() => setSheet({ kind: "menu" })}
             className={clsx(slotClass, styles.slot, menuActive && "justify-end pb-2.5")}
           >
@@ -249,7 +251,7 @@ export function DirectorBottomBar({
       {typeof document !== "undefined" &&
         sheet &&
         createPortal(
-          <div className="fixed inset-0 z-[65] md:hidden" role="dialog" aria-modal="true" aria-label={sheet.kind === "menu" ? "Barcha bo'limlar" : sheet.section.label}>
+          <div className="fixed inset-0 z-[65] md:hidden" role="dialog" aria-modal="true" aria-label={sheet.kind === "menu" ? tr("Barcha bo'limlar") : sheet.section.label}>
             <div className={clsx(styles.scrim, "absolute inset-0 bg-[var(--accent-rail)]/35 backdrop-blur-[2px]")} onClick={() => setSheet(null)} aria-hidden="true" />
             <div
               className={clsx(
@@ -284,6 +286,7 @@ export function DirectorBottomBar({
 
 /** Guruh ichidagi havolalar — pastdan chiquvchi oynada, katta teginish maydonlari bilan */
 function SectionList({ section, isActive, onClose }: { section: NavSection; isActive: (item: NavLeaf) => boolean; onClose: () => void }) {
+  const tr = useTr();
   const SectionIcon = section.icon;
   return (
     <div className="px-4 pt-4" style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom))" }}>
@@ -291,7 +294,7 @@ function SectionList({ section, isActive, onClose }: { section: NavSection; isAc
         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-[var(--accent-rail)] text-[var(--accent-light)]">
           <SectionIcon className="h-[22px] w-[22px]" />
         </span>
-        <p className="min-w-0 flex-1 truncate text-[18px] font-bold tracking-[-0.01em] text-[var(--color-text)]">{section.label}</p>
+        <p className="min-w-0 flex-1 truncate text-[18px] font-bold tracking-[-0.01em] text-[var(--color-text)]">{tr(section.label)}</p>
       </div>
       <div className="space-y-1">
         {section.items.map((item) => {
@@ -316,9 +319,9 @@ function SectionList({ section, isActive, onClose }: { section: NavSection; isAc
               >
                 <Icon filled={active} className="h-5 w-5" />
               </span>
-              <span className="min-w-0 flex-1 truncate">{item.label}</span>
+              <span className="min-w-0 flex-1 truncate">{tr(item.label)}</span>
               {item.badge != null && item.badge > 0 && (
-                <span className="rounded-full bg-[var(--accent-soft-icon)]/15 px-2 py-0.5 text-[11px] font-bold tabular-nums text-[var(--accent-soft-icon)]">{item.badge}</span>
+                <span className="rounded-full bg-[var(--accent-soft-icon)]/15 px-2 py-0.5 text-[11px] font-bold tabular-nums text-[var(--accent-soft-icon)]">{tr(item.badge)}</span>
               )}
             </Link>
           );

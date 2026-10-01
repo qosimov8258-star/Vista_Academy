@@ -11,6 +11,7 @@ import { Modal } from "@/components/ui/modal";
 import { Input, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import clsx from "clsx";
+import { useTr } from "@/i18n/tr";
 
 const schema = z.object({
   fullName: z.string().optional(),
@@ -35,6 +36,7 @@ export function AddGuardianModal({
   slug: string;
   childId: string;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
   const [mode, setMode] = useState<"existing" | "new">("existing");
@@ -89,18 +91,18 @@ export function AddGuardianModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
   const onSubmit = (values: FormValues) => {
     setServerError(null);
     if (mode === "existing" && !selectedGuardian) {
-      setServerError("Ota-onani ro'yxatdan tanlang");
+      setServerError(tr("Ota-onani ro'yxatdan tanlang"));
       return;
     }
     if (mode === "new" && (!values.fullName || values.fullName.trim().length < 2)) {
-      setServerError("To'liq ism kamida 2 belgi bo'lishi kerak");
+      setServerError(tr("To'liq ism kamida 2 belgi bo'lishi kerak"));
       return;
     }
     if (mode === "new" && (!values.phone || values.phone.trim().length < 3)) {
@@ -111,11 +113,11 @@ export function AddGuardianModal({
   };
 
   return (
-    <Modal open={open} onClose={onClose} title="Ota-ona qo'shish" widthClassName="max-w-xl">
+    <Modal open={open} onClose={onClose} title={tr("Ota-ona qo'shish")} widthClassName="max-w-xl">
       <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
 
@@ -128,7 +130,7 @@ export function AddGuardianModal({
               mode === "existing" ? "bg-[var(--color-primary)] text-white" : "text-[var(--color-text-muted)] hover:bg-[var(--color-surface-sunken)]",
             )}
           >
-            Mavjud ota-onani biriktirish
+            {tr("Mavjud ota-onani biriktirish")}
           </button>
           <button
             type="button"
@@ -138,7 +140,7 @@ export function AddGuardianModal({
               mode === "new" ? "bg-[var(--color-primary)] text-white" : "text-[var(--color-text-muted)] hover:bg-[var(--color-surface-sunken)]",
             )}
           >
-            Yangi ota-ona qo'shish
+            {tr("Yangi ota-ona qo'shish")}
           </button>
         </div>
 
@@ -146,17 +148,17 @@ export function AddGuardianModal({
           <div className="space-y-2">
             <div className="flex gap-2">
               <Input
-                placeholder="Ism yoki telefon bo'yicha qidirish"
+                placeholder={tr("Ism yoki telefon bo'yicha qidirish")}
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
               />
               <Button type="button" variant="outline" onClick={() => setSearch(searchInput)}>
-                Qidirish
+                {tr("Qidirish")}
               </Button>
             </div>
-            {searchQuery.isFetching && <p className="text-sm text-[var(--color-text-muted)]">Qidirilmoqda...</p>}
+            {searchQuery.isFetching && <p className="text-sm text-[var(--color-text-muted)]">{tr("Qidirilmoqda...")}</p>}
             {searchQuery.data && searchQuery.data.length === 0 && (
-              <p className="text-sm text-[var(--color-text-muted)]">Hech kim topilmadi</p>
+              <p className="text-sm text-[var(--color-text-muted)]">{tr("Hech kim topilmadi")}</p>
             )}
             {searchQuery.data && searchQuery.data.length > 0 && (
               <div className="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-[var(--color-border)] p-1">
@@ -170,44 +172,44 @@ export function AddGuardianModal({
                       selectedGuardian?.id === g.id ? "bg-[var(--color-primary)]/10 text-[var(--color-primary)]" : "hover:bg-[var(--color-surface-sunken)]",
                     )}
                   >
-                    <span className="font-medium">{g.fullName}</span>{" "}
-                    <span className="text-[var(--color-text-muted)]">{g.phone}</span>
+                    <span className="font-medium">{tr(g.fullName)}</span>{" "}
+                    <span className="text-[var(--color-text-muted)]">{tr(g.phone)}</span>
                   </button>
                 ))}
               </div>
             )}
             {selectedGuardian && (
               <p className="text-sm text-[var(--color-text)]">
-                Tanlandi: <strong>{selectedGuardian.fullName}</strong> ({selectedGuardian.phone})
+                {tr("Tanlandi:")}{" "}<strong>{tr(selectedGuardian.fullName)}</strong> ({tr(selectedGuardian.phone)})
               </p>
             )}
           </div>
         ) : (
           <div className="space-y-4">
-            <Input label="To'liq ism" placeholder="Karimova Aziza" {...register("fullName")} />
-            <Input label="Telefon" placeholder="+998901234567" {...register("phone")} />
+            <Input label={tr("To'liq ism")} placeholder={tr("Karimova Aziza")} {...register("fullName")} />
+            <Input label={tr("Telefon")} placeholder="+998901234567" {...register("phone")} />
           </div>
         )}
 
-        <Select label="Qarindoshlik turi" {...register("relation")}>
-          <option value="FATHER">Ota</option>
-          <option value="MOTHER">Ona</option>
-          <option value="GRANDPARENT">Bobo/Buvi</option>
-          <option value="OTHER">Boshqa</option>
+        <Select label={tr("Qarindoshlik turi")} {...register("relation")}>
+          <option value="FATHER">{tr("Ota")}</option>
+          <option value="MOTHER">{tr("Ona")}</option>
+          <option value="GRANDPARENT">{tr("Bobo/Buvi")}</option>
+          <option value="OTHER">{tr("Boshqa")}</option>
         </Select>
 
         <div className="grid grid-cols-2 gap-2">
           <label className="flex items-center gap-2 text-sm text-[var(--color-text)]">
             <input type="checkbox" className="h-4 w-4 rounded border-[var(--color-border)]" {...register("isPrimary")} />
-            Asosiy vasiy
+            {tr("Asosiy vasiy")}
           </label>
           <label className="flex items-center gap-2 text-sm text-[var(--color-text)]">
             <input type="checkbox" className="h-4 w-4 rounded border-[var(--color-border)]" {...register("canPickup")} />
-            Bolani olib ketishi mumkin
+            {tr("Bolani olib ketishi mumkin")}
           </label>
           <label className="flex items-center gap-2 text-sm text-[var(--color-text)]">
             <input type="checkbox" className="h-4 w-4 rounded border-[var(--color-border)]" {...register("canViewFinance")} />
-            Moliyani ko'ra oladi
+            {tr("Moliyani ko'ra oladi")}
           </label>
           <label className="flex items-center gap-2 text-sm text-[var(--color-text)]">
             <input
@@ -215,16 +217,16 @@ export function AddGuardianModal({
               className="h-4 w-4 rounded border-[var(--color-border)]"
               {...register("canReceiveNotifications")}
             />
-            Bildirishnoma oladi
+            {tr("Bildirishnoma oladi")}
           </label>
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Bekor qilish
+            {tr("Bekor qilish")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Qo'shish
+            {tr("Qo'shish")}
           </Button>
         </div>
       </form>

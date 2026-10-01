@@ -7,12 +7,14 @@ import styles from "../../../parent.module.css";
 import { useProverbs } from "../content";
 import { useDayIndex, useLearned } from "../store";
 import { EmptyCard, FoydaliHeader, ListSkeleton, LoadErrorCard, ProverbIcon, SparkleDeco, StarIcon, TONES, TONE_CYCLE } from "../ui";
+import { useTr } from "@/i18n/tr";
 
 /**
  * Maqollar. Har birining ostida bolaga tushuntirish uchun sodda izoh bor —
  * maqolni yodlashdan oldin ma'nosini tushunish muhim.
  */
 export default function ProverbsPage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const base = `/ota-ona/${slug}/foydali`;
   const proverbsQuery = useProverbs();
@@ -27,8 +29,8 @@ export default function ProverbsPage({ params }: { params: Promise<{ slug: strin
       <FoydaliHeader
         backHref={base}
         backLabel="Foydali"
-        title="Maqollar"
-        subtitle="Qisqa, dono so'zlar — avval ma'nosini tushuntiring, keyin birga yodlang"
+        title={tr("Maqollar")}
+        subtitle={tr("Qisqa, dono so'zlar — avval ma'nosini tushuntiring, keyin birga yodlang")}
       />
 
       {featured && (
@@ -40,7 +42,7 @@ export default function ProverbsPage({ params }: { params: Promise<{ slug: strin
           <SparkleDeco className="absolute right-3 top-3 h-14 w-14" />
           <span className="relative inline-flex items-center gap-1.5 rounded-full bg-[var(--p-mint)]/16 px-2.5 py-1 text-[11.5px] font-bold uppercase tracking-[0.06em] text-[var(--p-mint)]">
             <StarIcon filled className="h-3.5 w-3.5" />
-            Bugungi maqol
+            {tr("Bugungi maqol")}
           </span>
           <p
             className={`${styles.roundedFont} relative mt-3 pr-10 text-[23px] font-extrabold leading-snug text-[var(--p-ink)]`}
@@ -53,7 +55,7 @@ export default function ProverbsPage({ params }: { params: Promise<{ slug: strin
               »
             </span>
           </p>
-          <p className="relative mt-2.5 text-[14.5px] leading-relaxed text-[var(--p-muted)]">{featured.meaning}</p>
+          <p className="relative mt-2.5 text-[14.5px] leading-relaxed text-[var(--p-muted)]">{tr(featured.meaning)}</p>
         </section>
       )}
 
@@ -67,8 +69,8 @@ export default function ProverbsPage({ params }: { params: Promise<{ slug: strin
         <EmptyCard
           Icon={ProverbIcon}
           tone="mint"
-          title="Hozircha maqol yo'q"
-          text="Tarbiyachi maqol qo'shishi bilan u shu yerda paydo bo'ladi."
+          title={tr("Hozircha maqol yo'q")}
+          text={tr("Tarbiyachi maqol qo'shishi bilan u shu yerda paydo bo'ladi.")}
         />
       ) : (
       <ul className="mt-5 space-y-3">
@@ -83,7 +85,7 @@ export default function ProverbsPage({ params }: { params: Promise<{ slug: strin
                   <ProverbIcon className="h-6 w-6" />
                 </span>
                 <p className={`${styles.roundedFont} flex-1 pt-1 text-[18px] font-bold leading-snug text-[var(--p-ink)]`}>
-                  {proverb.text}
+                  {tr(proverb.text)}
                 </p>
                 <button
                   type="button"
@@ -108,7 +110,7 @@ export default function ProverbsPage({ params }: { params: Promise<{ slug: strin
                 onClick={() => setOpen(isOpen ? null : proverb.id)}
                 className="flex w-full cursor-pointer items-center justify-between border-t border-[var(--p-line)] px-4 py-3 text-[13.5px] font-bold text-[var(--p-muted)] transition-colors active:bg-[var(--p-sunken)]"
               >
-                Ma&apos;nosi
+                {tr("Ma'nosi")}
                 <ChevronDownIcon className={clsx("h-4 w-4 transition-transform duration-300", isOpen && "rotate-180")} />
               </button>
               {/* Silliq ochilish: balandlik 0fr → 1fr */}
@@ -119,7 +121,7 @@ export default function ProverbsPage({ params }: { params: Promise<{ slug: strin
                 )}
               >
                 <div className="overflow-hidden">
-                  <p className="px-4 pb-4 text-[14.5px] leading-relaxed text-[var(--p-muted)]">{proverb.meaning}</p>
+                  <p className="px-4 pb-4 text-[14.5px] leading-relaxed text-[var(--p-muted)]">{tr(proverb.meaning)}</p>
                 </div>
               </div>
             </li>

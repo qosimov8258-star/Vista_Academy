@@ -61,6 +61,13 @@ export interface WeeklyResult {
   children: number;
   attendancePercent: number | null;
   daily: { date: string; present: number; absent: number; sick: number }[];
+  groups: {
+    id: string;
+    name: string;
+    childrenCount: number;
+    teachers: string[];
+    daily: { date: string; present: number; absent: number; sick: number }[];
+  }[];
   frequentlyAbsent: { name: string; days: number }[];
   collected: number;
   totalDebt: number;

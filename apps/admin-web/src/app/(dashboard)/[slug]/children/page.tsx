@@ -25,6 +25,7 @@ import { CreateChildModal } from "@/features/children/create-child-modal";
 import { EditChildModal } from "@/features/children/edit-child-modal";
 import { TeacherChildren } from "@/features/teacher/teacher-children";
 import { canWriteOperational, isTeacher } from "@/lib/permissions";
+import { useTr } from "@/i18n/tr";
 
 const STATUS_LABEL: Record<string, string> = { ACTIVE: "Faol", INACTIVE: "Nofaol", QUARANTINED: "Karantinda" };
 const STATUS_TONE: Record<string, "success" | "neutral" | "danger"> = {
@@ -56,6 +57,7 @@ export default function ChildrenPage({ params }: { params: Promise<{ slug: strin
 }
 
 function BranchChildren({ slug }: { slug: string }) {
+  const tr = useTr();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [groupFilter, setGroupFilter] = useState("");
@@ -111,7 +113,7 @@ function BranchChildren({ slug }: { slug: string }) {
     try {
       await downloadCsv(`/app/exports/children${forcedBranchId ? `?branchId=${forcedBranchId}` : ""}`, "bolalar.csv");
     } catch {
-      setExportError("Eksport qilib bo'lmadi — qayta urinib ko'ring");
+      setExportError(tr("Eksport qilib bo'lmadi — qayta urinib ko'ring"));
     } finally {
       setExporting(false);
     }
@@ -138,32 +140,32 @@ function BranchChildren({ slug }: { slug: string }) {
         <div className="flex w-full items-start justify-between gap-3 md:w-auto">
           <div className="min-w-0">
             <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
-              Bolalar
+              {tr("Bolalar")}
             </h1>
-            <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">Tarmoqqa ro'yxatga olingan bolalar</p>
+            <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">{tr("Tarmoqqa ro'yxatga olingan bolalar")}</p>
           </div>
           {canWrite && (
             <div className="shrink-0 md:hidden">
-              <Button onClick={() => setCreateOpen(true)}>+ Yangi bola</Button>
+              <Button onClick={() => setCreateOpen(true)}>{tr("+ Yangi bola")}</Button>
             </div>
           )}
         </div>
         <TopbarAction>
           <Button variant="outline" loading={exporting} onClick={handleExport}>
-            Eksport (CSV)
+            {tr("Eksport (CSV)")}
           </Button>
         </TopbarAction>
         <div className="hidden gap-2 md:flex">
           <Button variant="outline" loading={exporting} onClick={handleExport}>
-            Eksport (CSV)
+            {tr("Eksport (CSV)")}
           </Button>
-          {canWrite && <Button onClick={() => setCreateOpen(true)}>+ Yangi bola</Button>}
+          {canWrite && <Button onClick={() => setCreateOpen(true)}>{tr("+ Yangi bola")}</Button>}
         </div>
       </div>
 
       {exportError && (
         <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-          {exportError}
+          {tr(exportError)}
         </div>
       )}
 
@@ -171,7 +173,7 @@ function BranchChildren({ slug }: { slug: string }) {
 
       <Card className={`grid gap-3 p-4 sm:px-6 ${teacher ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
         <Input
-          placeholder="Ism, ota-ona yoki ID bo'yicha qidirish (masalan id14732)"
+          placeholder={tr("Ism, ota-ona yoki ID bo'yicha qidirish (masalan id14732)")}
           value={search}
           onChange={(e) => {
             setPage(1);
@@ -186,10 +188,10 @@ function BranchChildren({ slug }: { slug: string }) {
             setGroupFilter(e.target.value);
           }}
         >
-          <option value="">Barcha guruhlar</option>
+          <option value="">{tr("Barcha guruhlar")}</option>
           {(groupsQuery.data ?? []).map((group) => (
             <option key={group.id} value={group.id}>
-              {group.name}
+              {tr(group.name)}
             </option>
           ))}
         </Select>
@@ -203,16 +205,16 @@ function BranchChildren({ slug }: { slug: string }) {
         >
           {isFinance ? (
             <>
-              <option value="">Barcha to&apos;lovlar</option>
-              <option value="PAID">{PAYMENT_STATUS_LABEL.PAID}</option>
-              <option value="PARTIAL">{PAYMENT_STATUS_LABEL.PARTIAL}</option>
-              <option value="UNPAID">{PAYMENT_STATUS_LABEL.UNPAID}</option>
+              <option value="">{tr("Barcha to'lovlar")}</option>
+              <option value="PAID">{tr(PAYMENT_STATUS_LABEL.PAID)}</option>
+              <option value="PARTIAL">{tr(PAYMENT_STATUS_LABEL.PARTIAL)}</option>
+              <option value="UNPAID">{tr(PAYMENT_STATUS_LABEL.UNPAID)}</option>
             </>
           ) : (
             <>
-              <option value="">Barcha holatlar</option>
-              <option value="ACTIVE">{STATUS_LABEL.ACTIVE}</option>
-              <option value="INACTIVE">{STATUS_LABEL.INACTIVE}</option>
+              <option value="">{tr("Barcha holatlar")}</option>
+              <option value="ACTIVE">{tr(STATUS_LABEL.ACTIVE)}</option>
+              <option value="INACTIVE">{tr(STATUS_LABEL.INACTIVE)}</option>
             </>
           )}
         </Select>
@@ -221,15 +223,15 @@ function BranchChildren({ slug }: { slug: string }) {
       {childrenQuery.isLoading ? (
         <LoadingState rows={6} />
       ) : childrenQuery.isError ? (
-        <ErrorState message={(childrenQuery.error as Error).message} />
+        <ErrorState message={tr((childrenQuery.error as Error).message)} />
       ) : !childrenQuery.data || childrenQuery.data.data.length === 0 ? (
         <EmptyState
-          title="Bola topilmadi"
+          title={tr("Bola topilmadi")}
           description={
             search || groupFilter || statusFilter
-              ? "Qidiruv yoki filtr shartini o'zgartiring"
+              ? tr("Qidiruv yoki filtr shartini o'zgartiring")
               : canWrite
-                ? "Yangi bola qo'shish uchun tugmani bosing"
+                ? tr("Yangi bola qo'shish uchun tugmani bosing")
                 : undefined
           }
         />
@@ -245,7 +247,7 @@ function BranchChildren({ slug }: { slug: string }) {
                   <ChildPhoto child={child} size={44} fallback={initials(child.fullName)} />
                   <div className="min-w-0 flex-1">
                     <Link href={childHref(child.id)} className="block truncate text-[16px] font-semibold tracking-[-0.01em] text-[var(--color-text)]">
-                      {child.fullName}
+                      {tr(child.fullName)}
                     </Link>
                     <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">
                       {formatChildId(child.publicId)}
@@ -253,28 +255,28 @@ function BranchChildren({ slug }: { slug: string }) {
                     </p>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
-                    <Badge tone={STATUS_TONE[child.status]}>{STATUS_LABEL[child.status]}</Badge>
-                    {allergyChildIds.has(child.id) && <Badge tone="danger">Allergiya</Badge>}
+                    <Badge tone={STATUS_TONE[child.status]}>{tr(STATUS_LABEL[child.status])}</Badge>
+                    {allergyChildIds.has(child.id) && <Badge tone="danger">{tr("Allergiya")}</Badge>}
                   </div>
                 </div>
                 {g ? (
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                     <p className="min-w-0 text-[13px] text-[var(--color-text-muted)]">
-                      {RELATION_LABEL[g.relation]} · <span className="font-medium text-[var(--color-text)]">{g.guardian.fullName}</span>
+                      {tr(RELATION_LABEL[g.relation])} · <span className="font-medium text-[var(--color-text)]">{tr(g.guardian.fullName)}</span>
                     </p>
                     <a
                       href={`tel:${g.guardian.phone}`}
                       className="inline-flex min-h-10 items-center gap-2 rounded-full bg-[var(--accent-soft)] px-4 text-[14.5px] font-semibold tabular-nums text-[var(--accent-soft-ink)] active:scale-[0.98]"
                     >
                       <PhoneIcon className="h-4 w-4 text-[var(--accent-soft-icon)]" />
-                      {g.guardian.phone}
+                      {tr(g.guardian.phone)}
                     </a>
                   </div>
                 ) : null}
                 {canWrite && (
                   <div className="mt-3">
                     <Button size="sm" variant="outline" onClick={() => setEditingChild(child)}>
-                      Tahrirlash
+                      {tr("Tahrirlash")}
                     </Button>
                   </div>
                 )}
@@ -289,15 +291,15 @@ function BranchChildren({ slug }: { slug: string }) {
                 {/* Surat ustuni — sarlavha matni kerak emas, lekin ekran
                     o'quvchi uchun nomi bo'lsin */}
                 <Th className="w-px pr-0">
-                  <span className="sr-only">Surat</span>
+                  <span className="sr-only">{tr("Surat")}</span>
                 </Th>
-                <Th>ID</Th>
-                <Th>To'liq ism</Th>
-                <Th>Ota-ona / aloqa</Th>
-                <Th>Tug'ilgan sana</Th>
-                {!forcedBranchId && !teacher && <Th>Filial</Th>}
-                {!teacher && <Th>Guruh</Th>}
-                <Th>Holat</Th>
+                <Th>{tr("ID")}</Th>
+                <Th>{tr("To'liq ism")}</Th>
+                <Th>{tr("Ota-ona / aloqa")}</Th>
+                <Th>{tr("Tug'ilgan sana")}</Th>
+                {!forcedBranchId && !teacher && <Th>{tr("Filial")}</Th>}
+                {!teacher && <Th>{tr("Guruh")}</Th>}
+                <Th>{tr("Holat")}</Th>
                 {canWrite && <Th />}
               </tr>
             </THead>
@@ -314,20 +316,20 @@ function BranchChildren({ slug }: { slug: string }) {
                   </Td>
                   <Td className="font-medium">
                     <Link href={childHref(child.id)} className="text-[var(--color-primary)] hover:underline">
-                      {child.fullName}
+                      {tr(child.fullName)}
                     </Link>
                     {allergyChildIds.has(child.id) && (
                       <Badge tone="danger" className="ml-2">
-                        Allergiya
+                        {tr("Allergiya")}
                       </Badge>
                     )}
                   </Td>
                   <Td>
                     {child.guardians?.[0] ? (
                       <>
-                        <p className="font-medium text-[var(--color-text)]">{child.guardians[0].guardian.fullName}</p>
+                        <p className="font-medium text-[var(--color-text)]">{tr(child.guardians[0].guardian.fullName)}</p>
                         <p className="mt-0.5 text-[12.5px] text-[var(--color-text-muted)]">
-                          {RELATION_LABEL[child.guardians[0].relation]} • {child.guardians[0].guardian.phone}
+                          {tr(RELATION_LABEL[child.guardians[0].relation])} • {tr(child.guardians[0].guardian.phone)}
                         </p>
                       </>
                     ) : (
@@ -348,12 +350,12 @@ function BranchChildren({ slug }: { slug: string }) {
                     </Td>
                   )}
                   <Td>
-                    <Badge tone={STATUS_TONE[child.status]}>{STATUS_LABEL[child.status]}</Badge>
+                    <Badge tone={STATUS_TONE[child.status]}>{tr(STATUS_LABEL[child.status])}</Badge>
                   </Td>
                   {canWrite && (
                     <Td className="text-right">
                       <Button size="sm" variant="outline" onClick={() => setEditingChild(child)}>
-                        Tahrirlash
+                        {tr("Tahrirlash")}
                       </Button>
                     </Td>
                   )}
@@ -364,11 +366,11 @@ function BranchChildren({ slug }: { slug: string }) {
 
           <div className="hairline flex items-center justify-between gap-3 border-t border-[var(--color-separator)] px-5 py-3.5 text-[12.5px] text-[var(--color-text-muted)] sm:px-6">
             <span className="tabular-nums">
-              Jami {childrenQuery.data.meta.total} ta, {childrenQuery.data.meta.page}-sahifa
+              {tr("Jami")}{" "}{tr(childrenQuery.data.meta.total)} {tr("ta,")}{" "}{tr(childrenQuery.data.meta.page)}{tr("-sahifa")}
             </span>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-                Oldingi
+                {tr("Oldingi")}
               </Button>
               <Button
                 variant="outline"
@@ -376,16 +378,16 @@ function BranchChildren({ slug }: { slug: string }) {
                 disabled={page * childrenQuery.data.meta.limit >= childrenQuery.data.meta.total}
                 onClick={() => setPage((p) => p + 1)}
               >
-                Keyingi
+                {tr("Keyingi")}
               </Button>
             </div>
           </div>
         </Card>
         <div className="flex items-center justify-between gap-3 text-[12.5px] text-[var(--color-text-muted)] md:hidden">
-          <span className="tabular-nums">Jami {childrenQuery.data.meta.total} ta, {childrenQuery.data.meta.page}-sahifa</span>
+          <span className="tabular-nums">{tr("Jami")}{" "}{tr(childrenQuery.data.meta.total)} {tr("ta,")}{" "}{tr(childrenQuery.data.meta.page)}{tr("-sahifa")}</span>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Oldingi</Button>
-            <Button variant="outline" size="sm" disabled={page * childrenQuery.data.meta.limit >= childrenQuery.data.meta.total} onClick={() => setPage((p) => p + 1)}>Keyingi</Button>
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>{tr("Oldingi")}</Button>
+            <Button variant="outline" size="sm" disabled={page * childrenQuery.data.meta.limit >= childrenQuery.data.meta.total} onClick={() => setPage((p) => p + 1)}>{tr("Keyingi")}</Button>
           </div>
         </div>
         </>
@@ -405,11 +407,12 @@ function BranchChildren({ slug }: { slug: string }) {
  * bolalarning to'lov holati bo'yicha taqsimoti foydaliroq.
  */
 function ChildrenFinanceStatsBar({ stats }: { stats: ChildrenFinanceStats | undefined }) {
+  const tr = useTr();
   const tiles: { label: string; value: number | undefined; toneClass: string }[] = [
-    { label: "To'lagan", value: stats?.paid, toneClass: "text-[var(--color-success)]" },
-    { label: "Yarim to'lagan", value: stats?.partial, toneClass: "text-[var(--color-warning)]" },
-    { label: "To'lamagan", value: stats?.unpaid, toneClass: "text-[var(--color-danger)]" },
-    { label: "To'xtatgan", value: stats?.stopped, toneClass: "text-[var(--color-text-muted)]" },
+    { label: tr("To'lagan"), value: stats?.paid, toneClass: "text-[var(--color-success)]" },
+    { label: tr("Yarim to'lagan"), value: stats?.partial, toneClass: "text-[var(--color-warning)]" },
+    { label: tr("To'lamagan"), value: stats?.unpaid, toneClass: "text-[var(--color-danger)]" },
+    { label: tr("To'xtatgan"), value: stats?.stopped, toneClass: "text-[var(--color-text-muted)]" },
   ];
 
   return (
@@ -417,7 +420,7 @@ function ChildrenFinanceStatsBar({ stats }: { stats: ChildrenFinanceStats | unde
       <div className="grid grid-cols-2 gap-px bg-[var(--color-separator)] sm:grid-cols-4">
         {tiles.map((tile) => (
           <div key={tile.label} className="bg-[var(--color-surface)] px-5 py-3.5 sm:px-6">
-            <p className="text-[12px] font-medium text-[var(--color-text-muted)]">{tile.label}</p>
+            <p className="text-[12px] font-medium text-[var(--color-text-muted)]">{tr(tile.label)}</p>
             <p className={`mt-1 text-[20px] font-semibold tabular-nums ${tile.toneClass}`}>
               {tile.value ?? "—"}
             </p>

@@ -10,6 +10,7 @@ import type { Lead } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Input, Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useTr } from "@/i18n/tr";
 
 const schema = z.object({
   followUpDate: z.string().optional(),
@@ -33,6 +34,7 @@ export function EditLeadDetailsModal({
   leadId: string;
   lead: Lead;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -68,31 +70,31 @@ export function EditLeadDetailsModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
   return (
-    <Modal open={open} onClose={onClose} title="Tafsilotlarni tahrirlash">
+    <Modal open={open} onClose={onClose} title={tr("Tafsilotlarni tahrirlash")}>
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input label="Keyingi bog'lanish sanasi" type="date" {...register("followUpDate")} />
-          <Input label="Sinov kuni" type="date" {...register("trialDate")} />
+          <Input label={tr("Keyingi bog'lanish sanasi")} type="date" {...register("followUpDate")} />
+          <Input label={tr("Sinov kuni")} type="date" {...register("trialDate")} />
         </div>
-        <Input label="Shartnoma sanasi" type="date" {...register("contractDate")} />
-        <Textarea label="Shartnoma izohi" rows={3} placeholder="Shartlar, oylik to'lov, izoh..." {...register("contractNote")} />
+        <Input label={tr("Shartnoma sanasi")} type="date" {...register("contractDate")} />
+        <Textarea label={tr("Shartnoma izohi")} rows={3} placeholder={tr("Shartlar, oylik to'lov, izoh...")} {...register("contractNote")} />
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Bekor qilish
+            {tr("Bekor qilish")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Saqlash
+            {tr("Saqlash")}
           </Button>
         </div>
       </form>

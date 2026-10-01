@@ -6,6 +6,7 @@ import type { ComponentType, ReactNode } from "react";
 import type { IconProps } from "@/components/ui/icons";
 import { ChevronRightIcon } from "@/components/ui/icons";
 import styles from "./teacher.module.css";
+import { useTr } from "@/i18n/tr";
 
 /**
  * Tarbiyachi kabinetining iOS uslubidagi qurilish bloklari. Ikonkalar
@@ -33,18 +34,19 @@ export function LargeTitle({
   subtitle?: ReactNode;
   trailing?: ReactNode;
 }) {
+  const tr = useTr();
   return (
     <header className="flex items-end justify-between gap-3 px-2">
       <div className="min-w-0">
         {eyebrow && (
-          <p className="text-[13px] font-semibold uppercase tracking-[0.05em] text-[var(--color-text-muted)]">{eyebrow}</p>
+          <p className="text-[13px] font-semibold uppercase tracking-[0.05em] text-[var(--color-text-muted)]">{tr(eyebrow)}</p>
         )}
         <h1 className="mt-0.5 text-[32px] font-bold leading-[1.1] tracking-[-0.025em] text-[var(--color-text)] sm:text-[34px]">
-          {title}
+          {tr(title)}
         </h1>
-        {subtitle && <p className="mt-1.5 text-[15px] leading-snug text-[var(--color-text-muted)]">{subtitle}</p>}
+        {subtitle && <p className="mt-1.5 text-[15px] leading-snug text-[var(--color-text-muted)]">{tr(subtitle)}</p>}
       </div>
-      {trailing && <div className="shrink-0 pb-1">{trailing}</div>}
+      {trailing && <div className="shrink-0 pb-1">{tr(trailing)}</div>}
     </header>
   );
 }
@@ -63,16 +65,17 @@ export function Group({
   children: ReactNode;
   className?: string;
 }) {
+  const tr = useTr();
   return (
     <section>
       {(title || action) && (
         <div className="mb-2 flex items-end justify-between gap-3 px-4">
-          {title && <h2 className="text-[13px] font-semibold uppercase tracking-[0.05em] text-[var(--color-text-muted)]">{title}</h2>}
-          {action}
+          {title && <h2 className="text-[13px] font-semibold uppercase tracking-[0.05em] text-[var(--color-text-muted)]">{tr(title)}</h2>}
+          {tr(action)}
         </div>
       )}
       <div className={clsx(styles.group, "overflow-hidden", className)}>{children}</div>
-      {footer && <p className="mt-2 px-4 text-[13px] leading-relaxed text-[var(--color-text-muted)]">{footer}</p>}
+      {footer && <p className="mt-2 px-4 text-[13px] leading-relaxed text-[var(--color-text-muted)]">{tr(footer)}</p>}
     </section>
   );
 }
@@ -122,6 +125,7 @@ export function Row({
   chevron?: boolean;
   tone?: "default" | "danger";
 }) {
+  const tr = useTr();
   const hasLeading = !!Icon || !!leading;
   const showChevron = chevron ?? (!!href || !!onClick);
   const content = (
@@ -138,7 +142,7 @@ export function Row({
           strokeWidth={1.8}
         />
       )}
-      {leading}
+      {tr(leading)}
       <span className="min-w-0 flex-1">
         <span
           className={clsx(
@@ -146,12 +150,12 @@ export function Row({
             tone === "danger" ? "font-medium text-[var(--color-danger)]" : "text-[var(--color-text)]",
           )}
         >
-          {title}
+          {tr(title)}
         </span>
-        {subtitle && <span className="mt-0.5 block truncate text-[13.5px] leading-snug text-[var(--color-text-muted)]">{subtitle}</span>}
+        {subtitle && <span className="mt-0.5 block truncate text-[13.5px] leading-snug text-[var(--color-text-muted)]">{tr(subtitle)}</span>}
       </span>
-      {value != null && <span className="shrink-0 text-[15px] tabular-nums text-[var(--color-text-muted)]">{value}</span>}
-      {trailing}
+      {value != null && <span className="shrink-0 text-[15px] tabular-nums text-[var(--color-text-muted)]">{tr(value)}</span>}
+      {tr(trailing)}
       {showChevron && <ChevronRightIcon className="h-4 w-4 shrink-0 text-[#c4c4c7]" />}
     </>
   );
@@ -159,18 +163,18 @@ export function Row({
   if (href) {
     return (
       <Link href={href} className={className}>
-        {content}
+        {tr(content)}
       </Link>
     );
   }
   if (onClick) {
     return (
       <button type="button" onClick={onClick} className={clsx(className, "cursor-pointer")}>
-        {content}
+        {tr(content)}
       </button>
     );
   }
-  return <div className={className}>{content}</div>;
+  return <div className={className}>{tr(content)}</div>;
 }
 
 /** iOS segmented control. `tint` — tanlangan bo'lak matnining rangi (sukut: oddiy matn). */
@@ -189,12 +193,13 @@ export function Segmented<T extends string>({
   size?: "sm" | "md";
   className?: string;
 }) {
+  const tr = useTr();
   const index = Math.max(
     0,
     options.findIndex((o) => o.value === value),
   );
   return (
-    <div role="radiogroup" aria-label={label} className={clsx(styles.segmented, className)}>
+    <div role="radiogroup" aria-label={tr(label)} className={clsx(styles.segmented, className)}>
       <span
         className={styles.segmentThumb}
         style={{ width: `calc((100% - 4px) / ${options.length})`, transform: `translateX(${index * 100}%)` }}
@@ -212,7 +217,7 @@ export function Segmented<T extends string>({
             className={clsx(styles.segment, size === "sm" && "!py-[5px] !text-[12.5px]")}
             style={active && option.tint ? { color: option.tint } : undefined}
           >
-            {option.label}
+            {tr(option.label)}
           </button>
         );
       })}
@@ -279,19 +284,21 @@ export function FloatingBar({ children }: { children: ReactNode }) {
 
 /** Bo'sh holat — ro'yxat kartasi ichida, markazda. */
 export function EmptyRow({ icon: Icon, title, description }: { icon?: ComponentType<IconProps>; title: string; description?: string }) {
+  const tr = useTr();
   return (
     <div className="flex flex-col items-center px-6 py-9 text-center">
       {Icon && <Icon className="h-8 w-8 text-[var(--color-text-muted)]/60" strokeWidth={1.6} />}
-      <p className="mt-3 text-[16px] font-semibold text-[var(--color-text)]">{title}</p>
-      {description && <p className="mt-1 max-w-[300px] text-[14px] leading-relaxed text-[var(--color-text-muted)]">{description}</p>}
+      <p className="mt-3 text-[16px] font-semibold text-[var(--color-text)]">{tr(title)}</p>
+      {description && <p className="mt-1 max-w-[300px] text-[14px] leading-relaxed text-[var(--color-text-muted)]">{tr(description)}</p>}
     </div>
   );
 }
 
 /** Ro'yxat yuklanayotganda — kulrang "skelet" qatorlar. */
 export function SkeletonRows({ rows = 3 }: { rows?: number }) {
+  const tr = useTr();
   return (
-    <div aria-busy="true" aria-label="Yuklanmoqda">
+    <div aria-busy="true" aria-label={tr("Yuklanmoqda")}>
       {Array.from({ length: rows }, (_, i) => (
         <div key={i} className="relative flex items-center gap-3.5 px-4 py-3.5">
           {i > 0 && <span className="absolute left-4 right-0 top-0 h-px bg-[var(--color-separator)]" aria-hidden="true" />}

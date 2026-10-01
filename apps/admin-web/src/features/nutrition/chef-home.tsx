@@ -14,6 +14,7 @@ import { MealCard } from "@/features/chef/meal-card";
 import { PhotoViewer } from "@/features/chef/photo-viewer";
 import styles from "@/features/chef/chef.module.css";
 import { MEALS, useMenuPhotos } from "./use-menu-photos";
+import { useTr } from "@/i18n/tr";
 
 interface GroupRow {
   groupId: string | null;
@@ -69,6 +70,7 @@ function greeting(): string {
  * guruhlar. Davomat belgilangan sari raqamlar o'zi yangilanadi.
  */
 export function ChefHome({ slug }: { slug: string }) {
+  const tr = useTr();
   const { user } = useAuth();
   const branchId = user?.branchId ?? "";
   const today = todayTashkent();
@@ -98,7 +100,7 @@ export function ChefHome({ slug }: { slug: string }) {
   const firstName = user?.fullName?.trim().split(/\s+/).slice(-1)[0];
 
   if (todayQuery.isLoading) return <LoadingState rows={4} />;
-  if (todayQuery.isError) return <ErrorState message={(todayQuery.error as Error).message} />;
+  if (todayQuery.isError) return <ErrorState message={tr((todayQuery.error as Error).message)} />;
   const d = todayQuery.data;
   if (!d) return null;
 
@@ -122,12 +124,12 @@ export function ChefHome({ slug }: { slug: string }) {
 
           <section>
             <div className="mb-2.5 flex items-end justify-between">
-              <h2 className="text-[17px] font-semibold text-[var(--color-text)]">Bugungi taomlar</h2>
+              <h2 className="text-[17px] font-semibold text-[var(--color-text)]">{tr("Bugungi taomlar")}</h2>
               <Link
                 href={`/${slug}/nutrition`}
                 className="flex items-center gap-0.5 text-[13.5px] font-semibold text-orange-600 active:opacity-70"
               >
-                Haftalik menyu
+                {tr("Haftalik menyu")}
                 <ChevronRightIcon className="h-4 w-4" />
               </Link>
             </div>
@@ -136,7 +138,7 @@ export function ChefHome({ slug }: { slug: string }) {
                 <MealCard
                   key={meal}
                   meal={meal}
-                  label={label}
+                  label={tr(label)}
                   dishes={menu?.[MENU_FIELD[meal]] ?? null}
                   photos={photos.photosOf(meal)}
                   uploading={photos.uploading === meal}
@@ -168,6 +170,7 @@ export function ChefHome({ slug }: { slug: string }) {
 
 /** Asosiy raqam: bugun nechta porsiya — bolalar va xodimlar alohida */
 function PortionsHero({ d }: { d: TodaySummary }) {
+  const tr = useTr();
   const childMarked = d.total - d.notMarked;
   const staffMarked = d.staff.total - d.staff.notMarked;
   const complete = d.notMarked === 0 && d.staff.notMarked === 0;
@@ -181,21 +184,21 @@ function PortionsHero({ d }: { d: TodaySummary }) {
       <span className="pointer-events-none absolute -bottom-16 right-16 h-36 w-36 rounded-full bg-white/10" aria-hidden />
 
       <div className="relative flex items-center justify-between">
-        <p className="text-[12.5px] font-semibold uppercase tracking-[0.08em] text-white/85">Bugun tayyorlanadi</p>
+        <p className="text-[12.5px] font-semibold uppercase tracking-[0.08em] text-white/85">{tr("Bugun tayyorlanadi")}</p>
         <span className="flex items-center gap-1.5 rounded-full bg-white/20 px-2.5 py-1 text-[11.5px] font-semibold">
           <span className={clsx("h-1.5 w-1.5 rounded-full bg-white", styles.liveDot)} aria-hidden />
-          Jonli
+          {tr("Jonli")}
         </span>
       </div>
 
       <div className="relative mt-2 flex items-end gap-2">
-        <span className="text-[64px] font-bold leading-[0.9] tabular-nums tracking-tight">{d.totalMealCount}</span>
-        <span className="mb-1.5 text-[17px] font-semibold text-white/90">porsiya</span>
+        <span className="text-[64px] font-bold leading-[0.9] tabular-nums tracking-tight">{tr(d.totalMealCount)}</span>
+        <span className="mb-1.5 text-[17px] font-semibold text-white/90">{tr("porsiya")}</span>
       </div>
 
       <div className="relative mt-4 grid grid-cols-2 gap-2.5">
-        <HeroChip label="Bolalar" value={d.mealCount} note={`${childMarked}/${d.total} belgilandi`} />
-        <HeroChip label="Xodimlar" value={d.staffMealCount} note={`${staffMarked}/${d.staff.total} belgilandi`} />
+        <HeroChip label={tr("Bolalar")} value={d.mealCount} note={`${childMarked}/${d.total} belgilandi`} />
+        <HeroChip label={tr("Xodimlar")} value={d.staffMealCount} note={`${staffMarked}/${d.staff.total} belgilandi`} />
       </div>
 
       <div className="relative mt-4">
@@ -207,8 +210,8 @@ function PortionsHero({ d }: { d: TodaySummary }) {
         </div>
         <p className="mt-2 text-[12.5px] font-medium text-white/90">
           {complete
-            ? "Davomat to'liq belgilangan — raqam aniq"
-            : "Davomat hali to'liq emas — belgilangan sari raqam o'zi yangilanadi"}
+            ? tr("Davomat to'liq belgilangan — raqam aniq")
+            : tr("Davomat hali to'liq emas — belgilangan sari raqam o'zi yangilanadi")}
         </p>
       </div>
     </section>
@@ -216,17 +219,19 @@ function PortionsHero({ d }: { d: TodaySummary }) {
 }
 
 function HeroChip({ label, value, note }: { label: string; value: number; note: string }) {
+  const tr = useTr();
   return (
     <div className="rounded-2xl bg-white/20 px-3.5 py-2.5 backdrop-blur-sm">
-      <p className="text-[12px] font-medium text-white/85">{label}</p>
-      <p className="text-[24px] font-bold leading-tight tabular-nums">{value}</p>
-      <p className="text-[11.5px] text-white/80">{note}</p>
+      <p className="text-[12px] font-medium text-white/85">{tr(label)}</p>
+      <p className="text-[24px] font-bold leading-tight tabular-nums">{tr(value)}</p>
+      <p className="text-[11.5px] text-white/80">{tr(note)}</p>
     </div>
   );
 }
 
 /** Allergiyasi bor bolalar — oshpaz uchun eng xavfli ma'lumot, qizil urg'u bilan */
 function AllergiesCard({ allergies, loading }: { allergies: ChildAllergy[]; loading: boolean }) {
+  const tr = useTr();
   const [expanded, setExpanded] = useState(false);
   const LIMIT = 4;
   const shown = expanded ? allergies : allergies.slice(0, LIMIT);
@@ -239,8 +244,8 @@ function AllergiesCard({ allergies, loading }: { allergies: ChildAllergy[]; load
           <CheckIcon className="h-[18px] w-[18px]" />
         </span>
         <span>
-          <span className="block text-[15px] font-semibold text-[var(--color-text)]">Allergiyasi bor bola yo&apos;q</span>
-          <span className="block text-[12.5px] text-[var(--color-text-muted)]">Bugungi menyuni bemalol tayyorlash mumkin</span>
+          <span className="block text-[15px] font-semibold text-[var(--color-text)]">{tr("Allergiyasi bor bola yo'q")}</span>
+          <span className="block text-[12.5px] text-[var(--color-text-muted)]">{tr("Bugungi menyuni bemalol tayyorlash mumkin")}</span>
         </span>
       </section>
     );
@@ -252,8 +257,8 @@ function AllergiesCard({ allergies, loading }: { allergies: ChildAllergy[]; load
         <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-100 text-red-600">
           <AlertIcon className="h-[18px] w-[18px]" />
         </span>
-        <h2 className="flex-1 text-[15px] font-semibold text-red-700">Allergiyasi bor bolalar</h2>
-        <span className="rounded-full bg-red-100 px-2 py-0.5 text-[12.5px] font-bold tabular-nums text-red-700">{allergies.length}</span>
+        <h2 className="flex-1 text-[15px] font-semibold text-red-700">{tr("Allergiyasi bor bolalar")}</h2>
+        <span className="rounded-full bg-red-100 px-2 py-0.5 text-[12.5px] font-bold tabular-nums text-red-700">{tr(allergies.length)}</span>
       </div>
       {loading ? (
         <div className="p-4">
@@ -268,11 +273,11 @@ function AllergiesCard({ allergies, loading }: { allergies: ChildAllergy[]; load
                   {a.child.fullName.trim().charAt(0).toUpperCase()}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[14.5px] font-medium text-[var(--color-text)]">{a.child.fullName}</span>
+                  <span className="block truncate text-[14.5px] font-medium text-[var(--color-text)]">{tr(a.child.fullName)}</span>
                   <span className="block text-[12.5px] text-[var(--color-text-muted)]">{a.child.group?.name ?? "Guruhsiz"}</span>
                 </span>
                 <span className="max-w-[45%] rounded-xl bg-red-50 px-2.5 py-1 text-right text-[13px] font-semibold leading-snug text-red-600">
-                  {a.allergies}
+                  {tr(a.allergies)}
                 </span>
               </li>
             ))}
@@ -283,7 +288,7 @@ function AllergiesCard({ allergies, loading }: { allergies: ChildAllergy[]; load
               onClick={() => setExpanded((v) => !v)}
               className="w-full border-t border-[var(--color-separator)] py-3 text-[13.5px] font-semibold text-red-600 active:bg-red-50"
             >
-              {expanded ? "Yig'ish" : `Yana ${allergies.length - LIMIT} ta bola`}
+              {expanded ? tr("Yig'ish") : tr("Yana {0} ta bola", allergies.length - LIMIT)}
             </button>
           )}
         </>
@@ -294,9 +299,10 @@ function AllergiesCard({ allergies, loading }: { allergies: ChildAllergy[]; load
 
 /** Guruhlar bo'yicha kelganlar — qaysi guruh hali davomat qilmaganini ko'rsatadi */
 function GroupsCard({ groups }: { groups: GroupRow[] }) {
+  const tr = useTr();
   return (
     <section className="rounded-[22px] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)]">
-      <h2 className="text-[15px] font-semibold text-[var(--color-text)]">Guruhlar bo&apos;yicha</h2>
+      <h2 className="text-[15px] font-semibold text-[var(--color-text)]">{tr("Guruhlar bo'yicha")}</h2>
       <ul className="mt-3 space-y-3.5">
         {groups.filter((g) => g.total > 0).map((g) => {
           const came = g.present + g.late;
@@ -304,14 +310,14 @@ function GroupsCard({ groups }: { groups: GroupRow[] }) {
           return (
             <li key={g.groupId ?? "none"}>
               <div className="flex items-baseline justify-between gap-2 text-[14px]">
-                <span className="truncate font-medium text-[var(--color-text)]">{g.name}</span>
+                <span className="truncate font-medium text-[var(--color-text)]">{tr(g.name)}</span>
                 {unmarked ? (
                   <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[11.5px] font-semibold text-amber-600">
-                    davomat qilinmagan
+                    {tr("davomat qilinmagan")}
                   </span>
                 ) : (
                   <span className="shrink-0 tabular-nums text-[var(--color-text-muted)]">
-                    <b className="text-[var(--color-text)]">{came}</b> / {g.total}
+                    <b className="text-[var(--color-text)]">{tr(came)}</b> / {tr(g.total)}
                   </span>
                 )}
               </div>

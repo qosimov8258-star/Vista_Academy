@@ -2,6 +2,7 @@
 
 import clsx from "clsx";
 import type { TenantAuthenticatedUser } from "@/lib/types";
+import { useTr } from "@/i18n/tr";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
 
@@ -29,6 +30,7 @@ export function Avatar({
   size?: number;
   className?: string;
 }) {
+  const tr = useTr();
   const label = user?.fullName ?? "";
 
   if (user?.avatarUpdatedAt) {
@@ -36,7 +38,7 @@ export function Avatar({
       // eslint-disable-next-line @next/next/no-img-element -- tashqi manzil, Next optimizatsiyasi sozlanmagan
       <img
         src={`${API_URL}/app/profile/avatar?v=${encodeURIComponent(user.avatarUpdatedAt)}`}
-        alt={label}
+        alt={tr(label)}
         width={size}
         height={size}
         className={clsx("shrink-0 rounded-full object-cover ring-1 ring-inset ring-[rgba(16,24,40,0.06)]", className)}

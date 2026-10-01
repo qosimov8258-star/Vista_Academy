@@ -17,6 +17,7 @@ import { ChildNoteModal } from "@/features/child-notes/child-note-modal";
 import { EmptyRow, FloatingBar, Group, LargeTitle, PrimaryButton, Row, Segmented, SkeletonRows, TeacherPage, formatDayLong, formatDayShort, todayIso } from "./teacher-ui";
 import { TeacherReminders } from "./teacher-reminders";
 import styles from "./teacher.module.css";
+import { useTr } from "@/i18n/tr";
 
 const STATUS: { value: AttendanceStatus; label: string; color: string }[] = [
   { value: "PRESENT", label: "Keldi", color: "var(--color-success)" },
@@ -34,6 +35,7 @@ const STATUS_BY_VALUE = Object.fromEntries(STATUS.map((s) => [s.value, s])) as R
  * bir xil (o'sha API, o'sha kesh kalitlari).
  */
 export function TeacherAttendance({ slug }: { slug: string }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { branchId: forcedBranchId } = useBranchContext(slug);
@@ -115,7 +117,7 @@ export function TeacherAttendance({ slug }: { slug: string }) {
     try {
       await downloadCsv(`/app/exports/attendance?date=${date}&branchId=${branchId}`, `davomat-${date}.csv`);
     } catch {
-      setExportError("Eksport qilib bo'lmadi — qayta urinib ko'ring");
+      setExportError(tr("Eksport qilib bo'lmadi — qayta urinib ko'ring"));
     } finally {
       setExporting(false);
     }
@@ -132,7 +134,7 @@ export function TeacherAttendance({ slug }: { slug: string }) {
     <TeacherPage className="pb-4">
       <LargeTitle
         eyebrow={date ? formatDayLong(date) : " "}
-        title="Davomat"
+        title={tr("Davomat")}
         trailing={
           // Tabiiy sana tanlagich ko'rinmas holda kapsula ustida turadi — telefonda o'z g'ildiragi ochiladi
           <label className="relative flex h-9 cursor-pointer items-center gap-1.5 rounded-full bg-[var(--color-surface)] px-3.5 text-[15px] font-medium text-[var(--color-primary)] shadow-[0_1px_2px_rgba(16,24,40,0.06)] transition-transform active:scale-95">
@@ -143,7 +145,7 @@ export function TeacherAttendance({ slug }: { slug: string }) {
               value={date}
               max={todayIso()}
               onChange={(e) => e.target.value && setDate(e.target.value)}
-              aria-label="Sanani tanlash"
+              aria-label={tr("Sanani tanlash")}
               className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
             />
           </label>
@@ -156,9 +158,9 @@ export function TeacherAttendance({ slug }: { slug: string }) {
           {counts.map((c) => (
             <div key={c.value} className="flex flex-col items-center gap-0.5 px-1">
               <span className="text-[24px] font-bold leading-none tabular-nums tracking-[-0.02em]" style={{ color: c.count ? c.color : "var(--color-text-muted)" }}>
-                {c.count}
+                {tr(c.count)}
               </span>
-              <span className="truncate text-[12px] font-medium text-[var(--color-text-muted)]">{c.label}</span>
+              <span className="truncate text-[12px] font-medium text-[var(--color-text-muted)]">{tr(c.label)}</span>
             </div>
           ))}
         </div>
@@ -168,7 +170,7 @@ export function TeacherAttendance({ slug }: { slug: string }) {
 
       <div className="space-y-3">
         <Segmented
-          label="Ro'yxat"
+          label={tr("Ro'yxat")}
           value={tab}
           onChange={setTab}
           options={[
@@ -183,27 +185,27 @@ export function TeacherAttendance({ slug }: { slug: string }) {
           </Group>
         ) : attendanceQuery.isError ? (
           <Group>
-            <EmptyRow title="Yuklab bo'lmadi" description={(attendanceQuery.error as Error).message} />
+            <EmptyRow title={tr("Yuklab bo'lmadi")} description={tr((attendanceQuery.error as Error).message)} />
           </Group>
         ) : children.length === 0 ? (
           <Group>
-            <EmptyRow icon={ChecklistIcon} title="Guruhda faol bola yo'q" />
+            <EmptyRow icon={ChecklistIcon} title={tr("Guruhda faol bola yo'q")} />
           </Group>
         ) : tab === "absent" ? (
-          <Group footer="Ota-ona sabab yozmagan bo'lsa, «Aloqaga chiqish» filial administratoriga xabar yuboradi.">
+          <Group footer={tr("Ota-ona sabab yozmagan bo'lsa, «Aloqaga chiqish» filial administratoriga xabar yuboradi.")}>
             {absentChildren.length === 0 ? (
-              <EmptyRow icon={CheckIcon} title="Hammasi keldi" description="Bu kunda kelmagan bola yo'q" />
+              <EmptyRow icon={CheckIcon} title={tr("Hammasi keldi")} description={tr("Bu kunda kelmagan bola yo'q")} />
             ) : (
               absentChildren.map((child, i) => (
                 <Row
                   key={child.childId}
                   first={i === 0}
                   leading={<ChildPhoto child={{ id: child.childId, fullName: child.fullName, gender: child.gender, avatarUpdatedAt: child.avatarUpdatedAt }} size={40} fallback={initials(child.fullName)} />}
-                  title={child.fullName}
-                  subtitle={child.parentReason ? `Ota-ona: ${child.parentReason}` : child.note || "Sabab yozilmagan"}
+                  title={tr(child.fullName)}
+                  subtitle={child.parentReason ? tr("Ota-ona: {0}", child.parentReason) : child.note || "Sabab yozilmagan"}
                   trailing={
                     child.parentReason ? undefined : child.contactRequestedAt ? (
-                      <span className="shrink-0 text-[13px] font-medium text-[var(--color-warning)]">So&apos;raldi</span>
+                      <span className="shrink-0 text-[13px] font-medium text-[var(--color-warning)]">{tr("So'raldi")}</span>
                     ) : canWrite ? (
                       <button
                         type="button"
@@ -211,7 +213,7 @@ export function TeacherAttendance({ slug }: { slug: string }) {
                         onClick={() => contactMutation.mutate(child.childId)}
                         className="shrink-0 cursor-pointer rounded-full bg-[var(--color-primary)]/10 px-3 py-1.5 text-[13.5px] font-semibold text-[var(--color-primary)] transition-opacity active:opacity-60 disabled:opacity-50"
                       >
-                        Aloqaga chiqish
+                        {tr("Aloqaga chiqish")}
                       </button>
                     ) : undefined
                   }
@@ -220,13 +222,13 @@ export function TeacherAttendance({ slug }: { slug: string }) {
             )}
           </Group>
         ) : (
-          <Group footer={canWrite ? undefined : "Davomatni tarbiyachi belgilaydi — siz faqat ko'rasiz."}>
+          <Group footer={canWrite ? undefined : tr("Davomatni tarbiyachi belgilaydi — siz faqat ko'rasiz.")}>
             {children.map((child, i) => {
               const status = statusFor(child.childId);
               const flag = chronicByChild.get(child.childId);
               const flags = [
-                flag && flag.consecutiveAbsentDays >= 3 ? `${flag.consecutiveAbsentDays} kun ketma-ket kelmadi` : null,
-                flag?.overdueAndAbsentToday ? "To'lov muddati o'tgan" : null,
+                flag && flag.consecutiveAbsentDays >= 3 ? tr("{0} kun ketma-ket kelmadi", flag.consecutiveAbsentDays) : null,
+                flag?.overdueAndAbsentToday ? tr("To'lov muddati o'tgan") : null,
               ].filter(Boolean);
               return (
                 <div key={child.childId} className="relative px-4 py-3">
@@ -238,24 +240,24 @@ export function TeacherAttendance({ slug }: { slug: string }) {
                       fallback={initials(child.fullName)}
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-[16px] leading-snug text-[var(--color-text)]">{child.fullName}</p>
+                      <p className="truncate text-[16px] leading-snug text-[var(--color-text)]">{tr(child.fullName)}</p>
                       {flags.length > 0 ? (
                         <p className="truncate text-[13px] font-medium text-[var(--color-danger)]">{flags.join(" · ")}</p>
                       ) : child.checkInTime ? (
                         // Yuz tanish terminali qayd etgan vaqt
                         <p className="truncate text-[13px] font-medium text-[var(--color-success)]">
-                          Face ID · {child.checkInTime}
+                          {tr("Face ID ·")}{" "}{tr(child.checkInTime)}
                           {child.checkOutTime ? ` – ${child.checkOutTime}` : ""}
                         </p>
                       ) : (
-                        child.groupName && <p className="truncate text-[13px] text-[var(--color-text-muted)]">{child.groupName}</p>
+                        child.groupName && <p className="truncate text-[13px] text-[var(--color-text-muted)]">{tr(child.groupName)}</p>
                       )}
                     </div>
                     {canWrite ? (
                       <button
                         type="button"
                         onClick={() => setNoteChild({ id: child.childId, name: child.fullName })}
-                        aria-label={`${child.fullName}: xabar yoki eslatma`}
+                        aria-label={tr("{0}: xabar yoki eslatma", child.fullName)}
                         className="-mr-1.5 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--color-primary)] transition-colors active:bg-black/5"
                       >
                         <NoteIcon className="h-[21px] w-[21px]" strokeWidth={1.8} />
@@ -280,13 +282,13 @@ export function TeacherAttendance({ slug }: { slug: string }) {
                           type="text"
                           value={noteFor(child.childId)}
                           onChange={(e) => setLocalNotes((s) => ({ ...s, [child.childId]: e.target.value }))}
-                          placeholder="Izoh (ixtiyoriy)"
+                          placeholder={tr("Izoh (ixtiyoriy)")}
                           className="h-10 w-full rounded-[10px] bg-[rgba(118,118,128,0.12)] px-3 text-[15px] text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-muted)] focus:ring-2 focus:ring-[var(--color-primary)]/30"
                         />
                       )}
                     </div>
                   )}
-                  {!canWrite && child.note && <p className="mt-1 pl-[52px] text-[13px] text-[var(--color-text-muted)]">{child.note}</p>}
+                  {!canWrite && child.note && <p className="mt-1 pl-[52px] text-[13px] text-[var(--color-text-muted)]">{tr(child.note)}</p>}
                 </div>
               );
             })}
@@ -294,11 +296,11 @@ export function TeacherAttendance({ slug }: { slug: string }) {
         )}
       </div>
 
-      <Group title="So'nggi 14 kun">
+      <Group title={tr("So'nggi 14 kun")}>
         {summaryQuery.isLoading ? (
           <SkeletonRows rows={3} />
         ) : !summaryQuery.data || summaryQuery.data.totalChildren === 0 ? (
-          <EmptyRow title="Ma'lumot yo'q" />
+          <EmptyRow title={tr("Ma'lumot yo'q")} />
         ) : (
           // Eng yangi kun tepada
           [...summaryQuery.data.days].reverse().map((day, i) => {
@@ -312,9 +314,9 @@ export function TeacherAttendance({ slug }: { slug: string }) {
                   <span className="h-full bg-[var(--color-danger)]" style={{ width: `${(day.absent / all) * 100}%` }} />
                 </span>
                 <span className="w-[58px] shrink-0 text-right text-[14px] tabular-nums">
-                  <span className={clsx("font-semibold", day.present ? "text-[var(--color-success)]" : "text-[var(--color-text-muted)]")}>{day.present}</span>
+                  <span className={clsx("font-semibold", day.present ? "text-[var(--color-success)]" : "text-[var(--color-text-muted)]")}>{tr(day.present)}</span>
                   <span className="text-[var(--color-text-muted)]"> / </span>
-                  <span className={clsx("font-semibold", day.absent ? "text-[var(--color-danger)]" : "text-[var(--color-text-muted)]")}>{day.absent}</span>
+                  <span className={clsx("font-semibold", day.absent ? "text-[var(--color-danger)]" : "text-[var(--color-text-muted)]")}>{tr(day.absent)}</span>
                 </span>
               </div>
             );
@@ -322,11 +324,11 @@ export function TeacherAttendance({ slug }: { slug: string }) {
         )}
       </Group>
 
-      <Group footer={exportError ? <span className="text-[var(--color-danger)]">{exportError}</span> : "Tanlangan kun davomati Excel'da ochiladigan fayl bo'lib yuklanadi."}>
+      <Group footer={exportError ? <span className="text-[var(--color-danger)]">{tr(exportError)}</span> : tr("Tanlangan kun davomati Excel'da ochiladigan fayl bo'lib yuklanadi.")}>
         <Row
           first
           icon={DocumentIcon}
-          title="CSV yuklab olish"
+          title={tr("CSV yuklab olish")}
           onClick={exporting || !date ? undefined : handleExport}
           value={exporting ? "Yuklanmoqda…" : undefined}
           chevron={!exporting}
@@ -350,15 +352,15 @@ export function TeacherAttendance({ slug }: { slug: string }) {
           <PrimaryButton loading={saveMutation.isPending} onClick={() => saveMutation.mutate()} disabled={unsaved === 0 && saveMutation.isSuccess}>
             {saveMutation.isPending ? "Saqlanmoqda…" : unsaved === 0 && saveMutation.isSuccess ? (
               <>
-                <CheckIcon className="h-5 w-5" strokeWidth={2.6} /> Saqlandi
+                <CheckIcon className="h-5 w-5" strokeWidth={2.6} /> {tr("Saqlandi")}
               </>
             ) : unsaved > 0 && children.some((c) => c.status) ? (
-              `Saqlash · ${unsaved} ta o'zgarish`
+              tr("Saqlash · {0} ta o'zgarish", unsaved)
             ) : (
               "Saqlash"
             )}
           </PrimaryButton>
-          {saveMutation.isError && <p className="mt-1.5 text-center text-[13px] font-medium text-[var(--color-danger)]">Saqlashda xatolik — qayta urinib ko&apos;ring</p>}
+          {saveMutation.isError && <p className="mt-1.5 text-center text-[13px] font-medium text-[var(--color-danger)]">{tr("Saqlashda xatolik — qayta urinib ko'ring")}</p>}
         </FloatingBar>
       )}
     </TeacherPage>

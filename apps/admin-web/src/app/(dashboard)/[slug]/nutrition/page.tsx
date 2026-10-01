@@ -21,6 +21,7 @@ import { ChefMenu } from "@/features/chef/chef-menu";
 import { TodayRemindersCard } from "@/features/child-notes/today-reminders-card";
 import { TodayChildrenCard } from "@/features/nutrition/today-children-card";
 import { MenuPhotosCard } from "@/features/nutrition/menu-photos-card";
+import { useTr } from "@/i18n/tr";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -49,6 +50,7 @@ export default function NutritionPage({ params }: { params: Promise<{ slug: stri
 }
 
 function AdminNutritionPage({ slug }: { slug: string }) {
+  const tr = useTr();
   const { user } = useAuth();
   // Menyu — oshpazning ishi; filial admini va administrator ham yozadi.
   const canWrite = canWriteKitchen(user?.role);
@@ -146,7 +148,7 @@ function AdminNutritionPage({ slug }: { slug: string }) {
         `menyu-${weekStart}_${weekEnd}.csv`,
       );
     } catch {
-      setExportError("Eksport qilib bo'lmadi — qayta urinib ko'ring");
+      setExportError(tr("Eksport qilib bo'lmadi — qayta urinib ko'ring"));
     } finally {
       setExporting(false);
     }
@@ -157,26 +159,26 @@ function AdminNutritionPage({ slug }: { slug: string }) {
       <div className="flex items-start justify-between gap-3 md:flex-wrap md:items-center">
         <div className="min-w-0">
           <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
-            Ovqatlanish
+            {tr("Ovqatlanish")}
           </h1>
-          <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">Haftalik menyu</p>
+          <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">{tr("Haftalik menyu")}</p>
         </div>
         {/* Mobilda ikki tugma sarlavhaning o'ng tomonida ustma-ust turadi, kompyuterda yonma-yon */}
         <div className="flex shrink-0 flex-col items-stretch gap-2 md:flex-row md:items-center">
           {canWrite && (
             <Button variant="outline" disabled={!weekStart} onClick={() => setWeeklyMenuOpen(true)}>
-              Haftalik menyu
+              {tr("Haftalik menyu")}
             </Button>
           )}
           <Button variant="outline" loading={exporting} disabled={!weekStart} onClick={handleExport}>
-            Eksport (CSV)
+            {tr("Eksport (CSV)")}
           </Button>
         </div>
       </div>
 
       {exportError && (
         <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-          {exportError}
+          {tr(exportError)}
         </div>
       )}
 
@@ -188,8 +190,8 @@ function AdminNutritionPage({ slug }: { slug: string }) {
             disabled={!weekStart}
             onClick={() => setWeekStart((w) => (w ? addDays(w, -7) : w))}
           >
-            <span className="sm:hidden">← Oldingi</span>
-            <span className="hidden sm:inline">← Oldingi hafta</span>
+            <span className="sm:hidden">{tr("← Oldingi")}</span>
+            <span className="hidden sm:inline">{tr("← Oldingi hafta")}</span>
           </Button>
           <span className="order-last col-span-2 whitespace-nowrap text-center text-[14px] tabular-nums text-[var(--color-text-muted)] sm:order-none sm:col-span-1">
             {weekStart && weekEnd ? `${formatDate(weekStart)} — ${formatDate(weekEnd)}` : "…"}
@@ -200,16 +202,16 @@ function AdminNutritionPage({ slug }: { slug: string }) {
             disabled={!weekStart}
             onClick={() => setWeekStart((w) => (w ? addDays(w, 7) : w))}
           >
-            <span className="sm:hidden">Keyingi →</span>
-            <span className="hidden sm:inline">Keyingi hafta →</span>
+            <span className="sm:hidden">{tr("Keyingi →")}</span>
+            <span className="hidden sm:inline">{tr("Keyingi hafta →")}</span>
           </Button>
         </div>
         {!forcedBranchId && branches.length > 1 && (
           <div className="sm:ml-auto sm:max-w-xs">
-            <Select label="Filial" value={branchId} onChange={(e) => setBranchId(e.target.value)}>
+            <Select label={tr("Filial")} value={branchId} onChange={(e) => setBranchId(e.target.value)}>
               {branches.map((branch) => (
                 <option key={branch.id} value={branch.id}>
-                  {branch.name}
+                  {tr(branch.name)}
                 </option>
               ))}
             </Select>
@@ -227,14 +229,14 @@ function AdminNutritionPage({ slug }: { slug: string }) {
         <Card className="border-[var(--color-danger)]/40 shadow-[var(--shadow-raised)]">
           <CardHeader>
             <CardTitle className="text-[var(--color-danger)]">
-              Diqqat — bu haftaning menyusida allergen bor
+              {tr("Diqqat — bu haftaning menyusida allergen bor")}
             </CardTitle>
           </CardHeader>
           <CardBody className="space-y-1 text-[14px] text-[var(--color-text)]">
             {allergyWarnings.map((w, i) => (
               <p key={i}>
-                {formatDate(w.date)}, {w.mealLabel}: &quot;{w.token}&quot; —{" "}
-                <span className="font-medium">{w.childName}</span>da shu allergiya bor
+                {formatDate(w.date)}, {tr(w.mealLabel)}: &quot;{tr(w.token)}&quot; —{" "}
+                <span className="font-medium">{tr(w.childName)}</span>{tr("da shu allergiya bor")}
               </p>
             ))}
           </CardBody>
@@ -242,20 +244,56 @@ function AdminNutritionPage({ slug }: { slug: string }) {
       )}
 
       {!weekStart || !branchId ? (
-        weekStart ? <EmptyState title="Filial mavjud emas" /> : <LoadingState rows={7} />
+        weekStart ? <EmptyState title={tr("Filial mavjud emas")} /> : <LoadingState rows={7} />
       ) : menuQuery.isLoading ? (
         <LoadingState rows={7} />
       ) : menuQuery.isError ? (
-        <ErrorState message={(menuQuery.error as Error).message} />
+        <ErrorState message={tr((menuQuery.error as Error).message)} />
       ) : (
-        <Card className="overflow-hidden">
+        <>
+        {/* Mobil: har kun alohida kartochka — yonboshga surilmaydi */}
+        <div className="space-y-3 md:hidden">
+          {days.map((day) => {
+            const entry = entryByDate.get(day) ?? null;
+            const meals = [
+              { label: "Nonushta", value: entry?.breakfast },
+              { label: "Tushlik", value: entry?.lunch },
+              { label: "Kechki ovqat / gazak", value: entry?.snack },
+            ];
+            return (
+              <Card key={day}>
+                <CardBody className="space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold tabular-nums">{formatDate(day)}</span>
+                    {canWrite && (
+                      <Button size="sm" variant="outline" onClick={() => setEditDate(day)}>
+                        {tr("Tahrirlash")}
+                      </Button>
+                    )}
+                  </div>
+                  <dl className="space-y-2 text-[14px]">
+                    {meals.map((m) => (
+                      <div key={m.label} className="flex flex-col gap-0.5">
+                        <dt className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-text-muted)]">
+                          {tr(m.label)}
+                        </dt>
+                        <dd className="break-words text-[var(--color-text)]">{m.value || "—"}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </CardBody>
+              </Card>
+            );
+          })}
+        </div>
+        <Card className="hidden overflow-hidden md:block">
           <DataTable>
             <THead>
               <tr>
-                <Th>Sana</Th>
-                <Th>Nonushta</Th>
-                <Th>Tushlik</Th>
-                <Th>Kechki ovqat / gazak</Th>
+                <Th>{tr("Sana")}</Th>
+                <Th>{tr("Nonushta")}</Th>
+                <Th>{tr("Tushlik")}</Th>
+                <Th>{tr("Kechki ovqat / gazak")}</Th>
                 {canWrite && <Th />}
               </tr>
             </THead>
@@ -271,7 +309,7 @@ function AdminNutritionPage({ slug }: { slug: string }) {
                     {canWrite && (
                       <Td className="text-right">
                         <Button size="sm" variant="outline" onClick={() => setEditDate(day)}>
-                          Tahrirlash
+                          {tr("Tahrirlash")}
                         </Button>
                       </Td>
                     )}
@@ -281,6 +319,7 @@ function AdminNutritionPage({ slug }: { slug: string }) {
             </TBody>
           </DataTable>
         </Card>
+        </>
       )}
 
       {canWrite && editDate && (
@@ -305,21 +344,21 @@ function AdminNutritionPage({ slug }: { slug: string }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Allergiyasi bor bolalar</CardTitle>
+          <CardTitle>{tr("Allergiyasi bor bolalar")}</CardTitle>
         </CardHeader>
         <CardBody className="text-[14px] text-[var(--color-text)]">
           {allergiesQuery.isLoading ? (
             <LoadingState rows={2} />
           ) : allergiesQuery.isError ? (
-            <ErrorState message={(allergiesQuery.error as Error).message} />
+            <ErrorState message={tr((allergiesQuery.error as Error).message)} />
           ) : !allergiesQuery.data?.length ? (
-            <EmptyState title="Allergiyasi bor bola yo'q" />
+            <EmptyState title={tr("Allergiyasi bor bola yo'q")} />
           ) : (
             <ul className="divide-y divide-[var(--color-border)]">
               {allergiesQuery.data.map((item) => (
                 <li key={item.child.id} className="flex flex-wrap items-baseline justify-between gap-2 py-2.5">
-                  <span className="font-medium">{item.child.fullName}</span>
-                  <span className="text-[var(--color-danger)]">{item.allergies}</span>
+                  <span className="font-medium">{tr(item.child.fullName)}</span>
+                  <span className="text-[var(--color-danger)]">{tr(item.allergies)}</span>
                 </li>
               ))}
             </ul>

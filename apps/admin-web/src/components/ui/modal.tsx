@@ -3,6 +3,8 @@
 import { ReactNode, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { CloseIcon } from "@/components/ui/icons";
+import { useTr } from "@/i18n/tr";
+import { useAuth } from "@/lib/use-auth";
 
 interface ModalProps {
   open: boolean;
@@ -13,6 +15,8 @@ interface ModalProps {
 }
 
 export function Modal({ open, onClose, title, children, widthClassName = "max-w-lg" }: ModalProps) {
+  const tr = useTr();
+  const { user } = useAuth();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -29,7 +33,7 @@ export function Modal({ open, onClose, title, children, widthClassName = "max-w-
   if (!open || typeof document === "undefined") return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={title}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={tr(title)}>
       {/* Xiralashgan fon — ostidagi sahifa yo'qolmaydi, faqat orqaga chekinadi */}
       <div className="animate-overlay-in absolute inset-0 bg-black/3 backdrop-blur-[7px]" onClick={onClose} />
       <div
@@ -37,18 +41,23 @@ export function Modal({ open, onClose, title, children, widthClassName = "max-w-
       >
         <div className="sticky top-0 z-10 flex items-start justify-between gap-4 bg-[var(--color-surface)] px-6 py-5">
           <h2 className="text-[17px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
-            {title}
+            {tr(title)}
           </h2>
           {/* iOS uslubidagi dumaloq yopish tugmasi */}
           <button
             type="button"
             onClick={onClose}
             className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-border)] hover:text-[var(--color-text)]"
-            aria-label="Yopish"
+            aria-label={tr("Yopish")}
           >
             <CloseIcon className="h-4 w-4" />
           </button>
         </div>
+        {user?.organizationName && (
+          <p className="px-6 pb-4 text-center text-[24px] font-extrabold tracking-[-0.01em] text-[var(--color-primary)]">
+            {user.organizationName}
+          </p>
+        )}
         <div className="px-6 pb-6">{children}</div>
       </div>
     </div>,

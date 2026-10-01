@@ -3,6 +3,7 @@
 import clsx from "clsx";
 import type { Branch } from "@/lib/types";
 import { BuildingIcon } from "./icons";
+import { useTr } from "@/i18n/tr";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
 
@@ -28,6 +29,7 @@ export function BranchAvatar({
   className?: string;
   fallback?: React.ReactNode;
 }) {
+  const tr = useTr();
   const url = branchAvatarUrl(branch);
 
   if (url) {
@@ -35,7 +37,7 @@ export function BranchAvatar({
       // eslint-disable-next-line @next/next/no-img-element -- tashqi manzil, Next optimizatsiyasi sozlanmagan
       <img
         src={url}
-        alt={branch.name}
+        alt={tr(branch.name)}
         width={size}
         height={size}
         className={clsx(

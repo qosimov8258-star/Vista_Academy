@@ -8,9 +8,11 @@ import styles from "../../../parent.module.css";
 import { usePoems } from "../content";
 import { useLearned } from "../store";
 import { Chip, EmptyCard, FoydaliHeader, ListSkeleton, LoadErrorCard, PoemIcon, StarIcon, TONES, TONE_CYCLE } from "../ui";
+import { useTr } from "@/i18n/tr";
 
 /** She'rlar ro'yxati — tarbiyachilar qo'shgan, bolaning yoshiga mos she'rlar */
 export default function PoemsPage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const base = `/ota-ona/${slug}/foydali`;
   const poemsQuery = usePoems();
@@ -22,14 +24,14 @@ export default function PoemsPage({ params }: { params: Promise<{ slug: string }
       <FoydaliHeader
         backHref={base}
         backLabel="Foydali"
-        title="She'rlar"
-        subtitle="Tarbiyachilar tanlagan she'rlar — bolangiz bilan birga yodlang"
+        title={tr("She'rlar")}
+        subtitle={tr("Tarbiyachilar tanlagan she'rlar — bolangiz bilan birga yodlang")}
       />
 
       <div className="mt-4 flex items-start gap-3 rounded-[20px] bg-[var(--p-sun)]/12 px-4 py-3.5">
         <BulbIcon className="mt-0.5 h-5 w-5 shrink-0 text-[var(--p-sun-ink)]" />
         <p className="text-[13.5px] leading-relaxed text-[var(--p-ink)]">
-          Har kuni uxlashdan oldin 1–2 bandni takrorlang — bola she&apos;rni tez va mustahkam yodlaydi.
+          {tr("Har kuni uxlashdan oldin 1–2 bandni takrorlang — bola she'rni tez va mustahkam yodlaydi.")}
         </p>
       </div>
 
@@ -43,8 +45,8 @@ export default function PoemsPage({ params }: { params: Promise<{ slug: string }
         <EmptyCard
           Icon={PoemIcon}
           tone="lilac"
-          title="Hozircha she'r yo'q"
-          text="Tarbiyachi she'r qo'shishi bilan u shu yerda paydo bo'ladi."
+          title={tr("Hozircha she'r yo'q")}
+          text={tr("Tarbiyachi she'r qo'shishi bilan u shu yerda paydo bo'ladi.")}
         />
       ) : (
         <ul className="mt-4 space-y-3">
@@ -74,17 +76,17 @@ export default function PoemsPage({ params }: { params: Promise<{ slug: string }
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className={`${styles.roundedFont} block truncate text-[18px] font-bold text-[var(--p-ink)]`}>
-                      {poem.title}
+                      {tr(poem.title)}
                     </span>
                     <span className="mt-0.5 block truncate text-[13.5px] text-[var(--p-muted)]">
-                      {poem.stanzas[0]?.[0]}
+                      {tr(poem.stanzas[0]?.[0])}
                     </span>
                     <span className="mt-2 flex flex-wrap gap-1.5">
                       <Chip>
-                        {poem.ageFrom}–{poem.ageTo} yosh
+                        {tr(poem.ageFrom)}–{tr(poem.ageTo)} {tr("yosh")}
                       </Chip>
-                      <Chip>{lines} qator</Chip>
-                      {learned && <Chip tone="mint">Yodlandi</Chip>}
+                      <Chip>{tr(lines)} {tr("qator")}</Chip>
+                      {learned && <Chip tone="mint">{tr("Yodlandi")}</Chip>}
                     </span>
                   </span>
                   <ChevronRightIcon className="h-5 w-5 shrink-0 text-[var(--p-muted)]" />

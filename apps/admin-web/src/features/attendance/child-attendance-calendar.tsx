@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChevronRightIcon } from "@/components/ui/icons";
 import { formatDate } from "@/lib/format";
+import { useTr } from "@/i18n/tr";
 
 const STATUS_LABEL: Record<AttendanceStatus, string> = {
   PRESENT: "Keldi",
@@ -86,6 +87,7 @@ function AttendanceDayModal({
   record: AttendanceRecord;
   canEditNote: boolean;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [note, setNote] = useState(record.note ?? "");
   const canEdit = canEditNote && record.status !== "PRESENT";
@@ -101,38 +103,38 @@ function AttendanceDayModal({
   return (
     <Modal open={open} onClose={onClose} title={formatDate(record.date)} widthClassName="max-w-sm">
       <div className="space-y-4">
-        <Badge tone={toneFor(record)}>{STATUS_LABEL[record.status]}</Badge>
+        <Badge tone={toneFor(record)}>{tr(STATUS_LABEL[record.status])}</Badge>
 
         {canEdit ? (
           <div>
-            <span className="mb-1.5 block text-[13px] font-medium text-[var(--color-text)]">Izoh</span>
+            <span className="mb-1.5 block text-[13px] font-medium text-[var(--color-text)]">{tr("Izoh")}</span>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={3}
-              placeholder="Masalan: harorati baland edi, shifokorga bordik..."
+              placeholder={tr("Masalan: harorati baland edi, shifokorga bordik...")}
               className="w-full rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-3 py-2 text-[14px] text-[var(--color-text)] outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20"
             />
           </div>
         ) : record.note ? (
-          <p className="text-[14px] text-[var(--color-text-muted)]">{record.note}</p>
+          <p className="text-[14px] text-[var(--color-text-muted)]">{tr(record.note)}</p>
         ) : record.status !== "PRESENT" ? (
-          <p className="text-[13px] text-[var(--color-text-muted)]">Izoh yozilmagan</p>
+          <p className="text-[13px] text-[var(--color-text-muted)]">{tr("Izoh yozilmagan")}</p>
         ) : null}
 
         {mutation.isError && (
           <p className="text-[13px] text-[var(--color-danger)]">
-            {mutation.error instanceof ApiError ? mutation.error.message : "Saqlab bo'lmadi — qayta urinib ko'ring"}
+            {mutation.error instanceof ApiError ? mutation.error.message : tr("Saqlab bo'lmadi — qayta urinib ko'ring")}
           </p>
         )}
 
         {canEdit && (
           <div className="flex justify-end gap-2 pt-1">
             <Button type="button" variant="outline" onClick={onClose}>
-              Yopish
+              {tr("Yopish")}
             </Button>
             <Button type="button" loading={mutation.isPending} onClick={() => mutation.mutate()}>
-              Saqlash
+              {tr("Saqlash")}
             </Button>
           </div>
         )}
@@ -157,6 +159,7 @@ export function ChildAttendanceCalendar({
   records: AttendanceRecord[];
   canEditNote: boolean;
 }) {
+  const tr = useTr();
   const currentDate = new Date();
   const defaultMonth =
     year === currentDate.getFullYear()
@@ -179,19 +182,19 @@ export function ChildAttendanceCalendar({
           disabled={month === 0}
           onClick={() => setMonth((m) => Math.max(0, m - 1))}
           className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-text)] disabled:pointer-events-none disabled:opacity-30"
-          aria-label="Oldingi oy"
+          aria-label={tr("Oldingi oy")}
         >
           <ChevronRightIcon className="h-4 w-4 rotate-180" />
         </button>
         <p className="text-[14px] font-medium text-[var(--color-text)]">
-          {MONTH_LABEL[month]} {year}
+          {tr(MONTH_LABEL[month])} {tr(year)}
         </p>
         <button
           type="button"
           disabled={month === 11}
           onClick={() => setMonth((m) => Math.min(11, m + 1))}
           className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-text)] disabled:pointer-events-none disabled:opacity-30"
-          aria-label="Keyingi oy"
+          aria-label={tr("Keyingi oy")}
         >
           <ChevronRightIcon className="h-4 w-4" />
         </button>
@@ -199,7 +202,7 @@ export function ChildAttendanceCalendar({
 
       <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-medium text-[var(--color-text-muted)]">
         {WEEKDAY_LABEL.map((d) => (
-          <div key={d}>{d}</div>
+          <div key={d}>{tr(d)}</div>
         ))}
       </div>
       <div className="grid grid-cols-7 gap-1">
@@ -217,7 +220,7 @@ export function ChildAttendanceCalendar({
                 dayCellClass(record),
               )}
             >
-              {cell.day}
+              {tr(cell.day)}
             </button>
           );
         })}
@@ -225,13 +228,13 @@ export function ChildAttendanceCalendar({
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-1 text-[12px] text-[var(--color-text-muted)]">
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-[var(--color-success)]" /> Keldi
+          <span className="h-2.5 w-2.5 rounded-full bg-[var(--color-success)]" /> {tr("Keldi")}
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-[var(--color-warning)]" /> Sababli kelmadi
+          <span className="h-2.5 w-2.5 rounded-full bg-[var(--color-warning)]" /> {tr("Sababli kelmadi")}
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-[var(--color-danger)]" /> Sababsiz kelmadi
+          <span className="h-2.5 w-2.5 rounded-full bg-[var(--color-danger)]" /> {tr("Sababsiz kelmadi")}
         </span>
       </div>
 

@@ -15,8 +15,10 @@ import { canWriteTeaching } from "@/lib/permissions";
 import { ShopIcon, PlusIcon } from "@/components/ui/icons";
 import { CreateProductModal } from "@/features/products/create-product-modal";
 import { ProductCard } from "@/features/products/product-card";
+import { useTr } from "@/i18n/tr";
 
 export default function CoinShopPage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const { branchId: forcedBranchId } = useBranchContext(slug);
   const [branchId, setBranchId] = useState("");
@@ -50,14 +52,14 @@ export default function CoinShopPage({ params }: { params: Promise<{ slug: strin
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-3 md:flex-wrap">
         <div className="min-w-0">
-          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">Coin — Do&apos;kon</h1>
-          <p className="text-[14px] text-[var(--color-text-muted)]">Bolalar coinlarini sarflaydigan do&apos;kon</p>
+          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">{tr("Yulduzcha — Do'kon")}</h1>
+          <p className="text-[14px] text-[var(--color-text-muted)]">{tr("Bolalar yulduzchalarini sarflaydigan do'kon")}</p>
         </div>
         {canWrite && branchId && (
           <Button className="shrink-0 max-md:!h-auto max-md:!py-2" onClick={() => setCreateOpen(true)}>
             <PlusIcon className="h-4 w-4 shrink-0" />
             <span className="max-md:text-center max-md:leading-tight max-md:whitespace-normal">
-              Tovar<br className="md:hidden" /> qo&apos;shish
+              {tr("Tovar")}<br className="md:hidden" /> {tr("qo'shish")}
             </span>
           </Button>
         )}
@@ -65,10 +67,10 @@ export default function CoinShopPage({ params }: { params: Promise<{ slug: strin
 
       {!forcedBranchId && branches.length > 1 && (
         <Card className="flex flex-col gap-3 p-4 sm:flex-row">
-          <Select label="Filial" value={branchId} onChange={(e) => setBranchId(e.target.value)} className="sm:max-w-xs">
+          <Select label={tr("Filial")} value={branchId} onChange={(e) => setBranchId(e.target.value)} className="sm:max-w-xs">
             {branches.map((branch) => (
               <option key={branch.id} value={branch.id}>
-                {branch.name}
+                {tr(branch.name)}
               </option>
             ))}
           </Select>
@@ -80,21 +82,21 @@ export default function CoinShopPage({ params }: { params: Promise<{ slug: strin
       {orgQuery.isLoading || (!branchId && branches.length > 0) ? (
         <LoadingState rows={3} />
       ) : !branchId ? (
-        <EmptyState title="Filial mavjud emas" />
+        <EmptyState title={tr("Filial mavjud emas")} />
       ) : productsQuery.isLoading ? (
         <LoadingState />
       ) : productsQuery.isError ? (
-        <ErrorState message={(productsQuery.error as Error).message} />
+        <ErrorState message={tr((productsQuery.error as Error).message)} />
       ) : !productsQuery.data || productsQuery.data.length === 0 ? (
         <EmptyState
           icon={<ShopIcon className="h-8 w-8" />}
-          title="Hali tovar qo'shilmagan"
-          description={canWrite ? "\"Tovar qo'shish\" tugmasi orqali birinchi tovarni qo'shing" : "Bu filialda hali tovar yo'q"}
+          title={tr("Hali tovar qo'shilmagan")}
+          description={canWrite ? tr("\"Tovar qo'shish\" tugmasi orqali birinchi tovarni qo'shing") : tr("Bu filialda hali tovar yo'q")}
           action={
             canWrite ? (
               <Button onClick={() => setCreateOpen(true)}>
                 <PlusIcon className="h-4 w-4" />
-                Tovar qo&apos;shish
+                {tr("Tovar qo'shish")}
               </Button>
             ) : undefined
           }

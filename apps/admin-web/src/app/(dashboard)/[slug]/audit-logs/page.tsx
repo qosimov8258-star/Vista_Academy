@@ -25,6 +25,7 @@ import {
   SearchIcon,
   TeacherIcon,
 } from "@/components/ui/icons";
+import { useTr } from "@/i18n/tr";
 
 const PAGE_SIZE = 30;
 const TZ = "Asia/Tashkent";
@@ -118,6 +119,7 @@ const timeOf = (iso: string) =>
  * belgi bilan, bajargan kishi, vaqt va (tarmoq ko'rinishida) filial.
  */
 export default function AuditLogsPage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const { user } = useAuth();
   const { branchSlug, branchId: forcedBranchId, branch: forcedBranch, branches } = useBranchContext(slug);
@@ -203,12 +205,12 @@ export default function AuditLogsPage({ params }: { params: Promise<{ slug: stri
   };
 
   const actorOptions = [
-    { value: "", label: "Barcha xodimlar" },
+    { value: "", label: tr("Barcha xodimlar") },
     ...(actorsQuery.data ?? [])
       .filter((a) => a.actorUserId)
       .map((a) => ({ value: a.actorUserId as string, label: `${a.actorName} · ${a.count}` })),
   ];
-  const branchOptions = [{ value: "", label: "Barcha filiallar" }, ...branches.map((b) => ({ value: b.id, label: b.name }))];
+  const branchOptions = [{ value: "", label: tr("Barcha filiallar") }, ...branches.map((b) => ({ value: b.id, label: b.name }))];
 
   return (
     <div className="mx-auto w-full max-w-[1040px] space-y-5">
@@ -218,15 +220,15 @@ export default function AuditLogsPage({ params }: { params: Promise<{ slug: stri
             <AuditIcon className="h-6 w-6" />
           </span>
           <div>
-            <h1 className="text-[24px] font-bold tracking-[var(--tracking-title)] text-[var(--color-text)]">Audit</h1>
+            <h1 className="text-[24px] font-bold tracking-[var(--tracking-title)] text-[var(--color-text)]">{tr("Audit")}</h1>
             <p className="text-[14px] text-[var(--color-text-muted)]">
-              {forcedBranch ? `${forcedBranch.name} — ` : ""}kim, qachon va nima qilgani
+              {forcedBranch ? `${forcedBranch.name} — ` : ""}{tr("kim, qachon va nima qilgani")}
             </p>
           </div>
         </div>
         {!logsQuery.isLoading && (
           <span className="rounded-full bg-[var(--color-surface)] px-3.5 py-1.5 text-[13px] font-semibold tabular-nums text-[var(--color-text-muted)] shadow-[var(--shadow-xs)] ring-1 ring-black/[0.04]">
-            {total.toLocaleString("uz-UZ")} ta amal
+            {total.toLocaleString("uz-UZ")} {tr("ta amal")}
           </span>
         )}
       </div>
@@ -240,14 +242,14 @@ export default function AuditLogsPage({ params }: { params: Promise<{ slug: stri
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Amal yoki ism bo'yicha qidirish"
+              placeholder={tr("Amal yoki ism bo'yicha qidirish")}
               className="h-11 w-full rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] pl-10 pr-10 text-[15px] text-[var(--color-text)] outline-none transition-[border-color,box-shadow] placeholder:text-[var(--color-text-muted)]/60 focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/[0.12]"
             />
             {search && (
               <button
                 type="button"
                 onClick={() => setSearch("")}
-                aria-label="Qidiruvni tozalash"
+                aria-label={tr("Qidiruvni tozalash")}
                 className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-[var(--color-text-muted)] hover:bg-black/[0.05]"
               >
                 <CloseIcon className="h-4 w-4" />
@@ -273,12 +275,12 @@ export default function AuditLogsPage({ params }: { params: Promise<{ slug: stri
                     : "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
                 )}
               >
-                {c.label}
+                {tr(c.label)}
               </button>
             ))}
           </div>
 
-          <div className="flex shrink-0 rounded-full bg-[var(--color-surface-sunken)] p-1" role="radiogroup" aria-label="Davr">
+          <div className="flex shrink-0 rounded-full bg-[var(--color-surface-sunken)] p-1" role="radiogroup" aria-label={tr("Davr")}>
             {PERIODS.map((p) => (
               <button
                 key={p.key}
@@ -291,7 +293,7 @@ export default function AuditLogsPage({ params }: { params: Promise<{ slug: stri
                   period === p.key ? "bg-white text-[var(--color-text)] shadow-[var(--shadow-xs)]" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
                 )}
               >
-                {p.label}
+                {tr(p.label)}
               </button>
             ))}
           </div>
@@ -306,19 +308,19 @@ export default function AuditLogsPage({ params }: { params: Promise<{ slug: stri
           ))}
         </div>
       ) : logsQuery.isError ? (
-        <ErrorState message={(logsQuery.error as Error).message} />
+        <ErrorState message={tr((logsQuery.error as Error).message)} />
       ) : entries.length === 0 ? (
         <div className="flex flex-col items-center rounded-[var(--radius-xl)] bg-[var(--color-surface)] px-6 py-14 text-center shadow-[var(--shadow-card)]">
           <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)]">
             <AuditIcon className="h-7 w-7" />
           </span>
           <p className="mt-4 text-[16px] font-semibold text-[var(--color-text)]">
-            {filtered ? "Filtrga mos amal topilmadi" : "Hali amal yozilmagan"}
+            {filtered ? tr("Filtrga mos amal topilmadi") : tr("Hali amal yozilmagan")}
           </p>
           <p className="mt-1 max-w-[360px] text-[14px] text-[var(--color-text-muted)]">
             {filtered
-              ? "Boshqa davr yoki bo'limni tanlab ko'ring."
-              : "Bola, xodim, guruh, to'lov va hisoblar bilan bog'liq amallar shu yerda paydo bo'ladi."}
+              ? tr("Boshqa davr yoki bo'limni tanlab ko'ring.")
+              : tr("Bola, xodim, guruh, to'lov va hisoblar bilan bog'liq amallar shu yerda paydo bo'ladi.")}
           </p>
           {filtered && (
             <button
@@ -326,7 +328,7 @@ export default function AuditLogsPage({ params }: { params: Promise<{ slug: stri
               onClick={resetFilters}
               className="mt-5 h-10 cursor-pointer rounded-full bg-[var(--color-surface-sunken)] px-5 text-[14px] font-semibold text-[var(--color-text)] transition-colors hover:bg-[var(--color-border)]"
             >
-              Filtrlarni tozalash
+              {tr("Filtrlarni tozalash")}
             </button>
           )}
         </div>
@@ -336,7 +338,7 @@ export default function AuditLogsPage({ params }: { params: Promise<{ slug: stri
             <section key={key}>
               <h2 className="mb-2.5 flex items-center gap-2 px-1 text-[13px] font-bold uppercase tracking-[0.06em] text-[var(--color-text-muted)]">
                 {dayTitle(key)}
-                <span className="rounded-full bg-[var(--color-surface-sunken)] px-2 py-0.5 text-[11.5px] tabular-nums tracking-normal">{items.length}</span>
+                <span className="rounded-full bg-[var(--color-surface-sunken)] px-2 py-0.5 text-[11.5px] tabular-nums tracking-normal">{tr(items.length)}</span>
               </h2>
               <ol className="overflow-hidden rounded-[var(--radius-xl)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
                 {items.map((entry, i) => {
@@ -352,15 +354,15 @@ export default function AuditLogsPage({ params }: { params: Promise<{ slug: stri
                         <Icon className="h-5 w-5" />
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="text-[15px] leading-snug text-[var(--color-text)]">{entry.summary}</p>
+                        <p className="text-[15px] leading-snug text-[var(--color-text)]">{tr(entry.summary)}</p>
                         <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] text-[var(--color-text-muted)]">
                           {/* Telefonda amal belgisi shu qatorda — matn uchun joy qoladi */}
-                          <span className={clsx("rounded-full px-2 py-0.5 text-[11.5px] font-semibold ring-1 sm:hidden", tone.badge)}>{verb.label}</span>
+                          <span className={clsx("rounded-full px-2 py-0.5 text-[11.5px] font-semibold ring-1 sm:hidden", tone.badge)}>{tr(verb.label)}</span>
                           <span className="inline-flex items-center gap-1.5 font-semibold text-[var(--color-text)]">
                             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--accent-rail)] text-[9px] font-bold text-[var(--accent-light)]">
                               {initials(entry.actorName)}
                             </span>
-                            {entry.actorName}
+                            {tr(entry.actorName)}
                           </span>
                           <span aria-hidden="true">·</span>
                           <time dateTime={entry.createdAt} className="tabular-nums">
@@ -371,13 +373,13 @@ export default function AuditLogsPage({ params }: { params: Promise<{ slug: stri
                               <span aria-hidden="true">·</span>
                               <span className="inline-flex items-center gap-1">
                                 <BuildingIcon className="h-3.5 w-3.5" />
-                                {entry.branch.name}
+                                {tr(entry.branch.name)}
                               </span>
                             </>
                           )}
                         </div>
                       </div>
-                      <span className={clsx("hidden shrink-0 rounded-full px-2.5 py-1 text-[12px] font-semibold ring-1 sm:inline-flex", tone.badge)}>{verb.label}</span>
+                      <span className={clsx("hidden shrink-0 rounded-full px-2.5 py-1 text-[12px] font-semibold ring-1 sm:inline-flex", tone.badge)}>{tr(verb.label)}</span>
                     </li>
                   );
                 })}
@@ -394,7 +396,7 @@ export default function AuditLogsPage({ params }: { params: Promise<{ slug: stri
                 className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-full bg-[var(--color-surface)] px-6 text-[14px] font-semibold text-[var(--color-text)] shadow-[var(--shadow-card)] ring-1 ring-black/[0.04] transition-colors hover:bg-[var(--color-surface-hover)] disabled:opacity-60"
               >
                 {logsQuery.isFetchingNextPage && <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />}
-                Yana yuklash
+                {tr("Yana yuklash")}
                 <span className="tabular-nums text-[var(--color-text-muted)]">({(total - entries.length).toLocaleString("uz-UZ")})</span>
               </button>
             </div>

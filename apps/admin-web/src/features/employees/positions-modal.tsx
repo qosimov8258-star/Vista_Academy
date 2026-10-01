@@ -8,6 +8,7 @@ import type { Position } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useTr } from "@/i18n/tr";
 
 /**
  * "Yangi xodim" modalidagi Lavozim pill'i bosilganda ochiladi. Yangi lavozim
@@ -27,6 +28,7 @@ export function PositionsModal({
   selected?: string;
   onSelect: (name: string) => void;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +49,7 @@ export function PositionsModal({
       onClose();
     },
     onError: (err) => {
-      setError(err instanceof ApiError ? err.message : "Lavozim yaratib bo'lmadi");
+      setError(err instanceof ApiError ? err.message : tr("Lavozim yaratib bo'lmadi"));
     },
   });
 
@@ -60,20 +62,20 @@ export function PositionsModal({
   const handleCreate = () => {
     const trimmed = name.trim();
     if (trimmed.length < 2) {
-      setError("Lavozim nomi kamida 2 belgi");
+      setError(tr("Lavozim nomi kamida 2 belgi"));
       return;
     }
     createMutation.mutate(trimmed);
   };
 
   return (
-    <Modal open={open} onClose={handleClose} title="Lavozimlar" widthClassName="max-w-md">
+    <Modal open={open} onClose={handleClose} title={tr("Lavozimlar")} widthClassName="max-w-md">
       <div className="space-y-5">
         <div className="flex items-end gap-2">
           <div className="flex-1">
             <Input
-              label="Lavozim nomi"
-              placeholder="Masalan, Hovli farroshi"
+              label={tr("Lavozim nomi")}
+              placeholder={tr("Masalan, Hovli farroshi")}
               value={name}
               onChange={(e) => {
                 setName(e.target.value);
@@ -89,16 +91,16 @@ export function PositionsModal({
             />
           </div>
           <Button type="button" onClick={handleCreate} loading={createMutation.isPending}>
-            Yaratish
+            {tr("Yaratish")}
           </Button>
         </div>
 
         <div>
-          <span className="mb-2 block text-sm font-medium text-[var(--color-text)]">Mavjud lavozimlar</span>
+          <span className="mb-2 block text-sm font-medium text-[var(--color-text)]">{tr("Mavjud lavozimlar")}</span>
           {!positions ? (
-            <p className="text-xs text-[var(--color-text-muted)]">Yuklanmoqda...</p>
+            <p className="text-xs text-[var(--color-text-muted)]">{tr("Yuklanmoqda...")}</p>
           ) : positions.length === 0 ? (
-            <p className="text-xs text-[var(--color-text-muted)]">Hozircha lavozim yo&apos;q — yuqoridan yarating</p>
+            <p className="text-xs text-[var(--color-text-muted)]">{tr("Hozircha lavozim yo'q — yuqoridan yarating")}</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {positions.map((position) => {
@@ -119,7 +121,7 @@ export function PositionsModal({
                         : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]",
                     )}
                   >
-                    {position.name}
+                    {tr(position.name)}
                   </button>
                 );
               })}
@@ -129,7 +131,7 @@ export function PositionsModal({
 
         <div className="flex justify-end pt-1">
           <Button type="button" variant="secondary" onClick={handleClose}>
-            Yopish
+            {tr("Yopish")}
           </Button>
         </div>
       </div>

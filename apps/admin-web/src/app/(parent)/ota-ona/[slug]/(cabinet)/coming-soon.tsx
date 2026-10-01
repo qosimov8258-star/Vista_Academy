@@ -1,12 +1,14 @@
 "use client";
 
 import styles from "../parent.module.css";
+import { useTr } from "@/i18n/tr";
 
 /**
  * Hali tayyor bo'lmagan bo'lim. Bo'sh ekran o'rniga nima kutilayotganini
  * aytadi — ota-ona bosgan joyi ishlamayapti deb o'ylamasligi kerak.
  */
 export function ComingSoon({ title, description }: { title: string; description: string }) {
+  const tr = useTr();
   return (
     <div className="mx-auto flex w-full max-w-[520px] flex-col items-center px-6 pt-[20vh] text-center">
       <div className={styles.float}>
@@ -26,12 +28,12 @@ export function ComingSoon({ title, description }: { title: string; description:
         </div>
 
         <span className="mt-5 inline-flex items-center rounded-full bg-[var(--p-sun)]/18 px-3 py-1.5 text-[12px] font-bold uppercase tracking-[0.07em] text-[var(--p-sun-ink)]">
-          Tez orada
+          {tr("Tez orada")}
         </span>
         <h1 className="mt-3 text-[26px] font-extrabold leading-tight tracking-[-0.02em] text-[var(--p-ink)]">
-          {title}
+          {tr(title)}
         </h1>
-      <p className="mt-2.5 max-w-[300px] text-[15.5px] leading-relaxed text-[var(--p-muted)]">{description}</p>
+      <p className="mt-2.5 max-w-[300px] text-[15.5px] leading-relaxed text-[var(--p-muted)]">{tr(description)}</p>
     </div>
   );
 }

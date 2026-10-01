@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
 import { CheckIcon, CloseIcon } from "@/components/ui/icons";
+import { useTr } from "@/i18n/tr";
 
 export interface ToastState {
   type: "success" | "error";
@@ -12,6 +13,7 @@ export interface ToastState {
 
 /** Ekran burchagidan chiqadigan qisqa muddatli xabar — masalan "Saqlash" tasdiqlanganda. */
 export function Toast({ toast, onDismiss }: { toast: ToastState | null; onDismiss: () => void }) {
+  const tr = useTr();
   useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(onDismiss, 2600);
@@ -30,11 +32,11 @@ export function Toast({ toast, onDismiss }: { toast: ToastState | null; onDismis
         )}
       >
         {toast.type === "success" && <CheckIcon className="h-4 w-4 shrink-0" />}
-        <span>{toast.message}</span>
+        <span>{tr(toast.message)}</span>
         <button
           type="button"
           onClick={onDismiss}
-          aria-label="Xabarni yopish"
+          aria-label={tr("Xabarni yopish")}
           className="ml-1 flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded-full opacity-80 hover:opacity-100"
         >
           <CloseIcon className="h-3.5 w-3.5" />

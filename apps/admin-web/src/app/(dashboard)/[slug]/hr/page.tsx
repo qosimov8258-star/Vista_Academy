@@ -20,6 +20,7 @@ import { GeneratePayrollModal } from "@/features/hr/generate-payroll-modal";
 import { EditSalarySchemeModal } from "@/features/hr/edit-salary-scheme-modal";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { canWriteMoney } from "@/lib/permissions";
+import { useTr } from "@/i18n/tr";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 
@@ -40,6 +41,7 @@ const PAYROLL_STATUS_LABEL: Record<PayrollEntry["status"], string> = {
 };
 
 export default function HrPage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -128,10 +130,10 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
-            Ish haqi (HR)
+            {tr("Ish haqi (HR)")}
           </h1>
           <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">
-            Xodimlar smenalari va ish haqi hisob-kitobi
+            {tr("Xodimlar smenalari va ish haqi hisob-kitobi")}
           </p>
         </div>
       </div>
@@ -140,7 +142,7 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
 
       <Card className="flex flex-col gap-3 p-5 sm:flex-row sm:items-end">
         <div className="block">
-          <span className="mb-2 block text-[13px] font-medium text-[var(--color-text)]">Davr</span>
+          <span className="mb-2 block text-[13px] font-medium text-[var(--color-text)]">{tr("Davr")}</span>
           <input
             type="month"
             value={period}
@@ -149,15 +151,15 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
           />
         </div>
         <Select
-          label="Xodim (smenalar uchun filtr)"
+          label={tr("Xodim (smenalar uchun filtr)")}
           value={employeeFilter}
           onChange={(e) => setEmployeeFilter(e.target.value)}
           className="sm:max-w-xs"
         >
-          <option value="">Barcha xodimlar</option>
+          <option value="">{tr("Barcha xodimlar")}</option>
           {employeesQuery.data?.map((employee) => (
             <option key={employee.id} value={employee.id}>
-              {employee.fullName}
+              {tr(employee.fullName)}
             </option>
           ))}
         </Select>
@@ -165,7 +167,7 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
 
       <Card className="overflow-hidden">
         <CardHeader>
-          <CardTitle>Xodimlar va maosh sxemasi</CardTitle>
+          <CardTitle>{tr("Xodimlar va maosh sxemasi")}</CardTitle>
         </CardHeader>
         <CardBody className="p-0">
           {employeesQuery.isLoading ? (
@@ -174,22 +176,22 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
             </div>
           ) : !employeesQuery.data || employeesQuery.data.length === 0 ? (
             <div className="px-5 py-5 sm:px-6">
-              <EmptyState title="Xodim topilmadi" />
+              <EmptyState title={tr("Xodim topilmadi")} />
             </div>
           ) : (
             <ul className="divide-y divide-[var(--color-separator)]">
               {employeesQuery.data.map((employee) => (
                 <li key={employee.id} className="flex flex-col items-start gap-3 px-5 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-6">
                   <div className="min-w-0">
-                    <p className="truncate text-[14px] font-medium text-[var(--color-text)]">{employee.fullName}</p>
-                    <p className="text-[12.5px] text-[var(--color-text-muted)]">{employee.position}</p>
-                    {absenceNote(absenceByEmployee.get(employee.id)) && (
-                      <p className="text-[12.5px] text-[var(--color-danger)]">{absenceNote(absenceByEmployee.get(employee.id))}</p>
+                    <p className="truncate text-[14px] font-medium text-[var(--color-text)]">{tr(employee.fullName)}</p>
+                    <p className="text-[12.5px] text-[var(--color-text-muted)]">{tr(employee.position)}</p>
+                    {absenceNote(absenceByEmployee.get(employee.id), tr) && (
+                      <p className="text-[12.5px] text-[var(--color-danger)]">{absenceNote(absenceByEmployee.get(employee.id), tr)}</p>
                     )}
                   </div>
                   {canWrite && (
                     <Button size="sm" variant="outline" onClick={() => setSalarySchemeEmployee(employee)}>
-                      Maosh sxemasi
+                      {tr("Maosh sxemasi")}
                     </Button>
                   )}
                 </li>
@@ -201,8 +203,8 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
 
       <Card className="overflow-hidden">
         <CardHeader className="flex items-center justify-between gap-3">
-          <CardTitle>Ish smenalari</CardTitle>
-          {canWrite && <Button size="sm" onClick={() => setLogShiftOpen(true)}>+ Smena qo&apos;shish</Button>}
+          <CardTitle>{tr("Ish smenalari")}</CardTitle>
+          {canWrite && <Button size="sm" onClick={() => setLogShiftOpen(true)}>{tr("+ Smena qo'shish")}</Button>}
         </CardHeader>
         <CardBody className="p-0">
           {!period || shiftsQuery.isLoading ? (
@@ -211,23 +213,39 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
             </div>
           ) : shiftsQuery.isError ? (
             <div className="px-5 py-5 sm:px-6">
-              <ErrorState message={(shiftsQuery.error as Error).message} />
+              <ErrorState message={tr((shiftsQuery.error as Error).message)} />
             </div>
           ) : !shiftsQuery.data || shiftsQuery.data.length === 0 ? (
             <div className="px-5 py-5 sm:px-6">
               <EmptyState
-                title="Bu davr uchun smena topilmadi"
+                title={tr("Bu davr uchun smena topilmadi")}
                 icon={<ClockIcon className="h-[26px] w-[26px]" />}
               />
             </div>
           ) : (
+            <>
+            <ul className="divide-y divide-[var(--color-separator)] md:hidden">
+              {shiftsQuery.data.map((shift) => (
+                <li key={shift.id} className="space-y-1 px-5 py-3">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="min-w-0 truncate text-[14px] font-medium">{employeeName(shift.employeeId)}</span>
+                    <span className="shrink-0 text-[14px] font-medium tabular-nums">{tr(shift.hours)} {tr("soat")}</span>
+                  </div>
+                  <div className="flex items-baseline justify-between gap-3 text-[12.5px] text-[var(--color-text-muted)]">
+                    <span className="tabular-nums">{formatDate(shift.date)}</span>
+                    {shift.note && <span className="min-w-0 break-words text-right">{shift.note}</span>}
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <div className="hidden md:block">
             <DataTable>
               <THead>
                 <tr>
-                  <Th>Xodim</Th>
-                  <Th>Sana</Th>
-                  <Th numeric>Soat</Th>
-                  <Th>Izoh</Th>
+                  <Th>{tr("Xodim")}</Th>
+                  <Th>{tr("Sana")}</Th>
+                  <Th numeric>{tr("Soat")}</Th>
+                  <Th>{tr("Izoh")}</Th>
                 </tr>
               </THead>
               <TBody>
@@ -235,49 +253,51 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
                   <Tr key={shift.id}>
                     <Td className="font-medium">{employeeName(shift.employeeId)}</Td>
                     <Td className="tabular-nums text-[var(--color-text-muted)]">{formatDate(shift.date)}</Td>
-                    <Td numeric>{shift.hours}</Td>
+                    <Td numeric>{tr(shift.hours)}</Td>
                     <Td className="text-[var(--color-text-muted)]">{shift.note ?? "—"}</Td>
                   </Tr>
                 ))}
               </TBody>
             </DataTable>
+            </div>
+            </>
           )}
         </CardBody>
       </Card>
 
       <Card className="overflow-hidden">
         <CardHeader className="flex items-center justify-between gap-3">
-          <CardTitle>Ish haqi</CardTitle>
+          <CardTitle>{tr("Ish haqi")}</CardTitle>
           {canWrite && (
             <Button size="sm" onClick={() => setGeneratePayrollOpen(true)}>
-              + Ish haqi hisoblash
+              {tr("+ Ish haqi hisoblash")}
             </Button>
           )}
         </CardHeader>
         {payrollSummaryQuery.data && payrollSummaryQuery.data.totals.entries > 0 && (
           <div className="grid grid-cols-2 gap-px border-b border-[var(--color-separator)] bg-[var(--color-separator)] sm:grid-cols-4">
             <div className="bg-[var(--color-surface)] px-5 py-3.5 sm:px-6">
-              <p className="text-[12px] font-medium text-[var(--color-text-muted)]">Umumiy fond</p>
+              <p className="text-[12px] font-medium text-[var(--color-text-muted)]">{tr("Umumiy fond")}</p>
               <p className="mt-1 text-[15px] font-medium tabular-nums text-[var(--color-text)]">
                 {formatMoney(payrollSummaryQuery.data.totals.total)}
               </p>
             </div>
             <div className="bg-[var(--color-surface)] px-5 py-3.5 sm:px-6">
-              <p className="text-[12px] font-medium text-[var(--color-text-muted)]">To&apos;langan</p>
+              <p className="text-[12px] font-medium text-[var(--color-text-muted)]">{tr("To'langan")}</p>
               <p className="mt-1 text-[15px] font-medium tabular-nums text-[var(--color-success)]">
                 {formatMoney(payrollSummaryQuery.data.totals.paid)}
               </p>
             </div>
             <div className="bg-[var(--color-surface)] px-5 py-3.5 sm:px-6">
-              <p className="text-[12px] font-medium text-[var(--color-text-muted)]">To&apos;lanmagan</p>
+              <p className="text-[12px] font-medium text-[var(--color-text-muted)]">{tr("To'lanmagan")}</p>
               <p className="mt-1 text-[15px] font-medium tabular-nums text-[var(--color-danger)]">
                 {formatMoney(payrollSummaryQuery.data.totals.unpaid)}
               </p>
             </div>
             <div className="bg-[var(--color-surface)] px-5 py-3.5 sm:px-6">
-              <p className="text-[12px] font-medium text-[var(--color-text-muted)]">Yozuvlar soni</p>
+              <p className="text-[12px] font-medium text-[var(--color-text-muted)]">{tr("Yozuvlar soni")}</p>
               <p className="mt-1 text-[15px] font-medium tabular-nums text-[var(--color-text)]">
-                {payrollSummaryQuery.data.totals.entries}
+                {tr(payrollSummaryQuery.data.totals.entries)}
               </p>
             </div>
           </div>
@@ -289,29 +309,86 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
             </div>
           ) : payrollQuery.isError ? (
             <div className="px-5 py-5 sm:px-6">
-              <ErrorState message={(payrollQuery.error as Error).message} />
+              <ErrorState message={tr((payrollQuery.error as Error).message)} />
             </div>
           ) : !payrollQuery.data || payrollQuery.data.data.length === 0 ? (
             <div className="px-5 py-5 sm:px-6">
               <EmptyState
-                title="Bu davr uchun ish haqi hisoblanmagan"
+                title={tr("Bu davr uchun ish haqi hisoblanmagan")}
                 icon={<WalletIcon className="h-[26px] w-[26px]" />}
               />
             </div>
           ) : (
             <>
+              <ul className="divide-y divide-[var(--color-separator)] md:hidden">
+                {payrollQuery.data.data.map((entry) => {
+                  const note = absenceNote(absenceByEmployee.get(entry.employeeId), tr);
+                  const rows: [string, string, string][] = [
+                    ["Asosiy", formatMoney(entry.baseAmount), ""],
+                    ["Mukofot", formatMoney(entry.bonusAmount), "text-[var(--color-success)]"],
+                    ["Jarima", formatMoney(entry.penaltyAmount), "text-[var(--color-danger)]"],
+                    ["Ushlab qolish", formatMoney(entry.deductionAmount), "text-[var(--color-danger)]"],
+                  ];
+                  return (
+                    <li key={entry.id} className="space-y-2.5 px-5 py-3.5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="break-words text-[14px] font-medium">
+                            {entry.employee?.fullName ?? employeeName(entry.employeeId)}
+                          </p>
+                          <p className="text-[12.5px] tabular-nums text-[var(--color-text-muted)]">{tr(entry.period)}</p>
+                          {note && <p className="text-[12px] text-[var(--color-danger)]">{note}</p>}
+                        </div>
+                        <Badge tone={entry.status === "PAID" ? "success" : "warning"}>
+                          {tr(PAYROLL_STATUS_LABEL[entry.status])}
+                        </Badge>
+                      </div>
+                      <dl className="space-y-1 text-[13px]">
+                        {rows.map(([label, value, tone]) => (
+                          <div key={label} className="flex items-baseline justify-between gap-3">
+                            <dt className="text-[var(--color-text-muted)]">{tr(label)}</dt>
+                            <dd className={`tabular-nums ${tone}`}>{value}</dd>
+                          </div>
+                        ))}
+                        <div className="flex items-baseline justify-between gap-3 border-t border-[var(--color-separator)] pt-1.5 text-[14px] font-semibold">
+                          <dt>{tr("Jami")}</dt>
+                          <dd className="tabular-nums">{formatMoney(entry.totalAmount)}</dd>
+                        </div>
+                        {entry.paidAt && (
+                          <div className="flex items-baseline justify-between gap-3">
+                            <dt className="text-[var(--color-text-muted)]">{tr("To'langan sana")}</dt>
+                            <dd className="tabular-nums">{formatDate(entry.paidAt)}</dd>
+                          </div>
+                        )}
+                      </dl>
+                      {canWrite && entry.status === "DRAFT" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full"
+                          loading={markPaidMutation.isPending && markPaidMutation.variables === entry.id}
+                          onClick={() => markPaidMutation.mutate(entry.id)}
+                        >
+                          {tr("To'landi deb belgilash")}
+                        </Button>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+              <div className="hidden md:block">
               <DataTable className="min-w-[880px]">
                 <THead>
                   <tr>
-                    <Th>Xodim</Th>
-                    <Th>Davr</Th>
-                    <Th numeric>Asosiy</Th>
-                    <Th numeric>Mukofot</Th>
-                    <Th numeric>Jarima</Th>
-                    <Th numeric>Ushlab qolish</Th>
-                    <Th numeric>Jami</Th>
-                    <Th>Holat</Th>
-                    <Th>To&apos;langan sana</Th>
+                    <Th>{tr("Xodim")}</Th>
+                    <Th>{tr("Davr")}</Th>
+                    <Th numeric>{tr("Asosiy")}</Th>
+                    <Th numeric>{tr("Mukofot")}</Th>
+                    <Th numeric>{tr("Jarima")}</Th>
+                    <Th numeric>{tr("Ushlab qolish")}</Th>
+                    <Th numeric>{tr("Jami")}</Th>
+                    <Th>{tr("Holat")}</Th>
+                    <Th>{tr("To'langan sana")}</Th>
                     <Th></Th>
                   </tr>
                 </THead>
@@ -320,13 +397,13 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
                     <Tr key={entry.id}>
                       <Td className="font-medium">
                         {entry.employee?.fullName ?? employeeName(entry.employeeId)}
-                        {absenceNote(absenceByEmployee.get(entry.employeeId)) && (
+                        {absenceNote(absenceByEmployee.get(entry.employeeId), tr) && (
                           <div className="text-[12px] font-normal text-[var(--color-danger)]">
-                            {absenceNote(absenceByEmployee.get(entry.employeeId))}
+                            {absenceNote(absenceByEmployee.get(entry.employeeId), tr)}
                           </div>
                         )}
                       </Td>
-                      <Td className="tabular-nums text-[var(--color-text-muted)]">{entry.period}</Td>
+                      <Td className="tabular-nums text-[var(--color-text-muted)]">{tr(entry.period)}</Td>
                       <Td numeric className="text-[var(--color-text-muted)]">
                         {formatMoney(entry.baseAmount)}
                       </Td>
@@ -336,7 +413,7 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
                       <Td numeric className="font-medium">{formatMoney(entry.totalAmount)}</Td>
                       <Td>
                         <Badge tone={entry.status === "PAID" ? "success" : "warning"}>
-                          {PAYROLL_STATUS_LABEL[entry.status]}
+                          {tr(PAYROLL_STATUS_LABEL[entry.status])}
                         </Badge>
                       </Td>
                       <Td className="tabular-nums text-[var(--color-text-muted)]">
@@ -350,7 +427,7 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
                             loading={markPaidMutation.isPending && markPaidMutation.variables === entry.id}
                             onClick={() => markPaidMutation.mutate(entry.id)}
                           >
-                            To&apos;landi deb belgilash
+                            {tr("To'landi deb belgilash")}
                           </Button>
                         )}
                       </Td>
@@ -358,18 +435,19 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
                   ))}
                 </TBody>
               </DataTable>
+              </div>
 
               {markPaidMutation.isError && (
                 <div className="px-5 py-3.5 text-[13px] text-[var(--color-danger)] sm:px-6">
                   {markPaidMutation.error instanceof ApiError
                     ? markPaidMutation.error.message
-                    : "Kutilmagan xatolik yuz berdi"}
+                    : tr("Kutilmagan xatolik yuz berdi")}
                 </div>
               )}
 
               <div className="hairline flex items-center justify-between gap-3 border-t border-[var(--color-separator)] px-5 py-3.5 text-[12.5px] text-[var(--color-text-muted)] sm:px-6">
                 <span className="tabular-nums">
-                  Jami {payrollQuery.data.meta.total} ta, {payrollQuery.data.meta.page}-sahifa
+                  {tr("Jami")}{" "}{tr(payrollQuery.data.meta.total)} {tr("ta,")}{" "}{tr(payrollQuery.data.meta.page)}{tr("-sahifa")}
                 </span>
                 <div className="flex gap-2">
                   <Button
@@ -378,7 +456,7 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
                     disabled={payrollPage <= 1}
                     onClick={() => setPayrollPage((p) => p - 1)}
                   >
-                    Oldingi
+                    {tr("Oldingi")}
                   </Button>
                   <Button
                     variant="outline"
@@ -386,7 +464,7 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
                     disabled={payrollPage * payrollQuery.data.meta.limit >= payrollQuery.data.meta.total}
                     onClick={() => setPayrollPage((p) => p + 1)}
                   >
-                    Keyingi
+                    {tr("Keyingi")}
                   </Button>
                 </div>
               </div>

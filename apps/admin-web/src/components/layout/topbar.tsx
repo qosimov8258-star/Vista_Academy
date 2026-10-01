@@ -12,6 +12,7 @@ import { isChef, isTeacher, receivesEmployeeNotifications } from "@/lib/permissi
 import { BellIcon } from "@/components/ui/icons";
 import { ArrowLeftIcon } from "@/components/ui/icons";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
+import { useTr } from "@/i18n/tr";
 
 /**
  * Yuqori panel faqat kontekstni ko'rsatadi — qaysi tashkilotdasiz.
@@ -24,6 +25,7 @@ import { LanguageSwitcher } from "@/components/ui/language-switcher";
  * takrorlanmagani uchun (qarang: Sidebar).
  */
 export function Topbar({ slug }: { slug: string }) {
+  const tr = useTr();
   const { user } = useAuth();
   const showNotifications = receivesEmployeeNotifications(user?.role);
   // Oshpazda telefonda pastki panel bor: menyu tugmasi va qo'ng'iroqcha takrorlanmaydi
@@ -70,7 +72,7 @@ export function Topbar({ slug }: { slug: string }) {
         <button
           type="button"
           onClick={() => window.dispatchEvent(new Event("open-mobile-menu"))}
-          aria-label="Menyuni ochish"
+          aria-label={tr("Menyuni ochish")}
           className="-ml-1 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--color-text)] transition-colors hover:bg-black/[0.05] md:hidden"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" className="h-6 w-6" aria-hidden="true">
@@ -82,7 +84,7 @@ export function Topbar({ slug }: { slug: string }) {
         <button
           type="button"
           onClick={goBack}
-          aria-label="Orqaga"
+          aria-label={tr("Orqaga")}
           className="-ml-1 flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[var(--accent-soft)] text-[var(--accent-soft-ink)] transition-transform active:scale-90 md:hidden"
         >
           <ArrowLeftIcon className="h-5 w-5" />
@@ -97,7 +99,7 @@ export function Topbar({ slug }: { slug: string }) {
             </span>
           )}
           <p className="truncate text-[17px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
-            {user.organizationName}
+            {tr(user.organizationName)}
           </p>
         </div>
       )}

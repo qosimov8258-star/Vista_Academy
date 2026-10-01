@@ -19,6 +19,7 @@ import { MarkSentModal } from "@/features/notifications/mark-sent-modal";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { isCallOperatorUser } from "@/lib/employee-position";
 import { canWriteOperational } from "@/lib/permissions";
+import { useTr } from "@/i18n/tr";
 
 const eventTypeLabels: Record<NotificationEventType, string> = {
   CHILD_ABSENT: "Bola kelmadi",
@@ -46,6 +47,7 @@ const statusFilters: { value: NotificationStatus | "ALL"; label: string }[] = [
 ];
 
 export default function NotificationsPage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<NotificationStatus | "ALL">("ALL");
@@ -74,10 +76,9 @@ export default function NotificationsPage({ params }: { params: Promise<{ slug: 
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-3 md:items-center">
         <div className="min-w-0">
-          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">Bildirishnomalar</h1>
+          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">{tr("Bildirishnomalar")}</h1>
           <p className="hidden text-[14px] text-[var(--color-text-muted)] md:block">
-            Ota-onalarga yuborilgan yoki yuborilishi kerak bo&apos;lgan xabarlar jurnali — haqiqiy SMS/Telegram
-            yuborilmaydi, faqat yozib boriladi. Xabar berilgach, tegishli yozuvni &quot;Yuborildi&quot; deb belgilang.
+            {tr("Ota-onalarga yuborilgan yoki yuborilishi kerak bo'lgan xabarlar jurnali — haqiqiy SMS/Telegram yuborilmaydi, faqat yozib boriladi. Xabar berilgach, tegishli yozuvni \"Yuborildi\" deb belgilang.")}
           </p>
         </div>
         {canWrite && (
@@ -85,30 +86,29 @@ export default function NotificationsPage({ params }: { params: Promise<{ slug: 
             {/* Mobilda: "Ommaviy xabar" yuqori panelda, "+ Yangi yozuv" sarlavha qatorining o'ngida */}
             <TopbarAction>
               <Button variant="outline" onClick={() => setBroadcastOpen(true)}>
-                Ommaviy xabar
+                {tr("Ommaviy xabar")}
               </Button>
             </TopbarAction>
             <div className="shrink-0 md:hidden">
               <Button className="!h-auto !py-2" onClick={() => setCreateOpen(true)}>
                 <span className="text-center leading-tight">
-                  + Yangi
+                  {tr("+ Yangi")}
                   <br />
-                  yozuv
+                  {tr("yozuv")}
                 </span>
               </Button>
             </div>
             <div className="hidden gap-2 md:flex">
               <Button variant="outline" onClick={() => setBroadcastOpen(true)}>
-                Ommaviy xabar
+                {tr("Ommaviy xabar")}
               </Button>
-              <Button onClick={() => setCreateOpen(true)}>+ Yangi yozuv</Button>
+              <Button onClick={() => setCreateOpen(true)}>{tr("+ Yangi yozuv")}</Button>
             </div>
           </>
         )}
       </div>
       <p className="-mt-3 text-[14px] text-[var(--color-text-muted)] md:hidden">
-        Ota-onalarga yuborilgan yoki yuborilishi kerak bo&apos;lgan xabarlar jurnali — haqiqiy SMS/Telegram
-        yuborilmaydi, faqat yozib boriladi. Xabar berilgach, tegishli yozuvni &quot;Yuborildi&quot; deb belgilang.
+        {tr("Ota-onalarga yuborilgan yoki yuborilishi kerak bo'lgan xabarlar jurnali — haqiqiy SMS/Telegram yuborilmaydi, faqat yozib boriladi. Xabar berilgach, tegishli yozuvni \"Yuborildi\" deb belgilang.")}
       </p>
 
       {!canWrite && <ViewOnlyNote role={user?.role} />}
@@ -121,7 +121,7 @@ export default function NotificationsPage({ params }: { params: Promise<{ slug: 
             variant={status === f.value ? "primary" : "tertiary"}
             onClick={() => setStatusFilter(f.value)}
           >
-            {f.label}
+            {tr(f.label)}
           </Button>
         ))}
       </div>
@@ -129,40 +129,72 @@ export default function NotificationsPage({ params }: { params: Promise<{ slug: 
       {notificationsQuery.isLoading ? (
         <LoadingState />
       ) : notificationsQuery.isError ? (
-        <ErrorState message={(notificationsQuery.error as Error).message} />
+        <ErrorState message={tr((notificationsQuery.error as Error).message)} />
       ) : !notificationsQuery.data || notificationsQuery.data.data.length === 0 ? (
         <EmptyState
-          title="Bildirishnoma topilmadi"
-          description={canWrite ? "Yangi yozuv qo'shish uchun tugmani bosing" : undefined}
+          title={tr("Bildirishnoma topilmadi")}
+          description={canWrite ? tr("Yangi yozuv qo'shish uchun tugmani bosing") : undefined}
         />
       ) : (
         <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* Telefonda jadval o'rniga kartochkalar — yon tomonga surish kerak bo'lmaydi */}
+          <ul className="divide-y divide-[var(--color-separator)] md:hidden">
+            {notificationsQuery.data.data.map((n) => (
+              <li key={n.id} className="space-y-2 px-4 py-3.5">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-[14.5px] font-semibold text-[var(--color-text)]">{tr(eventTypeLabels[n.eventType])}</p>
+                  <Badge tone={n.status === "SENT" ? "success" : "warning"}>
+                    {n.status === "SENT" ? tr("Yuborildi") : tr("Kutilmoqda")}
+                  </Badge>
+                </div>
+                <div className="text-[13px] text-[var(--color-text-muted)]">
+                  <span className="font-medium text-[var(--color-text)]">{tr(n.recipientName)}</span>
+                  {n.recipientContact && <span> · {n.recipientContact}</span>}
+                </div>
+                {n.child && (
+                  <p className="text-[13px] text-[var(--color-text-muted)]">
+                    {tr("Bola:")} {n.child.fullName}
+                  </p>
+                )}
+                {n.message && <p className="text-[13px] text-[var(--color-text-muted)]">{tr(n.message)}</p>}
+                <p className="text-[12px] tabular-nums text-[var(--color-text-muted)]">
+                  {formatDateTime(n.createdAt)}
+                  {n.sentAt && ` · ${tr("Yuborildi")}: ${formatDateTime(n.sentAt)}${n.channel ? ` (${tr(channelLabels[n.channel])})` : ""}`}
+                </p>
+                {canWrite && n.status === "PENDING" && (
+                  <Button size="sm" variant="outline" onClick={() => setMarkSentTarget(n)}>
+                    {tr("Yuborildi deb belgilash")}
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full text-left text-sm">
               <thead className="hairline border-b border-[var(--color-separator)] bg-[var(--color-surface-sunken)] text-xs uppercase text-[var(--color-text-muted)]">
                 <tr>
-                  <th className="px-5 py-3 font-medium">Hodisa</th>
-                  <th className="px-5 py-3 font-medium">Qabul qiluvchi</th>
-                  <th className="px-5 py-3 font-medium">Xabar</th>
-                  <th className="px-5 py-3 font-medium">Bola</th>
-                  <th className="px-5 py-3 font-medium">Holat</th>
-                  <th className="px-5 py-3 font-medium">Yaratildi</th>
-                  <th className="px-5 py-3 font-medium">Yuborildi</th>
+                  <th className="px-5 py-3 font-medium">{tr("Hodisa")}</th>
+                  <th className="px-5 py-3 font-medium">{tr("Qabul qiluvchi")}</th>
+                  <th className="px-5 py-3 font-medium">{tr("Xabar")}</th>
+                  <th className="px-5 py-3 font-medium">{tr("Bola")}</th>
+                  <th className="px-5 py-3 font-medium">{tr("Holat")}</th>
+                  <th className="px-5 py-3 font-medium">{tr("Yaratildi")}</th>
+                  <th className="px-5 py-3 font-medium">{tr("Yuborildi")}</th>
                   {canWrite && <th className="px-5 py-3 font-medium" />}
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--color-separator)]">
                 {notificationsQuery.data.data.map((n) => (
                   <tr key={n.id} className="hover:bg-[var(--color-surface-hover)]">
-                    <td className="px-5 py-3 text-[var(--color-text)]">{eventTypeLabels[n.eventType]}</td>
+                    <td className="px-5 py-3 text-[var(--color-text)]">{tr(eventTypeLabels[n.eventType])}</td>
                     <td className="px-5 py-3 text-[var(--color-text-muted)]">
-                      <div className="font-medium text-[var(--color-text)]">{n.recipientName}</div>
-                      {n.recipientContact && <div className="text-xs">{n.recipientContact}</div>}
-                      {n.child && <div className="text-xs">Bola: {n.child.fullName}</div>}
+                      <div className="font-medium text-[var(--color-text)]">{tr(n.recipientName)}</div>
+                      {n.recipientContact && <div className="text-xs">{tr(n.recipientContact)}</div>}
+                      {n.child && <div className="text-xs">{tr("Bola:")}{" "}{tr(n.child.fullName)}</div>}
                     </td>
                     <td className="px-5 py-3 text-[var(--color-text-muted)]">
-                      <span className="block max-w-xs truncate" title={n.message}>
-                        {n.message}
+                      <span className="block max-w-xs truncate" title={tr(n.message)}>
+                        {tr(n.message)}
                       </span>
                     </td>
                     <td className="px-5 py-3 text-[var(--color-text-muted)]">
@@ -172,7 +204,7 @@ export default function NotificationsPage({ params }: { params: Promise<{ slug: 
                           n.child.fullName
                         ) : (
                           <Link href={`/${slug}/children/${n.child.id}`} className="text-[var(--color-primary)] hover:underline">
-                            {n.child.fullName}
+                            {tr(n.child.fullName)}
                           </Link>
                         )
                       ) : (
@@ -189,7 +221,7 @@ export default function NotificationsPage({ params }: { params: Promise<{ slug: 
                       {n.sentAt ? (
                         <>
                           {formatDateTime(n.sentAt)}
-                          {n.channel && <div className="text-xs">{channelLabels[n.channel]}</div>}
+                          {n.channel && <div className="text-xs">{tr(channelLabels[n.channel])}</div>}
                         </>
                       ) : (
                         "—"
@@ -199,7 +231,7 @@ export default function NotificationsPage({ params }: { params: Promise<{ slug: 
                       <td className="px-5 py-3">
                         {n.status === "PENDING" && (
                           <Button size="sm" variant="outline" onClick={() => setMarkSentTarget(n)}>
-                            Yuborildi deb belgilash
+                            {tr("Yuborildi deb belgilash")}
                           </Button>
                         )}
                       </td>
@@ -212,11 +244,11 @@ export default function NotificationsPage({ params }: { params: Promise<{ slug: 
 
           <div className="flex items-center justify-between border-t border-[var(--color-border)] px-5 py-3 text-sm text-[var(--color-text-muted)]">
             <span>
-              Jami {notificationsQuery.data.meta.total} ta, {notificationsQuery.data.meta.page}-sahifa
+              {tr("Jami")}{" "}{tr(notificationsQuery.data.meta.total)} {tr("ta,")}{" "}{tr(notificationsQuery.data.meta.page)}{tr("-sahifa")}
             </span>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-                Oldingi
+                {tr("Oldingi")}
               </Button>
               <Button
                 variant="outline"
@@ -224,7 +256,7 @@ export default function NotificationsPage({ params }: { params: Promise<{ slug: 
                 disabled={page * notificationsQuery.data.meta.limit >= notificationsQuery.data.meta.total}
                 onClick={() => setPage((p) => p + 1)}
               >
-                Keyingi
+                {tr("Keyingi")}
               </Button>
             </div>
           </div>

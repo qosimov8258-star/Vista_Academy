@@ -11,6 +11,7 @@ import { Modal } from "@/components/ui/modal";
 import { PhoneIcon } from "@/components/ui/icons";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { CALL_KIND_LABEL, RELATION_LABEL, todayTashkent, type CallItem, type CallKind, type CallsResult } from "./shared";
+import { useTr } from "@/i18n/tr";
 
 /** Kartaning chap chizig'i: qo'ng'iroq turini bir qarashda ajratish uchun */
 const KIND_BAR: Record<CallKind, string> = {
@@ -33,6 +34,7 @@ const isNoAnswer = (note: string | null) => !!note && note.startsWith("Aloqa qil
 
 /** Bugun qo'ng'iroq qilish ro'yxati. `limit` berilsa faqat tepadagi ochiq qo'ng'iroqlar ko'rsatiladi (bosh sahifa uchun). */
 export function CallsList({ slug, limit, filter }: { slug: string; limit?: number; filter?: CallKind | "ALL" }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const date = todayTashkent();
   const [target, setTarget] = useState<CallItem | null>(null);
@@ -45,7 +47,7 @@ export function CallsList({ slug, limit, filter }: { slug: string; limit?: numbe
     refetchInterval: 60_000,
   });
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["desk-calls", slug] });
-  const fail = (err: unknown) => setError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+  const fail = (err: unknown) => setError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
 
   const done = useMutation({
     mutationFn: ({ item, noAnswer }: { item: CallItem; noAnswer?: boolean }) =>
@@ -73,7 +75,7 @@ export function CallsList({ slug, limit, filter }: { slug: string; limit?: numbe
   });
 
   if (query.isLoading) return <LoadingState rows={3} />;
-  if (query.isError) return <ErrorState message={(query.error as Error).message} />;
+  if (query.isError) return <ErrorState message={tr((query.error as Error).message)} />;
 
   let items = (query.data?.items ?? []).filter((i) => !filter || filter === "ALL" || i.kind === filter);
   if (limit) items = items.filter((i) => !i.done).slice(0, limit);
@@ -82,10 +84,10 @@ export function CallsList({ slug, limit, filter }: { slug: string; limit?: numbe
 
   return (
     <>
-      {error && <div className="mb-3 rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">{error}</div>}
+      {error && <div className="mb-3 rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">{tr(error)}</div>}
       {items.length === 0 ? (
         <Card>
-          <EmptyState title={limit ? "Bugun qo'ng'iroq qilish kerak emas" : "Ro'yxat bo'sh"} />
+          <EmptyState title={limit ? tr("Bugun qo'ng'iroq qilish kerak emas") : tr("Ro'yxat bo'sh")} />
         </Card>
       ) : (
         <ul className="space-y-3">
@@ -96,11 +98,11 @@ export function CallsList({ slug, limit, filter }: { slug: string; limit?: numbe
               >
                 <div className="min-w-0">
                   <p className="flex flex-wrap items-center gap-2 text-[16px] font-semibold tracking-[-0.01em] text-[var(--color-text)]">
-                    {item.title}
-                    <Badge tone={KIND_TONE[item.kind]}>{CALL_KIND_LABEL[item.kind]}</Badge>
-                    {item.badge && <Badge tone="danger">{item.badge}</Badge>}
+                    {tr(item.title)}
+                    <Badge tone={KIND_TONE[item.kind]}>{tr(CALL_KIND_LABEL[item.kind])}</Badge>
+                    {item.badge && <Badge tone="danger">{tr(item.badge)}</Badge>}
                   </p>
-                  <p className="mt-0.5 text-[13px] text-[var(--color-text-muted)]">{item.subtitle}</p>
+                  <p className="mt-0.5 text-[13px] text-[var(--color-text-muted)]">{tr(item.subtitle)}</p>
                   <div className="mt-2.5 flex flex-col items-start gap-2">
                     {(item.contacts && item.contacts.length > 0
                       ? item.contacts
@@ -120,18 +122,18 @@ export function CallsList({ slug, limit, filter }: { slug: string; limit?: numbe
                             className="inline-flex min-h-10 items-center gap-2 rounded-full bg-[var(--accent-soft)] px-4 py-2 text-[15px] font-semibold tabular-nums text-[var(--accent-soft-ink)] transition-colors hover:bg-[var(--accent-soft-icon)]/15 active:scale-[0.98]"
                           >
                             <PhoneIcon className="h-4 w-4 text-[var(--accent-soft-icon)]" />
-                            {c.phone}
+                            {tr(c.phone)}
                           </a>
                         )}
                       </div>
                     ))}
                     {!item.phone && !(item.contacts && item.contacts.length > 0) && (
-                      <span className="text-[13px] text-[var(--color-warning)]">Ota-ona raqami kiritilmagan</span>
+                      <span className="text-[13px] text-[var(--color-warning)]">{tr("Ota-ona raqami kiritilmagan")}</span>
                     )}
                   </div>
                   {item.done && (
                     <p className={`text-[12.5px] ${isNoAnswer(item.doneNote) ? "text-[var(--color-warning)]" : "text-[var(--color-success)]"}`}>
-                      {isNoAnswer(item.doneNote) ? "Aloqa bo'lmadi" : "Qo'ng'iroq qilindi"}
+                      {isNoAnswer(item.doneNote) ? tr("Aloqa bo'lmadi") : tr("Qo'ng'iroq qilindi")}
                       {item.calledByName ? ` · ${item.calledByName}` : ""}
                       {item.doneNote && !isNoAnswer(item.doneNote) ? ` · ${item.doneNote}` : ""}
                     </p>
@@ -139,12 +141,12 @@ export function CallsList({ slug, limit, filter }: { slug: string; limit?: numbe
                 </div>
                 {item.done ? (
                   <Button size="sm" variant="outline" loading={undo.isPending && undo.variables?.subjectId === item.subjectId} onClick={() => undo.mutate(item)}>
-                    Qaytarish
+                    {tr("Qaytarish")}
                   </Button>
                 ) : (
                   <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
                     <Button size="sm" onClick={() => { setTarget(item); setNote(""); }}>
-                      Qo&apos;ng&apos;iroq qildim
+                      {tr("Qo'ng'iroq qildim")}
                     </Button>
                     <Button
                       size="sm"
@@ -152,7 +154,7 @@ export function CallsList({ slug, limit, filter }: { slug: string; limit?: numbe
                       loading={done.isPending && done.variables?.noAnswer && done.variables.item.subjectId === item.subjectId}
                       onClick={() => done.mutate({ item, noAnswer: true })}
                     >
-                      Aloqa qila olmadim
+                      {tr("Aloqa qila olmadim")}
                     </Button>
                   </div>
                 )}
@@ -161,15 +163,15 @@ export function CallsList({ slug, limit, filter }: { slug: string; limit?: numbe
         </ul>
       )}
 
-      <Modal open={!!target} onClose={() => setTarget(null)} title={target ? `${target.title} — qo'ng'iroq natijasi` : ""}>
+      <Modal open={!!target} onClose={() => setTarget(null)} title={target ? tr("{0} — qo'ng'iroq natijasi", target.title) : ""}>
         <div className="space-y-4">
-          <Input label="Izoh (ixtiyoriy)" placeholder="Masalan: ertaga to'laydi" value={note} onChange={(e) => setNote(e.target.value)} autoFocus />
+          <Input label={tr("Izoh (ixtiyoriy)")} placeholder={tr("Masalan: ertaga to'laydi")} value={note} onChange={(e) => setNote(e.target.value)} autoFocus />
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setTarget(null)}>
-              Bekor qilish
+              {tr("Bekor qilish")}
             </Button>
             <Button loading={done.isPending} onClick={() => target && done.mutate({ item: target })}>
-              Saqlash
+              {tr("Saqlash")}
             </Button>
           </div>
         </div>

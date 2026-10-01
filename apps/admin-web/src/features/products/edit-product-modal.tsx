@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { PlusIcon, CloseIcon } from "@/components/ui/icons";
 import { prepareProductPhoto } from "@/lib/product-photo";
+import { useTr } from "@/i18n/tr";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
 
@@ -20,7 +21,7 @@ const schema = z.object({
   name: z.string().min(2, "Nomi kamida 2 belgi"),
   description: z.string().max(500, "Izoh 500 belgidan oshmasin").optional(),
   color: z.string().optional(),
-  priceCoins: z.coerce.number({ invalid_type_error: "Coin miqdorini kiriting" }).int().min(0, "0 dan kichik bo'lmasin"),
+  priceCoins: z.coerce.number({ invalid_type_error: "Yulduzcha miqdorini kiriting" }).int().min(0, "0 dan kichik bo'lmasin"),
   quantity: z.coerce.number({ invalid_type_error: "Sonini kiriting" }).int().min(0, "Soni 0 dan kichik bo'lmasin"),
 });
 
@@ -61,6 +62,7 @@ export function EditProductModal({
   branchId: string;
   product: Product;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
   const [slots, setSlots] = useState<Record<number, SlotState>>(() => initialSlots(product));
@@ -111,7 +113,7 @@ export function EditProductModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
@@ -151,7 +153,7 @@ export function EditProductModal({
   };
 
   return (
-    <Modal open={open} onClose={onClose} title="Tovarni tahrirlash">
+    <Modal open={open} onClose={onClose} title={tr("Tovarni tahrirlash")}>
       <form
         className="space-y-4"
         onSubmit={handleSubmit((values) => {
@@ -161,12 +163,12 @@ export function EditProductModal({
       >
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
 
         <div>
-          <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">Rasmlar</span>
+          <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">{tr("Rasmlar")}</span>
           <div className="flex gap-3">
             {IMAGE_SLOTS.map((position) => {
               const slot = slots[position];
@@ -191,7 +193,7 @@ export function EditProductModal({
                       <button
                         type="button"
                         onClick={() => removeImage(position)}
-                        aria-label="Rasmni olib tashlash"
+                        aria-label={tr("Rasmni olib tashlash")}
                         className="absolute -right-1.5 -top-1.5 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-[var(--color-danger)] text-white shadow-[var(--shadow-xs)]"
                       >
                         <CloseIcon className="h-3 w-3" />
@@ -224,14 +226,14 @@ export function EditProductModal({
               );
             })}
           </div>
-          {imageError && <p className="mt-1.5 text-[12.5px] text-[var(--color-danger)]">{imageError}</p>}
+          {imageError && <p className="mt-1.5 text-[12.5px] text-[var(--color-danger)]">{tr(imageError)}</p>}
         </div>
 
-        <Input label="Nomi" placeholder="Konstruktor to'plami" error={errors.name?.message} {...register("name")} />
+        <Input label={tr("Nomi")} placeholder={tr("Konstruktor to'plami")} error={errors.name?.message} {...register("name")} />
 
         <Textarea
-          label="Izoh"
-          placeholder="Nima uchun ekanligi haqida qisqacha (ixtiyoriy)"
+          label={tr("Izoh")}
+          placeholder={tr("Nima uchun ekanligi haqida qisqacha (ixtiyoriy)")}
           rows={2}
           error={errors.description?.message}
           {...register("description")}
@@ -239,18 +241,18 @@ export function EditProductModal({
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
-            label="Narxi (coin)"
+            label={tr("Narxi (yulduzcha)")}
             type="number"
             min={0}
             placeholder="0"
             error={errors.priceCoins?.message}
             {...register("priceCoins")}
           />
-          <Input label="Rangi" placeholder="Ixtiyoriy" error={errors.color?.message} {...register("color")} />
+          <Input label={tr("Rangi")} placeholder={tr("Ixtiyoriy")} error={errors.color?.message} {...register("color")} />
         </div>
 
         <Input
-          label="Soni"
+          label={tr("Soni")}
           type="number"
           min={0}
           placeholder="10"
@@ -260,14 +262,14 @@ export function EditProductModal({
 
         <div className="flex items-center justify-between gap-2 pt-2">
           <Button type="button" variant="dangerSoft" onClick={() => setDeleteOpen(true)}>
-            Tovarni o&apos;chirish
+            {tr("Tovarni o'chirish")}
           </Button>
           <div className="flex gap-2">
             <Button type="button" variant="outline" onClick={onClose}>
-              Bekor qilish
+              {tr("Bekor qilish")}
             </Button>
             <Button type="submit" loading={isSubmitting || mutation.isPending}>
-              Saqlash
+              {tr("Saqlash")}
             </Button>
           </div>
         </div>
@@ -276,14 +278,14 @@ export function EditProductModal({
       <ConfirmDialog
         open={deleteOpen}
         onClose={() => setDeleteOpen(false)}
-        title="Tovarni o'chirish"
-        confirmLabel="O'chirish"
+        title={tr("Tovarni o'chirish")}
+        confirmLabel={tr("O'chirish")}
         tone="danger"
         loading={deleteMutation.isPending}
-        error={deleteMutation.isError ? "Kutilmagan xatolik yuz berdi" : null}
+        error={deleteMutation.isError ? tr("Kutilmagan xatolik yuz berdi") : null}
         description={
           <>
-            <b className="text-[var(--color-text)]">{product.name}</b> do&apos;kondan butunlay o&apos;chiriladi.
+            <b className="text-[var(--color-text)]">{tr(product.name)}</b> {tr("do'kondan butunlay o'chiriladi.")}
           </>
         }
         onConfirm={() => deleteMutation.mutate()}

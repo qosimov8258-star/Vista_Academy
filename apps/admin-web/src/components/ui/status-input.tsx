@@ -1,5 +1,6 @@
 import { InputHTMLAttributes, forwardRef } from "react";
 import clsx from "clsx";
+import { useTr } from "@/i18n/tr";
 
 export type FieldStatus = "neutral" | "success" | "error";
 
@@ -17,9 +18,10 @@ const statusStyles: Record<FieldStatus, string> = {
 
 export const StatusInput = forwardRef<HTMLInputElement, StatusInputProps>(
   ({ label, error, status = "neutral", className, id, ...props }, ref) => {
+  const tr = useTr();
     return (
       <label className="block" htmlFor={id}>
-        {label && <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">{label}</span>}
+        {label && <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">{tr(label)}</span>}
         <input
           ref={ref}
           id={id}
@@ -30,7 +32,7 @@ export const StatusInput = forwardRef<HTMLInputElement, StatusInputProps>(
           )}
           {...props}
         />
-        {error && <span className="mt-1 block text-xs text-[#dc2626]">{error}</span>}
+        {error && <span className="mt-1 block text-xs text-[#dc2626]">{tr(error)}</span>}
       </label>
     );
   },

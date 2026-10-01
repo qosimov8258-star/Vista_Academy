@@ -16,6 +16,7 @@ import { CreateTenantUserModal } from "@/features/users/create-tenant-user-modal
 import { EditTenantUserModal } from "@/features/users/edit-tenant-user-modal";
 import { ROLE_LABEL, canManageUser, canManageUsers } from "@/lib/permissions";
 import { BuildingIcon, KeyIcon, LockIcon, PencilIcon, SearchIcon, TrashIcon, UnlockIcon } from "@/components/ui/icons";
+import { useTr } from "@/i18n/tr";
 
 /**
  * Har bir rol o'z rangida — ro'yxatda kim kimligi bir qarashda ko'rinadi,
@@ -82,6 +83,7 @@ function PersonRow({
   onToggleStatus: () => void;
   onDelete: () => void;
 }) {
+  const tr = useTr();
   const style = ROLE_STYLE[person.role];
 
   return (
@@ -95,18 +97,18 @@ function PersonRow({
 
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="whitespace-nowrap text-[14px] font-medium text-[var(--color-text)] md:truncate">{person.fullName}</span>
-          {isSelf && <Badge tone="neutral">Siz</Badge>}
-          {!person.isActive && <Badge tone="neutral">Nofaol</Badge>}
+          <span className="whitespace-nowrap text-[14px] font-medium text-[var(--color-text)] md:truncate">{tr(person.fullName)}</span>
+          {isSelf && <Badge tone="neutral">{tr("Siz")}</Badge>}
+          {!person.isActive && <Badge tone="neutral">{tr("Nofaol")}</Badge>}
         </div>
-        <p className="whitespace-nowrap text-[12.5px] text-[var(--color-text-muted)] md:truncate">{person.login}</p>
+        <p className="whitespace-nowrap text-[12.5px] text-[var(--color-text-muted)] md:truncate">{tr(person.login)}</p>
         <p className="whitespace-nowrap text-[12px] text-[var(--color-text-muted)]/80 md:truncate">
-          {person.lastLoginAt ? `Oxirgi kirish: ${formatDateTime(person.lastLoginAt)}` : "Hali kirmagan"}
+          {person.lastLoginAt ? `Oxirgi kirish: ${formatDateTime(person.lastLoginAt)}` : tr("Hali kirmagan")}
         </p>
       </div>
 
       <span className={`shrink-0 rounded-full px-2.5 py-1 text-[12px] font-medium ${style.chip}`}>
-        {ROLE_LABEL[person.role]}
+        {tr(ROLE_LABEL[person.role])}
       </span>
       <span className="block shrink-0 text-[12px] tabular-nums text-[var(--color-text-muted)] md:hidden lg:block">
         {formatDate(person.createdAt)}
@@ -114,7 +116,7 @@ function PersonRow({
 
       {canManage && (
         <div className="flex shrink-0 items-center gap-1">
-          <Button size="sm" variant="ghost" isIconOnly aria-label="Tahrirlash" title="Tahrirlash" onClick={onEdit}>
+          <Button size="sm" variant="ghost" isIconOnly aria-label={tr("Tahrirlash")} title={tr("Tahrirlash")} onClick={onEdit}>
             <PencilIcon className="h-4 w-4" />
           </Button>
           <Button
@@ -131,8 +133,8 @@ function PersonRow({
             size="sm"
             variant="ghost"
             isIconOnly
-            aria-label="O'chirish"
-            title="O'chirish"
+            aria-label={tr("O'chirish")}
+            title={tr("O'chirish")}
             className="hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]"
             onClick={onDelete}
           >
@@ -145,6 +147,7 @@ function PersonRow({
 }
 
 export default function UsersPage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const [createOpen, setCreateOpen] = useState(false);
   const [roleFilter, setRoleFilter] = useState<TenantUserRole | "ALL">("ALL");
@@ -179,7 +182,7 @@ export default function UsersPage({ params }: { params: Promise<{ slug: string }
       setStatusTarget(null);
     },
     onError: (err) => {
-      setActionError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setActionError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
@@ -190,13 +193,13 @@ export default function UsersPage({ params }: { params: Promise<{ slug: string }
       setDeleteTarget(null);
     },
     onError: (err) => {
-      setActionError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setActionError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
   const isSuperAdmin = currentUser?.role === "NETWORK_ADMIN";
   const canCreate = canManageUsers(currentUser?.role);
-  const createLabel = isSuperAdmin ? "+ Yangi xodim" : "+ Call Operator";
+  const createLabel = isSuperAdmin ? tr("+ Yangi xodim") : "+ Call Operator";
 
   const people = useMemo(() => usersQuery.data ?? [], [usersQuery.data]);
 
@@ -244,7 +247,7 @@ export default function UsersPage({ params }: { params: Promise<{ slug: string }
     { value: "ALL", label: "Barchasi", count: people.length },
     ...ROLE_ORDER.filter((role) => roleCounts.has(role)).map((role) => ({
       value: role as TenantUserRole | "ALL",
-      label: ROLE_LABEL[role],
+      label: tr(ROLE_LABEL[role]),
       count: roleCounts.get(role) ?? 0,
     })),
   ];
@@ -261,26 +264,26 @@ export default function UsersPage({ params }: { params: Promise<{ slug: string }
           </h1>
           <p className="mt-0.5 text-[13px] text-[var(--color-text-muted)]">
             {isSuperAdmin
-              ? "Tizimga kira oladigan xodimlar — filiallar bo'yicha"
-              : "Tizimga kirish huquqi (login) bor hisoblar — xodimning to'liq kartochkasi \"Xodimlar\" bo'limida"}
+              ? tr("Tizimga kira oladigan xodimlar — filiallar bo'yicha")
+              : tr("Tizimga kirish huquqi (login) bor hisoblar — xodimning to'liq kartochkasi \"Xodimlar\" bo'limida")}
           </p>
         </div>
         <div className="flex gap-2">
           <Link href={`/${slug}/audit-logs`}>
-            <Button variant="outline">Faoliyat jurnali</Button>
+            <Button variant="outline">{tr("Faoliyat jurnali")}</Button>
           </Link>
-          {canCreate && <Button onClick={() => setCreateOpen(true)}>{createLabel}</Button>}
+          {canCreate && <Button onClick={() => setCreateOpen(true)}>{tr(createLabel)}</Button>}
         </div>
       </div>
 
       {usersQuery.isLoading ? (
         <LoadingState rows={6} />
       ) : usersQuery.isError ? (
-        <ErrorState message={(usersQuery.error as Error).message} />
+        <ErrorState message={tr((usersQuery.error as Error).message)} />
       ) : people.length === 0 ? (
         <EmptyState
-          title="Hali xodim yo'q"
-          description="Filialga admin yoki moliyachi tayinlash uchun yangi xodim qo'shing"
+          title={tr("Hali xodim yo'q")}
+          description={tr("Filialga admin yoki moliyachi tayinlash uchun yangi xodim qo'shing")}
         />
       ) : (
         <>
@@ -303,9 +306,9 @@ export default function UsersPage({ params }: { params: Promise<{ slug: string }
                     }`}
                   >
                     {dot && <span className={`h-1.5 w-1.5 rounded-full ${active ? "bg-white/70" : dot}`} />}
-                    {filter.label}
+                    {tr(filter.label)}
                     <span className={active ? "text-white/70" : "text-[var(--color-text-muted)]"}>
-                      {filter.count}
+                      {tr(filter.count)}
                     </span>
                   </button>
                 );
@@ -318,8 +321,8 @@ export default function UsersPage({ params }: { params: Promise<{ slug: string }
                 type="search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Ism yoki login"
-                aria-label="Xodim qidirish"
+                placeholder={tr("Ism yoki login")}
+                aria-label={tr("Xodim qidirish")}
                 className="h-11 w-full rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] pl-10 pr-3.5 text-[15px] text-[var(--color-text)] outline-none transition-[border-color,box-shadow] duration-[var(--dur-fast)] ease-[var(--ease-out)] placeholder:text-[var(--color-text-muted)]/60 focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/[0.12] [&::-webkit-search-cancel-button]:appearance-none"
               />
             </div>
@@ -327,8 +330,8 @@ export default function UsersPage({ params }: { params: Promise<{ slug: string }
 
           {visible.length === 0 ? (
             <EmptyState
-              title="Mos xodim topilmadi"
-              description="Qidiruv so'zini yoki rol filtrini o'zgartirib ko'ring"
+              title={tr("Mos xodim topilmadi")}
+              description={tr("Qidiruv so'zini yoki rol filtrini o'zgartirib ko'ring")}
               icon={<SearchIcon className="h-[26px] w-[26px]" />}
             />
           ) : (
@@ -340,20 +343,20 @@ export default function UsersPage({ params }: { params: Promise<{ slug: string }
                       <BuildingIcon className="h-[17px] w-[17px]" />
                     </span>
                     <h2 className="text-[15px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
-                      {section.title}
+                      {tr(section.title)}
                     </h2>
                     <span className="text-[13px] tabular-nums text-[var(--color-text-muted)]">
-                      {section.people.length}
+                      {tr(section.people.length)}
                     </span>
                     {section.missingAdmin && (
                       <Badge tone="warning" className="ml-auto">
-                        Filial admini tayinlanmagan
+                        {tr("Filial admini tayinlanmagan")}
                       </Badge>
                     )}
                   </div>
                   {section.people.length === 0 ? (
                     <p className="px-5 py-6 text-center text-[13px] text-[var(--color-text-muted)]">
-                      Bu filialda mos xodim yo&apos;q
+                      {tr("Bu filialda mos xodim yo'q")}
                     </p>
                   ) : (
                     <div className="overflow-x-auto"><ul className="w-max min-w-full divide-y divide-[var(--color-separator)] md:w-auto">
@@ -386,10 +389,10 @@ export default function UsersPage({ params }: { params: Promise<{ slug: string }
                       <KeyIcon className="h-[17px] w-[17px]" />
                     </span>
                     <h2 className="text-[15px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
-                      Tarmoq darajasi
+                      {tr("Tarmoq darajasi")}
                     </h2>
                     <span className="text-[13px] tabular-nums text-[var(--color-text-muted)]">
-                      {sections.networkLevel.length}
+                      {tr(sections.networkLevel.length)}
                     </span>
                   </div>
                   <div className="overflow-x-auto"><ul className="w-max min-w-full divide-y divide-[var(--color-separator)] md:w-auto">
@@ -449,12 +452,11 @@ export default function UsersPage({ params }: { params: Promise<{ slug: string }
         description={
           statusTarget?.isActive ? (
             <>
-              <b className="text-[var(--color-text)]">{statusTarget?.fullName}</b> tizimga kira olmaydi va ochiq
-              seanslari darhol yopiladi. Ma&apos;lumotlari saqlanib qoladi — istalgan vaqtda blokdan chiqarasiz.
+              <b className="text-[var(--color-text)]">{tr(statusTarget?.fullName)}</b> {tr("tizimga kira olmaydi va ochiq seanslari darhol yopiladi. Ma'lumotlari saqlanib qoladi — istalgan vaqtda blokdan chiqarasiz.")}
             </>
           ) : (
             <>
-              <b className="text-[var(--color-text)]">{statusTarget?.fullName}</b> yana tizimga kira oladi.
+              <b className="text-[var(--color-text)]">{tr(statusTarget?.fullName)}</b> {tr("yana tizimga kira oladi.")}
             </>
           )
         }
@@ -464,19 +466,18 @@ export default function UsersPage({ params }: { params: Promise<{ slug: string }
       <ConfirmDialog
         open={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
-        title="Loginni o'chirish"
-        confirmLabel="O'chirish"
+        title={tr("Loginni o'chirish")}
+        confirmLabel={tr("O'chirish")}
         tone="danger"
         loading={deleteMutation.isPending}
         error={actionError}
         description={
           <>
-            <b className="text-[var(--color-text)]">{deleteTarget?.fullName}</b> hisobi butunlay o&apos;chiriladi va
-            qaytarilmaydi.
+            <b className="text-[var(--color-text)]">{tr(deleteTarget?.fullName)}</b> {tr("hisobi butunlay o'chiriladi va qaytarilmaydi.")}
             {deleteTarget?.role === "TEACHER" && (
-              <> Xodim kartochkasi va guruh biriktiruvi saqlanib qoladi — u faqat kabinetsiz qoladi.</>
+              <> {tr("Xodim kartochkasi va guruh biriktiruvi saqlanib qoladi — u faqat kabinetsiz qoladi.")}</>
             )}{" "}
-            Vaqtincha to&apos;xtatish kerak bo&apos;lsa, o&apos;chirish o&apos;rniga bloklang.
+            {tr("Vaqtincha to'xtatish kerak bo'lsa, o'chirish o'rniga bloklang.")}
           </>
         }
         onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget)}

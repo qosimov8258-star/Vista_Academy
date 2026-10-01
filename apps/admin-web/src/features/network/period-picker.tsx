@@ -2,6 +2,7 @@
 
 import clsx from "clsx";
 import { ChevronRightIcon } from "@/components/ui/icons";
+import { useTr } from "@/i18n/tr";
 
 const MONTHS = [
   "Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun",
@@ -29,13 +30,14 @@ export function PeriodPicker({
   max: string;
   onChange: (period: string) => void;
 }) {
+  const tr = useTr();
   const atMax = period >= max;
   return (
     <div className="inline-flex items-center gap-1 rounded-full bg-[var(--color-surface-sunken)] p-1">
       <button
         type="button"
         onClick={() => onChange(shiftPeriod(period, -1))}
-        aria-label="Oldingi oy"
+        aria-label={tr("Oldingi oy")}
         className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
       >
         <ChevronRightIcon className="h-4 w-4 rotate-180" />
@@ -47,7 +49,7 @@ export function PeriodPicker({
         type="button"
         disabled={atMax}
         onClick={() => onChange(shiftPeriod(period, 1))}
-        aria-label="Keyingi oy"
+        aria-label={tr("Keyingi oy")}
         className={clsx(
           "flex h-8 w-8 items-center justify-center rounded-full transition-colors",
           atMax

@@ -22,6 +22,7 @@ import {
   TeacherIcon,
   WalletIcon,
 } from "@/components/ui/icons";
+import { useTr } from "@/i18n/tr";
 
 const INVOICE_STATUS_LABEL: Record<InvoiceStatus, string> = {
   PENDING: "Kutilmoqda",
@@ -89,6 +90,7 @@ function StatTile({
   /** Ulushni ko'rsatuvchi yupqa chiziq — raqamning kontekstini beradi. */
   meter?: { value: number; total: number };
 }) {
+  const tr = useTr();
   const percent = meter && meter.total > 0 ? Math.round((meter.value / meter.total) * 100) : null;
 
   return (
@@ -99,13 +101,13 @@ function StatTile({
         >
           <Icon className="h-[18px] w-[18px]" />
         </span>
-        <p className="min-w-0 truncate text-[13px] font-medium text-[var(--color-text-muted)]">{label}</p>
+        <p className="min-w-0 truncate text-[13px] font-medium text-[var(--color-text-muted)]">{tr(label)}</p>
       </div>
 
       <p
         className={`mt-3.5 text-[32px] font-semibold leading-none tracking-[var(--tracking-title)] tabular-nums ${TINT_VALUE[tint]}`}
       >
-        {value}
+        {tr(value)}
       </p>
 
       {percent !== null && (
@@ -117,7 +119,7 @@ function StatTile({
         </div>
       )}
 
-      {hint && <p className="mt-2.5 text-[12px] text-[var(--color-text-muted)]">{hint}</p>}
+      {hint && <p className="mt-2.5 text-[12px] text-[var(--color-text-muted)]">{tr(hint)}</p>}
     </div>
   );
 }
@@ -149,6 +151,7 @@ function CapacityRing({
   total: number;
   ringClass: string;
 }) {
+  const tr = useTr();
   const radius = 26;
   const circumference = 2 * Math.PI * radius;
   const ratio = total > 0 ? Math.min(1, value / total) : 0;
@@ -178,9 +181,9 @@ function CapacityRing({
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-[17px] font-semibold leading-none tabular-nums text-[var(--color-text)]">
-          {value}
+          {tr(value)}
         </span>
-        <span className="mt-0.5 text-[10px] leading-none text-[var(--color-text-muted)]">/ {total}</span>
+        <span className="mt-0.5 text-[10px] leading-none text-[var(--color-text-muted)]">/ {tr(total)}</span>
       </div>
     </div>
   );
@@ -195,6 +198,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 }
 
 export default function BranchReportPage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
 
@@ -215,13 +219,13 @@ export default function BranchReportPage({ params }: { params: Promise<{ slug: s
   });
 
   if (orgQuery.isLoading || (branchId && isLoading)) return <LoadingState rows={5} />;
-  if (orgQuery.isError) return <ErrorState message={(orgQuery.error as Error).message} />;
-  if (isError) return <ErrorState message={(error as Error).message} />;
+  if (orgQuery.isError) return <ErrorState message={tr((orgQuery.error as Error).message)} />;
+  if (isError) return <ErrorState message={tr((error as Error).message)} />;
   if (!branchId) {
     return (
       <EmptyState
-        title="Filial yo'q"
-        description="Ma'lumotlar chiqishi uchun avval filial oching"
+        title={tr("Filial yo'q")}
+        description={tr("Ma'lumotlar chiqishi uchun avval filial oching")}
         icon={<BuildingIcon className="h-[26px] w-[26px]" />}
       />
     );
@@ -237,10 +241,10 @@ export default function BranchReportPage({ params }: { params: Promise<{ slug: s
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <h1 className="truncate text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
-              Ma&apos;lumotlar
+              {tr("Ma'lumotlar")}
             </h1>
             <p className="mt-0.5 text-[13px] text-[var(--color-text-muted)]">
-              {branch.name} · {branch.address || "Manzil ko'rsatilmagan"} · {formatDate(branch.createdAt)} dan
+              {tr(branch.name)} · {branch.address || tr("Manzil ko'rsatilmagan")} · {formatDate(branch.createdAt)} {tr("dan")}
             </p>
           </div>
           <Link
@@ -248,7 +252,7 @@ export default function BranchReportPage({ params }: { params: Promise<{ slug: s
             className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-3.5 py-1.5 text-[13px] font-medium text-[var(--color-text)] shadow-[var(--shadow-xs)] transition-colors duration-[var(--dur-fast)] hover:bg-[var(--color-surface-hover)]"
           >
             <SettingsIcon className="h-4 w-4" />
-            Filial sozlamalari
+            {tr("Filial sozlamalari")}
           </Link>
         </div>
 
@@ -269,7 +273,7 @@ export default function BranchReportPage({ params }: { params: Promise<{ slug: s
                       : "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
                   }`}
                 >
-                  {item.name}
+                  {tr(item.name)}
                 </button>
               );
             })}
@@ -278,17 +282,17 @@ export default function BranchReportPage({ params }: { params: Promise<{ slug: s
       </div>
 
       <section>
-        <SectionTitle>Tarbiyalanuvchilar</SectionTitle>
+        <SectionTitle>{tr("Tarbiyalanuvchilar")}</SectionTitle>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <StatTile
-            label="Jami bolalar"
+            label={tr("Jami bolalar")}
             value={children.active}
             icon={ChildIcon}
             tint="brand"
-            hint={children.inactive > 0 ? `${children.inactive} ta nofaol` : "Faol holatdagilar"}
+            hint={children.inactive > 0 ? tr("{0} ta nofaol", children.inactive) : "Faol holatdagilar"}
           />
           <StatTile
-            label="O'g'il bolalar"
+            label={tr("O'g'il bolalar")}
             value={children.boys}
             icon={ChildIcon}
             tint="sky"
@@ -298,7 +302,7 @@ export default function BranchReportPage({ params }: { params: Promise<{ slug: s
             }
           />
           <StatTile
-            label="Qiz bolalar"
+            label={tr("Qiz bolalar")}
             value={children.girls}
             icon={ChildIcon}
             tint="rose"
@@ -310,25 +314,25 @@ export default function BranchReportPage({ params }: { params: Promise<{ slug: s
         </div>
         {children.unknownGender > 0 && (
           <p className="mt-2.5 px-1 text-[12px] text-[var(--color-text-muted)]">
-            {children.unknownGender} ta bolaning jinsi ko&apos;rsatilmagan — ular bu nisbatga kirmaydi.
+            {tr(children.unknownGender)} {tr("ta bolaning jinsi ko'rsatilmagan — ular bu nisbatga kirmaydi.")}
           </p>
         )}
       </section>
 
       <section>
-        <SectionTitle>Guruhlar</SectionTitle>
+        <SectionTitle>{tr("Guruhlar")}</SectionTitle>
 
         {/* Umumiy to'lganlik: guruhlar bo'yicha bo'lingan yagona chiziq */}
         <div className="mb-3 rounded-[var(--radius-xl)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] p-[18px] shadow-[var(--shadow-card)]">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <p className="text-[15px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
-              {groups.active} ta faol guruh
+              {tr(groups.active)} {tr("ta faol guruh")}
               <span className="ml-2 text-[13px] font-normal text-[var(--color-text-muted)]">
-                {groups.capacity} o&apos;rin
+                {tr(groups.capacity)} {tr("o'rin")}
               </span>
             </p>
             <p className="text-[13px] tabular-nums text-[var(--color-text-muted)]">
-              {children.active} / {groups.capacity} to&apos;lgan
+              {tr(children.active)} / {tr(groups.capacity)} {tr("to'lgan")}
               {groups.capacity > 0 && (
                 <span className="ml-2 font-medium text-[var(--color-text)]">
                   {Math.round((children.active / groups.capacity) * 100)}%
@@ -354,7 +358,7 @@ export default function BranchReportPage({ params }: { params: Promise<{ slug: s
 
         {groups.items.length === 0 ? (
           <EmptyState
-            title="Bu filialda hali guruh ochilmagan"
+            title={tr("Bu filialda hali guruh ochilmagan")}
             icon={<GroupIcon className="h-[26px] w-[26px]" />}
           />
         ) : (
@@ -377,11 +381,11 @@ export default function BranchReportPage({ params }: { params: Promise<{ slug: s
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-2">
                         <h3 className="min-w-0 text-[15px] font-semibold leading-tight tracking-[var(--tracking-headline)] text-[var(--color-text)]">
-                          {group.name}
+                          {tr(group.name)}
                         </h3>
                         {group.status !== "ACTIVE" && (
                           <Badge tone="neutral" className="shrink-0">
-                            Nofaol
+                            {tr("Nofaol")}
                           </Badge>
                         )}
                       </div>
@@ -401,11 +405,11 @@ export default function BranchReportPage({ params }: { params: Promise<{ slug: s
                                   .map((part) => part[0]?.toUpperCase() ?? "")
                                   .join("")}
                               </span>
-                              {teacher}
+                              {tr(teacher)}
                             </span>
                           ))
                         ) : (
-                          <Badge tone="warning">Tarbiyachi biriktirilmagan</Badge>
+                          <Badge tone="warning">{tr("Tarbiyachi biriktirilmagan")}</Badge>
                         )}
                       </div>
                     </div>
@@ -413,12 +417,12 @@ export default function BranchReportPage({ params }: { params: Promise<{ slug: s
 
                   <p className="hairline mt-3.5 border-t border-[var(--color-separator)] pt-3 text-[12.5px] text-[var(--color-text-muted)]">
                     {isFull ? (
-                      <span className="font-medium text-[var(--color-text)]">Guruh to&apos;lgan</span>
+                      <span className="font-medium text-[var(--color-text)]">{tr("Guruh to'lgan")}</span>
                     ) : isEmpty ? (
-                      <>Hali bola qo&apos;shilmagan — {group.capacity} o&apos;rin bo&apos;sh</>
+                      <>{tr("Hali bola qo'shilmagan —")}{" "}{tr(group.capacity)} {tr("o'rin bo'sh")}</>
                     ) : (
                       <>
-                        <span className="font-medium text-[var(--color-text)]">{free}</span> o&apos;rin bo&apos;sh
+                        <span className="font-medium text-[var(--color-text)]">{tr(free)}</span> {tr("o'rin bo'sh")}
                       </>
                     )}
                   </p>
@@ -430,37 +434,37 @@ export default function BranchReportPage({ params }: { params: Promise<{ slug: s
       </section>
 
       <section>
-        <SectionTitle>Xodimlar</SectionTitle>
+        <SectionTitle>{tr("Xodimlar")}</SectionTitle>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-          <StatTile label="Jami xodimlar" value={employees.total} icon={TeacherIcon} tint="brand" />
+          <StatTile label={tr("Jami xodimlar")} value={employees.total} icon={TeacherIcon} tint="brand" />
           <StatTile
-            label="Faol"
+            label={tr("Faol")}
             value={employees.active}
             icon={BriefcaseIcon}
             tint="success"
             meter={employees.total > 0 ? { value: employees.active, total: employees.total } : undefined}
-            hint={employees.total - employees.active > 0 ? `${employees.total - employees.active} ta nofaol` : undefined}
+            hint={employees.total - employees.active > 0 ? tr("{0} ta nofaol", employees.total - employees.active) : undefined}
           />
           <StatTile
-            label="Kabineti bor"
+            label={tr("Kabineti bor")}
             value={employees.withAccount}
             icon={KeyIcon}
             tint="neutral"
             meter={employees.total > 0 ? { value: employees.withAccount, total: employees.total } : undefined}
-            hint="Tizimga kira oladi"
+            hint={tr("Tizimga kira oladi")}
           />
         </div>
         {employees.byPosition.length > 0 && (
           <Card className="mt-3 p-[18px]">
-            <p className="mb-2.5 text-[14px] font-medium text-[var(--color-text)]">Lavozimlar bo&apos;yicha</p>
+            <p className="mb-2.5 text-[14px] font-medium text-[var(--color-text)]">{tr("Lavozimlar bo'yicha")}</p>
             <div className="flex flex-wrap gap-2">
               {employees.byPosition.map((row) => (
                 <span
                   key={row.position}
                   className="rounded-full bg-[var(--color-surface-sunken)] px-3 py-1.5 text-[13px] text-[var(--color-text)]"
                 >
-                  {row.position}
-                  <span className="ml-1.5 tabular-nums text-[var(--color-text-muted)]">{row.count}</span>
+                  {tr(row.position)}
+                  <span className="ml-1.5 tabular-nums text-[var(--color-text-muted)]">{tr(row.count)}</span>
                 </span>
               ))}
             </div>
@@ -469,40 +473,40 @@ export default function BranchReportPage({ params }: { params: Promise<{ slug: s
       </section>
 
       <section>
-        <SectionTitle>To&apos;lovlar</SectionTitle>
+        <SectionTitle>{tr("To'lovlar")}</SectionTitle>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <StatTile
-            label="Joriy oy tushumi"
+            label={tr("Joriy oy tushumi")}
             value={formatMoney(finance.monthRevenue)}
             icon={MoneyIcon}
             tint="success"
           />
           <StatTile
-            label="Qarzdorlik"
+            label={tr("Qarzdorlik")}
             value={formatMoney(finance.outstandingDebt)}
             icon={MoneyIcon}
             tint={finance.outstandingDebt > 0 ? "danger" : "neutral"}
-            hint={finance.outstandingDebt > 0 ? "To'lanishi kerak" : "Qarzdorlik yo'q"}
+            hint={finance.outstandingDebt > 0 ? tr("To'lanishi kerak") : tr("Qarzdorlik yo'q")}
           />
         </div>
         <Card className="mt-3 overflow-hidden">
           <CardHeader>
-            <CardTitle>Hisob-fakturalar holati</CardTitle>
+            <CardTitle>{tr("Hisob-fakturalar holati")}</CardTitle>
           </CardHeader>
           <CardBody className="p-0">
             {finance.invoices.length === 0 ? (
               <EmptyState
-                title="Bu filialda hali hisob-faktura yaratilmagan"
+                title={tr("Bu filialda hali hisob-faktura yaratilmagan")}
                 icon={<WalletIcon className="h-[26px] w-[26px]" />}
               />
             ) : (
               <DataTable className="min-w-[520px]">
                 <THead>
                   <tr>
-                    <Th>Holat</Th>
-                    <Th numeric>Soni</Th>
-                    <Th numeric>Hisoblangan</Th>
-                    <Th numeric>To&apos;langan</Th>
+                    <Th>{tr("Holat")}</Th>
+                    <Th numeric>{tr("Soni")}</Th>
+                    <Th numeric>{tr("Hisoblangan")}</Th>
+                    <Th numeric>{tr("To'langan")}</Th>
                   </tr>
                 </THead>
                 <TBody>
@@ -510,10 +514,10 @@ export default function BranchReportPage({ params }: { params: Promise<{ slug: s
                     <Tr key={row.status}>
                       <Td>
                         <Badge tone={INVOICE_STATUS_TONE[row.status]}>
-                          {INVOICE_STATUS_LABEL[row.status]}
+                          {tr(INVOICE_STATUS_LABEL[row.status])}
                         </Badge>
                       </Td>
-                      <Td numeric>{row.count}</Td>
+                      <Td numeric>{tr(row.count)}</Td>
                       <Td numeric>{formatMoney(row.billed)}</Td>
                       <Td numeric className="text-[var(--color-success)]">
                         {formatMoney(row.paid)}

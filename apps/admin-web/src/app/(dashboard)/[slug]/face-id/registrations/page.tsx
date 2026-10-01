@@ -22,6 +22,7 @@ import { initials } from "@/components/ui/avatar";
 import { TrashIcon, FaceIdIcon } from "@/components/ui/icons";
 import { FaceIdTabs } from "@/features/face-id/face-id-tabs";
 import { CreateEnrollmentModal } from "@/features/face-id/create-enrollment-modal";
+import { useTr } from "@/i18n/tr";
 
 const ALL_TAB = "__all__";
 
@@ -38,6 +39,7 @@ const STATUS_OPTIONS = (Object.keys(STATUS_TONE) as FaceEnrollmentStatus[]).map(
 }));
 
 export default function FaceIdRegistrationsPage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const { user } = useAuth();
   const canWrite = canWriteOperational(user?.role);
@@ -88,19 +90,19 @@ export default function FaceIdRegistrationsPage({ params }: { params: Promise<{ 
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-[var(--color-text)]">Face ID</h1>
+          <h1 className="text-xl font-semibold text-[var(--color-text)]">{tr("Face ID")}</h1>
           <p className="text-sm text-[var(--color-text-muted)]">
-            Xodim va bolalarning qaysi qurilmada yuzi ro&apos;yxatga olinganini kuzatish
+            {tr("Xodim va bolalarning qaysi qurilmada yuzi ro'yxatga olinganini kuzatish")}
           </p>
         </div>
         {canWrite && (
           <Button
             variant="outline"
             disabled={devices.length === 0}
-            title={devices.length === 0 ? "Avval qurilma qo'shing" : undefined}
+            title={devices.length === 0 ? tr("Avval qurilma qo'shing") : undefined}
             onClick={() => setCreateOpen(true)}
           >
-            + Yuz qo&apos;shish
+            {tr("+ Yuz qo'shish")}
           </Button>
         )}
       </div>
@@ -110,7 +112,7 @@ export default function FaceIdRegistrationsPage({ params }: { params: Promise<{ 
       {!canWrite && <ViewOnlyNote role={user?.role} />}
       {canWrite && devices.length === 0 && !devicesQuery.isLoading && (
         <div className="rounded-[var(--radius-lg)] bg-[var(--color-primary)]/[0.06] px-4 py-3.5 text-[14px] text-[var(--color-text-muted)]">
-          Avval &quot;Qurilmalar&quot; bo&apos;limida terminalni qo&apos;shing, keyin shu yerda yuz ro&apos;yxatini yuritishingiz mumkin.
+          {tr("Avval \"Qurilmalar\" bo'limida terminalni qo'shing, keyin shu yerda yuz ro'yxatini yuritishingiz mumkin.")}
         </div>
       )}
 
@@ -123,14 +125,14 @@ export default function FaceIdRegistrationsPage({ params }: { params: Promise<{ 
               ? devicesQuery.error.message
               : enrollmentsQuery.error instanceof ApiError
                 ? enrollmentsQuery.error.message
-                : "Xatolik yuz berdi"
+                : tr("Xatolik yuz berdi")
           }
         />
       ) : enrollments.length === 0 ? (
         <EmptyState
           icon={<FaceIdIcon className="h-[26px] w-[26px]" />}
-          title="Hali yuz ro'yxatga olinmagan"
-          description={canWrite && devices.length > 0 ? "Yuqoridagi \"+ Yuz qo'shish\" tugmasi orqali birinchi yozuvni qo'shing" : undefined}
+          title={tr("Hali yuz ro'yxatga olinmagan")}
+          description={canWrite && devices.length > 0 ? tr("Yuqoridagi \"+ Yuz qo'shish\" tugmasi orqali birinchi yozuvni qo'shing") : undefined}
         />
       ) : (
         <Card className="overflow-hidden">
@@ -153,7 +155,7 @@ export default function FaceIdRegistrationsPage({ params }: { params: Promise<{ 
                     : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
                 )}
               >
-                {label}
+                {tr(label)}
                 <Badge tone={activeTab === value ? "primary" : "neutral"}>
                   {value === ALL_TAB ? enrollments.length : enrollments.filter((e) => e.personType === value).length}
                 </Badge>
@@ -164,10 +166,10 @@ export default function FaceIdRegistrationsPage({ params }: { params: Promise<{ 
           <DataTable>
             <THead>
               <tr>
-                <Th>Kim</Th>
-                <Th>Turi</Th>
-                <Th>Qurilma</Th>
-                <Th>Holati</Th>
+                <Th>{tr("Kim")}</Th>
+                <Th>{tr("Turi")}</Th>
+                <Th>{tr("Qurilma")}</Th>
+                <Th>{tr("Holati")}</Th>
                 {canWrite && <Th>&nbsp;</Th>}
               </tr>
             </THead>
@@ -189,9 +191,9 @@ export default function FaceIdRegistrationsPage({ params }: { params: Promise<{ 
                       </div>
                     </Td>
                     <Td>
-                      <Badge tone="neutral">{enrollment.personType === "EMPLOYEE" ? "Xodim" : "Bola"}</Badge>
+                      <Badge tone="neutral">{enrollment.personType === "EMPLOYEE" ? tr("Xodim") : tr("Bola")}</Badge>
                     </Td>
-                    <Td>{enrollment.device.name}</Td>
+                    <Td>{tr(enrollment.device.name)}</Td>
                     <Td>
                       {canWrite ? (
                         <div className="w-44">
@@ -204,7 +206,7 @@ export default function FaceIdRegistrationsPage({ params }: { params: Promise<{ 
                           />
                         </div>
                       ) : (
-                        <Badge tone={STATUS_TONE[enrollment.status].tone}>{STATUS_TONE[enrollment.status].label}</Badge>
+                        <Badge tone={STATUS_TONE[enrollment.status].tone}>{tr(STATUS_TONE[enrollment.status].label)}</Badge>
                       )}
                     </Td>
                     {canWrite && (
@@ -213,7 +215,7 @@ export default function FaceIdRegistrationsPage({ params }: { params: Promise<{ 
                           <button
                             type="button"
                             onClick={() => setDeleting(enrollment)}
-                            aria-label="O'chirish"
+                            aria-label={tr("O'chirish")}
                             className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]"
                           >
                             <TrashIcon className="h-4 w-4" />
@@ -242,13 +244,13 @@ export default function FaceIdRegistrationsPage({ params }: { params: Promise<{ 
       <ConfirmDialog
         open={!!deleting}
         onClose={() => setDeleting(null)}
-        title="Yozuvni o'chirish"
+        title={tr("Yozuvni o'chirish")}
         description={
           <>
-            <strong>{(deleting?.employee ?? deleting?.child)?.fullName}</strong> uchun yuz yozuvini o&apos;chirmoqchimisiz?
+            <strong>{tr((deleting?.employee ?? deleting?.child)?.fullName)}</strong> {tr("uchun yuz yozuvini o'chirmoqchimisiz?")}
           </>
         }
-        confirmLabel="O'chirish"
+        confirmLabel={tr("O'chirish")}
         tone="danger"
         loading={deleteMutation.isPending}
         error={deleteMutation.error instanceof ApiError ? deleteMutation.error.message : null}
