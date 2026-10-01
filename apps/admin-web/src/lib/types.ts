@@ -1304,9 +1304,9 @@ export interface Tale {
 }
 
 // --- Lending sahifa (landing-web) ---------------------------------------------
-// `GET /app/landing/...` orqali o'qiladi (ochiq), `POST/PATCH/DELETE` esa shu
-// yerdan — "Lending sahifa" bo'limi orqali kiritiladi. Kontent global: barcha
-// tashkilotlar bitta umumiy landing-web saytini ko'radi.
+// `GET /app/landing/me/...` orqali o'qiladi (autentifikatsiyalangan, faqat
+// o'z tashkiloti), `POST/PATCH/DELETE` esa shu yerdan — "Lending sahifa"
+// bo'limi orqali kiritiladi. Har bir tashkilot faqat o'z kontentini ko'radi.
 
 export interface LandingTeacher {
   id: string;

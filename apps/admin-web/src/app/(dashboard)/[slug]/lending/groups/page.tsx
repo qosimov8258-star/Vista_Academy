@@ -50,7 +50,7 @@ export default function LendingGroupsPage({ params }: { params: Promise<{ slug: 
 
   const groupsQuery = useQuery({
     queryKey: ["landing-groups"],
-    queryFn: () => api.get<LandingGroup[]>("/app/landing/groups"),
+    queryFn: () => api.get<LandingGroup[]>("/app/landing/me/groups"),
   });
 
   const deleteMutation = useMutation({

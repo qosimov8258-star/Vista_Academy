@@ -32,6 +32,9 @@ import { UpdateContentBlockDto } from "./dto/update-content-block.dto";
  * Lending sahifa (landing-web) kontentini boshqarish — Platform Super Admin
  * platform-web'dagi "Lending sahifa" bo'limidan shu endpointlar orqali
  * jadval, taomlar, o'qituvchilar va matnli bloklarni tahrirlaydi/qo'shadi.
+ * Kontent endi har bir tashkilotga tegishli bo'lsa ham, bu panel hamon
+ * BITTA ("bayroqdor") tashkilotni ko'rsatadi — tashkilot tanlash bu yerga
+ * qo'shilmagan, qarang: LandingService.resolveDefaultOrganizationId.
  */
 @ApiBearerAuth()
 @ApiTags("Platform Landing")
@@ -43,51 +46,59 @@ export class LandingAdminController {
   // --- Jadval ---------------------------------------------------------------
 
   @Get("schedule")
-  listSchedule() {
-    return this.landingService.listScheduleItems();
+  async listSchedule() {
+    const organizationId = await this.landingService.resolveDefaultOrganizationId();
+    return this.landingService.listScheduleItems(organizationId);
   }
 
   @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN)
   @Post("schedule")
-  createScheduleItem(@Body() dto: CreateScheduleItemDto) {
-    return this.landingService.createScheduleItem(dto);
+  async createScheduleItem(@Body() dto: CreateScheduleItemDto) {
+    const organizationId = await this.landingService.resolveDefaultOrganizationId();
+    return this.landingService.createScheduleItem(organizationId, dto);
   }
 
   @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN)
   @Patch("schedule/:id")
-  updateScheduleItem(@Param("id") id: string, @Body() dto: UpdateScheduleItemDto) {
-    return this.landingService.updateScheduleItem(id, dto);
+  async updateScheduleItem(@Param("id") id: string, @Body() dto: UpdateScheduleItemDto) {
+    const organizationId = await this.landingService.resolveDefaultOrganizationId();
+    return this.landingService.updateScheduleItem(organizationId, id, dto);
   }
 
   @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN)
   @Delete("schedule/:id")
-  deleteScheduleItem(@Param("id") id: string) {
-    return this.landingService.deleteScheduleItem(id);
+  async deleteScheduleItem(@Param("id") id: string) {
+    const organizationId = await this.landingService.resolveDefaultOrganizationId();
+    return this.landingService.deleteScheduleItem(organizationId, id);
   }
 
   // --- Taomlar ----------------------------------------------------------------
 
   @Get("meals")
-  listMeals() {
-    return this.landingService.listMeals();
+  async listMeals() {
+    const organizationId = await this.landingService.resolveDefaultOrganizationId();
+    return this.landingService.listMeals(organizationId);
   }
 
   @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN)
   @Post("meals")
-  createMeal(@Body() dto: CreateMealDto) {
-    return this.landingService.createMeal(dto);
+  async createMeal(@Body() dto: CreateMealDto) {
+    const organizationId = await this.landingService.resolveDefaultOrganizationId();
+    return this.landingService.createMeal(organizationId, dto);
   }
 
   @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN)
   @Patch("meals/:id")
-  updateMeal(@Param("id") id: string, @Body() dto: UpdateMealDto) {
-    return this.landingService.updateMeal(id, dto);
+  async updateMeal(@Param("id") id: string, @Body() dto: UpdateMealDto) {
+    const organizationId = await this.landingService.resolveDefaultOrganizationId();
+    return this.landingService.updateMeal(organizationId, id, dto);
   }
 
   @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN)
   @Delete("meals/:id")
-  deleteMeal(@Param("id") id: string) {
-    return this.landingService.deleteMeal(id);
+  async deleteMeal(@Param("id") id: string) {
+    const organizationId = await this.landingService.resolveDefaultOrganizationId();
+    return this.landingService.deleteMeal(organizationId, id);
   }
 
   @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN)
@@ -98,32 +109,37 @@ export class LandingAdminController {
     if (!file) {
       throw new BadRequestException("Fayl yuborilmadi");
     }
-    return this.landingService.setMealPhoto(id, `/uploads/landing/${file.filename}`);
+    const organizationId = await this.landingService.resolveDefaultOrganizationId();
+    return this.landingService.setMealPhoto(organizationId, id, `/uploads/landing/${file.filename}`);
   }
 
   // --- O'qituvchilar -------------------------------------------------------------
 
   @Get("teachers")
-  listTeachers() {
-    return this.landingService.listTeachers();
+  async listTeachers() {
+    const organizationId = await this.landingService.resolveDefaultOrganizationId();
+    return this.landingService.listTeachers(organizationId);
   }
 
   @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN)
   @Post("teachers")
-  createTeacher(@Body() dto: CreateTeacherDto) {
-    return this.landingService.createTeacher(dto);
+  async createTeacher(@Body() dto: CreateTeacherDto) {
+    const organizationId = await this.landingService.resolveDefaultOrganizationId();
+    return this.landingService.createTeacher(organizationId, dto);
   }
 
   @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN)
   @Patch("teachers/:id")
-  updateTeacher(@Param("id") id: string, @Body() dto: UpdateTeacherDto) {
-    return this.landingService.updateTeacher(id, dto);
+  async updateTeacher(@Param("id") id: string, @Body() dto: UpdateTeacherDto) {
+    const organizationId = await this.landingService.resolveDefaultOrganizationId();
+    return this.landingService.updateTeacher(organizationId, id, dto);
   }
 
   @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN)
   @Delete("teachers/:id")
-  deleteTeacher(@Param("id") id: string) {
-    return this.landingService.deleteTeacher(id);
+  async deleteTeacher(@Param("id") id: string) {
+    const organizationId = await this.landingService.resolveDefaultOrganizationId();
+    return this.landingService.deleteTeacher(organizationId, id);
   }
 
   @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN)
@@ -134,20 +150,23 @@ export class LandingAdminController {
     if (!file) {
       throw new BadRequestException("Fayl yuborilmadi");
     }
-    return this.landingService.setTeacherPhoto(id, `/uploads/landing/${file.filename}`);
+    const organizationId = await this.landingService.resolveDefaultOrganizationId();
+    return this.landingService.setTeacherPhoto(organizationId, id, `/uploads/landing/${file.filename}`);
   }
 
   // --- Matnli bloklar ----------------------------------------------------------
 
   @Get("content-blocks")
-  listContentBlocks() {
-    return this.landingService.listContentBlocks();
+  async listContentBlocks() {
+    const organizationId = await this.landingService.resolveDefaultOrganizationId();
+    return this.landingService.listContentBlocks(organizationId);
   }
 
   @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN)
   @Patch("content-blocks/:key")
-  upsertContentBlock(@Param("key") key: string, @Body() dto: UpdateContentBlockDto) {
-    return this.landingService.upsertContentBlock(key, dto);
+  async upsertContentBlock(@Param("key") key: string, @Body() dto: UpdateContentBlockDto) {
+    const organizationId = await this.landingService.resolveDefaultOrganizationId();
+    return this.landingService.upsertContentBlock(organizationId, key, dto);
   }
 
   @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN)
@@ -158,6 +177,7 @@ export class LandingAdminController {
     if (!file) {
       throw new BadRequestException("Fayl yuborilmadi");
     }
-    return this.landingService.setContentBlockPhoto(key, `/uploads/landing/${file.filename}`);
+    const organizationId = await this.landingService.resolveDefaultOrganizationId();
+    return this.landingService.setContentBlockPhoto(organizationId, key, `/uploads/landing/${file.filename}`);
   }
 }

@@ -34,6 +34,22 @@ export class LandingService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
+   * Ochiq o'qish endpointlari (landing-web server-to-server fetch qiladi,
+   * brauzer Origin sarlavhasini yubormaydi) va platform-web'dagi "Lending
+   * sahifa" bitta "bayroqdor" tashkilotni ko'rsatadi — aynan bitta manba:
+   * avval `?org=<slug>` (kelajakdagi ko'p-domenli lending sayt uchun ochiq
+   * qoldirilgan, hozircha hech kim yubormaydi), aks holda
+   * LANDING_ORGANIZATION_SLUG, aks holda eski sukut "vista-academy" —
+   * LandingOwnerGuard o'chirilishidan oldingi xatti-harakat bilan aynan bir xil.
+   */
+  async resolveDefaultOrganizationId(explicitSlug?: string): Promise<string> {
+    const slug = (explicitSlug?.trim() || process.env.LANDING_ORGANIZATION_SLUG?.trim() || "vista-academy").trim();
+    const org = await this.prisma.organization.findUnique({ where: { slug }, select: { id: true } });
+    if (!org) throw new NotFoundException("Bog'cha topilmadi");
+    return org.id;
+  }
+
+  /**
    * Yangi rasm qo'yilganda yoki galereya rasmi o'chirilganda, eskisi diskda
    * "yetim" bo'lib qolmasligi uchun shu yordamchi chaqiriladi. Faqat
    * `/uploads/landing/` ostidagi yuklangan fayllarga tegadi — landing-web
@@ -56,28 +72,31 @@ export class LandingService {
 
   // --- Kun tartibi / jadval -------------------------------------------------
 
-  listScheduleItems() {
-    return this.prisma.landingScheduleItem.findMany({ orderBy: [{ order: "asc" }, { time: "asc" }] });
-  }
-
-  createScheduleItem(dto: CreateScheduleItemDto) {
-    return this.prisma.landingScheduleItem.create({
-      data: { time: dto.time, title: dto.title, type: dto.type, order: dto.order ?? 0 },
+  listScheduleItems(organizationId: string) {
+    return this.prisma.landingScheduleItem.findMany({
+      where: { organizationId },
+      orderBy: [{ order: "asc" }, { time: "asc" }],
     });
   }
 
-  async updateScheduleItem(id: string, dto: UpdateScheduleItemDto) {
-    await this.findScheduleItem(id);
+  createScheduleItem(organizationId: string, dto: CreateScheduleItemDto) {
+    return this.prisma.landingScheduleItem.create({
+      data: { organizationId, time: dto.time, title: dto.title, type: dto.type, order: dto.order ?? 0 },
+    });
+  }
+
+  async updateScheduleItem(organizationId: string, id: string, dto: UpdateScheduleItemDto) {
+    await this.findScheduleItem(organizationId, id);
     return this.prisma.landingScheduleItem.update({ where: { id }, data: dto });
   }
 
-  async deleteScheduleItem(id: string) {
-    await this.findScheduleItem(id);
+  async deleteScheduleItem(organizationId: string, id: string) {
+    await this.findScheduleItem(organizationId, id);
     await this.prisma.landingScheduleItem.delete({ where: { id } });
   }
 
-  private async findScheduleItem(id: string) {
-    const item = await this.prisma.landingScheduleItem.findUnique({ where: { id } });
+  private async findScheduleItem(organizationId: string, id: string) {
+    const item = await this.prisma.landingScheduleItem.findFirst({ where: { id, organizationId } });
     if (!item) {
       throw new NotFoundException("Jadval qatori topilmadi");
     }
@@ -86,15 +105,17 @@ export class LandingService {
 
   // --- Taomlar ---------------------------------------------------------------
 
-  listMeals() {
+  listMeals(organizationId: string) {
     return this.prisma.landingMeal.findMany({
+      where: { organizationId },
       orderBy: [{ weekday: "asc" }, { time: "asc" }, { order: "asc" }, { title: "asc" }],
     });
   }
 
-  createMeal(dto: CreateMealDto) {
+  createMeal(organizationId: string, dto: CreateMealDto) {
     return this.prisma.landingMeal.create({
       data: {
+        organizationId,
         title: dto.title,
         description: dto.description,
         mealType: dto.mealType,
@@ -105,25 +126,25 @@ export class LandingService {
     });
   }
 
-  async updateMeal(id: string, dto: UpdateMealDto) {
-    await this.findMeal(id);
+  async updateMeal(organizationId: string, id: string, dto: UpdateMealDto) {
+    await this.findMeal(organizationId, id);
     return this.prisma.landingMeal.update({ where: { id }, data: dto });
   }
 
-  async deleteMeal(id: string) {
-    await this.findMeal(id);
+  async deleteMeal(organizationId: string, id: string) {
+    await this.findMeal(organizationId, id);
     await this.prisma.landingMeal.delete({ where: { id } });
   }
 
-  async setMealPhoto(id: string, photoPath: string) {
-    const meal = await this.findMeal(id);
+  async setMealPhoto(organizationId: string, id: string, photoPath: string) {
+    const meal = await this.findMeal(organizationId, id);
     const updated = await this.prisma.landingMeal.update({ where: { id }, data: { photoPath } });
     await this.deleteUploadedPhoto(meal.photoPath);
     return updated;
   }
 
-  private async findMeal(id: string) {
-    const meal = await this.prisma.landingMeal.findUnique({ where: { id } });
+  private async findMeal(organizationId: string, id: string) {
+    const meal = await this.prisma.landingMeal.findFirst({ where: { id, organizationId } });
     if (!meal) {
       throw new NotFoundException("Taom topilmadi");
     }
@@ -132,80 +153,45 @@ export class LandingService {
 
   // --- O'qituvchilar -----------------------------------------------------------
 
-  /**
-   * Landing-web'dagi "O'qituvchilar" sahifasi CMS bo'sh bo'lganda ham
-   * bo'sh ko'rinmasin deb, xuddi shu 4 nafar namunaviy o'qituvchini
-   * (apps/landing-web/src/app/oqituvchilar/page.tsx dagi PLACEHOLDER_TEACHERS)
-   * qattiq yozib qo'yadi. Admin panelda ham shu 4 tasi darhol ko'rinishi
-   * uchun bazada hali yo'q bo'lsa shu yerda avtomatik yaratiladi — shunday
-   * qilib admin faqat mavjudlarini TAHRIRLAYDI, yangisini yaratishga hojat
-   * qolmaydi, saytning ko'rinishi esa o'zgarmaydi.
-   */
-  private static readonly DEFAULT_TEACHERS = [
-    {
-      fullName: "Dilnoza Qosimova",
-      role: "Bosh tarbiyachi",
-      bio: "Har bir bola menga o'z farzandimdek aziz.",
-      experience: "Maktabgacha ta'lim yo'nalishida 12 yillik tajribaga ega, bir necha filial jamoasini boshqargan.",
-    },
-    {
-      fullName: "Malika Yusupova",
-      role: "Ingliz tili o'qituvchisi",
-      bio: "Bolalar bilan o'ynab o'rganish eng samarali usul.",
-      experience: "Ingliz tili bo'yicha 6 yillik tajriba, xalqaro IELTS sertifikatiga ega, kichik yoshdagilar bilan ishlash metodikasi bo'yicha malaka oshirgan.",
-    },
-    {
-      fullName: "Nodira Karimova",
-      role: "Mental arifmetika o'qituvchisi",
-      bio: "Mental arifmetika bolaning tafakkurini rivojlantiradi.",
-      experience: "Mental arifmetika yo'nalishida 5 yillik tajriba, respublika miqyosidagi bolalar musobaqalarida shogirdlarini tayyorlagan.",
-    },
-    {
-      fullName: "Sevara Rashidova",
-      role: "Kichik guruh tarbiyachisi",
-      bio: "Sabr va mehr — ishimning asosi.",
-      experience: "Kichik yoshdagi bolalar bilan ishlashda 8 yillik tajribaga ega, bolalar psixologiyasi bo'yicha qo'shimcha ta'lim olgan.",
-    },
-  ];
-
-  async listTeachers() {
-    const existing = await this.prisma.landingTeacher.findMany({ orderBy: [{ order: "asc" }, { fullName: "asc" }] });
-    if (existing.length >= LandingService.DEFAULT_TEACHERS.length) {
-      return existing;
-    }
-
-    const missing = LandingService.DEFAULT_TEACHERS.slice(existing.length);
-    await this.prisma.landingTeacher.createMany({
-      data: missing.map((teacher, i) => ({ ...teacher, order: existing.length + i })),
+  listTeachers(organizationId: string) {
+    return this.prisma.landingTeacher.findMany({
+      where: { organizationId },
+      orderBy: [{ order: "asc" }, { fullName: "asc" }],
     });
-    return this.prisma.landingTeacher.findMany({ orderBy: [{ order: "asc" }, { fullName: "asc" }] });
   }
 
-  createTeacher(dto: CreateTeacherDto) {
+  createTeacher(organizationId: string, dto: CreateTeacherDto) {
     return this.prisma.landingTeacher.create({
-      data: { fullName: dto.fullName, role: dto.role, bio: dto.bio, experience: dto.experience, order: dto.order ?? 0 },
+      data: {
+        organizationId,
+        fullName: dto.fullName,
+        role: dto.role,
+        bio: dto.bio,
+        experience: dto.experience,
+        order: dto.order ?? 0,
+      },
     });
   }
 
-  async updateTeacher(id: string, dto: UpdateTeacherDto) {
-    await this.findTeacher(id);
+  async updateTeacher(organizationId: string, id: string, dto: UpdateTeacherDto) {
+    await this.findTeacher(organizationId, id);
     return this.prisma.landingTeacher.update({ where: { id }, data: dto });
   }
 
-  async deleteTeacher(id: string) {
-    await this.findTeacher(id);
+  async deleteTeacher(organizationId: string, id: string) {
+    await this.findTeacher(organizationId, id);
     await this.prisma.landingTeacher.delete({ where: { id } });
   }
 
-  async setTeacherPhoto(id: string, photoPath: string) {
-    const teacher = await this.findTeacher(id);
+  async setTeacherPhoto(organizationId: string, id: string, photoPath: string) {
+    const teacher = await this.findTeacher(organizationId, id);
     const updated = await this.prisma.landingTeacher.update({ where: { id }, data: { photoPath } });
     await this.deleteUploadedPhoto(teacher.photoPath);
     return updated;
   }
 
-  private async findTeacher(id: string) {
-    const teacher = await this.prisma.landingTeacher.findUnique({ where: { id } });
+  private async findTeacher(organizationId: string, id: string) {
+    const teacher = await this.prisma.landingTeacher.findFirst({ where: { id, organizationId } });
     if (!teacher) {
       throw new NotFoundException("O'qituvchi topilmadi");
     }
@@ -214,8 +200,9 @@ export class LandingService {
 
   // --- Guruhlar ----------------------------------------------------------------
 
-  listGroups() {
+  listGroups(organizationId: string) {
     return this.prisma.landingGroup.findMany({
+      where: { organizationId },
       orderBy: [{ order: "asc" }, { name: "asc" }],
       include: {
         photos: { orderBy: { order: "asc" } },
@@ -224,41 +211,43 @@ export class LandingService {
     });
   }
 
-  async createGroup(dto: CreateGroupDto) {
-    const slug = await this.uniqueGroupSlug(dto.name);
+  async createGroup(organizationId: string, dto: CreateGroupDto) {
+    const slug = await this.uniqueGroupSlug(organizationId, dto.name);
     return this.prisma.landingGroup.create({
-      data: { name: dto.name, slug, order: dto.order ?? 0 },
+      data: { organizationId, name: dto.name, slug, order: dto.order ?? 0 },
     });
   }
 
-  async updateGroup(id: string, dto: UpdateGroupDto) {
-    const group = await this.findGroup(id);
-    const slug = dto.name && dto.name !== group.name ? await this.uniqueGroupSlug(dto.name, id) : undefined;
+  async updateGroup(organizationId: string, id: string, dto: UpdateGroupDto) {
+    const group = await this.findGroup(organizationId, id);
+    const slug = dto.name && dto.name !== group.name ? await this.uniqueGroupSlug(organizationId, dto.name, id) : undefined;
     return this.prisma.landingGroup.update({ where: { id }, data: { ...dto, ...(slug ? { slug } : {}) } });
   }
 
-  async deleteGroup(id: string) {
-    await this.findGroup(id);
+  async deleteGroup(organizationId: string, id: string) {
+    await this.findGroup(organizationId, id);
     await this.prisma.landingGroup.delete({ where: { id } });
   }
 
-  async setGroupPhoto(id: string, photoPath: string) {
-    const group = await this.findGroup(id);
+  async setGroupPhoto(organizationId: string, id: string, photoPath: string) {
+    const group = await this.findGroup(organizationId, id);
     const updated = await this.prisma.landingGroup.update({ where: { id }, data: { photoPath } });
     await this.deleteUploadedPhoto(group.photoPath);
     return updated;
   }
 
   /** Guruh sahifasidagi galereyaga rasm qo'shadi — oxiriga qo'shiladi. */
-  async addGroupPhoto(groupId: string, path: string) {
-    await this.findGroup(groupId);
+  async addGroupPhoto(organizationId: string, groupId: string, path: string) {
+    await this.findGroup(organizationId, groupId);
     const count = await this.prisma.landingGroupPhoto.count({ where: { groupId } });
     return this.prisma.landingGroupPhoto.create({ data: { groupId, path, order: count } });
   }
 
-  async deleteGroupPhoto(groupId: string, photoId: string) {
-    const photo = await this.prisma.landingGroupPhoto.findUnique({ where: { id: photoId } });
-    if (!photo || photo.groupId !== groupId) {
+  async deleteGroupPhoto(organizationId: string, groupId: string, photoId: string) {
+    const photo = await this.prisma.landingGroupPhoto.findFirst({
+      where: { id: photoId, groupId, group: { organizationId } },
+    });
+    if (!photo) {
       throw new NotFoundException("Rasm topilmadi");
     }
     await this.prisma.landingGroupPhoto.delete({ where: { id: photoId } });
@@ -266,48 +255,50 @@ export class LandingService {
   }
 
   /** Guruh sahifasidagi "N-o'quvchi" joylaridan biriga haqiqiy o'quvchi qo'shadi. */
-  async createGroupStudent(groupId: string, dto: CreateGroupStudentDto) {
-    await this.findGroup(groupId);
+  async createGroupStudent(organizationId: string, groupId: string, dto: CreateGroupStudentDto) {
+    await this.findGroup(organizationId, groupId);
     return this.prisma.landingGroupStudent.create({
       data: { groupId, name: dto.name, bio: dto.bio, order: dto.order ?? 0 },
     });
   }
 
-  async updateGroupStudent(groupId: string, studentId: string, dto: UpdateGroupStudentDto) {
-    await this.findGroupStudent(groupId, studentId);
+  async updateGroupStudent(organizationId: string, groupId: string, studentId: string, dto: UpdateGroupStudentDto) {
+    await this.findGroupStudent(organizationId, groupId, studentId);
     return this.prisma.landingGroupStudent.update({ where: { id: studentId }, data: dto });
   }
 
-  async deleteGroupStudent(groupId: string, studentId: string) {
-    await this.findGroupStudent(groupId, studentId);
+  async deleteGroupStudent(organizationId: string, groupId: string, studentId: string) {
+    await this.findGroupStudent(organizationId, groupId, studentId);
     await this.prisma.landingGroupStudent.delete({ where: { id: studentId } });
   }
 
-  async setGroupStudentPhoto(groupId: string, studentId: string, photoPath: string) {
-    const student = await this.findGroupStudent(groupId, studentId);
+  async setGroupStudentPhoto(organizationId: string, groupId: string, studentId: string, photoPath: string) {
+    const student = await this.findGroupStudent(organizationId, groupId, studentId);
     const updated = await this.prisma.landingGroupStudent.update({ where: { id: studentId }, data: { photoPath } });
     await this.deleteUploadedPhoto(student.photoPath);
     return updated;
   }
 
-  private async findGroupStudent(groupId: string, studentId: string) {
-    const student = await this.prisma.landingGroupStudent.findUnique({ where: { id: studentId } });
-    if (!student || student.groupId !== groupId) {
+  private async findGroupStudent(organizationId: string, groupId: string, studentId: string) {
+    const student = await this.prisma.landingGroupStudent.findFirst({
+      where: { id: studentId, groupId, group: { organizationId } },
+    });
+    if (!student) {
       throw new NotFoundException("O'quvchi topilmadi");
     }
     return student;
   }
 
-  private async findGroup(id: string) {
-    const group = await this.prisma.landingGroup.findUnique({ where: { id } });
+  private async findGroup(organizationId: string, id: string) {
+    const group = await this.prisma.landingGroup.findFirst({ where: { id, organizationId } });
     if (!group) {
       throw new NotFoundException("Guruh topilmadi");
     }
     return group;
   }
 
-  /** `name`dan slug hosil qiladi, band bo'lsa (o'zidan boshqa yozuvda) `-2`, `-3` ... qo'shib bo'shini topadi. */
-  private async uniqueGroupSlug(name: string, excludeId?: string): Promise<string> {
+  /** `name`dan slug hosil qiladi, band bo'lsa (shu tashkilotda, o'zidan boshqa yozuvda) `-2`, `-3` ... qo'shib bo'shini topadi. */
+  private async uniqueGroupSlug(organizationId: string, name: string, excludeId?: string): Promise<string> {
     const base = name
       .toLowerCase()
       .trim()
@@ -318,7 +309,7 @@ export class LandingService {
     let candidate = base;
     let suffix = 2;
     for (;;) {
-      const existing = await this.prisma.landingGroup.findUnique({ where: { slug: candidate } });
+      const existing = await this.prisma.landingGroup.findFirst({ where: { organizationId, slug: candidate } });
       if (!existing || existing.id === excludeId) return candidate;
       candidate = `${base}-${suffix}`;
       suffix += 1;
@@ -327,22 +318,24 @@ export class LandingService {
 
   // --- Matnli bloklar (Doimiy tarbiyachi, Ta'lim yo'nalishi) -------------------
 
-  listContentBlocks() {
-    return this.prisma.landingContentBlock.findMany();
+  listContentBlocks(organizationId: string) {
+    return this.prisma.landingContentBlock.findMany({ where: { organizationId } });
   }
 
-  async getContentBlock(key: string) {
-    const block = await this.prisma.landingContentBlock.findUnique({ where: { key } });
+  async getContentBlock(organizationId: string, key: string) {
+    const block = await this.prisma.landingContentBlock.findUnique({
+      where: { organizationId_key: { organizationId, key } },
+    });
     if (!block) {
       throw new NotFoundException("Kontent blok topilmadi");
     }
     return block;
   }
 
-  upsertContentBlock(key: string, dto: UpdateContentBlockDto) {
+  upsertContentBlock(organizationId: string, key: string, dto: UpdateContentBlockDto) {
     return this.prisma.landingContentBlock.upsert({
-      where: { key },
-      create: { key, title: dto.title, body: dto.body },
+      where: { organizationId_key: { organizationId, key } },
+      create: { organizationId, key, title: dto.title, body: dto.body },
       update: { title: dto.title, body: dto.body },
     });
   }
@@ -352,11 +345,13 @@ export class LandingService {
    * kerak (masalan "maxsus-oqituvchi-1/2" — admin avval rasm tashlab, keyin
    * matn yozishi tabiiy) — shuning uchun `upsertContentBlock` kabi upsert.
    */
-  async setContentBlockPhoto(key: string, photoPath: string) {
-    const existing = await this.prisma.landingContentBlock.findUnique({ where: { key } });
+  async setContentBlockPhoto(organizationId: string, key: string, photoPath: string) {
+    const existing = await this.prisma.landingContentBlock.findUnique({
+      where: { organizationId_key: { organizationId, key } },
+    });
     const updated = await this.prisma.landingContentBlock.upsert({
-      where: { key },
-      create: { key, title: "", body: "", photoPath },
+      where: { organizationId_key: { organizationId, key } },
+      create: { organizationId, key, title: "", body: "", photoPath },
       update: { photoPath },
     });
     await this.deleteUploadedPhoto(existing?.photoPath);

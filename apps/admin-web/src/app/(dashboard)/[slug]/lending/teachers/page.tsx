@@ -39,7 +39,7 @@ export default function LendingTeachersPage({ params }: { params: Promise<{ slug
 
   const teachersQuery = useQuery({
     queryKey: ["landing-teachers"],
-    queryFn: () => api.get<LandingTeacher[]>("/app/landing/teachers"),
+    queryFn: () => api.get<LandingTeacher[]>("/app/landing/me/teachers"),
   });
 
   return (

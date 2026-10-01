@@ -1,36 +1,31 @@
-import { afterEach, describe, it } from "node:test";
-import assert from "node:assert/strict";
-import type { ExecutionContext } from "@nestjs/common";
+import { describe, it } from "node:test";
 import { expect } from "../helpers/expect";
 import { imageExtensionForMime, UPLOAD_IMAGE_EXTENSION } from "../../src/common/constants/uploads";
-import { LandingOwnerGuard } from "../../src/modules/landing/landing-owner.guard";
+import { LandingService } from "../../src/modules/landing/landing.service";
 import { AttendanceService } from "../../src/modules/attendance/attendance.service";
 import type { TenantScope } from "../../src/modules/iam/tenant-auth.types";
 
-function contextFor(user: unknown): ExecutionContext {
-  return { switchToHttp: () => ({ getRequest: () => ({ user }) }) } as unknown as ExecutionContext;
-}
+describe("lending kontenti — tashkilotlar orasida ajratilgan", () => {
+  function serviceWithTeacher(teacher: { id: string; organizationId: string }) {
+    const prisma = {
+      landingTeacher: {
+        findFirst: async ({ where }: { where: { id: string; organizationId: string } }) =>
+          teacher.id === where.id && teacher.organizationId === where.organizationId ? teacher : null,
+        update: async ({ where, data }: { where: { id: string }; data: unknown }) => ({ ...teacher, ...where, ...(data as object) }),
+      },
+    };
+    return new LandingService(prisma as never);
+  }
 
-describe("lending sayt faqat egasi tomonidan tahrirlanadi", () => {
-  const prev = process.env.LANDING_ORGANIZATION_SLUG;
-  afterEach(() => {
-    if (prev === undefined) delete process.env.LANDING_ORGANIZATION_SLUG;
-    else process.env.LANDING_ORGANIZATION_SLUG = prev;
+  it("boshqa tashkilotning o'qituvchisini tahrirlashga urinish — topilmadi", async () => {
+    const service = serviceWithTeacher({ id: "t1", organizationId: "org-a" });
+    await expect(service.updateTeacher("org-b", "t1", { fullName: "Boshqa" } as never)).rejects.toThrow("topilmadi");
   });
 
-  it("sukut bo'yicha vista-academy o'tadi, boshqa bog'cha rad etiladi", () => {
-    delete process.env.LANDING_ORGANIZATION_SLUG;
-    const guard = new LandingOwnerGuard();
-    expect(guard.canActivate(contextFor({ organizationSlug: "vista-academy" }))).toBe(true);
-    assert.throws(() => guard.canActivate(contextFor({ organizationSlug: "babyland" })), /faqat uning egasi/);
-    assert.throws(() => guard.canActivate(contextFor(undefined)), /faqat uning egasi/);
-  });
-
-  it("egasi env orqali o'zgartiriladi", () => {
-    process.env.LANDING_ORGANIZATION_SLUG = "usmon";
-    const guard = new LandingOwnerGuard();
-    expect(guard.canActivate(contextFor({ organizationSlug: "usmon" }))).toBe(true);
-    assert.throws(() => guard.canActivate(contextFor({ organizationSlug: "vista-academy" })), /faqat uning egasi/);
+  it("o'z tashkiloti o'qituvchisi — ishlaydi", async () => {
+    const service = serviceWithTeacher({ id: "t1", organizationId: "org-a" });
+    const updated = await service.updateTeacher("org-a", "t1", { fullName: "Yangi" } as never);
+    expect(updated.fullName).toBe("Yangi");
   });
 });
 

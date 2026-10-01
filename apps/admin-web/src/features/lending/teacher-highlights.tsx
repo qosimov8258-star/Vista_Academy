@@ -27,7 +27,7 @@ const HIGHLIGHT_BLOCKS: { key: string; label: string }[] = [
 export function TeacherHighlightsSection({ canWrite }: { canWrite: boolean }) {
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["landing-content-blocks"],
-    queryFn: () => api.get<LandingContentBlock[]>("/app/landing/content-blocks"),
+    queryFn: () => api.get<LandingContentBlock[]>("/app/landing/me/content-blocks"),
   });
 
   return (

@@ -66,7 +66,7 @@ export default function LendingMenuPage({ params }: { params: Promise<{ slug: st
 
   const mealsQuery = useQuery({
     queryKey: ["landing-meals"],
-    queryFn: () => api.get<LandingMeal[]>("/app/landing/meals"),
+    queryFn: () => api.get<LandingMeal[]>("/app/landing/me/meals"),
   });
 
   const deleteMutation = useMutation({

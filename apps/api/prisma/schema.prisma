@@ -123,6 +123,11 @@ model Organization {
   dailyReports              DailyReport[]
   developmentAssessments    DevelopmentAssessment[]
   leads                     Lead[]
+  landingScheduleItems      LandingScheduleItem[]
+  landingMeals              LandingMeal[]
+  landingTeachers           LandingTeacher[]
+  landingContentBlocks      LandingContentBlock[]
+  landingGroups             LandingGroup[]
   landingApplications       LandingApplication[]
   healthProfiles            HealthProfile[]
   vaccinations              Vaccination[]
@@ -2342,10 +2347,11 @@ model DiaryMedia {
 }
 
 // ---------------------------------------------------------------------------
-// Lending sahifa (landing-web) kontenti. Platform Super Admin platform-web
-// orqali boshqaradi, landing-web esa ochiq (autentifikatsiyasiz) API orqali
-// o'qiydi. Global: tashkilotga bog'liq emas — landing-web bitta umumiy
-// marketing sayt.
+// Lending sahifa (landing-web) kontenti. Har bir qator bitta tashkilotga
+// tegishli (organizationId) — har bog'cha admin panelidan faqat o'z
+// kontentini tahrirlaydi. Ochiq GET endpointlar va platform-web hamon bitta
+// "bayroqdor" tashkilotni ko'rsatadi — qarang:
+// LandingService.resolveDefaultOrganizationId.
 // ---------------------------------------------------------------------------
 
 enum LandingScheduleType {
@@ -2358,14 +2364,18 @@ enum LandingScheduleType {
 /// "Moslashuvchan jadval" bo'limi — kun tartibi: vaqt bo'yicha tartiblangan
 /// qatorlar (necha dars, qachon uxlashadi, qachon ovqatlanadi).
 model LandingScheduleItem {
-  id        String              @id @default(uuid())
-  time      String
-  title     String
-  type      LandingScheduleType @default(OTHER)
-  order     Int                 @default(0)
-  createdAt DateTime            @default(now()) @map("created_at")
-  updatedAt DateTime            @updatedAt @map("updated_at")
+  id             String              @id @default(uuid())
+  organizationId String              @map("organization_id")
+  time           String
+  title          String
+  type           LandingScheduleType @default(OTHER)
+  order          Int                 @default(0)
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
 
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
   @@map("landing_schedule_items")
 }
 
@@ -2379,61 +2389,79 @@ enum LandingMealType {
 
 /// "Sog'lom taomlar" bo'limi.
 model LandingMeal {
-  id          String          @id @default(uuid())
-  title       String
-  description String?
-  mealType    LandingMealType @default(OTHER) @map("meal_type")
-  weekday     Weekday?
-  time        String?
-  photoPath   String?         @map("photo_path")
-  order       Int             @default(0)
-  createdAt   DateTime        @default(now()) @map("created_at")
-  updatedAt   DateTime        @updatedAt @map("updated_at")
+  id             String          @id @default(uuid())
+  organizationId String          @map("organization_id")
+  title          String
+  description    String?
+  mealType       LandingMealType @default(OTHER) @map("meal_type")
+  weekday        Weekday?
+  time           String?
+  photoPath      String?         @map("photo_path")
+  order          Int             @default(0)
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
 
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
   @@index([weekday])
   @@map("landing_meals")
 }
 
 /// "O'qituvchilar" bo'limi.
 model LandingTeacher {
-  id         String   @id @default(uuid())
-  fullName   String   @map("full_name")
-  role       String
-  bio        String?
-  experience String?
-  photoPath  String?  @map("photo_path")
-  order      Int      @default(0)
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  fullName       String   @map("full_name")
+  role           String
+  bio            String?
+  experience     String?
+  photoPath      String?  @map("photo_path")
+  order          Int      @default(0)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
   @@map("landing_teachers")
 }
 
 /// "Doimiy tarbiyachi" va "Ta'lim yo'nalishi" kabi matnli bloklar — `key`
 /// bo'yicha yagona yozuv (masalan "doimiy-tarbiyachi", "talim-yonalishi").
 model LandingContentBlock {
-  id        String   @id @default(uuid())
-  key       String   @unique
-  title     String
-  body      String
-  photoPath String?  @map("photo_path")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  key            String
+  title          String
+  body           String
+  photoPath      String?  @map("photo_path")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, key])
+  @@index([organizationId])
   @@map("landing_content_blocks")
 }
 
 /// "Guruhlarimiz" bo'limi — landing-web bosh sahifasidagi guruh kartochkalari.
 model LandingGroup {
-  id        String                @id @default(uuid())
-  name      String
-  slug      String                @unique
-  photoPath String?               @map("photo_path")
-  order     Int                   @default(0)
-  createdAt DateTime              @default(now()) @map("created_at")
-  updatedAt DateTime              @updatedAt @map("updated_at")
-  photos    LandingGroupPhoto[]
-  students  LandingGroupStudent[]
+  id             String                @id @default(uuid())
+  organizationId String                @map("organization_id")
+  name           String
+  slug           String
+  photoPath      String?               @map("photo_path")
+  order          Int                   @default(0)
+  createdAt      DateTime              @default(now()) @map("created_at")
+  updatedAt      DateTime              @updatedAt @map("updated_at")
+  photos         LandingGroupPhoto[]
+  students       LandingGroupStudent[]
 
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
   @@map("landing_groups")
 }
 

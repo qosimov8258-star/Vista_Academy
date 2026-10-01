@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, HttpCode, HttpStatus, Param, Post } from "@nestjs/common";
+import { Body, Controller, Get, Headers, HttpCode, HttpStatus, Param, Post, Query } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { Public } from "../../common/decorators/public.decorator";
 import { LandingService } from "./landing.service";
@@ -6,10 +6,12 @@ import { CreateLandingApplicationDto } from "./dto/create-landing-application.dt
 
 /**
  * Lending sahifa (landing-web) uchun ochiq ma'lumot — sayt tashrif buyuruvchi
- * hali tizimga kirmagan, shuning uchun token talab qilinmaydi. Kontent
- * (jadval, taomlar va h.k.) faqat o'qiladi — yozish platform-web orqali
- * (LandingAdminController). Yagona istisno — pastdagi `applications`:
- * tashrif buyuruvchi "Ariza qoldirish" formasini shu yerdan yuboradi.
+ * hali tizimga kirmagan, shuning uchun token talab qilinmaydi. Kontent endi
+ * har bir tashkilotga tegishli, lekin bu endpointlar hamon BITTA ("bayroqdor")
+ * tashkilotni ko'rsatadi — qarang: LandingService.resolveDefaultOrganizationId.
+ * Yozish — bog'cha panelidan (TenantLandingController). Yagona istisno —
+ * pastdagi `applications`: tashrif buyuruvchi "Ariza qoldirish" formasini
+ * shu yerdan yuboradi.
  */
 @ApiTags("Public Landing")
 @Public()
@@ -18,33 +20,39 @@ export class PublicLandingController {
   constructor(private readonly landingService: LandingService) {}
 
   @Get("schedule")
-  listSchedule() {
-    return this.landingService.listScheduleItems();
+  async listSchedule(@Query("org") org?: string) {
+    const organizationId = await this.landingService.resolveDefaultOrganizationId(org);
+    return this.landingService.listScheduleItems(organizationId);
   }
 
   @Get("meals")
-  listMeals() {
-    return this.landingService.listMeals();
+  async listMeals(@Query("org") org?: string) {
+    const organizationId = await this.landingService.resolveDefaultOrganizationId(org);
+    return this.landingService.listMeals(organizationId);
   }
 
   @Get("teachers")
-  listTeachers() {
-    return this.landingService.listTeachers();
+  async listTeachers(@Query("org") org?: string) {
+    const organizationId = await this.landingService.resolveDefaultOrganizationId(org);
+    return this.landingService.listTeachers(organizationId);
   }
 
   @Get("groups")
-  listGroups() {
-    return this.landingService.listGroups();
+  async listGroups(@Query("org") org?: string) {
+    const organizationId = await this.landingService.resolveDefaultOrganizationId(org);
+    return this.landingService.listGroups(organizationId);
   }
 
   @Get("content-blocks")
-  listContentBlocks() {
-    return this.landingService.listContentBlocks();
+  async listContentBlocks(@Query("org") org?: string) {
+    const organizationId = await this.landingService.resolveDefaultOrganizationId(org);
+    return this.landingService.listContentBlocks(organizationId);
   }
 
   @Get("content-blocks/:key")
-  getContentBlock(@Param("key") key: string) {
-    return this.landingService.getContentBlock(key);
+  async getContentBlock(@Param("key") key: string, @Query("org") org?: string) {
+    const organizationId = await this.landingService.resolveDefaultOrganizationId(org);
+    return this.landingService.getContentBlock(organizationId, key);
   }
 
   /**

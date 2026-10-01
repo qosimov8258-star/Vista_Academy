@@ -54,7 +54,7 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
 
   const groupsQuery = useQuery({
     queryKey: ["landing-groups"],
-    queryFn: () => api.get<LandingGroup[]>("/app/landing/groups"),
+    queryFn: () => api.get<LandingGroup[]>("/app/landing/me/groups"),
   });
   const group = groupsQuery.data?.find((g) => g.id === groupId) ?? null;
 
