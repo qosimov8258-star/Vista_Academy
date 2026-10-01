@@ -11,6 +11,7 @@ import { Modal } from "@/components/ui/modal";
 import { Input, Select } from "@/components/ui/input";
 import { DateOfBirthInput } from "@/components/ui/date-of-birth-input";
 import { Button } from "@/components/ui/button";
+import { useTr } from "@/i18n/tr";
 
 const schema = z.object({
   groupId: z.string().optional(),
@@ -34,6 +35,7 @@ export function EditChildModal({
   slug: string;
   child: Child;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -79,12 +81,12 @@ export function EditChildModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
   return (
-    <Modal open={open} onClose={onClose} title="Bolani tahrirlash">
+    <Modal open={open} onClose={onClose} title={tr("Bolani tahrirlash")}>
       <form
         className="space-y-4"
         onSubmit={handleSubmit((values) => {
@@ -94,22 +96,22 @@ export function EditChildModal({
       >
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input label="Familiya" error={errors.lastName?.message} {...register("lastName")} />
-          <Input label="Ism" error={errors.firstName?.message} {...register("firstName")} />
+          <Input label={tr("Familiya")} error={errors.lastName?.message} {...register("lastName")} />
+          <Input label={tr("Ism")} error={errors.firstName?.message} {...register("firstName")} />
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Select label="Jinsi" error={errors.gender?.message} {...register("gender")}>
-            <option value="MALE">O&apos;g&apos;il bola</option>
-            <option value="FEMALE">Qiz bola</option>
+          <Select label={tr("Jinsi")} error={errors.gender?.message} {...register("gender")}>
+            <option value="MALE">{tr("O'g'il bola")}</option>
+            <option value="FEMALE">{tr("Qiz bola")}</option>
           </Select>
-          <Select label="Guruh" {...register("groupId")}>
-            <option value="">Guruhsiz</option>
+          <Select label={tr("Guruh")} {...register("groupId")}>
+            <option value="">{tr("Guruhsiz")}</option>
             {/* Bolaning joriy guruhi nofaol bo'lsa ham ro'yxatda ko'rinib
                 tursin — aks holda tanlov shu guruh emasdek ko'rinardi.
                 Boshqa nofaol guruhga o'tkazib bo'lmaydi. */}
@@ -117,7 +119,7 @@ export function EditChildModal({
               ?.filter((group) => group.status === "ACTIVE" || group.id === child.groupId)
               .map((group) => (
               <option key={group.id} value={group.id}>
-                {group.name}
+                {tr(group.name)}
               </option>
             ))}
           </Select>
@@ -129,7 +131,7 @@ export function EditChildModal({
             name="birthDate"
             render={({ field }) => (
               <DateOfBirthInput
-                label="Tug'ilgan sana"
+                label={tr("Tug'ilgan sana")}
                 value={field.value ?? ""}
                 onChange={field.onChange}
                 error={errors.birthDate?.message}
@@ -137,23 +139,23 @@ export function EditChildModal({
             )}
           />
           <Select
-            label="Holati"
+            label={tr("Holati")}
             error={errors.status?.message}
             disabled={child.status === "QUARANTINED"}
-            hint={child.status === "QUARANTINED" ? "Karantindagi bolaning holatini avval karantinni yopib o'zgartiring" : undefined}
+            hint={child.status === "QUARANTINED" ? tr("Karantindagi bolaning holatini avval karantinni yopib o'zgartiring") : undefined}
             {...register("status")}
           >
-            <option value="ACTIVE">Faol</option>
-            <option value="INACTIVE">Nofaol</option>
+            <option value="ACTIVE">{tr("Faol")}</option>
+            <option value="INACTIVE">{tr("Nofaol")}</option>
           </Select>
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Bekor qilish
+            {tr("Bekor qilish")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Saqlash
+            {tr("Saqlash")}
           </Button>
         </div>
       </form>

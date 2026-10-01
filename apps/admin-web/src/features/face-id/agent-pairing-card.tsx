@@ -8,6 +8,7 @@ import { Card, CardBody } from "@/components/ui/card";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { formatDateTime } from "@/lib/format";
+import { useTr } from "@/i18n/tr";
 
 interface FaceIdAgent {
   id: string;
@@ -51,6 +52,7 @@ const ONLINE_WINDOW_MS = 3 * 60_000;
  * agentga o'zi tushadi — tokenni .env ga yozish shart emas.
  */
 export function AgentPairingCard({ branchId, canWrite }: { branchId: string | null; canWrite: boolean }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [pairing, setPairing] = useState<{ code: string; expiresAt: string } | null>(null);
   const [revoking, setRevoking] = useState<FaceIdAgent | null>(null);
@@ -96,18 +98,16 @@ export function AgentPairingCard({ branchId, canWrite }: { branchId: string | nu
       <CardBody className="space-y-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-[15px] font-semibold text-[var(--color-text)]">Obyekt agenti</h2>
+            <h2 className="text-[15px] font-semibold text-[var(--color-text)]">{tr("Obyekt agenti")}</h2>
             <p className="text-[13px] text-[var(--color-text-muted)]">
-              Bog&apos;chadagi kompyuterdagi agent bir marta ulanadi — keyin bu yerda qo&apos;shilgan har bir qurilma unga o&apos;zi
-              tushadi, tokenni hech qayerga yozish shart emas.
+              {tr("Bog'chadagi kompyuterdagi agent bir marta ulanadi — keyin bu yerda qo'shilgan har bir qurilma unga o'zi tushadi, tokenni hech qayerga yozish shart emas.")}
             </p>
           </div>
         </div>
         {canWrite && (
           <div className="space-y-2">
             <p className="text-[13px] text-[var(--color-text-muted)]">
-              Bog&apos;chadagi kompyuterda shu sahifani ochib, o&apos;rnatuvchini yuklab oling va ikki marta bosing — u o&apos;zi
-              o&apos;rnatiladi, ulanadi va kompyuter yonganda o&apos;zi ishga tushadi.
+              {tr("Bog'chadagi kompyuterda shu sahifani ochib, o'rnatuvchini yuklab oling va ikki marta bosing — u o'zi o'rnatiladi, ulanadi va kompyuter yonganda o'zi ishga tushadi.")}
             </p>
             <div className="flex flex-wrap gap-2">
               {platforms.map((p, i) => (
@@ -117,13 +117,13 @@ export function AgentPairingCard({ branchId, canWrite }: { branchId: string | nu
                   onClick={() => installerMutation.mutate(p.value)}
                   loading={installerMutation.isPending && installerMutation.variables === p.value}
                 >
-                  Agentni o&apos;rnatish — {p.label}
+                  {tr("Agentni o'rnatish —")}{" "}{tr(p.label)}
                 </Button>
               ))}
             </div>
             {downloaded && (
               <div role="status" className="rounded-[var(--radius-md)] bg-[var(--color-success-bg)] px-3 py-2.5 text-[13px] text-[var(--color-success)]">
-                Yuklab olinmoqda. {HELP[downloaded]} Fayl 15 daqiqa ichida ishga tushirilishi kerak.
+                {tr("Yuklab olinmoqda.")}{" "}{tr(HELP[downloaded])} {tr("Fayl 15 daqiqa ichida ishga tushirilishi kerak.")}
               </div>
             )}
             <button
@@ -131,16 +131,16 @@ export function AgentPairingCard({ branchId, canWrite }: { branchId: string | nu
               onClick={() => codeMutation.mutate()}
               className="cursor-pointer text-[12.5px] text-[var(--color-text-muted)] underline underline-offset-2"
             >
-              Ishlab chiquvchilar uchun: kod bilan ulash (npm run pair)
+              {tr("Ishlab chiquvchilar uchun: kod bilan ulash (npm run pair)")}
             </button>
           </div>
         )}
         {(codeMutation.error ?? installerMutation.error) instanceof ApiError && (
-          <p className="text-[13px] text-[var(--color-danger)]">{((codeMutation.error ?? installerMutation.error) as ApiError).message}</p>
+          <p className="text-[13px] text-[var(--color-danger)]">{tr(((codeMutation.error ?? installerMutation.error) as ApiError).message)}</p>
         )}
 
         {agentsQuery.isLoading ? null : agents.length === 0 ? (
-          <p className="text-[13px] text-[var(--color-text-muted)]">Hali ulangan agent yo&apos;q.</p>
+          <p className="text-[13px] text-[var(--color-text-muted)]">{tr("Hali ulangan agent yo'q.")}</p>
         ) : (
           <ul className="divide-y divide-[var(--color-border-hair)]">
             {agents.map((agent) => {
@@ -148,10 +148,10 @@ export function AgentPairingCard({ branchId, canWrite }: { branchId: string | nu
               return (
                 <li key={agent.id} className="flex items-center justify-between gap-3 py-2 text-[13.5px]">
                   <span className="min-w-0">
-                    <span className="font-medium text-[var(--color-text)]">{agent.name}</span>
+                    <span className="font-medium text-[var(--color-text)]">{tr(agent.name)}</span>
                     <span className="ml-2 inline-flex items-center gap-1.5 text-[var(--color-text-muted)]">
                       <span className={`h-2 w-2 rounded-full ${online ? "bg-[var(--color-success)]" : "bg-[var(--color-text-faint,#9ca3af)]"}`} aria-hidden="true" />
-                      {online ? "Onlayn" : agent.lastSeenAt ? `Oxirgi aloqa: ${formatDateTime(agent.lastSeenAt)}` : "Hali ulanmagan"}
+                      {online ? "Onlayn" : agent.lastSeenAt ? `Oxirgi aloqa: ${formatDateTime(agent.lastSeenAt)}` : tr("Hali ulanmagan")}
                     </span>
                   </span>
                   {canWrite && (
@@ -160,7 +160,7 @@ export function AgentPairingCard({ branchId, canWrite }: { branchId: string | nu
                       onClick={() => setRevoking(agent)}
                       className="shrink-0 cursor-pointer text-[13px] font-medium text-[var(--color-danger)]"
                     >
-                      Uzish
+                      {tr("Uzish")}
                     </button>
                   )}
                 </li>
@@ -170,21 +170,21 @@ export function AgentPairingCard({ branchId, canWrite }: { branchId: string | nu
         )}
       </CardBody>
 
-      <Modal open={!!pairing} onClose={() => setPairing(null)} title="Agentni ulash">
+      <Modal open={!!pairing} onClose={() => setPairing(null)} title={tr("Agentni ulash")}>
         <div className="space-y-4 text-[14px] leading-relaxed text-[var(--color-text-muted)]">
-          <p>Bog&apos;chadagi kompyuterda, hik-agent papkasida quyidagini ishga tushiring va kodni kiriting:</p>
+          <p>{tr("Bog'chadagi kompyuterda, hik-agent papkasida quyidagini ishga tushiring va kodni kiriting:")}</p>
           <pre className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3 py-2 font-mono text-[13px] text-[var(--color-text)]">
             npm run pair
           </pre>
           <div className="rounded-[var(--radius-lg)] border border-[var(--color-border-hair)] py-4 text-center">
-            <div className="select-all font-mono text-[30px] font-bold tracking-[0.18em] text-[var(--color-text)]">{pairing?.code}</div>
+            <div className="select-all font-mono text-[30px] font-bold tracking-[0.18em] text-[var(--color-text)]">{tr(pairing?.code)}</div>
             <div className="mt-1 text-[12.5px]">
-              Bir marta ishlaydi, {pairing ? formatDateTime(pairing.expiresAt) : ""} gacha amal qiladi
+              {tr("Bir marta ishlaydi,")}{" "}{pairing ? formatDateTime(pairing.expiresAt) : ""} {tr("gacha amal qiladi")}
             </div>
           </div>
-          <p>Ulangach agentni ishga tushiring (npm start yoki pm2) — shu filialdagi qurilmalar o&apos;zi ulanadi.</p>
+          <p>{tr("Ulangach agentni ishga tushiring (npm start yoki pm2) — shu filialdagi qurilmalar o'zi ulanadi.")}</p>
           <div className="flex justify-end">
-            <Button onClick={() => setPairing(null)}>Tayyor</Button>
+            <Button onClick={() => setPairing(null)}>{tr("Tayyor")}</Button>
           </div>
         </div>
       </Modal>
@@ -192,14 +192,13 @@ export function AgentPairingCard({ branchId, canWrite }: { branchId: string | nu
       <ConfirmDialog
         open={!!revoking}
         onClose={() => setRevoking(null)}
-        title="Agentni uzish"
+        title={tr("Agentni uzish")}
         description={
           <>
-            <strong>{revoking?.name}</strong> agenti uziladi va qurilmalarga xizmat qilmay qo&apos;yadi. Qayta ulash uchun yangi kod
-            kerak bo&apos;ladi.
+            <strong>{tr(revoking?.name)}</strong> {tr("agenti uziladi va qurilmalarga xizmat qilmay qo'yadi. Qayta ulash uchun yangi kod kerak bo'ladi.")}
           </>
         }
-        confirmLabel="Uzish"
+        confirmLabel={tr("Uzish")}
         tone="danger"
         loading={revokeMutation.isPending}
         error={revokeMutation.error instanceof ApiError ? revokeMutation.error.message : null}

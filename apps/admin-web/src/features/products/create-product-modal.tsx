@@ -12,12 +12,13 @@ import { Input, Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { PlusIcon, CloseIcon } from "@/components/ui/icons";
 import { prepareProductPhoto } from "@/lib/product-photo";
+import { useTr } from "@/i18n/tr";
 
 const schema = z.object({
   name: z.string().min(2, "Nomi kamida 2 belgi"),
   description: z.string().max(500, "Izoh 500 belgidan oshmasin").optional(),
   color: z.string().optional(),
-  priceCoins: z.coerce.number({ invalid_type_error: "Coin miqdorini kiriting" }).int().min(0, "0 dan kichik bo'lmasin"),
+  priceCoins: z.coerce.number({ invalid_type_error: "Yulduzcha miqdorini kiriting" }).int().min(0, "0 dan kichik bo'lmasin"),
   quantity: z.coerce.number({ invalid_type_error: "Sonini kiriting" }).int().min(0, "Soni 0 dan kichik bo'lmasin"),
 });
 
@@ -36,6 +37,7 @@ export function CreateProductModal({
   slug: string;
   branchId: string;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
   const [images, setImages] = useState<Record<number, string | null>>({ 1: null, 2: null, 3: null });
@@ -79,7 +81,7 @@ export function CreateProductModal({
       handleClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
@@ -115,7 +117,7 @@ export function CreateProductModal({
   };
 
   return (
-    <Modal open={open} onClose={handleClose} title="Yangi tovar">
+    <Modal open={open} onClose={handleClose} title={tr("Yangi tovar")}>
       <form
         className="space-y-4"
         onSubmit={handleSubmit((values) => {
@@ -125,12 +127,12 @@ export function CreateProductModal({
       >
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
 
         <div>
-          <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">Rasmlar</span>
+          <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">{tr("Rasmlar")}</span>
           <div className="flex gap-3">
             {IMAGE_SLOTS.map((position) => {
               const image = images[position];
@@ -148,7 +150,7 @@ export function CreateProductModal({
                       <button
                         type="button"
                         onClick={() => removeImage(position)}
-                        aria-label="Rasmni olib tashlash"
+                        aria-label={tr("Rasmni olib tashlash")}
                         className="absolute -right-1.5 -top-1.5 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-[var(--color-danger)] text-white shadow-[var(--shadow-xs)]"
                       >
                         <CloseIcon className="h-3 w-3" />
@@ -181,14 +183,14 @@ export function CreateProductModal({
               );
             })}
           </div>
-          {imageError && <p className="mt-1.5 text-[12.5px] text-[var(--color-danger)]">{imageError}</p>}
+          {imageError && <p className="mt-1.5 text-[12.5px] text-[var(--color-danger)]">{tr(imageError)}</p>}
         </div>
 
-        <Input label="Nomi" placeholder="Konstruktor to'plami" error={errors.name?.message} {...register("name")} />
+        <Input label={tr("Nomi")} placeholder={tr("Konstruktor to'plami")} error={errors.name?.message} {...register("name")} />
 
         <Textarea
-          label="Izoh"
-          placeholder="Nima uchun ekanligi haqida qisqacha (ixtiyoriy)"
+          label={tr("Izoh")}
+          placeholder={tr("Nima uchun ekanligi haqida qisqacha (ixtiyoriy)")}
           rows={2}
           error={errors.description?.message}
           {...register("description")}
@@ -196,18 +198,18 @@ export function CreateProductModal({
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
-            label="Narxi (coin)"
+            label={tr("Narxi (yulduzcha)")}
             type="number"
             min={0}
             placeholder="0"
             error={errors.priceCoins?.message}
             {...register("priceCoins")}
           />
-          <Input label="Rangi" placeholder="Ixtiyoriy" error={errors.color?.message} {...register("color")} />
+          <Input label={tr("Rangi")} placeholder={tr("Ixtiyoriy")} error={errors.color?.message} {...register("color")} />
         </div>
 
         <Input
-          label="Soni"
+          label={tr("Soni")}
           type="number"
           min={0}
           placeholder="10"
@@ -217,10 +219,10 @@ export function CreateProductModal({
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={handleClose}>
-            Bekor qilish
+            {tr("Bekor qilish")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Yaratish
+            {tr("Yaratish")}
           </Button>
         </div>
       </form>

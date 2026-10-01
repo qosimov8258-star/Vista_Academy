@@ -9,9 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingState, ErrorState } from "@/components/ui/states";
 import type { ChildReminder } from "./child-note-modal";
+import { useTr } from "@/i18n/tr";
 
 /** Bugungi eslatmalar (dori vaqti va h.k.) — filial bo'yicha, tarbiyachida faqat o'z guruhi. */
 export function TodayRemindersCard({ slug, branchId, today }: { slug: string; branchId: string; today: string }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   // Belgini tarbiyachi (yoki admin) qo'yadi; oshpaz faqat ko'radi.
@@ -31,27 +33,27 @@ export function TodayRemindersCard({ slug, branchId, today }: { slug: string; br
   });
 
   if (query.isLoading) return <LoadingState rows={2} />;
-  if (query.isError) return <ErrorState message={(query.error as Error).message} />;
+  if (query.isError) return <ErrorState message={tr((query.error as Error).message)} />;
   if (!query.data?.length) return null;
 
   return (
     <Card className="border-[var(--color-warning)]/40">
       <CardHeader>
-        <CardTitle>Bugungi eslatmalar</CardTitle>
+        <CardTitle>{tr("Bugungi eslatmalar")}</CardTitle>
       </CardHeader>
       <CardBody>
         <ul className="divide-y divide-[var(--color-border)] text-[14px]">
           {query.data.map((r) => (
             <li key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-0.5 py-2">
               <b className="w-12 shrink-0 tabular-nums">{r.time ?? "—"}</b>
-              <span className={r.doneAt ? "font-medium text-[var(--color-text-muted)] line-through" : "font-medium"}>{r.childName}</span>
-              {r.groupName && <span className="text-[12.5px] text-[var(--color-text-muted)]">{r.groupName}</span>}
-              <span className="basis-full text-[var(--color-text)] sm:basis-auto">{r.text}</span>
-              <span className="basis-full pl-[60px] text-[12.5px] text-[var(--color-text-muted)]">Yozdi: {r.authorName}</span>
+              <span className={r.doneAt ? "font-medium text-[var(--color-text-muted)] line-through" : "font-medium"}>{tr(r.childName)}</span>
+              {r.groupName && <span className="text-[12.5px] text-[var(--color-text-muted)]">{tr(r.groupName)}</span>}
+              <span className="basis-full text-[var(--color-text)] sm:basis-auto">{tr(r.text)}</span>
+              <span className="basis-full pl-[60px] text-[12.5px] text-[var(--color-text-muted)]">{tr("Yozdi:")}{" "}{tr(r.authorName)}</span>
               <span className="flex basis-full flex-wrap items-center gap-2 pl-[60px] sm:ml-auto sm:basis-auto sm:pl-0">
                 {r.doneAt && (
                   <Badge tone="success">
-                    Berildi {new Date(r.doneAt).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" })}
+                    {tr("Berildi")}{" "}{new Date(r.doneAt).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" })}
                     {r.doneByName ? ` · ${r.doneByName}` : ""}
                   </Badge>
                 )}

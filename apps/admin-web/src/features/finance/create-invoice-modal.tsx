@@ -12,6 +12,7 @@ import { useAuth } from "@/lib/use-auth";
 import { Modal } from "@/components/ui/modal";
 import { Input, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useTr } from "@/i18n/tr";
 
 const schema = z
   .object({
@@ -34,6 +35,7 @@ function currentPeriod(): string {
 }
 
 export function CreateInvoiceModal({ open, onClose, slug }: { open: boolean; onClose: () => void; slug: string }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
   const { user } = useAuth();
@@ -92,20 +94,20 @@ export function CreateInvoiceModal({ open, onClose, slug }: { open: boolean; onC
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
   return (
-    <Modal open={open} onClose={onClose} title="Yangi hisob-faktura">
+    <Modal open={open} onClose={onClose} title={tr("Yangi hisob-faktura")}>
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
         <Select
-          label="Guruh"
+          label={tr("Guruh")}
           value={groupId}
           onChange={(e) => {
             setGroupId(e.target.value);
@@ -113,47 +115,47 @@ export function CreateInvoiceModal({ open, onClose, slug }: { open: boolean; onC
           }}
         >
           <option value="" disabled>
-            Guruhni tanlang
+            {tr("Guruhni tanlang")}
           </option>
           {groups?.groups.map((g) => (
             <option key={g.groupId} value={g.groupId}>
-              {g.name} ({g.total} bola)
+              {tr(g.name)} ({tr(g.total)} {tr("bola)")}
             </option>
           ))}
         </Select>
-        <Select label="Bola" defaultValue="" disabled={!groupId} error={errors.childId?.message} {...register("childId")}>
+        <Select label={tr("Bola")} defaultValue="" disabled={!groupId} error={errors.childId?.message} {...register("childId")}>
           <option value="" disabled>
-            {groupId ? "Bolani tanlang" : "Avval guruhni tanlang"}
+            {groupId ? tr("Bolani tanlang") : tr("Avval guruhni tanlang")}
           </option>
           {groupChildren?.children.map((child) => (
             <option key={child.childId} value={child.childId}>
-              {child.childName}
-              {child.state === "PAID" ? "  ✓ to'lagan" : child.state !== "NONE" ? "  ✓ hisob-faktura bor" : ""}
+              {tr(child.childName)}
+              {child.state === "PAID" ? tr("  ✓ to'lagan") : child.state !== "NONE" ? tr("  ✓ hisob-faktura bor") : ""}
             </option>
           ))}
         </Select>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input label="Summa (UZS)" type="number" placeholder="850000" error={errors.amount?.message} {...register("amount")} />
+          <Input label={tr("Summa (UZS)")} type="number" placeholder="850000" error={errors.amount?.message} {...register("amount")} />
           <Input
-            label="Chegirma (ixtiyoriy)"
+            label={tr("Chegirma (ixtiyoriy)")}
             type="number"
             placeholder="0"
-            hint="Masalan ko'p farzandli oila uchun"
+            hint={tr("Masalan ko'p farzandli oila uchun")}
             error={errors.discountAmount?.message}
             {...register("discountAmount")}
           />
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input label="Davr (YYYY-MM)" placeholder="2026-09" error={errors.period?.message} {...register("period")} />
-          <Input label="To'lov muddati" type="date" error={errors.dueDate?.message} {...register("dueDate")} />
+          <Input label={tr("Davr (YYYY-MM)")} placeholder="2026-09" error={errors.period?.message} {...register("period")} />
+          <Input label={tr("To'lov muddati")} type="date" error={errors.dueDate?.message} {...register("dueDate")} />
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Bekor qilish
+            {tr("Bekor qilish")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Yaratish
+            {tr("Yaratish")}
           </Button>
         </div>
       </form>

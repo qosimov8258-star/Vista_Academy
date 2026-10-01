@@ -9,6 +9,7 @@ import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { formatMoney, formatDateTime } from "@/lib/format";
+import { useTr } from "@/i18n/tr";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
 
@@ -61,6 +62,7 @@ export function ReceiptReviewModal({
   refundingId?: string;
   onRefund: (paymentId: string) => void;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [method, setMethod] = useState<PaymentMethod>(RECEIPT_PAYMENT_METHODS[0]);
   const [error, setError] = useState<string | null>(null);
@@ -83,7 +85,7 @@ export function ReceiptReviewModal({
       invalidate();
       onClose();
     },
-    onError: (err) => setError(err instanceof ApiError ? err.message : "Kutilmagan xatolik"),
+    onError: (err) => setError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik")),
   });
 
   const rejectMutation = useMutation({
@@ -92,7 +94,7 @@ export function ReceiptReviewModal({
       invalidate();
       onClose();
     },
-    onError: (err) => setError(err instanceof ApiError ? err.message : "Kutilmagan xatolik"),
+    onError: (err) => setError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik")),
   });
 
   const handleReject = () => {
@@ -105,14 +107,14 @@ export function ReceiptReviewModal({
   const pending = approveMutation.isPending || rejectMutation.isPending;
 
   return (
-    <Modal open={open} onClose={onClose} title="To'lov tafsilotlari" widthClassName="max-w-lg">
+    <Modal open={open} onClose={onClose} title={tr("To'lov tafsilotlari")} widthClassName="max-w-lg">
       <div className="space-y-4">
         {receipt && (
           <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-separator)] bg-[var(--color-surface-sunken)]">
             {/* eslint-disable-next-line @next/next/no-img-element -- tashqi manzil */}
             <img
               src={`${API_URL}/app/payment-receipts/${receipt.id}/image`}
-              alt="To'lov cheki"
+              alt={tr("To'lov cheki")}
               className="max-h-[50vh] w-full object-contain"
             />
           </div>
@@ -125,48 +127,48 @@ export function ReceiptReviewModal({
         {payment && (
           <dl className="grid grid-cols-2 gap-3 text-[14px]">
             <div>
-              <dt className="text-[12px] text-[var(--color-text-muted)]">Sana</dt>
+              <dt className="text-[12px] text-[var(--color-text-muted)]">{tr("Sana")}</dt>
               <dd className="font-medium tabular-nums text-[var(--color-text)]">{formatDateTime(createdAt)}</dd>
             </div>
             <div>
-              <dt className="text-[12px] text-[var(--color-text-muted)]">Summa</dt>
+              <dt className="text-[12px] text-[var(--color-text-muted)]">{tr("Summa")}</dt>
               <dd className="font-medium tabular-nums text-[var(--color-text)]">{formatMoney(amount, currency)}</dd>
             </div>
             <div>
-              <dt className="text-[12px] text-[var(--color-text-muted)]">Xizmat turi</dt>
-              <dd className="font-medium text-[var(--color-text)]">{RECEIPT_METHOD_LABEL[payment.method]}</dd>
+              <dt className="text-[12px] text-[var(--color-text-muted)]">{tr("Xizmat turi")}</dt>
+              <dd className="font-medium text-[var(--color-text)]">{tr(RECEIPT_METHOD_LABEL[payment.method])}</dd>
             </div>
           </dl>
         )}
 
         {error && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {error}
+            {tr(error)}
           </div>
         )}
 
         {receipt?.status === "REJECTED" && receipt.reviewNote && (
           <p className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-[13px] text-[var(--color-danger)]">
-            {receipt.reviewNote}
+            {tr(receipt.reviewNote)}
           </p>
         )}
 
         {isPendingReceipt && !canWrite && (
           <p className="rounded-lg bg-[var(--color-surface-sunken)] px-3 py-2 text-[13px] text-[var(--color-text-muted)]">
-            Bu chekni faqat moliyachi yoki filial admini tasdiqlashi/rad etishi mumkin.
+            {tr("Bu chekni faqat moliyachi yoki filial admini tasdiqlashi/rad etishi mumkin.")}
           </p>
         )}
 
         {isPendingReceipt && canWrite && (
           <>
             <Select
-              label="Xizmat turi (qanday to'lov qilingan)"
+              label={tr("Xizmat turi (qanday to'lov qilingan)")}
               value={method}
               onChange={(e) => setMethod(e.target.value as PaymentMethod)}
             >
               {RECEIPT_PAYMENT_METHODS.map((m) => (
                 <option key={m} value={m}>
-                  {RECEIPT_METHOD_LABEL[m]}
+                  {tr(RECEIPT_METHOD_LABEL[m])}
                 </option>
               ))}
             </Select>
@@ -182,10 +184,10 @@ export function ReceiptReviewModal({
                   approveMutation.mutate();
                 }}
               >
-                Tasdiqlash
+                {tr("Tasdiqlash")}
               </Button>
               <Button type="button" variant="danger" fullWidth loading={rejectMutation.isPending} disabled={pending} onClick={handleReject}>
-                Bekor qilish
+                {tr("Bekor qilish")}
               </Button>
             </div>
           </>
@@ -199,7 +201,7 @@ export function ReceiptReviewModal({
               loading={downloadingReceiptId === payment.id}
               onClick={() => onDownloadReceipt(payment.id)}
             >
-              Kvitansiya
+              {tr("Kvitansiya")}
             </Button>
             {canWrite && payment.status === "COMPLETED" && (
               <Button
@@ -207,12 +209,12 @@ export function ReceiptReviewModal({
                 variant="danger"
                 loading={refundingId === payment.id}
                 onClick={() => {
-                  if (confirm("Bu to'lovni qaytarishni tasdiqlaysizmi?")) {
+                  if (confirm(tr("Bu to'lovni qaytarishni tasdiqlaysizmi?"))) {
                     onRefund(payment.id);
                   }
                 }}
               >
-                Qaytarish
+                {tr("Qaytarish")}
               </Button>
             )}
           </div>

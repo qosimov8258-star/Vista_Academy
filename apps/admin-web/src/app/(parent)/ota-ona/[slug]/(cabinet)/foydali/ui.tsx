@@ -8,6 +8,7 @@ import { ApiError } from "@/lib/api";
 import styles from "../../parent.module.css";
 import type { Tale } from "./content";
 import { setTextSize, useTextSize } from "./store";
+import { useTr } from "@/i18n/tr";
 
 /** CSS o'zgaruvchilari (`--x`) bilan to'ldirilgan uslub */
 type FxStyle = CSSProperties & Record<`--${string}`, string | number>;
@@ -48,6 +49,7 @@ export function FoydaliHeader({
   subtitle?: string;
   right?: React.ReactNode;
 }) {
+  const tr = useTr();
   return (
     <header className="pt-5">
       {backHref && (
@@ -56,7 +58,7 @@ export function FoydaliHeader({
           className="inline-flex items-center gap-1 rounded-full bg-[var(--p-card)] py-1.5 pl-2 pr-3.5 text-[13.5px] font-semibold text-[var(--p-muted)] shadow-[var(--p-shadow)] transition-transform active:scale-[0.97]"
         >
           <ArrowLeftIcon className="h-4 w-4" />
-          {backLabel}
+          {tr(backLabel)}
         </Link>
       )}
       <div className={clsx("flex items-end justify-between gap-3", backHref && "mt-4")}>
@@ -64,11 +66,11 @@ export function FoydaliHeader({
           <h1
             className={`${styles.roundedFont} text-[28px] font-extrabold leading-tight tracking-[-0.02em] text-[var(--p-ink)]`}
           >
-            {title}
+            {tr(title)}
           </h1>
-          {subtitle && <p className="mt-1 text-[14.5px] leading-relaxed text-[var(--p-muted)]">{subtitle}</p>}
+          {subtitle && <p className="mt-1 text-[14.5px] leading-relaxed text-[var(--p-muted)]">{tr(subtitle)}</p>}
         </div>
-        {right}
+        {tr(right)}
       </div>
     </header>
   );
@@ -95,33 +97,34 @@ export function SectionLabel({ children }: { children: React.ReactNode }) {
 
 /** Matn o'lchami: ikki tugma — kichikroq va kattaroq "A" */
 export function TextSizeControl() {
+  const tr = useTr();
   const size = useTextSize();
   const button =
     "flex h-9 w-9 cursor-pointer items-center justify-center rounded-full font-extrabold text-[var(--p-ink)] transition-colors active:bg-[var(--p-sunken)] disabled:cursor-default disabled:opacity-30";
   return (
     <div
       role="group"
-      aria-label="Matn o'lchami"
+      aria-label={tr("Matn o'lchami")}
       className="flex shrink-0 items-center gap-0.5 rounded-full bg-[var(--p-card)] p-1 shadow-[var(--p-shadow)]"
     >
       <button
         type="button"
-        aria-label="Matnni kichraytirish"
+        aria-label={tr("Matnni kichraytirish")}
         disabled={size === 0}
         onClick={() => setTextSize(size === 2 ? 1 : 0)}
         className={clsx(button, "text-[13px]")}
       >
-        A
+        {tr("A")}
       </button>
       <span className="h-5 w-px bg-[var(--p-line)]" />
       <button
         type="button"
-        aria-label="Matnni kattalashtirish"
+        aria-label={tr("Matnni kattalashtirish")}
         disabled={size === 2}
         onClick={() => setTextSize(size === 0 ? 1 : 2)}
         className={clsx(button, "text-[19px]")}
       >
-        A
+        {tr("A")}
       </button>
     </div>
   );
@@ -167,6 +170,7 @@ export function LearnedButton({
   doneLabel: string;
   hint?: string;
 }) {
+  const tr = useTr();
   const [burst, setBurst] = useState(0);
   return (
     <div className="relative mt-5">
@@ -192,21 +196,22 @@ export function LearnedButton({
         {learned ? doneLabel : idleLabel}
       </button>
       {burst > 0 && <Confetti key={burst} />}
-      {hint && <p className="mt-2 text-center text-[12.5px] text-[var(--p-muted)]">{hint}</p>}
+      {hint && <p className="mt-2 text-center text-[12.5px] text-[var(--p-muted)]">{tr(hint)}</p>}
     </div>
   );
 }
 
 export function NotFoundCard({ backHref, backLabel, text }: { backHref: string; backLabel: string; text: string }) {
+  const tr = useTr();
   return (
     <div className="mt-6 rounded-[var(--p-radius)] bg-[var(--p-card)] p-6 text-center shadow-[var(--p-shadow)]">
-      <p className={`${styles.roundedFont} text-[20px] font-extrabold text-[var(--p-ink)]`}>Topilmadi</p>
-      <p className="mt-1 text-[14px] text-[var(--p-muted)]">{text}</p>
+      <p className={`${styles.roundedFont} text-[20px] font-extrabold text-[var(--p-ink)]`}>{tr("Topilmadi")}</p>
+      <p className="mt-1 text-[14px] text-[var(--p-muted)]">{tr(text)}</p>
       <Link
         href={backHref}
         className="mt-4 inline-flex rounded-full bg-[var(--p-sunken)] px-5 py-2.5 text-[14px] font-bold text-[var(--p-ink)]"
       >
-        {backLabel}
+        {tr(backLabel)}
       </Link>
     </div>
   );
@@ -214,8 +219,9 @@ export function NotFoundCard({ backHref, backLabel, text }: { backHref: string; 
 
 /** Yuklanish paytida — kartalar shaklidagi yumshoq miltillash */
 export function ListSkeleton({ rows = 3, tall = false }: { rows?: number; tall?: boolean }) {
+  const tr = useTr();
   return (
-    <ul className="mt-4 space-y-3" aria-busy="true" aria-label="Yuklanmoqda">
+    <ul className="mt-4 space-y-3" aria-busy="true" aria-label={tr("Yuklanmoqda")}>
       {Array.from({ length: rows }, (_, i) => (
         <li
           key={i}
@@ -242,36 +248,38 @@ export function EmptyCard({
   title: string;
   text: string;
 }) {
+  const tr = useTr();
   return (
     <div className="mt-5 flex flex-col items-center rounded-[var(--p-radius)] bg-[var(--p-card)] px-6 py-8 text-center shadow-[var(--p-shadow)]">
       <span className={clsx("flex h-16 w-16 items-center justify-center rounded-[22px]", TONES[tone].soft, TONES[tone].ink)}>
         <Icon className="h-9 w-9" />
       </span>
-      <p className={`${styles.roundedFont} mt-4 text-[19px] font-extrabold text-[var(--p-ink)]`}>{title}</p>
-      <p className="mt-1 max-w-[300px] text-[14px] leading-relaxed text-[var(--p-muted)]">{text}</p>
+      <p className={`${styles.roundedFont} mt-4 text-[19px] font-extrabold text-[var(--p-ink)]`}>{tr(title)}</p>
+      <p className="mt-1 max-w-[300px] text-[14px] leading-relaxed text-[var(--p-muted)]">{tr(text)}</p>
     </div>
   );
 }
 
 /** Yuklab bo'lmadi: internet yo'q yoki seans tugagan */
 export function LoadErrorCard({ error, onRetry, loginHref }: { error: unknown; onRetry: () => void; loginHref: string }) {
+  const tr = useTr();
   const signedOut = error instanceof ApiError && error.status === 401;
   return (
     <div role="alert" className="mt-5 rounded-[var(--p-radius)] bg-[var(--p-card)] p-6 text-center shadow-[var(--p-shadow)]">
       <p className={`${styles.roundedFont} text-[19px] font-extrabold text-[var(--p-ink)]`}>
-        {signedOut ? "Qayta kirish kerak" : "Yuklab bo'lmadi"}
+        {signedOut ? tr("Qayta kirish kerak") : tr("Yuklab bo'lmadi")}
       </p>
       <p className="mt-1 text-[14px] leading-relaxed text-[var(--p-muted)]">
         {signedOut
-          ? "Kabinet parol almashgani yoki uzoq kirilmagani uchun yopilgan."
-          : "Internetni tekshirib, qayta urinib ko'ring."}
+          ? tr("Kabinet parol almashgani yoki uzoq kirilmagani uchun yopilgan.")
+          : tr("Internetni tekshirib, qayta urinib ko'ring.")}
       </p>
       {signedOut ? (
         <Link
           href={loginHref}
           className="mt-4 inline-flex rounded-full bg-[var(--p-coral)] px-5 py-2.5 text-[14px] font-bold text-white"
         >
-          Kirish
+          {tr("Kirish")}
         </Link>
       ) : (
         <button
@@ -279,7 +287,7 @@ export function LoadErrorCard({ error, onRetry, loginHref }: { error: unknown; o
           onClick={onRetry}
           className="mt-4 inline-flex cursor-pointer rounded-full bg-[var(--p-sunken)] px-5 py-2.5 text-[14px] font-bold text-[var(--p-ink)] transition-colors active:bg-[var(--p-line)]"
         >
-          Qayta urinish
+          {tr("Qayta urinish")}
         </button>
       )}
     </div>

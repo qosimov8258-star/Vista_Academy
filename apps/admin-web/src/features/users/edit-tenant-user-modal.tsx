@@ -11,6 +11,7 @@ import { ROLE_LABEL, canChangeUserRole } from "@/lib/permissions";
 import { Modal } from "@/components/ui/modal";
 import { Input, PasswordInput, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useTr } from "@/i18n/tr";
 
 const schema = z.object({
   fullName: z.string().min(2, "To'liq ism kamida 2 belgi"),
@@ -34,6 +35,7 @@ export function EditTenantUserModal({
   currentUser: TenantAuthenticatedUser;
   user: TenantUser | null;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
   const roleEditable = !!user && canChangeUserRole(currentUser, user);
@@ -69,60 +71,60 @@ export function EditTenantUserModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
   if (!user) return null;
 
   return (
-    <Modal open={open} onClose={onClose} title="Xodimni tahrirlash">
+    <Modal open={open} onClose={onClose} title={tr("Xodimni tahrirlash")}>
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div role="alert" className="rounded-[var(--radius-md)] bg-[var(--color-danger-bg)] px-3.5 py-2.5 text-[14px] text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
 
         <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
-          <p className="text-[13px] text-[var(--color-text-muted)]">Login</p>
-          <p className="text-[15px] font-medium text-[var(--color-text)]">{user.login}</p>
+          <p className="text-[13px] text-[var(--color-text-muted)]">{tr("Login")}</p>
+          <p className="text-[15px] font-medium text-[var(--color-text)]">{tr(user.login)}</p>
           <p className="mt-1 text-[12.5px] text-[var(--color-text-muted)]">
-            Login o&apos;zgartirilmaydi — u hisobning doimiy identifikatori.
+            {tr("Login o'zgartirilmaydi — u hisobning doimiy identifikatori.")}
           </p>
         </div>
 
-        <Input label="To'liq ism" error={errors.fullName?.message} {...register("fullName")} />
+        <Input label={tr("To'liq ism")} error={errors.fullName?.message} {...register("fullName")} />
 
         {roleEditable ? (
-          <Select label="Rol" error={errors.role?.message} {...register("role")}>
-            <option value="BRANCH_ADMIN">{ROLE_LABEL.BRANCH_ADMIN}</option>
-            <option value="FINANCE">{ROLE_LABEL.FINANCE}</option>
+          <Select label={tr("Rol")} error={errors.role?.message} {...register("role")}>
+            <option value="BRANCH_ADMIN">{tr(ROLE_LABEL.BRANCH_ADMIN)}</option>
+            <option value="FINANCE">{tr(ROLE_LABEL.FINANCE)}</option>
           </Select>
         ) : (
           <div>
-            <p className="mb-2 text-[13px] font-medium text-[var(--color-text)]">Rol</p>
+            <p className="mb-2 text-[13px] font-medium text-[var(--color-text)]">{tr("Rol")}</p>
             <p className="text-[15px] text-[var(--color-text-muted)]">
-              {ROLE_LABEL[user.role]}
-              {user.role === "TEACHER" && " — o'qituvchi roli guruh biriktiruviga bog'langan, bu yerdan o'zgartirilmaydi"}
+              {tr(ROLE_LABEL[user.role])}
+              {user.role === "TEACHER" && tr(" — o'qituvchi roli guruh biriktiruviga bog'langan, bu yerdan o'zgartirilmaydi")}
             </p>
           </div>
         )}
 
         <PasswordInput
-          label="Yangi parol"
-          placeholder="Bo'sh qoldirilsa o'zgarmaydi"
-          hint="Parol almashtirilsa, xodimning ochiq seanslari yopiladi"
+          label={tr("Yangi parol")}
+          placeholder={tr("Bo'sh qoldirilsa o'zgarmaydi")}
+          hint={tr("Parol almashtirilsa, xodimning ochiq seanslari yopiladi")}
           error={errors.password?.message}
           {...register("password")}
         />
 
         <div className="flex justify-end gap-2 pt-1">
           <Button type="button" variant="outline" onClick={onClose}>
-            Bekor qilish
+            {tr("Bekor qilish")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Saqlash
+            {tr("Saqlash")}
           </Button>
         </div>
       </form>

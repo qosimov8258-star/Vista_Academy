@@ -8,6 +8,7 @@ import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { initials } from "@/components/ui/avatar";
+import { useTr } from "@/i18n/tr";
 
 export function ManageTeachersModal({
   open,
@@ -20,6 +21,7 @@ export function ManageTeachersModal({
   slug: string;
   group: Group;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -32,8 +34,8 @@ export function ManageTeachersModal({
 
   const mutation = useMutation({
     mutationFn: ({ employee, assign }: { employee: Employee; assign: boolean }) => {
-      const currentIds = (employee.teachingGroups ?? []).map((link) => link.groupId);
-      const nextIds = assign ? [...currentIds, group.id] : currentIds.filter((id) => id !== group.id);
+      // Xodim faqat bitta guruhga biriktiriladi: biriktirilsa, eski guruhi almashadi
+      const nextIds = assign ? [group.id] : [];
       return api.patch<Employee>(`/app/employees/${employee.id}/groups`, { groupIds: nextIds });
     },
     onMutate: ({ employee }) => setPendingId(employee.id),
@@ -43,7 +45,7 @@ export function ManageTeachersModal({
       queryClient.invalidateQueries({ queryKey: ["group-overview", slug, group.id] });
       queryClient.invalidateQueries({ queryKey: ["groups", slug] });
     },
-    onError: (err) => setError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi"),
+    onError: (err) => setError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi")),
     onSettled: () => setPendingId(null),
   });
 
@@ -53,15 +55,15 @@ export function ManageTeachersModal({
     <Modal open={open} onClose={onClose} title={`Tarbiyachilar — ${group.name}`} widthClassName="max-w-lg">
       <div className="space-y-3">
         {error && (
-          <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">{error}</div>
+          <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">{tr(error)}</div>
         )}
 
         {employeesQuery.isLoading ? (
           <LoadingState rows={4} />
         ) : employeesQuery.isError ? (
-          <ErrorState message={(employeesQuery.error as Error).message} />
+          <ErrorState message={tr((employeesQuery.error as Error).message)} />
         ) : employees.length === 0 ? (
-          <EmptyState title="Bu filialda xodim yo'q" />
+          <EmptyState title={tr("Bu filialda xodim yo'q")} />
         ) : (
           <ul className="divide-y divide-[var(--color-separator)] rounded-[var(--radius-md)] border border-[var(--color-separator)]">
             {employees.map((employee) => {
@@ -77,12 +79,12 @@ export function ManageTeachersModal({
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[14px] font-medium text-[var(--color-text)]">
-                      {employee.fullName}
+                      {tr(employee.fullName)}
                       {!employee.isActive && (
-                        <span className="ml-1.5 text-[12px] font-normal text-[var(--color-text-muted)]">(nofaol)</span>
+                        <span className="ml-1.5 text-[12px] font-normal text-[var(--color-text-muted)]">{tr("(nofaol)")}</span>
                       )}
                     </p>
-                    <p className="text-[12.5px] text-[var(--color-text-muted)]">{employee.position}</p>
+                    <p className="text-[12.5px] text-[var(--color-text-muted)]">{tr(employee.position)}</p>
                   </div>
                   <Button
                     size="sm"
@@ -101,7 +103,7 @@ export function ManageTeachersModal({
 
         <div className="flex justify-end pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Yopish
+            {tr("Yopish")}
           </Button>
         </div>
       </div>

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { LoadingState } from "@/components/ui/states";
 import type { StaffAttendanceDay, StaffAttendanceStatus, StaffAttendanceSummary } from "@/lib/types";
 import { todayTashkent } from "./shared";
+import { useTr } from "@/i18n/tr";
 
 const NOT_HERE: Partial<Record<StaffAttendanceStatus, { label: string; tone: "danger" | "warning" | "neutral" }>> = {
   ABSENT: { label: "Kelmadi", tone: "danger" },
@@ -17,6 +18,7 @@ const NOT_HERE: Partial<Record<StaffAttendanceStatus, { label: string; tone: "da
 
 /** Bugun kelmagan, kasal yoki ta'tildagi xodimlar — kassirning bosh sahifasida qisqacha. */
 export function StaffAbsenceToday({ slug, branchId }: { slug: string; branchId: string }) {
+  const tr = useTr();
   const today = todayTashkent();
   const query = useQuery({
     queryKey: ["staff-attendance", slug, branchId, today],
@@ -30,23 +32,23 @@ export function StaffAbsenceToday({ slug, branchId }: { slug: string; branchId: 
   return (
     <Card>
       <CardHeader className="flex items-center justify-between gap-3">
-        <CardTitle>Bugun kelmagan xodimlar</CardTitle>
+        <CardTitle>{tr("Bugun kelmagan xodimlar")}</CardTitle>
         <Link href={`/${slug}/staff-absences`} className="text-[13px] font-medium text-[var(--color-primary)] hover:underline">
-          Kelmagan kunlar
+          {tr("Kelmagan kunlar")}
         </Link>
       </CardHeader>
       <CardBody className="space-y-2 text-[14px]">
         {rows.length === 0 ? (
-          <p className="text-[var(--color-text-muted)]">Bugun kelmagan xodim yo&apos;q</p>
+          <p className="text-[var(--color-text-muted)]">{tr("Bugun kelmagan xodim yo'q")}</p>
         ) : (
           <ul className="divide-y divide-[var(--color-border)]">
             {rows.map((e) => (
               <li key={e.employeeId} className="flex items-center justify-between gap-3 py-2">
                 <span>
-                  <span className="font-medium">{e.fullName}</span>
-                  <span className="ml-2 text-[12.5px] text-[var(--color-text-muted)]">{e.position}</span>
+                  <span className="font-medium">{tr(e.fullName)}</span>
+                  <span className="ml-2 text-[12.5px] text-[var(--color-text-muted)]">{tr(e.position)}</span>
                 </span>
-                <Badge tone={NOT_HERE[e.status!]!.tone}>{NOT_HERE[e.status!]!.label}</Badge>
+                <Badge tone={NOT_HERE[e.status!]!.tone}>{tr(NOT_HERE[e.status!]!.label)}</Badge>
               </li>
             ))}
           </ul>
@@ -57,13 +59,16 @@ export function StaffAbsenceToday({ slug, branchId }: { slug: string; branchId: 
 }
 
 /** "Kelmadi 2 · Kasal 1 · Ta'til 1" — bir xodimning oy bo'yicha qisqa izohi (bo'lmasa null). */
-export function absenceNote(row: StaffAttendanceSummary["employees"][number] | undefined): string | null {
+export function absenceNote(
+  row: StaffAttendanceSummary["employees"][number] | undefined,
+  tr: (text: string, ...args: unknown[]) => string,
+): string | null {
   if (!row) return null;
   const parts = [
-    row.absent > 0 ? `kelmadi ${row.absent} kun` : null,
-    row.sick > 0 ? `kasal ${row.sick} kun` : null,
-    row.onLeave > 0 ? `ta'til ${row.onLeave} kun` : null,
-    row.late > 0 ? `kech qoldi ${row.late} marta` : null,
+    row.absent > 0 ? tr("kelmadi {0} kun", row.absent) : null,
+    row.sick > 0 ? tr("kasal {0} kun", row.sick) : null,
+    row.onLeave > 0 ? tr("ta'til {0} kun", row.onLeave) : null,
+    row.late > 0 ? tr("kech qoldi {0} marta", row.late) : null,
   ].filter(Boolean);
   return parts.length ? parts.join(" · ") : null;
 }

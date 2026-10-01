@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/use-auth";
 import { CallsList } from "./calls-list";
 import { CALL_KIND_LABEL, todayTashkent, type CallKind, type CallsResult } from "./shared";
+import { useTr } from "@/i18n/tr";
 
 const KIND_STYLE: Record<CallKind, { dot: string; suffix: string }> = {
   LEAD: { dot: "bg-[var(--accent-bright)]", suffix: "crm" },
@@ -31,6 +32,7 @@ function todayLabel() {
  * kabi operatorga aloqasi yo'q raqamlar bu yerda yo'q.
  */
 export function OperatorHome({ slug }: { slug: string }) {
+  const tr = useTr();
   const { user } = useAuth();
   const date = todayTashkent();
   // CallsList bilan bir xil kalit — so'rov bir marta yuboriladi
@@ -53,18 +55,18 @@ export function OperatorHome({ slug }: { slug: string }) {
       <section className="relative overflow-hidden rounded-[28px] bg-[linear-gradient(145deg,var(--accent-rail)_0%,var(--accent-rail-2)_100%)] p-5 text-white shadow-[0_18px_40px_-20px_color-mix(in_srgb,var(--accent-rail)_70%,transparent)]">
         <div className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-[var(--accent-bright)]/15 blur-2xl" aria-hidden="true" />
         <p className="text-[13px] font-medium text-[var(--accent-pale)]/80">{todayLabel()}</p>
-        <h1 data-hero className="mt-0.5 text-[24px] font-bold tracking-[-0.02em]">Salom{firstName ? `, ${firstName}` : ""}</h1>
+        <h1 data-hero className="mt-0.5 text-[24px] font-bold tracking-[-0.02em]">{tr("Salom")}{firstName ? `, ${firstName}` : ""}</h1>
 
         <div className="mt-5 flex items-end justify-between gap-3">
           <div>
             <p className="text-[44px] font-extrabold leading-none tracking-[-0.03em] tabular-nums">{calls.isLoading ? "–" : open}</p>
-            <p className="mt-1.5 text-[13px] text-[var(--accent-pale)]/80">bugun qo&apos;ng&apos;iroq qilish kerak</p>
+            <p className="mt-1.5 text-[13px] text-[var(--accent-pale)]/80">{tr("bugun qo'ng'iroq qilish kerak")}</p>
           </div>
           {total > 0 && (
             <div className="text-right">
-              <p className="text-[20px] font-bold tabular-nums text-[var(--accent-light)]">{pct}%</p>
+              <p className="text-[20px] font-bold tabular-nums text-[var(--accent-light)]">{tr(pct)}%</p>
               <p className="text-[12px] text-[var(--accent-pale)]/70">
-                {doneCount}/{total} bajarildi
+                {tr(doneCount)}/{tr(total)} {tr("bajarildi")}
               </p>
             </div>
           )}
@@ -82,7 +84,7 @@ export function OperatorHome({ slug }: { slug: string }) {
               className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3.5 py-2 text-[13px] font-semibold backdrop-blur transition-colors active:bg-white/20"
             >
               <span className={`h-2 w-2 rounded-full ${KIND_STYLE[k].dot}`} aria-hidden="true" />
-              {CALL_KIND_LABEL[k]}
+              {tr(CALL_KIND_LABEL[k])}
               <span className="tabular-nums text-[var(--accent-light)]">{openBy(k)}</span>
             </Link>
           ))}
@@ -91,16 +93,16 @@ export function OperatorHome({ slug }: { slug: string }) {
 
       <section>
         <div className="mb-3 flex items-baseline justify-between px-0.5">
-          <h2 className="text-[16px] font-semibold tracking-[-0.01em] text-[var(--color-text)]">Qo&apos;ng&apos;iroqlar</h2>
+          <h2 className="text-[16px] font-semibold tracking-[-0.01em] text-[var(--color-text)]">{tr("Qo'ng'iroqlar")}</h2>
           <Link href={`/${slug}/calls`} className="text-[13px] font-semibold text-[var(--accent-soft-icon)]">
-            Hammasi
+            {tr("Hammasi")}
           </Link>
         </div>
         <CallsList slug={slug} limit={6} />
       </section>
 
       <section>
-        <h2 className="mb-3 px-0.5 text-[16px] font-semibold tracking-[-0.01em] text-[var(--color-text)]">Tez o&apos;tish</h2>
+        <h2 className="mb-3 px-0.5 text-[16px] font-semibold tracking-[-0.01em] text-[var(--color-text)]">{tr("Tez o'tish")}</h2>
         <div className="grid grid-cols-2 gap-3">
           {ACTIONS.map((a) => (
             <Link
@@ -108,7 +110,7 @@ export function OperatorHome({ slug }: { slug: string }) {
               href={`/${slug}/${a.suffix}`}
               className="flex h-14 items-center justify-center rounded-[18px] border border-[var(--color-border-hair)] bg-[var(--color-surface)] text-[14px] font-semibold text-[var(--color-text)] shadow-[var(--shadow-card)] transition-transform active:scale-[0.97]"
             >
-              {a.label}
+              {tr(a.label)}
             </Link>
           ))}
         </div>

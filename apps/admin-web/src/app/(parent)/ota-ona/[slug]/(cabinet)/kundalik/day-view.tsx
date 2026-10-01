@@ -22,6 +22,7 @@ import {
   type ItemPhase,
 } from "./diary";
 import { CameraIcon, DiaryIcon, KIND_META, PlayGlyph } from "@/features/diary/kinds";
+import { useTr } from "@/i18n/tr";
 
 /* ------------------------------------------------------------------ kunlar */
 
@@ -34,6 +35,7 @@ export function DayStrip({
   selected: string;
   onSelect: (date: string) => void;
 }) {
+  const tr = useTr();
   // Server bugunni birinchi beradi; tasmada esa bugun o'ngda turadi (kalendar kabi)
   const ordered = useMemo(() => [...days].reverse(), [days]);
   const scroller = useRef<HTMLDivElement>(null);
@@ -49,7 +51,7 @@ export function DayStrip({
       ref={scroller}
       className="-mx-4 mt-4 flex snap-x gap-2 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       role="tablist"
-      aria-label="Kunni tanlash"
+      aria-label={tr("Kunni tanlash")}
     >
       {ordered.map((d) => {
         const active = d.date === selected;
@@ -107,6 +109,7 @@ export function DayContent({
   now: number;
   onOpenMedia: (items: DiaryMedia[], index: number) => void;
 }) {
+  const tr = useTr();
   const isToday = day.date === day.today;
   const allMedia = useMemo(
     () =>
@@ -121,8 +124,8 @@ export function DayContent({
       <EmptyCard
         Icon={DiaryIcon}
         tone="sun"
-        title="Guruh hali yo'q"
-        text="Bolangiz guruhga qo'shilgach, kun tartibi va lahzalar shu yerda ko'rinadi."
+        title={tr("Guruh hali yo'q")}
+        text={tr("Bolangiz guruhga qo'shilgach, kun tartibi va lahzalar shu yerda ko'rinadi.")}
       />
     );
   }
@@ -134,7 +137,7 @@ export function DayContent({
     <div className={styles.pop}>
       {absent && (
         <div className="mt-4 rounded-[20px] bg-[var(--p-sky)]/14 px-4 py-3 text-[14px] leading-relaxed text-[var(--p-ink)]">
-          {day.attendance === "SICK" ? "Bolangiz bu kuni kasal bo'lgan." : "Bolangiz bu kuni bog'chaga kelmagan."} Quyida guruhning kuni.
+          {day.attendance === "SICK" ? tr("Bolangiz bu kuni kasal bo'lgan.") : tr("Bolangiz bu kuni bog'chaga kelmagan.")} {tr("Quyida guruhning kuni.")}
         </div>
       )}
 
@@ -142,12 +145,12 @@ export function DayContent({
         <EmptyCard
           Icon={DiaryIcon}
           tone={isWeekend(day.date) ? "sky" : "sun"}
-          title={isWeekend(day.date) ? "Dam olish kuni" : isToday ? "Kun tartibi hali yo'q" : "Bu kun uchun yozuv yo'q"}
+          title={isWeekend(day.date) ? "Dam olish kuni" : isToday ? tr("Kun tartibi hali yo'q") : tr("Bu kun uchun yozuv yo'q")}
           text={
             isWeekend(day.date)
-              ? "Bu kuni bog'cha ishlamaydi. Oila bilan yaxshi dam oling!"
+              ? tr("Bu kuni bog'cha ishlamaydi. Oila bilan yaxshi dam oling!")
               : isToday
-                ? "Tarbiyachi guruhning kun tartibini kiritgach, bolangizning kuni qanday o'tayotgani shu yerda ko'rinadi."
+                ? tr("Tarbiyachi guruhning kun tartibini kiritgach, bolangizning kuni qanday o'tayotgani shu yerda ko'rinadi.")
                 : "Tarbiyachi bu kuni kundalikka hech narsa yozmagan."
           }
         />
@@ -157,7 +160,7 @@ export function DayContent({
           {(allMedia.length > 0 || isToday) && <Moments media={allMedia} isToday={isToday} onOpen={openAt} />}
           {day.items.length > 0 && (
             <section className="mt-6">
-              <h2 className="text-[13px] font-bold uppercase tracking-[0.06em] text-[var(--p-muted)]">Kun tartibi</h2>
+              <h2 className="text-[13px] font-bold uppercase tracking-[0.06em] text-[var(--p-muted)]">{tr("Kun tartibi")}</h2>
               <ol className="relative mt-3">
                 {day.items.map((item, i) => (
                   <TimelineRow
@@ -178,6 +181,7 @@ export function DayContent({
 }
 
 function DayHero({ day, phases, isToday }: { day: DiaryDay; phases: ItemPhase[]; isToday: boolean }) {
+  const tr = useTr();
   const { done, total, photos, videos } = day.summary;
   const progress = total > 0 ? done / total : 0;
   const nowIndex = phases.indexOf("now");
@@ -214,28 +218,28 @@ function DayHero({ day, phases, isToday }: { day: DiaryDay; phases: ItemPhase[];
           </svg>
           <span className="absolute inset-0 flex flex-col items-center justify-center">
             <b className="text-[17px] font-extrabold tabular-nums leading-none text-[var(--p-ink)]">
-              {done}/{total}
+              {tr(done)}/{tr(total)}
             </b>
           </span>
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-[12.5px] font-bold uppercase tracking-[0.06em] text-[var(--p-muted)]">
-            {isToday ? "Bugun" : "O'tgan kun"} · {prettyDay(day.date)}
+            {isToday ? "Bugun" : tr("O'tgan kun")} · {prettyDay(day.date)}
           </p>
           {isToday && focus ? (
             <p className={`${styles.roundedFont} mt-1 text-[19px] font-extrabold leading-snug text-[var(--p-ink)]`}>
               {nowIndex >= 0 ? "Hozir: " : "Keyingi: "}
-              {focus.title}
+              {tr(focus.title)}
             </p>
           ) : (
             <p className={`${styles.roundedFont} mt-1 text-[19px] font-extrabold leading-snug text-[var(--p-ink)]`}>
-              {total > 0 && done === total ? "Kun yakunlandi" : `${done} ta mashg'ulot o'tdi`}
+              {total > 0 && done === total ? tr("Kun yakunlandi") : tr("{0} ta mashg'ulot o'tdi", done)}
             </p>
           )}
           <p className="mt-0.5 text-[13.5px] text-[var(--p-muted)]">
             {isToday && focus
               ? `${focus.startTime}${focus.endTime ? `–${focus.endTime}` : ""} · ${KIND_META[focus.kind].label}`
-              : [photos > 0 && `${photos} ta rasm`, videos > 0 && `${videos} ta video`].filter(Boolean).join(" · ") ||
+              : [photos > 0 && tr("{0} ta rasm", photos), videos > 0 && tr("{0} ta video", videos)].filter(Boolean).join(" · ") ||
                 "Rasm yuklanmagan"}
           </p>
         </div>
@@ -263,6 +267,7 @@ function MediaThumb({
   /** Kichik katak (vaqt chizig'ida): tugma kichik, davomiylik ko'rsatilmaydi */
   compact?: boolean;
 }) {
+  const tr = useTr();
   const [failed, setFailed] = useState(false);
   const src = media.kind === "PHOTO" ? mediaUrl(media) : media.hasPoster ? mediaUrl(media, "poster") : null;
   return (
@@ -300,17 +305,18 @@ function MediaThumb({
           )}
         </span>
       )}
-      {overlay}
+      {tr(overlay)}
     </button>
   );
 }
 
 function Moments({ media, isToday, onOpen }: { media: DiaryMedia[]; isToday: boolean; onOpen: (media: DiaryMedia) => void }) {
+  const tr = useTr();
   if (media.length === 0) {
     return (
       <div className="mt-4 flex items-center gap-3 rounded-[20px] border border-dashed border-[var(--p-line)] px-4 py-3.5 text-[13.5px] leading-snug text-[var(--p-muted)]">
         <CameraIcon className="h-6 w-6 shrink-0" />
-        {isToday ? "Tarbiyachi kun davomida rasm va video yuklaydi — shu yerda paydo bo'ladi." : "Bu kuni rasm yuklanmagan."}
+        {isToday ? tr("Tarbiyachi kun davomida rasm va video yuklaydi — shu yerda paydo bo'ladi.") : "Bu kuni rasm yuklanmagan."}
       </div>
     );
   }
@@ -323,8 +329,8 @@ function Moments({ media, isToday, onOpen }: { media: DiaryMedia[]; isToday: boo
   return (
     <section className="mt-6">
       <div className="flex items-baseline justify-between">
-        <h2 className="text-[13px] font-bold uppercase tracking-[0.06em] text-[var(--p-muted)]">Kun lahzalari</h2>
-        <span className="text-[12.5px] text-[var(--p-muted)]">{media.length} ta</span>
+        <h2 className="text-[13px] font-bold uppercase tracking-[0.06em] text-[var(--p-muted)]">{tr("Kun lahzalari")}</h2>
+        <span className="text-[12.5px] text-[var(--p-muted)]">{tr(media.length)} {tr("ta")}</span>
       </div>
       <div className={clsx("mt-3 grid gap-2", shown.length > 0 ? "grid-cols-3" : "grid-cols-1")}>
         <MediaThumb
@@ -341,14 +347,14 @@ function Moments({ media, isToday, onOpen }: { media: DiaryMedia[]; isToday: boo
             overlay={
               i === shown.length - 1 && hidden > 0 ? (
                 <span className="absolute inset-0 flex items-center justify-center bg-black/45 text-[20px] font-extrabold text-white">
-                  +{hidden}
+                  +{tr(hidden)}
                 </span>
               ) : undefined
             }
           />
         ))}
       </div>
-      {first.caption && <p className="mt-2 text-[13.5px] leading-snug text-[var(--p-muted)]">{first.caption}</p>}
+      {first.caption && <p className="mt-2 text-[13.5px] leading-snug text-[var(--p-muted)]">{tr(first.caption)}</p>}
     </section>
   );
 }
@@ -373,6 +379,7 @@ function TimelineRow({
   last: boolean;
   onOpenMedia: (media: DiaryMedia) => void;
 }) {
+  const tr = useTr();
   const meta = KIND_META[item.kind];
   const tone = TONES[meta.tone];
   const chip = PHASE_CHIP[phase];
@@ -387,7 +394,7 @@ function TimelineRow({
           muted ? "text-[var(--p-muted)]" : "text-[var(--p-ink)]",
         )}
       >
-        {item.startTime}
+        {tr(item.startTime)}
       </span>
 
       {/* Chiziq va nuqta */}
@@ -426,7 +433,7 @@ function TimelineRow({
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <p className={clsx("text-[15.5px] font-bold leading-snug", muted ? "text-[var(--p-muted)]" : "text-[var(--p-ink)]")}>
-              {item.title}
+              {tr(item.title)}
             </p>
             <p className="mt-0.5 text-[12.5px] text-[var(--p-muted)]">
               {item.endTime ? `${item.startTime}–${item.endTime}` : item.startTime}
@@ -435,12 +442,12 @@ function TimelineRow({
             </p>
           </div>
           {chip && (
-            <span className={clsx("shrink-0 rounded-full px-2.5 py-1 text-[11.5px] font-bold", chip.className)}>{chip.label}</span>
+            <span className={clsx("shrink-0 rounded-full px-2.5 py-1 text-[11.5px] font-bold", chip.className)}>{tr(chip.label)}</span>
           )}
         </div>
         {item.note && (
           <p className="mt-2 rounded-[14px] bg-[var(--p-sunken)] px-3 py-2 text-[14px] leading-relaxed text-[var(--p-ink)]">
-            {item.note}
+            {tr(item.note)}
           </p>
         )}
         {item.media.length > 0 && (
@@ -452,7 +459,7 @@ function TimelineRow({
         )}
         {item.done && item.doneByName && item.doneAt && (
           <p className="mt-2 text-[11.5px] text-[var(--p-muted)]">
-            {item.doneByName} · {clockOf(item.doneAt)}
+            {tr(item.doneByName)} · {clockOf(item.doneAt)}
           </p>
         )}
       </div>

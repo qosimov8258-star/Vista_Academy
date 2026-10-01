@@ -17,6 +17,7 @@ import { LoadingState, ErrorState } from "@/components/ui/states";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ArrowLeftIcon, CameraIcon, CloseIcon, GroupIcon, PencilIcon, PlusIcon, TrashIcon, UserIcon } from "@/components/ui/icons";
+import { useTr } from "@/i18n/tr";
 
 const infoSchema = z.object({
   name: z.string().min(2, "Nomi kamida 2 belgi"),
@@ -39,6 +40,7 @@ type StudentFormValues = z.infer<typeof studentSchema>;
  * shundaki bu yerda har bir rasm ustiga bosib uni almashtirish/o'chirish mumkin.
  */
 export default function LendingGroupDetailPage({ params }: { params: Promise<{ slug: string; groupId: string }> }) {
+  const tr = useTr();
   const { slug, groupId } = use(params);
   const { user } = useAuth();
   const canWrite = canWriteOperational(user?.role);
@@ -73,19 +75,19 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
   const infoMutation = useMutation({
     mutationFn: (values: InfoFormValues) => api.patch<LandingGroup>(`/app/landing/groups/${groupId}`, values),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["landing-groups"] }),
-    onError: (err) => setServerError(err instanceof ApiError ? err.message : "Saqlashda xatolik"),
+    onError: (err) => setServerError(err instanceof ApiError ? err.message : tr("Saqlashda xatolik")),
   });
 
   const coverMutation = useMutation({
     mutationFn: (file: File) => api.upload<LandingGroup>(`/app/landing/groups/${groupId}/photo`, file),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["landing-groups"] }),
-    onError: (err) => setServerError(err instanceof ApiError ? err.message : "Rasm yuklashda xatolik"),
+    onError: (err) => setServerError(err instanceof ApiError ? err.message : tr("Rasm yuklashda xatolik")),
   });
 
   const addPhotoMutation = useMutation({
     mutationFn: (file: File) => api.upload(`/app/landing/groups/${groupId}/photos`, file),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["landing-groups"] }),
-    onError: (err) => setServerError(err instanceof ApiError ? err.message : "Rasm yuklashda xatolik"),
+    onError: (err) => setServerError(err instanceof ApiError ? err.message : tr("Rasm yuklashda xatolik")),
   });
 
   const deletePhotoMutation = useMutation({
@@ -94,7 +96,7 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
       queryClient.invalidateQueries({ queryKey: ["landing-groups"] });
       setDeletingPhotoId(null);
     },
-    onError: (err) => setServerError(err instanceof ApiError ? err.message : "O'chirishda xatolik"),
+    onError: (err) => setServerError(err instanceof ApiError ? err.message : tr("O'chirishda xatolik")),
   });
 
   const deleteStudentMutation = useMutation({
@@ -103,7 +105,7 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
       queryClient.invalidateQueries({ queryKey: ["landing-groups"] });
       setDeletingStudent(null);
     },
-    onError: (err) => setServerError(err instanceof ApiError ? err.message : "O'chirishda xatolik"),
+    onError: (err) => setServerError(err instanceof ApiError ? err.message : tr("O'chirishda xatolik")),
   });
 
   const handleCoverPick = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -131,30 +133,30 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
         className="inline-flex items-center gap-1.5 text-[14px] font-medium text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
       >
         <ArrowLeftIcon className="h-4 w-4" />
-        Guruhlar
+        {tr("Guruhlar")}
       </Link>
 
       {!canWrite && <ViewOnlyNote role={user?.role} />}
 
       {serverError && (
         <div role="alert" className="rounded-[var(--radius-lg)] bg-[var(--color-danger-bg)] px-3.5 py-2.5 text-[13px] text-[var(--color-danger)]">
-          {serverError}
+          {tr(serverError)}
         </div>
       )}
 
       {groupsQuery.isLoading ? (
         <LoadingState rows={4} />
       ) : groupsQuery.isError ? (
-        <ErrorState message={groupsQuery.error instanceof ApiError ? groupsQuery.error.message : "Xatolik yuz berdi"} />
+        <ErrorState message={groupsQuery.error instanceof ApiError ? groupsQuery.error.message : tr("Xatolik yuz berdi")} />
       ) : !group ? (
-        <ErrorState message="Guruh topilmadi" />
+        <ErrorState message={tr("Guruh topilmadi")} />
       ) : (
         <>
           {/* Hero — guruh sahifasidagi bosh rasm bilan bir xil joylashuv (object-contain — saytdagi kabi kesilmasdan to'liq ko'rinadi) */}
           <div className="relative h-[220px] w-full overflow-hidden rounded-[var(--radius-xl)] bg-[var(--color-surface-sunken)] sm:h-[300px]">
             {group.photoPath ? (
               // eslint-disable-next-line @next/next/no-img-element -- API'dan kelgan dinamik rasm
-              <img src={assetUrl(group.photoPath) ?? undefined} alt={group.name} className="absolute inset-0 h-full w-full object-contain" />
+              <img src={assetUrl(group.photoPath) ?? undefined} alt={tr(group.name)} className="absolute inset-0 h-full w-full object-contain" />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center">
                 <GroupIcon className="h-10 w-10 text-[var(--color-text-subtle)]" />
@@ -162,8 +164,8 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 p-5">
-              <p className="text-[13px] font-bold uppercase tracking-[0.08em] text-white/80">Guruhlarimiz</p>
-              <h1 className="text-[24px] font-semibold text-white sm:text-[28px]">{group.name}</h1>
+              <p className="text-[13px] font-bold uppercase tracking-[0.08em] text-white/80">{tr("Guruhlarimiz")}</p>
+              <h1 className="text-[24px] font-semibold text-white sm:text-[28px]">{tr(group.name)}</h1>
             </div>
             {canWrite && (
               <>
@@ -172,7 +174,7 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
                   type="button"
                   onClick={() => coverInputRef.current?.click()}
                   disabled={coverMutation.isPending}
-                  title="Tavsiya: kvadrat (1:1) rasm, kamida 800x800px — bosh sahifadagi kartochkada ham, bu yerdagi katta rasmda ham kesilmasdan to'liq chiqadi"
+                  title={tr("Tavsiya: kvadrat (1:1) rasm, kamida 800x800px — bosh sahifadagi kartochkada ham, bu yerdagi katta rasmda ham kesilmasdan to'liq chiqadi")}
                   className="absolute right-4 top-4 flex items-center gap-1.5 rounded-full bg-black/40 px-3.5 py-2 text-[13px] font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/55 disabled:cursor-wait"
                 >
                   <CameraIcon className="h-3.5 w-3.5" />
@@ -183,43 +185,40 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
           </div>
           {canWrite && (
             <p className="text-[12.5px] text-[var(--color-text-muted)]">
-              Tavsiya: kvadrat (1:1) rasm, kamida 800×800px, fon oq yoki shaffof — shu rasm bosh sahifadagi
-              kartochkada va guruh sahifasining katta rasmida kesilmasdan to&apos;liq ko&apos;rinadi.
+              {tr("Tavsiya: kvadrat (1:1) rasm, kamida 800×800px, fon oq yoki shaffof — shu rasm bosh sahifadagi kartochkada va guruh sahifasining katta rasmida kesilmasdan to'liq ko'rinadi.")}
             </p>
           )}
 
           {/* Nomi va tartib raqami */}
           <div className="rounded-[var(--radius-xl)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] p-4 sm:p-5">
-            <h2 className="text-[16px] font-semibold text-[var(--color-text)]">Ma&apos;lumotlari</h2>
+            <h2 className="text-[16px] font-semibold text-[var(--color-text)]">{tr("Ma'lumotlari")}</h2>
             {canWrite ? (
               <form
                 className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_160px_auto] sm:items-end"
                 onSubmit={handleSubmit((values) => infoMutation.mutate(values))}
               >
-                <Input label="Nomi" placeholder="Kichkintoylar" error={errors.name?.message} {...register("name")} />
+                <Input label={tr("Nomi")} placeholder={tr("Kichkintoylar")} error={errors.name?.message} {...register("name")} />
                 <Input
-                  label="Tartib raqami"
+                  label={tr("Tartib raqami")}
                   type="number"
-                  hint="Kichik raqam avval chiqadi"
+                  hint={tr("Kichik raqam avval chiqadi")}
                   error={errors.order?.message}
                   {...register("order")}
                 />
                 <Button type="submit" loading={isSubmitting || infoMutation.isPending}>
-                  Saqlash
+                  {tr("Saqlash")}
                 </Button>
               </form>
             ) : (
-              <p className="mt-2 text-[14px] text-[var(--color-text-muted)]">{group.name}</p>
+              <p className="mt-2 text-[14px] text-[var(--color-text-muted)]">{tr(group.name)}</p>
             )}
           </div>
 
           {/* O'quvchilar — guruh sahifasidagi "N-o'quvchi" joylarini to'ldiradi */}
           <div>
-            <h2 className="text-[16px] font-semibold text-[var(--color-text)]">O&apos;quvchilar</h2>
+            <h2 className="text-[16px] font-semibold text-[var(--color-text)]">{tr("O'quvchilar")}</h2>
             <p className="mt-0.5 text-[13px] text-[var(--color-text-muted)]">
-              Guruh sahifasida &quot;{STUDENT_SLOTS}-o&apos;quvchi&quot; nomi bilan chiqadigan joylar — rasmi, ismi va
-              qisqa bio&apos;si shu yerdan to&apos;ldiriladi. To&apos;ldirilmagan joylarda &quot;tez orada
-              qo&apos;shiladi&quot; degan yozuv chiqadi.
+              {tr("Guruh sahifasida \"")}{tr(STUDENT_SLOTS)}{tr("-o'quvchi\" nomi bilan chiqadigan joylar — rasmi, ismi va qisqa bio'si shu yerdan to'ldiriladi. To'ldirilmagan joylarda \"tez orada qo'shiladi\" degan yozuv chiqadi.")}
             </p>
 
             <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -234,7 +233,7 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
                       className="flex aspect-[3/4] flex-col items-center justify-center gap-1.5 rounded-[var(--radius-lg)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-hover)]"
                     >
                       <PlusIcon className="h-5 w-5" />
-                      <span className="text-[12.5px] font-medium">{index + 1}-o&apos;quvchi qo&apos;shish</span>
+                      <span className="text-[12.5px] font-medium">{index + 1}{tr("-o'quvchi qo'shish")}</span>
                     </button>
                   ) : (
                     <div
@@ -242,7 +241,7 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
                       className="flex aspect-[3/4] flex-col items-center justify-center gap-1.5 rounded-[var(--radius-lg)] border border-dashed border-[var(--color-border-hair)] text-[var(--color-text-subtle)]"
                     >
                       <UserIcon className="h-6 w-6" />
-                      <span className="text-[12.5px]">{index + 1}-o&apos;quvchi</span>
+                      <span className="text-[12.5px]">{index + 1}{tr("-o'quvchi")}</span>
                     </div>
                   );
                 }
@@ -252,7 +251,7 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
                     <div className="aspect-[3/4] overflow-hidden rounded-[var(--radius-lg)] bg-[var(--color-surface-sunken)]">
                       {student.photoPath ? (
                         // eslint-disable-next-line @next/next/no-img-element -- API'dan kelgan dinamik rasm
-                        <img src={assetUrl(student.photoPath) ?? undefined} alt={student.name} className="h-full w-full object-cover" />
+                        <img src={assetUrl(student.photoPath) ?? undefined} alt={tr(student.name)} className="h-full w-full object-cover" />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center">
                           <UserIcon className="h-8 w-8 text-[var(--color-text-subtle)]" />
@@ -263,7 +262,7 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
                           <button
                             type="button"
                             onClick={() => setStudentModal({ mode: "edit", student })}
-                            aria-label="Tahrirlash"
+                            aria-label={tr("Tahrirlash")}
                             className="pointer-events-auto flex h-7 w-7 items-center justify-center rounded-full bg-black/45 text-white transition-colors hover:bg-black/65"
                           >
                             <PencilIcon className="h-3.5 w-3.5" />
@@ -271,7 +270,7 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
                           <button
                             type="button"
                             onClick={() => setDeletingStudent(student)}
-                            aria-label="O'chirish"
+                            aria-label={tr("O'chirish")}
                             className="pointer-events-auto flex h-7 w-7 items-center justify-center rounded-full bg-black/45 text-white transition-colors hover:bg-[var(--color-danger)]"
                           >
                             <TrashIcon className="h-3.5 w-3.5" />
@@ -279,8 +278,8 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
                         </div>
                       )}
                     </div>
-                    <p className="mt-2 truncate text-[14px] font-semibold text-[var(--color-text)]">{student.name}</p>
-                    {student.bio && <p className="mt-0.5 line-clamp-2 text-[12.5px] text-[var(--color-text-muted)]">{student.bio}</p>}
+                    <p className="mt-2 truncate text-[14px] font-semibold text-[var(--color-text)]">{tr(student.name)}</p>
+                    {student.bio && <p className="mt-0.5 line-clamp-2 text-[12.5px] text-[var(--color-text-muted)]">{tr(student.bio)}</p>}
                   </div>
                 );
               })}
@@ -289,11 +288,9 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
 
           {/* Galereya — guruh sahifasida (saytda) shu rasmlar ko'rsatiladi */}
           <div>
-            <h2 className="text-[16px] font-semibold text-[var(--color-text)]">Guruh sahifasidagi rasmlar</h2>
+            <h2 className="text-[16px] font-semibold text-[var(--color-text)]">{tr("Guruh sahifasidagi rasmlar")}</h2>
             <p className="mt-0.5 text-[13px] text-[var(--color-text-muted)]">
-              Bu yerga qo&apos;shilgan birinchi rasm &quot;{group.name}&quot; guruhining o&apos;z sahifasida (saytda)
-              &quot;Farzandingiz shu yerda o&apos;sadi va rivojlanadi&quot; bo&apos;limidagi katta rasm sifatida
-              ko&apos;rsatiladi. Tavsiya: kvadrat (1:1) rasm, kamida 600×600px — markazdan kesib ko&apos;rsatiladi.
+              {tr("Bu yerga qo'shilgan birinchi rasm \"")}{tr(group.name)}{tr("\" guruhining o'z sahifasida (saytda) \"Farzandingiz shu yerda o'sadi va rivojlanadi\" bo'limidagi katta rasm sifatida ko'rsatiladi. Tavsiya: kvadrat (1:1) rasm, kamida 600×600px — markazdan kesib ko'rsatiladi.")}
             </p>
 
             <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -303,12 +300,12 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
                   className="group relative aspect-square overflow-hidden rounded-[var(--radius-lg)] bg-[var(--color-surface-sunken)]"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element -- API'dan kelgan dinamik rasm */}
-                  <img src={assetUrl(photo.path) ?? undefined} alt={group.name} className="h-full w-full object-cover" />
+                  <img src={assetUrl(photo.path) ?? undefined} alt={tr(group.name)} className="h-full w-full object-cover" />
                   {canWrite && (
                     <button
                       type="button"
                       onClick={() => setDeletingPhotoId(photo.id)}
-                      aria-label="Rasmni o'chirish"
+                      aria-label={tr("Rasmni o'chirish")}
                       className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition-opacity hover:bg-[var(--color-danger)] group-hover:opacity-100"
                     >
                       <CloseIcon className="h-3.5 w-3.5" />
@@ -331,14 +328,14 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
                     ) : (
                       <PlusIcon className="h-5 w-5" />
                     )}
-                    <span className="text-[12.5px] font-medium">Rasm qo&apos;shish</span>
+                    <span className="text-[12.5px] font-medium">{tr("Rasm qo'shish")}</span>
                   </button>
                 </>
               )}
             </div>
 
             {group.photos.length === 0 && !canWrite && (
-              <p className="mt-4 text-[13px] text-[var(--color-text-muted)]">Hali rasm qo&apos;shilmagan</p>
+              <p className="mt-4 text-[13px] text-[var(--color-text-muted)]">{tr("Hali rasm qo'shilmagan")}</p>
             )}
           </div>
         </>
@@ -347,12 +344,12 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
       <ConfirmDialog
         open={!!deletingPhotoId}
         onClose={() => setDeletingPhotoId(null)}
-        title="Rasmni o'chirish"
-        confirmLabel="O'chirish"
+        title={tr("Rasmni o'chirish")}
+        confirmLabel={tr("O'chirish")}
         tone="danger"
         loading={deletePhotoMutation.isPending}
         error={deletePhotoMutation.isError ? ((deletePhotoMutation.error as Error)?.message ?? null) : null}
-        description="Bu rasm guruh sahifasidan butunlay o'chiriladi."
+        description={tr("Bu rasm guruh sahifasidan butunlay o'chiriladi.")}
         onConfirm={() => deletingPhotoId && deletePhotoMutation.mutate(deletingPhotoId)}
       />
 
@@ -361,12 +358,12 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
       <ConfirmDialog
         open={!!deletingStudent}
         onClose={() => setDeletingStudent(null)}
-        title="O'quvchini o'chirish"
-        confirmLabel="O'chirish"
+        title={tr("O'quvchini o'chirish")}
+        confirmLabel={tr("O'chirish")}
         tone="danger"
         loading={deleteStudentMutation.isPending}
         error={deleteStudentMutation.isError ? ((deleteStudentMutation.error as Error)?.message ?? null) : null}
-        description={<><b className="text-[var(--color-text)]">{deletingStudent?.name}</b> guruh sahifasidan butunlay o&apos;chiriladi.</>}
+        description={<><b className="text-[var(--color-text)]">{tr(deletingStudent?.name)}</b> {tr("guruh sahifasidan butunlay o'chiriladi.")}</>}
         onConfirm={() => deletingStudent && deleteStudentMutation.mutate(deletingStudent.id)}
       />
     </div>
@@ -382,6 +379,7 @@ function StudentFormModal({
   modal: { mode: "create"; order: number } | { mode: "edit"; student: LandingGroupStudent };
   onClose: () => void;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
   const [photoPath, setPhotoPath] = useState<string | null>(modal.mode === "edit" ? modal.student.photoPath : null);
@@ -404,7 +402,7 @@ function StudentFormModal({
       queryClient.invalidateQueries({ queryKey: ["landing-groups"] });
       onClose();
     },
-    onError: (err) => setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik"),
+    onError: (err) => setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik")),
   });
 
   const updateMutation = useMutation({
@@ -414,7 +412,7 @@ function StudentFormModal({
       queryClient.invalidateQueries({ queryKey: ["landing-groups"] });
       onClose();
     },
-    onError: (err) => setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik"),
+    onError: (err) => setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik")),
   });
 
   const photoMutation = useMutation({
@@ -424,17 +422,17 @@ function StudentFormModal({
       queryClient.invalidateQueries({ queryKey: ["landing-groups"] });
       setPhotoPath(updated.photoPath);
     },
-    onError: (err) => setServerError(err instanceof ApiError ? err.message : "Rasm yuklashda xatolik"),
+    onError: (err) => setServerError(err instanceof ApiError ? err.message : tr("Rasm yuklashda xatolik")),
   });
 
   const mutation = modal.mode === "edit" ? updateMutation : createMutation;
 
   return (
-    <Modal open onClose={onClose} title={modal.mode === "edit" ? "O'quvchini tahrirlash" : "Yangi o'quvchi"}>
+    <Modal open onClose={onClose} title={modal.mode === "edit" ? tr("O'quvchini tahrirlash") : tr("Yangi o'quvchi")}>
       <div className="space-y-4">
         {serverError && (
           <div role="alert" className="rounded-[var(--radius-lg)] bg-[var(--color-danger-bg)] px-3 py-2.5 text-[13px] text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
 
@@ -443,7 +441,7 @@ function StudentFormModal({
             <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--color-surface-sunken)]">
               {photoPath ? (
                 // eslint-disable-next-line @next/next/no-img-element -- API'dan kelgan dinamik rasm
-                <img src={assetUrl(photoPath) ?? undefined} alt={modal.student.name} className="h-full w-full object-cover" />
+                <img src={assetUrl(photoPath) ?? undefined} alt={tr(modal.student.name)} className="h-full w-full object-cover" />
               ) : (
                 <UserIcon className="h-6 w-6 text-[var(--color-text-subtle)]" />
               )}
@@ -461,29 +459,29 @@ function StudentFormModal({
             />
             <Button type="button" size="sm" variant="outline" loading={photoMutation.isPending} onClick={() => photoInputRef.current?.click()}>
               <CameraIcon className="h-4 w-4" />
-              Rasm yuklash
+              {tr("Rasm yuklash")}
             </Button>
           </div>
         )}
 
         <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
-          <Input label="Ismi" placeholder="Amir Vositov" error={errors.name?.message} {...register("name")} />
+          <Input label={tr("Ismi")} placeholder={tr("Amir Vositov")} error={errors.name?.message} {...register("name")} />
           <Textarea
-            label="Bio (qisqa matn)"
+            label={tr("Bio (qisqa matn)")}
             rows={3}
-            placeholder="Masalan: rasm chizishni yaxshi ko'radi"
+            placeholder={tr("Masalan: rasm chizishni yaxshi ko'radi")}
             error={errors.bio?.message}
             {...register("bio")}
           />
           {modal.mode === "create" && (
-            <p className="text-[13px] text-[var(--color-text-muted)]">Rasmni saqlagandan keyin, o&apos;quvchini qayta ochib qo&apos;shishingiz mumkin.</p>
+            <p className="text-[13px] text-[var(--color-text-muted)]">{tr("Rasmni saqlagandan keyin, o'quvchini qayta ochib qo'shishingiz mumkin.")}</p>
           )}
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={onClose}>
-              Bekor qilish
+              {tr("Bekor qilish")}
             </Button>
             <Button type="submit" loading={isSubmitting || mutation.isPending}>
-              Saqlash
+              {tr("Saqlash")}
             </Button>
           </div>
         </form>

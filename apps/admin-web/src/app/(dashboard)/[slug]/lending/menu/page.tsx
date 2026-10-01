@@ -21,6 +21,7 @@ import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CameraIcon, MealIcon, PencilIcon, PlusIcon, TrashIcon } from "@/components/ui/icons";
 import { LendingTabs } from "@/features/lending/lending-tabs";
+import { useTr } from "@/i18n/tr";
 
 const TYPE_LABELS: Record<LandingMealType, string> = {
   BREAKFAST: "Nonushta",
@@ -54,6 +55,7 @@ type MenuWeekday = FormValues["weekday"];
 const WEEKDAY_ORDER: MenuWeekday[] = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
 
 export default function LendingMenuPage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const { user } = useAuth();
   const canWrite = canWriteOperational(user?.role);
@@ -90,15 +92,15 @@ export default function LendingMenuPage({ params }: { params: Promise<{ slug: st
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">Lending sahifa</h1>
+          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">{tr("Lending sahifa")}</h1>
           <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">
-            Saytdagi "Haftalik menyu" bo'limi — shu yerdan tahrirlansa, o'zgarish saytda darhol ko'rinadi
+            {tr("Saytdagi \"Haftalik menyu\" bo'limi — shu yerdan tahrirlansa, o'zgarish saytda darhol ko'rinadi")}
           </p>
         </div>
         {canWrite && (
           <Button onClick={() => setModal({ open: true, meal: null })}>
             <PlusIcon className="h-4 w-4" />
-            Taom qo'shish
+            {tr("Taom qo'shish")}
           </Button>
         )}
       </div>
@@ -110,12 +112,12 @@ export default function LendingMenuPage({ params }: { params: Promise<{ slug: st
       {mealsQuery.isLoading ? (
         <LoadingState rows={4} />
       ) : mealsQuery.isError ? (
-        <ErrorState message={mealsQuery.error instanceof ApiError ? mealsQuery.error.message : "Xatolik yuz berdi"} />
+        <ErrorState message={mealsQuery.error instanceof ApiError ? mealsQuery.error.message : tr("Xatolik yuz berdi")} />
       ) : meals.length === 0 ? (
         <EmptyState
           icon={<MealIcon className="h-[26px] w-[26px]" />}
-          title="Hali taom yo'q"
-          description={canWrite ? "\"+ Taom qo'shish\" tugmasi orqali birinchisini qo'shing" : undefined}
+          title={tr("Hali taom yo'q")}
+          description={canWrite ? tr("\"+ Taom qo'shish\" tugmasi orqali birinchisini qo'shing") : undefined}
         />
       ) : (
         <>
@@ -135,7 +137,7 @@ export default function LendingMenuPage({ params }: { params: Promise<{ slug: st
                       : "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)] hover:bg-[var(--color-border)]",
                   )}
                 >
-                  {WEEKDAY_LABELS[day]}
+                  {tr(WEEKDAY_LABELS[day])}
                   {count > 0 && <span className="ml-1.5 opacity-75">({count})</span>}
                 </button>
               );
@@ -146,8 +148,8 @@ export default function LendingMenuPage({ params }: { params: Promise<{ slug: st
             {activeMeals.length === 0 ? (
               <EmptyState
                 icon={<MealIcon className="h-[26px] w-[26px]" />}
-                title={`${WEEKDAY_LABELS[activeDay]} kuni uchun taom yo'q`}
-                description={canWrite ? "\"+ Taom qo'shish\" tugmasi orqali qo'shing" : undefined}
+                title={tr(`${WEEKDAY_LABELS[activeDay]} kuni uchun taom yo'q`)}
+                description={canWrite ? tr("\"+ Taom qo'shish\" tugmasi orqali qo'shing") : undefined}
               />
             ) : (
               activeMeals.map((meal) => (
@@ -165,7 +167,7 @@ export default function LendingMenuPage({ params }: { params: Promise<{ slug: st
           {unscheduled.length > 0 && (
             <div className="space-y-3">
               <p className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--color-text-muted)]">
-                Kunsiz taomlar
+                {tr("Kunsiz taomlar")}
               </p>
               {unscheduled.map((meal) => (
                 <MealRow
@@ -193,12 +195,12 @@ export default function LendingMenuPage({ params }: { params: Promise<{ slug: st
       <ConfirmDialog
         open={!!deleting}
         onClose={() => setDeleting(null)}
-        title="Taomni o'chirish"
-        confirmLabel="O'chirish"
+        title={tr("Taomni o'chirish")}
+        confirmLabel={tr("O'chirish")}
         tone="danger"
         loading={deleteMutation.isPending}
         error={deleteMutation.isError ? ((deleteMutation.error as Error)?.message ?? null) : null}
-        description={<><b className="text-[var(--color-text)]">{deleting?.title}</b> saytdan o&apos;chiriladi.</>}
+        description={<><b className="text-[var(--color-text)]">{tr(deleting?.title)}</b> {tr("saytdan o'chiriladi.")}</>}
         onConfirm={() => deleting && deleteMutation.mutate(deleting.id)}
       />
     </div>
@@ -216,6 +218,7 @@ function MealRow({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const tr = useTr();
   const items = meal.title
     .split(",")
     .map((item) => item.trim())
@@ -226,15 +229,15 @@ function MealRow({
       <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-lg)] bg-[var(--color-surface-sunken)]">
         {meal.photoPath ? (
           // eslint-disable-next-line @next/next/no-img-element -- API'dan kelgan dinamik rasm
-          <img src={assetUrl(meal.photoPath) ?? undefined} alt={meal.title} className="h-full w-full object-cover" />
+          <img src={assetUrl(meal.photoPath) ?? undefined} alt={tr(meal.title)} className="h-full w-full object-cover" />
         ) : (
           <MealIcon className="h-6 w-6 text-[var(--color-text-subtle)]" />
         )}
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          {meal.time && <Badge tone="primary">{meal.time}</Badge>}
-          <Badge tone="neutral">{TYPE_LABELS[meal.mealType]}</Badge>
+          {meal.time && <Badge tone="primary">{tr(meal.time)}</Badge>}
+          <Badge tone="neutral">{tr(TYPE_LABELS[meal.mealType])}</Badge>
         </div>
         <div className="mt-2 flex flex-wrap gap-1.5">
           {items.map((item, index) => (
@@ -242,22 +245,22 @@ function MealRow({
               key={index}
               className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-2.5 py-1 text-[13px] font-medium text-[var(--color-text)]"
             >
-              {item}
+              {tr(item)}
             </span>
           ))}
         </div>
-        {meal.description && <p className="mt-1.5 text-[13px] text-[var(--color-text-muted)]">{meal.description}</p>}
+        {meal.description && <p className="mt-1.5 text-[13px] text-[var(--color-text-muted)]">{tr(meal.description)}</p>}
       </div>
       {canWrite && (
         <div className="flex shrink-0 items-center gap-2">
           <Button size="sm" variant="outline" onClick={onEdit}>
             <PencilIcon className="h-3.5 w-3.5" />
-            Tahrirlash
+            {tr("Tahrirlash")}
           </Button>
           <button
             type="button"
             onClick={onDelete}
-            aria-label="O'chirish"
+            aria-label={tr("O'chirish")}
             className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]"
           >
             <TrashIcon className="h-4 w-4" />
@@ -279,6 +282,7 @@ function MealFormModal({
   meal: LandingMeal | null;
   defaultWeekday: MenuWeekday;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -318,21 +322,21 @@ function MealFormModal({
       queryClient.invalidateQueries({ queryKey: ["landing-meals"] });
       onClose();
     },
-    onError: (err) => setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik"),
+    onError: (err) => setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik")),
   });
 
   const photoMutation = useMutation({
     mutationFn: (file: File) => api.upload<LandingMeal>(`/app/landing/meals/${meal!.id}/photo`, file),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["landing-meals"] }),
-    onError: (err) => setServerError(err instanceof ApiError ? err.message : "Rasm yuklashda xatolik"),
+    onError: (err) => setServerError(err instanceof ApiError ? err.message : tr("Rasm yuklashda xatolik")),
   });
 
   return (
-    <Modal open={open} onClose={onClose} title={isEdit ? "Taomni tahrirlash" : "Yangi taom"}>
+    <Modal open={open} onClose={onClose} title={isEdit ? "Taomni tahrirlash" : tr("Yangi taom")}>
       <div className="space-y-4">
         {serverError && (
           <div role="alert" className="rounded-[var(--radius-lg)] bg-[var(--color-danger-bg)] px-3 py-2.5 text-[13px] text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
 
@@ -341,7 +345,7 @@ function MealFormModal({
             <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-lg)] bg-[var(--color-surface-sunken)]">
               {meal!.photoPath ? (
                 // eslint-disable-next-line @next/next/no-img-element -- API'dan kelgan dinamik rasm
-                <img src={assetUrl(meal!.photoPath) ?? undefined} alt={meal!.title} className="h-full w-full object-cover" />
+                <img src={assetUrl(meal!.photoPath) ?? undefined} alt={tr(meal!.title)} className="h-full w-full object-cover" />
               ) : (
                 <MealIcon className="h-6 w-6 text-[var(--color-text-subtle)]" />
               )}
@@ -359,38 +363,38 @@ function MealFormModal({
             />
             <Button type="button" size="sm" variant="outline" loading={photoMutation.isPending} onClick={() => fileInputRef.current?.click()}>
               <CameraIcon className="h-4 w-4" />
-              Rasm yuklash
+              {tr("Rasm yuklash")}
             </Button>
           </div>
         )}
 
         <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
-          <Input label="Nomi" placeholder="Sabzavotli osh" error={errors.title?.message} {...register("title")} />
-          <Select label="Turi" error={errors.mealType?.message} {...register("mealType")}>
-            <option value="BREAKFAST">Nonushta</option>
-            <option value="LUNCH">Tushlik</option>
-            <option value="SNACK">Ikkinchi nonushta</option>
-            <option value="DINNER">Kechki ovqat</option>
-            <option value="OTHER">Boshqa</option>
+          <Input label={tr("Nomi")} placeholder={tr("Sabzavotli osh")} error={errors.title?.message} {...register("title")} />
+          <Select label={tr("Turi")} error={errors.mealType?.message} {...register("mealType")}>
+            <option value="BREAKFAST">{tr("Nonushta")}</option>
+            <option value="LUNCH">{tr("Tushlik")}</option>
+            <option value="SNACK">{tr("Ikkinchi nonushta")}</option>
+            <option value="DINNER">{tr("Kechki ovqat")}</option>
+            <option value="OTHER">{tr("Boshqa")}</option>
           </Select>
           <div className="grid grid-cols-2 gap-3">
-            <Select label="Haftaning kuni" error={errors.weekday?.message} {...register("weekday")}>
+            <Select label={tr("Haftaning kuni")} error={errors.weekday?.message} {...register("weekday")}>
               {WEEKDAY_ORDER.map((day) => (
                 <option key={day} value={day}>
-                  {WEEKDAY_LABELS[day]}
+                  {tr(WEEKDAY_LABELS[day])}
                 </option>
               ))}
             </Select>
-            <Input label="Vaqti" type="time" error={errors.time?.message} {...register("time")} />
+            <Input label={tr("Vaqti")} type="time" error={errors.time?.message} {...register("time")} />
           </div>
-          <Textarea label="Tarkibi" rows={3} placeholder="Taom tarkibidagi mahsulotlar, vergul bilan" error={errors.description?.message} {...register("description")} />
-          <Input label="Tartib raqami" type="number" hint="Kichik raqam avval chiqadi" error={errors.order?.message} {...register("order")} />
+          <Textarea label={tr("Tarkibi")} rows={3} placeholder={tr("Taom tarkibidagi mahsulotlar, vergul bilan")} error={errors.description?.message} {...register("description")} />
+          <Input label={tr("Tartib raqami")} type="number" hint={tr("Kichik raqam avval chiqadi")} error={errors.order?.message} {...register("order")} />
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={onClose}>
-              Bekor qilish
+              {tr("Bekor qilish")}
             </Button>
             <Button type="submit" loading={isSubmitting || mutation.isPending}>
-              Saqlash
+              {tr("Saqlash")}
             </Button>
           </div>
         </form>

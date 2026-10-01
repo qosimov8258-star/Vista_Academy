@@ -554,14 +554,9 @@ export function StarIcon(props: IconProps) {
   );
 }
 
+/** Yulduzcha (avvalgi "coin") belgisi — nomi eski, ko'rinishi yulduz. */
 export function CoinIcon(props: IconProps) {
-  return (
-    <Outline {...props}>
-      <circle cx="12" cy="12" r="8.4" />
-      <circle cx="12" cy="12" r="5.4" />
-      <path d="M12 9v6M10.1 10.3c0-.75.8-1.3 1.9-1.3s1.9.5 1.9 1.2c0 1.7-3.8.9-3.8 2.6 0 .7.8 1.2 1.9 1.2s1.9-.55 1.9-1.3" />
-    </Outline>
-  );
+  return <StarIcon {...props} />;
 }
 
 export function ShopIcon(props: IconProps) {

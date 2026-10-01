@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { initials } from "@/components/ui/avatar";
 import { ChecklistIcon, MealIcon, PhoneIcon, WalletIcon } from "@/components/ui/icons";
 import styles from "./login.module.css";
+import { useTr } from "@/i18n/tr";
 
 const FEATURES = [
   { key: "attendance", Icon: ChecklistIcon },
@@ -16,6 +17,7 @@ const FEATURES = [
 
 /** Bog'cha belgisi va nomi. Nom yuklanayotganda — joy egallovchi. */
 export function OrgBrand({ name, compact = false }: { name: string | null; compact?: boolean }) {
+  const tr = useTr();
   if (name === null) {
     return (
       <div className="flex items-center gap-3" aria-hidden="true">
@@ -36,7 +38,7 @@ export function OrgBrand({ name, compact = false }: { name: string | null; compa
       >
         {initials(name)}
       </span>
-      <span className="truncate text-[17px] font-bold tracking-[-0.01em] text-white">{name}</span>
+      <span className="truncate text-[17px] font-bold tracking-[-0.01em] text-white">{tr(name)}</span>
     </div>
   );
 }
@@ -47,6 +49,7 @@ export function OrgBrand({ name, compact = false }: { name: string | null; compa
  * ustida bo'lsa to'xtaydi), chiziqlarni bosib ham almashtirish mumkin.
  */
 export function LoginHero({ orgName, online }: { orgName: string | null; online: boolean }) {
+  const tr = useTr();
   const t = useTranslations("login.hero");
   const [active, setActive] = useState(0);
   const year = new Date().getFullYear();
@@ -142,7 +145,7 @@ export function LoginHero({ orgName, online }: { orgName: string | null; online:
 
         <div className="flex items-center gap-2 text-[13px] text-[var(--accent-pale)]/35">
           <span>
-            © {year} {orgName ?? ""}
+            © {tr(year)} {orgName ?? ""}
           </span>
           <span aria-hidden="true">·</span>
           <span>{t("rights")}</span>

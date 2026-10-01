@@ -9,6 +9,7 @@ import { useLearned, useTextSize } from "../../store";
 import { FoydaliHeader, LearnedButton, ListSkeleton, LoadErrorCard, NotFoundCard, TaleCover, TextSizeControl, formatUzDate } from "../../ui";
 import { SaveImageButton, useKindergartenName } from "../../save-image-button";
 import { kindergartenLabel, renderTaleImages } from "../../share-image";
+import { useTr } from "@/i18n/tr";
 
 /** Ertak matni uchun shrift (px) — she'rdan kichikroq, o'qishga qulay */
 const READING_SIZES = [16.5, 18.5, 21] as const;
@@ -18,27 +19,28 @@ const READING_SIZES = [16.5, 18.5, 21] as const;
  * savollar: ertakni tushunganini tekshirish va suhbat boshlash uchun.
  */
 export default function TalePage({ params }: { params: Promise<{ slug: string; id: string }> }) {
+  const tr = useTr();
   const { slug, id } = use(params);
   const base = `/ota-ona/${slug}/foydali`;
   const taleQuery = useTale(id);
   const tale = taleQuery.data;
   const { has, toggle } = useLearned();
   const size = useTextSize();
-  const brand = useKindergartenName(slug) ?? "Bog'cha";
+  const brand = useKindergartenName(slug) ?? tr("Bog'cha");
   // Muqova rasmi saqlanadigan rasmning birinchi sahifasiga ko'chiriladi
   const coverRef = useRef<HTMLDivElement>(null);
 
   if (!tale) {
     return (
       <div className="mx-auto w-full max-w-[520px] px-4">
-        <FoydaliHeader backHref={`${base}/ertaklar`} backLabel="Ertaklar" title="Ertak" />
+        <FoydaliHeader backHref={`${base}/ertaklar`} backLabel="Ertaklar" title={tr("Ertak")} />
         {!taleQuery.isError ? (
           <ListSkeleton rows={2} tall />
         ) : isGone(taleQuery.error) ? (
           <NotFoundCard
             backHref={`${base}/ertaklar`}
             backLabel="Ertaklarga qaytish"
-            text="Bu ertak o'chirilgan yoki hali qo'shilmagan."
+            text={tr("Bu ertak o'chirilgan yoki hali qo'shilmagan.")}
           />
         ) : (
           <LoadErrorCard error={taleQuery.error} onRetry={() => taleQuery.refetch()} loginHref={`/ota-ona/${slug}/kirish`} />
@@ -54,7 +56,7 @@ export default function TalePage({ params }: { params: Promise<{ slug: string; i
       <FoydaliHeader
         backHref={`${base}/ertaklar`}
         backLabel="Ertaklar"
-        title={tale.title}
+        title={tr(tale.title)}
         subtitle={`${tale.origin} · ${tale.minutes} daqiqa`}
         right={<TextSizeControl />}
       />
@@ -70,7 +72,7 @@ export default function TalePage({ params }: { params: Promise<{ slug: string; i
             className={clsx("leading-[1.75] text-[var(--p-ink)]", i > 0 && "mt-4", i === 0 && styles.dropCap)}
             style={{ fontSize }}
           >
-            {paragraph}
+            {tr(paragraph)}
           </p>
         ))}
       </article>
@@ -78,21 +80,21 @@ export default function TalePage({ params }: { params: Promise<{ slug: string; i
       <section className="mt-3 rounded-[var(--p-radius)] bg-[var(--p-sun)]/12 px-5 py-4">
         <p className="flex items-center gap-2 text-[13px] font-bold uppercase tracking-[0.06em] text-[var(--p-sun-ink)]">
           <BulbIcon className="h-4 w-4" />
-          Ertak saboqi
+          {tr("Ertak saboqi")}
         </p>
-        <p className={`${styles.roundedFont} mt-2 text-[17px] font-bold leading-snug text-[var(--p-ink)]`}>{tale.moral}</p>
+        <p className={`${styles.roundedFont} mt-2 text-[17px] font-bold leading-snug text-[var(--p-ink)]`}>{tr(tale.moral)}</p>
       </section>
 
       {tale.questions.length > 0 && (
         <section className="mt-3 rounded-[var(--p-radius)] bg-[var(--p-card)] px-5 py-4 shadow-[var(--p-shadow)]">
-          <p className="text-[13px] font-bold uppercase tracking-[0.06em] text-[var(--p-sky-ink)]">Bolangizga so&apos;rang</p>
+          <p className="text-[13px] font-bold uppercase tracking-[0.06em] text-[var(--p-sky-ink)]">{tr("Bolangizga so'rang")}</p>
           <ol className="mt-3 space-y-2.5">
             {tale.questions.map((question, i) => (
               <li key={i} className="flex gap-3">
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--p-sky)]/16 text-[12.5px] font-bold text-[var(--p-sky-ink)]">
                   {i + 1}
                 </span>
-                <span className="pt-0.5 text-[15px] leading-snug text-[var(--p-ink)]">{question}</span>
+                <span className="pt-0.5 text-[15px] leading-snug text-[var(--p-ink)]">{tr(question)}</span>
               </li>
             ))}
           </ol>
@@ -100,7 +102,7 @@ export default function TalePage({ params }: { params: Promise<{ slug: string; i
       )}
 
       <SaveImageButton
-        label="Ertakni rasm qilib saqlash"
+        label={tr("Ertakni rasm qilib saqlash")}
         shareTitle={tale.title}
         shareText={`«${tale.title}» — ${kindergartenLabel(brand)}`}
         build={() => renderTaleImages(tale, brand, coverRef.current?.querySelector("svg") ?? null)}
@@ -109,11 +111,11 @@ export default function TalePage({ params }: { params: Promise<{ slug: string; i
       <LearnedButton
         learned={has("tales", tale.id)}
         onToggle={() => toggle("tales", tale.id)}
-        idleLabel="O'qib bo'ldik!"
-        doneLabel="O'qildi"
+        idleLabel={tr("O'qib bo'ldik!")}
+        doneLabel={tr("O'qildi")}
       />
       <p className="mt-6 text-center text-[12.5px] text-[var(--p-muted)]">
-        {tale.addedBy} qo&apos;shgan · {formatUzDate(tale.addedAt)}
+        {tr(tale.addedBy)} {tr("qo'shgan ·")}{" "}{formatUzDate(tale.addedAt)}
       </p>
     </div>
   );

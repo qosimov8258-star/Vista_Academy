@@ -6,6 +6,7 @@ import { useAppPathname } from "@/lib/tenant-host-context";
 import clsx from "clsx";
 import styles from "../parent.module.css";
 import { CABINET_TABS, TAB_BAR_SLOTS, tabIndexOf } from "./tabs";
+import { useTr } from "@/i18n/tr";
 
 /**
  * Pastdagi suzuvchi menyu. Telefonda bosh barmoq yetadigan joyda turadi,
@@ -21,6 +22,7 @@ import { CABINET_TABS, TAB_BAR_SLOTS, tabIndexOf } from "./tabs";
  * tugmaning haqiqiy o'lchamidan olinadi — bo'lim qo'shilsa ham adashmaydi.
  */
 export function ParentTabBar({ slug }: { slug: string }) {
+  const tr = useTr();
   const pathname = useAppPathname();
   const base = `/ota-ona/${slug}`;
 
@@ -87,7 +89,7 @@ export function ParentTabBar({ slug }: { slug: string }) {
 
   return (
     <nav
-      aria-label="Asosiy menyu"
+      aria-label={tr("Asosiy menyu")}
       className="fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 min-[380px]:px-4"
       // iPhone'dagi pastki chiziq tugmalarni yopib qolmasin
       style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom))" }}
@@ -137,7 +139,7 @@ export function ParentTabBar({ slug }: { slug: string }) {
             >
               {/* key: bo'lim faollashganda animatsiya boshidan ishlasin */}
               <Icon filled={active} key={active ? "on" : "off"} className={iconClass(active)} />
-              <span className={labelClass}>{tab.label}</span>
+              <span className={labelClass}>{tr(tab.label)}</span>
             </Link>
           );
         })}
@@ -154,7 +156,7 @@ export function ParentTabBar({ slug }: { slug: string }) {
             className={itemClass(moreSlot === activeSlot)}
           >
             <MoreIcon filled={moreSlot === activeSlot} key={moreSlot === activeSlot ? "on" : "off"} className={iconClass(moreSlot === activeSlot)} />
-            <span className={labelClass}>Yana</span>
+            <span className={labelClass}>{tr("Yana")}</span>
           </button>
         )}
       </div>
@@ -176,8 +178,9 @@ function MoreSheet({
   onPick: (index: number) => void;
   onClose: () => void;
 }) {
+  const tr = useTr();
   return (
-    <div className="fixed inset-0 z-[-1]" role="dialog" aria-modal="true" aria-label="Boshqa bo'limlar">
+    <div className="fixed inset-0 z-[-1]" role="dialog" aria-modal="true" aria-label={tr("Boshqa bo'limlar")}>
       <div className={clsx("absolute inset-0 bg-black/35", styles.enterSoft)} onClick={onClose} aria-hidden />
       <div
         className={clsx(
@@ -187,7 +190,7 @@ function MoreSheet({
         // Menyu ustida, undan biroz yuqorida suzib turadi
         style={{ bottom: "calc(max(12px, env(safe-area-inset-bottom)) + 88px)" }}
       >
-        <p className="px-2 pb-2 pt-1 text-[12px] font-bold uppercase tracking-[0.07em] text-[var(--p-muted)]">Boshqa bo&apos;limlar</p>
+        <p className="px-2 pb-2 pt-1 text-[12px] font-bold uppercase tracking-[0.07em] text-[var(--p-muted)]">{tr("Boshqa bo'limlar")}</p>
         <ul className="space-y-1">
           {items.map((tab) => {
             const active = tab.index === activeIndex;
@@ -213,9 +216,9 @@ function MoreSheet({
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className={clsx("block text-[15.5px] font-bold", active ? "text-[var(--p-sun-ink)]" : "text-[var(--p-ink)]")}>
-                      {tab.label}
+                      {tr(tab.label)}
                     </span>
-                    <span className="block truncate text-[13px] text-[var(--p-muted)]">{tab.hint}</span>
+                    <span className="block truncate text-[13px] text-[var(--p-muted)]">{tr(tab.hint)}</span>
                   </span>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 shrink-0 text-[var(--p-muted)]" aria-hidden>
                     <path d="m9 6 6 6-6 6" />

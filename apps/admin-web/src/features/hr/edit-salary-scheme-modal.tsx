@@ -13,6 +13,7 @@ import { AmountInput } from "@/components/ui/amount-input";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { Button } from "@/components/ui/button";
 import { LoadingState, ErrorState } from "@/components/ui/states";
+import { useTr } from "@/i18n/tr";
 
 const RULE_TYPE_OPTIONS = [
   { value: "FIXED", label: "Belgilangan (oylik summa)" },
@@ -50,6 +51,7 @@ export function EditSalarySchemeModal({
   employeeId: string;
   employeeName?: string;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -106,7 +108,7 @@ export function EditSalarySchemeModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
@@ -120,12 +122,12 @@ export function EditSalarySchemeModal({
       {schemeQuery.isLoading ? (
         <LoadingState />
       ) : realError ? (
-        <ErrorState message={(schemeQuery.error as Error).message} />
+        <ErrorState message={tr((schemeQuery.error as Error).message)} />
       ) : (
         <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
           {serverError && (
             <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-              {serverError}
+              {tr(serverError)}
             </div>
           )}
           <Controller
@@ -133,7 +135,7 @@ export function EditSalarySchemeModal({
             name="ruleType"
             render={({ field }) => (
               <SelectMenu
-                label="Hisoblash turi"
+                label={tr("Hisoblash turi")}
                 options={RULE_TYPE_OPTIONS}
                 value={field.value}
                 onChange={field.onChange}
@@ -148,7 +150,7 @@ export function EditSalarySchemeModal({
               name="fixedAmount"
               render={({ field }) => (
                 <AmountInput
-                  label="Oylik summa (UZS)"
+                  label={tr("Oylik summa (UZS)")}
                   placeholder="2 500 000"
                   value={field.value}
                   onChange={field.onChange}
@@ -162,7 +164,7 @@ export function EditSalarySchemeModal({
               name="rate"
               render={({ field }) => (
                 <AmountInput
-                  label={ruleType === "PER_HOUR" ? "Bir soat narxi (UZS)" : "Bir bola uchun narx (UZS)"}
+                  label={ruleType === "PER_HOUR" ? "Bir soat narxi (UZS)" : tr("Bir bola uchun narx (UZS)")}
                   placeholder="15 000"
                   value={field.value}
                   onChange={field.onChange}
@@ -174,10 +176,10 @@ export function EditSalarySchemeModal({
 
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={onClose}>
-              Bekor qilish
+              {tr("Bekor qilish")}
             </Button>
             <Button type="submit" loading={isSubmitting || mutation.isPending}>
-              Saqlash
+              {tr("Saqlash")}
             </Button>
           </div>
         </form>

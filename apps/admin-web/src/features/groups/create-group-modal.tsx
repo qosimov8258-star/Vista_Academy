@@ -10,6 +10,7 @@ import type { Group } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useTr } from "@/i18n/tr";
 
 const schema = z.object({
   name: z.string().min(2, "Nomi kamida 2 belgi"),
@@ -19,6 +20,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export function CreateGroupModal({ open, onClose, slug }: { open: boolean; onClose: () => void; slug: string }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -41,27 +43,27 @@ export function CreateGroupModal({ open, onClose, slug }: { open: boolean; onClo
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
   return (
-    <Modal open={open} onClose={onClose} title="Yangi guruh">
+    <Modal open={open} onClose={onClose} title={tr("Yangi guruh")}>
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
-        <Input label="Guruh nomi" placeholder="Kapalakchalar (3-4 yosh)" error={errors.name?.message} {...register("name")} />
-        <Input label="Sig'imi" type="number" min={1} max={100} error={errors.capacity?.message} {...register("capacity")} />
+        <Input label={tr("Guruh nomi")} placeholder={tr("Kapalakchalar (3-4 yosh)")} error={errors.name?.message} {...register("name")} />
+        <Input label={tr("Sig'imi")} type="number" min={1} max={100} error={errors.capacity?.message} {...register("capacity")} />
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Bekor qilish
+            {tr("Bekor qilish")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Yaratish
+            {tr("Yaratish")}
           </Button>
         </div>
       </form>

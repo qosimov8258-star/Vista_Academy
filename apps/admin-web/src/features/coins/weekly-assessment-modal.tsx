@@ -9,6 +9,7 @@ import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
+import { useTr } from "@/i18n/tr";
 
 type AnswerState = "unasked" | "correct" | "incorrect";
 
@@ -34,6 +35,7 @@ export function WeeklyAssessmentModal({
   branchId: string;
   child: CoinChildBalance;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Record<string, AnswerState>>({});
@@ -66,7 +68,7 @@ export function WeeklyAssessmentModal({
       handleClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
@@ -88,27 +90,26 @@ export function WeeklyAssessmentModal({
       <div className="space-y-4">
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
 
         <p className="text-sm text-[var(--color-text-muted)]">
-          O&apos;tilgan mavzulardan savol so&apos;rang va har birini belgilang. Coin avtomatik hisoblanadi: savol-javob
-          uchun max {QA_POOL}, she&apos;r yodlash uchun {POEM_POOL} — jami max {QA_POOL + POEM_POOL} coin/hafta.
+          {tr("O'tilgan mavzulardan savol so'rang va har birini belgilang. Yulduzcha avtomatik hisoblanadi: savol-javob uchun max")}{" "}{tr(QA_POOL)}{tr(", she'r yodlash uchun")}{" "}{tr(POEM_POOL)} {tr("— jami max")}{" "}{QA_POOL + POEM_POOL} {tr("yulduzcha/hafta.")}
         </p>
 
         {questionsQuery.isLoading ? (
           <LoadingState />
         ) : questionsQuery.isError ? (
-          <ErrorState message={(questionsQuery.error as Error).message} />
+          <ErrorState message={tr((questionsQuery.error as Error).message)} />
         ) : groups.length === 0 ? (
-          <EmptyState title="Bu guruh uchun hali savollar banki yo'q" />
+          <EmptyState title={tr("Bu guruh uchun hali savollar banki yo'q")} />
         ) : (
           <div className="max-h-[45vh] space-y-4 overflow-y-auto scrollbar-thin pr-1">
             {groups.map((group) => (
               <div key={group.topicId} className="space-y-2">
                 <p className="text-xs font-semibold tracking-wide text-[var(--color-text-muted)] uppercase">
-                  {group.topicTitle}
+                  {tr(group.topicTitle)}
                 </p>
                 <ul className="space-y-1.5">
                   {group.questions.map((q) => {
@@ -118,7 +119,7 @@ export function WeeklyAssessmentModal({
                         key={q.id}
                         className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-lg)] border border-[var(--color-separator)] px-3 py-2"
                       >
-                        <span className="min-w-0 flex-1 text-sm text-[var(--color-text)]">{q.question}</span>
+                        <span className="min-w-0 flex-1 text-sm text-[var(--color-text)]">{tr(q.question)}</span>
                         <div className="flex gap-1.5">
                           <button
                             type="button"
@@ -130,7 +131,7 @@ export function WeeklyAssessmentModal({
                                 : "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)] hover:bg-[var(--color-border)]",
                             )}
                           >
-                            To&apos;g&apos;ri
+                            {tr("To'g'ri")}
                           </button>
                           <button
                             type="button"
@@ -142,7 +143,7 @@ export function WeeklyAssessmentModal({
                                 : "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)] hover:bg-[var(--color-border)]",
                             )}
                           >
-                            Noto&apos;g&apos;ri
+                            {tr("Noto'g'ri")}
                           </button>
                         </div>
                       </li>
@@ -155,21 +156,21 @@ export function WeeklyAssessmentModal({
         )}
 
         <div className="flex items-center justify-between rounded-[var(--radius-lg)] bg-[var(--color-surface-sunken)] px-3 py-2.5">
-          <span className="text-sm font-medium text-[var(--color-text)]">She&apos;r yodladi</span>
-          <Switch checked={poemRecited} onChange={() => setPoemRecited((v) => !v)} aria-label="She'r yodladi" />
+          <span className="text-sm font-medium text-[var(--color-text)]">{tr("She'r yodladi")}</span>
+          <Switch checked={poemRecited} onChange={() => setPoemRecited((v) => !v)} aria-label={tr("She'r yodladi")} />
         </div>
 
         <p className="text-sm text-[var(--color-text)]">
-          Hisoblangan coin: <span className="font-semibold">{totalCoins}</span>
+          {tr("Hisoblangan yulduzcha:")}{" "}<span className="font-semibold">{tr(totalCoins)}</span>
           <span className="text-[var(--color-text-muted)]">
             {" "}
-            ({correctCount}/{askedEntries.length} to&apos;g&apos;ri javob{poemRecited ? " · she'r bilan" : ""})
+            ({tr(correctCount)}/{tr(askedEntries.length)} {tr("to'g'ri javob")}{poemRecited ? tr(" · she'r bilan") : ""})
           </span>
         </p>
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={handleClose}>
-            Bekor qilish
+            {tr("Bekor qilish")}
           </Button>
           <Button
             type="button"
@@ -180,7 +181,7 @@ export function WeeklyAssessmentModal({
               mutation.mutate();
             }}
           >
-            Saqlash
+            {tr("Saqlash")}
           </Button>
         </div>
       </div>

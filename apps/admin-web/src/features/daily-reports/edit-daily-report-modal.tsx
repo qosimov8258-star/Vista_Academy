@@ -10,6 +10,7 @@ import type { DailyReport, HealthProfile } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Select, Input, Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useTr } from "@/i18n/tr";
 
 const schema = z.object({
   eatingQuality: z.enum(["GOOD", "AVERAGE", "POOR", ""]).optional(),
@@ -40,6 +41,7 @@ export function EditDailyReportModal({
   childName: string;
   report: DailyReport | null;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -83,7 +85,7 @@ export function EditDailyReportModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
@@ -92,39 +94,39 @@ export function EditDailyReportModal({
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
         {hasWarning && (
           <div className="space-y-0.5 rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {health?.allergies && <p>Allergiya: {health.allergies}</p>}
-            {health?.chronicConditions && <p>Surunkali kasallik: {health.chronicConditions}</p>}
+            {health?.allergies && <p>{tr("Allergiya:")}{" "}{tr(health.allergies)}</p>}
+            {health?.chronicConditions && <p>{tr("Surunkali kasallik:")}{" "}{tr(health.chronicConditions)}</p>}
           </div>
         )}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Select label="Ovqatlanishi" defaultValue="" {...register("eatingQuality")}>
-            <option value="">Belgilanmagan</option>
-            <option value="GOOD">Yaxshi</option>
-            <option value="AVERAGE">O'rtacha</option>
-            <option value="POOR">Yomon</option>
+          <Select label={tr("Ovqatlanishi")} defaultValue="" {...register("eatingQuality")}>
+            <option value="">{tr("Belgilanmagan")}</option>
+            <option value="GOOD">{tr("Yaxshi")}</option>
+            <option value="AVERAGE">{tr("O'rtacha")}</option>
+            <option value="POOR">{tr("Yomon")}</option>
           </Select>
-          <Select label="Kayfiyati" defaultValue="" {...register("mood")}>
-            <option value="">Belgilanmagan</option>
-            <option value="HAPPY">Xursand</option>
-            <option value="NEUTRAL">Oddiy</option>
-            <option value="UPSET">Xafa</option>
+          <Select label={tr("Kayfiyati")} defaultValue="" {...register("mood")}>
+            <option value="">{tr("Belgilanmagan")}</option>
+            <option value="HAPPY">{tr("Xursand")}</option>
+            <option value="NEUTRAL">{tr("Oddiy")}</option>
+            <option value="UPSET">{tr("Xafa")}</option>
           </Select>
         </div>
-        <Input label="Uyqu davomiyligi (daqiqa)" type="number" min={0} {...register("sleepMinutes")} />
-        <Textarea label="Tualet holati (ixtiyoriy)" rows={2} {...register("toiletNotes")} />
-        <Textarea label="Kunlik faoliyat" rows={3} placeholder="Bugun nima qildi..." {...register("activityNotes")} />
+        <Input label={tr("Uyqu davomiyligi (daqiqa)")} type="number" min={0} {...register("sleepMinutes")} />
+        <Textarea label={tr("Tualet holati (ixtiyoriy)")} rows={2} {...register("toiletNotes")} />
+        <Textarea label={tr("Kunlik faoliyat")} rows={3} placeholder={tr("Bugun nima qildi...")} {...register("activityNotes")} />
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Bekor qilish
+            {tr("Bekor qilish")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Saqlash
+            {tr("Saqlash")}
           </Button>
         </div>
       </form>

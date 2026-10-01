@@ -21,6 +21,7 @@ import { BulkCreateInvoiceModal } from "@/features/finance/bulk-create-invoice-m
 import { RecordPaymentModal } from "@/features/finance/record-payment-modal";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { canWriteMoney } from "@/lib/permissions";
+import { useTr } from "@/i18n/tr";
 
 function currentPeriod(): string {
   const now = new Date();
@@ -44,6 +45,7 @@ const STATUS_TONE: Record<Invoice["status"], "success" | "warning" | "danger" | 
 };
 
 export default function FinancePage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const [page, setPage] = useState(1);
   const [overdueOnly, setOverdueOnly] = useState(false);
@@ -89,7 +91,7 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
         "hisob-fakturalar.csv",
       );
     } catch {
-      setExportError("Eksport qilib bo'lmadi — qayta urinib ko'ring");
+      setExportError(tr("Eksport qilib bo'lmadi — qayta urinib ko'ring"));
     } finally {
       setExporting(false);
     }
@@ -101,7 +103,7 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
     try {
       await downloadCsv(`/app/exports/invoices/${invoiceId}/pdf`, `hisob-faktura-${invoiceId}.pdf`);
     } catch {
-      setExportError("PDF yuklab bo'lmadi — qayta urinib ko'ring");
+      setExportError(tr("PDF yuklab bo'lmadi — qayta urinib ko'ring"));
     } finally {
       setDownloadingId(null);
     }
@@ -113,16 +115,16 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
         {/* Mobilda "+ Yangi hisob-faktura" sarlavha qatorining o'ngida, qolgan tugmalar pastda qatorga o'raladi */}
         <div className="flex w-full items-start justify-between gap-3 md:w-auto">
           <div className="min-w-0">
-            <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">Moliya</h1>
-            <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">Ota-onalar uchun hisob-fakturalar</p>
+            <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">{tr("Moliya")}</h1>
+            <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">{tr("Ota-onalar uchun hisob-fakturalar")}</p>
           </div>
           {canWrite && (
             <div className="shrink-0 md:hidden">
               <Button className="!h-auto !py-2" onClick={() => setCreateOpen(true)}>
                 <span className="text-center leading-tight">
-                  + Yangi
+                  {tr("+ Yangi")}
                   <br />
-                  hisob-faktura
+                  {tr("hisob-faktura")}
                 </span>
               </Button>
             </div>
@@ -130,7 +132,7 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
         </div>
         <TopbarAction>
           <Button variant="outline" loading={exporting} onClick={handleExport}>
-            Eksport (CSV)
+            {tr("Eksport (CSV)")}
           </Button>
         </TopbarAction>
         <div className="flex flex-wrap gap-2">
@@ -141,21 +143,21 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
               setPage(1);
             }}
           >
-            Muddati o&apos;tganlar
+            {tr("Muddati o'tganlar")}
           </Button>
           <div className="hidden md:block">
             <Button variant="outline" loading={exporting} onClick={handleExport}>
-              Eksport (CSV)
+              {tr("Eksport (CSV)")}
             </Button>
           </div>
           {canWrite && (
             <Button variant="outline" onClick={() => setBulkOpen(true)}>
-              Ommaviy hisob-faktura
+              {tr("Ommaviy hisob-faktura")}
             </Button>
           )}
           {canWrite && (
             <div className="hidden md:block">
-              <Button onClick={() => setCreateOpen(true)}>+ Yangi hisob-faktura</Button>
+              <Button onClick={() => setCreateOpen(true)}>{tr("+ Yangi hisob-faktura")}</Button>
             </div>
           )}
         </div>
@@ -164,24 +166,24 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
       {summaryQuery.data && (
         <Card className="flex flex-wrap items-center gap-6 p-4">
           <p className="text-[13px] font-medium text-[var(--color-text-muted)]">
-            Naqd vs o&apos;tkazma ({summaryQuery.data.period})
+            {tr("Naqd vs o'tkazma (")}{tr(summaryQuery.data.period)})
           </p>
           <div className="flex items-center gap-2">
-            <span className="text-[13px] text-[var(--color-text-muted)]">Naqd:</span>
+            <span className="text-[13px] text-[var(--color-text-muted)]">{tr("Naqd:")}</span>
             <span className="text-[14px] font-semibold tabular-nums text-[var(--color-text)]">
-              {formatMoney(summaryQuery.data.byMethod.CASH.amount)} ({summaryQuery.data.byMethod.CASH.count})
+              {formatMoney(summaryQuery.data.byMethod.CASH.amount)} ({tr(summaryQuery.data.byMethod.CASH.count)})
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[13px] text-[var(--color-text-muted)]">Karta:</span>
+            <span className="text-[13px] text-[var(--color-text-muted)]">{tr("Karta:")}</span>
             <span className="text-[14px] font-semibold tabular-nums text-[var(--color-text)]">
-              {formatMoney(summaryQuery.data.byMethod.CARD.amount)} ({summaryQuery.data.byMethod.CARD.count})
+              {formatMoney(summaryQuery.data.byMethod.CARD.amount)} ({tr(summaryQuery.data.byMethod.CARD.count)})
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[13px] text-[var(--color-text-muted)]">O&apos;tkazma:</span>
+            <span className="text-[13px] text-[var(--color-text-muted)]">{tr("O'tkazma:")}</span>
             <span className="text-[14px] font-semibold tabular-nums text-[var(--color-text)]">
-              {formatMoney(summaryQuery.data.byMethod.BANK_TRANSFER.amount)} ({summaryQuery.data.byMethod.BANK_TRANSFER.count})
+              {formatMoney(summaryQuery.data.byMethod.BANK_TRANSFER.amount)} ({tr(summaryQuery.data.byMethod.BANK_TRANSFER.count)})
             </span>
           </div>
         </Card>
@@ -189,7 +191,7 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
 
       <Card className="grid gap-3 p-4 sm:grid-cols-3">
         <Input
-          placeholder="Bola ismi bo'yicha qidirish"
+          placeholder={tr("Bola ismi bo'yicha qidirish")}
           value={search}
           onChange={(e) => {
             setPage(1);
@@ -197,7 +199,7 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
           }}
         />
         <Input
-          placeholder="Davr (YYYY-MM)"
+          placeholder={tr("Davr (YYYY-MM)")}
           value={period}
           onChange={(e) => {
             setPage(1);
@@ -208,7 +210,7 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
 
       {exportError && (
         <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-          {exportError}
+          {tr(exportError)}
         </div>
       )}
 
@@ -217,15 +219,15 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
       {invoicesQuery.isLoading ? (
         <LoadingState rows={6} />
       ) : invoicesQuery.isError ? (
-        <ErrorState message={(invoicesQuery.error as Error).message} />
+        <ErrorState message={tr((invoicesQuery.error as Error).message)} />
       ) : !invoicesQuery.data || invoicesQuery.data.data.length === 0 ? (
         <EmptyState
-          title="Hisob-faktura topilmadi"
+          title={tr("Hisob-faktura topilmadi")}
           description={
             search || period
-              ? "Qidiruv yoki filtr shartini o'zgartiring"
+              ? tr("Qidiruv yoki filtr shartini o'zgartiring")
               : canWrite
-                ? "Yangi hisob-faktura yaratish uchun tugmani bosing"
+                ? tr("Yangi hisob-faktura yaratish uchun tugmani bosing")
                 : undefined
           }
         />
@@ -234,14 +236,14 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
           <DataTable>
             <THead>
               <tr>
-                <Th>Bola</Th>
-                <Th>Davr</Th>
-                <Th numeric>Summa</Th>
-                <Th numeric>Chegirma</Th>
-                <Th numeric>To'langan</Th>
-                <Th numeric>Qoldiq</Th>
-                <Th>Muddat</Th>
-                <Th>Holat</Th>
+                <Th>{tr("Bola")}</Th>
+                <Th>{tr("Davr")}</Th>
+                <Th numeric>{tr("Summa")}</Th>
+                <Th numeric>{tr("Chegirma")}</Th>
+                <Th numeric>{tr("To'langan")}</Th>
+                <Th numeric>{tr("Qoldiq")}</Th>
+                <Th>{tr("Muddat")}</Th>
+                <Th>{tr("Holat")}</Th>
                 <Th></Th>
               </tr>
             </THead>
@@ -259,7 +261,7 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
                         {invoice.child?.fullName ?? "—"}
                       </Link>
                     </Td>
-                    <Td className="tabular-nums text-[var(--color-text-muted)]">{invoice.period}</Td>
+                    <Td className="tabular-nums text-[var(--color-text-muted)]">{tr(invoice.period)}</Td>
                     <Td numeric>{formatMoney(invoice.amount, invoice.currency)}</Td>
                     <Td numeric className="text-[var(--color-text-muted)]">
                       {Number(invoice.discountAmount) > 0 ? formatMoney(invoice.discountAmount, invoice.currency) : "—"}
@@ -275,7 +277,7 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
                     <Td className="tabular-nums text-[var(--color-text-muted)]">{formatDate(invoice.dueDate)}</Td>
                     <Td>
                       <Badge tone={invoice.overdue ? "danger" : STATUS_TONE[invoice.status]}>
-                        {invoice.overdue ? "Muddati o'tgan" : STATUS_LABEL[invoice.status]}
+                        {invoice.overdue ? tr("Muddati o'tgan") : STATUS_LABEL[invoice.status]}
                       </Badge>
                     </Td>
                     <Td className="text-right">
@@ -286,11 +288,11 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
                           loading={downloadingId === invoice.id}
                           onClick={() => handleInvoicePdf(invoice.id)}
                         >
-                          PDF
+                          {tr("PDF")}
                         </Button>
                         {canWrite && (invoice.status === "PENDING" || invoice.status === "PARTIALLY_PAID" || invoice.status === "OVERDUE") && (
                           <Button size="sm" variant="outline" onClick={() => setPayInvoice(invoice)}>
-                            To&apos;lov qabul qilish
+                            {tr("To'lov qabul qilish")}
                           </Button>
                         )}
                       </div>
@@ -303,11 +305,11 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
 
           <div className="hairline flex items-center justify-between gap-3 border-t border-[var(--color-separator)] px-5 py-3.5 text-[12.5px] text-[var(--color-text-muted)] sm:px-6">
             <span className="tabular-nums">
-              Jami {invoicesQuery.data.meta.total} ta, {invoicesQuery.data.meta.page}-sahifa
+              {tr("Jami")}{" "}{tr(invoicesQuery.data.meta.total)} {tr("ta,")}{" "}{tr(invoicesQuery.data.meta.page)}{tr("-sahifa")}
             </span>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-                Oldingi
+                {tr("Oldingi")}
               </Button>
               <Button
                 variant="outline"
@@ -315,7 +317,7 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
                 disabled={page * invoicesQuery.data.meta.limit >= invoicesQuery.data.meta.total}
                 onClick={() => setPage((p) => p + 1)}
               >
-                Keyingi
+                {tr("Keyingi")}
               </Button>
             </div>
           </div>

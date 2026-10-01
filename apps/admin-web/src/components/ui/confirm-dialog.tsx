@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { Modal } from "./modal";
 import { Button } from "./button";
+import { useTr } from "@/i18n/tr";
 
 /**
  * Ortga qaytarib bo'lmaydigan amaldan oldingi tasdiq. Ilgari bunday
@@ -31,18 +32,19 @@ export function ConfirmDialog({
   error?: string | null;
   onConfirm: () => void;
 }) {
+  const tr = useTr();
   return (
-    <Modal open={open} onClose={onClose} title={title} widthClassName="max-w-md">
+    <Modal open={open} onClose={onClose} title={tr(title)} widthClassName="max-w-md">
       <div className="space-y-4">
         {error && (
           <div role="alert" className="rounded-[var(--radius-md)] bg-[var(--color-danger-bg)] px-3.5 py-2.5 text-[14px] text-[var(--color-danger)]">
-            {error}
+            {tr(error)}
           </div>
         )}
-        <div className="text-[15px] leading-relaxed text-[var(--color-text-muted)]">{description}</div>
+        <div className="text-[15px] leading-relaxed text-[var(--color-text-muted)]">{tr(description)}</div>
         <div className="flex justify-end gap-2 pt-1">
           <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
-            Bekor qilish
+            {tr("Bekor qilish")}
           </Button>
           <Button
             type="button"
@@ -50,7 +52,7 @@ export function ConfirmDialog({
             loading={loading}
             onClick={onConfirm}
           >
-            {confirmLabel}
+            {tr(confirmLabel)}
           </Button>
         </div>
       </div>

@@ -7,6 +7,7 @@ import { MAX_PHOTOS_PER_MEAL, menuPhotoSrc } from "@/features/nutrition/use-menu
 import styles from "./chef.module.css";
 import { usePhotoPicker } from "./photo-picker";
 import { GalleryIcon } from "./quick-photo-sheet";
+import { useTr } from "@/i18n/tr";
 
 /** Har bir ovqatning o'z rangi va belgisi — ro'yxatda bir qarashda ajralsin */
 export const MEAL_LOOK: Record<MenuMeal, { tint: string; ink: string; Icon: (p: { className?: string }) => React.JSX.Element }> = {
@@ -40,6 +41,7 @@ export function MealCard({
   onFile: (file: File) => void;
   onOpenPhoto: (id: string) => void;
 }) {
+  const tr = useTr();
   const picker = usePhotoPicker();
   const look = MEAL_LOOK[meal];
   const full = photos.length >= MAX_PHOTOS_PER_MEAL;
@@ -52,14 +54,14 @@ export function MealCard({
           <look.Icon className="h-6 w-6" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[16px] font-semibold leading-tight text-[var(--color-text)]">{label}</p>
+          <p className="text-[16px] font-semibold leading-tight text-[var(--color-text)]">{tr(label)}</p>
           {shared ? (
             <p className={clsx("mt-0.5 flex items-center gap-1 text-[12.5px] font-medium text-[var(--color-success)]", styles.doneIn)}>
               <CheckIcon className="h-3.5 w-3.5" />
-              Ota-onalarga ko&apos;rinmoqda · {photos.length} ta rasm
+              {tr("Ota-onalarga ko'rinmoqda ·")}{" "}{tr(photos.length)} {tr("ta rasm")}
             </p>
           ) : (
-            <p className="mt-0.5 text-[12.5px] text-[var(--color-text-muted)]">Hali rasm yuklanmagan</p>
+            <p className="mt-0.5 text-[12.5px] text-[var(--color-text-muted)]">{tr("Hali rasm yuklanmagan")}</p>
           )}
         </div>
       </header>
@@ -78,7 +80,7 @@ export function MealCard({
             aria-label={`${label} suratini ochish`}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={menuPhotoSrc(p.id)} alt={label} loading="lazy" className="h-full w-full object-cover" />
+            <img src={menuPhotoSrc(p.id)} alt={tr(label)} loading="lazy" className="h-full w-full object-cover" />
           </button>
         ))}
         {!full && (
@@ -98,7 +100,7 @@ export function MealCard({
               {uploading ? (
                 <>
                   <span className="h-5 w-5 animate-spin rounded-full border-2 border-orange-300 border-t-orange-600" aria-hidden />
-                  Yuklanmoqda…
+                  {tr("Yuklanmoqda…")}
                 </>
               ) : (
                 <>
@@ -115,13 +117,13 @@ export function MealCard({
               className="flex h-[84px] w-[84px] shrink-0 flex-col items-center justify-center gap-1 rounded-2xl bg-[var(--color-surface-sunken)] text-[12px] font-semibold text-[var(--color-text-muted)] active:bg-black/[0.07] disabled:opacity-50"
             >
               <GalleryIcon className="h-6 w-6" />
-              Galereya
+              {tr("Galereya")}
             </button>
           </>
         )}
-        {picker.ui}
+        {tr(picker.ui)}
       </div>
-      {error && <p className="mt-2 text-[13px] text-[var(--color-danger)]">{error}</p>}
+      {error && <p className="mt-2 text-[13px] text-[var(--color-danger)]">{tr(error)}</p>}
     </article>
   );
 }

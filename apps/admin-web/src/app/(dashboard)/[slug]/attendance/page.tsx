@@ -21,6 +21,7 @@ import { isAssistantPosition } from "@/lib/employee-position";
 import { ChildNoteModal } from "@/features/child-notes/child-note-modal";
 import { TodayRemindersCard } from "@/features/child-notes/today-reminders-card";
 import { TeacherAttendance } from "@/features/teacher/teacher-attendance";
+import { useTr } from "@/i18n/tr";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 
@@ -51,6 +52,7 @@ function StatusSegmented({
   value: AttendanceStatus;
   onChange: (status: AttendanceStatus) => void;
 }) {
+  const tr = useTr();
   return (
     <div className="inline-flex flex-wrap items-center gap-0.5 rounded-full bg-[var(--color-surface-sunken)] p-1">
       {STATUS_SEGMENT_OPTIONS.map((opt) => (
@@ -65,7 +67,7 @@ function StatusSegmented({
               : "text-[var(--color-text-muted)] hover:bg-[var(--color-border)]",
           )}
         >
-          {opt.label}
+          {tr(opt.label)}
         </button>
       ))}
     </div>
@@ -85,6 +87,7 @@ export default function AttendancePage({ params }: { params: Promise<{ slug: str
 }
 
 function BranchAttendance({ slug }: { slug: string }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const { branchId: forcedBranchId } = useBranchContext(slug);
   const [branchId, setBranchId] = useState("");
@@ -113,7 +116,7 @@ function BranchAttendance({ slug }: { slug: string }) {
     // kunlik eksportga o'tish o'rniga aniq xato ko'rsatamiz, aks holda
     // foydalanuvchi oraliqni so'raganini bilmay qoladi.
     if ((exportFrom && !exportTo) || (!exportFrom && exportTo)) {
-      setExportError("Sana oralig'i uchun ham \"dan\", ham \"gacha\" ni to'ldiring");
+      setExportError(tr("Sana oralig'i uchun ham \"dan\", ham \"gacha\" ni to'ldiring"));
       return;
     }
     setExporting(true);
@@ -128,7 +131,7 @@ function BranchAttendance({ slug }: { slug: string }) {
         await downloadCsv(`/app/exports/attendance?date=${date}&branchId=${branchId}`, `davomat-${date}.csv`);
       }
     } catch {
-      setExportError("Eksport qilib bo'lmadi — qayta urinib ko'ring");
+      setExportError(tr("Eksport qilib bo'lmadi — qayta urinib ko'ring"));
     } finally {
       setExporting(false);
     }
@@ -239,34 +242,34 @@ function BranchAttendance({ slug }: { slug: string }) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="min-w-0">
-          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">Kunlik hisobot — Davomat</h1>
-          <p className="text-[14px] text-[var(--color-text-muted)]">Bolalarning kunlik qatnashuvini belgilang</p>
+          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">{tr("Kunlik hisobot — Davomat")}</h1>
+          <p className="text-[14px] text-[var(--color-text-muted)]">{tr("Bolalarning kunlik qatnashuvini belgilang")}</p>
         </div>
         {/* Mobilda "Eksport" yuqori panelda (uch chiziq qatorida), kompyuterda avvalgidek o'ngda */}
         <TopbarAction>
           <Button variant="outline" loading={exporting} disabled={!date || !branchId} onClick={handleExport}>
-            Eksport (CSV)
+            {tr("Eksport (CSV)")}
           </Button>
         </TopbarAction>
         <div className="hidden md:block">
           <Button variant="outline" loading={exporting} disabled={!date || !branchId} onClick={handleExport}>
-            Eksport (CSV)
+            {tr("Eksport (CSV)")}
           </Button>
         </div>
       </div>
 
       <Card className="flex flex-col gap-3 p-4 sm:flex-row">
         {!forcedBranchId && branches.length > 1 && (
-          <Select label="Filial" value={branchId} onChange={(e) => setBranchId(e.target.value)} className="sm:max-w-xs">
+          <Select label={tr("Filial")} value={branchId} onChange={(e) => setBranchId(e.target.value)} className="sm:max-w-xs">
             {branches.map((branch) => (
               <option key={branch.id} value={branch.id}>
-                {branch.name}
+                {tr(branch.name)}
               </option>
             ))}
           </Select>
         )}
         <div className="block">
-          <span className="mb-2 block text-[13px] font-medium text-[var(--color-text)]">Sana</span>
+          <span className="mb-2 block text-[13px] font-medium text-[var(--color-text)]">{tr("Sana")}</span>
           <input
             type="date"
             value={date}
@@ -276,7 +279,7 @@ function BranchAttendance({ slug }: { slug: string }) {
         </div>
         <div className="block">
           <span className="mb-2 block text-[13px] font-medium text-[var(--color-text)]">
-            Eksport oralig&apos;i (ixtiyoriy)
+            {tr("Eksport oralig'i (ixtiyoriy)")}
           </span>
           <div className="flex items-center gap-2">
             <input
@@ -284,7 +287,7 @@ function BranchAttendance({ slug }: { slug: string }) {
               value={exportFrom}
               max={exportTo || undefined}
               onChange={(e) => setExportFrom(e.target.value)}
-              aria-label="Eksport — dan"
+              aria-label={tr("Eksport — dan")}
               className="h-11 min-w-0 flex-1 rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-2 text-[13px] sm:px-3.5 sm:text-[15px] sm:flex-none text-[var(--color-text)] outline-none transition-[border-color,box-shadow] duration-[var(--dur-fast)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/[0.12]"
             />
             <span className="text-[13px] text-[var(--color-text-muted)]">—</span>
@@ -293,7 +296,7 @@ function BranchAttendance({ slug }: { slug: string }) {
               value={exportTo}
               min={exportFrom || undefined}
               onChange={(e) => setExportTo(e.target.value)}
-              aria-label="Eksport — gacha"
+              aria-label={tr("Eksport — gacha")}
               className="h-11 min-w-0 flex-1 rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-2 text-[13px] sm:px-3.5 sm:text-[15px] sm:flex-none text-[var(--color-text)] outline-none transition-[border-color,box-shadow] duration-[var(--dur-fast)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/[0.12]"
             />
           </div>
@@ -302,7 +305,7 @@ function BranchAttendance({ slug }: { slug: string }) {
 
       {exportError && (
         <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-          {exportError}
+          {tr(exportError)}
         </div>
       )}
 
@@ -313,48 +316,48 @@ function BranchAttendance({ slug }: { slug: string }) {
       {!date ? (
         <LoadingState />
       ) : !branchId ? (
-        <EmptyState title="Filial mavjud emas" />
+        <EmptyState title={tr("Filial mavjud emas")} />
       ) : attendanceQuery.isLoading ? (
         <LoadingState />
       ) : attendanceQuery.isError ? (
-        <ErrorState message={(attendanceQuery.error as Error).message} />
+        <ErrorState message={tr((attendanceQuery.error as Error).message)} />
       ) : !attendanceQuery.data || attendanceQuery.data.children.length === 0 ? (
-        <EmptyState title="Bu filialda faol bola yo'q" />
+        <EmptyState title={tr("Bu filialda faol bola yo'q")} />
       ) : (
         <>
           <div className="flex gap-2">
             <Button size="sm" variant={tab === "all" ? "primary" : "tertiary"} onClick={() => setTab("all")}>
-              Barchasi
+              {tr("Barchasi")}
             </Button>
             <Button size="sm" variant={tab === "absent" ? "primary" : "tertiary"} onClick={() => setTab("absent")}>
-              Kelmaganlar{absentChildren.length > 0 ? ` (${absentChildren.length})` : ""}
+              {tr("Kelmaganlar")}{absentChildren.length > 0 ? ` (${absentChildren.length})` : ""}
             </Button>
           </div>
 
           {tab === "absent" ? (
             <Card className="overflow-hidden">
               {absentChildren.length === 0 ? (
-                <EmptyState title="Bugun hammasi keldi" description="Kelmagan bola yo'q" />
+                <EmptyState title={tr("Bugun hammasi keldi")} description={tr("Kelmagan bola yo'q")} />
               ) : (
                 <ul className="divide-y divide-[var(--color-separator)]">
                   {absentChildren.map((child) => (
                     <li key={child.childId} className="flex flex-wrap items-center justify-between gap-2.5 px-5 py-3">
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-[var(--color-text)]">{child.fullName}</p>
+                        <p className="text-sm font-medium text-[var(--color-text)]">{tr(child.fullName)}</p>
                         {child.groupName && (
-                          <p className="text-xs text-[var(--color-text-muted)]">{child.groupName}</p>
+                          <p className="text-xs text-[var(--color-text-muted)]">{tr(child.groupName)}</p>
                         )}
                       </div>
                       <div className="flex items-center gap-2">
                         {child.parentReason ? (
                           <div className="max-w-xs text-right">
                             <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
-                              Ota-ona sababi
+                              {tr("Ota-ona sababi")}
                             </p>
-                            <p className="text-sm text-[var(--color-text)]">{child.parentReason}</p>
+                            <p className="text-sm text-[var(--color-text)]">{tr(child.parentReason)}</p>
                           </div>
                         ) : child.contactRequestedAt ? (
-                          <Badge tone="warning">Aloqaga chiqish so&apos;raldi</Badge>
+                          <Badge tone="warning">{tr("Aloqaga chiqish so'raldi")}</Badge>
                         ) : canWrite ? (
                           <Button
                             size="sm"
@@ -365,10 +368,10 @@ function BranchAttendance({ slug }: { slug: string }) {
                             }
                             onClick={() => requestContactMutation.mutate(child.childId)}
                           >
-                            Aloqaga chiqish
+                            {tr("Aloqaga chiqish")}
                           </Button>
                         ) : (
-                          <Badge tone="neutral">Sabab yo&apos;q</Badge>
+                          <Badge tone="neutral">{tr("Sabab yo'q")}</Badge>
                         )}
                       </div>
                     </li>
@@ -383,28 +386,28 @@ function BranchAttendance({ slug }: { slug: string }) {
                   <li key={child.childId} className="flex flex-wrap items-center justify-between gap-2.5 px-5 py-3">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <p className="text-sm font-medium text-[var(--color-text)]">{child.fullName}</p>
+                        <p className="text-sm font-medium text-[var(--color-text)]">{tr(child.fullName)}</p>
                         {(() => {
                           const flag = chronicAbsenceByChildId.get(child.childId);
                           if (!flag) return null;
                           return (
                             <>
                               {flag.consecutiveAbsentDays >= 3 && (
-                                <Badge tone="danger">{flag.consecutiveAbsentDays} kun ketma-ket kelmadi</Badge>
+                                <Badge tone="danger">{tr(flag.consecutiveAbsentDays)} {tr("kun ketma-ket kelmadi")}</Badge>
                               )}
-                              {flag.overdueAndAbsentToday && <Badge tone="danger">To&apos;lov muddati o&apos;tgan</Badge>}
+                              {flag.overdueAndAbsentToday && <Badge tone="danger">{tr("To'lov muddati o'tgan")}</Badge>}
                             </>
                           );
                         })()}
                       </div>
                       {/* Bir necha guruhli tarbiyachi kimni belgilayotganini bilsin */}
                       {child.groupName && (
-                        <p className="text-xs text-[var(--color-text-muted)]">{child.groupName}</p>
+                        <p className="text-xs text-[var(--color-text-muted)]">{tr(child.groupName)}</p>
                       )}
                       {/* Yuz tanish terminali (Face ID) qayd etgan vaqt */}
                       {child.checkInTime && (
                         <p className="text-xs font-medium text-[var(--color-success)]">
-                          Face ID: {child.checkInTime} da keldi{child.checkOutTime ? ` · ${child.checkOutTime} da ketdi` : ""}
+                          {tr("Face ID:")}{" "}{tr(child.checkInTime)} {tr("da keldi")}{child.checkOutTime ? ` · ${child.checkOutTime} da ketdi` : ""}
                         </p>
                       )}
                       {canWrite && (
@@ -413,7 +416,7 @@ function BranchAttendance({ slug }: { slug: string }) {
                           className="mt-0.5 text-xs font-medium text-[var(--color-primary)] hover:underline"
                           onClick={() => setNoteChild({ id: child.childId, name: child.fullName })}
                         >
-                          Xabar / eslatma
+                          {tr("Xabar / eslatma")}
                         </button>
                       )}
                     </div>
@@ -424,7 +427,7 @@ function BranchAttendance({ slug }: { slug: string }) {
                             type="text"
                             value={noteFor(child.childId)}
                             onChange={(e) => setLocalNotes((s) => ({ ...s, [child.childId]: e.target.value }))}
-                            placeholder="Izoh (ixtiyoriy)"
+                            placeholder={tr("Izoh (ixtiyoriy)")}
                             className="h-9 w-40 rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-2.5 text-[13px] text-[var(--color-text)] outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20"
                           />
                         )}
@@ -448,7 +451,7 @@ function BranchAttendance({ slug }: { slug: string }) {
                         >
                           {child.status ? CHILD_ATTENDANCE_STATUS_LABEL[child.status] : "Belgilanmagan"}
                         </Badge>
-                        {child.note && <p className="text-xs text-[var(--color-text-muted)]">{child.note}</p>}
+                        {child.note && <p className="text-xs text-[var(--color-text-muted)]">{tr(child.note)}</p>}
                       </div>
                     )}
                   </li>
@@ -457,13 +460,13 @@ function BranchAttendance({ slug }: { slug: string }) {
               {canWrite && (
                 <div className="hairline flex items-center justify-between gap-3 border-t border-[var(--color-separator)] px-5 py-3.5 sm:px-6">
                   {saveMutation.isError && (
-                    <span className="text-[13px] text-[var(--color-danger)]">Saqlashda xatolik yuz berdi</span>
+                    <span className="text-[13px] text-[var(--color-danger)]">{tr("Saqlashda xatolik yuz berdi")}</span>
                   )}
                   {saveMutation.isSuccess && !saveMutation.isPending && (
-                    <span className="text-[13px] text-[var(--color-success)]">Saqlandi</span>
+                    <span className="text-[13px] text-[var(--color-success)]">{tr("Saqlandi")}</span>
                   )}
                   <Button className="ml-auto" loading={saveMutation.isPending} onClick={() => saveMutation.mutate()}>
-                    Saqlash
+                    {tr("Saqlash")}
                   </Button>
                 </div>
               )}
@@ -474,7 +477,7 @@ function BranchAttendance({ slug }: { slug: string }) {
 
       <Card className="overflow-hidden">
         <CardHeader>
-          <CardTitle>So&apos;nggi 14 kunlik statistika</CardTitle>
+          <CardTitle>{tr("So'nggi 14 kunlik statistika")}</CardTitle>
         </CardHeader>
         <CardBody className="p-0">
           {!branchId || summaryQuery.isLoading ? (
@@ -483,27 +486,27 @@ function BranchAttendance({ slug }: { slug: string }) {
             </div>
           ) : summaryQuery.isError ? (
             <div className="px-5 py-5 sm:px-6">
-              <ErrorState message={(summaryQuery.error as Error).message} />
+              <ErrorState message={tr((summaryQuery.error as Error).message)} />
             </div>
           ) : !summaryQuery.data || summaryQuery.data.totalChildren === 0 ? (
-            <EmptyState title="Bu filialda faol bola yo'q" />
+            <EmptyState title={tr("Bu filialda faol bola yo'q")} />
           ) : (
             <DataTable>
               <THead>
                 <tr>
-                  <Th>Sana</Th>
-                  <Th numeric>Keldi</Th>
-                  <Th numeric>Kelmadi</Th>
-                  <Th numeric>Belgilanmagan</Th>
+                  <Th>{tr("Sana")}</Th>
+                  <Th numeric>{tr("Keldi")}</Th>
+                  <Th numeric>{tr("Kelmadi")}</Th>
+                  <Th numeric>{tr("Belgilanmagan")}</Th>
                 </tr>
               </THead>
               <TBody>
                 {summaryQuery.data.days.map((day) => (
                   <Tr key={day.date}>
-                    <Td className="font-medium tabular-nums">{day.date}</Td>
-                    <Td numeric className="text-[var(--color-success)]">{day.present}</Td>
-                    <Td numeric className="text-[var(--color-danger)]">{day.absent}</Td>
-                    <Td numeric className="text-[var(--color-text-muted)]">{day.unmarked}</Td>
+                    <Td className="font-medium tabular-nums">{tr(day.date)}</Td>
+                    <Td numeric className="text-[var(--color-success)]">{tr(day.present)}</Td>
+                    <Td numeric className="text-[var(--color-danger)]">{tr(day.absent)}</Td>
+                    <Td numeric className="text-[var(--color-text-muted)]">{tr(day.unmarked)}</Td>
                   </Tr>
                 ))}
               </TBody>

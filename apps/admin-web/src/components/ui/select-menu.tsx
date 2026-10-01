@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import { CheckIcon, ChevronDownIcon } from "@/components/ui/icons";
+import { useTr } from "@/i18n/tr";
 
 export interface SelectMenuOption {
   value: string;
@@ -24,6 +25,7 @@ interface SelectMenuProps {
  * uslubdagi ro'yxatni chizamiz.
  */
 export function SelectMenu({ label, options, value, onChange, error, hint }: SelectMenuProps) {
+  const tr = useTr();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -47,7 +49,7 @@ export function SelectMenu({ label, options, value, onChange, error, hint }: Sel
 
   return (
     <div className="relative" ref={rootRef}>
-      {label && <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">{label}</span>}
+      {label && <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">{tr(label)}</span>}
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -81,14 +83,14 @@ export function SelectMenu({ label, options, value, onChange, error, hint }: Sel
                 option.value === value && "font-medium text-[var(--color-primary)]",
               )}
             >
-              {option.label}
+              {tr(option.label)}
               {option.value === value && <CheckIcon className="h-4 w-4 shrink-0" />}
             </button>
           ))}
         </div>
       )}
-      {hint && !error && <span className="mt-1 block text-xs text-[var(--color-text-muted)]">{hint}</span>}
-      {error && <span className="mt-1 block text-xs text-[var(--color-danger)]">{error}</span>}
+      {hint && !error && <span className="mt-1 block text-xs text-[var(--color-text-muted)]">{tr(hint)}</span>}
+      {error && <span className="mt-1 block text-xs text-[var(--color-danger)]">{tr(error)}</span>}
     </div>
   );
 }

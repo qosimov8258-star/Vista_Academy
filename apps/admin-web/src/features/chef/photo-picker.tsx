@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CameraIcon, CloseIcon } from "@/components/ui/icons";
+import { useTr } from "@/i18n/tr";
 
 /** Telefon/planshet: barmoq bilan boshqariladigan ekran */
 const isTouchDevice = () => typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
@@ -95,6 +96,7 @@ function WebcamCapture({
   onCapture: (file: File) => void;
   onGallery: () => void;
 }) {
+  const tr = useTr();
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [status, setStatus] = useState<"starting" | "live" | "error">("starting");
@@ -126,10 +128,10 @@ function WebcamCapture({
         setStatus("error");
         setError(
           err?.name === "NotAllowedError"
-            ? "Kameraga ruxsat berilmadi. Brauzer manzil satridagi kamera belgisidan ruxsat bering yoki galereyadan tanlang."
+            ? tr("Kameraga ruxsat berilmadi. Brauzer manzil satridagi kamera belgisidan ruxsat bering yoki galereyadan tanlang.")
             : err?.name === "NotFoundError"
-              ? "Bu qurilmada kamera topilmadi — galereyadan tanlang."
-              : "Kamerani ochib bo'lmadi — galereyadan tanlang.",
+              ? tr("Bu qurilmada kamera topilmadi — galereyadan tanlang.")
+              : tr("Kamerani ochib bo'lmadi — galereyadan tanlang."),
         );
       });
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onCloseRef.current();
@@ -167,10 +169,10 @@ function WebcamCapture({
   if (typeof document === "undefined") return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[70] flex flex-col bg-black text-white" role="dialog" aria-modal="true" aria-label="Kamera">
+    <div className="fixed inset-0 z-[70] flex flex-col bg-black text-white" role="dialog" aria-modal="true" aria-label={tr("Kamera")}>
       <div className="flex items-center justify-between px-4 pb-3" style={{ paddingTop: "max(14px, env(safe-area-inset-top))" }}>
         <p className="text-[15px] font-semibold">{shot ? "Surat yaxshi chiqdimi?" : "Taomni suratga oling"}</p>
-        <button type="button" onClick={onClose} aria-label="Yopish" className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 active:bg-white/25">
+        <button type="button" onClick={onClose} aria-label={tr("Yopish")} className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 active:bg-white/25">
           <CloseIcon className="h-5 w-5" />
         </button>
       </div>
@@ -185,12 +187,12 @@ function WebcamCapture({
         />
         {shot && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={shot.url} alt="Olingan surat" className="max-h-full max-w-full rounded-2xl object-contain" />
+          <img src={shot.url} alt={tr("Olingan surat")} className="max-h-full max-w-full rounded-2xl object-contain" />
         )}
-        {status === "starting" && !shot && <p className="absolute text-[14px] text-white/70">Kamera ochilmoqda…</p>}
+        {status === "starting" && !shot && <p className="absolute text-[14px] text-white/70">{tr("Kamera ochilmoqda…")}</p>}
         {status === "error" && (
           <div className="absolute inset-x-6 rounded-2xl bg-white/10 p-4 text-center">
-            <p className="text-[14.5px] leading-snug">{error}</p>
+            <p className="text-[14.5px] leading-snug">{tr(error)}</p>
           </div>
         )}
       </div>
@@ -203,26 +205,26 @@ function WebcamCapture({
               onClick={() => setShot(null)}
               className="h-12 flex-1 rounded-2xl bg-white/15 text-[15px] font-semibold active:bg-white/25"
             >
-              Qayta olish
+              {tr("Qayta olish")}
             </button>
             <button
               type="button"
               onClick={() => onCapture(shot.file)}
               className="h-12 flex-[1.3] rounded-2xl bg-orange-500 text-[15px] font-semibold active:bg-orange-600"
             >
-              Yuklash
+              {tr("Yuklash")}
             </button>
           </>
         ) : (
           <>
             <button type="button" onClick={onGallery} className="h-12 w-28 rounded-2xl bg-white/15 text-[14px] font-semibold active:bg-white/25">
-              Galereya
+              {tr("Galereya")}
             </button>
             <button
               type="button"
               onClick={takePhoto}
               disabled={status !== "live"}
-              aria-label="Suratga olish"
+              aria-label={tr("Suratga olish")}
               className="flex h-[74px] w-[74px] items-center justify-center rounded-full border-4 border-white/80 bg-orange-500 transition-transform active:scale-95 disabled:opacity-40"
             >
               <CameraIcon className="h-8 w-8" />

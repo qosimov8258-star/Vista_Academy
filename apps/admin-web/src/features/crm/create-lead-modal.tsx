@@ -12,6 +12,7 @@ import { Input, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { validateUzbekPhone } from "@/lib/phone";
 import { AGE_GROUP_LABEL, SOURCE_LABEL } from "./labels";
+import { useTr } from "@/i18n/tr";
 
 const schema = z.object({
   childFullName: z.string().min(2, "To'liq ism kamida 2 belgi"),
@@ -40,6 +41,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export function CreateLeadModal({ open, onClose, slug }: { open: boolean; onClose: () => void; slug: string }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -65,55 +67,55 @@ export function CreateLeadModal({ open, onClose, slug }: { open: boolean; onClos
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
   return (
-    <Modal open={open} onClose={onClose} title="Yangi ariza">
+    <Modal open={open} onClose={onClose} title={tr("Yangi ariza")}>
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
         <Input
-          label="Bolaning to'liq ismi"
-          placeholder="Aliyev Sardor"
+          label={tr("Bolaning to'liq ismi")}
+          placeholder={tr("Aliyev Sardor")}
           error={errors.childFullName?.message}
           {...register("childFullName")}
         />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input label="Tug'ilgan sana (ixtiyoriy)" type="date" error={errors.childBirthDate?.message} {...register("childBirthDate")} />
-          <Select label="Yosh guruhi (ixtiyoriy)" defaultValue="" {...register("ageGroup")}>
-            <option value="">Tanlanmagan</option>
+          <Input label={tr("Tug'ilgan sana (ixtiyoriy)")} type="date" error={errors.childBirthDate?.message} {...register("childBirthDate")} />
+          <Select label={tr("Yosh guruhi (ixtiyoriy)")} defaultValue="" {...register("ageGroup")}>
+            <option value="">{tr("Tanlanmagan")}</option>
             {Object.entries(AGE_GROUP_LABEL).map(([value, label]) => (
               <option key={value} value={value}>
-                {label}
+                {tr(label)}
               </option>
             ))}
           </Select>
         </div>
         <Input
-          label="Ota-ona ismi"
-          placeholder="Aziza Karimova"
+          label={tr("Ota-ona ismi")}
+          placeholder={tr("Aziza Karimova")}
           error={errors.parentName?.message}
           {...register("parentName")}
         />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
-            label="Ota-ona telefoni"
+            label={tr("Ota-ona telefoni")}
             type="tel"
             placeholder="+998901234567"
             maxLength={13}
             error={errors.parentPhone?.message}
             {...register("parentPhone")}
           />
-          <Select label="Manba (ixtiyoriy)" defaultValue="" {...register("source")}>
-            <option value="">Tanlanmagan</option>
+          <Select label={tr("Manba (ixtiyoriy)")} defaultValue="" {...register("source")}>
+            <option value="">{tr("Tanlanmagan")}</option>
             {Object.entries(SOURCE_LABEL).map(([value, label]) => (
               <option key={value} value={value}>
-                {label}
+                {tr(label)}
               </option>
             ))}
           </Select>
@@ -121,10 +123,10 @@ export function CreateLeadModal({ open, onClose, slug }: { open: boolean; onClos
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Bekor qilish
+            {tr("Bekor qilish")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Yaratish
+            {tr("Yaratish")}
           </Button>
         </div>
       </form>

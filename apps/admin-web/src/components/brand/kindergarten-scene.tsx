@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import styles from "./kindergarten-scene.module.css";
+import { useTr } from "@/i18n/tr";
 
 /**
  * Kirish sahifasi uchun jonli bog'cha hovlisi: quyosh, bulutlar, kamalak,
@@ -211,6 +212,7 @@ function Kid({
 
 /** Soch turmagi. To'rt xil: kalta, kare, dumchali va jingalak. */
 function Hair({ x, y, color, style, delay }: { x: number; y: number; color: string; style: HairStyle; delay: number }) {
+  const tr = useTr();
   const cap = <path d={`M${x - 12} ${y - 0.5} a12 12 0 0 1 24 0 q-6 -4.5 -12 -4.5 t-12 4.5z`} fill={color} />;
 
   if (style === "bob") {
@@ -223,7 +225,7 @@ function Hair({ x, y, color, style, delay }: { x: number; y: number; color: stri
   if (style === "curly") {
     return (
       <g>
-        {cap}
+        {tr(cap)}
         {[-8, -3.5, 1, 5.5, 9.5].map((dx, i) => (
           <circle key={dx} cx={x + dx} cy={y - 8 + (i % 2) * 1.8} r="4.2" fill={color} />
         ))}
@@ -233,7 +235,7 @@ function Hair({ x, y, color, style, delay }: { x: number; y: number; color: stri
   if (style === "pigtails") {
     return (
       <g>
-        {cap}
+        {tr(cap)}
         <g
           className={styles.pigtailL}
           style={{ transformOrigin: `${x - 11}px ${y - 1}px`, animationDelay: `${delay}s` }}
@@ -329,8 +331,9 @@ interface KindergartenSceneProps {
 }
 
 export function KindergartenScene({ className, name }: KindergartenSceneProps) {
+  const tr = useTr();
   const signLabel = name ? name.toUpperCase() : null;
-  const sign = signMetrics(signLabel ?? "BOG'CHA");
+  const sign = signMetrics(signLabel ?? tr("BOG'CHA"));
   return (
     <svg
       className={[styles.scene, className].filter(Boolean).join(" ")}
@@ -507,16 +510,16 @@ export function KindergartenScene({ className, name }: KindergartenSceneProps) {
       <g className={styles.enterUp} style={{ animationDelay: "0.35s" }}>
         <rect x="36" y="656" width="44" height="44" rx="7" fill="#ff8fa3" />
         <text x="58" y="688" textAnchor="middle" fontSize="24" fontWeight="800" fill="#fff">
-          A
+          {tr("A")}
         </text>
         <rect x="84" y="656" width="44" height="44" rx="7" fill="#7ad3ff" />
         <text x="106" y="688" textAnchor="middle" fontSize="24" fontWeight="800" fill="#fff">
-          B
+          {tr("B")}
         </text>
         <g className={styles.block}>
           <rect x="60" y="612" width="44" height="44" rx="7" fill="#ffd166" />
           <text x="82" y="644" textAnchor="middle" fontSize="24" fontWeight="800" fill="#9a5b00">
-            C
+            {tr("C")}
           </text>
         </g>
       </g>
@@ -590,7 +593,7 @@ export function KindergartenScene({ className, name }: KindergartenSceneProps) {
             textLength={sign.textLength}
             lengthAdjust={sign.textLength ? "spacingAndGlyphs" : undefined}
           >
-            {signLabel}
+            {tr(signLabel)}
           </text>
         )}
         <path d="M588 700 V676 a22 22 0 0 1 44 0 V700 Z" fill="#0f766e" />
@@ -661,7 +664,7 @@ export function KindergartenScene({ className, name }: KindergartenSceneProps) {
           <g key={c.n}>
             <rect x={c.x} y={c.y} width="44" height="44" fill="#fff" fillOpacity="0.35" stroke="#fff" strokeWidth="3" />
             <text x={c.x + 22} y={c.y + 29} textAnchor="middle" fontSize="18" fontWeight="800" fill="#ff8fa3">
-              {c.n}
+              {tr(c.n)}
             </text>
           </g>
         ))}

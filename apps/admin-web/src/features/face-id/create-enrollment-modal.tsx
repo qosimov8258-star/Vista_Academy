@@ -12,6 +12,7 @@ import { SelectMenu } from "@/components/ui/select-menu";
 import { EmployeePhoto } from "@/components/ui/employee-photo";
 import { ChildPhoto } from "@/components/ui/child-photo";
 import { initials } from "@/components/ui/avatar";
+import { useTr } from "@/i18n/tr";
 
 /** Xodim yoki bolani tanlab, tanlangan qurilmada yuzini ro'yxatga qo'shish. */
 export function CreateEnrollmentModal({
@@ -27,6 +28,7 @@ export function CreateEnrollmentModal({
   forcedBranchId: string | null;
   devices: FaceIdDevice[];
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [deviceId, setDeviceId] = useState("");
   const [personType, setPersonType] = useState<FacePersonType>("EMPLOYEE");
@@ -88,30 +90,30 @@ export function CreateEnrollmentModal({
       queryClient.invalidateQueries({ queryKey: ["face-id-enrollments", slug] });
       onClose();
     },
-    onError: (err) => setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi"),
+    onError: (err) => setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi")),
   });
 
   const handleSubmit = () => {
     const missingDevice = !deviceId;
     const missingPerson = !personId;
-    setDeviceError(missingDevice ? "Qurilmani tanlang" : null);
-    setPersonError(missingPerson ? (personType === "EMPLOYEE" ? "Xodimni tanlang" : "Bolani tanlang") : null);
+    setDeviceError(missingDevice ? tr("Qurilmani tanlang") : null);
+    setPersonError(missingPerson ? (personType === "EMPLOYEE" ? tr("Xodimni tanlang") : tr("Bolani tanlang")) : null);
     if (missingDevice || missingPerson) return;
     setServerError(null);
     mutation.mutate();
   };
 
   return (
-    <Modal open={open} onClose={onClose} title="Yuzni ro'yxatga qo'shish">
+    <Modal open={open} onClose={onClose} title={tr("Yuzni ro'yxatga qo'shish")}>
       <div className="space-y-4">
         {serverError && (
           <div role="alert" className="rounded-[var(--radius-lg)] bg-[var(--color-danger-bg)] px-3 py-2.5 text-[13px] text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
 
         <SelectMenu
-          label="Qurilma"
+          label={tr("Qurilma")}
           options={devices.map((d) => ({ value: d.id, label: d.name }))}
           value={deviceId}
           onChange={setDeviceId}
@@ -119,12 +121,12 @@ export function CreateEnrollmentModal({
         />
 
         <div>
-          <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">Kim uchun</span>
+          <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">{tr("Kim uchun")}</span>
           <div className="flex gap-2">
             {(
               [
-                ["EMPLOYEE", "Xodim"],
-                ["CHILD", "Bola"],
+                ["EMPLOYEE", tr("Xodim")],
+                ["CHILD", tr("Bola")],
               ] as const
             ).map(([value, label]) => (
               <button
@@ -144,7 +146,7 @@ export function CreateEnrollmentModal({
                     : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]",
                 )}
               >
-                {label}
+                {tr(label)}
               </button>
             ))}
           </div>
@@ -157,14 +159,14 @@ export function CreateEnrollmentModal({
               setSearch(e.target.value);
               setPersonId(null);
             }}
-            placeholder={personType === "EMPLOYEE" ? "Xodim ismi bo'yicha qidirish" : "Bola ismi bo'yicha qidirish"}
+            placeholder={personType === "EMPLOYEE" ? tr("Xodim ismi bo'yicha qidirish") : tr("Bola ismi bo'yicha qidirish")}
             className="h-11 w-full rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-3.5 text-[15px] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/60 outline-none transition-[border-color,box-shadow] duration-[var(--dur-fast)] ease-[var(--ease-out)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/[0.12]"
           />
           <div className="mt-2 max-h-56 space-y-0.5 overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--color-border-hair)] p-1.5">
             {peopleLoading ? (
-              <p className="px-3 py-2 text-[13px] text-[var(--color-text-muted)]">Yuklanmoqda...</p>
+              <p className="px-3 py-2 text-[13px] text-[var(--color-text-muted)]">{tr("Yuklanmoqda...")}</p>
             ) : people.length === 0 ? (
-              <p className="px-3 py-2 text-[13px] text-[var(--color-text-muted)]">Hech kim topilmadi</p>
+              <p className="px-3 py-2 text-[13px] text-[var(--color-text-muted)]">{tr("Hech kim topilmadi")}</p>
             ) : (
               people.map((person) => (
                 <button
@@ -184,22 +186,22 @@ export function CreateEnrollmentModal({
                   ) : (
                     <ChildPhoto child={person as Child} size={32} fallback={initials(person.fullName)} />
                   )}
-                  <span className="truncate">{person.fullName}</span>
+                  <span className="truncate">{tr(person.fullName)}</span>
                 </button>
               ))
             )}
           </div>
-          {personError && <span className="mt-1.5 block text-[13px] text-[var(--color-danger)]">{personError}</span>}
+          {personError && <span className="mt-1.5 block text-[13px] text-[var(--color-danger)]">{tr(personError)}</span>}
         </div>
 
-        <Textarea label="Izoh" rows={2} placeholder="Ixtiyoriy" value={notes} onChange={(e) => setNotes(e.target.value)} />
+        <Textarea label={tr("Izoh")} rows={2} placeholder={tr("Ixtiyoriy")} value={notes} onChange={(e) => setNotes(e.target.value)} />
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Bekor qilish
+            {tr("Bekor qilish")}
           </Button>
           <Button type="button" loading={mutation.isPending} onClick={handleSubmit}>
-            Qo&apos;shish
+            {tr("Qo'shish")}
           </Button>
         </div>
       </div>

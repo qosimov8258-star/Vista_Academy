@@ -1,4 +1,5 @@
 import type { SVGProps } from "react";
+import { useTr } from "@/i18n/tr";
 
 /**
  * Chaqaloq-shishasi illyustratsiyasi. Rasmdagi kompozitsiya: qalpoqchali
@@ -91,6 +92,7 @@ export function RestartCard({
   onRestart?: () => void;
   className?: string;
 }) {
+  const tr = useTr();
   return (
     <div className={`flex flex-col items-center gap-6 ${className ?? ""}`}>
       <div className="flex w-full max-w-sm items-center justify-center rounded-[28px] bg-[var(--color-surface-sunken)] px-8 py-10">
@@ -101,7 +103,7 @@ export function RestartCard({
         onClick={onRestart}
         className="rounded-full bg-rose-200 px-8 py-3 text-[15px] font-semibold text-rose-900 transition hover:bg-rose-300"
       >
-        {buttonLabel}
+        {tr(buttonLabel)}
       </button>
     </div>
   );

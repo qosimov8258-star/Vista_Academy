@@ -22,6 +22,7 @@ import {
 import { IosIcon, type IosTint } from "./ios-icon";
 import { compactMoney, fullMoney } from "./money";
 import styles from "./director-home.module.css";
+import { useTr } from "@/i18n/tr";
 
 const TZ = "Asia/Tashkent";
 const WEEKDAYS = ["Yakshanba", "Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba"];
@@ -56,6 +57,7 @@ function greeting(hour: number) {
  * kabi ko'rinadi.
  */
 export function DirectorHome({ slug, org }: { slug: string; org: Organization }) {
+  const tr = useTr();
   const { user } = useAuth();
   const { hour, date } = tashkentNow();
   const firstName = user?.fullName.split(" ")[0] ?? "";
@@ -103,7 +105,7 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
       {/* Katta sarlavha — iOS "Large Title" */}
       <header className={styles.rise}>
         <p className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--color-text-muted)]">
-          {WEEKDAYS[date.getUTCDay()]}, {date.getUTCDate()}-{MONTHS[date.getUTCMonth()]}
+          {tr(WEEKDAYS[date.getUTCDay()])}, {date.getUTCDate()}-{tr(MONTHS[date.getUTCMonth()])}
         </p>
         <h1 className="mt-1 text-[30px] font-bold leading-[1.1] tracking-[-0.025em] text-[var(--color-text)] md:text-[34px]">
           {greeting(hour)}
@@ -111,7 +113,7 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
         </h1>
         {org.status !== "ACTIVE" && (
           <p className="mt-3 inline-flex rounded-full bg-[var(--color-danger-bg)] px-3 py-1 text-[13px] font-semibold text-[var(--color-danger)]">
-            Tashkilot faoliyati to&apos;xtatilgan
+            {tr("Tashkilot faoliyati to'xtatilgan")}
           </p>
         )}
       </header>
@@ -120,42 +122,42 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
       <section className={clsx(styles.hero, styles.rise, "relative overflow-hidden rounded-[var(--radius-xl)] p-5 md:p-7")} style={{ animationDelay: "40ms" }}>
         <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
           <div className="max-w-[340px]">
-            <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">Bugun bog&apos;chada</p>
+            <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">{tr("Bugun bog'chada")}</p>
             <p className="mt-2 text-[22px] font-bold leading-snug tracking-[-0.015em] text-[var(--color-text)] md:text-[26px]">
               {loading
                 ? "Yuklanmoqda…"
                 : !attendanceStarted
-                  ? "Davomat hali belgilanmagan"
-                  : `${children} boladan ${childrenPresent} tasi keldi`}
+                  ? tr("Davomat hali belgilanmagan")
+                  : tr("{0} boladan {1} tasi keldi", children, childrenPresent)}
             </p>
             <p className="mt-1.5 text-[14px] text-[var(--color-text-muted)]">
-              {org.branches.length} ta filial · {children} bola · {employees} xodim
+              {tr(org.branches.length)} {tr("ta filial ·")}{" "}{children} {tr("bola ·")}{" "}{tr(employees)} {tr("xodim")}
             </p>
           </div>
 
           <div className="flex gap-3 md:gap-4">
-            <RingStat label="Bolalar" present={childrenPresent} absent={childrenAbsent} total={children} color="var(--color-primary)" />
-            <RingStat label="Xodimlar" present={staffPresent} absent={staffAbsent} total={employees} color="var(--accent-bright)" />
+            <RingStat label={tr("Bolalar")} present={childrenPresent} absent={childrenAbsent} total={children} color="var(--color-primary)" />
+            <RingStat label={tr("Xodimlar")} present={staffPresent} absent={staffAbsent} total={employees} color="var(--accent-bright)" />
           </div>
         </div>
       </section>
 
       {/* Raqamlar — vidjetlar */}
       <section className={clsx(styles.rise, "grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4")} style={{ animationDelay: "80ms" }}>
-        <Widget href={`/${slug}/branches`} icon={BuildingIcon} tint="accent" label="Filiallar" value={org.branches.length} />
-        <Widget href={`/${slug}/network/children`} icon={ChildIcon} tint="accent" label="Bolalar" value={children} loading={loading} />
-        <Widget href={`/${slug}/network/groups`} icon={GroupIcon} tint="accent" label="Faol guruhlar" value={s?.activeGroupsCount ?? 0} loading={loading} />
-        <Widget href={`/${slug}/users`} icon={TeacherIcon} tint="accent" label="Xodimlar" value={employees} loading={loading} />
+        <Widget href={`/${slug}/branches`} icon={BuildingIcon} tint="accent" label={tr("Filiallar")} value={org.branches.length} />
+        <Widget href={`/${slug}/network/children`} icon={ChildIcon} tint="accent" label={tr("Bolalar")} value={children} loading={loading} />
+        <Widget href={`/${slug}/network/groups`} icon={GroupIcon} tint="accent" label={tr("Faol guruhlar")} value={s?.activeGroupsCount ?? 0} loading={loading} />
+        <Widget href={`/${slug}/users`} icon={TeacherIcon} tint="accent" label={tr("Xodimlar")} value={employees} loading={loading} />
       </section>
 
       {/* Moliya */}
       <section className={styles.rise} style={{ animationDelay: "120ms" }}>
-        <SectionHeader title="Moliya" href={`/${slug}/network/finance`} />
+        <SectionHeader title={tr("Moliya")} href={`/${slug}/network/finance`} />
         <div className="grid gap-3 md:grid-cols-2 md:gap-4">
           <Link href={`/${slug}/network/finance`} className={clsx(styles.card, "group block p-5")}>
             <div className="flex items-center gap-3">
               <IosIcon icon={MoneyIcon} tint="accent" size={36} />
-              <p className="text-[15px] font-semibold text-[var(--color-text)]">Joriy oy tushumi</p>
+              <p className="text-[15px] font-semibold text-[var(--color-text)]">{tr("Joriy oy tushumi")}</p>
               {change !== null && (
                 <span
                   className={clsx(
@@ -167,32 +169,32 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
                 </span>
               )}
             </div>
-            <p className="mt-4 text-[32px] font-bold leading-none tracking-[-0.02em] tabular-nums text-[var(--color-text)]" title={fullMoney(revenue)}>
-              {loading ? "—" : compactMoney(revenue)}
-              <span className="ml-1.5 text-[16px] font-semibold text-[var(--color-text-muted)]">so&apos;m</span>
+            <p className="mt-4 text-[32px] font-bold leading-none tracking-[-0.02em] tabular-nums text-[var(--color-text)]" title={fullMoney(revenue, tr)}>
+              {loading ? "—" : compactMoney(revenue, tr)}
+              <span className="ml-1.5 text-[16px] font-semibold text-[var(--color-text-muted)]">{tr("so'm")}</span>
             </p>
             <p className="mt-2 text-[13px] text-[var(--color-text-muted)]">
-              {change === null ? "O'tgan oy bilan solishtirish uchun ma'lumot yo'q" : `O'tgan oy: ${compactMoney(prevRevenue)} so'm`}
+              {change === null ? tr("O'tgan oy bilan solishtirish uchun ma'lumot yo'q") : tr("O'tgan oy: {0} so'm", compactMoney(prevRevenue, tr))}
             </p>
           </Link>
 
           <Link href={`/${slug}/network/finance`} className={clsx(styles.card, "group block p-5")}>
             <div className="flex items-center gap-3">
               <IosIcon icon={MoneyIcon} tint={debt > 0 ? "red" : "gray"} size={36} />
-              <p className="text-[15px] font-semibold text-[var(--color-text)]">Qarzdorlik</p>
-              {debt > 0 && <span className="ml-auto rounded-full bg-rose-50 px-2.5 py-1 text-[12.5px] font-bold text-rose-700">To&apos;lanishi kerak</span>}
+              <p className="text-[15px] font-semibold text-[var(--color-text)]">{tr("Qarzdorlik")}</p>
+              {debt > 0 && <span className="ml-auto rounded-full bg-rose-50 px-2.5 py-1 text-[12.5px] font-bold text-rose-700">{tr("To'lanishi kerak")}</span>}
             </div>
             <p
               className={clsx(
                 "mt-4 text-[32px] font-bold leading-none tracking-[-0.02em] tabular-nums",
                 debt > 0 ? "text-[#e8392f]" : "text-[var(--color-text)]",
               )}
-              title={fullMoney(debt)}
+              title={fullMoney(debt, tr)}
             >
-              {loading ? "—" : compactMoney(debt)}
-              <span className="ml-1.5 text-[16px] font-semibold text-[var(--color-text-muted)]">so&apos;m</span>
+              {loading ? "—" : compactMoney(debt, tr)}
+              <span className="ml-1.5 text-[16px] font-semibold text-[var(--color-text-muted)]">{tr("so'm")}</span>
             </p>
-            <p className="mt-2 text-[13px] text-[var(--color-text-muted)]">{debt > 0 ? "Barcha filiallar bo'yicha to'lanmagan qoldiq" : "Qarzdor yo'q"}</p>
+            <p className="mt-2 text-[13px] text-[var(--color-text-muted)]">{debt > 0 ? tr("Barcha filiallar bo'yicha to'lanmagan qoldiq") : tr("Qarzdor yo'q")}</p>
           </Link>
         </div>
       </section>
@@ -200,13 +202,13 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
       <div className="grid gap-7 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:gap-6">
         {/* Filiallar — iOS guruhlangan ro'yxat */}
         <section className={styles.rise} style={{ animationDelay: "160ms" }}>
-          <SectionHeader title="Filiallar" href={`/${slug}/branches`} />
+          <SectionHeader title={tr("Filiallar")} href={`/${slug}/branches`} />
           {org.branches.length === 0 ? (
             <div className={clsx(styles.card, "flex flex-col items-center px-6 py-10 text-center")}>
               <IosIcon icon={BuildingIcon} tint="accent" size={52} />
-              <p className="mt-4 text-[16px] font-semibold text-[var(--color-text)]">Hali filial yo&apos;q</p>
+              <p className="mt-4 text-[16px] font-semibold text-[var(--color-text)]">{tr("Hali filial yo'q")}</p>
               <Link href={`/${slug}/branches`} className="mt-2 text-[14px] font-semibold text-[var(--color-primary)]">
-                Filial qo&apos;shish
+                {tr("Filial qo'shish")}
               </Link>
             </div>
           ) : (
@@ -223,15 +225,15 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
                         {branch.name.charAt(0).toUpperCase()}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-[16px] font-semibold text-[var(--color-text)]">{branch.name}</p>
+                        <p className="truncate text-[16px] font-semibold text-[var(--color-text)]">{tr(branch.name)}</p>
                         <p className="truncate text-[13px] text-[var(--color-text-muted)]">
-                          {b ? `${b.childrenCount} bola · ${b.activeGroupsCount} guruh · ${b.employeesCount} xodim` : (branch.address || "Yuklanmoqda…")}
+                          {b ? tr("{0} bola · {1} guruh · {2} xodim", b.childrenCount, b.activeGroupsCount, b.employeesCount) : (branch.address || "Yuklanmoqda…")}
                         </p>
                       </div>
                       {b && (
                         <span className="hidden text-right sm:block">
-                          <span className="block text-[15px] font-semibold tabular-nums text-[var(--color-text)]">{compactMoney(b.monthRevenue)}</span>
-                          <span className="block text-[11.5px] text-[var(--color-text-muted)]">shu oy</span>
+                          <span className="block text-[15px] font-semibold tabular-nums text-[var(--color-text)]">{compactMoney(b.monthRevenue, tr)}</span>
+                          <span className="block text-[11.5px] text-[var(--color-text-muted)]">{tr("shu oy")}</span>
                         </span>
                       )}
                       <ChevronRightIcon className="h-4 w-4 shrink-0 text-[#c4c4c7]" />
@@ -246,12 +248,12 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
 
         {/* Tezkor bo'limlar — iPhone bosh ekranidagidek */}
         <section className={styles.rise} style={{ animationDelay: "200ms" }}>
-          <SectionHeader title="Bo'limlar" />
+          <SectionHeader title={tr("Bo'limlar")} />
           <div className={clsx(styles.card, "grid grid-cols-4 gap-y-5 px-2 py-5")}>
             {apps.map((app) => (
               <Link key={app.href} href={app.href} className={clsx(styles.app, "flex flex-col items-center gap-2 px-1")}>
                 <IosIcon icon={app.icon} tint={app.tint} size={54} />
-                <span className="w-full truncate text-center text-[12px] font-medium text-[var(--color-text)]">{app.label}</span>
+                <span className="w-full truncate text-center text-[12px] font-medium text-[var(--color-text)]">{tr(app.label)}</span>
               </Link>
             ))}
           </div>
@@ -262,12 +264,13 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
 }
 
 function SectionHeader({ title, href }: { title: string; href?: string }) {
+  const tr = useTr();
   return (
     <div className="mb-3 flex items-end justify-between px-1">
-      <h2 className="text-[21px] font-bold tracking-[-0.02em] text-[var(--color-text)]">{title}</h2>
+      <h2 className="text-[21px] font-bold tracking-[-0.02em] text-[var(--color-text)]">{tr(title)}</h2>
       {href && (
         <Link href={href} className="text-[15px] font-medium text-[var(--color-primary)] active:opacity-60">
-          Barchasi
+          {tr("Barchasi")}
         </Link>
       )}
     </div>
@@ -289,6 +292,7 @@ function Widget({
   value: ReactNode;
   loading?: boolean;
 }) {
+  const tr = useTr();
   return (
     <Link href={href} className={clsx(styles.card, "group flex flex-col p-4 md:p-5")}>
       <div className="flex items-start justify-between">
@@ -298,13 +302,14 @@ function Widget({
       <p className="mt-4 text-[30px] font-bold leading-none tracking-[-0.02em] tabular-nums text-[var(--color-text)]">
         {loading ? <span className="inline-block h-7 w-12 animate-pulse rounded-lg bg-[var(--color-surface-sunken)] align-middle" /> : value}
       </p>
-      <p className="mt-1.5 text-[14px] font-medium text-[var(--color-text-muted)]">{label}</p>
+      <p className="mt-1.5 text-[14px] font-medium text-[var(--color-text-muted)]">{tr(label)}</p>
     </Link>
   );
 }
 
 /** Apple Watch halqasi kabi: keldi — to'liq rang, kelmadi — xira, belgilanmagan — bo'sh */
 function RingStat({ label, present, absent, total, color }: { label: string; present: number; absent: number; total: number; color: string }) {
+  const tr = useTr();
   const size = 104;
   const stroke = 11;
   const r = (size - stroke) / 2;
@@ -346,11 +351,11 @@ function RingStat({ label, present, absent, total, color }: { label: string; pre
           )}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-[24px] font-bold leading-none tabular-nums text-[var(--color-text)]">{present}</span>
-          <span className="mt-0.5 text-[12px] font-medium text-[var(--color-text-muted)]">/ {total}</span>
+          <span className="text-[24px] font-bold leading-none tabular-nums text-[var(--color-text)]">{tr(present)}</span>
+          <span className="mt-0.5 text-[12px] font-medium text-[var(--color-text-muted)]">/ {tr(total)}</span>
         </div>
       </div>
-      <p className="mt-2.5 text-[14px] font-semibold text-[var(--color-text)]">{label}</p>
+      <p className="mt-2.5 text-[14px] font-semibold text-[var(--color-text)]">{tr(label)}</p>
       <p className="text-[12px] text-[var(--color-text-muted)]">{absent > 0 ? `${absent} kelmadi` : total > 0 && present === 0 ? "belgilanmagan" : "keldi"}</p>
     </div>
   );

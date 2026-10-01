@@ -12,6 +12,7 @@ import { Avatar, initials } from "@/components/ui/avatar";
 import { ArrowLeftIcon, ChevronRightIcon, CloseIcon, LogoutIcon } from "@/components/ui/icons";
 import { isSection, type NavEntry, type NavIcon, type NavLeaf, type NavSection } from "./nav-types";
 import styles from "./director-rail.module.css";
+import { useTr } from "@/i18n/tr";
 
 // Geometriya (px, yon panelning chap chetidan). Bo'rtma va qalqib chiquvchi
 // oynalar shu qiymatlardan hisoblanadi — CSS'dagi --rail-collapsed bilan bir xil.
@@ -101,6 +102,7 @@ export function DirectorRail({
   onLogout,
   loggingOut,
 }: DirectorRailProps) {
+  const tr = useTr();
   const t = useTranslations("sidebar");
   const pathname = useAppPathname();
   const [open, toggleOpen] = useRailOpen();
@@ -265,7 +267,7 @@ export function DirectorRail({
         className={clsx(styles.row, rowState(active))}
       >
         <Icon filled={open && active} className="h-[22px] w-[22px] shrink-0" />
-        <span className={styles.label}>{item.label}</span>
+        <span className={styles.label}>{tr(item.label)}</span>
         {item.badge != null && item.badge > 0 && (
           <span
             className={clsx(styles.dot, "absolute h-2 w-2 rounded-full bg-[var(--accent-bright)]")}
@@ -298,7 +300,7 @@ export function DirectorRail({
           className={clsx(styles.row, rowState(active), open && hasActiveChild && !active && styles.rowParent)}
         >
           <Icon className="h-[22px] w-[22px] shrink-0" />
-          <span className={styles.label}>{section.label}</span>
+          <span className={styles.label}>{tr(section.label)}</span>
           {open && <ChevronRightIcon className={clsx(styles.chevron, "h-4 w-4", expanded ? "rotate-90" : "")} />}
           {!open && section.items.some((i) => (i.badge ?? 0) > 0) && (
             <span className={clsx(styles.dot, "absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-[var(--accent-bright)]")} aria-hidden="true" />
@@ -315,9 +317,9 @@ export function DirectorRail({
                   aria-current={childActive ? "page" : undefined}
                   className={clsx(styles.child, childActive && styles.rowActive)}
                 >
-                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                  <span className="min-w-0 flex-1 truncate">{tr(item.label)}</span>
                   {item.badge != null && item.badge > 0 && (
-                    <span className="ml-2 rounded-full bg-[var(--accent-bright)]/20 px-2 py-0.5 text-[11px] font-bold tabular-nums">{item.badge}</span>
+                    <span className="ml-2 rounded-full bg-[var(--accent-bright)]/20 px-2 py-0.5 text-[11px] font-bold tabular-nums">{tr(item.badge)}</span>
                   )}
                 </Link>
               );
@@ -336,7 +338,7 @@ export function DirectorRail({
       ref={asideRef}
       className={clsx(styles.aside, open && styles.open, "relative z-20 hidden shrink-0 flex-col gap-3 py-4 md:flex")}
       style={{ width: RAIL_LEFT + railWidth + (open ? 16 : 20), paddingLeft: RAIL_LEFT }}
-      aria-label="Asosiy menyu"
+      aria-label={tr("Asosiy menyu")}
     >
       {/* Bog'cha belgisi — nomidan olinadi, tizimda bir necha bog'cha bor */}
       <Link
@@ -354,8 +356,8 @@ export function DirectorRail({
           )}
         </span>
         <span className={clsx(styles.brandName, "min-w-0 flex-1")} aria-hidden={!open}>
-          <span className="block truncate text-[17px] font-bold tracking-[-0.01em] text-[var(--color-text)]">{orgName}</span>
-          <span className="block truncate text-[12.5px] text-[var(--color-text-muted)]">{user ? ROLE_LABEL[user.role] : ""}</span>
+          <span className="block truncate text-[17px] font-bold tracking-[-0.01em] text-[var(--color-text)]">{tr(orgName)}</span>
+          <span className="block truncate text-[12.5px] text-[var(--color-text-muted)]">{user ? tr(ROLE_LABEL[user.role]) : ""}</span>
         </span>
       </Link>
 
@@ -364,13 +366,13 @@ export function DirectorRail({
           <button
             type="button"
             onClick={toggleOpen}
-            aria-label={open ? "Menyuni yig'ish" : "Menyuni kengaytirish"}
+            aria-label={open ? tr("Menyuni yig'ish") : "Menyuni kengaytirish"}
             aria-expanded={open}
             {...tipHandlers("Menyuni kengaytirish", "menu")}
             className={styles.row}
           >
             <MenuIcon className="h-[22px] w-[22px] shrink-0" />
-            <span className={styles.label}>Menyuni yig&apos;ish</span>
+            <span className={styles.label}>{tr("Menyuni yig'ish")}</span>
           </button>
 
           {inBranchContext && (
@@ -382,7 +384,7 @@ export function DirectorRail({
             >
               <ArrowLeftIcon className="h-5 w-5 shrink-0" />
               <span className={clsx(styles.label, "leading-tight")}>
-                <span className="block text-[11px] font-semibold opacity-70">Filiallarga qaytish</span>
+                <span className="block text-[11px] font-semibold opacity-70">{tr("Filiallarga qaytish")}</span>
                 <span className="block truncate">{branchName ?? "Filiallar"}</span>
               </span>
             </Link>
@@ -399,7 +401,7 @@ export function DirectorRail({
             setFlyout(null);
           }}
           className={clsx(styles.scroll, styles.list, "flex min-h-0 w-full flex-1 flex-col overflow-y-auto py-1.5")}
-          aria-label="Bo'limlar"
+          aria-label={tr("Bo'limlar")}
         >
           {entries.map((entry) => (isSection(entry) ? renderSection(entry) : renderLeaf(entry)))}
         </nav>
@@ -410,14 +412,14 @@ export function DirectorRail({
           {renderLeaf(settingsItem, settingsKey)}
           <div
             className={clsx(styles.row, styles.userRow)}
-            title={!open && user ? `${user.fullName} · ${ROLE_LABEL[user.role]}` : undefined}
+            title={!open && user ? `${user.fullName} · ${tr(ROLE_LABEL[user.role])}` : undefined}
           >
             <span className="shrink-0 rounded-full ring-2 ring-white/15">
               <Avatar user={user} size={36} />
             </span>
             <span className={clsx(styles.label, "leading-tight")}>
               <span className="block truncate text-[14px] font-semibold text-white">{user?.fullName ?? ""}</span>
-              <span className="block truncate text-[12px] font-medium">{user ? ROLE_LABEL[user.role] : ""}</span>
+              <span className="block truncate text-[12px] font-medium">{user ? tr(ROLE_LABEL[user.role]) : ""}</span>
             </span>
           </div>
           <button
@@ -470,7 +472,7 @@ export function DirectorRail({
             )}
             style={{ top: tip.top, left: tip.left }}
           >
-            {tip.label}
+            {tr(tip.label)}
           </div>,
           document.body,
         )}
@@ -481,7 +483,7 @@ export function DirectorRail({
           <div
             ref={flyoutRef}
             role="menu"
-            aria-label={flyout.section.label}
+            aria-label={tr(flyout.section.label)}
             className={clsx(
               styles.flyout,
               "fixed z-[70] w-[248px] overflow-hidden rounded-[22px] border border-black/[0.04] bg-white shadow-[0_24px_48px_-16px_color-mix(in_srgb,var(--accent-rail)_28%,transparent),0_2px_6px_color-mix(in_srgb,var(--accent-rail)_6%,transparent)]",
@@ -490,7 +492,7 @@ export function DirectorRail({
           >
             <p className="flex items-center gap-2 bg-[var(--accent-rail)] px-3.5 py-2.5 text-[12px] font-bold uppercase tracking-[0.08em] text-[var(--accent-light)]">
               <flyout.section.icon className="h-4 w-4 shrink-0" />
-              {flyout.section.label}
+              {tr(flyout.section.label)}
             </p>
             <div className="p-2">
             {flyout.section.items.map((item) => {
@@ -517,9 +519,9 @@ export function DirectorRail({
                   >
                     <Icon filled={active} className="h-[18px] w-[18px]" />
                   </span>
-                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                  <span className="min-w-0 flex-1 truncate">{tr(item.label)}</span>
                   {item.badge != null && item.badge > 0 && (
-                    <span className="rounded-full bg-[var(--accent-soft-icon)]/15 px-2 py-0.5 text-[11px] font-bold tabular-nums text-[var(--accent-soft-icon)]">{item.badge}</span>
+                    <span className="rounded-full bg-[var(--accent-soft-icon)]/15 px-2 py-0.5 text-[11px] font-bold tabular-nums text-[var(--accent-soft-icon)]">{tr(item.badge)}</span>
                   )}
                 </Link>
               );
@@ -563,6 +565,7 @@ export function DirectorMenuContent({
   loggingOut,
   logoutLabel,
 }: DirectorMenuContentProps) {
+  const tr = useTr();
   const orgName = user?.organizationName ?? "";
 
   // Barcha bo'limlar bir ekranga sig'sin deb — ikonkali kataklar to'ri (ilovalar ekrani kabi)
@@ -590,9 +593,9 @@ export function DirectorMenuContent({
         >
           <Icon filled={active} className="h-[22px] w-[22px]" />
         </span>
-        <span className="line-clamp-2 w-full text-[12px] font-semibold leading-tight">{item.label}</span>
+        <span className="line-clamp-2 w-full text-[12px] font-semibold leading-tight">{tr(item.label)}</span>
         {item.badge != null && item.badge > 0 && (
-          <span className="absolute right-2 top-2 rounded-full bg-[var(--accent-bright)] px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-[var(--accent-rail)]">{item.badge}</span>
+          <span className="absolute right-2 top-2 rounded-full bg-[var(--accent-bright)] px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-[var(--accent-rail)]">{tr(item.badge)}</span>
         )}
       </Link>
     );
@@ -616,15 +619,15 @@ export function DirectorMenuContent({
             {orgName ? initials(orgName) : ""}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[17px] font-bold tracking-[-0.01em] text-white">{orgName}</p>
+            <p className="truncate text-[17px] font-bold tracking-[-0.01em] text-white">{tr(orgName)}</p>
             <p className="truncate text-[12.5px] text-[var(--accent-pale)]/75">
-              {user ? `${user.fullName} · ${ROLE_LABEL[user.role]}` : ""}
+              {user ? `${user.fullName} · ${tr(ROLE_LABEL[user.role])}` : ""}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Yopish"
+            aria-label={tr("Yopish")}
             className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-white/10 text-white/80 transition-colors active:bg-white/20"
           >
             <CloseIcon className="h-5 w-5" />
@@ -640,17 +643,17 @@ export function DirectorMenuContent({
         >
           <ArrowLeftIcon className="h-4 w-4 shrink-0 text-[var(--accent-soft-icon)] transition-transform group-hover:-translate-x-0.5" />
           <span className="min-w-0 flex-1">
-            <span className="block text-[11.5px] font-semibold text-[var(--accent-soft-icon)]/80">Filiallarga qaytish</span>
-            <span className="block truncate text-[14px] font-bold text-[var(--accent-soft-ink)]">{branchName}</span>
+            <span className="block text-[11.5px] font-semibold text-[var(--accent-soft-icon)]/80">{tr("Filiallarga qaytish")}</span>
+            <span className="block truncate text-[14px] font-bold text-[var(--accent-soft-ink)]">{tr(branchName)}</span>
           </span>
         </Link>
       )}
 
-      <nav className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 pb-3 pt-4" aria-label="Bo'limlar">
+      <nav className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 pb-3 pt-4" aria-label={tr("Bo'limlar")}>
         {groups.map((group, gi) => (
           <div key={group.title ?? `g${gi}`}>
             {group.title && (
-              <p className="px-1 pb-2 text-[11.5px] font-bold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">{group.title}</p>
+              <p className="px-1 pb-2 text-[11.5px] font-bold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">{tr(group.title)}</p>
             )}
             <div className="grid grid-cols-3 gap-2.5">{group.items.map(tile)}</div>
           </div>
@@ -664,7 +667,7 @@ export function DirectorMenuContent({
           className="flex h-12 items-center justify-center gap-2 rounded-[16px] bg-white text-[14px] font-semibold text-[var(--color-text)] shadow-[var(--shadow-card)] active:scale-[0.98]"
         >
           <settingsItem.icon className="h-[18px] w-[18px] text-[var(--accent-soft-icon)]" />
-          {settingsItem.label}
+          {tr(settingsItem.label)}
         </Link>
         <button
           type="button"
@@ -673,7 +676,7 @@ export function DirectorMenuContent({
           className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded-[16px] bg-[var(--color-danger-bg)] text-[14px] font-semibold text-[var(--color-danger)] active:scale-[0.98] disabled:opacity-60"
         >
           <LogoutIcon className="h-[18px] w-[18px]" />
-          {logoutLabel}
+          {tr(logoutLabel)}
         </button>
       </div>
     </>

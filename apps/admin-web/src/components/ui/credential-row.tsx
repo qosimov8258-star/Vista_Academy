@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { CopyIcon, CheckIcon } from "@/components/ui/icons";
+import { useTr } from "@/i18n/tr";
 
 /** Login/parol kabi bir martalik ko'rsatiladigan qiymatlar uchun — nusxalash tugmasi bilan. */
 export function CredentialRow({ label, value }: { label: string; value: string }) {
+  const tr = useTr();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -20,8 +22,8 @@ export function CredentialRow({ label, value }: { label: string; value: string }
   return (
     <div className="flex items-center justify-between gap-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-sunken)] px-4 py-3">
       <div className="min-w-0">
-        <p className="text-[12px] font-medium text-[var(--color-text-muted)]">{label}</p>
-        <p className="truncate font-mono text-[15px] text-[var(--color-text)]">{value}</p>
+        <p className="text-[12px] font-medium text-[var(--color-text-muted)]">{tr(label)}</p>
+        <p className="truncate font-mono text-[15px] text-[var(--color-text)]">{tr(value)}</p>
       </div>
       <button
         type="button"

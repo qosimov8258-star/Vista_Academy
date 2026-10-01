@@ -1,5 +1,6 @@
 import clsx from "clsx";
 import { CheckIcon } from "@/components/ui/icons";
+import { useTr } from "@/i18n/tr";
 
 export interface PasswordRule {
   label: string;
@@ -19,6 +20,7 @@ export function getPasswordRules(password: string, confirmPassword?: string): Pa
 
 /** Har bir talab parol kiritilayotganda birma-bir yashildan ko'kka o'tadi. */
 export function PasswordChecklist({ rules }: { rules: PasswordRule[] }) {
+  const tr = useTr();
   return (
     <ul className="space-y-1.5">
       {rules.map((rule) => (
@@ -32,7 +34,7 @@ export function PasswordChecklist({ rules }: { rules: PasswordRule[] }) {
             <CheckIcon className="h-2.5 w-2.5" strokeWidth={3} />
           </span>
           <span className={clsx("transition-colors duration-200", rule.met ? "text-[var(--color-success)]" : "text-[var(--color-text-muted)]")}>
-            {rule.label}
+            {tr(rule.label)}
           </span>
         </li>
       ))}

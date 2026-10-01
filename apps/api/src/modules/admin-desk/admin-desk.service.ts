@@ -372,24 +372,46 @@ export class AdminDeskService {
     const days = Array.from({ length: 7 }, (_, i) => addDays(from, i));
     const range = dayRange(from, to);
 
-    const [childrenCount, attendance, payments, debtors, leadsNew, leadsWon, staffAbs] = await Promise.all([
+    const [childrenCount, attendance, payments, debtors, leadsNew, leadsWon, staffAbs, groupRows] = await Promise.all([
       this.prisma.child.count({ where: { branchId, status: { not: "INACTIVE" } } }),
       this.prisma.attendance.findMany({
         where: { branchId, date: { gte: toDateOnly(from), lte: toDateOnly(to) } },
-        select: { date: true, status: true, childId: true, child: { select: { fullName: true } } },
+        select: { date: true, status: true, childId: true, child: { select: { fullName: true, groupId: true } } },
       }),
       this.prisma.payment.findMany({ where: { branchId, createdAt: range, status: "COMPLETED" }, select: { amount: true } }),
       this.cashDesk.debtors(scope),
       this.prisma.lead.count({ where: { branchId, createdAt: range } }),
       this.prisma.lead.count({ where: { branchId, stage: "WON", updatedAt: range } }),
       this.prisma.employeeAttendance.count({ where: { branchId, date: { gte: toDateOnly(from), lte: toDateOnly(to) }, status: { in: ["ABSENT", "SICK", "ON_LEAVE"] } } }),
+      this.prisma.group.findMany({
+        where: { branchId, status: "ACTIVE" },
+        orderBy: { name: "asc" },
+        select: {
+          id: true,
+          name: true,
+          _count: { select: { children: { where: { status: { not: "INACTIVE" } } } } },
+          teachers: { select: { employee: { select: { fullName: true } } } },
+        },
+      }),
     ]);
 
     const perDay = new Map(days.map((d) => [d, { date: d, present: 0, absent: 0, sick: 0 }]));
     const absentByChild = new Map<string, { name: string; days: number }>();
+    // Guruhlar kesimida kunlik davomat: guruh -> kun -> son
+    const perGroupDay = new Map<string, Map<string, { present: number; absent: number; sick: number }>>();
+    for (const g of groupRows) {
+      perGroupDay.set(g.id, new Map(days.map((d) => [d, { present: 0, absent: 0, sick: 0 }])));
+    }
     for (const a of attendance) {
-      const row = perDay.get(a.date.toISOString().slice(0, 10));
+      const dayKey = a.date.toISOString().slice(0, 10);
+      const row = perDay.get(dayKey);
       if (!row) continue;
+      const groupDay = a.child.groupId ? perGroupDay.get(a.child.groupId)?.get(dayKey) : undefined;
+      if (groupDay) {
+        if (a.status === "PRESENT" || a.status === "LATE") groupDay.present += 1;
+        else if (a.status === "ABSENT") groupDay.absent += 1;
+        else if (a.status === "SICK") groupDay.sick += 1;
+      }
       if (a.status === "PRESENT" || a.status === "LATE") row.present += 1;
       else if (a.status === "ABSENT") {
         row.absent += 1;
@@ -407,6 +429,13 @@ export class AdminDeskService {
       children: childrenCount,
       attendancePercent: marked === 0 ? null : Math.round((present / marked) * 100),
       daily,
+      groups: groupRows.map((g) => ({
+        id: g.id,
+        name: g.name,
+        childrenCount: g._count.children,
+        teachers: g.teachers.map((t) => t.employee.fullName),
+        daily: days.map((d) => ({ date: d, ...perGroupDay.get(g.id)!.get(d)! })),
+      })),
       frequentlyAbsent: [...absentByChild.values()].filter((c) => c.days >= 2).sort((a, b) => b.days - a.days).slice(0, 8),
       collected: payments.reduce((s, p) => s + Number(p.amount), 0),
       totalDebt: debtors.totalDebt,

@@ -7,6 +7,7 @@ import styles from "../../parent.module.css";
 import { DownloadIcon } from "../foydali/save-image-button";
 import { saveImages } from "../foydali/share-image";
 import { clockOf, fetchMediaFile, mediaUrl, type DiaryMedia } from "./diary";
+import { useTr } from "@/i18n/tr";
 
 function ArrowIcon({ className, left }: { className?: string; left?: boolean }) {
   return (
@@ -32,6 +33,7 @@ export function MediaViewer({
   date: string;
   onClose: () => void;
 }) {
+  const tr = useTr();
   const [index, setIndex] = useState(startIndex);
   const [saving, setSaving] = useState<"idle" | "saving" | "done" | "error">("idle");
   const touchX = useRef<number | null>(null);
@@ -65,7 +67,7 @@ export function MediaViewer({
     setSaving("saving");
     try {
       const file = await fetchMediaFile(current, date, index);
-      const result = await saveImages([file], "Bog'chadagi kun", current.caption ?? "Kun lahzasi");
+      const result = await saveImages([file], tr("Bog'chadagi kun"), current.caption ?? tr("Kun lahzasi"));
       setSaving(result === "cancelled" ? "idle" : "done");
     } catch {
       setSaving("error");
@@ -79,7 +81,7 @@ export function MediaViewer({
       className={`${styles.fadeIn} fixed inset-0 z-[60] flex flex-col bg-black text-white`}
       role="dialog"
       aria-modal="true"
-      aria-label="Kun lahzalari"
+      aria-label={tr("Kun lahzalari")}
       onTouchStart={(event) => {
         touchX.current = event.touches[0]?.clientX ?? null;
       }}
@@ -98,14 +100,14 @@ export function MediaViewer({
         <button
           type="button"
           onClick={onClose}
-          aria-label="Yopish"
+          aria-label={tr("Yopish")}
           className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full bg-white/10 transition-colors active:bg-white/20"
         >
           <CloseIcon className="h-5 w-5" />
         </button>
         {many && (
           <span className="text-[14px] font-semibold tabular-nums text-white/80">
-            {index + 1} / {items.length}
+            {index + 1} / {tr(items.length)}
           </span>
         )}
         <button
@@ -139,7 +141,7 @@ export function MediaViewer({
           />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element -- himoyalangan API fayli, optimallashtirilmaydi
-          <img key={current.id} src={mediaUrl(current)} alt={current.caption ?? "Kun lahzasi"} className="max-h-full max-w-full object-contain" />
+          <img key={current.id} src={mediaUrl(current)} alt={current.caption ?? tr("Kun lahzasi")} className="max-h-full max-w-full object-contain" />
         )}
 
         {many && (
@@ -147,7 +149,7 @@ export function MediaViewer({
             <button
               type="button"
               onClick={() => go(-1)}
-              aria-label="Oldingisi"
+              aria-label={tr("Oldingisi")}
               className="absolute left-2 top-1/2 hidden h-12 w-12 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white/10 transition-colors hover:bg-white/20 sm:flex"
             >
               <ArrowIcon left className="h-6 w-6" />
@@ -155,7 +157,7 @@ export function MediaViewer({
             <button
               type="button"
               onClick={() => go(1)}
-              aria-label="Keyingisi"
+              aria-label={tr("Keyingisi")}
               className="absolute right-2 top-1/2 hidden h-12 w-12 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white/10 transition-colors hover:bg-white/20 sm:flex"
             >
               <ArrowIcon className="h-6 w-6" />
@@ -165,9 +167,9 @@ export function MediaViewer({
       </div>
 
       <div className="px-5 pt-3" style={{ paddingBottom: "max(16px, env(safe-area-inset-bottom))" }}>
-        {current.caption && <p className="text-[15.5px] font-semibold leading-snug">{current.caption}</p>}
+        {current.caption && <p className="text-[15.5px] font-semibold leading-snug">{tr(current.caption)}</p>}
         <p className="mt-1 text-[13px] text-white/60">
-          {current.createdByName} · {clockOf(current.createdAt)}
+          {tr(current.createdByName)} · {clockOf(current.createdAt)}
         </p>
         {many && (
           <div className="mt-3 flex justify-center gap-1.5" aria-hidden="true">

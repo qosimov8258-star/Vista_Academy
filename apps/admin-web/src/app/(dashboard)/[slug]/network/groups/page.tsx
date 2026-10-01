@@ -12,6 +12,7 @@ import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { CapacityRing } from "@/features/network/capacity-ring";
 import { monogram, paletteFor } from "@/features/network/palette";
 import { ChevronRightIcon, TeacherIcon } from "@/components/ui/icons";
+import { useTr } from "@/i18n/tr";
 
 /**
  * Super Admin uchun tarmoq bo'ylab guruhlar: barcha filiallarniki bir joyda,
@@ -19,6 +20,7 @@ import { ChevronRightIcon, TeacherIcon } from "@/components/ui/icons";
  * o'zgarishsiz qoladi — u filial xodimlarining kundalik ish ro'yxati.
  */
 export default function NetworkGroupsPage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const [branchFilter, setBranchFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
@@ -55,19 +57,19 @@ export default function NetworkGroupsPage({ params }: { params: Promise<{ slug: 
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-[var(--color-text)]">Guruhlar</h1>
-          <p className="text-sm text-[var(--color-text-muted)]">Tarmoqdagi barcha guruhlar bir ro&apos;yxatda</p>
+          <h1 className="text-xl font-semibold text-[var(--color-text)]">{tr("Guruhlar")}</h1>
+          <p className="text-sm text-[var(--color-text-muted)]">{tr("Tarmoqdagi barcha guruhlar bir ro'yxatda")}</p>
         </div>
         {groupsQuery.data && (
           <div className="flex items-center gap-4 text-sm">
             <span className="text-[var(--color-text-muted)]">
-              <b className="text-[var(--color-text)]">{groups.length}</b> guruh
+              <b className="text-[var(--color-text)]">{tr(groups.length)}</b> {tr("guruh")}
             </span>
             <span className="text-[var(--color-text-muted)]">
-              <b className="text-[var(--color-text)]">{totals.children}</b> / {totals.capacity} o&apos;rin band
+              <b className="text-[var(--color-text)]">{tr(totals.children)}</b> / {tr(totals.capacity)} {tr("o'rin band")}
             </span>
             <span className="text-[var(--color-text-muted)]">
-              <b className="text-[var(--color-text)]">{totals.free}</b> bo&apos;sh
+              <b className="text-[var(--color-text)]">{tr(totals.free)}</b> {tr("bo'sh")}
             </span>
           </div>
         )}
@@ -75,7 +77,7 @@ export default function NetworkGroupsPage({ params }: { params: Promise<{ slug: 
 
       <Card className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
         <Input
-          placeholder="Guruh nomi bo'yicha qidirish"
+          placeholder={tr("Guruh nomi bo'yicha qidirish")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="h-10 rounded-xl sm:max-w-xs"
@@ -83,11 +85,11 @@ export default function NetworkGroupsPage({ params }: { params: Promise<{ slug: 
         {branches.length > 1 && (
           <div className="flex flex-wrap gap-1.5">
             <FilterChip active={branchFilter === "all"} onClick={() => setBranchFilter("all")}>
-              Barcha filiallar
+              {tr("Barcha filiallar")}
             </FilterChip>
             {branches.map((branch) => (
               <FilterChip key={branch.id} active={branchFilter === branch.id} onClick={() => setBranchFilter(branch.id)}>
-                {branch.name}
+                {tr(branch.name)}
               </FilterChip>
             ))}
           </div>
@@ -97,11 +99,11 @@ export default function NetworkGroupsPage({ params }: { params: Promise<{ slug: 
       {groupsQuery.isLoading ? (
         <LoadingState />
       ) : groupsQuery.isError ? (
-        <ErrorState message={(groupsQuery.error as Error).message} />
+        <ErrorState message={tr((groupsQuery.error as Error).message)} />
       ) : groups.length === 0 ? (
         <EmptyState
-          title="Guruh topilmadi"
-          description={search ? "Qidiruv shartini o'zgartirib ko'ring" : "Guruhlar filial panelidan qo'shiladi"}
+          title={tr("Guruh topilmadi")}
+          description={search ? tr("Qidiruv shartini o'zgartirib ko'ring") : tr("Guruhlar filial panelidan qo'shiladi")}
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -129,7 +131,7 @@ export default function NetworkGroupsPage({ params }: { params: Promise<{ slug: 
                         {monogram(group.name)}
                       </span>
                       <h2 className="min-w-0 flex-1 truncate text-[15px] font-semibold leading-6 text-[var(--color-text)]">
-                        {group.name}
+                        {tr(group.name)}
                       </h2>
                     </div>
                     <p className="mt-1 truncate text-xs text-[var(--color-text-muted)]">
@@ -140,7 +142,7 @@ export default function NetworkGroupsPage({ params }: { params: Promise<{ slug: 
                     <div className="mt-2.5 flex flex-wrap gap-1.5">
                       {teachers.length === 0 ? (
                         <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-warning-bg)] px-2 py-0.5 text-[11px] font-medium text-[var(--color-warning)]">
-                          Tarbiyachi biriktirilmagan
+                          {tr("Tarbiyachi biriktirilmagan")}
                         </span>
                       ) : (
                         teachers.map((link) => (
@@ -162,7 +164,7 @@ export default function NetworkGroupsPage({ params }: { params: Promise<{ slug: 
 
                 <div className="flex items-center justify-between border-t border-[var(--color-separator)] px-5 py-2.5">
                   <span className="text-xs text-[var(--color-text-muted)]">
-                    {count === 0 ? "Hali bola qo'shilmagan" : free === 0 ? "To'lgan" : `${free} o'rin bo'sh`}
+                    {count === 0 ? tr("Hali bola qo'shilmagan") : free === 0 ? tr("To'lgan") : tr("{0} o'rin bo'sh", free)}
                   </span>
                   <ChevronRightIcon className="h-4 w-4 text-[var(--color-text-muted)] transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none" />
                 </div>

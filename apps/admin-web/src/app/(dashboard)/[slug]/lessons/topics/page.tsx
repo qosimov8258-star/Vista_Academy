@@ -19,8 +19,10 @@ import { formatDate } from "@/lib/format";
 import { TopicModal } from "@/features/lessons/topic-modal";
 import { TopicQuestionModal } from "@/features/lessons/topic-question-modal";
 import clsx from "clsx";
+import { useTr } from "@/i18n/tr";
 
 export default function LessonTopicsPage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const { user } = useAuth();
   // Administrator xodim tafsilotida "Mavzu qo'shasizmi?"ni yoqib saqlagan
@@ -72,10 +74,10 @@ export default function LessonTopicsPage({ params }: { params: Promise<{ slug: s
       <div className="flex flex-wrap items-start justify-between gap-3 md:items-center">
         <div className="min-w-0 flex-1 md:flex-none">
           <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
-            Savol-javob
+            {tr("Savol-javob")}
           </h1>
           <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">
-            Dars mavzulari va ularga tegishli test savollari banki
+            {tr("Dars mavzulari va ularga tegishli test savollari banki")}
           </p>
         </div>
         {/* Mobilda asosiy "+ Yangi mavzu" sarlavha yonida, "+ Savol" esa uning ostida */}
@@ -83,9 +85,9 @@ export default function LessonTopicsPage({ params }: { params: Promise<{ slug: s
           <div className="shrink-0 md:hidden">
             <Button className="!h-auto !py-2" onClick={() => setTopicModal({ open: true, topic: null })} disabled={!groupId}>
               <span className="text-center leading-tight">
-                + Yangi mavzu
+                {tr("+ Yangi mavzu")}
                 <br />
-                qo&apos;shish
+                {tr("qo'shish")}
               </span>
             </Button>
           </div>
@@ -97,7 +99,7 @@ export default function LessonTopicsPage({ params }: { params: Promise<{ slug: s
               onClick={() => setQuickQuestionModalOpen(true)}
               disabled={!groupId || !topicsQuery.data || topicsQuery.data.length === 0}
             >
-              + Savol qo&apos;shish
+              {tr("+ Savol qo'shish")}
             </Button>
           </div>
         )}
@@ -108,12 +110,12 @@ export default function LessonTopicsPage({ params }: { params: Promise<{ slug: s
               onClick={() => setQuickQuestionModalOpen(true)}
               disabled={!groupId || !topicsQuery.data || topicsQuery.data.length === 0}
             >
-              + Savol qo&apos;shish
+              {tr("+ Savol qo'shish")}
             </Button>
           )}
           {canWriteTopics && (
             <Button onClick={() => setTopicModal({ open: true, topic: null })} disabled={!groupId}>
-              + Yangi mavzu qo&apos;shish
+              {tr("+ Yangi mavzu qo'shish")}
             </Button>
           )}
         </div>
@@ -125,12 +127,12 @@ export default function LessonTopicsPage({ params }: { params: Promise<{ slug: s
         {groupsQuery.isLoading ? (
           <LoadingState rows={1} />
         ) : groups.length === 0 ? (
-          <p className="text-[14px] text-[var(--color-text-muted)]">Hali guruh yo&apos;q</p>
+          <p className="text-[14px] text-[var(--color-text-muted)]">{tr("Hali guruh yo'q")}</p>
         ) : (
-          <Select label="Guruh" value={groupId} onChange={(e) => setGroupId(e.target.value)} className="sm:max-w-xs">
+          <Select label={tr("Guruh")} value={groupId} onChange={(e) => setGroupId(e.target.value)} className="sm:max-w-xs">
             {groups.map((group) => (
               <option key={group.id} value={group.id}>
-                {group.name}
+                {tr(group.name)}
               </option>
             ))}
           </Select>
@@ -141,18 +143,18 @@ export default function LessonTopicsPage({ params }: { params: Promise<{ slug: s
         groupsQuery.isLoading ? (
           <LoadingState />
         ) : (
-          <EmptyState title="Guruh tanlanmagan" description="Avval yuqoridan guruhni tanlang" />
+          <EmptyState title={tr("Guruh tanlanmagan")} description={tr("Avval yuqoridan guruhni tanlang")} />
         )
       ) : topicsQuery.isLoading ? (
         <LoadingState rows={4} />
       ) : topicsQuery.isError ? (
-        <ErrorState message={(topicsQuery.error as Error).message} />
+        <ErrorState message={tr((topicsQuery.error as Error).message)} />
       ) : !topicsQuery.data || topicsQuery.data.length === 0 ? (
         <EmptyState
           icon={<QuestionIcon className="h-[26px] w-[26px]" />}
-          title="Hali mavzu yo'q"
+          title={tr("Hali mavzu yo'q")}
           description={
-            canWriteTopics ? "\"+ Yangi mavzu qo'shish\" tugmasi orqali birinchi mavzuni qo'shing" : undefined
+            canWriteTopics ? tr("\"+ Yangi mavzu qo'shish\" tugmasi orqali birinchi mavzuni qo'shing") : undefined
           }
         />
       ) : (
@@ -197,15 +199,14 @@ export default function LessonTopicsPage({ params }: { params: Promise<{ slug: s
       <ConfirmDialog
         open={!!deletingTopic}
         onClose={() => setDeletingTopic(null)}
-        title="Mavzuni o'chirish"
-        confirmLabel="O'chirish"
+        title={tr("Mavzuni o'chirish")}
+        confirmLabel={tr("O'chirish")}
         tone="danger"
         loading={deleteMutation.isPending}
         error={deleteMutation.isError ? ((deleteMutation.error as Error)?.message ?? null) : null}
         description={
           <>
-            <b className="text-[var(--color-text)]">{deletingTopic?.title}</b> o&apos;chiriladi — unga tegishli
-            barcha savollar ham yo&apos;qoladi.
+            <b className="text-[var(--color-text)]">{tr(deletingTopic?.title)}</b> {tr("o'chiriladi — unga tegishli barcha savollar ham yo'qoladi.")}
           </>
         }
         onConfirm={() => deletingTopic && deleteMutation.mutate(deletingTopic.id)}
@@ -235,6 +236,7 @@ function TopicRow({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const tr = useTr();
   return (
     <Card className="overflow-hidden">
       <div className="flex flex-wrap items-center gap-3 px-5 py-4">
@@ -249,14 +251,14 @@ function TopicRow({
           <span className="min-w-0 flex-1">
             <span className="flex flex-wrap items-center gap-2">
               <span className="text-sm font-medium text-[var(--color-text)]">
-                {index + 1}. {topic.title}
+                {index + 1}. {tr(topic.title)}
               </span>
-              {topic.reviewDue && <Badge tone="warning">Takrorlash vaqti</Badge>}
+              {topic.reviewDue && <Badge tone="warning">{tr("Takrorlash vaqti")}</Badge>}
             </span>
             <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-[var(--color-text-muted)]">
               <span>{formatDate(topic.date)}</span>
-              {topic.subject && <span>· {topic.subject}</span>}
-              <span>· {topic._count.questions} ta savol</span>
+              {topic.subject && <span>· {tr(topic.subject)}</span>}
+              <span>· {tr(topic._count.questions)} {tr("ta savol")}</span>
             </span>
           </span>
           <ChevronRightIcon
@@ -271,7 +273,7 @@ function TopicRow({
             <button
               type="button"
               onClick={onEdit}
-              aria-label="Mavzuni tahrirlash"
+              aria-label={tr("Mavzuni tahrirlash")}
               className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-text)]"
             >
               <PencilIcon className="h-4 w-4" />
@@ -279,7 +281,7 @@ function TopicRow({
             <button
               type="button"
               onClick={onDelete}
-              aria-label="Mavzuni o'chirish"
+              aria-label={tr("Mavzuni o'chirish")}
               className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]"
             >
               <TrashIcon className="h-4 w-4" />
@@ -298,6 +300,7 @@ function TopicRow({
 }
 
 function TopicQuestions({ slug, topicId, canWrite }: { slug: string; topicId: string; canWrite: boolean }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [questionModal, setQuestionModal] = useState<{ open: boolean; question: TopicQuestion | null }>({
     open: false,
@@ -324,23 +327,23 @@ function TopicQuestions({ slug, topicId, canWrite }: { slug: string; topicId: st
       {detailQuery.isLoading ? (
         <LoadingState rows={2} />
       ) : detailQuery.isError ? (
-        <ErrorState message={(detailQuery.error as Error).message} />
+        <ErrorState message={tr((detailQuery.error as Error).message)} />
       ) : !detailQuery.data || detailQuery.data.questions.length === 0 ? (
-        <p className="py-2 text-[13px] text-[var(--color-text-muted)]">Hali savol qo&apos;shilmagan</p>
+        <p className="py-2 text-[13px] text-[var(--color-text-muted)]">{tr("Hali savol qo'shilmagan")}</p>
       ) : (
         <ul className="space-y-3">
           {detailQuery.data.questions.map((question, index) => (
             <li key={question.id} className="rounded-[var(--radius-lg)] bg-[var(--color-surface)] p-3.5 shadow-[var(--shadow-xs)]">
               <div className="flex items-start justify-between gap-3">
                 <p className="text-[14px] font-medium text-[var(--color-text)]">
-                  {index + 1}. {question.question}
+                  {index + 1}. {tr(question.question)}
                 </p>
                 {canWrite && (
                   <div className="flex shrink-0 items-center gap-1">
                     <button
                       type="button"
                       onClick={() => setQuestionModal({ open: true, question })}
-                      aria-label="Savolni tahrirlash"
+                      aria-label={tr("Savolni tahrirlash")}
                       className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-text)]"
                     >
                       <PencilIcon className="h-3.5 w-3.5" />
@@ -348,7 +351,7 @@ function TopicQuestions({ slug, topicId, canWrite }: { slug: string; topicId: st
                     <button
                       type="button"
                       onClick={() => setDeletingQuestion(question)}
-                      aria-label="Savolni o'chirish"
+                      aria-label={tr("Savolni o'chirish")}
                       className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]"
                     >
                       <TrashIcon className="h-3.5 w-3.5" />
@@ -368,13 +371,13 @@ function TopicQuestions({ slug, topicId, canWrite }: { slug: string; topicId: st
                           : "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)]",
                       )}
                     >
-                      {option}
+                      {tr(option)}
                     </span>
                   ))}
                 </div>
               )}
               {question.answer && question.options.length === 0 && (
-                <p className="mt-2 text-[12.5px] text-[var(--color-success)]">To&apos;g&apos;ri javob: {question.answer}</p>
+                <p className="mt-2 text-[12.5px] text-[var(--color-success)]">{tr("To'g'ri javob:")}{" "}{tr(question.answer)}</p>
               )}
             </li>
           ))}
@@ -390,7 +393,7 @@ function TopicQuestions({ slug, topicId, canWrite }: { slug: string; topicId: st
           onClick={() => setQuestionModal({ open: true, question: null })}
         >
           <PlusIcon className="h-3.5 w-3.5" />
-          Savol qo&apos;shish
+          {tr("Savol qo'shish")}
         </Button>
       )}
 
@@ -407,11 +410,11 @@ function TopicQuestions({ slug, topicId, canWrite }: { slug: string; topicId: st
       <ConfirmDialog
         open={!!deletingQuestion}
         onClose={() => setDeletingQuestion(null)}
-        title="Savolni o'chirish"
-        confirmLabel="O'chirish"
+        title={tr("Savolni o'chirish")}
+        confirmLabel={tr("O'chirish")}
         tone="danger"
         loading={deleteMutation.isPending}
-        description="Bu savol banki'dan butunlay o'chiriladi."
+        description={tr("Bu savol banki'dan butunlay o'chiriladi.")}
         onConfirm={() => deletingQuestion && deleteMutation.mutate(deletingQuestion.id)}
       />
     </div>

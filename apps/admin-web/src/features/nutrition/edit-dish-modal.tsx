@@ -10,6 +10,7 @@ import type { Dish } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useTr } from "@/i18n/tr";
 
 const schema = z.object({
   name: z.string().min(2, "Nomi kamida 2 belgi"),
@@ -30,6 +31,7 @@ export function EditDishModal({
   slug: string;
   dish: Dish;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -61,33 +63,33 @@ export function EditDishModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
   return (
-    <Modal open={open} onClose={onClose} title="Taomni tahrirlash">
+    <Modal open={open} onClose={onClose} title={tr("Taomni tahrirlash")}>
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
-        <Input label="Taom nomi" error={errors.name?.message} {...register("name")} />
+        <Input label={tr("Taom nomi")} error={errors.name?.message} {...register("name")} />
         <Input
-          label="Kaloriya (ixtiyoriy)"
+          label={tr("Kaloriya (ixtiyoriy)")}
           type="number"
           min={0}
           error={errors.calories?.message}
           {...register("calories")}
         />
-        <Input label="Allergenlar (ixtiyoriy)" error={errors.allergens?.message} {...register("allergens")} />
+        <Input label={tr("Allergenlar (ixtiyoriy)")} error={errors.allergens?.message} {...register("allergens")} />
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Bekor qilish
+            {tr("Bekor qilish")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Saqlash
+            {tr("Saqlash")}
           </Button>
         </div>
       </form>

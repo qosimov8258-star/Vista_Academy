@@ -16,6 +16,7 @@ import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { formatDate, formatMoney } from "@/lib/format";
 import type { PaymentReminderSettings, UnpaidReminderChild } from "@/lib/types";
+import { useTr } from "@/i18n/tr";
 
 const DEFAULT_MESSAGE =
   "Hurmatli ota-ona! {childName} uchun to'lov muddati {dueDate}. Iltimos, to'lovni amalga oshiring.";
@@ -42,30 +43,31 @@ function sortForReminderCard(rows: UnpaidReminderChild[]): UnpaidReminderChild[]
 }
 
 function UnpaidChildrenTable({ rows }: { rows: UnpaidReminderChild[] }) {
+  const tr = useTr();
   return (
     <Card className="overflow-hidden">
       <DataTable>
         <THead>
           <tr>
-            <Th>Bola</Th>
-            <Th>Guruh</Th>
-            <Th>Muddat</Th>
-            <Th numeric>Qoldiq</Th>
-            <Th>Holat</Th>
+            <Th>{tr("Bola")}</Th>
+            <Th>{tr("Guruh")}</Th>
+            <Th>{tr("Muddat")}</Th>
+            <Th numeric>{tr("Qoldiq")}</Th>
+            <Th>{tr("Holat")}</Th>
           </tr>
         </THead>
         <TBody>
           {rows.map((row) => (
             <Tr key={row.invoiceId}>
-              <Td className="font-medium">{row.childFullName}</Td>
+              <Td className="font-medium">{tr(row.childFullName)}</Td>
               <Td className="text-[var(--color-text-muted)]">{row.groupName ?? "—"}</Td>
               <Td className="tabular-nums text-[var(--color-text-muted)]">{formatDate(row.dueDate)}</Td>
               <Td numeric className="font-medium">{formatMoney(row.remainingAmount)}</Td>
               <Td>
                 {row.daysUntilDue < 0 ? (
-                  <Badge tone="danger">{Math.abs(row.daysUntilDue)} kun kechikdi</Badge>
+                  <Badge tone="danger">{Math.abs(row.daysUntilDue)} {tr("kun kechikdi")}</Badge>
                 ) : (
-                  <Badge tone="warning">{row.daysUntilDue} kun qoldi</Badge>
+                  <Badge tone="warning">{tr(row.daysUntilDue)} {tr("kun qoldi")}</Badge>
                 )}
               </Td>
             </Tr>
@@ -77,6 +79,7 @@ function UnpaidChildrenTable({ rows }: { rows: UnpaidReminderChild[] }) {
 }
 
 export default function RemindersPage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const { user } = useAuth();
   const canWrite = canWriteMoney(user?.role);
@@ -149,9 +152,9 @@ export default function RemindersPage({ params }: { params: Promise<{ slug: stri
   return (
     <div className="space-y-5">
       <div className="min-w-0">
-        <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">Eslatmalar</h1>
+        <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">{tr("Eslatmalar")}</h1>
         <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">
-          To&apos;lov muddati yaqinlashganda yoki o&apos;tib ketganda ota-ona kabinetida avtomatik chiqadigan eslatma karta
+          {tr("To'lov muddati yaqinlashganda yoki o'tib ketganda ota-ona kabinetida avtomatik chiqadigan eslatma karta")}
         </p>
       </div>
 
@@ -172,7 +175,7 @@ export default function RemindersPage({ params }: { params: Promise<{ slug: stri
                     : "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
                 }`}
               >
-                {item.name}
+                {tr(item.name)}
               </button>
             );
           })}
@@ -183,20 +186,20 @@ export default function RemindersPage({ params }: { params: Promise<{ slug: stri
 
       {!branchId ? (
         <Card>
-          <EmptyState title="Filial yo'q" description="Eslatmalar ko'rinishi uchun avval filial oching" />
+          <EmptyState title={tr("Filial yo'q")} description={tr("Eslatmalar ko'rinishi uchun avval filial oching")} />
         </Card>
       ) : (
         <>
         {settingsQuery.isLoading || !form ? (
           <LoadingState rows={4} />
         ) : settingsQuery.isError ? (
-          <ErrorState message={(settingsQuery.error as Error).message} />
+          <ErrorState message={tr((settingsQuery.error as Error).message)} />
         ) : (
           <Card className="space-y-5 p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-[15px] font-semibold text-[var(--color-text)]">Eslatma yoqilgan</p>
-                <p className="text-[13px] text-[var(--color-text-muted)]">O&apos;chirilsa, ota-ona kabinetida karta chiqmaydi</p>
+                <p className="text-[15px] font-semibold text-[var(--color-text)]">{tr("Eslatma yoqilgan")}</p>
+                <p className="text-[13px] text-[var(--color-text-muted)]">{tr("O'chirilsa, ota-ona kabinetida karta chiqmaydi")}</p>
               </div>
               <Switch
                 checked={form.isEnabled}
@@ -210,8 +213,8 @@ export default function RemindersPage({ params }: { params: Promise<{ slug: stri
                 type="number"
                 min={0}
                 max={60}
-                label="Necha kun oldin boshlansin"
-                hint="To'lov muddatiga shuncha kun qolganda karta chiqa boshlaydi"
+                label={tr("Necha kun oldin boshlansin")}
+                hint={tr("To'lov muddatiga shuncha kun qolganda karta chiqa boshlaydi")}
                 value={form.daysBeforeDue}
                 disabled={!canWrite}
                 onChange={(e) => setForm({ ...form, daysBeforeDue: Number(e.target.value) })}
@@ -220,8 +223,8 @@ export default function RemindersPage({ params }: { params: Promise<{ slug: stri
                 type="number"
                 min={0}
                 max={60}
-                label="Necha kun kechikkuncha davom etsin"
-                hint="Muddat o'tgach ham shuncha kun 'kechikdi' deb ko'rsatiladi"
+                label={tr("Necha kun kechikkuncha davom etsin")}
+                hint={tr("Muddat o'tgach ham shuncha kun 'kechikdi' deb ko'rsatiladi")}
                 value={form.daysAfterDue}
                 disabled={!canWrite}
                 onChange={(e) => setForm({ ...form, daysAfterDue: Number(e.target.value) })}
@@ -230,7 +233,7 @@ export default function RemindersPage({ params }: { params: Promise<{ slug: stri
 
             <div>
               <p className="mb-2 text-[13px] font-medium text-[var(--color-text)]">
-                Kuniga necha marta va soat nechada yuborilsin
+                {tr("Kuniga necha marta va soat nechada yuborilsin")}
               </p>
               <div className="flex flex-wrap gap-2">
                 {form.sendTimes.map((t, i) => (
@@ -247,7 +250,7 @@ export default function RemindersPage({ params }: { params: Promise<{ slug: stri
                         type="button"
                         onClick={() => removeTime(i)}
                         className="text-[13px] text-[var(--color-text-muted)] hover:text-[var(--color-danger)]"
-                        aria-label="O'chirish"
+                        aria-label={tr("O'chirish")}
                       >
                         ✕
                       </button>
@@ -256,15 +259,15 @@ export default function RemindersPage({ params }: { params: Promise<{ slug: stri
                 ))}
                 {canWrite && form.sendTimes.length < 6 && (
                   <Button variant="outline" size="sm" onClick={addTime} type="button">
-                    + Vaqt qo&apos;shish
+                    {tr("+ Vaqt qo'shish")}
                   </Button>
                 )}
               </div>
             </div>
 
             <Textarea
-              label="Eslatma matni"
-              hint="Ishlatsa bo'ladigan o'rin bosuvchilar: {childName}, {amount}, {dueDate}, {daysLeft}"
+              label={tr("Eslatma matni")}
+              hint={tr("Ishlatsa bo'ladigan o'rin bosuvchilar: {childName}, {amount}, {dueDate}, {daysLeft}")}
               rows={3}
               maxLength={1000}
               value={form.messageTemplate}
@@ -274,16 +277,16 @@ export default function RemindersPage({ params }: { params: Promise<{ slug: stri
 
             {saveMutation.isError && (
               <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-                {saveMutation.error instanceof ApiError ? saveMutation.error.message : "Saqlab bo'lmadi"}
+                {saveMutation.error instanceof ApiError ? saveMutation.error.message : tr("Saqlab bo'lmadi")}
               </div>
             )}
 
             {canWrite && (
               <div className="flex items-center gap-3">
                 <Button loading={saveMutation.isPending} onClick={() => saveMutation.mutate(form)}>
-                  Saqlash
+                  {tr("Saqlash")}
                 </Button>
-                {saved && <span className="text-[13px] text-[var(--color-success)]">Saqlandi</span>}
+                {saved && <span className="text-[13px] text-[var(--color-success)]">{tr("Saqlandi")}</span>}
               </div>
             )}
           </Card>
@@ -293,27 +296,27 @@ export default function RemindersPage({ params }: { params: Promise<{ slug: stri
         {unpaidQuery.isLoading ? (
           <LoadingState rows={4} />
         ) : unpaidQuery.isError ? (
-          <ErrorState message={(unpaidQuery.error as Error).message} />
+          <ErrorState message={tr((unpaidQuery.error as Error).message)} />
         ) : reminderCardRows.length === 0 ? (
           <Card>
-            <EmptyState title="Hozircha hech kim yo'q" description="Barcha o'quvchilar to'lovini amalga oshirgan" />
+            <EmptyState title={tr("Hozircha hech kim yo'q")} description={tr("Barcha o'quvchilar to'lovini amalga oshirgan")} />
           </Card>
         ) : (
           <UnpaidChildrenTable rows={reminderCardRows} />
         )}
 
         <div>
-          <h2 className="text-[16px] font-semibold text-[var(--color-text)]">To&apos;lov qilmagan o&apos;quvchilar</h2>
-          <p className="mt-0.5 text-[13px] text-[var(--color-text-muted)]">Hozirgi eslatma oynasiga tushayotganlar</p>
+          <h2 className="text-[16px] font-semibold text-[var(--color-text)]">{tr("To'lov qilmagan o'quvchilar")}</h2>
+          <p className="mt-0.5 text-[13px] text-[var(--color-text-muted)]">{tr("Hozirgi eslatma oynasiga tushayotganlar")}</p>
         </div>
 
         {unpaidQuery.isLoading ? (
           <LoadingState rows={4} />
         ) : unpaidQuery.isError ? (
-          <ErrorState message={(unpaidQuery.error as Error).message} />
+          <ErrorState message={tr((unpaidQuery.error as Error).message)} />
         ) : !unpaidQuery.data || unpaidQuery.data.length === 0 ? (
           <Card>
-            <EmptyState title="Hozircha hech kim yo'q" description="Barcha o'quvchilar to'lovini amalga oshirgan" />
+            <EmptyState title={tr("Hozircha hech kim yo'q")} description={tr("Barcha o'quvchilar to'lovini amalga oshirgan")} />
           </Card>
         ) : (
           <UnpaidChildrenTable rows={unpaidQuery.data} />

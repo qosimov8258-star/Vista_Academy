@@ -8,6 +8,7 @@ import { useLearned, useTextSize } from "../../store";
 import { Chip, FoydaliHeader, LearnedButton, ListSkeleton, LoadErrorCard, NotFoundCard, StarIcon, TextSizeControl, formatUzDate } from "../../ui";
 import { SaveImageButton, useKindergartenName } from "../../save-image-button";
 import { kindergartenLabel, renderPoemImage } from "../../share-image";
+import { useTr } from "@/i18n/tr";
 
 /**
  * She'r sahifasi — yodlash uchun uch usul:
@@ -31,6 +32,7 @@ const MODES: Array<{ key: Mode; label: string }> = [
 const POEM_SIZES = [19, 22, 26] as const;
 
 export default function PoemPage({ params }: { params: Promise<{ slug: string; id: string }> }) {
+  const tr = useTr();
   const { slug, id } = use(params);
   const base = `/ota-ona/${slug}/foydali`;
   const poemQuery = usePoem(id);
@@ -38,19 +40,19 @@ export default function PoemPage({ params }: { params: Promise<{ slug: string; i
   const { has, toggle } = useLearned();
   const size = useTextSize();
   const [mode, setMode] = useState<Mode>("read");
-  const brand = useKindergartenName(slug) ?? "Bog'cha";
+  const brand = useKindergartenName(slug) ?? tr("Bog'cha");
 
   if (!poem) {
     return (
       <div className="mx-auto w-full max-w-[520px] px-4">
-        <FoydaliHeader backHref={`${base}/sherlar`} backLabel="She'rlar" title="She'r" />
+        <FoydaliHeader backHref={`${base}/sherlar`} backLabel={tr("She'rlar")} title={tr("She'r")} />
         {!poemQuery.isError ? (
           <ListSkeleton rows={2} tall />
         ) : isGone(poemQuery.error) ? (
           <NotFoundCard
             backHref={`${base}/sherlar`}
-            backLabel="She'rlarga qaytish"
-            text="Bu she'r o'chirilgan yoki hali qo'shilmagan."
+            backLabel={tr("She'rlarga qaytish")}
+            text={tr("Bu she'r o'chirilgan yoki hali qo'shilmagan.")}
           />
         ) : (
           <LoadErrorCard error={poemQuery.error} onRetry={() => poemQuery.refetch()} loginHref={`/ota-ona/${slug}/kirish`} />
@@ -65,19 +67,19 @@ export default function PoemPage({ params }: { params: Promise<{ slug: string; i
 
   return (
     <div className="mx-auto w-full max-w-[520px] px-4">
-      <FoydaliHeader backHref={`${base}/sherlar`} backLabel="She'rlar" title={poem.title} right={<TextSizeControl />} />
+      <FoydaliHeader backHref={`${base}/sherlar`} backLabel={tr("She'rlar")} title={tr(poem.title)} right={<TextSizeControl />} />
       <div className="mt-2.5 flex flex-wrap gap-1.5">
-        {poem.author && <Chip tone="lilac">{poem.author}</Chip>}
+        {poem.author && <Chip tone="lilac">{tr(poem.author)}</Chip>}
         <Chip>
-          {poem.ageFrom}–{poem.ageTo} yosh
+          {tr(poem.ageFrom)}–{tr(poem.ageTo)} {tr("yosh")}
         </Chip>
         <Chip>
-          {poem.stanzas.length} band · {lineCount} qator
+          {tr(poem.stanzas.length)} {tr("band ·")}{" "}{tr(lineCount)} {tr("qator")}
         </Chip>
-        <Chip>{poem.groupName ?? "Barcha guruhlar"}</Chip>
+        <Chip>{poem.groupName ?? tr("Barcha guruhlar")}</Chip>
       </div>
 
-      <div role="radiogroup" aria-label="Yodlash usuli" className="mt-5 grid grid-cols-3 gap-1 rounded-full bg-[var(--p-sunken)] p-1">
+      <div role="radiogroup" aria-label={tr("Yodlash usuli")} className="mt-5 grid grid-cols-3 gap-1 rounded-full bg-[var(--p-sunken)] p-1">
         {MODES.map((option) => {
           const active = option.key === mode;
           return (
@@ -92,7 +94,7 @@ export default function PoemPage({ params }: { params: Promise<{ slug: string; i
                 active ? "bg-[var(--p-card)] text-[var(--p-ink)] shadow-[var(--p-shadow)]" : "text-[var(--p-muted)]",
               )}
             >
-              {option.label}
+              {tr(option.label)}
             </button>
           );
         })}
@@ -104,7 +106,7 @@ export default function PoemPage({ params }: { params: Promise<{ slug: string; i
 
       {/* Rasm har doim butun she'rdan — qaysi usul ochiq bo'lishidan qat'i nazar */}
       <SaveImageButton
-        label="Rasm qilib saqlash"
+        label={tr("Rasm qilib saqlash")}
         shareTitle={poem.title}
         shareText={`«${poem.title}» — ${kindergartenLabel(brand)}`}
         build={async () => [await renderPoemImage(poem, brand)]}
@@ -115,10 +117,10 @@ export default function PoemPage({ params }: { params: Promise<{ slug: string; i
         onToggle={() => toggle("poems", poem.id)}
         idleLabel="Yodladik!"
         doneLabel="Yodlandi"
-        hint={learned ? "Belgini olib tashlash uchun yana bosing" : "Bolangiz she'rni yoddan aytib bersa — belgilang"}
+        hint={learned ? tr("Belgini olib tashlash uchun yana bosing") : tr("Bolangiz she'rni yoddan aytib bersa — belgilang")}
       />
       <p className="mt-6 text-center text-[12.5px] text-[var(--p-muted)]">
-        {poem.addedBy} qo&apos;shgan · {formatUzDate(poem.addedAt)}
+        {tr(poem.addedBy)} {tr("qo'shgan ·")}{" "}{formatUzDate(poem.addedAt)}
       </p>
     </div>
   );
@@ -129,6 +131,7 @@ export default function PoemPage({ params }: { params: Promise<{ slug: string; i
  * ------------------------------------------------------------------------ */
 
 function ReadView({ poem, fontSize }: { poem: Poem; fontSize: number }) {
+  const tr = useTr();
   return (
     <div className="relative mt-4 overflow-hidden rounded-[var(--p-radius)] bg-[var(--p-card)] px-5 py-8 shadow-[var(--p-shadow)]">
       <span
@@ -141,7 +144,7 @@ function ReadView({ poem, fontSize }: { poem: Poem; fontSize: number }) {
             {i > 0 && <StanzaDivider />}
             {stanza.map((line, j) => (
               <p key={j} className="font-semibold leading-[1.6] text-[var(--p-ink)]">
-                {line}
+                {tr(line)}
               </p>
             ))}
           </div>
@@ -166,6 +169,7 @@ function StanzaDivider() {
  * ------------------------------------------------------------------------ */
 
 function LineByLine({ poem, fontSize }: { poem: Poem; fontSize: number }) {
+  const tr = useTr();
   const lines = useMemo(
     () => poem.stanzas.flatMap((stanza, s) => stanza.map((text) => ({ text, stanza: s }))),
     [poem],
@@ -184,9 +188,9 @@ function LineByLine({ poem, fontSize }: { poem: Poem; fontSize: number }) {
         >
           <StarIcon filled className="h-9 w-9" />
         </span>
-        <p className={`${styles.roundedFont} mt-3 text-[22px] font-extrabold text-[var(--p-ink)]`}>Barakalla!</p>
+        <p className={`${styles.roundedFont} mt-3 text-[22px] font-extrabold text-[var(--p-ink)]`}>{tr("Barakalla!")}</p>
         <p className="mx-auto mt-1 max-w-[280px] text-[14px] leading-relaxed text-[var(--p-muted)]">
-          She&apos;r oxirigacha o&apos;qildi. Endi bolangiz uni yoddan aytib ko&apos;rsin.
+          {tr("She'r oxirigacha o'qildi. Endi bolangiz uni yoddan aytib ko'rsin.")}
         </p>
         <button
           type="button"
@@ -196,7 +200,7 @@ function LineByLine({ poem, fontSize }: { poem: Poem; fontSize: number }) {
           }}
           className="mt-5 cursor-pointer rounded-full bg-[var(--p-sunken)] px-5 py-3 text-[14.5px] font-bold text-[var(--p-ink)] transition-transform active:scale-[0.97]"
         >
-          Yana boshidan
+          {tr("Yana boshidan")}
         </button>
       </div>
     );
@@ -205,9 +209,9 @@ function LineByLine({ poem, fontSize }: { poem: Poem; fontSize: number }) {
   return (
     <div className="mt-4 rounded-[var(--p-radius)] bg-[var(--p-card)] p-5 shadow-[var(--p-shadow)]">
       <div className="flex items-center justify-between text-[12.5px] font-semibold text-[var(--p-muted)]">
-        <span>{current.stanza + 1}-band</span>
+        <span>{current.stanza + 1}{tr("-band")}</span>
         <span className="tabular-nums">
-          {index + 1} / {lines.length}
+          {index + 1} / {tr(lines.length)}
         </span>
       </div>
       <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--p-sunken)]">
@@ -220,7 +224,7 @@ function LineByLine({ poem, fontSize }: { poem: Poem; fontSize: number }) {
       <div className={`${styles.roundedFont} flex min-h-[210px] flex-col items-center justify-center py-6 text-center`}>
         {previous && (
           <p className="mb-3 font-semibold text-[var(--p-muted)] opacity-70" style={{ fontSize: fontSize * 0.78 }}>
-            {previous.text}
+            {tr(previous.text)}
           </p>
         )}
         <p
@@ -228,10 +232,10 @@ function LineByLine({ poem, fontSize }: { poem: Poem; fontSize: number }) {
           className={`${styles.lineIn} font-extrabold leading-snug text-[var(--p-ink)]`}
           style={{ fontSize: fontSize * 1.3 }}
         >
-          {current.text}
+          {tr(current.text)}
         </p>
       </div>
-      <p className="text-center text-[13px] text-[var(--p-muted)]">Qatorni bolangiz bilan 2–3 marta birga ayting</p>
+      <p className="text-center text-[13px] text-[var(--p-muted)]">{tr("Qatorni bolangiz bilan 2–3 marta birga ayting")}</p>
 
       <div className="mt-4 grid grid-cols-[auto_1fr] gap-2.5">
         <button
@@ -240,7 +244,7 @@ function LineByLine({ poem, fontSize }: { poem: Poem; fontSize: number }) {
           onClick={() => setIndex((i) => Math.max(0, i - 1))}
           className="cursor-pointer rounded-full bg-[var(--p-sunken)] px-5 py-3.5 text-[15px] font-bold text-[var(--p-ink)] transition-transform active:scale-[0.97] disabled:cursor-default disabled:opacity-40"
         >
-          Orqaga
+          {tr("Orqaga")}
         </button>
         <button
           type="button"
@@ -300,6 +304,7 @@ function tokenize(line: string, level: Level): Token[] {
 }
 
 function WordGame({ poem, fontSize }: { poem: Poem; fontSize: number }) {
+  const tr = useTr();
   const [level, setLevel] = useState<Level>("oson");
   const [revealed, setRevealed] = useState<Set<string>>(() => new Set());
   const stanzas = useMemo(() => poem.stanzas.map((stanza) => stanza.map((line) => tokenize(line, level))), [poem, level]);
@@ -314,7 +319,7 @@ function WordGame({ poem, fontSize }: { poem: Poem; fontSize: number }) {
 
   return (
     <div className="mt-4 rounded-[var(--p-radius)] bg-[var(--p-card)] px-4 py-5 shadow-[var(--p-shadow)]">
-      <div role="radiogroup" aria-label="Qiyinlik" className="grid grid-cols-3 gap-1 rounded-full bg-[var(--p-sunken)] p-1">
+      <div role="radiogroup" aria-label={tr("Qiyinlik")} className="grid grid-cols-3 gap-1 rounded-full bg-[var(--p-sunken)] p-1">
         {LEVELS.map((option) => {
           const active = option.key === level;
           return (
@@ -332,14 +337,14 @@ function WordGame({ poem, fontSize }: { poem: Poem; fontSize: number }) {
                 active ? "bg-[var(--p-lilac)] text-white" : "text-[var(--p-muted)]",
               )}
             >
-              {option.label}
+              {tr(option.label)}
             </button>
           );
         })}
       </div>
 
       <div className="mt-3 flex items-center justify-between gap-3">
-        <p className="text-[13px] leading-snug text-[var(--p-muted)]">Bolangiz yashirin so&apos;zni aytsin, keyin bosib tekshiring</p>
+        <p className="text-[13px] leading-snug text-[var(--p-muted)]">{tr("Bolangiz yashirin so'zni aytsin, keyin bosib tekshiring")}</p>
         <button
           type="button"
           onClick={() => setRevealed(allOpen ? new Set() : new Set(hiddenKeys))}
@@ -361,7 +366,7 @@ function WordGame({ poem, fontSize }: { poem: Poem; fontSize: number }) {
                     word = (
                       <button
                         type="button"
-                        aria-label="Yashirin so'z — ochish uchun bosing"
+                        aria-label={tr("Yashirin so'z — ochish uchun bosing")}
                         onClick={() => setRevealed((prev) => new Set(prev).add(key))}
                         className="mx-[0.06em] inline-block h-[1.05em] translate-y-[0.14em] cursor-pointer rounded-[0.3em] border-b-[3px] border-dashed border-[var(--p-lilac)] bg-[var(--p-lilac)]/12 align-baseline transition-colors active:bg-[var(--p-lilac)]/25"
                         style={{ width: `${Math.max(1.6, token.core.length * 0.56)}em` }}
@@ -370,16 +375,16 @@ function WordGame({ poem, fontSize }: { poem: Poem; fontSize: number }) {
                   } else if (token.hidden) {
                     word = (
                       <span className={`${styles.reveal} rounded-[0.3em] bg-[var(--p-mint)]/14 px-[0.12em] text-[var(--p-mint)]`}>
-                        {token.core}
+                        {tr(token.core)}
                       </span>
                     );
                   }
                   return (
                     <span key={w}>
                       {w > 0 && " "}
-                      {token.prefix}
-                      {word}
-                      {token.suffix}
+                      {tr(token.prefix)}
+                      {tr(word)}
+                      {tr(token.suffix)}
                     </span>
                   );
                 })}
@@ -390,7 +395,7 @@ function WordGame({ poem, fontSize }: { poem: Poem; fontSize: number }) {
       </div>
 
       {allOpen && (
-        <p className="mt-4 text-center text-[14.5px] font-bold text-[var(--p-mint)]">Hammasi topildi — barakalla!</p>
+        <p className="mt-4 text-center text-[14.5px] font-bold text-[var(--p-mint)]">{tr("Hammasi topildi — barakalla!")}</p>
       )}
     </div>
   );

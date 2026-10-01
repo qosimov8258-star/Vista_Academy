@@ -23,6 +23,7 @@ import { IosIcon } from "@/features/director/ios-icon";
 import { formatCompact, formatSum } from "@/features/network/money";
 import clsx from "clsx";
 import styles from "./page.module.css";
+import { useTr } from "@/i18n/tr";
 
 // Intl uz-UZ lokali oy va hafta kunini o'zbekcha bermaydi ("M09 8, Tue"),
 // shuning uchun nomlar qo'lda yoziladi.
@@ -90,6 +91,7 @@ function PaymentStatusPie({
   openStatus: FinanceChildStatus | null;
   onToggle: (status: FinanceChildStatus) => void;
 }) {
+  const tr = useTr();
   const size = 232;
   const center = size / 2;
   const radius = center - 3;
@@ -138,7 +140,7 @@ function PaymentStatusPie({
         </svg>
         {total === 0 ? (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-8 text-center">
-            <span className="text-[13px] font-medium text-[var(--color-text-muted)]">Bu davrda hisob-faktura yo&apos;q</span>
+            <span className="text-[13px] font-medium text-[var(--color-text-muted)]">{tr("Bu davrda hisob-faktura yo'q")}</span>
           </div>
         ) : (
           slices.map((slice) => {
@@ -174,10 +176,10 @@ function PaymentStatusPie({
           >
             <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: STATUS_META[slice.status].color }} />
             <span className="min-w-0 flex-1 truncate text-[14px] font-medium text-[var(--color-text)]">
-              {STATUS_META[slice.status].label}
+              {tr(STATUS_META[slice.status].label)}
             </span>
             <span className="shrink-0 text-[13.5px] font-semibold tabular-nums text-[var(--color-text)]">
-              {slice.value}
+              {tr(slice.value)}
               <span className="ml-1 font-normal text-[var(--color-text-muted)]">({Math.round(slice.fraction * 100)}%)</span>
             </span>
           </button>
@@ -193,13 +195,14 @@ function PaymentStatusPie({
  * bir qarashda ko'rsatish uchun.
  */
 function WeeklyPaymentsChart({ weeks, periodText }: { weeks: FinanceSummary["weeklyPayments"]; periodText: string }) {
+  const tr = useTr();
   const [hovered, setHovered] = useState<number | null>(null);
   const max = Math.max(1, ...weeks.map((w) => w.amount));
 
   return (
     <Card className="p-5">
-      <p className="text-[15px] font-semibold text-[var(--color-text)]">To&apos;lovlar — hafta bo&apos;yicha</p>
-      <p className="text-[12.5px] text-[var(--color-text-muted)]">{periodText}, qaysi haftada qancha tushgani</p>
+      <p className="text-[15px] font-semibold text-[var(--color-text)]">{tr("To'lovlar — hafta bo'yicha")}</p>
+      <p className="text-[12.5px] text-[var(--color-text-muted)]">{tr(periodText)}{tr(", qaysi haftada qancha tushgani")}</p>
       <div className="mt-5 flex items-end gap-3 sm:gap-5">
         {weeks.map((week, i) => {
           const heightPct = Math.max(week.amount > 0 ? 6 : 2, (week.amount / max) * 100);
@@ -218,8 +221,8 @@ function WeeklyPaymentsChart({ weeks, periodText }: { weeks: FinanceSummary["wee
               >
                 {hovered === i && (
                   <div className="absolute -top-2 z-10 -translate-y-full whitespace-nowrap rounded-[10px] bg-[var(--color-text)] px-2.5 py-1.5 text-center shadow-[var(--shadow-raised)]">
-                    <span className="block text-[12px] font-bold text-[var(--color-surface)]">{formatSum(week.amount)} so&apos;m</span>
-                    <span className="block text-[11px] text-[var(--color-surface)]/70">{week.count} ta to&apos;lov</span>
+                    <span className="block text-[12px] font-bold text-[var(--color-surface)]">{formatSum(week.amount)} {tr("so'm")}</span>
+                    <span className="block text-[11px] text-[var(--color-surface)]/70">{tr(week.count)} {tr("ta to'lov")}</span>
                   </div>
                 )}
                 <div
@@ -230,7 +233,7 @@ function WeeklyPaymentsChart({ weeks, periodText }: { weeks: FinanceSummary["wee
                   style={{ height: `${heightPct}%` }}
                 />
               </div>
-              <span className="text-[11.5px] font-medium text-[var(--color-text-muted)]">{week.week}-hafta</span>
+              <span className="text-[11.5px] font-medium text-[var(--color-text-muted)]">{tr(week.week)}{tr("-hafta")}</span>
             </div>
           );
         })}
@@ -245,17 +248,18 @@ function WeeklyPaymentsChart({ weeks, periodText }: { weeks: FinanceSummary["wee
  * o'sha o'quvchining moliya profiliga o'tadi.
  */
 function RecentPayments({ payments, slug }: { payments: Payment[]; slug: string }) {
+  const tr = useTr();
   const items = payments.filter((p) => p.status === "COMPLETED" && p.child).slice(0, 5);
 
   return (
     <Card className="overflow-hidden">
       <div className="hairline border-b border-[var(--color-separator)] px-5 py-4 sm:px-6">
         <h2 className="text-[15px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
-          So&apos;nggi to&apos;lovlar
+          {tr("So'nggi to'lovlar")}
         </h2>
       </div>
       {items.length === 0 ? (
-        <EmptyState title="Hali to'lov qilingan yo'q" />
+        <EmptyState title={tr("Hali to'lov qilingan yo'q")} />
       ) : (
         <ul className="divide-y divide-[var(--color-separator)]">
           {items.map((payment) => (
@@ -268,7 +272,7 @@ function RecentPayments({ payments, slug }: { payments: Payment[]; slug: string 
                   <ChildIcon className="h-4.5 w-4.5" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[14px] font-medium text-[var(--color-text)]">{payment.child?.fullName}</p>
+                  <p className="truncate text-[14px] font-medium text-[var(--color-text)]">{tr(payment.child?.fullName)}</p>
                   <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">{formatDateTime(payment.createdAt)}</p>
                 </div>
                 <p className="shrink-0 text-[14px] font-semibold tabular-nums text-[var(--color-success)]">
@@ -285,6 +289,7 @@ function RecentPayments({ payments, slug }: { payments: Payment[]; slug: string 
 }
 
 export default function DashboardPage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const { user } = useAuth();
   const isNetworkAdmin = user?.role === "NETWORK_ADMIN";
@@ -304,14 +309,14 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
     queryKey: ["dashboard-finance-children", slug, period],
     queryFn: () => api.get<FinanceChildren>(`/app/finance/children?period=${period}`),
     // Oshpaz va tarbiyachiga moliya yopiq — ularning sahifasi o'z ma'lumotini oladi
-    enabled: !!user && !!period && !isChef(user.role) && !isTeacher(user.role),
+    enabled: !!user && !!period && !isChef(user.role) && !isTeacher(user.role) && user.role !== "BRANCH_ADMIN",
   });
 
   // Haftalik to'lov grafigi uchun — o'sha bola ro'yxati bilan bir xil davr.
   const summaryQuery = useQuery({
     queryKey: ["dashboard-finance-summary", slug, period],
     queryFn: () => api.get<FinanceSummary>(`/app/finance/summary?period=${period}`),
-    enabled: !!user && !!period && !isChef(user.role) && !isTeacher(user.role),
+    enabled: !!user && !!period && !isChef(user.role) && !isTeacher(user.role) && user.role !== "BRANCH_ADMIN",
   });
 
   // Bosh sahifadagi "So'nggi to'lovlar" — davrga bog'liq emas, doim eng oxirgisi.
@@ -326,7 +331,7 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
   const [openStatus, setOpenStatus] = useState<FinanceChildStatus | null>(null);
 
   if (orgQuery.isLoading) return <LoadingState rows={4} />;
-  if (orgQuery.isError) return <ErrorState message={(orgQuery.error as Error).message} />;
+  if (orgQuery.isError) return <ErrorState message={tr((orgQuery.error as Error).message)} />;
   const org = orgQuery.data;
   if (!org) return null;
 
@@ -338,7 +343,7 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
           <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
             {user?.branchName ?? org.name}
           </h1>
-          <p className="text-[13px] text-[var(--color-text-muted)]">Bugun · {todayLabel()}</p>
+          <p className="text-[13px] text-[var(--color-text-muted)]">{tr("Bugun ·")}{" "}{todayLabel()}</p>
         </div>
         <CashierHome slug={slug} />
       </div>
@@ -362,16 +367,17 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
   }
 
   // Administrator (MANAGER) uchun alohida bosh sahifa: bugungi holat va qo'ng'iroqlar.
-  if (user?.role === "MANAGER") {
+  // Filial admini ham shu ko'rinishda, lekin qo'ng'iroq ro'yxatisiz (qarzdorlar unga yopiq).
+  if (user?.role === "MANAGER" || user?.role === "BRANCH_ADMIN") {
     return (
       <div className="space-y-6">
         <div>
           <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
             {user?.branchName ?? org.name}
           </h1>
-          <p className="text-[13px] text-[var(--color-text-muted)]">Bugun · {todayLabel()}</p>
+          <p className="text-[13px] text-[var(--color-text-muted)]">{tr("Bugun ·")}{" "}{todayLabel()}</p>
         </div>
-        <AdminHome slug={slug} />
+        <AdminHome slug={slug} showCalls={user?.role === "MANAGER"} />
       </div>
     );
   }
@@ -395,15 +401,15 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
           <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
             {user?.branchName ?? org.name}
           </h1>
-          <p className="text-[13px] text-[var(--color-text-muted)]">{org.name}</p>
+          <p className="text-[13px] text-[var(--color-text-muted)]">{tr(org.name)}</p>
         </div>
-        <p className="text-[13px] text-[var(--color-text-muted)]">Bugun · {todayLabel()}</p>
+        <p className="text-[13px] text-[var(--color-text-muted)]">{tr("Bugun ·")}{" "}{todayLabel()}</p>
       </div>
 
       {!period || financeQuery.isLoading ? (
         <LoadingState rows={4} />
       ) : financeQuery.isError ? (
-        <ErrorState message={(financeQuery.error as Error).message} />
+        <ErrorState message={tr((financeQuery.error as Error).message)} />
       ) : !financeData ? null : (
         <>
           <div className="rounded-[var(--radius-xl)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
@@ -411,7 +417,7 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
               <div className="flex items-center gap-3">
                 <IosIcon icon={MoneyIcon} tint="accent" size={36} />
                 <p className="text-[15px] font-semibold text-[var(--color-text)]">
-                  Barcha filiallardan {periodLabel(financeData.period)} oyida to&apos;langan summa
+                  {tr("Barcha filiallardan")}{" "}{periodLabel(financeData.period)} {tr("oyida to'langan summa")}
                 </p>
               </div>
               <PeriodPicker period={period} max={currentPeriod()} onChange={setPeriod} />
@@ -437,11 +443,11 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
             <Card className="overflow-hidden">
               <div className="hairline border-b border-[var(--color-separator)] px-5 py-4 sm:px-6">
                 <h2 className="text-[15px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
-                  {STATUS_META[openStatus].label} — {visibleItems.length} ta o&apos;quvchi
+                  {tr(STATUS_META[openStatus].label)} — {tr(visibleItems.length)} {tr("ta o'quvchi")}
                 </h2>
               </div>
               {visibleItems.length === 0 ? (
-                <EmptyState title="Bu holatda o'quvchi yo'q" />
+                <EmptyState title={tr("Bu holatda o'quvchi yo'q")} />
               ) : (
                 <ul className="divide-y divide-[var(--color-separator)]">
                   {visibleItems.map((child) => (
@@ -454,9 +460,9 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
                           <ChildIcon className="h-4.5 w-4.5" />
                         </span>
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-[14px] font-medium text-[var(--color-text)]">{child.fullName}</p>
+                          <p className="truncate text-[14px] font-medium text-[var(--color-text)]">{tr(child.fullName)}</p>
                           <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">
-                            {formatChildId(child.publicId)} · <span className="font-medium">{child.branchName}</span>
+                            {formatChildId(child.publicId)} · <span className="font-medium">{tr(child.branchName)}</span>
                             {child.groupName && ` · ${child.groupName}`}
                           </p>
                         </div>

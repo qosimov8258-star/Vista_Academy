@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
+import { useTr } from "@/i18n/tr";
 
 export interface ComboboxItem {
   id: string;
@@ -31,6 +32,7 @@ export function Combobox({
   error,
   createLabel = "Yangi lavozim yaratish",
 }: ComboboxProps) {
+  const tr = useTr();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState(value);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -68,10 +70,10 @@ export function Combobox({
 
   return (
     <div className="relative" ref={rootRef}>
-      {label && <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">{label}</span>}
+      {label && <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">{tr(label)}</span>}
       <input
         value={query}
-        placeholder={placeholder}
+        placeholder={tr(placeholder)}
         onFocus={() => setOpen(true)}
         onChange={(e) => {
           setQuery(e.target.value);
@@ -97,7 +99,7 @@ export function Combobox({
       {open && (
         <div className="absolute z-10 mt-1.5 max-h-56 w-full overflow-y-auto rounded-2xl border border-[var(--color-border)] bg-white p-1.5 shadow-lg">
           {filtered.length === 0 && (
-            <p className="px-3 py-2 text-xs text-[var(--color-text-muted)]">Mos lavozim topilmadi</p>
+            <p className="px-3 py-2 text-xs text-[var(--color-text-muted)]">{tr("Mos lavozim topilmadi")}</p>
           )}
           {filtered.map((item) => (
             <button
@@ -109,7 +111,7 @@ export function Combobox({
                 item.name === value && "bg-[var(--color-primary)]/10 font-medium text-[var(--color-primary)]",
               )}
             >
-              {item.name}
+              {tr(item.name)}
             </button>
           ))}
           <div className="my-1 h-px bg-[var(--color-border)]" />
@@ -119,11 +121,11 @@ export function Combobox({
             onClick={handleCreate}
             className="block w-full cursor-pointer rounded-xl px-3 py-2 text-left text-sm font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {creating ? "Yaratilmoqda..." : `+ ${createLabel}`}
+            {creating ? tr("Yaratilmoqda...") : `+ ${tr(createLabel)}`}
           </button>
         </div>
       )}
-      {error && <span className="mt-1 block text-xs text-[#dc2626]">{error}</span>}
+      {error && <span className="mt-1 block text-xs text-[#dc2626]">{tr(error)}</span>}
     </div>
   );
 }

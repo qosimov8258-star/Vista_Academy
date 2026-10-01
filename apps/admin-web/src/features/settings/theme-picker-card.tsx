@@ -5,6 +5,7 @@ import { CheckIcon, GlobeIcon } from "@/components/ui/icons";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { THEMES, useTheme } from "@/lib/theme";
 import { RowIcon, SettingsGroup, SettingsRow, usePlainSettingsIcons } from "./settings-ui";
+import { useTr } from "@/i18n/tr";
 
 /** Palitra belgisi — "Tizim rangi" qatori uchun */
 function PaletteIcon({ className, style }: { className?: string; style?: React.CSSProperties }) {
@@ -23,6 +24,7 @@ function PaletteIcon({ className, style }: { className?: string; style?: React.C
  * panel shu rangga o'tadi va hisobga yoziladi — barcha qurilmalarda bir xil.
  */
 export function ThemePickerCard() {
+  const tr = useTr();
   const { theme, setTheme, saving, error } = useTheme();
   const current = THEMES.find((t) => t.key === theme) ?? THEMES[0];
   // Namuna va ranglar ikonkadan keyingi matn chizig'idan boshlanadi
@@ -30,19 +32,19 @@ export function ThemePickerCard() {
 
   return (
     <SettingsGroup
-      title="Ko'rinish"
+      title={tr("Ko'rinish")}
       footer={
         error ? (
-          <span className="text-[var(--color-danger)]">{error}</span>
+          <span className="text-[var(--color-danger)]">{tr(error)}</span>
         ) : (
-          "Rang hisobingizda saqlanadi — telefon va kompyuterda bir xil bo'ladi."
+          tr("Rang hisobingizda saqlanadi — telefon va kompyuterda bir xil bo'ladi.")
         )
       }
     >
       <div className="px-4 pb-4 pt-3">
         <div className="flex items-center gap-3.5">
           <RowIcon icon={PaletteIcon} />
-          <span className="min-w-0 flex-1 text-[15.5px] text-[var(--color-text)]">Tizim rangi</span>
+          <span className="min-w-0 flex-1 text-[15.5px] text-[var(--color-text)]">{tr("Tizim rangi")}</span>
           <span className="text-[15px] text-[var(--color-text-muted)]">{saving ? "Saqlanmoqda…" : current.label}</span>
         </div>
 
@@ -59,7 +61,7 @@ export function ThemePickerCard() {
           <span className="ml-auto h-8 w-24 rounded-full bg-[var(--color-primary)] transition-colors duration-300" />
         </div>
 
-        <div className={`mt-3.5 grid grid-cols-8 gap-2 sm:flex sm:flex-wrap sm:gap-3 ${indent}`} role="radiogroup" aria-label="Tizim rangi">
+        <div className={`mt-3.5 grid grid-cols-8 gap-2 sm:flex sm:flex-wrap sm:gap-3 ${indent}`} role="radiogroup" aria-label={tr("Tizim rangi")}>
           {THEMES.map((t) => {
             const active = t.key === theme;
             return (
@@ -68,8 +70,8 @@ export function ThemePickerCard() {
                 type="button"
                 role="radio"
                 aria-checked={active}
-                aria-label={t.label}
-                title={t.label}
+                aria-label={tr(t.label)}
+                title={tr(t.label)}
                 onClick={() => void setTheme(t.key)}
                 className={clsx(
                   "relative flex aspect-square w-full max-w-[44px] cursor-pointer items-center justify-center justify-self-center rounded-full transition-transform duration-200 active:scale-90 sm:h-10 sm:w-10",
@@ -87,7 +89,7 @@ export function ThemePickerCard() {
           })}
         </div>
       </div>
-      <SettingsRow icon={GlobeIcon} label="Til" trailing={<LanguageSwitcher />} />
+      <SettingsRow icon={GlobeIcon} label={tr("Til")} trailing={<LanguageSwitcher />} />
     </SettingsGroup>
   );
 }

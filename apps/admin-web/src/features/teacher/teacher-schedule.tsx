@@ -8,6 +8,7 @@ import type { LessonSchedule, Weekday } from "@/lib/types";
 import { ClockIcon } from "@/components/ui/icons";
 import { EmptyRow, Group, LargeTitle, Row, SkeletonRows, TeacherPage } from "./teacher-ui";
 import styles from "./teacher.module.css";
+import { useTr } from "@/i18n/tr";
 
 const WEEK: { key: Weekday; short: string; label: string }[] = [
   { key: "MONDAY", short: "Du", label: "Dushanba" },
@@ -26,6 +27,7 @@ const WEEKDAY_BY_JS_DAY: Weekday[] = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY"
  * Jadvalni filial admini tuzadi — bu yerda faqat ko'rinadi.
  */
 export function TeacherSchedule({ slug }: { slug: string }) {
+  const tr = useTr();
   const [today, setToday] = useState<Weekday | null>(null);
   const [day, setDay] = useState<Weekday>("MONDAY");
   // Hafta kuni foydalanuvchi soatiga bog'liq — faqat brauzerda hisoblanadi
@@ -46,10 +48,10 @@ export function TeacherSchedule({ slug }: { slug: string }) {
 
   return (
     <TeacherPage>
-      <LargeTitle title="Dars jadvali" subtitle={`Haftasiga ${all.length} ta dars`} />
+      <LargeTitle title={tr("Dars jadvali")} subtitle={tr("Haftasiga {0} ta dars", all.length)} />
 
       {/* Hafta tasmasi */}
-      <div className={clsx(styles.group, "grid grid-cols-7 gap-1 p-2")} role="tablist" aria-label="Hafta kuni">
+      <div className={clsx(styles.group, "grid grid-cols-7 gap-1 p-2")} role="tablist" aria-label={tr("Hafta kuni")}>
         {WEEK.map((d) => {
           const active = d.key === day;
           const has = all.some((l) => l.weekday === d.key);
@@ -59,7 +61,7 @@ export function TeacherSchedule({ slug }: { slug: string }) {
               type="button"
               role="tab"
               aria-selected={active}
-              aria-label={d.label}
+              aria-label={tr(d.label)}
               onClick={() => setDay(d.key)}
               className={clsx(
                 "flex cursor-pointer flex-col items-center gap-1 rounded-[14px] py-2 transition-colors",
@@ -72,7 +74,7 @@ export function TeacherSchedule({ slug }: { slug: string }) {
                   !active && (d.key === today ? "text-[var(--color-primary)]" : "text-[var(--color-text)]"),
                 )}
               >
-                {d.short}
+                {tr(d.short)}
               </span>
               <span
                 className={clsx("h-1.5 w-1.5 rounded-full", has ? (active ? "bg-white" : "bg-[var(--color-primary)]") : "bg-transparent")}
@@ -83,13 +85,13 @@ export function TeacherSchedule({ slug }: { slug: string }) {
         })}
       </div>
 
-      <Group title={day === today ? `Bugun · ${current.label}` : current.label} footer="Dars jadvalini filial admini tuzadi. O'zgarsa, «Xabarlar»ga bildirishnoma keladi.">
+      <Group title={day === today ? `Bugun · ${current.label}` : current.label} footer={tr("Dars jadvalini filial admini tuzadi. O'zgarsa, «Xabarlar»ga bildirishnoma keladi.")}>
         {query.isLoading ? (
           <SkeletonRows rows={3} />
         ) : query.isError ? (
-          <EmptyRow title="Yuklab bo'lmadi" description={(query.error as Error).message} />
+          <EmptyRow title={tr("Yuklab bo'lmadi")} description={tr((query.error as Error).message)} />
         ) : lessons.length === 0 ? (
-          <EmptyRow icon={ClockIcon} title="Bu kunda dars yo'q" />
+          <EmptyRow icon={ClockIcon} title={tr("Bu kunda dars yo'q")} />
         ) : (
           lessons.map((lesson, i) => (
             <Row
@@ -97,8 +99,8 @@ export function TeacherSchedule({ slug }: { slug: string }) {
               first={i === 0}
               leading={
                 <span className="flex w-[40px] shrink-0 flex-col items-start leading-tight tabular-nums">
-                  <span className="text-[15px] font-semibold text-[var(--color-text)]">{lesson.startTime}</span>
-                  <span className="text-[12.5px] text-[var(--color-text-muted)]">{lesson.endTime}</span>
+                  <span className="text-[15px] font-semibold text-[var(--color-text)]">{tr(lesson.startTime)}</span>
+                  <span className="text-[12.5px] text-[var(--color-text-muted)]">{tr(lesson.endTime)}</span>
                 </span>
               }
               title={lesson.subject || "Dars"}

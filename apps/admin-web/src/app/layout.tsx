@@ -6,6 +6,8 @@ import { headers } from "next/headers";
 import { QueryProvider } from "@/lib/query-provider";
 import { THEME_BOOT_SCRIPT } from "@/lib/theme-config";
 import { TENANT_SLUG_HEADER } from "@/lib/tenant-host";
+import { TrProvider } from "@/i18n/tr";
+import { loadDict } from "@/i18n/dict";
 import { TenantHostProvider } from "@/lib/tenant-host-context";
 import "./globals.css";
 
@@ -23,6 +25,7 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale();
   const messages = await getMessages();
+  const dict = await loadDict(locale);
   // Bog'cha subdomenida (babyland.zeeron.uz) proxy qo'ygan slug — menyular
   // toza manzilni ilova ichidagi yo'lga to'g'ri solishtirishi uchun
   const tenantHostSlug = (await headers()).get(TENANT_SLUG_HEADER);
@@ -36,9 +39,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body>
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <TenantHostProvider slug={tenantHostSlug}>
-            <QueryProvider>{children}</QueryProvider>
-          </TenantHostProvider>
+          <TrProvider dict={dict}>
+            <TenantHostProvider slug={tenantHostSlug}>
+              <QueryProvider>{children}</QueryProvider>
+            </TenantHostProvider>
+          </TrProvider>
         </NextIntlClientProvider>
       </body>
     </html>

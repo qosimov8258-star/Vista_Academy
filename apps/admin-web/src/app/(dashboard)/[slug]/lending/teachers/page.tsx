@@ -19,6 +19,7 @@ import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { CameraIcon, PencilIcon, TeacherIcon } from "@/components/ui/icons";
 import { LendingTabs } from "@/features/lending/lending-tabs";
 import { TeacherHighlightsSection } from "@/features/lending/teacher-highlights";
+import { useTr } from "@/i18n/tr";
 
 const schema = z.object({
   fullName: z.string().min(2, "Ism-familiya kamida 2 belgi"),
@@ -30,6 +31,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export default function LendingTeachersPage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const { user } = useAuth();
   const canWrite = canWriteOperational(user?.role);
@@ -45,9 +47,9 @@ export default function LendingTeachersPage({ params }: { params: Promise<{ slug
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">Lending sahifa</h1>
+        <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">{tr("Lending sahifa")}</h1>
         <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">
-          "O'qituvchilar" bo'limida saytda chiqadigan rasm va ism — shu yerdan tahrirlanadi
+          {tr("\"O'qituvchilar\" bo'limida saytda chiqadigan rasm va ism — shu yerdan tahrirlanadi")}
         </p>
       </div>
 
@@ -58,7 +60,7 @@ export default function LendingTeachersPage({ params }: { params: Promise<{ slug
       {teachersQuery.isLoading ? (
         <LoadingState rows={3} />
       ) : teachersQuery.isError ? (
-        <ErrorState message={teachersQuery.error instanceof ApiError ? teachersQuery.error.message : "Xatolik yuz berdi"} />
+        <ErrorState message={teachersQuery.error instanceof ApiError ? teachersQuery.error.message : tr("Xatolik yuz berdi")} />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {(teachersQuery.data ?? []).map((teacher) => (
@@ -66,20 +68,20 @@ export default function LendingTeachersPage({ params }: { params: Promise<{ slug
               <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--color-surface-sunken)]">
                 {teacher.photoPath ? (
                   // eslint-disable-next-line @next/next/no-img-element -- API'dan kelgan dinamik rasm
-                  <img src={assetUrl(teacher.photoPath) ?? undefined} alt={teacher.fullName} className="h-full w-full object-cover" />
+                  <img src={assetUrl(teacher.photoPath) ?? undefined} alt={tr(teacher.fullName)} className="h-full w-full object-cover" />
                 ) : (
                   <TeacherIcon className="h-6 w-6 text-[var(--color-text-subtle)]" />
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[14px] font-semibold text-[var(--color-text)]">{teacher.fullName}</p>
-                <p className="truncate text-[12px] text-[var(--color-text-muted)]">{teacher.role}</p>
+                <p className="truncate text-[14px] font-semibold text-[var(--color-text)]">{tr(teacher.fullName)}</p>
+                <p className="truncate text-[12px] text-[var(--color-text-muted)]">{tr(teacher.role)}</p>
               </div>
               {canWrite && (
                 <button
                   type="button"
                   onClick={() => setEditing(teacher)}
-                  aria-label="Tahrirlash"
+                  aria-label={tr("Tahrirlash")}
                   className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-text)]"
                 >
                   <PencilIcon className="h-4 w-4" />
@@ -108,6 +110,7 @@ function TeacherFormModal({
   onClose: () => void;
   onPhotoUploaded: (teacher: LandingTeacher) => void;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -146,7 +149,7 @@ function TeacherFormModal({
       queryClient.invalidateQueries({ queryKey: ["landing-teachers"] });
       onClose();
     },
-    onError: (err) => setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik"),
+    onError: (err) => setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik")),
   });
 
   const photoMutation = useMutation({
@@ -158,15 +161,15 @@ function TeacherFormModal({
       // holat ko'rinaveradi.
       onPhotoUploaded(updated);
     },
-    onError: (err) => setServerError(err instanceof ApiError ? err.message : "Rasm yuklashda xatolik"),
+    onError: (err) => setServerError(err instanceof ApiError ? err.message : tr("Rasm yuklashda xatolik")),
   });
 
   return (
-    <Modal open onClose={onClose} title="O'qituvchini tahrirlash">
+    <Modal open onClose={onClose} title={tr("O'qituvchini tahrirlash")}>
       <div className="space-y-4">
         {serverError && (
           <div role="alert" className="rounded-[var(--radius-lg)] bg-[var(--color-danger-bg)] px-3 py-2.5 text-[13px] text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
 
@@ -174,7 +177,7 @@ function TeacherFormModal({
           <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--color-surface-sunken)]">
             {teacher.photoPath ? (
               // eslint-disable-next-line @next/next/no-img-element -- API'dan kelgan dinamik rasm
-              <img src={assetUrl(teacher.photoPath) ?? undefined} alt={teacher.fullName} className="h-full w-full object-cover" />
+              <img src={assetUrl(teacher.photoPath) ?? undefined} alt={tr(teacher.fullName)} className="h-full w-full object-cover" />
             ) : (
               <TeacherIcon className="h-6 w-6 text-[var(--color-text-subtle)]" />
             )}
@@ -192,28 +195,28 @@ function TeacherFormModal({
           />
           <Button type="button" size="sm" variant="outline" loading={photoMutation.isPending} onClick={() => fileInputRef.current?.click()}>
             <CameraIcon className="h-4 w-4" />
-            Rasm yuklash
+            {tr("Rasm yuklash")}
           </Button>
         </div>
 
         <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
-          <Input label="Ism-familiya" placeholder="Dilnoza Qosimova" error={errors.fullName?.message} {...register("fullName")} />
-          <Input label="Lavozimi" placeholder="Bosh tarbiyachi" error={errors.role?.message} {...register("role")} />
-          <Textarea label="Qisqacha iqtibos" rows={2} placeholder="Kartochkada ko'rinadigan qisqa gap" error={errors.bio?.message} {...register("bio")} />
+          <Input label={tr("Ism-familiya")} placeholder={tr("Dilnoza Qosimova")} error={errors.fullName?.message} {...register("fullName")} />
+          <Input label={tr("Lavozimi")} placeholder={tr("Bosh tarbiyachi")} error={errors.role?.message} {...register("role")} />
+          <Textarea label={tr("Qisqacha iqtibos")} rows={2} placeholder={tr("Kartochkada ko'rinadigan qisqa gap")} error={errors.bio?.message} {...register("bio")} />
           <Textarea
-            label="Tajriba va batafsil ma'lumot"
+            label={tr("Tajriba va batafsil ma'lumot")}
             rows={4}
-            placeholder="Bosilganda chiqadigan oynada ko'rinadi: tajribasi, sertifikatlari va h.k."
+            placeholder={tr("Bosilganda chiqadigan oynada ko'rinadi: tajribasi, sertifikatlari va h.k.")}
             error={errors.experience?.message}
             {...register("experience")}
           />
-          <Input label="Tartib raqami" type="number" hint="Kichik raqam avval chiqadi" error={errors.order?.message} {...register("order")} />
+          <Input label={tr("Tartib raqami")} type="number" hint={tr("Kichik raqam avval chiqadi")} error={errors.order?.message} {...register("order")} />
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={onClose}>
-              Bekor qilish
+              {tr("Bekor qilish")}
             </Button>
             <Button type="submit" loading={isSubmitting || mutation.isPending}>
-              Saqlash
+              {tr("Saqlash")}
             </Button>
           </div>
         </form>
