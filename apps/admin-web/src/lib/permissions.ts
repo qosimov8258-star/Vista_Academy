@@ -19,14 +19,14 @@ export const ROLE_LABEL: Record<TenantUserRole, string> = {
 };
 
 /**
- * Lending sayt (vista-academy.uz) bitta tashkilotniki — API'dagi
- * LandingOwnerGuard (LANDING_ORGANIZATION_SLUG) bilan bir xil qoida.
- * Boshqa bog'chalarda "Lending sahifa" bo'limi ko'rinmaydi.
+ * "Lending sahifa" bo'limi faqat shu tashkilotga lending veb-sayt ulangan
+ * bo'lsa ko'rinadi (Organization.website kiritilgan) — API'dagi
+ * TenantAuthenticatedUser.hasLandingWebsite bilan bir xil qoida. Lending
+ * kontenti endi har bir tashkilotga ajratilgan (organizationId), shuning
+ * uchun bu yerda alohida "egasi" tekshiruvi kerak emas.
  */
-const LANDING_ORGANIZATION_SLUG = (process.env.NEXT_PUBLIC_LANDING_ORGANIZATION_SLUG ?? "vista-academy").trim().toLowerCase();
-
-export function ownsLanding(organizationSlug: string | undefined): boolean {
-  return !!organizationSlug && organizationSlug.toLowerCase() === LANDING_ORGANIZATION_SLUG;
+export function ownsLanding(hasLandingWebsite: boolean | undefined): boolean {
+  return !!hasLandingWebsite;
 }
 
 /** Filialga biriktirilgan har qanday rol (ya'ni Super Admin emas). */

@@ -145,13 +145,14 @@ export class TenantAuthService {
       themeColor: string | null;
       employee: { position: string; subjects: string[]; topicsManagedByAdmin: boolean } | null;
     },
-    organization: { slug: string; name: string },
+    organization: { slug: string; name: string; website: string | null },
   ): TenantAuthenticatedUser {
     return {
       id: tenantUser.id,
       organizationId: tenantUser.organizationId,
       organizationSlug: organization.slug,
       organizationName: organization.name,
+      hasLandingWebsite: !!organization.website,
       branchId: tenantUser.branchId,
       branchSlug: tenantUser.branch?.slug ?? null,
       branchName: tenantUser.branch?.name ?? null,

@@ -146,8 +146,8 @@ export function Sidebar({ slug }: { slug: string }) {
   const chef = isChef(user?.role);
   const isAssistant = !!user?.position && isAssistantPosition(user.position);
   const isCashier = !!user?.position && isCashierPosition(user.position);
-  // Lending sayt bitta tashkilotniki — boshqa bog'chalarda bo'lim ko'rinmaydi
-  const showLandingNav = ownsLanding(user?.organizationSlug);
+  // "Lending sahifa" bo'limi faqat veb-sayt ulangan tashkilotlarda ko'rinadi
+  const showLandingNav = ownsLanding(user?.hasLandingWebsite);
   const isManager = user?.role === "MANAGER";
   const isFinance = user?.role === "FINANCE";
   // Yon paneldagi "Bildirishnomalarim" belgisi uchun — daqiqada bir marta yangilanadi.

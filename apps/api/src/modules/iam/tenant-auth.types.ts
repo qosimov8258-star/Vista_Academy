@@ -22,6 +22,8 @@ export interface TenantAuthenticatedUser {
   subjects: string[];
   /** Administrator xodim tafsilotida "Mavzu qo'shasizmi?"ni yoqib saqlagan bo'lsa — true. Shu holatda o'qituvchi "Savol-javob"ga o'zi mavzu qo'sha olmaydi. */
   topicsManagedByAdmin: boolean;
+  /** Tashkilotga lending veb-sayt ulangan bo'lsa (Organization.website) — admin-web "Lending sahifa" bo'limini shu asosda ko'rsatadi. */
+  hasLandingWebsite: boolean;
 }
 
 export interface TenantAccessTokenPayload {

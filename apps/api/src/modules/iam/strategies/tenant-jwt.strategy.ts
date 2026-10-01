@@ -61,6 +61,7 @@ export class TenantJwtStrategy extends PassportStrategy(Strategy, "tenant-jwt") 
       position: tenantUser.employee?.position ?? null,
       subjects: tenantUser.employee?.subjects ?? [],
       topicsManagedByAdmin: tenantUser.employee?.topicsManagedByAdmin ?? false,
+      hasLandingWebsite: !!tenantUser.organization.website,
     };
   }
 }
