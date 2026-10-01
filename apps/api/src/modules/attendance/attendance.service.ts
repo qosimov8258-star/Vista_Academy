@@ -135,6 +135,8 @@ export class AttendanceService {
    */
   async requestContact(scope: TenantScope, dto: RequestContactDto) {
     const branchId = requireTeachingScope(scope);
+    // Davomat belgilash (mark) bilan bir xil: yordamchi tarbiyachi bu amalni bajarmaydi
+    await assertNotAssistant(this.prisma, scope);
     const child = await this.prisma.child.findFirst({ where: { id: dto.childId, organizationId: scope.organizationId } });
     if (!child) {
       throw new NotFoundException("Bola topilmadi");
