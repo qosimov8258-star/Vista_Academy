@@ -29,7 +29,9 @@ async function bootstrap() {
   // Profil rasmi so'rov tanasida base64 ko'rinishida keladi. Express'ning
   // standart 100kb chegarasi 256x256 avatar uchun ham tor bo'lib qolishi
   // mumkin; server tomonda hajm ProfileService'da alohida tekshiriladi.
-  app.useBodyParser("json", { limit: "1mb" });
+  // To'lov cheki surati 3 MB gacha (base64 ~4 MB) — 1 MB chegarada server
+  // tomondagi cheklov hech qachon ishlamas, katta skrinshot tushunarsiz 413 berardi.
+  app.useBodyParser("json", { limit: "5mb" });
 
   const corsOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:3000").split(",").map((origin) => origin.trim());
 
