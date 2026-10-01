@@ -44,8 +44,10 @@ export class DeviceWorker {
     token: string,
     private readonly cfg: AgentConfig,
     private readonly now: () => number = Date.now,
+    /** Ulangan agent kaliti bilan ishlaganda — xizmat qilinadigan qurilma */
+    deviceId?: string,
   ) {
-    this.erp = new ErpClient(cfg.erpUrl, token);
+    this.erp = new ErpClient(cfg.erpUrl, token, undefined, deviceId);
     this.log = createLogger("agent");
   }
 

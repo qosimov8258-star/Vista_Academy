@@ -5,6 +5,7 @@ import { TenantJwtAuthGuard } from "../iam/guards/tenant-jwt-auth.guard";
 import { CurrentTenantUser } from "../iam/decorators/current-tenant-user.decorator";
 import { TenantAuthenticatedUser, toTenantScope } from "../iam/tenant-auth.types";
 import { FaceIdService } from "./face-id.service";
+import { FaceIdAgentsService } from "./face-id-agents.service";
 import { CreateDeviceDto } from "./dto/create-device.dto";
 import { UpdateDeviceDto } from "./dto/update-device.dto";
 import { DeviceQueryDto } from "./dto/device-query.dto";
@@ -18,7 +19,26 @@ import { EnrollmentQueryDto } from "./dto/enrollment-query.dto";
 @UseGuards(TenantJwtAuthGuard)
 @Controller("app/face-id")
 export class FaceIdController {
-  constructor(private readonly faceIdService: FaceIdService) {}
+  constructor(
+    private readonly faceIdService: FaceIdService,
+    private readonly agentsService: FaceIdAgentsService,
+  ) {}
+
+  /** Obyekt agentini ulash uchun bir martalik kod (15 daqiqa) — faqat shu javobda ko'rinadi. */
+  @Post("agents/pairing-code")
+  createPairingCode(@CurrentTenantUser() user: TenantAuthenticatedUser) {
+    return this.agentsService.createPairingCode(user);
+  }
+
+  @Get("agents")
+  listAgents(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query("branchId") branchId?: string) {
+    return this.agentsService.listAgents(toTenantScope(user), branchId);
+  }
+
+  @Delete("agents/:id")
+  revokeAgent(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string) {
+    return this.agentsService.revokeAgent(user, id);
+  }
 
   @Get("devices")
   findDevices(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query() query: DeviceQueryDto) {
