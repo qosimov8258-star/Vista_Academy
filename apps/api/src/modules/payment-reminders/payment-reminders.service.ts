@@ -1,7 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { InvoiceStatus } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
-import { TenantScope, resolveReadBranchFilter } from "../iam/tenant-auth.types";
+import { TenantScope, requireMoneyScope, resolveReadBranchFilter } from "../iam/tenant-auth.types";
 import { UpdateReminderSettingsDto } from "./dto/update-reminder-settings.dto";
 
 const UNPAID_STATUSES: InvoiceStatus[] = [InvoiceStatus.PENDING, InvoiceStatus.PARTIALLY_PAID, InvoiceStatus.OVERDUE];
@@ -56,7 +56,8 @@ export class PaymentRemindersService {
   }
 
   async updateSettings(scope: TenantScope, dto: UpdateReminderSettingsDto, branchId?: string) {
-    assertFinanceReader(scope);
+    // O'zgartirish — pul bo'limidagi yozish amali: Super Admin faqat kuzatadi
+    requireMoneyScope(scope);
     const resolvedBranchId = await this.resolveBranchId(scope, branchId);
     const existing = await this.upsertSettings(scope.organizationId, resolvedBranchId);
     return this.prisma.paymentReminderSettings.update({
