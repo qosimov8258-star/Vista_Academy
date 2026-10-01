@@ -1,9 +1,10 @@
-import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { ForbiddenException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService, JwtSignOptions } from "@nestjs/jwt";
 import * as argon2 from "argon2";
 import { createHash, randomBytes } from "crypto";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantAccessTokenPayload, TenantAuthenticatedUser } from "./tenant-auth.types";
+import { ORGANIZATION_SUSPENDED_MESSAGE, ORGANIZATION_WITH_SUBSCRIPTION_STATUS, isOrganizationSuspended } from "./organization-access";
 
 export interface IssuedTenantTokens {
   accessToken: string;
@@ -27,9 +28,15 @@ export class TenantAuthService {
   ) {}
 
   async validateCredentials(orgSlug: string, login: string, password: string): Promise<TenantAuthenticatedUser> {
-    const organization = await this.prisma.organization.findUnique({ where: { slug: orgSlug } });
+    const organization = await this.prisma.organization.findUnique({
+      where: { slug: orgSlug },
+      include: ORGANIZATION_WITH_SUBSCRIPTION_STATUS,
+    });
     if (!organization) {
       throw new UnauthorizedException("Tashkilot topilmadi");
+    }
+    if (isOrganizationSuspended(organization, organization.subscription)) {
+      throw new ForbiddenException(ORGANIZATION_SUSPENDED_MESSAGE);
     }
 
     const tenantUser = await this.prisma.tenantUser.findUnique({

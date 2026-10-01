@@ -80,7 +80,7 @@ export function LoginForm({ slug, submitClassName }: { slug: string; submitClass
       // (Yangi xodim, Tovar qo'shish) ko'rinmay qolardi. Logout'dagi bilan bir xil tozalash.
       queryClient.clear();
       const defaultDestination = user.branchSlug ? `/${slug}/${user.branchSlug}` : `/${slug}`;
-      const next = searchParams.get("next") ?? defaultDestination;
+      const next = safeNextPath(searchParams.get("next")) ?? defaultDestination;
       router.push(next);
       router.refresh();
     } catch (err) {
@@ -136,4 +136,14 @@ export function LoginForm({ slug, submitClassName }: { slug: string; submitClass
       </Button>
     </form>
   );
+}
+
+/**
+ * `?next=` faqat shu saytdagi yo'l bo'lishi mumkin ("/..." lekin "//" yoki "/\\"
+ * emas) — aks holda login havolasi orqali foydalanuvchini begona saytga
+ * yo'naltirib yuborish (phishing) mumkin edi.
+ */
+function safeNextPath(next: string | null): string | null {
+  if (!next || !next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) return null;
+  return next;
 }

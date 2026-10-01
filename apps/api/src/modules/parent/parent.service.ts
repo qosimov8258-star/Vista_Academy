@@ -200,23 +200,25 @@ export class ParentService {
     if (!product) {
       throw new NotFoundException("Mahsulot topilmadi");
     }
-    if (product.quantity <= 0) {
-      throw new BadRequestException("Tovar tugagan");
-    }
-    const balance = await this.coinBalance(child.id);
-    if (balance < product.priceCoins) {
-      throw new BadRequestException("Yulduzcha yetarli emas");
-    }
-
-    const [updatedProduct] = await this.prisma.$transaction([
-      this.prisma.product.update({
-        where: { id: product.id },
+    // Bir vaqtdagi ikki xarid balansni minusga yoki zaxirani manfiyga tushirmasin:
+    // bola qatori qulflanadi (shu bolaning xaridlari navbat bilan), balans
+    // tranzaksiya ichida hisoblanadi va zaxira faqat > 0 bo'lsa kamaytiriladi.
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM children WHERE id = ${child.id} FOR UPDATE`;
+      const agg = await tx.coinTransaction.aggregate({ where: { childId: child.id }, _sum: { amount: true } });
+      const balance = agg._sum.amount ?? 0;
+      if (balance < product.priceCoins) {
+        throw new BadRequestException("Yulduzcha yetarli emas");
+      }
+      const decremented = await tx.product.updateMany({
+        where: { id: product.id, quantity: { gt: 0 } },
         data: { quantity: { decrement: 1 } },
-      }),
-      this.prisma.productSale.create({
-        data: { productId: product.id, quantity: 1, childId: child.id },
-      }),
-      this.prisma.coinTransaction.create({
+      });
+      if (decremented.count === 0) {
+        throw new BadRequestException("Tovar tugagan");
+      }
+      await tx.productSale.create({ data: { productId: product.id, quantity: 1, childId: child.id } });
+      await tx.coinTransaction.create({
         data: {
           organizationId: parent.organizationId,
           branchId: child.branchId,
@@ -225,10 +227,10 @@ export class ParentService {
           reason: `"${product.name}" sotib olindi`,
           source: "PRODUCT_PURCHASE",
         },
-      }),
-    ]);
-
-    return { product: updatedProduct, balance: balance - product.priceCoins };
+      });
+      const updatedProduct = await tx.product.findUniqueOrThrow({ where: { id: product.id } });
+      return { product: updatedProduct, balance: balance - product.priceCoins };
+    });
   }
 
   /** Do'kon rasmi — faqat ota-onaning bola(lar)i biriktirilgan filiallar doirasida. */

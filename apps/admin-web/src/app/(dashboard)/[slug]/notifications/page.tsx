@@ -149,11 +149,11 @@ export default function NotificationsPage({ params }: { params: Promise<{ slug: 
                 </div>
                 <div className="text-[13px] text-[var(--color-text-muted)]">
                   <span className="font-medium text-[var(--color-text)]">{tr(n.recipientName)}</span>
-                  {n.recipientContact && <span> · {n.recipientContact}</span>}
+                  {n.recipientContact && <span> · {tr(n.recipientContact)}</span>}
                 </div>
                 {n.child && (
                   <p className="text-[13px] text-[var(--color-text-muted)]">
-                    {tr("Bola:")} {n.child.fullName}
+                    {tr("Bola:")} {tr(n.child.fullName)}
                   </p>
                 )}
                 {n.message && <p className="text-[13px] text-[var(--color-text-muted)]">{tr(n.message)}</p>}

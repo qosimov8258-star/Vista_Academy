@@ -94,6 +94,12 @@ model Organization {
   id           String             @id @default(uuid())
   name         String
   slug         String             @unique
+  /// Tashkilotning mustaqil lending (marketing) sayti domeni — masalan
+  /// "vista-academy.uz". Protokol/"www."/yo'lsiz, normallashtirilgan holda
+  /// saqlanadi (qarang: common/website-host.ts). Shu domendan kelgan
+  /// "Ariza qoldirish" so'rovlari shu tashkilotga bog'lanadi — qarang:
+  /// LandingService.resolveApplicationOrganizationId va main.ts'dagi CORS.
+  website      String?            @unique
   contactName  String?            @map("contact_name")
   contactEmail String?            @map("contact_email")
   contactPhone String?            @map("contact_phone")
@@ -130,6 +136,8 @@ model Organization {
   proverbs                  Proverb[]
   tales                     Tale[]
   faceIdDevices             FaceIdDevice[]
+  faceIdAgents              FaceIdAgent[]
+  faceIdAgentPairingCodes   FaceIdAgentPairingCode[]
   faceEnrollments           FaceEnrollment[]
   faceIdEvents              FaceIdEvent[]
   faceIdCommands            FaceIdCommand[]
@@ -316,6 +324,8 @@ model Branch {
   proverbs                  Proverb[]
   tales                     Tale[]
   faceIdDevices             FaceIdDevice[]
+  faceIdAgents              FaceIdAgent[]
+  faceIdAgentPairingCodes   FaceIdAgentPairingCode[]
   faceEnrollments           FaceEnrollment[]
   faceIdEvents              FaceIdEvent[]
   faceIdCommands            FaceIdCommand[]
@@ -1208,6 +1218,7 @@ enum PaymentMethod {
   UZUM
   MOBILE_APP
   BANKOMAT
+  OTHER
 }
 
 /// Ota-ona ekrandagi chekni tasdiqlashi kutilayotgan (PENDING), moliyachi
@@ -2008,7 +2019,7 @@ model FaceIdDevice {
   branchId          String             @map("branch_id")
   name              String
   model             String             @default("DS-K1T342MX")
-  serialNumber      String?            @unique @map("serial_number")
+  serialNumber      String?            @map("serial_number")
   ipAddress         String?            @map("ip_address")
   // ISAPI (HTTP) porti va qurilma administratori logini. Parol qaytarib
   // olinadigan holda shifrlanadi (AES-256-GCM, kalit — DEVICE_SECRET_KEY):
@@ -2033,9 +2044,52 @@ model FaceIdDevice {
   events       FaceIdEvent[]
   commands     FaceIdCommand[]
 
+  /// Seriya raqami tashkilot ichida noyob: boshqa bog'cha birovning terminal
+  /// raqamini oldindan band qilib qo'ya olmasin va uni bilib ham olmasin.
+  @@unique([organizationId, serialNumber])
   @@index([organizationId])
   @@index([branchId])
   @@map("face_id_devices")
+}
+
+/// Obyektdagi hik-agent (bitta kompyuter) — filialga bir martalik kod bilan
+/// ulanadi. Ulangach filialdagi barcha faol qurilmalarga o'zi xizmat qiladi:
+/// ERP'da yangi qurilma qo'shilsa token ko'chirish/.env tahrirlash shart emas.
+model FaceIdAgent {
+  id             String    @id @default(uuid())
+  organizationId String    @map("organization_id")
+  branchId       String    @map("branch_id")
+  /// Kompyuter nomi (agent o'zi yuboradi) — qaysi agent ekanini tanish uchun
+  name           String
+  /// Agent kaliti (hka_...) sha256 — kalitning o'zi saqlanmaydi
+  keyHash        String    @unique @map("key_hash")
+  lastSeenAt     DateTime? @map("last_seen_at")
+  revokedAt      DateTime? @map("revoked_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, branchId])
+  @@map("face_id_agents")
+}
+
+/// Agentni ulash uchun bir martalik kod (XXXX-XXXX, 15 daqiqa). Faqat sha256 saqlanadi.
+model FaceIdAgentPairingCode {
+  id              String    @id @default(uuid())
+  organizationId  String    @map("organization_id")
+  branchId        String    @map("branch_id")
+  codeHash        String    @unique @map("code_hash")
+  expiresAt       DateTime  @map("expires_at")
+  usedAt          DateTime? @map("used_at")
+  createdByUserId String?   @map("created_by_user_id")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@index([branchId])
+  @@map("face_id_agent_pairing_codes")
 }
 
 model FaceEnrollment {

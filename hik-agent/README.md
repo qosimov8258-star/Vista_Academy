@@ -38,15 +38,39 @@ Saqlagach **agent tokeni** bir marta ko'rsatiladi — nusxalab oling (yo'qolsa: 
 git clone <repo> && cd <repo>/hik-agent   # yoki faqat hik-agent papkasini ko'chiring
 npm ci
 npm run build
-cp .env.example .env                       # Windows: copy .env.example .env
 ```
 
-`.env` da kamida:
+### Bog'chaga o'rnatish (tavsiya) — hech narsa yozilmaydi
 
-```ini
-ERP_URL=https://vista-academy.uz/api/v1
-AGENT_TOKENS=hik_...        # bir nechta terminal bo'lsa: hik_aaa,hik_bbb
-```
+1. Bog'chadagi kompyuterda brauzerda ERP → Face ID → Qurilmalar → **"Agentni o'rnatish"** (Windows / macOS).
+2. Yuklangan faylni ikki marta bosing:
+   - **Windows** (`zeeron-agent-XXXX-XXXX.exe`): "kompyuteringiz himoyalandi" chiqsa — "Batafsil" → "Baribir ishga
+     tushirish", administrator so'roviga "Ha". `C:\ProgramData\Zeeron\Agent` ga o'rnatiladi, vazifalar
+     rejalashtiruvchisida `ZeeronAgent` (SYSTEM, kompyuter yonishi bilan, oynasiz). Log: `agent.log`.
+   - **macOS** (`Zeeron-Agent-XXXX-XXXX.pkg`): o'ng tugma → "Ochish" → o'rnatuvchi. `/Library/Application Support/Zeeron Agent`,
+     LaunchDaemon `uz.zeeron.agent`. Log: `agent.log`.
+3. Tayyor: fayl nomidagi bir martalik kod bilan ERP'ga o'zi ulanadi; keyin ERP'da qo'shilgan qurilmalar unga o'zi tushadi.
+
+O'chirish: `zeeron-agent --uninstall` (administrator/root) va ERP'da agentni "Uzish".
+
+**O'rnatuvchilarni yig'ish (macOS'da, ishlab chiquvchi):** `npm run build:installers` → `release/` dagi uch fayl.
+Serverga: `scp release/* vista:/srv/vista/shared/agent-builds/` — ERP ularni shu papkadan beradi. Imzolanmagan
+(Windows SmartScreen / macOS Gatekeeper bir marta ogohlantiradi); agent ichida Node.js bor, alohida o'rnatish shart emas.
+
+### Ulash (bir marta, ishlab chiquvchi) — `.env` kerak emas
+
+1. ERP → Face ID → Qurilmalar → **"Agentni ulash"** — 8 belgili kod chiqadi (masalan `K7Q2-M9XD`, 15 daqiqa, bir marta).
+2. Shu kompyuterda: `npm run pair` va kodni kiriting (yoki `npm run pair -- K7Q2-M9XD`).
+3. `npm start` (yoki pm2). Agent filialdagi barcha faol qurilmalarni ERP'dan o'zi oladi; keyin ERP'da qo'shilgan
+   har bir yangi qurilma bir daqiqa ichida o'zi ulanadi, o'chirilgani to'xtatiladi — tokenni hech qayerga yozish shart emas.
+
+Kalit `data/agent.json` da saqlanadi (faqat egasi o'qiy oladi). Kompyuter yo'qolsa — ERP'da agentni **"Uzish"**.
+ERP manzili sukut bo'yicha `https://platform.zeeron.uz/api/v1`; boshqasi kerak bo'lsa `.env` da `ERP_URL`.
+
+### Eski usul (ixtiyoriy): qurilma tokeni bilan
+
+`cp .env.example .env` va `AGENT_TOKENS=hik_...` (bir nechta terminal: `hik_aaa,hik_bbb`). Agent ulangan bo'lsa
+(`data/agent.json` bor) `.env` dagi tokenlar e'tiborsiz qoldiriladi — bir qurilmaga ikki ishchi bo'lmasin.
 
 Tekshirish (terminal nimani qo'llashini ko'rsatadi, hech narsani o'zgartirmaydi):
 
@@ -120,8 +144,8 @@ npm test     # mock ISAPI server (haqiqiy Digest auth) + mock ERP bilan
 ## Qo'lda sinov checklisti (haqiqiy terminal bilan)
 
 1. [ ] Terminalda ISAPI yoqilgan, IP statik, agent kompyuteridan `http://<IP>` brauzerda ochiladi.
-2. [ ] ERP → Face ID → Qurilmalar → yangi qurilma (IP, port, login, parol). Tokenni nusxalang.
-3. [ ] `.env` ga `ERP_URL` va `AGENT_TOKENS` ni yozing, `npm run build && npm run probe` — model, capabilities chiqadi,
+2. [ ] ERP → Face ID → Qurilmalar → yangi qurilma (IP, port, login, parol); agent ulanmagan bo'lsa "Agentni ulash" → `npm run pair`.
+3. [ ] `npm run build && npm run probe` (probe hozircha `.env` dagi token bilan ishlaydi) — model, capabilities chiqadi,
        401 yo'q. Yuqoridagi "tasdiqlanishi kerak" bandlarini solishtiring.
 4. [ ] `npm start` (yoki pm2). Logda "Sozlamalar olindi" chiqadi; ERP'da qurilma qatorida **Onlayn**.
 5. [ ] ERP → Xodimlar → yangi xodim qo'shing. Qurilmalar sahifasida "Navbatda" 1 bo'ladi, bir necha soniyada 0 ga tushadi;

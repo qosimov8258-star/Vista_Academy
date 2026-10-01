@@ -2,6 +2,7 @@ import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/commo
 import { PrismaService } from "../../database/prisma.service";
 import { TenantAuthenticatedUser, TenantScope, requireOperationalScope, toTenantScope } from "../iam/tenant-auth.types";
 import { AuditLogService } from "../audit-log/audit-log.service";
+import { assertTeacherOwnsChild } from "../iam/teacher-scope";
 import { UpsertHealthProfileDto } from "./dto/upsert-health-profile.dto";
 import { CreateVaccinationDto } from "./dto/create-vaccination.dto";
 import { UpdateVaccinationDto } from "./dto/update-vaccination.dto";
@@ -23,6 +24,8 @@ export class ChildHealthService {
     if (scope.branchId && child.branchId !== scope.branchId) {
       throw new ForbiddenException("Bu bolaga kirish huquqingiz yo'q");
     }
+    // Tibbiy ma'lumot: o'qituvchi faqat o'z guruhidagi bolanikini ko'radi
+    await assertTeacherOwnsChild(this.prisma, scope, child);
     return child;
   }
 

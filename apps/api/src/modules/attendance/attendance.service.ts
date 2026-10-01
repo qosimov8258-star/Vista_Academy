@@ -135,6 +135,8 @@ export class AttendanceService {
    */
   async requestContact(scope: TenantScope, dto: RequestContactDto) {
     const branchId = requireTeachingScope(scope);
+    // Davomat belgilash (mark) bilan bir xil: yordamchi tarbiyachi bu amalni bajarmaydi
+    await assertNotAssistant(this.prisma, scope);
     const child = await this.prisma.child.findFirst({ where: { id: dto.childId, organizationId: scope.organizationId } });
     if (!child) {
       throw new NotFoundException("Bola topilmadi");
@@ -306,6 +308,8 @@ export class AttendanceService {
     if (scope.branchId && child.branchId !== scope.branchId) {
       throw new ForbiddenException("Bu bolaga kirish huquqingiz yo'q");
     }
+    // O'qituvchi faqat o'z guruhidagi bolaning ma'lumotini ko'radi
+    await assertTeacherOwnsChild(this.prisma, scope, child);
 
     const targetYear = year && Number.isInteger(year) ? year : new Date().getFullYear();
     const from = new Date(Date.UTC(targetYear, 0, 1));

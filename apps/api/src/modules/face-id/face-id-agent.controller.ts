@@ -1,4 +1,5 @@
 import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Query, Res, UseGuards } from "@nestjs/common";
+import { fitFaceJpeg } from "./face-image";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
 import { Public } from "../../common/decorators/public.decorator";
@@ -57,8 +58,22 @@ export class FaceIdAgentController {
    * uchun buyruq payload'iga qo'yilmaydi — agent shu yerdan oladi.
    */
   @Get("commands/:id/face")
-  async face(@CurrentAgentDevice() device: AgentDevice, @Param("id", new ParseUUIDPipe()) id: string, @Res() res: Response) {
+  async face(
+    @CurrentAgentDevice() device: AgentDevice,
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @Query("maxBytes") maxBytesRaw: string | undefined,
+    @Res() res: Response,
+  ) {
     const image = await this.commandsService.faceImage(device, id);
+    // Agent terminal chegarasini yuboradi — rasm shu yerda JPEG ≤ maxBytes ga keltiriladi
+    const maxBytes = Number(maxBytesRaw);
+    if (Number.isInteger(maxBytes) && maxBytes >= 20_000 && maxBytes <= 5_000_000) {
+      const data = await fitFaceJpeg(Buffer.from(image.data), maxBytes);
+      res.setHeader("Content-Type", "image/jpeg");
+      res.setHeader("Cache-Control", "no-store");
+      res.send(data);
+      return;
+    }
     res.setHeader("Content-Type", image.mimeType);
     res.setHeader("Cache-Control", "no-store");
     res.send(image.data);

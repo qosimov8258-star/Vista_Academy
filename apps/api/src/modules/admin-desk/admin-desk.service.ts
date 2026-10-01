@@ -351,6 +351,12 @@ export class AdminDeskService {
   async undoPickup(scope: TenantScope, childId: string, dateInput: string) {
     const branchId = requireTeachingScope(scope);
     await assertNotAssistant(this.prisma, scope);
+    // Belgilashdagi kabi: o'qituvchi faqat o'z guruhidagi bola uchun bekor qiladi
+    const child = await this.prisma.child.findFirst({ where: { id: childId, branchId }, select: { groupId: true } });
+    if (!child) {
+      throw new NotFoundException("Bola topilmadi");
+    }
+    await assertTeacherOwnsChild(this.prisma, scope, child);
     await this.prisma.pickupLog.deleteMany({ where: { branchId, childId, date: toDateOnly(assertDate(dateInput)) } });
     return { success: true };
   }

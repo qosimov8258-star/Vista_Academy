@@ -13,6 +13,8 @@ import { RejectPaymentReceiptDto } from "./dto/reject-payment-receipt.dto";
 
 /** Ekrandan olingan skrinshotlar kattaroq bo'lishi mumkin — bola surati (600KB)dan farqli, 3MB gacha. */
 const MAX_RECEIPT_IMAGE_BYTES = 3 * 1024 * 1024;
+/** Bir bola uchun bir vaqtda ko'rib chiqilmagan cheklar — cheksiz yuklab xotirani to'ldirmaslik uchun. */
+const MAX_PENDING_RECEIPTS_PER_CHILD = 5;
 
 const receiptSummarySelect = {
   id: true,
@@ -79,6 +81,10 @@ export class PaymentReceiptsService {
 
   async submitForParent(parent: AuthenticatedParent, childId: string, dto: SubmitPaymentReceiptDto) {
     const child = await this.assertParentOwnsChildWithFinance(parent, childId);
+    const pending = await this.prisma.paymentReceipt.count({ where: { childId: child.id, status: "PENDING" } });
+    if (pending >= MAX_PENDING_RECEIPTS_PER_CHILD) {
+      throw new BadRequestException("Ko'rib chiqilmagan cheklar ko'p — moliyachi ularni tekshirgach yangisini yuboring");
+    }
     const { buffer, mimeType } = this.decodeImage(dto.image);
 
     let image: Buffer<ArrayBuffer> | null = buffer;
@@ -202,22 +208,37 @@ export class PaymentReceiptsService {
       throw new BadRequestException("Bu bola uchun ochiq hisob-faktura yo'q — to'lovni qabul qilib bo'lmaydi");
     }
 
-    const result = await this.billingService.recordPayment(caller, {
-      invoiceId: invoice.id,
-      amount: Number(receipt.claimedAmount),
-      method: dto.method,
-      note: dto.note ?? "To'lov cheki tasdiqlandi",
+    // Chekni avval atomar "egallab olamiz": ikki marta bosish yoki ikki moliyachi
+    // bir vaqtda tasdiqlasa, faqat bittasi o'tadi — aks holda bitta chek uchun
+    // ikkita to'lov yozilardi (PENDING tekshiruvi va to'lov alohida qadamlar edi).
+    const claimed = await this.prisma.paymentReceipt.updateMany({
+      where: { id: receipt.id, status: "PENDING" },
+      data: { status: "APPROVED", reviewedByUserId: caller.id, reviewedAt: new Date(), reviewNote: dto.note ?? null },
     });
+    if (claimed.count === 0) {
+      throw new BadRequestException("Bu chek allaqachon ko'rib chiqilgan");
+    }
+
+    let result: Awaited<ReturnType<BillingService["recordPayment"]>>;
+    try {
+      result = await this.billingService.recordPayment(caller, {
+        invoiceId: invoice.id,
+        amount: Number(receipt.claimedAmount),
+        method: dto.method,
+        note: dto.note ?? "To'lov cheki tasdiqlandi",
+      });
+    } catch (err) {
+      // To'lov yozilmadi — chek qayta ko'rib chiqilishi uchun PENDING ga qaytadi
+      await this.prisma.paymentReceipt.update({
+        where: { id: receipt.id },
+        data: { status: "PENDING", reviewedByUserId: null, reviewedAt: null, reviewNote: null },
+      });
+      throw err;
+    }
 
     const updated = await this.prisma.paymentReceipt.update({
       where: { id: receipt.id },
-      data: {
-        status: "APPROVED",
-        reviewedByUserId: caller.id,
-        reviewedAt: new Date(),
-        paymentId: result.payment.id,
-        reviewNote: dto.note ?? null,
-      },
+      data: { paymentId: result.payment.id },
       select: receiptSummarySelect,
     });
 
@@ -237,14 +258,16 @@ export class PaymentReceiptsService {
     requireMoneyScope(scope);
     const receipt = await this.loadPendingReceipt(scope, receiptId);
 
-    const updated = await this.prisma.paymentReceipt.update({
+    // Tasdiqlash bilan bir vaqtda kelsa — faqat hali PENDING bo'lsa rad etiladi
+    const claimed = await this.prisma.paymentReceipt.updateMany({
+      where: { id: receipt.id, status: "PENDING" },
+      data: { status: "REJECTED", reviewedByUserId: caller.id, reviewedAt: new Date(), reviewNote: dto.comment },
+    });
+    if (claimed.count === 0) {
+      throw new BadRequestException("Bu chek allaqachon ko'rib chiqilgan");
+    }
+    const updated = await this.prisma.paymentReceipt.findUniqueOrThrow({
       where: { id: receipt.id },
-      data: {
-        status: "REJECTED",
-        reviewedByUserId: caller.id,
-        reviewedAt: new Date(),
-        reviewNote: dto.comment,
-      },
       select: receiptSummarySelect,
     });
 

@@ -114,7 +114,7 @@ export function TextSizeControl() {
         onClick={() => setTextSize(size === 2 ? 1 : 0)}
         className={clsx(button, "text-[13px]")}
       >
-        A
+        {tr("A")}
       </button>
       <span className="h-5 w-px bg-[var(--p-line)]" />
       <button
@@ -124,7 +124,7 @@ export function TextSizeControl() {
         onClick={() => setTextSize(size === 0 ? 1 : 2)}
         className={clsx(button, "text-[19px]")}
       >
-        A
+        {tr("A")}
       </button>
     </div>
   );

@@ -29,6 +29,18 @@ export class TenantDashboardService {
   ) {}
 
   async summary(scope: TenantScope) {
+    // Super Admin filialni so'rovda beradi — boshqa tashkilot filiali bo'lmasin.
+    // Ilgari bu tekshiruv faqat tasodifan (pastdagi davomat chaqiruvida) bor edi,
+    // undan oldin esa eslatmalar sinxronlanib, filial bo'yicha yozuvlar yaratilardi.
+    if (scope.branchId) {
+      const branch = await this.prisma.branch.findFirst({
+        where: { id: scope.branchId, organizationId: scope.organizationId },
+        select: { id: true },
+      });
+      if (!branch) {
+        throw new NotFoundException("Filial topilmadi");
+      }
+    }
     // Bildirishnomalar sahifasida ko'rinishidan oldin, hozirgi holatga mos
     // ravishda yetishmayotganlarini to'ldirib qo'yamiz.
     await this.billingService.syncOverdueNotifications(scope);

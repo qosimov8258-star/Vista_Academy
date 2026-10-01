@@ -1,13 +1,3 @@
-import { organizationAccessUrl } from "./admin-web";
-
-const TENANT_BASE_URL = (process.env.NEXT_PUBLIC_TENANT_BASE_URL ?? "https://bogcha.uz").replace(/\/+$/, "");
-
-export function bogchaPublicUrl(slug: string): string {
-  // Subdomen yoqilgan bo'lsa bog'chaning ochiq manzili ham o'sha subdomen
-  if (process.env.NEXT_PUBLIC_TENANT_BASE_DOMAIN) return organizationAccessUrl(slug);
-  return `${TENANT_BASE_URL}/${slug}`;
-}
-
 export function formatMoney(value: string | number, currency = "UZS"): string {
   const num = typeof value === "string" ? Number(value) : value;
   return new Intl.NumberFormat("uz-UZ", { maximumFractionDigits: 0 }).format(num) + " " + currency;

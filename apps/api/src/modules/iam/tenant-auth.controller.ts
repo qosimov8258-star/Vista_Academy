@@ -20,6 +20,7 @@ import { TenantAuthenticatedUser } from "./tenant-auth.types";
 import { TenantJwtAuthGuard } from "./guards/tenant-jwt-auth.guard";
 import { CurrentTenantUser } from "./decorators/current-tenant-user.decorator";
 import { AllowChef } from "./decorators/allow-chef.decorator";
+import { LoginThrottle } from "../../common/throttle";
 
 const ACCESS_COOKIE = "bogcha_tenant_at";
 const REFRESH_COOKIE = "bogcha_tenant_rt";
@@ -30,6 +31,7 @@ const REFRESH_COOKIE = "bogcha_tenant_rt";
 export class TenantAuthController {
   constructor(private readonly authService: TenantAuthService) {}
 
+  @LoginThrottle()
   @Post("login")
   @HttpCode(HttpStatus.OK)
   async login(@Body() dto: TenantLoginDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {

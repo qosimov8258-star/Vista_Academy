@@ -1,7 +1,13 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
-import { TenantAuthenticatedUser, TenantScope, requireMoneyScope, toTenantScope } from "../iam/tenant-auth.types";
+import {
+  TenantAuthenticatedUser,
+  TenantScope,
+  requireMoneyScope,
+  requireOperationalScope,
+  toTenantScope,
+} from "../iam/tenant-auth.types";
 import { AuditLogService } from "../audit-log/audit-log.service";
 import { UpsertSalarySchemeDto } from "./dto/upsert-salary-scheme.dto";
 import { CreateShiftDto } from "./dto/create-shift.dto";
@@ -51,7 +57,10 @@ export class HrService {
   }
 
   async upsertSalaryScheme(scope: TenantScope, employeeId: string, dto: UpsertSalarySchemeDto) {
-    requireMoneyScope(scope);
+    // Sxemani belgilash — filial admini/administrator ishi (`requireOperationalScope`),
+    // moliyachi emas: u faqat hisoblangan summani to'laydi (`payEmployeeSalary`,
+    // pastda `requireMoneyScope` bilan qoladi), sxemani o'zi yarata olmaydi.
+    requireOperationalScope(scope);
     await this.requireEmployee(scope, employeeId);
     return this.prisma.salaryScheme.upsert({
       where: { employeeId },

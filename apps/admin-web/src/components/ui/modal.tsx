@@ -55,7 +55,7 @@ export function Modal({ open, onClose, title, children, widthClassName = "max-w-
         </div>
         {user?.organizationName && (
           <p className="px-6 pb-4 text-center text-[24px] font-extrabold tracking-[-0.01em] text-[var(--color-primary)]">
-            {user.organizationName}
+            {tr(user.organizationName)}
           </p>
         )}
         <div className="px-6 pb-6">{children}</div>

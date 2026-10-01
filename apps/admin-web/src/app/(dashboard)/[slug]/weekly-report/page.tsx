@@ -91,9 +91,9 @@ export default function WeeklyReportPage({ params }: { params: Promise<{ slug: s
                     <div className="flex items-center justify-between gap-3 border-b border-[var(--color-border)] pb-1.5">
                       <h3 className="text-[14px] font-semibold tabular-nums text-[var(--color-text)]">{formatDate(d.date)}</h3>
                       <span className="flex gap-3 text-[12.5px] tabular-nums text-[var(--color-text-muted)]">
-                        <span>{tr("Keldi")}{" "}<b>{d.present}</b></span>
-                        <span>{tr("Kelmadi")}{" "}<b>{d.absent}</b></span>
-                        <span>{tr("Kasal")}{" "}<b>{d.sick}</b></span>
+                        <span>{tr("Keldi")}{" "}<b>{tr(d.present)}</b></span>
+                        <span>{tr("Kelmadi")}{" "}<b>{tr(d.absent)}</b></span>
+                        <span>{tr("Kasal")}{" "}<b>{tr(d.sick)}</b></span>
                       </span>
                     </div>
                     {r.groups.length === 0 ? (
@@ -105,7 +105,7 @@ export default function WeeklyReportPage({ params }: { params: Promise<{ slug: s
                           return (
                             <li key={g.id} className="flex items-start justify-between gap-3 py-2">
                               <div className="min-w-0">
-                                <p className="truncate font-medium text-[var(--color-text)]">{g.name}</p>
+                                <p className="truncate font-medium text-[var(--color-text)]">{tr(g.name)}</p>
                                 <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">
                                   {tr("{0} ta bola", g.childrenCount)} ·{" "}
                                   {g.teachers.length > 0 ? g.teachers.join(", ") : tr("Tarbiyachi biriktirilmagan")}

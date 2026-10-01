@@ -510,16 +510,16 @@ export function KindergartenScene({ className, name }: KindergartenSceneProps) {
       <g className={styles.enterUp} style={{ animationDelay: "0.35s" }}>
         <rect x="36" y="656" width="44" height="44" rx="7" fill="#ff8fa3" />
         <text x="58" y="688" textAnchor="middle" fontSize="24" fontWeight="800" fill="#fff">
-          A
+          {tr("A")}
         </text>
         <rect x="84" y="656" width="44" height="44" rx="7" fill="#7ad3ff" />
         <text x="106" y="688" textAnchor="middle" fontSize="24" fontWeight="800" fill="#fff">
-          B
+          {tr("B")}
         </text>
         <g className={styles.block}>
           <rect x="60" y="612" width="44" height="44" rx="7" fill="#ffd166" />
           <text x="82" y="644" textAnchor="middle" fontSize="24" fontWeight="800" fill="#9a5b00">
-            C
+            {tr("C")}
           </text>
         </g>
       </g>

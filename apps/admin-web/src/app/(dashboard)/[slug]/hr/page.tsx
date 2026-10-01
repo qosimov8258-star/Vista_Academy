@@ -19,7 +19,7 @@ import { LogShiftModal } from "@/features/hr/log-shift-modal";
 import { GeneratePayrollModal } from "@/features/hr/generate-payroll-modal";
 import { EditSalarySchemeModal } from "@/features/hr/edit-salary-scheme-modal";
 import { useBranchContext } from "@/lib/use-branch-context";
-import { canWriteMoney } from "@/lib/permissions";
+import { canWriteMoney, canWriteOperational } from "@/lib/permissions";
 import { useTr } from "@/i18n/tr";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
@@ -46,6 +46,9 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const canWrite = canWriteMoney(user?.role);
+  // Maosh sxemasini belgilash — moliyachi emas, faqat filial admini/administrator ishi
+  // (moliyachi faqat hisoblangan summani to'laydi, sxemani o'zi yarata olmaydi).
+  const canWriteScheme = canWriteOperational(user?.role);
   const { branchId: forcedBranchId } = useBranchContext(slug);
 
   // "Current period" depends on the viewer's clock, which can differ between
@@ -189,7 +192,7 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
                       <p className="text-[12.5px] text-[var(--color-danger)]">{absenceNote(absenceByEmployee.get(employee.id), tr)}</p>
                     )}
                   </div>
-                  {canWrite && (
+                  {canWriteScheme && (
                     <Button size="sm" variant="outline" onClick={() => setSalarySchemeEmployee(employee)}>
                       {tr("Maosh sxemasi")}
                     </Button>
@@ -233,7 +236,7 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
                   </div>
                   <div className="flex items-baseline justify-between gap-3 text-[12.5px] text-[var(--color-text-muted)]">
                     <span className="tabular-nums">{formatDate(shift.date)}</span>
-                    {shift.note && <span className="min-w-0 break-words text-right">{shift.note}</span>}
+                    {shift.note && <span className="min-w-0 break-words text-right">{tr(shift.note)}</span>}
                   </div>
                 </li>
               ))}
@@ -337,7 +340,7 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
                             {entry.employee?.fullName ?? employeeName(entry.employeeId)}
                           </p>
                           <p className="text-[12.5px] tabular-nums text-[var(--color-text-muted)]">{tr(entry.period)}</p>
-                          {note && <p className="text-[12px] text-[var(--color-danger)]">{note}</p>}
+                          {note && <p className="text-[12px] text-[var(--color-danger)]">{tr(note)}</p>}
                         </div>
                         <Badge tone={entry.status === "PAID" ? "success" : "warning"}>
                           {tr(PAYROLL_STATUS_LABEL[entry.status])}
@@ -347,7 +350,7 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
                         {rows.map(([label, value, tone]) => (
                           <div key={label} className="flex items-baseline justify-between gap-3">
                             <dt className="text-[var(--color-text-muted)]">{tr(label)}</dt>
-                            <dd className={`tabular-nums ${tone}`}>{value}</dd>
+                            <dd className={`tabular-nums ${tone}`}>{tr(value)}</dd>
                           </div>
                         ))}
                         <div className="flex items-baseline justify-between gap-3 border-t border-[var(--color-separator)] pt-1.5 text-[14px] font-semibold">
@@ -477,7 +480,7 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
       {canWrite && (
         <GeneratePayrollModal open={generatePayrollOpen} onClose={() => setGeneratePayrollOpen(false)} slug={slug} />
       )}
-      {canWrite && salarySchemeEmployee && (
+      {canWriteScheme && salarySchemeEmployee && (
         <EditSalarySchemeModal
           open={!!salarySchemeEmployee}
           onClose={() => setSalarySchemeEmployee(null)}

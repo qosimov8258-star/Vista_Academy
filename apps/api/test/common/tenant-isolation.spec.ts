@@ -12,6 +12,7 @@ function contextFor(user: unknown): ExecutionContext {
 }
 
 describe("lending sayt faqat egasi tomonidan tahrirlanadi", () => {
+  const writer = { id: "u1", organizationId: "org", branchId: "b1", role: "BRANCH_ADMIN" };
   const prev = process.env.LANDING_ORGANIZATION_SLUG;
   afterEach(() => {
     if (prev === undefined) delete process.env.LANDING_ORGANIZATION_SLUG;
@@ -21,16 +22,22 @@ describe("lending sayt faqat egasi tomonidan tahrirlanadi", () => {
   it("sukut bo'yicha vista-academy o'tadi, boshqa bog'cha rad etiladi", () => {
     delete process.env.LANDING_ORGANIZATION_SLUG;
     const guard = new LandingOwnerGuard();
-    expect(guard.canActivate(contextFor({ organizationSlug: "vista-academy" }))).toBe(true);
+    expect(guard.canActivate(contextFor({ organizationSlug: "vista-academy", ...writer }))).toBe(true);
     assert.throws(() => guard.canActivate(contextFor({ organizationSlug: "babyland" })), /faqat uning egasi/);
     assert.throws(() => guard.canActivate(contextFor(undefined)), /faqat uning egasi/);
+  });
+
+  it("egasi bo'lsa ham o'qituvchi rad etiladi (fayl diskka yozilishidan oldin)", () => {
+    delete process.env.LANDING_ORGANIZATION_SLUG;
+    const guard = new LandingOwnerGuard();
+    assert.throws(() => guard.canActivate(contextFor({ ...writer, organizationSlug: "vista-academy", role: "TEACHER" })), /O'qituvchi/);
   });
 
   it("egasi env orqali o'zgartiriladi", () => {
     process.env.LANDING_ORGANIZATION_SLUG = "usmon";
     const guard = new LandingOwnerGuard();
-    expect(guard.canActivate(contextFor({ organizationSlug: "usmon" }))).toBe(true);
-    assert.throws(() => guard.canActivate(contextFor({ organizationSlug: "vista-academy" })), /faqat uning egasi/);
+    expect(guard.canActivate(contextFor({ organizationSlug: "usmon", ...writer }))).toBe(true);
+    assert.throws(() => guard.canActivate(contextFor({ organizationSlug: "vista-academy", ...writer })), /faqat uning egasi/);
   });
 });
 

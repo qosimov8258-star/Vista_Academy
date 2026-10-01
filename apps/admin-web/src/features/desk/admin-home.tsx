@@ -89,7 +89,7 @@ export function AdminHome({ slug, showCalls = true }: { slug: string; showCalls?
                   return (
                     <Link key={g.id} href={`/${slug}/groups/${g.id}`} className="flex items-start justify-between gap-3 px-4 py-3 hover:bg-[var(--color-surface-hover)]">
                       <div className="min-w-0">
-                        <p className="truncate text-[14.5px] font-medium text-[var(--color-text)]">{g.name}</p>
+                        <p className="truncate text-[14.5px] font-medium text-[var(--color-text)]">{tr(g.name)}</p>
                         <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">
                           {tr("{0} ta bola", g.childrenCount)} ·{" "}
                           {g.teachers.length > 0 ? g.teachers.join(", ") : tr("Tarbiyachi biriktirilmagan")}

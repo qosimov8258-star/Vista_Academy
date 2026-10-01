@@ -7,7 +7,7 @@ export default function RootPage() {
     <div className="flex min-h-screen items-center justify-center bg-[var(--color-bg)] px-4">
       <div className="max-w-sm text-center">
         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-primary)] text-xl font-bold text-white">
-          B
+          {tr("B")}
         </div>
         <h1 className="text-lg font-semibold text-[var(--color-text)]">{tr("Tashkilot havolasi kerak")}</h1>
         <p className="mt-2 text-sm text-[var(--color-text-muted)]">

@@ -3,12 +3,13 @@
 import { OperatorHome } from "@/features/desk/operator-home";
 import { use, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import type { FinanceChildren, FinanceChildStatus, FinanceSummary, Organization } from "@/lib/types";
+import Link from "next/link";
+import { api, getPaginated } from "@/lib/api";
+import type { FinanceChildren, FinanceChildStatus, FinanceSummary, Organization, Payment } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { Card } from "@/components/ui/card";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
-import { formatMoney, formatChildId } from "@/lib/format";
+import { formatMoney, formatChildId, formatDateTime } from "@/lib/format";
 import { isChef, isTeacher } from "@/lib/permissions";
 import { isCallOperatorUser, isCashierPosition } from "@/lib/employee-position";
 import { ChefHome } from "@/features/nutrition/chef-home";
@@ -16,7 +17,7 @@ import { CashierHome } from "@/features/cash/cashier-home";
 import { AdminHome } from "@/features/desk/admin-home";
 import { DirectorHome } from "@/features/director/director-home";
 import { TeacherHome } from "@/features/teacher/teacher-home";
-import { ChildIcon, MoneyIcon } from "@/components/ui/icons";
+import { ChildIcon, ChevronRightIcon, MoneyIcon } from "@/components/ui/icons";
 import { PeriodPicker } from "@/features/network/period-picker";
 import { IosIcon } from "@/features/director/ios-icon";
 import { formatCompact, formatSum } from "@/features/network/money";
@@ -241,6 +242,52 @@ function WeeklyPaymentsChart({ weeks, periodText }: { weeks: FinanceSummary["wee
   );
 }
 
+/**
+ * Eng so'nggi haqiqiy to'lovlar (qaytarilmagan) — moliyachi bosh sahifaga
+ * kirgan zahoti kim yaqinda to'lov qilganini ko'rsin. Har bir qator bosilsa
+ * o'sha o'quvchining moliya profiliga o'tadi.
+ */
+function RecentPayments({ payments, slug }: { payments: Payment[]; slug: string }) {
+  const tr = useTr();
+  const items = payments.filter((p) => p.status === "COMPLETED" && p.child).slice(0, 5);
+
+  return (
+    <Card className="overflow-hidden">
+      <div className="hairline border-b border-[var(--color-separator)] px-5 py-4 sm:px-6">
+        <h2 className="text-[15px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
+          {tr("So'nggi to'lovlar")}
+        </h2>
+      </div>
+      {items.length === 0 ? (
+        <EmptyState title={tr("Hali to'lov qilingan yo'q")} />
+      ) : (
+        <ul className="divide-y divide-[var(--color-separator)]">
+          {items.map((payment) => (
+            <li key={payment.id}>
+              <Link
+                href={`/${slug}/finance/${payment.childId}`}
+                className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-[var(--color-surface-sunken)] sm:px-6"
+              >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-success)]/10 text-[var(--color-success)]">
+                  <ChildIcon className="h-4.5 w-4.5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[14px] font-medium text-[var(--color-text)]">{tr(payment.child?.fullName)}</p>
+                  <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">{formatDateTime(payment.createdAt)}</p>
+                </div>
+                <p className="shrink-0 text-[14px] font-semibold tabular-nums text-[var(--color-success)]">
+                  +{formatMoney(payment.amount)}
+                </p>
+                <ChevronRightIcon className="h-4 w-4 shrink-0 text-[var(--color-text-muted)]" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
 export default function DashboardPage({ params }: { params: Promise<{ slug: string }> }) {
   const tr = useTr();
   const { slug } = use(params);
@@ -270,6 +317,15 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
     queryKey: ["dashboard-finance-summary", slug, period],
     queryFn: () => api.get<FinanceSummary>(`/app/finance/summary?period=${period}`),
     enabled: !!user && !!period && !isChef(user.role) && !isTeacher(user.role) && user.role !== "BRANCH_ADMIN",
+  });
+
+  // Bosh sahifadagi "So'nggi to'lovlar" — davrga bog'liq emas, doim eng oxirgisi.
+  const recentPaymentsQuery = useQuery({
+    queryKey: ["dashboard-recent-payments", slug],
+    // Bir nechtasi qaytarilgan (REFUNDED) bo'lishi mumkin — filtrlagandan keyin
+    // 5 tasi qolishi uchun zaxira bilan ko'proq so'raladi.
+    queryFn: () => getPaginated<Payment>("/app/payments?limit=10"),
+    enabled: !!user && !isChef(user.role) && !isTeacher(user.role),
   });
 
   const [openStatus, setOpenStatus] = useState<FinanceChildStatus | null>(null);
@@ -381,6 +437,8 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
             onToggle={(status) => setOpenStatus((s) => (s === status ? null : status))}
           />
 
+          {recentPaymentsQuery.data && <RecentPayments payments={recentPaymentsQuery.data.data} slug={slug} />}
+
           {openStatus && (
             <Card className="overflow-hidden">
               <div className="hairline border-b border-[var(--color-separator)] px-5 py-4 sm:px-6">
@@ -393,21 +451,27 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
               ) : (
                 <ul className="divide-y divide-[var(--color-separator)]">
                   {visibleItems.map((child) => (
-                    <li key={child.childId} className="flex items-center gap-3 px-5 py-3 sm:px-6">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)]">
-                        <ChildIcon className="h-4.5 w-4.5" />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[14px] font-medium text-[var(--color-text)]">{tr(child.fullName)}</p>
-                        <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">
-                          {formatChildId(child.publicId)} · <span className="font-medium">{tr(child.branchName)}</span>
-                          {child.groupName && ` · ${child.groupName}`}
+                    <li key={child.childId}>
+                      <Link
+                        href={`/${slug}/finance/${child.childId}`}
+                        className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-[var(--color-surface-sunken)] sm:px-6"
+                      >
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)]">
+                          <ChildIcon className="h-4.5 w-4.5" />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[14px] font-medium text-[var(--color-text)]">{tr(child.fullName)}</p>
+                          <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">
+                            {formatChildId(child.publicId)} · <span className="font-medium">{tr(child.branchName)}</span>
+                            {child.groupName && ` · ${child.groupName}`}
+                          </p>
+                        </div>
+                        <p className="shrink-0 text-[14px] tabular-nums text-[var(--color-text)]">
+                          <b>{formatMoney(child.paid)}</b>
+                          <span className="text-[var(--color-text-muted)]"> / {formatMoney(child.billed)}</span>
                         </p>
-                      </div>
-                      <p className="shrink-0 text-[14px] tabular-nums text-[var(--color-text)]">
-                        <b>{formatMoney(child.paid)}</b>
-                        <span className="text-[var(--color-text-muted)]"> / {formatMoney(child.billed)}</span>
-                      </p>
+                        <ChevronRightIcon className="h-4 w-4 shrink-0 text-[var(--color-text-muted)]" />
+                      </Link>
                     </li>
                   ))}
                 </ul>
