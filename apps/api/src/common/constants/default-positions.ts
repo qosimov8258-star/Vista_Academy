@@ -10,7 +10,6 @@ export const DEFAULT_POSITIONS = [
   "Fan o'qituvchisi",
   "Tarbiyachi",
   "Tarbiyachi yordamchisi",
-  "Kassir",
   "Call Operator",
   "Bosh oshpaz",
   "Oshpaz yordamchisi",
