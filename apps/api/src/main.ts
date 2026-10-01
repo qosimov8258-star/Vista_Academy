@@ -14,6 +14,10 @@ import { PrismaService } from "./database/prisma.service";
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // API faqat nginx (127.0.0.1) orqasida: mijoz IP'si X-Forwarded-For dan olinadi
+  // (login cheklovi IP bo'yicha ishlaydi). Faqat loopback'ga ishoniladi — tashqaridan
+  // yuborilgan soxta sarlavha hisobga olinmaydi.
+  app.set("trust proxy", "loopback");
   // /uploads har bir hostda (jumladan bog'cha subdomenlarida) API bilan bir
   // origin'dan beriladi — rasm bo'lmagan fayl brauzerda sahifa bo'lib ochilib,
   // skript ishga tushirmasin: nosniff + sandbox, rasm bo'lmasa — yuklab olish.

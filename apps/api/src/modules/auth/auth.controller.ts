@@ -28,6 +28,7 @@ import { AuthService, IssuedTokens } from "./auth.service";
 import { LoginDto } from "./dto/login.dto";
 import { UpdateProfileDto } from "./dto/update-profile.dto";
 import { AuthenticatedUser } from "./auth.types";
+import { LoginThrottle } from "../../common/throttle";
 
 const AVATAR_MIME_PATTERN = /^image\/(jpeg|png|webp|gif)$/;
 const AVATAR_MAX_SIZE = 5 * 1024 * 1024;
@@ -41,6 +42,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Public()
+  @LoginThrottle()
   @Post("login")
   @HttpCode(HttpStatus.OK)
   async login(@Body() dto: LoginDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
