@@ -4,6 +4,7 @@ import { ExtractJwt, Strategy } from "passport-jwt";
 import type { Request } from "express";
 import { PrismaService } from "../../../database/prisma.service";
 import { requireTenantAccessSecret } from "../tenant-auth.service";
+import { ORGANIZATION_SUSPENDED_MESSAGE, ORGANIZATION_WITH_SUBSCRIPTION_STATUS, isOrganizationSuspended } from "../organization-access";
 import { TenantAccessTokenPayload, TenantAuthenticatedUser } from "../tenant-auth.types";
 
 function extractFromCookie(req: Request): string | null {
@@ -30,7 +31,7 @@ export class TenantJwtStrategy extends PassportStrategy(Strategy, "tenant-jwt") 
   async validate(payload: TenantAccessTokenPayload): Promise<TenantAuthenticatedUser> {
     const tenantUser = await this.prisma.tenantUser.findUnique({
       where: { id: payload.sub },
-      include: { organization: true, branch: true, employee: true },
+      include: { organization: { include: ORGANIZATION_WITH_SUBSCRIPTION_STATUS }, branch: true, employee: true },
     });
     if (
       !tenantUser ||
@@ -39,6 +40,10 @@ export class TenantJwtStrategy extends PassportStrategy(Strategy, "tenant-jwt") 
       tenantUser.branchId !== payload.branchId
     ) {
       throw new UnauthorizedException("User not found or inactive");
+    }
+    // Platformada to'xtatilgan bog'cha — ochiq seanslar ham darhol to'xtaydi
+    if (isOrganizationSuspended(tenantUser.organization, tenantUser.organization.subscription)) {
+      throw new UnauthorizedException(ORGANIZATION_SUSPENDED_MESSAGE);
     }
     return {
       id: tenantUser.id,

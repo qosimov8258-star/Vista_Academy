@@ -1,5 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../database/prisma.service";
+import { assertTeacherOwnsChild } from "../iam/teacher-scope";
 import { TenantScope, requireOperationalScope } from "../iam/tenant-auth.types";
 import { UpsertDevelopmentAssessmentDto } from "./dto/upsert-development-assessment.dto";
 
@@ -48,6 +49,8 @@ export class DevelopmentService {
     if (scope.branchId && child.branchId !== scope.branchId) {
       throw new ForbiddenException("Bu bolaga kirish huquqingiz yo'q");
     }
+    // O'qituvchi faqat o'z guruhidagi bolaning ma'lumotini ko'radi
+    await assertTeacherOwnsChild(this.prisma, scope, child);
     return this.prisma.developmentAssessment.findMany({
       where: { childId },
       orderBy: { period: "desc" },

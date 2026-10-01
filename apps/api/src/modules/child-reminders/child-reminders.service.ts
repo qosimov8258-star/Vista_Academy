@@ -33,9 +33,10 @@ export class ChildRemindersService {
     }
     // Oshpaz (CHEF) butun filial eslatmalarini (dori, allergiya) ko'radi —
     // resolveTeacherGroupIds unga cheklov qo'ymaydi. O'qituvchilardan faqat
-    // guruhi borlar cheklanadi.
+    // guruhi bilan cheklanadi; guruhi yo'q o'qituvchi hech narsa ko'rmaydi
+    // (resolveTeacherGroupIds qoidasi: bo'sh ro'yxat — kirish yo'q).
     const groupIds = await resolveTeacherGroupIds(this.prisma, scope);
-    const restrict = groupIds !== null && groupIds.length > 0;
+    const restrict = groupIds !== null;
     const rows = await this.prisma.childReminder.findMany({
       where: {
         branchId,

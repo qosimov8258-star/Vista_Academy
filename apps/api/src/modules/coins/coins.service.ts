@@ -1,7 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantScope } from "../iam/tenant-auth.types";
-import { resolveTeacherGroupIds, teacherChildWhere } from "../iam/teacher-scope";
+import { resolveTeacherGroupIds, teacherChildWhere, assertTeacherOwnsChild } from "../iam/teacher-scope";
 import { CoinsQueryDto } from "./dto/coins-query.dto";
 
 /** Bola tafsilotidagi coin tarixida qaytariladigan yozuvlar soni chegarasi. */
@@ -90,6 +90,8 @@ export class CoinsService {
     if (scope.branchId && child.branchId !== scope.branchId) {
       throw new ForbiddenException("Bu bolaga kirish huquqingiz yo'q");
     }
+    // O'qituvchi faqat o'z guruhidagi bolaning ma'lumotini ko'radi
+    await assertTeacherOwnsChild(this.prisma, scope, child);
 
     return this.prisma.coinTransaction.findMany({
       where: { childId: child.id },

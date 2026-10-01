@@ -306,6 +306,8 @@ export class AttendanceService {
     if (scope.branchId && child.branchId !== scope.branchId) {
       throw new ForbiddenException("Bu bolaga kirish huquqingiz yo'q");
     }
+    // O'qituvchi faqat o'z guruhidagi bolaning ma'lumotini ko'radi
+    await assertTeacherOwnsChild(this.prisma, scope, child);
 
     const targetYear = year && Number.isInteger(year) ? year : new Date().getFullYear();
     const from = new Date(Date.UTC(targetYear, 0, 1));

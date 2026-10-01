@@ -4,6 +4,14 @@ import { PrismaService } from "../../database/prisma.service";
 import { TenantScope } from "../iam/tenant-auth.types";
 import { formatChildPublicId } from "../children/child-creation";
 import { assertMoneyReader } from "../billing/billing.service";
+import { resolveTeacherGroupIds, teacherChildWhere } from "../iam/teacher-scope";
+
+/** Bolalar ro'yxati (ota-ona telefonlari bilan) va lidlar eksporti — o'qituvchiga emas. */
+function assertNotTeacher(scope: TenantScope) {
+  if (scope.role === "TEACHER") {
+    throw new ForbiddenException("O'qituvchi bu eksportni ola olmaydi");
+  }
+}
 
 const PAYMENT_METHOD_LABEL: Record<string, string> = {
   CASH: "Naqd",
@@ -54,6 +62,7 @@ export class ExportsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async childrenCsv(scope: TenantScope, branchId?: string): Promise<string> {
+    assertNotTeacher(scope);
     const children = await this.prisma.child.findMany({
       where: { organizationId: scope.organizationId, branchId: scope.branchId ?? branchId },
       include: {
@@ -94,6 +103,8 @@ export class ExportsService {
   }
 
   async invoicesCsv(scope: TenantScope, branchId?: string, period?: string): Promise<string> {
+    // Moliya ekranlari bilan bir xil qoida: o'qituvchi hisob-fakturalarni ko'rmaydi
+    assertMoneyReader(scope);
     const invoices = await this.prisma.invoice.findMany({
       where: {
         organizationId: scope.organizationId,
@@ -120,6 +131,7 @@ export class ExportsService {
   }
 
   async leadsCsv(scope: TenantScope, branchId?: string): Promise<string> {
+    assertNotTeacher(scope);
     const leads = await this.prisma.lead.findMany({
       where: { organizationId: scope.organizationId, branchId: scope.branchId ?? branchId },
       include: { assignedTo: { select: { fullName: true } } },
@@ -175,8 +187,10 @@ export class ExportsService {
       }
     }
 
+    // O'qituvchi faqat o'z guruhlari davomatini eksport qiladi
+    const teacherGroupIds = await resolveTeacherGroupIds(this.prisma, scope);
     const children = await this.prisma.child.findMany({
-      where: { branchId: resolvedBranchId, status: "ACTIVE" },
+      where: teacherChildWhere({ branchId: resolvedBranchId, status: "ACTIVE" }, teacherGroupIds),
       select: { id: true, fullName: true },
       orderBy: { fullName: "asc" },
     });
