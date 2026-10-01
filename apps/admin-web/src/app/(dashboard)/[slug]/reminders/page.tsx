@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/use-auth";
@@ -28,27 +28,87 @@ interface FormState {
   messageTemplate: string;
 }
 
+/**
+ * Ro'yxatda avval muddati yaqinlashayotganlar (eng yaqin muddat tepada),
+ * so'ng — bo'lsa — muddati o'tib ketganlar eng pastda ko'rinsin.
+ */
+function sortForReminderCard(rows: UnpaidReminderChild[]): UnpaidReminderChild[] {
+  return [...rows].sort((a, b) => {
+    const aOverdue = a.daysUntilDue < 0;
+    const bOverdue = b.daysUntilDue < 0;
+    if (aOverdue !== bOverdue) return aOverdue ? 1 : -1;
+    return aOverdue ? b.daysUntilDue - a.daysUntilDue : a.daysUntilDue - b.daysUntilDue;
+  });
+}
+
+function UnpaidChildrenTable({ rows }: { rows: UnpaidReminderChild[] }) {
+  return (
+    <Card className="overflow-hidden">
+      <DataTable>
+        <THead>
+          <tr>
+            <Th>Bola</Th>
+            <Th>Guruh</Th>
+            <Th>Muddat</Th>
+            <Th numeric>Qoldiq</Th>
+            <Th>Holat</Th>
+          </tr>
+        </THead>
+        <TBody>
+          {rows.map((row) => (
+            <Tr key={row.invoiceId}>
+              <Td className="font-medium">{row.childFullName}</Td>
+              <Td className="text-[var(--color-text-muted)]">{row.groupName ?? "—"}</Td>
+              <Td className="tabular-nums text-[var(--color-text-muted)]">{formatDate(row.dueDate)}</Td>
+              <Td numeric className="font-medium">{formatMoney(row.remainingAmount)}</Td>
+              <Td>
+                {row.daysUntilDue < 0 ? (
+                  <Badge tone="danger">{Math.abs(row.daysUntilDue)} kun kechikdi</Badge>
+                ) : (
+                  <Badge tone="warning">{row.daysUntilDue} kun qoldi</Badge>
+                )}
+              </Td>
+            </Tr>
+          ))}
+        </TBody>
+      </DataTable>
+    </Card>
+  );
+}
+
 export default function RemindersPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const { user } = useAuth();
   const canWrite = canWriteMoney(user?.role);
-  const { branchId: forcedBranchId } = useBranchContext(slug);
+  // URL filial nomi bilan ochilgan bo'lsa (masalan filial admini) shu majburiy;
+  // aks holda (moliyachi/Super Admin umumiy `/[slug]/reminders`da) o'zi tanlaydi —
+  // aks holda backend "branchId ko'rsatilishi shart" deb rad etadi.
+  const { branchId: forcedBranchId, branches } = useBranchContext(slug);
+  const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
+  const branchId = forcedBranchId ?? selectedBranchId ?? branches[0]?.id ?? null;
   const queryClient = useQueryClient();
 
-  const qs = forcedBranchId ? `?branchId=${forcedBranchId}` : "";
+  const qs = branchId ? `?branchId=${branchId}` : "";
 
   const settingsQuery = useQuery({
-    queryKey: ["reminder-settings", slug, forcedBranchId],
+    queryKey: ["reminder-settings", slug, branchId],
     queryFn: () => api.get<PaymentReminderSettings>(`/app/finance/reminder-settings${qs}`),
+    enabled: branchId !== null,
   });
 
   const unpaidQuery = useQuery({
-    queryKey: ["reminder-unpaid-children", slug, forcedBranchId],
+    queryKey: ["reminder-unpaid-children", slug, branchId],
     queryFn: () => api.get<UnpaidReminderChild[]>(`/app/finance/reminder-settings/unpaid-children${qs}`),
+    enabled: branchId !== null,
   });
 
   const [form, setForm] = useState<FormState | null>(null);
   const [saved, setSaved] = useState(false);
+
+  const reminderCardRows = useMemo(
+    () => (unpaidQuery.data ? sortForReminderCard(unpaidQuery.data) : []),
+    [unpaidQuery.data],
+  );
 
   // Server javobi kelgach formani bir marta to'ldiramiz — keyingi refetch'lar
   // (masalan saqlashdan keyingi invalidate) foydalanuvchi terayotgan qiymatni bosib ketmasin.
@@ -67,7 +127,7 @@ export default function RemindersPage({ params }: { params: Promise<{ slug: stri
   const saveMutation = useMutation({
     mutationFn: (data: FormState) => api.put<PaymentReminderSettings>(`/app/finance/reminder-settings${qs}`, data),
     onSuccess: (data) => {
-      queryClient.setQueryData(["reminder-settings", slug, forcedBranchId], data);
+      queryClient.setQueryData(["reminder-settings", slug, branchId], data);
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     },
@@ -95,154 +155,170 @@ export default function RemindersPage({ params }: { params: Promise<{ slug: stri
         </p>
       </div>
 
-      {!canWrite && <ViewOnlyNote role={user?.role} />}
-
-      {settingsQuery.isLoading || !form ? (
-        <LoadingState rows={4} />
-      ) : settingsQuery.isError ? (
-        <ErrorState message={(settingsQuery.error as Error).message} />
-      ) : (
-        <Card className="space-y-5 p-5">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[15px] font-semibold text-[var(--color-text)]">Eslatma yoqilgan</p>
-              <p className="text-[13px] text-[var(--color-text-muted)]">O&apos;chirilsa, ota-ona kabinetida karta chiqmaydi</p>
-            </div>
-            <Switch
-              checked={form.isEnabled}
-              onChange={() => canWrite && setForm({ ...form, isEnabled: !form.isEnabled })}
-              disabled={!canWrite}
-            />
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Input
-              type="number"
-              min={0}
-              max={60}
-              label="Necha kun oldin boshlansin"
-              hint="To'lov muddatiga shuncha kun qolganda karta chiqa boshlaydi"
-              value={form.daysBeforeDue}
-              disabled={!canWrite}
-              onChange={(e) => setForm({ ...form, daysBeforeDue: Number(e.target.value) })}
-            />
-            <Input
-              type="number"
-              min={0}
-              max={60}
-              label="Necha kun kechikkuncha davom etsin"
-              hint="Muddat o'tgach ham shuncha kun 'kechikdi' deb ko'rsatiladi"
-              value={form.daysAfterDue}
-              disabled={!canWrite}
-              onChange={(e) => setForm({ ...form, daysAfterDue: Number(e.target.value) })}
-            />
-          </div>
-
-          <div>
-            <p className="mb-2 text-[13px] font-medium text-[var(--color-text)]">
-              Kuniga necha marta va soat nechada yuborilsin
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {form.sendTimes.map((t, i) => (
-                <div key={i} className="flex items-center gap-1.5">
-                  <input
-                    type="time"
-                    value={t}
-                    disabled={!canWrite}
-                    onChange={(e) => updateTime(i, e.target.value)}
-                    className="h-11 rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-3 text-[15px] text-[var(--color-text)] outline-none focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/[0.12]"
-                  />
-                  {canWrite && form.sendTimes.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeTime(i)}
-                      className="text-[13px] text-[var(--color-text-muted)] hover:text-[var(--color-danger)]"
-                      aria-label="O'chirish"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-              ))}
-              {canWrite && form.sendTimes.length < 6 && (
-                <Button variant="outline" size="sm" onClick={addTime} type="button">
-                  + Vaqt qo&apos;shish
-                </Button>
-              )}
-            </div>
-          </div>
-
-          <Textarea
-            label="Eslatma matni"
-            hint="Ishlatsa bo'ladigan o'rin bosuvchilar: {childName}, {amount}, {dueDate}, {daysLeft}"
-            rows={3}
-            maxLength={1000}
-            value={form.messageTemplate}
-            disabled={!canWrite}
-            onChange={(e) => setForm({ ...form, messageTemplate: e.target.value })}
-          />
-
-          {saveMutation.isError && (
-            <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-              {saveMutation.error instanceof ApiError ? saveMutation.error.message : "Saqlab bo'lmadi"}
-            </div>
-          )}
-
-          {canWrite && (
-            <div className="flex items-center gap-3">
-              <Button loading={saveMutation.isPending} onClick={() => saveMutation.mutate(form)}>
-                Saqlash
-              </Button>
-              {saved && <span className="text-[13px] text-[var(--color-success)]">Saqlandi</span>}
-            </div>
-          )}
-        </Card>
+      {/* URL filial nomi bilan qulflanmagan (moliyachi/Super Admin) bo'lsa, filial o'zi tanlansin */}
+      {!forcedBranchId && branches.length > 1 && (
+        <div className="flex flex-wrap gap-1.5">
+          {branches.map((item) => {
+            const active = item.id === branchId;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setSelectedBranchId(item.id)}
+                aria-pressed={active}
+                className={`cursor-pointer rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors ${
+                  active
+                    ? "bg-[var(--color-primary)] text-white"
+                    : "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                }`}
+              >
+                {item.name}
+              </button>
+            );
+          })}
+        </div>
       )}
 
-      <div>
-        <h2 className="text-[16px] font-semibold text-[var(--color-text)]">To&apos;lov qilmagan o&apos;quvchilar</h2>
-        <p className="mt-0.5 text-[13px] text-[var(--color-text-muted)]">Hozirgi eslatma oynasiga tushayotganlar</p>
-      </div>
+      {!canWrite && <ViewOnlyNote role={user?.role} />}
 
-      {unpaidQuery.isLoading ? (
-        <LoadingState rows={4} />
-      ) : unpaidQuery.isError ? (
-        <ErrorState message={(unpaidQuery.error as Error).message} />
-      ) : !unpaidQuery.data || unpaidQuery.data.length === 0 ? (
+      {!branchId ? (
         <Card>
-          <EmptyState title="Hozircha hech kim yo'q" description="Barcha o'quvchilar to'lovini amalga oshirgan" />
+          <EmptyState title="Filial yo'q" description="Eslatmalar ko'rinishi uchun avval filial oching" />
         </Card>
       ) : (
-        <Card className="overflow-hidden">
-          <DataTable>
-            <THead>
-              <tr>
-                <Th>Bola</Th>
-                <Th>Guruh</Th>
-                <Th>Muddat</Th>
-                <Th numeric>Qoldiq</Th>
-                <Th>Holat</Th>
-              </tr>
-            </THead>
-            <TBody>
-              {unpaidQuery.data.map((row) => (
-                <Tr key={row.invoiceId}>
-                  <Td className="font-medium">{row.childFullName}</Td>
-                  <Td className="text-[var(--color-text-muted)]">{row.groupName ?? "—"}</Td>
-                  <Td className="tabular-nums text-[var(--color-text-muted)]">{formatDate(row.dueDate)}</Td>
-                  <Td numeric className="font-medium">{formatMoney(row.remainingAmount)}</Td>
-                  <Td>
-                    {row.daysUntilDue < 0 ? (
-                      <Badge tone="danger">{Math.abs(row.daysUntilDue)} kun kechikdi</Badge>
-                    ) : (
-                      <Badge tone="warning">{row.daysUntilDue} kun qoldi</Badge>
+        <>
+        {settingsQuery.isLoading || !form ? (
+          <LoadingState rows={4} />
+        ) : settingsQuery.isError ? (
+          <ErrorState message={(settingsQuery.error as Error).message} />
+        ) : (
+          <Card className="space-y-5 p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[15px] font-semibold text-[var(--color-text)]">Eslatma yoqilgan</p>
+                <p className="text-[13px] text-[var(--color-text-muted)]">O&apos;chirilsa, ota-ona kabinetida karta chiqmaydi</p>
+              </div>
+              <Switch
+                checked={form.isEnabled}
+                onChange={() => canWrite && setForm({ ...form, isEnabled: !form.isEnabled })}
+                disabled={!canWrite}
+              />
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Input
+                type="number"
+                min={0}
+                max={60}
+                label="Necha kun oldin boshlansin"
+                hint="To'lov muddatiga shuncha kun qolganda karta chiqa boshlaydi"
+                value={form.daysBeforeDue}
+                disabled={!canWrite}
+                onChange={(e) => setForm({ ...form, daysBeforeDue: Number(e.target.value) })}
+              />
+              <Input
+                type="number"
+                min={0}
+                max={60}
+                label="Necha kun kechikkuncha davom etsin"
+                hint="Muddat o'tgach ham shuncha kun 'kechikdi' deb ko'rsatiladi"
+                value={form.daysAfterDue}
+                disabled={!canWrite}
+                onChange={(e) => setForm({ ...form, daysAfterDue: Number(e.target.value) })}
+              />
+            </div>
+
+            <div>
+              <p className="mb-2 text-[13px] font-medium text-[var(--color-text)]">
+                Kuniga necha marta va soat nechada yuborilsin
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {form.sendTimes.map((t, i) => (
+                  <div key={i} className="flex items-center gap-1.5">
+                    <input
+                      type="time"
+                      value={t}
+                      disabled={!canWrite}
+                      onChange={(e) => updateTime(i, e.target.value)}
+                      className="h-11 rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-3 text-[15px] text-[var(--color-text)] outline-none focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/[0.12]"
+                    />
+                    {canWrite && form.sendTimes.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeTime(i)}
+                        className="text-[13px] text-[var(--color-text-muted)] hover:text-[var(--color-danger)]"
+                        aria-label="O'chirish"
+                      >
+                        ✕
+                      </button>
                     )}
-                  </Td>
-                </Tr>
-              ))}
-            </TBody>
-          </DataTable>
-        </Card>
+                  </div>
+                ))}
+                {canWrite && form.sendTimes.length < 6 && (
+                  <Button variant="outline" size="sm" onClick={addTime} type="button">
+                    + Vaqt qo&apos;shish
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <Textarea
+              label="Eslatma matni"
+              hint="Ishlatsa bo'ladigan o'rin bosuvchilar: {childName}, {amount}, {dueDate}, {daysLeft}"
+              rows={3}
+              maxLength={1000}
+              value={form.messageTemplate}
+              disabled={!canWrite}
+              onChange={(e) => setForm({ ...form, messageTemplate: e.target.value })}
+            />
+
+            {saveMutation.isError && (
+              <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
+                {saveMutation.error instanceof ApiError ? saveMutation.error.message : "Saqlab bo'lmadi"}
+              </div>
+            )}
+
+            {canWrite && (
+              <div className="flex items-center gap-3">
+                <Button loading={saveMutation.isPending} onClick={() => saveMutation.mutate(form)}>
+                  Saqlash
+                </Button>
+                {saved && <span className="text-[13px] text-[var(--color-success)]">Saqlandi</span>}
+              </div>
+            )}
+          </Card>
+        )}
+
+        {/* Sozlamalardan qat'i nazar — muddati yaqinlashgan/o'tib ketgan o'quvchilar shu yerga o'zi qo'shiladi */}
+        {unpaidQuery.isLoading ? (
+          <LoadingState rows={4} />
+        ) : unpaidQuery.isError ? (
+          <ErrorState message={(unpaidQuery.error as Error).message} />
+        ) : reminderCardRows.length === 0 ? (
+          <Card>
+            <EmptyState title="Hozircha hech kim yo'q" description="Barcha o'quvchilar to'lovini amalga oshirgan" />
+          </Card>
+        ) : (
+          <UnpaidChildrenTable rows={reminderCardRows} />
+        )}
+
+        <div>
+          <h2 className="text-[16px] font-semibold text-[var(--color-text)]">To&apos;lov qilmagan o&apos;quvchilar</h2>
+          <p className="mt-0.5 text-[13px] text-[var(--color-text-muted)]">Hozirgi eslatma oynasiga tushayotganlar</p>
+        </div>
+
+        {unpaidQuery.isLoading ? (
+          <LoadingState rows={4} />
+        ) : unpaidQuery.isError ? (
+          <ErrorState message={(unpaidQuery.error as Error).message} />
+        ) : !unpaidQuery.data || unpaidQuery.data.length === 0 ? (
+          <Card>
+            <EmptyState title="Hozircha hech kim yo'q" description="Barcha o'quvchilar to'lovini amalga oshirgan" />
+          </Card>
+        ) : (
+          <UnpaidChildrenTable rows={unpaidQuery.data} />
+        )}
+        </>
       )}
     </div>
   );

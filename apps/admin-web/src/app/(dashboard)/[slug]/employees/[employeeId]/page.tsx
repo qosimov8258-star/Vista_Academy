@@ -20,6 +20,7 @@ import { LoadingState, ErrorState } from "@/components/ui/states";
 import { Toast, type ToastState } from "@/components/ui/toast";
 import { formatPositionLabel } from "@/lib/employee-position";
 import { formatMoney, formatDate } from "@/lib/format";
+import { canWriteOperational } from "@/lib/permissions";
 import { EditSalarySchemeModal } from "@/features/hr/edit-salary-scheme-modal";
 import { PeriodPicker } from "@/features/network/period-picker";
 
@@ -90,6 +91,10 @@ export default function EmployeeFinancePage({ params }: { params: Promise<{ slug
   const { slug, employeeId } = use(params);
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  // Maosh sxemasini belgilash — moliyachi emas, faqat filial admini/administrator ishi:
+  // moliyachi bu sahifada faqat hisoblangan summani ko'radi va to'laydi, sxemani o'zi
+  // yarata olmaydi (sxema hisoblash turini — soatlik/bola soni/belgilangan oylik — belgilaydi).
+  const canWriteScheme = canWriteOperational(user?.role);
   const { branches } = useBranchContext(slug);
   // `useBranchContext`ning branchSlug/branchId'i shu sahifada ishonchsiz —
   // sabab: employees/page.tsx dagi izohga qarang (bu komponent ham xuddi
@@ -308,9 +313,11 @@ export default function EmployeeFinancePage({ params }: { params: Promise<{ slug
           ) : !overview?.scheme && !overview?.entry ? (
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm text-[var(--color-text-muted)]">Maosh sxemasi belgilanmagan</p>
-              <Button type="button" variant="outline" size="sm" onClick={() => setSchemeModalOpen(true)}>
-                Sxema belgilash
-              </Button>
+              {canWriteScheme && (
+                <Button type="button" variant="outline" size="sm" onClick={() => setSchemeModalOpen(true)}>
+                  Sxema belgilash
+                </Button>
+              )}
             </div>
           ) : (
             <div className="flex items-center justify-between gap-3">
@@ -388,16 +395,18 @@ export default function EmployeeFinancePage({ params }: { params: Promise<{ slug
         </CardBody>
       </Card>
 
-      <EditSalarySchemeModal
-        open={schemeModalOpen}
-        onClose={() => {
-          setSchemeModalOpen(false);
-          queryClient.invalidateQueries({ queryKey: ["employee-payroll-overview", slug, employee.id] });
-        }}
-        slug={slug}
-        employeeId={employee.id}
-        employeeName={employee.fullName}
-      />
+      {canWriteScheme && (
+        <EditSalarySchemeModal
+          open={schemeModalOpen}
+          onClose={() => {
+            setSchemeModalOpen(false);
+            queryClient.invalidateQueries({ queryKey: ["employee-payroll-overview", slug, employee.id] });
+          }}
+          slug={slug}
+          employeeId={employee.id}
+          employeeName={employee.fullName}
+        />
+      )}
 
       <Toast toast={toast} onDismiss={() => setToast(null)} />
     </div>

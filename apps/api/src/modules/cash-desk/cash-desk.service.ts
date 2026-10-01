@@ -11,7 +11,7 @@ const OPEN_INVOICE = ["PENDING", "PARTIALLY_PAID", "OVERDUE"] as const;
 // To'lov cheki tasdiqlanganda paydo bo'ladigan raqamli usullar ham shu yerga
 // kiritilgan — aks holda o'sha kunning kassa hisobotida `income[method]`
 // aniqlanmagan bo'lib, hisobot butunlay yiqiladi (payment-receipts moduliga qarang).
-const METHODS = ["CASH", "CARD", "BANK_TRANSFER", "CLICK", "PAYME", "UZUM", "MOBILE_APP", "BANKOMAT"] as const;
+const METHODS = ["CASH", "CARD", "BANK_TRANSFER", "CLICK", "PAYME", "UZUM", "MOBILE_APP", "BANKOMAT", "OTHER"] as const;
 type Method = (typeof METHODS)[number];
 
 function toDateOnly(value: string): Date {

@@ -661,6 +661,7 @@ export class BillingService {
       UZUM: { amount: 0, count: 0 },
       MOBILE_APP: { amount: 0, count: 0 },
       BANKOMAT: { amount: 0, count: 0 },
+      OTHER: { amount: 0, count: 0 },
     };
     for (const row of byMethodGrouped) {
       byMethod[row.method] = { amount: Number(row._sum.amount ?? 0), count: row._count._all };

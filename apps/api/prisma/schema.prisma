@@ -1214,6 +1214,7 @@ enum PaymentMethod {
   UZUM
   MOBILE_APP
   BANKOMAT
+  OTHER
 }
 
 /// Ota-ona ekrandagi chekni tasdiqlashi kutilayotgan (PENDING), moliyachi
