@@ -29,6 +29,7 @@ import { AuthenticatedParent } from "./parent-auth.types";
 import { PaymentReceiptsService } from "../payment-receipts/payment-receipts.service";
 import { SubmitPaymentReceiptDto } from "../payment-receipts/dto/submit-payment-receipt.dto";
 import { R2Service } from "../storage/r2.service";
+import { LoginThrottle } from "../../common/throttle";
 
 const ACCESS_COOKIE = "bogcha_parent_at";
 const REFRESH_COOKIE = "bogcha_parent_rt";
@@ -49,6 +50,7 @@ export class ParentController {
     private readonly r2: R2Service,
   ) {}
 
+  @LoginThrottle()
   @Post("login")
   @HttpCode(HttpStatus.OK)
   async login(@Body() dto: ParentLoginDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {

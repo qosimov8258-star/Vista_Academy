@@ -3,6 +3,7 @@ import { ApiTags } from "@nestjs/swagger";
 import { Public } from "../../common/decorators/public.decorator";
 import { LandingService } from "./landing.service";
 import { CreateLandingApplicationDto } from "./dto/create-landing-application.dto";
+import { PublicFormThrottle } from "../../common/throttle";
 
 /**
  * Lending sahifa (landing-web) uchun ochiq ma'lumot — sayt tashrif buyuruvchi
@@ -54,6 +55,7 @@ export class PublicLandingController {
    * mustaqil lending saytlar (masalan Vista-Academy-web) hech qanday
    * qo'shimcha sozlamasiz to'g'ri bog'chaga ariza yuboradi.
    */
+  @PublicFormThrottle()
   @Post("applications")
   @HttpCode(HttpStatus.CREATED)
   createApplication(

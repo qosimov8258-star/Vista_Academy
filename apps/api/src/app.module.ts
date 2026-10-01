@@ -1,4 +1,6 @@
 import { Module } from "@nestjs/common";
+import { ThrottlerModule } from "@nestjs/throttler";
+import { THROTTLER_OPTIONS } from "./common/throttle";
 import { ConfigModule } from "@nestjs/config";
 import { APP_GUARD } from "@nestjs/core";
 import { PrismaModule } from "./database/prisma.module";
@@ -58,6 +60,7 @@ import { FaceIdModule } from "./modules/face-id/face-id.module";
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ThrottlerModule.forRoot(THROTTLER_OPTIONS),
     PrismaModule,
     StorageModule,
     HealthModule,
