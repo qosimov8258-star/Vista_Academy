@@ -1,6 +1,8 @@
-import { loadConfig, type AgentConfig } from "./config";
+import { createInterface } from "node:readline/promises";
+import { DEFAULT_ERP_URL, loadConfig, type AgentConfig } from "./config";
 import { DeviceWorker } from "./device-worker";
-import { createLogger, errorText, setLogLevel, type Logger } from "./logger";
+import { createLogger, errorText, setLogFile, setLogLevel, type Logger } from "./logger";
+import { argValue, codeFromFileName, installAgent, installLayout, isSingleExecutable, isWindowsAdmin, relaunchElevated, uninstallAgent } from "./install";
 import { listAgentDevices, PairingError, readPairedAgent, type PairedAgent } from "./pairing";
 
 /** Ulangan agent filialdagi qurilmalar ro'yxatini shu oraliqda yangilaydi. */
@@ -14,7 +16,68 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
  *   o'zi xizmat qiladi — yangi qurilma qo'shilsa avtomatik ishchi ochiladi.
  * - Eski usul: .env dagi AGENT_TOKENS — har bir token bitta qurilma.
  */
+async function ask(question: string): Promise<string> {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    return await rl.question(question);
+  } finally {
+    rl.close();
+  }
+}
+
+/** O'rnatish (administrator/root huquqi bilan). `--pause` — oyna darhol yopilmasin. */
+async function cliInstall(argv: string[]): Promise<void> {
+  const pause = argv.includes("--pause");
+  // --code-from: macOS .pkg postinstall o'rnatuvchi fayl yo'lini beradi (nomida kod)
+  let code = argValue(argv, "--code") ?? codeFromFileName(argValue(argv, "--code-from") ?? process.execPath);
+  if (!code && pause) code = (await ask("Ulash kodini kiriting (ERP → Face ID → Agentni o'rnatish): ")).trim();
+  const erpUrl = argValue(argv, "--erp") ?? process.env.ERP_URL ?? DEFAULT_ERP_URL;
+  try {
+    if (!code) throw new Error("Ulash kodi topilmadi — ERP'dan o'rnatuvchini qaytadan yuklab oling");
+    const agent = await installAgent({ code, erpUrl, autostart: !argv.includes("--no-autostart") });
+    console.log(`\nTayyor! Agent o'rnatildi va ulandi: ${agent.organizationName} — ${agent.branchName}.`);
+    console.log("U orqa fonda ishlaydi va kompyuter yonganda o'zi ishga tushadi. ERP'da qo'shilgan qurilmalar unga o'zi tushadi.");
+  } catch (err) {
+    console.error(`\nO'rnatib bo'lmadi: ${errorText(err)}`);
+    process.exitCode = 1;
+  }
+  if (pause) await ask("\nOynani yopish uchun Enter bosing...");
+}
+
+/** Bitta faylli agent ikki marta bosildi — o'rnatuvchi rejimi. */
+async function interactiveInstall(argv: string[]): Promise<void> {
+  console.log("Zeeron Face ID agenti — o'rnatish\n");
+  if (process.platform === "win32" && !isWindowsAdmin()) {
+    const code = argValue(argv, "--code") ?? codeFromFileName(process.execPath) ?? (await ask("Ulash kodini kiriting: ")).trim();
+    const erpUrl = argValue(argv, "--erp") ?? process.env.ERP_URL ?? DEFAULT_ERP_URL;
+    console.log("Administrator ruxsati so'raladi — chiqqan oynada \"Ha\" ni bosing.");
+    process.exit(relaunchElevated(["--install", "--code", code, "--erp", erpUrl, "--pause"]));
+  }
+  if (process.platform === "darwin" && process.getuid?.() !== 0) {
+    console.error("macOS'da ERP'dan yuklangan .pkg o'rnatuvchidan foydalaning (Zeeron-Agent-....pkg).");
+    await ask("\nOynani yopish uchun Enter bosing...");
+    process.exit(1);
+  }
+  await cliInstall([...argv, "--pause"]);
+}
+
 async function main() {
+  const argv = process.argv.slice(2);
+  if (argv.includes("--install")) return cliInstall(argv);
+  if (argv.includes("--uninstall")) {
+    uninstallAgent();
+    console.log("Agent o'chirildi. ERP'da ham agentni \"Uzish\" ni bosing.");
+    return;
+  }
+  const service = argv.includes("--service");
+  if (!service && isSingleExecutable()) return interactiveInstall(argv);
+  if (service) {
+    // O'rnatilgan agent: ma'lumot va log o'rnatish papkasida (macOS'da log'ni launchd yozadi)
+    const layout = installLayout();
+    process.env.DATA_DIR = layout.dataDir;
+    if (process.platform === "win32") setLogFile(layout.logFile);
+  }
+
   const config = loadConfig();
   setLogLevel(config.logLevel);
   const log = createLogger("agent");

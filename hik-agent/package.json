@@ -9,7 +9,8 @@
     "start": "node dist/src/index.js",
     "probe": "node dist/src/probe.js",
     "test": "tsc -p tsconfig.json && node --test \"dist/test/**/*.test.js\"",
-    "pair": "node dist/src/pair.js"
+    "pair": "node dist/src/pair.js",
+    "build:installers": "bash scripts/build-installers.sh"
   },
   "engines": {
     "node": ">=20"

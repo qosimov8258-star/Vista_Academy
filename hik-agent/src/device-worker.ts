@@ -212,7 +212,7 @@ export class DeviceWorker {
       } else if (command.type === "SET_FACE") {
         let image: Buffer;
         try {
-          image = await this.erp.faceImage(command.id);
+          image = await this.erp.faceImage(command.id, this.cfg.isapi.faceMaxBytes);
         } catch (err) {
           if (err instanceof ErpError && err.status === 404) return { success: false, error: "Xodimda surat yo'q" };
           throw err;

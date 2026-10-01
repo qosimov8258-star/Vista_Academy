@@ -30,6 +30,12 @@ export class FaceIdController {
     return this.agentsService.createPairingCode(user);
   }
 
+  /** "Agentni o'rnatish": tizim bo'yicha o'rnatuvchi havolasi (ichida yangi ulash kodi). */
+  @Post("agents/installer-link")
+  createInstallerLink(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body("platform") platform: string) {
+    return this.agentsService.createInstallerLink(user, platform);
+  }
+
   @Get("agents")
   listAgents(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query("branchId") branchId?: string) {
     return this.agentsService.listAgents(toTenantScope(user), branchId);

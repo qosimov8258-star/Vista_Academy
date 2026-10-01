@@ -110,10 +110,12 @@ export class ErpClient {
   }
 
   /** SET_FACE uchun xodim surati (binar). */
-  async faceImage(commandId: string): Promise<Buffer> {
+  async faceImage(commandId: string, maxBytes?: number): Promise<Buffer> {
     let res;
     try {
-      res = await request(`${this.baseUrl}/agent/commands/${commandId}/face`, {
+      // maxBytes — ERP rasmni shu hajmgacha o'zi kichraytirib beradi
+      const query = maxBytes ? `?maxBytes=${maxBytes}` : "";
+      res = await request(`${this.baseUrl}/agent/commands/${commandId}/face${query}`, {
         method: "GET",
         headers: this.authHeaders(),
         dataType: "buffer",

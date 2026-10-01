@@ -1,4 +1,4 @@
-import { createInterface } from "readline/promises";
+import { createInterface } from "node:readline/promises";
 import { loadConfig } from "./config";
 import { pairAgent, readPairedAgent } from "./pairing";
 

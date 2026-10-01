@@ -40,7 +40,24 @@ npm ci
 npm run build
 ```
 
-### Ulash (bir marta) — `.env` kerak emas
+### Bog'chaga o'rnatish (tavsiya) — hech narsa yozilmaydi
+
+1. Bog'chadagi kompyuterda brauzerda ERP → Face ID → Qurilmalar → **"Agentni o'rnatish"** (Windows / macOS).
+2. Yuklangan faylni ikki marta bosing:
+   - **Windows** (`zeeron-agent-XXXX-XXXX.exe`): "kompyuteringiz himoyalandi" chiqsa — "Batafsil" → "Baribir ishga
+     tushirish", administrator so'roviga "Ha". `C:\ProgramData\Zeeron\Agent` ga o'rnatiladi, vazifalar
+     rejalashtiruvchisida `ZeeronAgent` (SYSTEM, kompyuter yonishi bilan, oynasiz). Log: `agent.log`.
+   - **macOS** (`Zeeron-Agent-XXXX-XXXX.pkg`): o'ng tugma → "Ochish" → o'rnatuvchi. `/Library/Application Support/Zeeron Agent`,
+     LaunchDaemon `uz.zeeron.agent`. Log: `agent.log`.
+3. Tayyor: fayl nomidagi bir martalik kod bilan ERP'ga o'zi ulanadi; keyin ERP'da qo'shilgan qurilmalar unga o'zi tushadi.
+
+O'chirish: `zeeron-agent --uninstall` (administrator/root) va ERP'da agentni "Uzish".
+
+**O'rnatuvchilarni yig'ish (macOS'da, ishlab chiquvchi):** `npm run build:installers` → `release/` dagi uch fayl.
+Serverga: `scp release/* vista:/srv/vista/shared/agent-builds/` — ERP ularni shu papkadan beradi. Imzolanmagan
+(Windows SmartScreen / macOS Gatekeeper bir marta ogohlantiradi); agent ichida Node.js bor, alohida o'rnatish shart emas.
+
+### Ulash (bir marta, ishlab chiquvchi) — `.env` kerak emas
 
 1. ERP → Face ID → Qurilmalar → **"Agentni ulash"** — 8 belgili kod chiqadi (masalan `K7Q2-M9XD`, 15 daqiqa, bir marta).
 2. Shu kompyuterda: `npm run pair` va kodni kiriting (yoki `npm run pair -- K7Q2-M9XD`).
