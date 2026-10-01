@@ -1355,7 +1355,10 @@ export interface LandingGroup {
   id: string;
   name: string;
   slug: string;
+  /** Bosh sahifadagi va guruhlar ro'yxatidagi kichik kartochka rasmi. */
   photoPath: string | null;
+  /** Guruhning o'z sahifasidagi katta (hero) rasmi — `photoPath`dan mustaqil. */
+  heroPhotoPath: string | null;
   order: number;
   photos: LandingGroupPhoto[];
   students: LandingGroupStudent[];

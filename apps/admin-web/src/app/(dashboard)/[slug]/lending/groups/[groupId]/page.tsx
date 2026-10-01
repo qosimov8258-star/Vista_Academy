@@ -49,7 +49,8 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
     null,
   );
   const [deletingStudent, setDeletingStudent] = useState<LandingGroupStudent | null>(null);
-  const coverInputRef = useRef<HTMLInputElement>(null);
+  const cardInputRef = useRef<HTMLInputElement>(null);
+  const heroInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
   const groupsQuery = useQuery({
@@ -76,8 +77,16 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
     onError: (err) => setServerError(err instanceof ApiError ? err.message : "Saqlashda xatolik"),
   });
 
-  const coverMutation = useMutation({
+  /** Kartochka rasmi — bosh sahifada va guruhlar ro'yxatida ko'rinadigan rasm, hero'dan mustaqil. */
+  const cardMutation = useMutation({
     mutationFn: (file: File) => api.upload<LandingGroup>(`/app/landing/groups/${groupId}/photo`, file),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["landing-groups"] }),
+    onError: (err) => setServerError(err instanceof ApiError ? err.message : "Rasm yuklashda xatolik"),
+  });
+
+  /** Hero rasmi — faqat guruhning o'z sahifasi ochilganda ko'rinadigan katta rasm, kartochkaga ta'sir qilmaydi. */
+  const heroMutation = useMutation({
+    mutationFn: (file: File) => api.upload<LandingGroup>(`/app/landing/groups/${groupId}/hero-photo`, file),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["landing-groups"] }),
     onError: (err) => setServerError(err instanceof ApiError ? err.message : "Rasm yuklashda xatolik"),
   });
@@ -106,12 +115,21 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
     onError: (err) => setServerError(err instanceof ApiError ? err.message : "O'chirishda xatolik"),
   });
 
-  const handleCoverPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCardPick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (file) {
       setServerError(null);
-      coverMutation.mutate(file);
+      cardMutation.mutate(file);
+    }
+  };
+
+  const handleHeroPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (file) {
+      setServerError(null);
+      heroMutation.mutate(file);
     }
   };
 
@@ -150,11 +168,48 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
         <ErrorState message="Guruh topilmadi" />
       ) : (
         <>
-          {/* Hero — guruh sahifasidagi bosh rasm bilan bir xil joylashuv (object-contain — saytdagi kabi kesilmasdan to'liq ko'rinadi) */}
+          {/* Kartochka rasmi — bosh sahifadagi "Guruhlarimiz" bo'limida va bu ro'yxatdagi kichik
+              kartochkada ko'rinadigan rasm. Quyidagi hero rasmidan ATAYLAB mustaqil — buni o'zgartirish
+              hero rasmiga ta'sir qilmaydi. */}
+          <div className="rounded-[var(--radius-xl)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] p-4 sm:p-5">
+            <h2 className="text-[16px] font-semibold text-[var(--color-text)]">Kartochka rasmi</h2>
+            <p className="mt-0.5 text-[13px] text-[var(--color-text-muted)]">
+              Bosh sahifadagi &quot;Guruhlarimiz&quot; bo&apos;limida va shu ro&apos;yxatdagi kichik
+              kartochkada shu rasm ko&apos;rsatiladi. Guruh sahifasining katta (hero) rasmiga ta&apos;sir
+              qilmaydi — u pastda alohida.
+            </p>
+            <div className="mt-3 flex items-center gap-4">
+              <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-lg)] bg-[var(--color-surface-sunken)]">
+                {group.photoPath ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- API'dan kelgan dinamik rasm
+                  <img src={assetUrl(group.photoPath) ?? undefined} alt={group.name} className="h-full w-full object-contain" />
+                ) : (
+                  <GroupIcon className="h-8 w-8 text-[var(--color-text-subtle)]" />
+                )}
+              </div>
+              {canWrite && (
+                <>
+                  <input ref={cardInputRef} type="file" accept="image/*" className="hidden" onChange={handleCardPick} />
+                  <Button type="button" variant="outline" size="sm" loading={cardMutation.isPending} onClick={() => cardInputRef.current?.click()}>
+                    <CameraIcon className="h-4 w-4" />
+                    Kartochka rasmini almashtirish
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Hero — guruhning o'z sahifasi ochilganda ko'rinadigan katta rasm (bir xil joylashuv,
+              object-contain — saytdagi kabi kesilmasdan to'liq ko'rinadi). Alohida `heroPhotoPath`
+              maydoni hali tanlanmagan bo'lsa, kartochka rasmi vaqtincha ko'rsatiladi. */}
           <div className="relative h-[220px] w-full overflow-hidden rounded-[var(--radius-xl)] bg-[var(--color-surface-sunken)] sm:h-[300px]">
-            {group.photoPath ? (
+            {group.heroPhotoPath || group.photoPath ? (
               // eslint-disable-next-line @next/next/no-img-element -- API'dan kelgan dinamik rasm
-              <img src={assetUrl(group.photoPath) ?? undefined} alt={group.name} className="absolute inset-0 h-full w-full object-contain" />
+              <img
+                src={assetUrl(group.heroPhotoPath ?? group.photoPath) ?? undefined}
+                alt={group.name}
+                className="absolute inset-0 h-full w-full object-contain"
+              />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center">
                 <GroupIcon className="h-10 w-10 text-[var(--color-text-subtle)]" />
@@ -167,24 +222,24 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
             </div>
             {canWrite && (
               <>
-                <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverPick} />
+                <input ref={heroInputRef} type="file" accept="image/*" className="hidden" onChange={handleHeroPick} />
                 <button
                   type="button"
-                  onClick={() => coverInputRef.current?.click()}
-                  disabled={coverMutation.isPending}
-                  title="Tavsiya: kvadrat (1:1) rasm, kamida 800x800px — bosh sahifadagi kartochkada ham, bu yerdagi katta rasmda ham kesilmasdan to'liq chiqadi"
+                  onClick={() => heroInputRef.current?.click()}
+                  disabled={heroMutation.isPending}
+                  title="Tavsiya: kvadrat (1:1) rasm, kamida 800x800px — faqat shu guruh sahifasi ochilganda ko'rinadigan katta rasm, kartochkaga ta'sir qilmaydi"
                   className="absolute right-4 top-4 flex items-center gap-1.5 rounded-full bg-black/40 px-3.5 py-2 text-[13px] font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/55 disabled:cursor-wait"
                 >
                   <CameraIcon className="h-3.5 w-3.5" />
-                  {coverMutation.isPending ? "Yuklanmoqda..." : "Bosh rasmni almashtirish"}
+                  {heroMutation.isPending ? "Yuklanmoqda..." : "Bosh rasmni almashtirish"}
                 </button>
               </>
             )}
           </div>
           {canWrite && (
             <p className="text-[12.5px] text-[var(--color-text-muted)]">
-              Tavsiya: kvadrat (1:1) rasm, kamida 800×800px, fon oq yoki shaffof — shu rasm bosh sahifadagi
-              kartochkada va guruh sahifasining katta rasmida kesilmasdan to&apos;liq ko&apos;rinadi.
+              Tavsiya: kvadrat (1:1) rasm, kamida 800×800px, fon oq yoki shaffof — faqat shu guruh
+              sahifasining katta rasmiga tegishli, kartochkaga ta&apos;sir qilmaydi.
             </p>
           )}
 

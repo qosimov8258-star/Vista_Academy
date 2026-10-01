@@ -2452,6 +2452,7 @@ model LandingGroup {
   name           String
   slug           String
   photoPath      String?               @map("photo_path")
+  heroPhotoPath  String?               @map("hero_photo_path")
   order          Int                   @default(0)
   createdAt      DateTime              @default(now()) @map("created_at")
   updatedAt      DateTime              @updatedAt @map("updated_at")

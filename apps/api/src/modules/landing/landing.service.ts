@@ -236,6 +236,18 @@ export class LandingService {
     return updated;
   }
 
+  /**
+   * Guruhning o'z sahifasidagi katta (hero) rasmi — `photoPath` (bosh sahifa
+   * va ro'yxatdagi kartochka rasmi) dan ATAYLAB mustaqil maydon, shu sabab
+   * biri o'zgarganda ikkinchisiga ta'sir qilmaydi.
+   */
+  async setGroupHeroPhoto(organizationId: string, id: string, heroPhotoPath: string) {
+    const group = await this.findGroup(organizationId, id);
+    const updated = await this.prisma.landingGroup.update({ where: { id }, data: { heroPhotoPath } });
+    await this.deleteUploadedPhoto(group.heroPhotoPath);
+    return updated;
+  }
+
   /** Guruh sahifasidagi galereyaga rasm qo'shadi — oxiriga qo'shiladi. */
   async addGroupPhoto(organizationId: string, groupId: string, path: string) {
     await this.findGroup(organizationId, groupId);
