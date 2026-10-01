@@ -100,6 +100,9 @@ export class GroupsService {
 
   async update(caller: TenantAuthenticatedUser, id: string, dto: UpdateGroupDto) {
     const scope = toTenantScope(caller);
+    // Guruhni o'zgartirish operatsion amal: Super Admin faqat kuzatadi,
+    // moliyachi va o'qituvchi tahrirlamaydi (create bilan bir xil qoida).
+    requireOperationalScope(scope);
     const group = await this.assertAccess(scope, id);
     if (dto.capacity !== undefined) {
       // Faqat faol bolalar joy band qiladi — nofaol/karantindagi bola

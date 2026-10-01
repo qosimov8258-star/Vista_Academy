@@ -122,6 +122,8 @@ export class DailyReportsService {
     if (scope.branchId && child.branchId !== scope.branchId) {
       throw new ForbiddenException("Bu bolaga kirish huquqingiz yo'q");
     }
+    // O'qituvchi faqat o'z guruhidagi bolaning ma'lumotini ko'radi
+    await assertTeacherOwnsChild(this.prisma, scope, child);
     return this.prisma.dailyReport.findMany({
       where: { childId },
       orderBy: { date: "desc" },

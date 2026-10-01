@@ -30,8 +30,13 @@ export class GuardiansService {
   }
 
   async search(scope: TenantScope, query: GuardianQueryDto) {
+    // Qidiruv faqat bolaga ota-ona biriktirish uchun (operatsion amal) va faqat
+    // shu filial bolalarining ota-onalari bo'yicha. Boshqa filialdagi aka-uka
+    // ota-onasi telefon raqami orqali baribir topiladi (addToChild).
+    const branchId = requireOperationalScope(scope);
     const where: Prisma.GuardianWhereInput = {
       organizationId: scope.organizationId,
+      children: { some: { child: { branchId } } },
       ...(query.search
         ? {
             OR: [
@@ -255,6 +260,17 @@ export class GuardiansService {
     });
     if (!guardian) {
       throw new NotFoundException("Ota-ona topilmadi");
+    }
+    // Ota-onani o'z bolasiga biriktirib, keyin uning parolini yangilab,
+    // boshqa filialdagi bolalari ma'lumotiga kirib olinmasin: kabinet
+    // faqat barcha bolalari shu filialda bo'lsa boshqariladi.
+    const elsewhere = await this.prisma.childGuardian.count({
+      where: { guardianId, child: { branchId: { not: branchId } } },
+    });
+    if (elsewhere > 0) {
+      throw new ForbiddenException(
+        "Bu ota-onaning boshqa filialda ham bolasi bor — kabinetini faqat uning barcha bolalari shu filialda bo'lsa boshqarish mumkin",
+      );
     }
     return guardian;
   }

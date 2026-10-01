@@ -121,7 +121,12 @@ export async function createChildWithGuardian<T extends Prisma.ChildInclude>(
     guardianId = existingGuardian.id;
     // Kabineti allaqachon ochiq bo'lsa parolga tegilmaydi — aks holda ota-ona
     // eski parolidan to'satdan chetlashtirilardi.
-    if (!existingGuardian.passwordHash && input.guardian.password !== undefined) {
+    // Boshqa filialda ham bolasi bo'lsa kabinet bu yerdan ochilmaydi — aks holda
+    // bu filial xodimi o'sha bolalarni ko'radigan login-parolni olib qo'yardi.
+    const elsewhere = await tx.childGuardian.count({
+      where: { guardianId, child: { branchId: { not: input.branchId } } },
+    });
+    if (!existingGuardian.passwordHash && elsewhere === 0 && input.guardian.password !== undefined) {
       const password = input.guardian.password || generateParentPassword();
       const passwordHash = await argon2.hash(password);
       await tx.guardian.update({ where: { id: guardianId }, data: { passwordHash, isActive: true } });

@@ -5,6 +5,7 @@ import type { Request } from "express";
 import { PrismaService } from "../../../database/prisma.service";
 import { requireParentAccessSecret } from "../parent-auth.service";
 import { AuthenticatedParent, ParentAccessTokenPayload } from "../parent-auth.types";
+import { ORGANIZATION_SUSPENDED_MESSAGE, ORGANIZATION_WITH_SUBSCRIPTION_STATUS, isOrganizationSuspended } from "../../iam/organization-access";
 
 function extractFromCookie(req: Request): string | null {
   return (req?.cookies?.bogcha_parent_at as string | undefined) ?? null;
@@ -28,7 +29,7 @@ export class ParentJwtStrategy extends PassportStrategy(Strategy, "parent-jwt") 
   async validate(payload: ParentAccessTokenPayload): Promise<AuthenticatedParent> {
     const guardian = await this.prisma.guardian.findUnique({
       where: { id: payload.sub },
-      include: { organization: true },
+      include: { organization: { include: ORGANIZATION_WITH_SUBSCRIPTION_STATUS } },
       // passwordHash global omit qilingan — kabinet yopilganini bilish uchun kerak
       omit: { passwordHash: false },
     });
@@ -41,6 +42,9 @@ export class ParentJwtStrategy extends PassportStrategy(Strategy, "parent-jwt") 
       guardian.organizationId !== payload.organizationId
     ) {
       throw new UnauthorizedException("Kabinet topilmadi yoki yopilgan");
+    }
+    if (isOrganizationSuspended(guardian.organization, guardian.organization.subscription)) {
+      throw new UnauthorizedException(ORGANIZATION_SUSPENDED_MESSAGE);
     }
     return {
       id: guardian.id,

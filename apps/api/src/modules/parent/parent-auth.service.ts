@@ -1,9 +1,10 @@
-import { Injectable, UnauthorizedException, BadRequestException } from "@nestjs/common";
+import { Injectable, UnauthorizedException, BadRequestException, ForbiddenException } from "@nestjs/common";
 import { JwtService, JwtSignOptions } from "@nestjs/jwt";
 import * as argon2 from "argon2";
 import { createHash, randomBytes, randomInt } from "crypto";
 import { PrismaService } from "../../database/prisma.service";
 import { AuthenticatedParent, ParentAccessTokenPayload } from "./parent-auth.types";
+import { ORGANIZATION_SUSPENDED_MESSAGE, ORGANIZATION_WITH_SUBSCRIPTION_STATUS, isOrganizationSuspended } from "../iam/organization-access";
 import { ChangeParentPasswordDto } from "./dto/change-parent-password.dto";
 
 export interface IssuedParentTokens {
@@ -56,9 +57,15 @@ export class ParentAuthService {
   ) {}
 
   async validateCredentials(orgSlug: string, phone: string, password: string): Promise<AuthenticatedParent> {
-    const organization = await this.prisma.organization.findUnique({ where: { slug: orgSlug } });
+    const organization = await this.prisma.organization.findUnique({
+      where: { slug: orgSlug },
+      include: ORGANIZATION_WITH_SUBSCRIPTION_STATUS,
+    });
     if (!organization) {
       throw new UnauthorizedException("Tashkilot topilmadi");
+    }
+    if (isOrganizationSuspended(organization, organization.subscription)) {
+      throw new ForbiddenException(ORGANIZATION_SUSPENDED_MESSAGE);
     }
 
     const guardian = await this.prisma.guardian.findUnique({
