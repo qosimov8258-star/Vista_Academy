@@ -22,17 +22,17 @@ export class CashDeskController {
 
   @Post("expenses")
   addExpense(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: CreateExpenseDto) {
-    return this.service.addExpense(toTenantScope(user), user.fullName, dto);
+    return this.service.addExpense(user, dto);
   }
 
   @Delete("expenses/:id")
   removeExpense(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string) {
-    return this.service.removeExpense(toTenantScope(user), id);
+    return this.service.removeExpense(user, id);
   }
 
   @Post("close")
   close(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: CloseCashDto) {
-    return this.service.close(toTenantScope(user), user.fullName, dto);
+    return this.service.close(user, dto);
   }
 
   @Get("debtors")

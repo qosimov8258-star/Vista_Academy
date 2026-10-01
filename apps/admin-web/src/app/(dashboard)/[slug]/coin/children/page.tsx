@@ -15,8 +15,10 @@ import { useBranchContext } from "@/lib/use-branch-context";
 import { isTeacher } from "@/lib/permissions";
 import { WeeklyAssessmentModal } from "@/features/coins/weekly-assessment-modal";
 import { CoinHistoryModal } from "@/features/coins/coin-history-modal";
+import { useTr } from "@/i18n/tr";
 
 export default function CoinChildrenPage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const { branchId: forcedBranchId } = useBranchContext(slug);
   const [branchId, setBranchId] = useState("");
@@ -50,16 +52,16 @@ export default function CoinChildrenPage({ params }: { params: Promise<{ slug: s
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">Coin — Bolalar</h1>
-        <p className="text-[14px] text-[var(--color-text-muted)]">Bolalarning coin balansi va hisoboti</p>
+        <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">{tr("Yulduzcha — Bolalar")}</h1>
+        <p className="text-[14px] text-[var(--color-text-muted)]">{tr("Bolalarning yulduzcha balansi va hisoboti")}</p>
       </div>
 
       {!forcedBranchId && branches.length > 1 && (
         <Card className="flex flex-col gap-3 p-4 sm:flex-row">
-          <Select label="Filial" value={branchId} onChange={(e) => setBranchId(e.target.value)} className="sm:max-w-xs">
+          <Select label={tr("Filial")} value={branchId} onChange={(e) => setBranchId(e.target.value)} className="sm:max-w-xs">
             {branches.map((branch) => (
               <option key={branch.id} value={branch.id}>
-                {branch.name}
+                {tr(branch.name)}
               </option>
             ))}
           </Select>
@@ -69,45 +71,44 @@ export default function CoinChildrenPage({ params }: { params: Promise<{ slug: s
       <div className="flex items-start gap-3 rounded-[var(--radius-lg)] bg-[var(--color-primary)]/[0.06] px-4 py-3.5">
         <InfoIcon className="mt-px h-5 w-5 shrink-0 text-[var(--color-primary)]" />
         <div>
-          <p className="text-[14px] font-semibold text-[var(--color-text)]">Coin hech qachon qo&apos;lda berilmaydi</p>
+          <p className="text-[14px] font-semibold text-[var(--color-text)]">{tr("Yulduzcha hech qachon qo'lda berilmaydi")}</p>
           <p className="text-[14px] text-[var(--color-text-muted)]">
-            Coin faqat avtomatik hisoblanadi: har kelgan kuni uchun +5 (davomat), haftalik savol-javob va she&apos;r
-            yodlashdan esa max +50/hafta. Bu yerda faqat natija ko&apos;rinadi.
+            {tr("Yulduzcha faqat avtomatik hisoblanadi: har kelgan kuni uchun +5 (davomat), haftalik savol-javob va she'r yodlashdan esa max +50/hafta. Bu yerda faqat natija ko'rinadi.")}
           </p>
         </div>
       </div>
 
       {!branchId ? (
-        <EmptyState title="Filial mavjud emas" />
+        <EmptyState title={tr("Filial mavjud emas")} />
       ) : balancesQuery.isLoading ? (
         <LoadingState />
       ) : balancesQuery.isError ? (
-        <ErrorState message={(balancesQuery.error as Error).message} />
+        <ErrorState message={tr((balancesQuery.error as Error).message)} />
       ) : !balancesQuery.data || balancesQuery.data.length === 0 ? (
-        <EmptyState title="Bu filialda faol bola yo'q" />
+        <EmptyState title={tr("Bu filialda faol bola yo'q")} />
       ) : (
         <Card className="overflow-hidden">
           <ul className="divide-y divide-[var(--color-separator)]">
             {balancesQuery.data.map((child) => (
               <li key={child.childId} className="flex flex-wrap items-center justify-between gap-2.5 px-5 py-3">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-[var(--color-text)]">{child.fullName}</p>
+                  <p className="text-sm font-medium text-[var(--color-text)]">{tr(child.fullName)}</p>
                   <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-[var(--color-text-muted)]">
-                    {child.groupName && <span>{child.groupName}</span>}
-                    <span>Davomat: {child.attendanceCoins}</span>
-                    <span>Haftalik: {child.weeklyAssessmentCoins}</span>
+                    {child.groupName && <span>{tr(child.groupName)}</span>}
+                    <span>{tr("Davomat:")}{" "}{tr(child.attendanceCoins)}</span>
+                    <span>{tr("Haftalik:")}{" "}{tr(child.weeklyAssessmentCoins)}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge tone={child.balance > 0 ? "success" : child.balance < 0 ? "danger" : "neutral"}>
-                    {child.balance} coin
+                    {tr(child.balance)} {tr("yulduzcha")}
                   </Badge>
                   <Button size="sm" variant="outline" onClick={() => setHistoryTarget(child)}>
-                    Tarix
+                    {tr("Tarix")}
                   </Button>
                   {canAssess && (
                     <Button size="sm" variant="outline" onClick={() => setAssessTarget(child)}>
-                      Haftalik baholash
+                      {tr("Haftalik baholash")}
                     </Button>
                   )}
                 </div>

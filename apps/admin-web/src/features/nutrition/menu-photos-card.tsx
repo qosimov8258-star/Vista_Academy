@@ -8,6 +8,7 @@ import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { LoadingState } from "@/components/ui/states";
 import { MAX_PHOTOS_PER_MEAL, MEALS, menuPhotoSrc, useMenuPhotos } from "./use-menu-photos";
+import { useTr } from "@/i18n/tr";
 
 /**
  * Tayyor ovqat suratlari: oshpaz har bir ovqatni suratga olib yuklaydi,
@@ -25,6 +26,7 @@ export function MenuPhotosCard({
   date: string;
   canWrite: boolean;
 }) {
+  const tr = useTr();
   const { query, photosOf, upload, uploading, errors, remove } = useMenuPhotos(slug, branchId, date);
   const [viewing, setViewing] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -32,24 +34,24 @@ export function MenuPhotosCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Tayyor ovqat suratlari</CardTitle>
+        <CardTitle>{tr("Tayyor ovqat suratlari")}</CardTitle>
       </CardHeader>
       <CardBody className="space-y-5">
         <p className="text-[13px] text-[var(--color-text-muted)]">
           {canWrite
-            ? "Ovqat tayyor bo'lgach suratga olib yuklang — ota-onalar kabinetda menyu ostida ko'radi."
-            : "Suratlarni faqat oshpaz yuklaydi — bu yerda uning yuklaganini kuzatasiz. Ota-onalar ham shularni ko'radi."}
+            ? tr("Ovqat tayyor bo'lgach suratga olib yuklang — ota-onalar kabinetda menyu ostida ko'radi.")
+            : tr("Suratlarni faqat oshpaz yuklaydi — bu yerda uning yuklaganini kuzatasiz. Ota-onalar ham shularni ko'radi.")}
         </p>
         {query.isLoading ? (
           <LoadingState rows={2} />
         ) : query.isError ? (
-          <p className="text-[13px] text-[var(--color-danger)]">{(query.error as Error).message}</p>
+          <p className="text-[13px] text-[var(--color-danger)]">{tr((query.error as Error).message)}</p>
         ) : (
           MEALS.map(({ meal, label }) => (
             <MealRow
               key={meal}
               meal={meal}
-              label={label}
+              label={tr(label)}
               photos={photosOf(meal)}
               canWrite={canWrite}
               uploading={uploading === meal}
@@ -62,10 +64,10 @@ export function MenuPhotosCard({
         )}
       </CardBody>
 
-      <Modal open={!!viewing} onClose={() => setViewing(null)} title="Ovqat surati" widthClassName="max-w-3xl">
+      <Modal open={!!viewing} onClose={() => setViewing(null)} title={tr("Ovqat surati")} widthClassName="max-w-3xl">
         {viewing && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={menuPhotoSrc(viewing)} alt="Ovqat surati" className="max-h-[75vh] w-full rounded-lg object-contain" />
+          <img src={menuPhotoSrc(viewing)} alt={tr("Ovqat surati")} className="max-h-[75vh] w-full rounded-lg object-contain" />
         )}
       </Modal>
 
@@ -75,9 +77,9 @@ export function MenuPhotosCard({
           setDeleting(null);
           remove.reset();
         }}
-        title="Suratni o'chirish"
-        description="Surat ota-onalar kabinetidan ham olib tashlanadi."
-        confirmLabel="O'chirish"
+        title={tr("Suratni o'chirish")}
+        description={tr("Surat ota-onalar kabinetidan ham olib tashlanadi.")}
+        confirmLabel={tr("O'chirish")}
         tone="danger"
         loading={remove.isPending}
         error={remove.error ? (remove.error as Error).message : undefined}
@@ -107,16 +109,17 @@ function MealRow({
   onView: (id: string) => void;
   onDelete: (id: string) => void;
 }) {
+  const tr = useTr();
   const inputRef = useRef<HTMLInputElement>(null);
 
   return (
     <div>
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[14px] font-medium text-[var(--color-text)]">{label}</p>
+        <p className="text-[14px] font-medium text-[var(--color-text)]">{tr(label)}</p>
         {canWrite && photos.length < MAX_PHOTOS_PER_MEAL && (
           <>
             <Button variant="outline" size="sm" loading={uploading} onClick={() => inputRef.current?.click()}>
-              Rasm qo&apos;shish
+              {tr("Rasm qo'shish")}
             </Button>
             <input
               ref={inputRef}
@@ -144,14 +147,14 @@ function MealRow({
                 aria-label={`${label} suratini kattalashtirish`}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={menuPhotoSrc(p.id)} alt={label} loading="lazy" className="h-full w-full object-cover" />
+                <img src={menuPhotoSrc(p.id)} alt={tr(label)} loading="lazy" className="h-full w-full object-cover" />
               </button>
               {canWrite && (
                 <button
                   type="button"
                   onClick={() => onDelete(p.id)}
                   className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/70 text-[13px] leading-none text-white"
-                  aria-label="Suratni o'chirish"
+                  aria-label={tr("Suratni o'chirish")}
                 >
                   ×
                 </button>
@@ -160,9 +163,9 @@ function MealRow({
           ))}
         </div>
       ) : (
-        <p className="mt-1 text-[13px] text-[var(--color-text-muted)]">Surat yo&apos;q</p>
+        <p className="mt-1 text-[13px] text-[var(--color-text-muted)]">{tr("Surat yo'q")}</p>
       )}
-      {error && <p className="mt-2 text-[13px] text-[var(--color-danger)]">{error}</p>}
+      {error && <p className="mt-2 text-[13px] text-[var(--color-danger)]">{tr(error)}</p>}
     </div>
   );
 }

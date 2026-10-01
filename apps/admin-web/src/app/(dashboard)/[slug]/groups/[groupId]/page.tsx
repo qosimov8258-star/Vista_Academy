@@ -18,6 +18,7 @@ import { formatAge, formatChildId, formatDate, formatGender } from "@/lib/format
 import { canWriteOperational } from "@/lib/permissions";
 import { EditGroupModal } from "@/features/groups/edit-group-modal";
 import { ManageTeachersModal } from "@/features/groups/manage-teachers-modal";
+import { useTr } from "@/i18n/tr";
 
 const CHILD_STATUS_LABEL: Record<string, string> = { ACTIVE: "Faol", INACTIVE: "Nofaol", QUARANTINED: "Karantinda" };
 const CHILD_STATUS_TONE: Record<string, "success" | "neutral" | "danger"> = {
@@ -73,6 +74,7 @@ function FilterPill({ active, onClick, children }: { active: boolean; onClick: (
 }
 
 export default function GroupDetailPage({ params }: { params: Promise<{ slug: string; groupId: string }> }) {
+  const tr = useTr();
   const { slug, groupId } = use(params);
   const { user } = useAuth();
   const canWrite = canWriteOperational(user?.role);
@@ -108,7 +110,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
   });
 
   if (overviewQuery.isLoading) return <LoadingState />;
-  if (overviewQuery.isError) return <ErrorState message={(overviewQuery.error as Error).message} />;
+  if (overviewQuery.isError) return <ErrorState message={tr((overviewQuery.error as Error).message)} />;
   const overview = overviewQuery.data;
   if (!overview) return null;
 
@@ -129,7 +131,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
         className="group inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
       >
         <ArrowLeftIcon className="h-4 w-4 transition-transform group-hover:-translate-x-0.5 motion-reduce:transition-none" />
-        Guruhlar
+        {tr("Guruhlar")}
       </Link>
 
       <Card className="overflow-hidden">
@@ -137,21 +139,21 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
           <div>
             <div className="flex flex-wrap items-center gap-2.5">
               <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
-                {overview.group.name}
+                {tr(overview.group.name)}
               </h1>
               <Badge tone={overview.group.status === "ACTIVE" ? "success" : "neutral"}>
                 {overview.group.status === "ACTIVE" ? "Faol" : "Nofaol"}
               </Badge>
             </div>
-            <p className="mt-1 text-[14px] text-[var(--color-text-muted)]">{overview.branch.name}</p>
+            <p className="mt-1 text-[14px] text-[var(--color-text-muted)]">{tr(overview.branch.name)}</p>
           </div>
           {canWrite && (
             <div className="flex gap-2">
               <Button size="sm" variant="outline" onClick={() => setTeachersOpen(true)}>
-                Tarbiyachilar
+                {tr("Tarbiyachilar")}
               </Button>
               <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
-                Tahrirlash
+                {tr("Tahrirlash")}
               </Button>
             </div>
           )}
@@ -159,46 +161,46 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
 
         <dl className="grid grid-cols-2 divide-x divide-y divide-[var(--color-separator)] border-t border-[var(--color-separator)] sm:grid-cols-5 sm:divide-y-0">
           <div className="px-5 py-3.5 sm:px-6">
-            <dt className="text-[12px] font-medium text-[var(--color-text-muted)]">Bolalar / Sig&apos;im</dt>
+            <dt className="text-[12px] font-medium text-[var(--color-text-muted)]">{tr("Bolalar / Sig'im")}</dt>
             <dd className="mt-1 text-[15px] font-medium tabular-nums text-[var(--color-text)]">
-              {overview.children.active} / {overview.group.capacity}
+              {tr(overview.children.active)} / {tr(overview.group.capacity)}
             </dd>
           </div>
           <div className="px-5 py-3.5 sm:px-6">
-            <dt className="text-[12px] font-medium text-[var(--color-text-muted)]">Bo&apos;sh o&apos;rin</dt>
+            <dt className="text-[12px] font-medium text-[var(--color-text-muted)]">{tr("Bo'sh o'rin")}</dt>
             <dd className="mt-1 text-[15px] font-medium tabular-nums text-[var(--color-text)]">
               {Math.max(0, overview.group.capacity - overview.children.active)}
             </dd>
           </div>
           <div className="px-5 py-3.5 sm:px-6">
-            <dt className="text-[12px] font-medium text-[var(--color-text-muted)]">O&apos;g&apos;il bolalar</dt>
-            <dd className="mt-1 text-[15px] font-medium tabular-nums text-[var(--color-text)]">{overview.children.boys}</dd>
+            <dt className="text-[12px] font-medium text-[var(--color-text-muted)]">{tr("O'g'il bolalar")}</dt>
+            <dd className="mt-1 text-[15px] font-medium tabular-nums text-[var(--color-text)]">{tr(overview.children.boys)}</dd>
           </div>
           <div className="px-5 py-3.5 sm:px-6">
-            <dt className="text-[12px] font-medium text-[var(--color-text-muted)]">Qiz bolalar</dt>
-            <dd className="mt-1 text-[15px] font-medium tabular-nums text-[var(--color-text)]">{overview.children.girls}</dd>
+            <dt className="text-[12px] font-medium text-[var(--color-text-muted)]">{tr("Qiz bolalar")}</dt>
+            <dd className="mt-1 text-[15px] font-medium tabular-nums text-[var(--color-text)]">{tr(overview.children.girls)}</dd>
           </div>
           <div className="px-5 py-3.5 sm:px-6">
-            <dt className="text-[12px] font-medium text-[var(--color-text-muted)]">Tarbiyachilar</dt>
-            <dd className="mt-1 text-[15px] font-medium tabular-nums text-[var(--color-text)]">{overview.teachers.length}</dd>
+            <dt className="text-[12px] font-medium text-[var(--color-text-muted)]">{tr("Tarbiyachilar")}</dt>
+            <dd className="mt-1 text-[15px] font-medium tabular-nums text-[var(--color-text)]">{tr(overview.teachers.length)}</dd>
           </div>
         </dl>
       </Card>
 
       <Card className="overflow-hidden">
         <div className="hairline flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-separator)] px-5 py-4 sm:px-6">
-          <CardTitle>Kim keldi</CardTitle>
+          <CardTitle>{tr("Kim keldi")}</CardTitle>
           <div className="flex flex-wrap items-center gap-2">
             {rosterDate && (
               <>
                 <FilterPill active={rosterDate === todayDateString()} onClick={() => setRosterDate(todayDateString())}>
-                  Bugun
+                  {tr("Bugun")}
                 </FilterPill>
                 <FilterPill
                   active={rosterDate === shiftDays(todayDateString(), -1)}
                   onClick={() => setRosterDate(shiftDays(todayDateString(), -1))}
                 >
-                  Kecha
+                  {tr("Kecha")}
                 </FilterPill>
               </>
             )}
@@ -207,7 +209,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
               value={rosterDate ?? ""}
               max={todayDateString()}
               onChange={(e) => e.target.value && setRosterDate(e.target.value)}
-              aria-label="Sana"
+              aria-label={tr("Sana")}
               className="h-9 rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-2.5 text-[13px] text-[var(--color-text)] outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20"
             />
           </div>
@@ -219,25 +221,25 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
             </div>
           ) : rosterQuery.isError ? (
             <div className="px-5 py-5 sm:px-6">
-              <ErrorState message={(rosterQuery.error as Error).message} />
+              <ErrorState message={tr((rosterQuery.error as Error).message)} />
             </div>
           ) : !rosterQuery.data || rosterQuery.data.total === 0 ? (
             <div className="px-5 py-5 sm:px-6">
-              <EmptyState title="Bu guruhda faol bola yo'q" />
+              <EmptyState title={tr("Bu guruhda faol bola yo'q")} />
             </div>
           ) : (
             <>
               <div className="grid grid-cols-3 divide-x divide-[var(--color-separator)] border-b border-[var(--color-separator)]">
-                <RosterCount label="Keldi" value={rosterQuery.data.counts.present} tone="success" />
-                <RosterCount label="Kelmadi" value={rosterQuery.data.counts.absent} tone="danger" />
-                <RosterCount label="Belgilanmagan" value={rosterQuery.data.counts.unmarked} tone="neutral" />
+                <RosterCount label={tr("Keldi")} value={rosterQuery.data.counts.present} tone="success" />
+                <RosterCount label={tr("Kelmadi")} value={rosterQuery.data.counts.absent} tone="danger" />
+                <RosterCount label={tr("Belgilanmagan")} value={rosterQuery.data.counts.unmarked} tone="neutral" />
               </div>
               <DataTable>
                 <THead>
                   <tr>
-                    <Th>Ism</Th>
-                    <Th>Holat</Th>
-                    <Th>Izoh</Th>
+                    <Th>{tr("Ism")}</Th>
+                    <Th>{tr("Holat")}</Th>
+                    <Th>{tr("Izoh")}</Th>
                   </tr>
                 </THead>
                 <TBody>
@@ -245,15 +247,15 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
                     <Tr key={item.childId}>
                       <Td className="font-medium">
                         <Link href={`/${slug}/children/${item.childId}`} className="text-[var(--color-primary)] hover:underline">
-                          {item.fullName}
+                          {tr(item.fullName)}
                         </Link>
                         <span className="ml-1.5 text-[12px] text-[var(--color-text-muted)]">{formatChildId(item.publicId)}</span>
                       </Td>
                       <Td>
                         {item.status ? (
-                          <Badge tone={ATTENDANCE_STATUS_TONE[item.status]}>{ATTENDANCE_STATUS_LABEL[item.status]}</Badge>
+                          <Badge tone={ATTENDANCE_STATUS_TONE[item.status]}>{tr(ATTENDANCE_STATUS_LABEL[item.status])}</Badge>
                         ) : (
-                          <Badge tone="neutral">Belgilanmagan</Badge>
+                          <Badge tone="neutral">{tr("Belgilanmagan")}</Badge>
                         )}
                       </Td>
                       <Td className="text-[var(--color-text-muted)]">{item.note ?? "—"}</Td>
@@ -268,13 +270,13 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
 
       <Card className="overflow-hidden">
         <CardHeader>
-          <CardTitle>Tarbiyachilar</CardTitle>
+          <CardTitle>{tr("Tarbiyachilar")}</CardTitle>
         </CardHeader>
         <CardBody className="p-0">
           {overview.teachers.length === 0 ? (
             <div className="px-5 py-5 sm:px-6">
               <EmptyState
-                title="Hali tarbiyachi biriktirilmagan"
+                title={tr("Hali tarbiyachi biriktirilmagan")}
                 description={canWrite ? "\"Tarbiyachilar\" tugmasi orqali biriktiring" : undefined}
                 icon={<TeacherIcon className="h-[26px] w-[26px]" />}
               />
@@ -287,10 +289,10 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
                     {initials(teacher.fullName)}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[14px] font-medium text-[var(--color-text)]">{teacher.fullName}</p>
-                    <p className="text-[12.5px] text-[var(--color-text-muted)]">{teacher.position}</p>
+                    <p className="truncate text-[14px] font-medium text-[var(--color-text)]">{tr(teacher.fullName)}</p>
+                    <p className="text-[12.5px] text-[var(--color-text-muted)]">{tr(teacher.position)}</p>
                   </div>
-                  {!teacher.isActive && <Badge tone="neutral">Nofaol</Badge>}
+                  {!teacher.isActive && <Badge tone="neutral">{tr("Nofaol")}</Badge>}
                 </li>
               ))}
             </ul>
@@ -300,21 +302,21 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
 
       <Card className="overflow-hidden">
         <CardHeader>
-          <CardTitle>Bolalar</CardTitle>
+          <CardTitle>{tr("Bolalar")}</CardTitle>
         </CardHeader>
         <CardBody className="p-0">
           {overview.children.items.length === 0 ? (
             <div className="px-5 py-5 sm:px-6">
-              <EmptyState title="Bu guruhda bola yo'q" icon={<GroupIcon className="h-[26px] w-[26px]" />} />
+              <EmptyState title={tr("Bu guruhda bola yo'q")} icon={<GroupIcon className="h-[26px] w-[26px]" />} />
             </div>
           ) : (
             <DataTable>
               <THead>
                 <tr>
-                  <Th>Ism</Th>
-                  <Th>Jinsi</Th>
-                  <Th>Tug&apos;ilgan sana</Th>
-                  <Th>Holati</Th>
+                  <Th>{tr("Ism")}</Th>
+                  <Th>{tr("Jinsi")}</Th>
+                  <Th>{tr("Tug'ilgan sana")}</Th>
+                  <Th>{tr("Holati")}</Th>
                 </tr>
               </THead>
               <TBody>
@@ -322,7 +324,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
                   <Tr key={child.id}>
                     <Td>
                       <Link href={`/${slug}/children/${child.id}`} className="font-medium text-[var(--color-primary)] hover:underline">
-                        {child.fullName}
+                        {tr(child.fullName)}
                       </Link>
                       <span className="ml-1.5 text-[12px] text-[var(--color-text-muted)]">{formatChildId(child.publicId)}</span>
                     </Td>
@@ -331,7 +333,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
                       {child.birthDate ? `${formatDate(child.birthDate)} (${formatAge(child.birthDate)})` : "—"}
                     </Td>
                     <Td>
-                      <Badge tone={CHILD_STATUS_TONE[child.status]}>{CHILD_STATUS_LABEL[child.status]}</Badge>
+                      <Badge tone={CHILD_STATUS_TONE[child.status]}>{tr(CHILD_STATUS_LABEL[child.status])}</Badge>
                     </Td>
                   </Tr>
                 ))}
@@ -343,7 +345,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
 
       <Card className="overflow-hidden">
         <div className="hairline flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-separator)] px-5 py-4 sm:px-6">
-          <CardTitle>Davomat ({attendanceQuery.data ? `${attendanceQuery.data.from} — ${attendanceQuery.data.to}` : "so'nggi 14 kun"})</CardTitle>
+          <CardTitle>{tr("Davomat (")}{attendanceQuery.data ? `${attendanceQuery.data.from} — ${attendanceQuery.data.to}` : tr("so'nggi 14 kun")})</CardTitle>
           <div className="flex flex-wrap items-center gap-2">
             {RANGE_PRESETS.map((preset) => {
               const to = todayDateString();
@@ -351,7 +353,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
               const active = range?.from === from && range?.to === to;
               return (
                 <FilterPill key={preset.days} active={active} onClick={() => setRange({ from, to })}>
-                  {preset.label}
+                  {tr(preset.label)}
                 </FilterPill>
               );
             })}
@@ -364,27 +366,27 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
             </div>
           ) : attendanceQuery.isError ? (
             <div className="px-5 py-5 sm:px-6">
-              <ErrorState message={(attendanceQuery.error as Error).message} />
+              <ErrorState message={tr((attendanceQuery.error as Error).message)} />
             </div>
           ) : !attendanceQuery.data || attendanceQuery.data.children.length === 0 ? (
-            <EmptyState title="Davomat ma'lumoti yo'q" />
+            <EmptyState title={tr("Davomat ma'lumoti yo'q")} />
           ) : (
             <DataTable>
               <THead>
                 <tr>
-                  <Th>Bola</Th>
-                  <Th numeric>Keldi</Th>
-                  <Th numeric>Kelmadi</Th>
-                  <Th numeric>Foiz</Th>
+                  <Th>{tr("Bola")}</Th>
+                  <Th numeric>{tr("Keldi")}</Th>
+                  <Th numeric>{tr("Kelmadi")}</Th>
+                  <Th numeric>{tr("Foiz")}</Th>
                 </tr>
               </THead>
               <TBody>
                 {attendanceQuery.data.children.map((child) => (
                   <Tr key={child.childId}>
-                    <Td className="font-medium">{child.fullName}</Td>
-                    <Td numeric className="text-[var(--color-text-muted)]">{child.present}</Td>
-                    <Td numeric className="text-[var(--color-text-muted)]">{child.absent}</Td>
-                    <Td numeric>{child.rate === null ? "—" : <Badge tone={child.rate >= 80 ? "success" : child.rate >= 50 ? "warning" : "danger"}>{child.rate}%</Badge>}</Td>
+                    <Td className="font-medium">{tr(child.fullName)}</Td>
+                    <Td numeric className="text-[var(--color-text-muted)]">{tr(child.present)}</Td>
+                    <Td numeric className="text-[var(--color-text-muted)]">{tr(child.absent)}</Td>
+                    <Td numeric>{child.rate === null ? "—" : <Badge tone={child.rate >= 80 ? "success" : child.rate >= 50 ? "warning" : "danger"}>{tr(child.rate)}%</Badge>}</Td>
                   </Tr>
                 ))}
               </TBody>
@@ -408,11 +410,12 @@ const ROSTER_COUNT_TONE = {
 } as const;
 
 function RosterCount({ label, value, tone }: { label: string; value: number; tone: keyof typeof ROSTER_COUNT_TONE }) {
+  const tr = useTr();
   const style = ROSTER_COUNT_TONE[tone];
   return (
     <div className={clsx("min-w-0 px-2 py-3.5 sm:px-6", style.bg)}>
-      <p className={clsx("text-[22px] font-semibold leading-none tabular-nums", style.text)}>{value}</p>
-      <p className="mt-1.5 break-words text-[11px] font-medium text-[var(--color-text-muted)] sm:text-[12.5px]">{label}</p>
+      <p className={clsx("text-[22px] font-semibold leading-none tabular-nums", style.text)}>{tr(value)}</p>
+      <p className="mt-1.5 break-words text-[11px] font-medium text-[var(--color-text-muted)] sm:text-[12.5px]">{tr(label)}</p>
     </div>
   );
 }

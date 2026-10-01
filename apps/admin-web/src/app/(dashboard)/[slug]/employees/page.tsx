@@ -20,6 +20,7 @@ import { EmployeePhoto } from "@/components/ui/employee-photo";
 import { initials } from "@/components/ui/avatar";
 import { formatPositionLabel } from "@/lib/employee-position";
 import { formatMoney } from "@/lib/format";
+import { useTr } from "@/i18n/tr";
 
 const OTHER_POSITION: Position = { id: "__other__", organizationId: "", name: "Boshqa", createdAt: "" };
 const ALL_TAB = "__all__";
@@ -40,6 +41,7 @@ function currentPeriodString(): string {
 }
 
 export default function EmployeesPage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const [employeeModal, setEmployeeModal] = useState<{ open: boolean; position: Position | null }>({
     open: false,
@@ -156,12 +158,12 @@ export default function EmployeesPage({ params }: { params: Promise<{ slug: stri
     <div className="space-y-5">
       <div className="flex items-start justify-between gap-3 md:flex-wrap md:items-center">
         <div className="min-w-0">
-          <h1 className="text-xl font-semibold text-[var(--color-text)]">Xodimlar</h1>
-          <p className="text-sm text-[var(--color-text-muted)]">Lavozimlar bo&apos;yicha guruhlangan xodimlar ro&apos;yxati</p>
+          <h1 className="text-xl font-semibold text-[var(--color-text)]">{tr("Xodimlar")}</h1>
+          <p className="text-sm text-[var(--color-text-muted)]">{tr("Lavozimlar bo'yicha guruhlangan xodimlar ro'yxati")}</p>
         </div>
         {canWrite && (
           <Button variant="outline" className="shrink-0" onClick={() => setEmployeeModal({ open: true, position: null })}>
-            + Yangi xodim
+            {tr("+ Yangi xodim")}
           </Button>
         )}
       </div>
@@ -188,8 +190,8 @@ export default function EmployeesPage({ params }: { params: Promise<{ slug: stri
         />
       ) : allEmployees.length === 0 ? (
         <EmptyState
-          title="Hali xodim yo'q"
-          description={canWrite ? "Yuqoridagi \"+ Yangi xodim\" tugmasi orqali birinchi xodimni qo'shing" : undefined}
+          title={tr("Hali xodim yo'q")}
+          description={canWrite ? tr("Yuqoridagi \"+ Yangi xodim\" tugmasi orqali birinchi xodimni qo'shing") : undefined}
         />
       ) : (
         <Card className="overflow-hidden">
@@ -204,8 +206,8 @@ export default function EmployeesPage({ params }: { params: Promise<{ slug: stri
                   : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
               )}
             >
-              Barchasi
-              <Badge tone={activeTab === ALL_TAB ? "primary" : "neutral"}>{allEmployees.length}</Badge>
+              {tr("Barchasi")}
+              <Badge tone={activeTab === ALL_TAB ? "primary" : "neutral"}>{tr(allEmployees.length)}</Badge>
             </button>
             {canViewPayroll && (
               <>
@@ -219,8 +221,8 @@ export default function EmployeesPage({ params }: { params: Promise<{ slug: stri
                       : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
                   )}
                 >
-                  Oylik to&apos;langan
-                  <Badge tone={activeTab === PAID_TAB ? "primary" : "success"}>{paidEmployees.length}</Badge>
+                  {tr("Oylik to'langan")}
+                  <Badge tone={activeTab === PAID_TAB ? "primary" : "success"}>{tr(paidEmployees.length)}</Badge>
                 </button>
                 <button
                   type="button"
@@ -232,8 +234,8 @@ export default function EmployeesPage({ params }: { params: Promise<{ slug: stri
                       : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
                   )}
                 >
-                  Oylik to&apos;lanmagan
-                  <Badge tone={activeTab === UNPAID_TAB ? "primary" : "danger"}>{unpaidEmployees.length}</Badge>
+                  {tr("Oylik to'lanmagan")}
+                  <Badge tone={activeTab === UNPAID_TAB ? "primary" : "danger"}>{tr(unpaidEmployees.length)}</Badge>
                 </button>
                 <button
                   type="button"
@@ -245,8 +247,8 @@ export default function EmployeesPage({ params }: { params: Promise<{ slug: stri
                       : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
                   )}
                 >
-                  Bonuslar
-                  <Badge tone={activeTab === BONUS_TAB ? "primary" : "info"}>{bonusEmployees.length}</Badge>
+                  {tr("Bonuslar")}
+                  <Badge tone={activeTab === BONUS_TAB ? "primary" : "info"}>{tr(bonusEmployees.length)}</Badge>
                 </button>
                 <span aria-hidden className="mx-1 h-5 w-px shrink-0 bg-[var(--color-separator)]" />
               </>
@@ -263,8 +265,8 @@ export default function EmployeesPage({ params }: { params: Promise<{ slug: stri
                     : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
                 )}
               >
-                {position.name}
-                <Badge tone={activeTab === position.id ? "primary" : "neutral"}>{employees.length}</Badge>
+                {tr(position.name)}
+                <Badge tone={activeTab === position.id ? "primary" : "neutral"}>{tr(employees.length)}</Badge>
               </button>
             ))}
           </div>
@@ -274,10 +276,10 @@ export default function EmployeesPage({ params }: { params: Promise<{ slug: stri
               <EmptyState
                 title={
                   activeTab === BONUS_TAB
-                    ? "Bu oyda bonus berilgan xodim yo'q"
+                    ? tr("Bu oyda bonus berilgan xodim yo'q")
                     : activeTab === PAID_TAB
-                      ? "Bu oyda hali oylik to'langan xodim yo'q"
-                      : "Bu oyda barcha xodimlarga oylik to'langan"
+                      ? tr("Bu oyda hali oylik to'langan xodim yo'q")
+                      : tr("Bu oyda barcha xodimlarga oylik to'langan")
                 }
               />
             </div>
@@ -302,16 +304,16 @@ export default function EmployeesPage({ params }: { params: Promise<{ slug: stri
                 />
                 <div className="min-w-0 w-full">
                   <p className="truncate text-[13px] font-medium text-[var(--color-text)]">
-                    {employee.fullName}
+                    {tr(employee.fullName)}
                   </p>
                   <p className="truncate text-[11px] text-[var(--color-text-muted)]">
-                    {formatPositionLabel(employee.position, employee.subjects)}
+                    {tr(formatPositionLabel(employee.position, employee.subjects))}
                   </p>
                 </div>
                 {activeTab === PAID_TAB ? (
                   <Badge tone="success">{formatMoney(payrollEntry?.totalAmount ?? 0)}</Badge>
                 ) : activeTab === UNPAID_TAB ? (
-                  <Badge tone="danger">To&apos;lanmagan</Badge>
+                  <Badge tone="danger">{tr("To'lanmagan")}</Badge>
                 ) : activeTab === BONUS_TAB ? (
                   <Badge tone="info">{formatMoney(payrollEntry?.bonusAmount ?? 0)}</Badge>
                 ) : (
@@ -364,10 +366,11 @@ function EmployeesStatsBar({
   unpaid: number;
   bonus: number;
 }) {
+  const tr = useTr();
   const tiles: { label: string; value: number; toneClass: string }[] = [
     { label: "Jami xodimlar", value: total, toneClass: "text-[var(--color-text)]" },
-    { label: "Oylik to'langan", value: paid, toneClass: "text-[var(--color-success)]" },
-    { label: "Oylik to'lanmagan", value: unpaid, toneClass: "text-[var(--color-danger)]" },
+    { label: tr("Oylik to'langan"), value: paid, toneClass: "text-[var(--color-success)]" },
+    { label: tr("Oylik to'lanmagan"), value: unpaid, toneClass: "text-[var(--color-danger)]" },
     { label: "Bonus olganlar", value: bonus, toneClass: "text-sky-700" },
   ];
 
@@ -376,8 +379,8 @@ function EmployeesStatsBar({
       <div className="grid grid-cols-2 gap-px bg-[var(--color-separator)] sm:grid-cols-4">
         {tiles.map((tile) => (
           <div key={tile.label} className="bg-[var(--color-surface)] px-5 py-3.5 sm:px-6">
-            <p className="text-[12px] font-medium text-[var(--color-text-muted)]">{tile.label}</p>
-            <p className={`mt-1 text-[20px] font-semibold tabular-nums ${tile.toneClass}`}>{tile.value}</p>
+            <p className="text-[12px] font-medium text-[var(--color-text-muted)]">{tr(tile.label)}</p>
+            <p className={`mt-1 text-[20px] font-semibold tabular-nums ${tile.toneClass}`}>{tr(tile.value)}</p>
           </div>
         ))}
       </div>

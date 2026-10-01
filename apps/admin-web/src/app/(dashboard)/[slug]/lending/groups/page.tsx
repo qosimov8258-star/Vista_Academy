@@ -19,6 +19,7 @@ import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { GroupIcon, PencilIcon, PlusIcon, TrashIcon } from "@/components/ui/icons";
 import { LendingTabs } from "@/features/lending/lending-tabs";
+import { useTr } from "@/i18n/tr";
 
 const schema = z.object({
   name: z.string().min(2, "Nomi kamida 2 belgi"),
@@ -39,6 +40,7 @@ const CARD_COLORS = [
 ];
 
 export default function LendingGroupsPage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const { user } = useAuth();
   const canWrite = canWriteOperational(user?.role);
@@ -65,16 +67,15 @@ export default function LendingGroupsPage({ params }: { params: Promise<{ slug: 
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">Lending sahifa</h1>
+          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">{tr("Lending sahifa")}</h1>
           <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">
-            "Guruhlarimiz" bo'limida saytda chiqadigan rasm va nom — shu yerdan tahrirlanadi. Guruhni bosib,
-            uning o'z sahifasidagi rasmlarni ham boshqarish mumkin.
+            {tr("\"Guruhlarimiz\" bo'limida saytda chiqadigan rasm va nom — shu yerdan tahrirlanadi. Guruhni bosib, uning o'z sahifasidagi rasmlarni ham boshqarish mumkin.")}
           </p>
         </div>
         {canWrite && (
           <Button onClick={() => setCreateOpen(true)}>
             <PlusIcon className="h-4 w-4" />
-            Guruh qo'shish
+            {tr("Guruh qo'shish")}
           </Button>
         )}
       </div>
@@ -86,12 +87,12 @@ export default function LendingGroupsPage({ params }: { params: Promise<{ slug: 
       {groupsQuery.isLoading ? (
         <LoadingState rows={3} />
       ) : groupsQuery.isError ? (
-        <ErrorState message={groupsQuery.error instanceof ApiError ? groupsQuery.error.message : "Xatolik yuz berdi"} />
+        <ErrorState message={groupsQuery.error instanceof ApiError ? groupsQuery.error.message : tr("Xatolik yuz berdi")} />
       ) : !groupsQuery.data || groupsQuery.data.length === 0 ? (
         <EmptyState
           icon={<GroupIcon className="h-[26px] w-[26px]" />}
-          title="Hali guruh yo'q"
-          description={canWrite ? "\"+ Guruh qo'shish\" tugmasi orqali birinchisini qo'shing" : undefined}
+          title={tr("Hali guruh yo'q")}
+          description={canWrite ? tr("\"+ Guruh qo'shish\" tugmasi orqali birinchisini qo'shing") : undefined}
         />
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
@@ -105,7 +106,7 @@ export default function LendingGroupsPage({ params }: { params: Promise<{ slug: 
                   // eslint-disable-next-line @next/next/no-img-element -- API'dan kelgan dinamik rasm, saytdagi bilan bir xil ko'rinish
                   <img
                     src={assetUrl(group.photoPath) ?? undefined}
-                    alt={group.name}
+                    alt={tr(group.name)}
                     className="h-full w-full bg-[var(--color-surface-sunken)] object-contain"
                   />
                 ) : (
@@ -114,7 +115,7 @@ export default function LendingGroupsPage({ params }: { params: Promise<{ slug: 
                     style={{ background: CARD_COLORS[index % CARD_COLORS.length] }}
                   >
                     <span className="text-[13px] font-bold text-white/70">{index + 1}</span>
-                    <p className="mt-1 text-[16px] font-bold leading-tight text-white">{group.name}</p>
+                    <p className="mt-1 text-[16px] font-bold leading-tight text-white">{tr(group.name)}</p>
                   </div>
                 )}
               </Link>
@@ -126,7 +127,7 @@ export default function LendingGroupsPage({ params }: { params: Promise<{ slug: 
                     <button
                       type="button"
                       onClick={() => setDeleting(group)}
-                      aria-label="O'chirish"
+                      aria-label={tr("O'chirish")}
                       className="pointer-events-auto flex h-7 w-7 items-center justify-center rounded-full bg-black/45 text-white transition-colors hover:bg-[var(--color-danger)]"
                     >
                       <TrashIcon className="h-3.5 w-3.5" />
@@ -134,7 +135,7 @@ export default function LendingGroupsPage({ params }: { params: Promise<{ slug: 
                   </div>
                   <div className="flex items-center justify-center gap-1.5 rounded-full bg-black/45 px-3 py-1.5 text-[12.5px] font-medium text-white">
                     <PencilIcon className="h-3.5 w-3.5" />
-                    Tahrirlash
+                    {tr("Tahrirlash")}
                   </div>
                 </div>
               )}
@@ -148,12 +149,12 @@ export default function LendingGroupsPage({ params }: { params: Promise<{ slug: 
       <ConfirmDialog
         open={!!deleting}
         onClose={() => setDeleting(null)}
-        title="Guruhni o'chirish"
-        confirmLabel="O'chirish"
+        title={tr("Guruhni o'chirish")}
+        confirmLabel={tr("O'chirish")}
         tone="danger"
         loading={deleteMutation.isPending}
         error={deleteMutation.isError ? ((deleteMutation.error as Error)?.message ?? null) : null}
-        description={<><b className="text-[var(--color-text)]">{deleting?.name}</b> saytdan o&apos;chiriladi.</>}
+        description={<><b className="text-[var(--color-text)]">{tr(deleting?.name)}</b> {tr("saytdan o'chiriladi.")}</>}
         onConfirm={() => deleting && deleteMutation.mutate(deleting.id)}
       />
     </div>
@@ -161,6 +162,7 @@ export default function LendingGroupsPage({ params }: { params: Promise<{ slug: 
 }
 
 function CreateGroupModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -184,30 +186,30 @@ function CreateGroupModal({ open, onClose }: { open: boolean; onClose: () => voi
       queryClient.invalidateQueries({ queryKey: ["landing-groups"] });
       onClose();
     },
-    onError: (err) => setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik"),
+    onError: (err) => setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik")),
   });
 
   return (
-    <Modal open={open} onClose={onClose} title="Yangi guruh">
+    <Modal open={open} onClose={onClose} title={tr("Yangi guruh")}>
       <div className="space-y-4">
         {serverError && (
           <div role="alert" className="rounded-[var(--radius-lg)] bg-[var(--color-danger-bg)] px-3 py-2.5 text-[13px] text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
 
         <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
-          <Input label="Nomi" placeholder="Kichkintoylar" error={errors.name?.message} {...register("name")} />
-          <Input label="Tartib raqami" type="number" hint="Kichik raqam avval chiqadi" error={errors.order?.message} {...register("order")} />
+          <Input label={tr("Nomi")} placeholder={tr("Kichkintoylar")} error={errors.name?.message} {...register("name")} />
+          <Input label={tr("Tartib raqami")} type="number" hint={tr("Kichik raqam avval chiqadi")} error={errors.order?.message} {...register("order")} />
           <p className="text-[13px] text-[var(--color-text-muted)]">
-            Rasm va nomni keyinroq guruh ustiga bosib, uning sahifasida tahrirlashingiz mumkin.
+            {tr("Rasm va nomni keyinroq guruh ustiga bosib, uning sahifasida tahrirlashingiz mumkin.")}
           </p>
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={onClose}>
-              Bekor qilish
+              {tr("Bekor qilish")}
             </Button>
             <Button type="submit" loading={isSubmitting || mutation.isPending}>
-              Saqlash
+              {tr("Saqlash")}
             </Button>
           </div>
         </form>

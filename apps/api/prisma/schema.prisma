@@ -136,6 +136,8 @@ model Organization {
   proverbs                  Proverb[]
   tales                     Tale[]
   faceIdDevices             FaceIdDevice[]
+  faceIdAgents              FaceIdAgent[]
+  faceIdAgentPairingCodes   FaceIdAgentPairingCode[]
   faceEnrollments           FaceEnrollment[]
   faceIdEvents              FaceIdEvent[]
   faceIdCommands            FaceIdCommand[]
@@ -322,6 +324,8 @@ model Branch {
   proverbs                  Proverb[]
   tales                     Tale[]
   faceIdDevices             FaceIdDevice[]
+  faceIdAgents              FaceIdAgent[]
+  faceIdAgentPairingCodes   FaceIdAgentPairingCode[]
   faceEnrollments           FaceEnrollment[]
   faceIdEvents              FaceIdEvent[]
   faceIdCommands            FaceIdCommand[]
@@ -2067,6 +2071,46 @@ model FaceIdDevice {
   @@index([organizationId])
   @@index([branchId])
   @@map("face_id_devices")
+}
+
+/// Obyektdagi hik-agent (bitta kompyuter) — filialga bir martalik kod bilan
+/// ulanadi. Ulangach filialdagi barcha faol qurilmalarga o'zi xizmat qiladi:
+/// ERP'da yangi qurilma qo'shilsa token ko'chirish/.env tahrirlash shart emas.
+model FaceIdAgent {
+  id             String    @id @default(uuid())
+  organizationId String    @map("organization_id")
+  branchId       String    @map("branch_id")
+  /// Kompyuter nomi (agent o'zi yuboradi) — qaysi agent ekanini tanish uchun
+  name           String
+  /// Agent kaliti (hka_...) sha256 — kalitning o'zi saqlanmaydi
+  keyHash        String    @unique @map("key_hash")
+  lastSeenAt     DateTime? @map("last_seen_at")
+  revokedAt      DateTime? @map("revoked_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, branchId])
+  @@map("face_id_agents")
+}
+
+/// Agentni ulash uchun bir martalik kod (XXXX-XXXX, 15 daqiqa). Faqat sha256 saqlanadi.
+model FaceIdAgentPairingCode {
+  id              String    @id @default(uuid())
+  organizationId  String    @map("organization_id")
+  branchId        String    @map("branch_id")
+  codeHash        String    @unique @map("code_hash")
+  expiresAt       DateTime  @map("expires_at")
+  usedAt          DateTime? @map("used_at")
+  createdByUserId String?   @map("created_by_user_id")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@index([branchId])
+  @@map("face_id_agent_pairing_codes")
 }
 
 model FaceEnrollment {

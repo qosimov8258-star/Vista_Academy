@@ -10,6 +10,7 @@ import type { Employee, PayrollEntry } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Input, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useTr } from "@/i18n/tr";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 
@@ -36,6 +37,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export function GeneratePayrollModal({ open, onClose, slug }: { open: boolean; onClose: () => void; slug: string }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -79,39 +81,39 @@ export function GeneratePayrollModal({ open, onClose, slug }: { open: boolean; o
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
   return (
-    <Modal open={open} onClose={onClose} title="Ish haqi hisoblash">
+    <Modal open={open} onClose={onClose} title={tr("Ish haqi hisoblash")}>
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
-        <Select label="Xodim" defaultValue="" error={errors.employeeId?.message} {...register("employeeId")}>
+        <Select label={tr("Xodim")} defaultValue="" error={errors.employeeId?.message} {...register("employeeId")}>
           <option value="" disabled>
-            Tanlang
+            {tr("Tanlang")}
           </option>
           {employees?.map((employee) => (
             <option key={employee.id} value={employee.id}>
-              {employee.fullName}
+              {tr(employee.fullName)}
             </option>
           ))}
         </Select>
-        <Input label="Davr (YYYY-MM)" placeholder="2026-09" error={errors.period?.message} {...register("period")} />
+        <Input label={tr("Davr (YYYY-MM)")} placeholder="2026-09" error={errors.period?.message} {...register("period")} />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
-            label="Mukofot (ixtiyoriy)"
+            label={tr("Mukofot (ixtiyoriy)")}
             type="number"
             placeholder="0"
             error={errors.bonusAmount?.message}
             {...register("bonusAmount")}
           />
           <Input
-            label="Jarima (ixtiyoriy)"
+            label={tr("Jarima (ixtiyoriy)")}
             type="number"
             placeholder="0"
             error={errors.penaltyAmount?.message}
@@ -119,21 +121,21 @@ export function GeneratePayrollModal({ open, onClose, slug }: { open: boolean; o
           />
         </div>
         <Input
-          label="Soliq/ushlab qolish (ixtiyoriy)"
+          label={tr("Soliq/ushlab qolish (ixtiyoriy)")}
           type="number"
           placeholder="0"
-          hint="Soliq, sug'urta, avans kabi rasmiy ushlab qolish — jarimadan alohida"
+          hint={tr("Soliq, sug'urta, avans kabi rasmiy ushlab qolish — jarimadan alohida")}
           error={errors.deductionAmount?.message}
           {...register("deductionAmount")}
         />
-        <Input label="Izoh (ixtiyoriy)" {...register("note")} />
+        <Input label={tr("Izoh (ixtiyoriy)")} {...register("note")} />
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Bekor qilish
+            {tr("Bekor qilish")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Hisoblash
+            {tr("Hisoblash")}
           </Button>
         </div>
       </form>

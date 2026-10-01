@@ -15,6 +15,7 @@ import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ClockIcon, PencilIcon, TeacherIcon, TrashIcon } from "@/components/ui/icons";
 import { LessonScheduleModal } from "@/features/lessons/lesson-schedule-modal";
+import { useTr } from "@/i18n/tr";
 
 const WEEKDAY_ORDER: Weekday[] = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
 const WEEKDAY_LABEL: Record<Weekday, string> = {
@@ -28,6 +29,7 @@ const WEEKDAY_LABEL: Record<Weekday, string> = {
 };
 
 export default function LessonSchedulePage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -69,7 +71,7 @@ export default function LessonSchedulePage({ params }: { params: Promise<{ slug:
       queryClient.invalidateQueries({ queryKey: ["lesson-schedules", slug] });
       setDeleting(null);
     },
-    onError: (err) => setDeleteError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi"),
+    onError: (err) => setDeleteError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi")),
   });
 
   const byWeekday = new Map<Weekday, LessonSchedule[]>();
@@ -84,10 +86,10 @@ export default function LessonSchedulePage({ params }: { params: Promise<{ slug:
       <div className="flex items-start justify-between gap-3 md:flex-wrap md:items-center">
         <div className="min-w-0">
           <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
-            Dars jadvali
+            {tr("Dars jadvali")}
           </h1>
           <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">
-            Guruh darslari qaysi kunda va soatda o&apos;tishi
+            {tr("Guruh darslari qaysi kunda va soatda o'tishi")}
           </p>
         </div>
         {canWrite && (
@@ -96,7 +98,7 @@ export default function LessonSchedulePage({ params }: { params: Promise<{ slug:
               onClick={() => setScheduleModal({ open: true, schedule: null })}
               disabled={!groupId}
             >
-              + Yangi dars
+              {tr("+ Yangi dars")}
             </Button>
           </div>
         )}
@@ -108,17 +110,17 @@ export default function LessonSchedulePage({ params }: { params: Promise<{ slug:
         {groupsQuery.isLoading ? (
           <LoadingState rows={1} />
         ) : groups.length === 0 ? (
-          <p className="text-[14px] text-[var(--color-text-muted)]">Hali guruh yo&apos;q</p>
+          <p className="text-[14px] text-[var(--color-text-muted)]">{tr("Hali guruh yo'q")}</p>
         ) : (
           <Select
-            label="Guruh"
+            label={tr("Guruh")}
             value={groupId}
             onChange={(e) => setGroupId(e.target.value)}
             className="sm:max-w-xs"
           >
             {groups.map((group) => (
               <option key={group.id} value={group.id}>
-                {group.name}
+                {tr(group.name)}
               </option>
             ))}
           </Select>
@@ -129,23 +131,23 @@ export default function LessonSchedulePage({ params }: { params: Promise<{ slug:
         groupsQuery.isLoading ? (
           <LoadingState />
         ) : (
-          <EmptyState title="Guruh tanlanmagan" description="Avval yuqoridan guruhni tanlang" />
+          <EmptyState title={tr("Guruh tanlanmagan")} description={tr("Avval yuqoridan guruhni tanlang")} />
         )
       ) : scheduleQuery.isLoading ? (
         <LoadingState rows={4} />
       ) : scheduleQuery.isError ? (
-        <ErrorState message={(scheduleQuery.error as Error).message} />
+        <ErrorState message={tr((scheduleQuery.error as Error).message)} />
       ) : !scheduleQuery.data || scheduleQuery.data.length === 0 ? (
         <EmptyState
-          title="Dars jadvali bo'sh"
-          description={canWrite ? "\"+ Yangi dars\" tugmasi orqali qo'shing" : "Hali dars jadvali belgilanmagan"}
+          title={tr("Dars jadvali bo'sh")}
+          description={canWrite ? tr("\"+ Yangi dars\" tugmasi orqali qo'shing") : tr("Hali dars jadvali belgilanmagan")}
         />
       ) : (
         <div className="space-y-4">
           {WEEKDAY_ORDER.filter((day) => byWeekday.has(day)).map((day) => (
             <Card key={day} className="overflow-hidden">
               <div className="border-b border-[var(--color-separator)] px-5 py-3">
-                <h2 className="text-[14px] font-semibold text-[var(--color-text)]">{WEEKDAY_LABEL[day]}</h2>
+                <h2 className="text-[14px] font-semibold text-[var(--color-text)]">{tr(WEEKDAY_LABEL[day])}</h2>
               </div>
               <ul className="divide-y divide-[var(--color-separator)]">
                 {byWeekday.get(day)!.map((item) => (
@@ -155,13 +157,13 @@ export default function LessonSchedulePage({ params }: { params: Promise<{ slug:
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-[var(--color-text)]">
-                        {item.startTime} — {item.endTime}
-                        {item.subject && <span className="text-[var(--color-text-muted)]"> · {item.subject}</span>}
+                        {tr(item.startTime)} — {tr(item.endTime)}
+                        {item.subject && <span className="text-[var(--color-text-muted)]"> · {tr(item.subject)}</span>}
                       </p>
                       <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-[var(--color-text-muted)]">
                         <span className="inline-flex items-center gap-1">
                           <TeacherIcon className="h-3.5 w-3.5" />
-                          {item.employee.fullName}
+                          {tr(item.employee.fullName)}
                         </span>
                       </p>
                     </div>
@@ -170,7 +172,7 @@ export default function LessonSchedulePage({ params }: { params: Promise<{ slug:
                         <button
                           type="button"
                           onClick={() => setScheduleModal({ open: true, schedule: item })}
-                          aria-label="Tahrirlash"
+                          aria-label={tr("Tahrirlash")}
                           className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-text)]"
                         >
                           <PencilIcon className="h-4 w-4" />
@@ -181,7 +183,7 @@ export default function LessonSchedulePage({ params }: { params: Promise<{ slug:
                             setDeleteError(null);
                             setDeleting(item);
                           }}
-                          aria-label="O'chirish"
+                          aria-label={tr("O'chirish")}
                           className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]"
                         >
                           <TrashIcon className="h-4 w-4" />
@@ -210,8 +212,8 @@ export default function LessonSchedulePage({ params }: { params: Promise<{ slug:
       <ConfirmDialog
         open={!!deleting}
         onClose={() => setDeleting(null)}
-        title="Darsni o'chirish"
-        confirmLabel="O'chirish"
+        title={tr("Darsni o'chirish")}
+        confirmLabel={tr("O'chirish")}
         tone="danger"
         loading={deleteMutation.isPending}
         error={deleteError}
@@ -219,9 +221,9 @@ export default function LessonSchedulePage({ params }: { params: Promise<{ slug:
           deleting && (
             <>
               <b className="text-[var(--color-text)]">
-                {WEEKDAY_LABEL[deleting.weekday]}, {deleting.startTime}–{deleting.endTime}
+                {tr(WEEKDAY_LABEL[deleting.weekday])}, {tr(deleting.startTime)}–{tr(deleting.endTime)}
               </b>{" "}
-              dars jadvalidan o&apos;chiriladi.
+              {tr("dars jadvalidan o'chiriladi.")}
             </>
           )
         }

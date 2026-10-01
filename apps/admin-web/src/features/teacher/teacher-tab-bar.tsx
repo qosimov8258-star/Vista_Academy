@@ -9,6 +9,7 @@ import { isTeacher } from "@/lib/permissions";
 import { isSubjectTeacherPosition } from "@/lib/employee-position";
 import { BulbIcon, CalendarIcon, ChecklistIcon, ChildIcon, HomeIcon, UserIcon, type IconProps } from "@/components/ui/icons";
 import styles from "./teacher.module.css";
+import { useTr } from "@/i18n/tr";
 
 type Tab = { href: string; label: string; Icon: ComponentType<IconProps>; exact?: boolean; also?: string[] };
 
@@ -19,6 +20,7 @@ type Tab = { href: string; label: string; Icon: ComponentType<IconProps>; exact?
  * ko'rinmaydi — u yerda yon panel bor.
  */
 export function TeacherTabBar({ slug }: { slug: string }) {
+  const tr = useTr();
   const { user } = useAuth();
   const pathname = useAppPathname();
 
@@ -49,7 +51,7 @@ export function TeacherTabBar({ slug }: { slug: string }) {
 
   return (
     <nav
-      aria-label="Tarbiyachi menyusi"
+      aria-label={tr("Tarbiyachi menyusi")}
       className="fixed inset-x-0 bottom-0 z-40 px-4 md:hidden"
       style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom))" }}
     >
@@ -70,7 +72,7 @@ export function TeacherTabBar({ slug }: { slug: string }) {
               {active && <span className={styles.tabPill} aria-hidden="true" />}
               <tab.Icon filled={active} className={clsx(styles.tabIcon, "relative h-[23px] w-[23px]")} strokeWidth={active ? 2 : 1.7} />
               <span className={clsx("relative truncate text-[10.5px] leading-none", active ? "font-semibold" : "font-medium")}>
-                {tab.label}
+                {tr(tab.label)}
               </span>
             </Link>
           );

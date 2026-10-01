@@ -14,6 +14,7 @@ import { nowMinutes, useDiaryDay, useDiaryDays, type DiaryMedia } from "./diary"
 import { DiaryIcon } from "@/features/diary/kinds";
 import { MediaViewer } from "./media-viewer";
 import { MealsSection } from "./meals-section";
+import { useTr } from "@/i18n/tr";
 
 /** Har 30 soniyada yangilanadigan soat — "hozir" belgisi siljib borsin */
 function useNowMinutes(): number {
@@ -32,6 +33,7 @@ function useNowMinutes(): number {
  * taom suratlari. Bugungi kun har daqiqada yangilanadi.
  */
 export default function ParentDiaryPage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const router = useRouter();
   const [activeChildId, setActiveChildId] = useState<string | null>(null);
@@ -60,10 +62,10 @@ export default function ParentDiaryPage({ params }: { params: Promise<{ slug: st
     <div className="mx-auto w-full max-w-[520px] px-4 pt-5">
       <header>
         <h1 className={`${styles.roundedFont} text-[28px] font-extrabold leading-tight tracking-[-0.02em] text-[var(--p-ink)]`}>
-          Kundalik
+          {tr("Kundalik")}
         </h1>
         <p className="mt-1 text-[14.5px] leading-relaxed text-[var(--p-muted)]">
-          {day?.group ? `${day.group.name} · bog'chadagi kun` : "Bolangizning bog'chadagi kuni"}
+          {day?.group ? tr("{0} · bog'chadagi kun", day.group.name) : tr("Bolangizning bog'chadagi kuni")}
         </p>
       </header>
 
@@ -82,7 +84,7 @@ export default function ParentDiaryPage({ params }: { params: Promise<{ slug: st
                 c.id === childId ? "bg-[var(--p-coral)] text-white" : "bg-[var(--p-panel)] text-[var(--p-muted)]",
               )}
             >
-              {c.fullName.split(" ").slice(-1)[0]}
+              {tr(c.fullName.split(" ").slice(-1)[0])}
             </button>
           ))}
         </div>
@@ -107,7 +109,7 @@ export default function ParentDiaryPage({ params }: { params: Promise<{ slug: st
             loginHref={`/ota-ona/${slug}/kirish`}
           />
         ) : meQuery.data && children.length === 0 ? (
-          <EmptyCard Icon={DiaryIcon} tone="sun" title="Bola biriktirilmagan" text="Kabinetingizga hali bola biriktirilmagan — bog'cha ma'muriyatiga murojaat qiling." />
+          <EmptyCard Icon={DiaryIcon} tone="sun" title={tr("Bola biriktirilmagan")} text={tr("Kabinetingizga hali bola biriktirilmagan — bog'cha ma'muriyatiga murojaat qiling.")} />
         ) : (
           <>
             <div className="mt-5 h-[132px] animate-pulse rounded-[var(--p-radius)] bg-[var(--p-card)]/70 motion-reduce:animate-none" />

@@ -9,10 +9,12 @@ import { Input } from "@/components/ui/input";
 import { LoadingState, ErrorState } from "@/components/ui/states";
 import { BoardTiles } from "@/features/desk/board-tiles";
 import { todayTashkent, type BoardResult } from "@/features/desk/shared";
+import { useTr } from "@/i18n/tr";
 
 const STAFF_LABEL = { ABSENT: "Kelmadi", SICK: "Kasal", ON_LEAVE: "Ta'til" } as const;
 
 export default function BoardPage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const [date, setDate] = useState("");
   useEffect(() => setDate((d) => d || todayTashkent()), []);
@@ -28,36 +30,36 @@ export default function BoardPage({ params }: { params: Promise<{ slug: string }
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">Bugungi holat</h1>
-          <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">Bog&apos;cha hozir qanday: kim keldi, kim ketdi</p>
+          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">{tr("Bugungi holat")}</h1>
+          <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">{tr("Bog'cha hozir qanday: kim keldi, kim ketdi")}</p>
         </div>
         <div className="w-[180px]">
-          <Input label="Sana" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          <Input label={tr("Sana")} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         </div>
       </div>
 
       {!date || query.isLoading ? (
         <LoadingState rows={4} />
       ) : query.isError ? (
-        <ErrorState message={(query.error as Error).message} />
+        <ErrorState message={tr((query.error as Error).message)} />
       ) : board ? (
         <>
           <BoardTiles board={board} />
           <Card>
             <CardHeader>
-              <CardTitle>Guruhlar bo&apos;yicha</CardTitle>
+              <CardTitle>{tr("Guruhlar bo'yicha")}</CardTitle>
             </CardHeader>
             <CardBody>
               <ul className="divide-y divide-[var(--color-border)] text-[14px]">
                 {board.groups.map((g) => (
                   <li key={g.groupId ?? "none"} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
-                    <span className="font-medium">{g.name}</span>
+                    <span className="font-medium">{tr(g.name)}</span>
                     <span className="flex flex-wrap items-center gap-x-4 gap-y-1 tabular-nums text-[var(--color-text-muted)]">
-                      <span>Keldi <b className="text-[var(--color-success)]">{g.present}</b>/{g.total}</span>
-                      <span>Kelmadi <b className="text-[var(--color-danger)]">{g.absent}</b></span>
-                      <span>Kasal <b className="text-[var(--color-warning)]">{g.sick}</b></span>
-                      {g.notMarked > 0 && <span>Belgilanmagan <b>{g.notMarked}</b></span>}
-                      <span>Olib ketildi <b className="text-[var(--color-text)]">{g.pickedUp}</b></span>
+                      <span>{tr("Keldi")}{" "}<b className="text-[var(--color-success)]">{tr(g.present)}</b>/{tr(g.total)}</span>
+                      <span>{tr("Kelmadi")}{" "}<b className="text-[var(--color-danger)]">{tr(g.absent)}</b></span>
+                      <span>{tr("Kasal")}{" "}<b className="text-[var(--color-warning)]">{tr(g.sick)}</b></span>
+                      {g.notMarked > 0 && <span>{tr("Belgilanmagan")}{" "}<b>{tr(g.notMarked)}</b></span>}
+                      <span>{tr("Olib ketildi")}{" "}<b className="text-[var(--color-text)]">{tr(g.pickedUp)}</b></span>
                     </span>
                   </li>
                 ))}
@@ -66,20 +68,20 @@ export default function BoardPage({ params }: { params: Promise<{ slug: string }
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle>Kelmagan xodimlar</CardTitle>
+              <CardTitle>{tr("Kelmagan xodimlar")}</CardTitle>
             </CardHeader>
             <CardBody>
               {board.staffAway.length === 0 ? (
-                <p className="text-[14px] text-[var(--color-text-muted)]">Hamma xodim ishda</p>
+                <p className="text-[14px] text-[var(--color-text-muted)]">{tr("Hamma xodim ishda")}</p>
               ) : (
                 <ul className="divide-y divide-[var(--color-border)] text-[14px]">
                   {board.staffAway.map((s) => (
                     <li key={s.fullName} className="flex items-center justify-between gap-3 py-2">
                       <span>
-                        <span className="font-medium">{s.fullName}</span>
-                        <span className="ml-2 text-[12.5px] text-[var(--color-text-muted)]">{s.position}</span>
+                        <span className="font-medium">{tr(s.fullName)}</span>
+                        <span className="ml-2 text-[12.5px] text-[var(--color-text-muted)]">{tr(s.position)}</span>
                       </span>
-                      <Badge tone={s.status === "ABSENT" ? "danger" : s.status === "SICK" ? "warning" : "neutral"}>{STAFF_LABEL[s.status]}</Badge>
+                      <Badge tone={s.status === "ABSENT" ? "danger" : s.status === "SICK" ? "warning" : "neutral"}>{tr(STAFF_LABEL[s.status])}</Badge>
                     </li>
                   ))}
                 </ul>

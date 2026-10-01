@@ -10,6 +10,7 @@ import type { Vaccination } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Select, Input, Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useTr } from "@/i18n/tr";
 
 const schema = z.object({
   status: z.enum(["SCHEDULED", "DONE", "MISSED"]),
@@ -32,6 +33,7 @@ export function UpdateVaccinationModal({
   childId: string;
   vaccination: Vaccination;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -63,7 +65,7 @@ export function UpdateVaccinationModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
@@ -72,23 +74,23 @@ export function UpdateVaccinationModal({
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
-        <Select label="Holati" {...register("status")}>
-          <option value="SCHEDULED">Rejalashtirilgan</option>
-          <option value="DONE">Bajarildi</option>
-          <option value="MISSED">O'tkazib yuborildi</option>
+        <Select label={tr("Holati")} {...register("status")}>
+          <option value="SCHEDULED">{tr("Rejalashtirilgan")}</option>
+          <option value="DONE">{tr("Bajarildi")}</option>
+          <option value="MISSED">{tr("O'tkazib yuborildi")}</option>
         </Select>
-        {status === "DONE" && <Input label="Bajarilgan sana" type="date" {...register("doneDate")} />}
-        <Textarea label="Izoh (ixtiyoriy)" rows={2} {...register("note")} />
+        {status === "DONE" && <Input label={tr("Bajarilgan sana")} type="date" {...register("doneDate")} />}
+        <Textarea label={tr("Izoh (ixtiyoriy)")} rows={2} {...register("note")} />
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Bekor qilish
+            {tr("Bekor qilish")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Saqlash
+            {tr("Saqlash")}
           </Button>
         </div>
       </form>

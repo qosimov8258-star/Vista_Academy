@@ -8,12 +8,12 @@ import type { Subject } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useTr } from "@/i18n/tr";
 
 /**
  * "Yangi xodim" modalidagi Fanlar pill'i bosilganda ochiladi. Lavozimlar
- * modali bilan bir xil dizayn — farqi shundaki, bir nechta fan tanlash
- * mumkin, shuning uchun pill bosilganda modal yopilmaydi, faqat tanlov
- * holati almashadi.
+ * modali bilan bir xil dizayn. Pill bosilganda modal yopilmaydi, faqat
+ * tanlov holati almashadi (chaqiruvchi bitta fanni qoldiradi).
  */
 export function SubjectsModal({
   open,
@@ -28,6 +28,7 @@ export function SubjectsModal({
   selected: string[];
   onToggle: (name: string) => void;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +48,7 @@ export function SubjectsModal({
       onToggle(created.name);
     },
     onError: (err) => {
-      setError(err instanceof ApiError ? err.message : "Fan yaratib bo'lmadi");
+      setError(err instanceof ApiError ? err.message : tr("Fan yaratib bo'lmadi"));
     },
   });
 
@@ -60,20 +61,20 @@ export function SubjectsModal({
   const handleCreate = () => {
     const trimmed = name.trim();
     if (trimmed.length < 2) {
-      setError("Fan nomi kamida 2 belgi");
+      setError(tr("Fan nomi kamida 2 belgi"));
       return;
     }
     createMutation.mutate(trimmed);
   };
 
   return (
-    <Modal open={open} onClose={handleClose} title="Fanlar" widthClassName="max-w-md">
+    <Modal open={open} onClose={handleClose} title={tr("Fanlar")} widthClassName="max-w-md">
       <div className="space-y-5">
         <div className="flex items-end gap-2">
           <div className="flex-1">
             <Input
-              label="Fan nomi"
-              placeholder="Masalan, Rus tili"
+              label={tr("Fan nomi")}
+              placeholder={tr("Masalan, Rus tili")}
               value={name}
               onChange={(e) => {
                 setName(e.target.value);
@@ -89,16 +90,16 @@ export function SubjectsModal({
             />
           </div>
           <Button type="button" onClick={handleCreate} loading={createMutation.isPending}>
-            Yaratish
+            {tr("Yaratish")}
           </Button>
         </div>
 
         <div>
-          <span className="mb-2 block text-sm font-medium text-[var(--color-text)]">Mavjud fanlar</span>
+          <span className="mb-2 block text-sm font-medium text-[var(--color-text)]">{tr("Mavjud fanlar")}</span>
           {!subjects ? (
-            <p className="text-xs text-[var(--color-text-muted)]">Yuklanmoqda...</p>
+            <p className="text-xs text-[var(--color-text-muted)]">{tr("Yuklanmoqda...")}</p>
           ) : subjects.length === 0 ? (
-            <p className="text-xs text-[var(--color-text-muted)]">Hozircha fan yo&apos;q — yuqoridan yarating</p>
+            <p className="text-xs text-[var(--color-text-muted)]">{tr("Hozircha fan yo'q — yuqoridan yarating")}</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {subjects.map((subject) => {
@@ -116,7 +117,7 @@ export function SubjectsModal({
                         : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]",
                     )}
                   >
-                    {subject.name}
+                    {tr(subject.name)}
                   </button>
                 );
               })}
@@ -126,7 +127,7 @@ export function SubjectsModal({
 
         <div className="flex justify-end pt-1">
           <Button type="button" variant="secondary" onClick={handleClose}>
-            Yopish
+            {tr("Yopish")}
           </Button>
         </div>
       </div>

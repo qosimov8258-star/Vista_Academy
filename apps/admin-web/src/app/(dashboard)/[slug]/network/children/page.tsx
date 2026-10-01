@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { formatChildId, formatDate } from "@/lib/format";
 import { monogram, paletteFor } from "@/features/network/palette";
+import { useTr } from "@/i18n/tr";
 
 const PAGE_SIZE = 24;
 const STATUS_LABEL: Record<string, string> = { ACTIVE: "Faol", INACTIVE: "Nofaol", QUARANTINED: "Karantinda" };
@@ -28,6 +29,7 @@ const STATUS_TONE: Record<string, "success" | "neutral" | "danger"> = {
  * `/{slug}/children` sahifasi o'zgarishsiz qoladi.
  */
 export default function NetworkChildrenPage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState("");
@@ -80,19 +82,19 @@ export default function NetworkChildrenPage({ params }: { params: Promise<{ slug
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-[var(--color-text)]">O&apos;quvchilar</h1>
-          <p className="text-sm text-[var(--color-text-muted)]">Tarmoqdagi barcha bolalar bir ro&apos;yxatda</p>
+          <h1 className="text-xl font-semibold text-[var(--color-text)]">{tr("O'quvchilar")}</h1>
+          <p className="text-sm text-[var(--color-text-muted)]">{tr("Tarmoqdagi barcha bolalar bir ro'yxatda")}</p>
         </div>
         {childrenQuery.data && (
           <p className="text-sm text-[var(--color-text-muted)]">
-            <b className="text-[var(--color-text)]">{total}</b> ta topildi
+            <b className="text-[var(--color-text)]">{tr(total)}</b> {tr("ta topildi")}
           </p>
         )}
       </div>
 
       <Card className="grid gap-3 p-4 sm:grid-cols-3">
         <Input
-          placeholder="Ism, ota-ona yoki ID (masalan id14732)"
+          placeholder={tr("Ism, ota-ona yoki ID (masalan id14732)")}
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           className="h-10 rounded-xl"
@@ -106,10 +108,10 @@ export default function NetworkChildrenPage({ params }: { params: Promise<{ slug
           }}
           className="h-10 rounded-xl"
         >
-          <option value="">Barcha filiallar</option>
+          <option value="">{tr("Barcha filiallar")}</option>
           {branches.map((branch) => (
             <option key={branch.id} value={branch.id}>
-              {branch.name}
+              {tr(branch.name)}
             </option>
           ))}
         </Select>
@@ -121,10 +123,10 @@ export default function NetworkChildrenPage({ params }: { params: Promise<{ slug
           }}
           className="h-10 rounded-xl"
         >
-          <option value="">Barcha guruhlar</option>
+          <option value="">{tr("Barcha guruhlar")}</option>
           {groups.map((group) => (
             <option key={group.id} value={group.id}>
-              {group.name}
+              {tr(group.name)}
             </option>
           ))}
         </Select>
@@ -133,11 +135,11 @@ export default function NetworkChildrenPage({ params }: { params: Promise<{ slug
       {childrenQuery.isLoading ? (
         <LoadingState />
       ) : childrenQuery.isError ? (
-        <ErrorState message={(childrenQuery.error as Error).message} />
+        <ErrorState message={tr((childrenQuery.error as Error).message)} />
       ) : items.length === 0 ? (
         <EmptyState
-          title="Bola topilmadi"
-          description={search || branchId || groupId ? "Filtrlarni o'zgartirib ko'ring" : undefined}
+          title={tr("Bola topilmadi")}
+          description={search || branchId || groupId ? tr("Filtrlarni o'zgartirib ko'ring") : undefined}
         />
       ) : (
         <>
@@ -163,7 +165,7 @@ export default function NetworkChildrenPage({ params }: { params: Promise<{ slug
                     {monogram(child.fullName)}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-[var(--color-text)]">{child.fullName}</p>
+                    <p className="truncate text-sm font-semibold text-[var(--color-text)]">{tr(child.fullName)}</p>
                     <p className="truncate text-xs text-[var(--color-text-muted)]">
                       {formatChildId(child.publicId)}
                       {child.branch && ` · ${child.branch.name}`}
@@ -172,15 +174,15 @@ export default function NetworkChildrenPage({ params }: { params: Promise<{ slug
                     <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                       {child.group ? (
                         <span className={clsx("rounded-full px-2 py-0.5 text-[11px] font-medium", palette!.chip)}>
-                          {child.group.name}
+                          {tr(child.group.name)}
                         </span>
                       ) : (
                         <span className="rounded-full bg-[var(--color-warning-bg)] px-2 py-0.5 text-[11px] font-medium text-[var(--color-warning)]">
-                          Guruhsiz
+                          {tr("Guruhsiz")}
                         </span>
                       )}
                       {child.status !== "ACTIVE" && (
-                        <Badge tone={STATUS_TONE[child.status]}>{STATUS_LABEL[child.status]}</Badge>
+                        <Badge tone={STATUS_TONE[child.status]}>{tr(STATUS_LABEL[child.status])}</Badge>
                       )}
                     </div>
                   </div>
@@ -192,14 +194,14 @@ export default function NetworkChildrenPage({ params }: { params: Promise<{ slug
           {lastPage > 1 && (
             <div className="flex items-center justify-between">
               <p className="text-sm text-[var(--color-text-muted)]">
-                {page}-sahifa, jami {lastPage}
+                {tr(page)}{tr("-sahifa, jami")}{" "}{tr(lastPage)}
               </p>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-                  Oldingi
+                  {tr("Oldingi")}
                 </Button>
                 <Button variant="outline" size="sm" disabled={page >= lastPage} onClick={() => setPage((p) => p + 1)}>
-                  Keyingi
+                  {tr("Keyingi")}
                 </Button>
               </div>
             </div>

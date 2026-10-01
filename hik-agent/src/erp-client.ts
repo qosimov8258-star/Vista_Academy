@@ -60,14 +60,23 @@ export class ErpClient {
     private readonly baseUrl: string,
     private readonly token: string,
     private readonly timeoutMs = 20_000,
+    /** Ulangan agent (hka_ kaliti) — qaysi qurilma nomidan so'ralayotgani */
+    private readonly deviceId?: string,
   ) {}
+
+  private authHeaders(): Record<string, string> {
+    return {
+      Authorization: `Bearer ${this.token}`,
+      ...(this.deviceId ? { "X-Face-Id-Device": this.deviceId } : {}),
+    };
+  }
 
   private async call<T>(method: "GET" | "POST", path: string, body?: unknown): Promise<T> {
     let res;
     try {
       res = await request(`${this.baseUrl}${path}`, {
         method,
-        headers: { Authorization: `Bearer ${this.token}`, Accept: "application/json" },
+        headers: { ...this.authHeaders(), Accept: "application/json" },
         ...(body !== undefined ? { content: JSON.stringify(body), contentType: "application/json" } : {}),
         dataType: "json",
         timeout: this.timeoutMs,
@@ -101,12 +110,14 @@ export class ErpClient {
   }
 
   /** SET_FACE uchun xodim surati (binar). */
-  async faceImage(commandId: string): Promise<Buffer> {
+  async faceImage(commandId: string, maxBytes?: number): Promise<Buffer> {
     let res;
     try {
-      res = await request(`${this.baseUrl}/agent/commands/${commandId}/face`, {
+      // maxBytes — ERP rasmni shu hajmgacha o'zi kichraytirib beradi
+      const query = maxBytes ? `?maxBytes=${maxBytes}` : "";
+      res = await request(`${this.baseUrl}/agent/commands/${commandId}/face${query}`, {
         method: "GET",
-        headers: { Authorization: `Bearer ${this.token}` },
+        headers: this.authHeaders(),
         dataType: "buffer",
         timeout: this.timeoutMs,
         // Qayta yo'naltirish kerak emas — token/parol boshqa manzilga sizib ketmasin

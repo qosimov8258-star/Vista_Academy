@@ -11,6 +11,7 @@ import { MAX_PHOTOS_PER_MEAL, MEALS, useMenuPhotos } from "@/features/nutrition/
 import { MEAL_LOOK } from "./meal-card";
 import { usePhotoPicker } from "./photo-picker";
 import styles from "./chef.module.css";
+import { useTr } from "@/i18n/tr";
 
 const MENU_FIELD: Record<MenuMeal, "breakfast" | "lunch" | "snack"> = {
   BREAKFAST: "breakfast",
@@ -38,6 +39,7 @@ export function QuickPhotoSheet({
   branchId: string;
   date: string;
 }) {
+  const tr = useTr();
   const { photosOf, upload, uploading, errors } = useMenuPhotos(slug, branchId, date);
   const picker = usePhotoPicker();
   const menuQuery = useQuery({
@@ -67,7 +69,7 @@ export function QuickPhotoSheet({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Taomni suratga olish">
+    <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={tr("Taomni suratga olish")}>
       <div className={clsx("absolute inset-0 bg-black/40", styles.backdrop)} onClick={onClose} aria-hidden />
       <div
         className={clsx(
@@ -77,8 +79,8 @@ export function QuickPhotoSheet({
         style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom))" }}
       >
         <div className="mx-auto h-1.5 w-10 rounded-full bg-black/15" aria-hidden />
-        <h2 className="mt-4 text-[19px] font-semibold text-[var(--color-text)]">Qaysi ovqatni suratga olasiz?</h2>
-        <p className="mt-1 text-[13.5px] text-[var(--color-text-muted)]">Surat ota-onalar kabinetida darhol ko&apos;rinadi</p>
+        <h2 className="mt-4 text-[19px] font-semibold text-[var(--color-text)]">{tr("Qaysi ovqatni suratga olasiz?")}</h2>
+        <p className="mt-1 text-[13.5px] text-[var(--color-text-muted)]">{tr("Surat ota-onalar kabinetida darhol ko'rinadi")}</p>
 
         <ul className="mt-4 space-y-2.5">
           {MEALS.map(({ meal, label }) => {
@@ -105,17 +107,17 @@ export function QuickPhotoSheet({
                   )}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[16px] font-semibold text-[var(--color-text)]">{label}</span>
+                  <span className="block text-[16px] font-semibold text-[var(--color-text)]">{tr(label)}</span>
                   <span className={clsx("block truncate text-[13px]", justDone ? "font-medium text-emerald-700" : "text-[var(--color-text-muted)]")}>
                     {busy
                       ? "Yuklanmoqda…"
                       : justDone
-                        ? `Yuklandi — ota-onalar ko'rmoqda (${count} ta)`
+                        ? tr("Yuklandi — ota-onalar ko'rmoqda ({0} ta)", count)
                         : full
-                          ? `To'ldi (${count}/${MAX_PHOTOS_PER_MEAL})`
-                          : (dishes || (count > 0 ? `${count} ta rasm bor` : "Hali rasm yo'q"))}
+                          ? tr("To'ldi ({0}/{1})", count, MAX_PHOTOS_PER_MEAL)
+                          : (dishes || (count > 0 ? tr("{0} ta rasm bor", count) : tr("Hali rasm yo'q")))}
                   </span>
-                  {errors[meal] && <span className="mt-0.5 block text-[12.5px] text-[var(--color-danger)]">{errors[meal]}</span>}
+                  {errors[meal] && <span className="mt-0.5 block text-[12.5px] text-[var(--color-danger)]">{tr(errors[meal])}</span>}
                 </span>
                 {busy ? (
                   <span className="mr-2 h-6 w-6 shrink-0 animate-spin rounded-full border-2 border-orange-200 border-t-orange-600" aria-hidden />
@@ -134,7 +136,7 @@ export function QuickPhotoSheet({
                       type="button"
                       disabled={!!uploading}
                       onClick={() => picker.openCamera(handleFile(meal))}
-                      aria-label={`${label}: kamera bilan suratga olish`}
+                      aria-label={tr("{0}: kamera bilan suratga olish", label)}
                       className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-500 text-white active:bg-orange-600 disabled:opacity-40"
                     >
                       <CameraIcon className="h-[18px] w-[18px]" />
@@ -153,7 +155,7 @@ export function QuickPhotoSheet({
         >
           {done.length > 0 ? "Tayyor" : "Yopish"}
         </button>
-        {picker.ui}
+        {tr(picker.ui)}
       </div>
     </div>,
     document.body,

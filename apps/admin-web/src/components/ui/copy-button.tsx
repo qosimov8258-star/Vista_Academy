@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import { CheckIcon, CopyIcon } from "./icons";
+import { useTr } from "@/i18n/tr";
 
 /**
  * Matnni buferga ko'chiradi. Ikki yo'l bilan:
@@ -48,6 +49,7 @@ export function CopyButton({
   label?: string;
   className?: string;
 }) {
+  const tr = useTr();
   const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
   const timer = useRef<number | null>(null);
 
@@ -76,8 +78,8 @@ export function CopyButton({
     <button
       type="button"
       onClick={copy}
-      title={state === "copied" ? "Nusxalandi" : state === "failed" ? "Nusxalab bo'lmadi" : label}
-      aria-label={label}
+      title={state === "copied" ? "Nusxalandi" : state === "failed" ? tr("Nusxalab bo'lmadi") : label}
+      aria-label={tr(label)}
       className={clsx(
         "flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors duration-[var(--dur-fast)]",
         state === "copied"

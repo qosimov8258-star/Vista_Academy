@@ -9,6 +9,7 @@ import { api, ApiError } from "@/lib/api";
 import { Modal } from "@/components/ui/modal";
 import { Input, Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useTr } from "@/i18n/tr";
 
 const schema = z.object({
   medicationName: z.string().min(2, "Nomi kamida 2 belgi"),
@@ -38,6 +39,7 @@ export function AddMedicationModal({
   slug: string;
   childId: string;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -69,40 +71,40 @@ export function AddMedicationModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
   return (
-    <Modal open={open} onClose={onClose} title="Yangi dori-darmon yozuvi">
+    <Modal open={open} onClose={onClose} title={tr("Yangi dori-darmon yozuvi")}>
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
-        <Input label="Dori nomi" placeholder="Paratsetamol" error={errors.medicationName?.message} {...register("medicationName")} />
-        <Input label="Doza" placeholder="5 ml" error={errors.dose?.message} {...register("dose")} />
-        <Input label="Berilgan sana/vaqt" type="datetime-local" error={errors.givenAt?.message} {...register("givenAt")} />
+        <Input label={tr("Dori nomi")} placeholder={tr("Paratsetamol")} error={errors.medicationName?.message} {...register("medicationName")} />
+        <Input label={tr("Doza")} placeholder="5 ml" error={errors.dose?.message} {...register("dose")} />
+        <Input label={tr("Berilgan sana/vaqt")} type="datetime-local" error={errors.givenAt?.message} {...register("givenAt")} />
 
         <label className="flex items-center gap-2 text-sm text-[var(--color-text)]">
           <input type="checkbox" className="h-4 w-4 rounded border-[var(--color-border)]" {...register("parentAuthorized")} />
-          Ota-ona rasman ruxsat bergan
+          {tr("Ota-ona rasman ruxsat bergan")}
         </label>
         {!parentAuthorized && (
           <div className="rounded-lg bg-[var(--color-warning-bg)] px-3 py-2 text-sm text-[var(--color-warning)]">
-            Diqqat: ota-ona ruxsati belgilanmagan. Baribir saqlashingiz mumkin, lekin bu xavfsizlik nuqtai nazaridan muhim maydon.
+            {tr("Diqqat: ota-ona ruxsati belgilanmagan. Baribir saqlashingiz mumkin, lekin bu xavfsizlik nuqtai nazaridan muhim maydon.")}
           </div>
         )}
 
-        <Textarea label="Izoh (ixtiyoriy)" rows={2} {...register("note")} />
+        <Textarea label={tr("Izoh (ixtiyoriy)")} rows={2} {...register("note")} />
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Bekor qilish
+            {tr("Bekor qilish")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Qo'shish
+            {tr("Qo'shish")}
           </Button>
         </div>
       </form>

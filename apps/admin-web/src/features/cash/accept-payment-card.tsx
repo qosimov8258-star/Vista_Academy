@@ -9,6 +9,7 @@ import { Input, Select } from "@/components/ui/input";
 import { downloadCsv } from "@/lib/download";
 import { formatMoney } from "@/lib/format";
 import { METHODS, METHOD_LABEL, currentMonth, type CashMethod, type GroupPaymentSummary } from "./shared";
+import { useTr } from "@/i18n/tr";
 
 interface Payable {
   childId: string;
@@ -22,6 +23,7 @@ interface Payable {
  * Qabul qilingan to'lov darrov shu sahifadagi bugungi kassaga tushadi.
  */
 export function AcceptPaymentCard({ slug }: { slug: string }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [groupId, setGroupId] = useState("");
   const [childId, setChildId] = useState("");
@@ -72,7 +74,7 @@ export function AcceptPaymentCard({ slug }: { slug: string }) {
       queryClient.invalidateQueries({ queryKey: ["cash-group-children", slug] });
       queryClient.invalidateQueries({ queryKey: ["invoices", slug] });
     },
-    onError: (err) => setError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi"),
+    onError: (err) => setError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi")),
   });
 
   const openReceipt = async () => {
@@ -81,7 +83,7 @@ export function AcceptPaymentCard({ slug }: { slug: string }) {
     try {
       await downloadCsv(`/app/exports/payments/${done.paymentId}/pdf`, `tolov-kvitansiyasi-${done.paymentId}.pdf`);
     } catch {
-      setError("Kvitansiyani yuklab bo'lmadi — qayta urinib ko'ring");
+      setError(tr("Kvitansiyani yuklab bo'lmadi — qayta urinib ko'ring"));
     } finally {
       setReceiptLoading(false);
     }
@@ -92,21 +94,21 @@ export function AcceptPaymentCard({ slug }: { slug: string }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>To&apos;lov qabul qilish</CardTitle>
+        <CardTitle>{tr("To'lov qabul qilish")}</CardTitle>
       </CardHeader>
       <CardBody className="space-y-3">
-        {error && <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">{error}</div>}
+        {error && <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">{tr(error)}</div>}
         {done && (
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[var(--color-success-bg)] px-3 py-2 text-sm text-[var(--color-success)]">
-            <span>{done.text}</span>
+            <span>{tr(done.text)}</span>
             <Button size="sm" variant="outline" loading={receiptLoading} onClick={openReceipt}>
-              Chek
+              {tr("Chek")}
             </Button>
           </div>
         )}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Select
-            label="Guruh"
+            label={tr("Guruh")}
             value={groupId}
             onChange={(e) => {
               setGroupId(e.target.value);
@@ -115,22 +117,22 @@ export function AcceptPaymentCard({ slug }: { slug: string }) {
             }}
           >
             <option value="" disabled>
-              Guruhni tanlang
+              {tr("Guruhni tanlang")}
             </option>
             {groupsQuery.data?.groups.map((g) => (
               <option key={g.groupId} value={g.groupId}>
-                {g.name} ({g.total} bola)
+                {tr(g.name)} ({tr(g.total)} {tr("bola)")}
               </option>
             ))}
           </Select>
-          <Select label="Bola" value={childId} disabled={!groupId} onChange={(e) => { setChildId(e.target.value); setDone(null); }}>
+          <Select label={tr("Bola")} value={childId} disabled={!groupId} onChange={(e) => { setChildId(e.target.value); setDone(null); }}>
             <option value="" disabled>
-              {groupId ? "Bolani tanlang" : "Avval guruhni tanlang"}
+              {groupId ? tr("Bolani tanlang") : tr("Avval guruhni tanlang")}
             </option>
             {payablesQuery.data?.children.map((c) => (
               <option key={c.childId} value={c.childId} disabled={c.invoices.length === 0}>
-                {c.childName}
-                {c.invoices.length > 0 ? ` — qarz ${formatMoney(c.balance)}` : " — qarz yo'q"}
+                {tr(c.childName)}
+                {c.invoices.length > 0 ? ` — qarz ${formatMoney(c.balance)}` : tr(" — qarz yo'q")}
               </option>
             ))}
           </Select>
@@ -139,7 +141,7 @@ export function AcceptPaymentCard({ slug }: { slug: string }) {
         {child && child.invoices.length > 0 && (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
             <Select
-              label="Hisob-faktura (oy)"
+              label={tr("Hisob-faktura (oy)")}
               value={invoiceId}
               onChange={(e) => {
                 setInvoiceId(e.target.value);
@@ -149,29 +151,29 @@ export function AcceptPaymentCard({ slug }: { slug: string }) {
             >
               {child.invoices.map((i) => (
                 <option key={i.id} value={i.id}>
-                  {i.period} — {formatMoney(i.remaining)}
+                  {tr(i.period)} — {formatMoney(i.remaining)}
                 </option>
               ))}
             </Select>
-            <Input label="Summa (UZS)" type="number" min={0} value={amount} onChange={(e) => setAmount(e.target.value)} />
-            <Select label="To'lov usuli" value={method} onChange={(e) => setMethod(e.target.value as CashMethod)}>
+            <Input label={tr("Summa (UZS)")} type="number" min={0} value={amount} onChange={(e) => setAmount(e.target.value)} />
+            <Select label={tr("To'lov usuli")} value={method} onChange={(e) => setMethod(e.target.value as CashMethod)}>
               {METHODS.map((m) => (
                 <option key={m} value={m}>
-                  {METHOD_LABEL[m]}
+                  {tr(METHOD_LABEL[m])}
                 </option>
               ))}
             </Select>
-            <Input label="Izoh (ixtiyoriy)" value={note} onChange={(e) => setNote(e.target.value)} />
+            <Input label={tr("Izoh (ixtiyoriy)")} value={note} onChange={(e) => setNote(e.target.value)} />
           </div>
         )}
 
         {invoice && Number(amount) > invoice.remaining + 0.005 && (
-          <p className="text-[13px] text-[var(--color-danger)]">Summa qolgan qarzdan ({formatMoney(invoice.remaining)}) katta bo&apos;lmasin</p>
+          <p className="text-[13px] text-[var(--color-danger)]">{tr("Summa qolgan qarzdan (")}{formatMoney(invoice.remaining)}{tr(") katta bo'lmasin")}</p>
         )}
 
         <div className="flex justify-end">
           <Button loading={pay.isPending} disabled={!canSubmit} onClick={() => { setError(null); setDone(null); pay.mutate(); }}>
-            To&apos;lovni qabul qilish
+            {tr("To'lovni qabul qilish")}
           </Button>
         </div>
       </CardBody>

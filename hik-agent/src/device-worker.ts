@@ -44,8 +44,10 @@ export class DeviceWorker {
     token: string,
     private readonly cfg: AgentConfig,
     private readonly now: () => number = Date.now,
+    /** Ulangan agent kaliti bilan ishlaganda — xizmat qilinadigan qurilma */
+    deviceId?: string,
   ) {
-    this.erp = new ErpClient(cfg.erpUrl, token);
+    this.erp = new ErpClient(cfg.erpUrl, token, undefined, deviceId);
     this.log = createLogger("agent");
   }
 
@@ -210,7 +212,7 @@ export class DeviceWorker {
       } else if (command.type === "SET_FACE") {
         let image: Buffer;
         try {
-          image = await this.erp.faceImage(command.id);
+          image = await this.erp.faceImage(command.id, this.cfg.isapi.faceMaxBytes);
         } catch (err) {
           if (err instanceof ErpError && err.status === 404) return { success: false, error: "Xodimda surat yo'q" };
           throw err;

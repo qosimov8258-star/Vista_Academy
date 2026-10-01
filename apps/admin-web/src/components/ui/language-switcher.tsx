@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import clsx from "clsx";
 import { locales, localeCookieName, type Locale } from "@/i18n/config";
 import { GlobeIcon, ChevronDownIcon } from "@/components/ui/icons";
+import { useTr } from "@/i18n/tr";
 
 export function LanguageSwitcher({
   collapsed = false,
@@ -17,6 +18,7 @@ export function LanguageSwitcher({
   /** `onDark` — to'q fon ustida (masalan, kirish sahifasi): tugma och rangda */
   appearance?: "default" | "onDark";
 }) {
+  const tr = useTr();
   const locale = useLocale() as Locale;
   const t = useTranslations("common");
   const router = useRouter();
@@ -58,7 +60,7 @@ export function LanguageSwitcher({
         )}
       >
         <GlobeIcon className="h-[18px] w-[18px] shrink-0" />
-        {!collapsed && <span className="uppercase">{locale}</span>}
+        {!collapsed && <span className="uppercase">{tr(locale)}</span>}
         {!collapsed && <ChevronDownIcon className={clsx("h-3.5 w-3.5 transition-transform", open && "rotate-180")} />}
       </button>
 

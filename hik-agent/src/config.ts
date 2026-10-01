@@ -1,6 +1,9 @@
 import "dotenv/config";
 
-/** Agent sozlamalari — .env'dan. Tokenlar hech qachon logga chiqmaydi. */
+/** ERP_URL berilmasa — Zeeron production (agent yo'llari /api/v1/agent har qanday hostda ishlaydi). */
+export const DEFAULT_ERP_URL = "https://platform.zeeron.uz/api/v1";
+
+/** Agent sozlamalari — .env'dan (ixtiyoriy). Tokenlar hech qachon logga chiqmaydi. */
 export interface AgentConfig {
   erpUrl: string;
   tokens: string[];
@@ -36,13 +39,13 @@ function str(env: NodeJS.ProcessEnv, name: string, fallback: string): string {
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AgentConfig {
-  const erpUrl = (env.ERP_URL ?? "").trim().replace(/\/+$/, "");
-  if (!erpUrl) throw new Error("ERP_URL berilmagan (.env)");
+  // Sukut — Zeeron ERP: ulangan agentga .env umuman kerak emas (`npm run pair`)
+  const erpUrl = (env.ERP_URL ?? "").trim().replace(/\/+$/, "") || DEFAULT_ERP_URL;
+  // Bo'sh bo'lishi mumkin — agent `npm run pair` bilan ulangan bo'lsa qurilmalar ERP'dan olinadi
   const tokens = (env.AGENT_TOKENS ?? env.AGENT_TOKEN ?? "")
     .split(",")
     .map((t) => t.trim())
     .filter(Boolean);
-  if (tokens.length === 0) throw new Error("AGENT_TOKENS berilmagan (.env) — ERP'dagi qurilma tokenini qo'ying");
   const level = str(env, "LOG_LEVEL", "info");
   const nameMax = env.NAME_MAX_BYTES?.trim();
   return {

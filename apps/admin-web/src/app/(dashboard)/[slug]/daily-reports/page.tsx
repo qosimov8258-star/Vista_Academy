@@ -15,6 +15,7 @@ import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { EditDailyReportModal } from "@/features/daily-reports/edit-daily-report-modal";
 import { canWriteTeaching } from "@/lib/permissions";
+import { useTr } from "@/i18n/tr";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 
@@ -26,6 +27,7 @@ const EATING_LABEL: Record<string, string> = { GOOD: "Yaxshi", AVERAGE: "O'rtach
 const MOOD_LABEL: Record<string, string> = { HAPPY: "Xursand", NEUTRAL: "Oddiy", UPSET: "Xafa" };
 
 export default function DailyReportsPage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const queryClient = useQueryClient();
   const { branchId: forcedBranchId } = useBranchContext(slug);
@@ -131,22 +133,22 @@ export default function DailyReportsPage({ params }: { params: Promise<{ slug: s
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">Kundalik hisobot</h1>
-        <p className="text-[14px] text-[var(--color-text-muted)]">Har bir bola uchun ovqatlanish, uyqu, kayfiyat va faoliyat</p>
+        <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">{tr("Kundalik hisobot")}</h1>
+        <p className="text-[14px] text-[var(--color-text-muted)]">{tr("Har bir bola uchun ovqatlanish, uyqu, kayfiyat va faoliyat")}</p>
       </div>
 
       <Card className="flex flex-col gap-3 p-4 sm:flex-row">
         {!forcedBranchId && branches.length > 1 && (
-          <Select label="Filial" value={branchId} onChange={(e) => setBranchId(e.target.value)} className="sm:max-w-xs">
+          <Select label={tr("Filial")} value={branchId} onChange={(e) => setBranchId(e.target.value)} className="sm:max-w-xs">
             {branches.map((branch) => (
               <option key={branch.id} value={branch.id}>
-                {branch.name}
+                {tr(branch.name)}
               </option>
             ))}
           </Select>
         )}
         <div className="block">
-          <span className="mb-2 block text-[13px] font-medium text-[var(--color-text)]">Sana</span>
+          <span className="mb-2 block text-[13px] font-medium text-[var(--color-text)]">{tr("Sana")}</span>
           <input
             type="date"
             value={date}
@@ -161,18 +163,18 @@ export default function DailyReportsPage({ params }: { params: Promise<{ slug: s
       {!date ? (
         <LoadingState />
       ) : !branchId ? (
-        <EmptyState title="Filial mavjud emas" />
+        <EmptyState title={tr("Filial mavjud emas")} />
       ) : reportsQuery.isLoading ? (
         <LoadingState />
       ) : reportsQuery.isError ? (
-        <ErrorState message={(reportsQuery.error as Error).message} />
+        <ErrorState message={tr((reportsQuery.error as Error).message)} />
       ) : !reportsQuery.data || reportsQuery.data.children.length === 0 ? (
-        <EmptyState title="Bu filialda faol bola yo'q" />
+        <EmptyState title={tr("Bu filialda faol bola yo'q")} />
       ) : (
         <Card className="overflow-hidden">
           <div className="hairline flex items-center justify-between border-b border-[var(--color-separator)] px-5 py-3 text-[12.5px] text-[var(--color-text-muted)] sm:px-6">
             <span className="tabular-nums">
-              {reportsQuery.data.children.filter((c) => c.report).length} / {reportsQuery.data.children.length} to&apos;ldirildi
+              {tr(reportsQuery.data.children.filter((c) => c.report).length)} / {tr(reportsQuery.data.children.length)} {tr("to'ldirildi")}
             </span>
           </div>
           <ul className="divide-y divide-[var(--color-separator)]">
@@ -180,15 +182,15 @@ export default function DailyReportsPage({ params }: { params: Promise<{ slug: s
               <li key={c.childId} className="flex flex-wrap items-center justify-between gap-2.5 px-5 py-3">
                 <div className="min-w-0">
                   <Link href={`/${slug}/children/${c.childId}`} className="text-sm font-medium text-[var(--color-primary)] hover:underline">
-                    {c.fullName}
+                    {tr(c.fullName)}
                   </Link>
                   {allergyByChildId.has(c.childId) && (
                     <Badge tone="danger" className="ml-2">
-                      Allergiya: {allergyByChildId.get(c.childId)}
+                      {tr("Allergiya:")}{" "}{allergyByChildId.get(c.childId)}
                     </Badge>
                   )}
                   {/* Bir necha guruhli tarbiyachi uchun guruh nomi */}
-                  {c.groupName && <p className="text-xs text-[var(--color-text-muted)]">{c.groupName}</p>}
+                  {c.groupName && <p className="text-xs text-[var(--color-text-muted)]">{tr(c.groupName)}</p>}
                   {c.report && (
                     <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
                       {c.report.sleepMinutes != null && `Uyqu: ${c.report.sleepMinutes} daq`}
@@ -201,34 +203,34 @@ export default function DailyReportsPage({ params }: { params: Promise<{ slug: s
                   {canWrite ? (
                     <>
                       <Select
-                        aria-label="Ovqatlanishi"
+                        aria-label={tr("Ovqatlanishi")}
                         value={localEating[c.childId] ?? "GOOD"}
                         onChange={(e) =>
                           setLocalEating((s) => ({ ...s, [c.childId]: e.target.value as EatingQuality }))
                         }
                         className="h-9 w-32 py-0 text-[13px]"
                       >
-                        <option value="GOOD">{EATING_LABEL.GOOD}</option>
-                        <option value="AVERAGE">{EATING_LABEL.AVERAGE}</option>
-                        <option value="POOR">{EATING_LABEL.POOR}</option>
+                        <option value="GOOD">{tr(EATING_LABEL.GOOD)}</option>
+                        <option value="AVERAGE">{tr(EATING_LABEL.AVERAGE)}</option>
+                        <option value="POOR">{tr(EATING_LABEL.POOR)}</option>
                       </Select>
                       <Select
-                        aria-label="Kayfiyati"
+                        aria-label={tr("Kayfiyati")}
                         value={localMood[c.childId] ?? "HAPPY"}
                         onChange={(e) => setLocalMood((s) => ({ ...s, [c.childId]: e.target.value as MoodStatus }))}
                         className="h-9 w-28 py-0 text-[13px]"
                       >
-                        <option value="HAPPY">{MOOD_LABEL.HAPPY}</option>
-                        <option value="NEUTRAL">{MOOD_LABEL.NEUTRAL}</option>
-                        <option value="UPSET">{MOOD_LABEL.UPSET}</option>
+                        <option value="HAPPY">{tr(MOOD_LABEL.HAPPY)}</option>
+                        <option value="NEUTRAL">{tr(MOOD_LABEL.NEUTRAL)}</option>
+                        <option value="UPSET">{tr(MOOD_LABEL.UPSET)}</option>
                       </Select>
                     </>
                   ) : (
-                    <Badge tone={c.report ? "success" : "neutral"}>{c.report ? "To'ldirilgan" : "To'ldirilmagan"}</Badge>
+                    <Badge tone={c.report ? "success" : "neutral"}>{c.report ? tr("To'ldirilgan") : tr("To'ldirilmagan")}</Badge>
                   )}
                   {canWrite && (
                     <Button size="sm" variant="outline" onClick={() => setEditChild({ childId: c.childId, fullName: c.fullName })}>
-                      Tafsilotlar
+                      {tr("Tafsilotlar")}
                     </Button>
                   )}
                 </div>
@@ -238,13 +240,13 @@ export default function DailyReportsPage({ params }: { params: Promise<{ slug: s
           {canWrite && (
             <div className="hairline flex items-center justify-between gap-3 border-t border-[var(--color-separator)] px-5 py-3.5 sm:px-6">
               {bulkSaveMutation.isError && (
-                <span className="text-[13px] text-[var(--color-danger)]">Saqlashda xatolik yuz berdi</span>
+                <span className="text-[13px] text-[var(--color-danger)]">{tr("Saqlashda xatolik yuz berdi")}</span>
               )}
               {bulkSaveMutation.isSuccess && !bulkSaveMutation.isPending && (
-                <span className="text-[13px] text-[var(--color-success)]">Saqlandi</span>
+                <span className="text-[13px] text-[var(--color-success)]">{tr("Saqlandi")}</span>
               )}
               <Button className="ml-auto" loading={bulkSaveMutation.isPending} onClick={() => bulkSaveMutation.mutate()}>
-                Hammasini saqlash
+                {tr("Hammasini saqlash")}
               </Button>
             </div>
           )}

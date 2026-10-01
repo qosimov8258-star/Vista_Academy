@@ -13,6 +13,7 @@ import { Input, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { CheckIcon } from "@/components/ui/icons";
 import clsx from "clsx";
+import { useTr } from "@/i18n/tr";
 
 const WEEKDAY_OPTIONS: { value: Weekday; label: string }[] = [
   { value: "MONDAY", label: "Dushanba" },
@@ -67,6 +68,7 @@ export function LessonScheduleModal({
   /** Tahrirlash uchun — bo'lmasa yangi yozuv yaratiladi. */
   schedule?: LessonSchedule | null;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
   const isEdit = !!schedule;
@@ -131,7 +133,7 @@ export function LessonScheduleModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
@@ -163,35 +165,35 @@ export function LessonScheduleModal({
   })();
 
   return (
-    <Modal open={open} onClose={handleClose} title={isEdit ? "Darsni tahrirlash" : "Yangi dars"}>
+    <Modal open={open} onClose={handleClose} title={isEdit ? "Darsni tahrirlash" : tr("Yangi dars")}>
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
 
-        <Select label="Guruh" error={errors.groupId?.message} {...register("groupId")}>
-          <option value="">Tanlang</option>
+        <Select label={tr("Guruh")} error={errors.groupId?.message} {...register("groupId")}>
+          <option value="">{tr("Tanlang")}</option>
           {groups.map((group) => (
             <option key={group.id} value={group.id}>
-              {group.name}
+              {tr(group.name)}
             </option>
           ))}
         </Select>
 
-        <Select label="Xodim (o'qituvchi)" error={errors.employeeId?.message} {...register("employeeId")}>
-          <option value="">Tanlang</option>
+        <Select label={tr("Xodim (o'qituvchi)")} error={errors.employeeId?.message} {...register("employeeId")}>
+          <option value="">{tr("Tanlang")}</option>
           {employees.map((employee) => (
             <option key={employee.id} value={employee.id}>
-              {employee.fullName}
+              {tr(employee.fullName)}
             </option>
           ))}
         </Select>
 
         <div>
           <span className="mb-2 block text-[13px] font-medium text-[var(--color-text)]">
-            Hafta kunlari
+            {tr("Hafta kunlari")}
           </span>
           <div className="flex flex-wrap gap-2">
             {WEEKDAY_OPTIONS.map((option) => {
@@ -215,26 +217,26 @@ export function LessonScheduleModal({
                   )}
                 >
                   {selected && <CheckIcon className="h-4 w-4" />}
-                  {option.label}
+                  {tr(option.label)}
                 </button>
               );
             })}
           </div>
           {errors.weekdays?.message && (
-            <p className="mt-1.5 text-[13px] text-[var(--color-danger)]">{errors.weekdays.message}</p>
+            <p className="mt-1.5 text-[13px] text-[var(--color-danger)]">{tr(errors.weekdays.message)}</p>
           )}
         </div>
 
-        <Input label="Fan (ixtiyoriy)" placeholder="Ingliz tili" {...register("subject")} />
+        <Input label={tr("Fan (ixtiyoriy)")} placeholder={tr("Ingliz tili")} {...register("subject")} />
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input label="Boshlanish vaqti" type="time" error={errors.startTime?.message} {...register("startTime")} />
-          <Input label="Tugash vaqti" type="time" error={errors.endTime?.message} {...register("endTime")} />
+          <Input label={tr("Boshlanish vaqti")} type="time" error={errors.startTime?.message} {...register("startTime")} />
+          <Input label={tr("Tugash vaqti")} type="time" error={errors.endTime?.message} {...register("endTime")} />
         </div>
 
         {teacherConflicts.length > 0 && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            Bu o&apos;qituvchi shu vaqtda band:{" "}
+            {tr("Bu o'qituvchi shu vaqtda band:")}{" "}
             {teacherConflicts
               .map(
                 (row) =>
@@ -247,7 +249,7 @@ export function LessonScheduleModal({
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={handleClose}>
-            Bekor qilish
+            {tr("Bekor qilish")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending} disabled={teacherConflicts.length > 0}>
             {isEdit ? "Saqlash" : "Yaratish"}

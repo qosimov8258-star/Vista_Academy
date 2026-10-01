@@ -20,6 +20,7 @@ import { initials } from "@/components/ui/avatar";
 import { prepareChildPhoto } from "@/lib/child-photo";
 import { isCabinetlessPosition, isCookPosition, isGrouplessPosition, isSubjectTeacherPosition } from "@/lib/employee-position";
 import { validateUzbekPhone } from "@/lib/phone";
+import { useTr } from "@/i18n/tr";
 
 const schema = z
   .object({
@@ -78,6 +79,7 @@ export function CreateEmployeeModal({
   slug: string;
   initialPosition?: Position | null;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
   const [photoImage, setPhotoImage] = useState<string | null>(null);
@@ -226,26 +228,15 @@ export function CreateEmployeeModal({
       }
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
   const toggleGroup = (id: string) => {
-    // Fan o'qituvchisi bir necha guruhda dars berishi mumkin — ko'p tanlov.
-    // Boshqa xodimlar (tarbiyachi va h.k.) bir vaqtning o'zida faqat bitta
-    // guruhga biriktiriladi, shuning uchun yangisini bosish avvalgisini
-    // almashtiradi (xuddi shu guruhni qayta bossa — bekor qilinadi).
-    setValue(
-      "groupIds",
-      isSubjectTeacher
-        ? groupIds.includes(id)
-          ? groupIds.filter((g) => g !== id)
-          : [...groupIds, id]
-        : groupIds.includes(id)
-          ? []
-          : [id],
-      { shouldValidate: true },
-    );
+    // Har bir xodim (tarbiyachi ham, fan o'qituvchisi ham) faqat bitta guruhga
+    // biriktiriladi: yangisini bosish avvalgisini almashtiradi (xuddi shu
+    // guruhni qayta bossa — bekor qilinadi).
+    setValue("groupIds", groupIds.includes(id) ? [] : [id], { shouldValidate: true });
     setGroupsError(null);
   };
 
@@ -268,21 +259,21 @@ export function CreateEmployeeModal({
 
   if (createdCredentials) {
     return (
-      <Modal open={open} onClose={handleClose} title="Xodim yaratildi">
+      <Modal open={open} onClose={handleClose} title={tr("Xodim yaratildi")}>
         <div className="space-y-4">
           <div className="flex flex-col items-center gap-2 text-center">
             <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-success-bg)] text-[var(--color-success)]">
               <CheckIcon className="h-6 w-6" />
             </span>
             <p className="text-sm text-[var(--color-text-muted)]">
-              Kabinet ochildi. Login va parolni xodimga bering — parol qayta ko&apos;rsatilmaydi.
+              {tr("Kabinet ochildi. Login va parolni xodimga bering — parol qayta ko'rsatilmaydi.")}
             </p>
           </div>
-          <CredentialRow label="Login" value={createdCredentials.login} />
-          <CredentialRow label="Parol" value={createdCredentials.password} />
+          <CredentialRow label={tr("Login")} value={createdCredentials.login} />
+          <CredentialRow label={tr("Parol")} value={createdCredentials.password} />
           <div className="flex justify-end pt-1">
             <Button type="button" onClick={handleClose}>
-              Yopish
+              {tr("Yopish")}
             </Button>
           </div>
         </div>
@@ -291,24 +282,24 @@ export function CreateEmployeeModal({
   }
 
   return (
-    <Modal open={open} onClose={handleClose} title="Yangi xodim">
+    <Modal open={open} onClose={handleClose} title={tr("Yangi xodim")}>
       <form
         className="space-y-4"
         onSubmit={handleSubmit((values) => {
           if (!photoImage) {
-            setPhotoRequiredError("Xodim surati talab qilinadi");
+            setPhotoRequiredError(tr("Xodim surati talab qilinadi"));
             return;
           }
           if (positionName.trim().length < 2) {
-            setPositionError("Lavozimni tanlang yoki yarating");
+            setPositionError(tr("Lavozimni tanlang yoki yarating"));
             return;
           }
           if (isSubjectTeacher && subjects.length === 0) {
-            setSubjectsError("Kamida bitta fan tanlang");
+            setSubjectsError(tr("Kamida bitta fan tanlang"));
             return;
           }
           if (values.withAccount && !cabinetless && !isCookRole && values.groupIds.length === 0) {
-            setGroupsError("Kamida bitta guruh tanlang");
+            setGroupsError(tr("Kamida bitta guruh tanlang"));
             return;
           }
           setServerError(null);
@@ -317,7 +308,7 @@ export function CreateEmployeeModal({
       >
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
 
@@ -327,7 +318,7 @@ export function CreateEmployeeModal({
               // eslint-disable-next-line @next/next/no-img-element -- data: URL, Next optimizatsiyasi kerak emas
               <img
                 src={photoImage}
-                alt="Xodim surati"
+                alt={tr("Xodim surati")}
                 width={72}
                 height={72}
                 className="h-[72px] w-[72px] shrink-0 rounded-full object-cover ring-1 ring-inset ring-[rgba(16,24,40,0.06)]"
@@ -345,8 +336,8 @@ export function CreateEmployeeModal({
               type="button"
               onClick={() => photoInputRef.current?.click()}
               disabled={photoChecking}
-              aria-label="Xodim suratini tanlash"
-              title="Surat qo'yish"
+              aria-label={tr("Xodim suratini tanlash")}
+              title={tr("Surat qo'yish")}
               className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-full bg-black/45 text-white opacity-0 transition-opacity duration-[var(--dur-fast)] hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none disabled:cursor-wait disabled:opacity-100 motion-reduce:transition-none"
             >
               {photoChecking ? (
@@ -369,7 +360,7 @@ export function CreateEmployeeModal({
             disabled={photoChecking}
             className="cursor-pointer text-[12.5px] font-medium text-[var(--color-primary)] hover:underline disabled:opacity-60"
           >
-            {photoChecking ? "Tekshirilmoqda..." : photoImage ? "Suratni almashtirish" : "Surat qo'yish (majburiy)"}
+            {photoChecking ? "Tekshirilmoqda..." : photoImage ? "Suratni almashtirish" : tr("Surat qo'yish (majburiy)")}
           </button>
           {(photoError || photoRequiredError) && (
             <p role="alert" className="max-w-[320px] text-center text-[12.5px] text-[var(--color-danger)]">
@@ -380,8 +371,8 @@ export function CreateEmployeeModal({
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <StatusInput
-            label="Ism"
-            placeholder="Dilnoza"
+            label={tr("Ism")}
+            placeholder={tr("Dilnoza")}
             error={errors.firstName?.message}
             status={nameFieldStatus(firstName, dirtyFields.firstName, errors.firstName?.message)}
             {...register("firstName")}
@@ -389,8 +380,8 @@ export function CreateEmployeeModal({
           {/* Fullname birlashtirishda familiya oldinda: ro'yxatlar va
               hujjatlar "Familiya Ism" tartibida saqlanadi */}
           <StatusInput
-            label="Familiya"
-            placeholder="Yusupova"
+            label={tr("Familiya")}
+            placeholder={tr("Yusupova")}
             error={errors.lastName?.message}
             status={nameFieldStatus(lastName, dirtyFields.lastName, errors.lastName?.message)}
             {...register("lastName")}
@@ -398,7 +389,7 @@ export function CreateEmployeeModal({
         </div>
 
         <Input
-          label="Telefon raqami"
+          label={tr("Telefon raqami")}
           type="tel"
           placeholder="+998 90 123 45 67"
           maxLength={13}
@@ -407,40 +398,40 @@ export function CreateEmployeeModal({
         />
 
         <div>
-          <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">Lavozim</span>
+          <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">{tr("Lavozim")}</span>
           <button
             type="button"
             onClick={() => setPositionsModalOpen(true)}
             className="flex w-full cursor-pointer items-center justify-between rounded-2xl border border-[var(--color-border)] bg-white px-3.5 py-2.5 text-left text-sm text-[var(--color-text)] outline-none transition-colors hover:bg-[var(--color-surface-hover)] focus:border-[var(--color-primary)]"
           >
             <span className={positionName ? undefined : "text-gray-400"}>
-              {positionName || "Lavozimni tanlang yoki yarating"}
+              {positionName || tr("Lavozimni tanlang yoki yarating")}
             </span>
             <ChevronDownIcon className="h-4 w-4 shrink-0 text-gray-400" />
           </button>
-          {positionError && <span className="mt-1 block text-xs text-[#dc2626]">{positionError}</span>}
+          {positionError && <span className="mt-1 block text-xs text-[#dc2626]">{tr(positionError)}</span>}
         </div>
 
         {isSubjectTeacher && (
           <div>
-            <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">Fanlar</span>
+            <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">{tr("Fan")}</span>
             <button
               type="button"
               onClick={() => setSubjectsModalOpen(true)}
               className="flex w-full cursor-pointer items-center justify-between rounded-2xl border border-[var(--color-border)] bg-white px-3.5 py-2.5 text-left text-sm text-[var(--color-text)] outline-none transition-colors hover:bg-[var(--color-surface-hover)] focus:border-[var(--color-primary)]"
             >
               <span className={subjects.length > 0 ? undefined : "text-gray-400"}>
-                {subjects.length > 0 ? subjects.join(", ") : "Fanlarni tanlang yoki yarating"}
+                {subjects.length > 0 ? subjects.join(", ") : tr("Fanni tanlang yoki yarating")}
               </span>
               <ChevronDownIcon className="h-4 w-4 shrink-0 text-gray-400" />
             </button>
-            {subjectsError && <span className="mt-1 block text-xs text-[#dc2626]">{subjectsError}</span>}
+            {subjectsError && <span className="mt-1 block text-xs text-[#dc2626]">{tr(subjectsError)}</span>}
           </div>
         )}
 
         {cabinetless ? (
           <p className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3.5 text-xs text-[var(--color-text-muted)]">
-            Bu lavozimdagi xodim tizimga kirmaydi — kabinet ochilmaydi, faqat xodimlar ro&apos;yxatida turadi.
+            {tr("Bu lavozimdagi xodim tizimga kirmaydi — kabinet ochilmaydi, faqat xodimlar ro'yxatida turadi.")}
           </p>
         ) : (
         <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3.5">
@@ -451,10 +442,9 @@ export function CreateEmployeeModal({
               {...register("withAccount")}
             />
             <span>
-              <span className="block text-sm font-medium text-[var(--color-text)]">Kabinet ochish</span>
+              <span className="block text-sm font-medium text-[var(--color-text)]">{tr("Kabinet ochish")}</span>
               <span className="block text-xs text-[var(--color-text-muted)]">
-                Tarbiyachi tizimga kirib, o&apos;ziga biriktirilgan guruhlarga davomat qo&apos;yadi. Oshpaz yoki
-                farrosh kabi xodimlarga kerak emas.
+                {tr("Tarbiyachi tizimga kirib, o'ziga biriktirilgan guruhlarga davomat qo'yadi. Oshpaz yoki farrosh kabi xodimlarga kerak emas.")}
               </span>
             </span>
           </label>
@@ -462,13 +452,12 @@ export function CreateEmployeeModal({
           {withAccount && (
             <div className="mt-4 space-y-4 border-t border-[var(--color-border)] pt-4">
               <p className="text-xs text-[var(--color-text-muted)]">
-                Login va parolni o&apos;zingiz kiriting yoki bo&apos;sh qoldiring — bo&apos;sh qoldirilsa avtomatik
-                yaratiladi va bir marta ko&apos;rsatiladi.
+                {tr("Login va parolni o'zingiz kiriting yoki bo'sh qoldiring — bo'sh qoldirilsa avtomatik yaratiladi va bir marta ko'rsatiladi.")}
               </p>
 
               <Input
-                label="Login"
-                placeholder="dilnoza.yusupova (ixtiyoriy)"
+                label={tr("Login")}
+                placeholder={tr("dilnoza.yusupova (ixtiyoriy)")}
                 autoComplete="off"
                 error={errors.login?.message}
                 {...register("login")}
@@ -477,13 +466,13 @@ export function CreateEmployeeModal({
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className="mb-2 block text-[13px] font-medium text-[var(--color-text)]" htmlFor="password">
-                    Parol
+                    {tr("Parol")}
                   </label>
                   <div className="relative">
                     <input
                       id="password"
                       type={showPassword ? "text" : "password"}
-                      placeholder="Ixtiyoriy"
+                      placeholder={tr("Ixtiyoriy")}
                       autoComplete="new-password"
                       className="h-11 w-full rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-3.5 pr-10 text-[15px] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/60 outline-none transition-[border-color,box-shadow] duration-[var(--dur-fast)] ease-[var(--ease-out)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/[0.12]"
                       {...register("password")}
@@ -492,25 +481,25 @@ export function CreateEmployeeModal({
                       type="button"
                       onClick={() => setShowPassword((v) => !v)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400 hover:text-[var(--color-text)]"
-                      aria-label={showPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+                      aria-label={showPassword ? "Parolni yashirish" : tr("Parolni ko'rsatish")}
                     >
                       {showPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
                     </button>
                   </div>
                   {errors.password?.message && (
-                    <span className="mt-1.5 block text-[13px] text-[var(--color-danger)]">{errors.password.message}</span>
+                    <span className="mt-1.5 block text-[13px] text-[var(--color-danger)]">{tr(errors.password.message)}</span>
                   )}
                 </div>
 
                 <div>
                   <label className="mb-2 block text-[13px] font-medium text-[var(--color-text)]" htmlFor="confirmPassword">
-                    Parolni tasdiqlang
+                    {tr("Parolni tasdiqlang")}
                   </label>
                   <div className="relative">
                     <input
                       id="confirmPassword"
                       type={showConfirmPassword ? "text" : "password"}
-                      placeholder="Ixtiyoriy"
+                      placeholder={tr("Ixtiyoriy")}
                       autoComplete="new-password"
                       className="h-11 w-full rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-3.5 pr-10 text-[15px] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/60 outline-none transition-[border-color,box-shadow] duration-[var(--dur-fast)] ease-[var(--ease-out)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/[0.12]"
                       {...register("confirmPassword")}
@@ -519,13 +508,13 @@ export function CreateEmployeeModal({
                       type="button"
                       onClick={() => setShowConfirmPassword((v) => !v)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400 hover:text-[var(--color-text)]"
-                      aria-label={showConfirmPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+                      aria-label={showConfirmPassword ? "Parolni yashirish" : tr("Parolni ko'rsatish")}
                     >
                       {showConfirmPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
                     </button>
                   </div>
                   {errors.confirmPassword?.message && (
-                    <span className="mt-1.5 block text-[13px] text-[var(--color-danger)]">{errors.confirmPassword.message}</span>
+                    <span className="mt-1.5 block text-[13px] text-[var(--color-danger)]">{tr(errors.confirmPassword.message)}</span>
                   )}
                 </div>
               </div>
@@ -538,12 +527,12 @@ export function CreateEmployeeModal({
 
               {!isCookRole && (
                 <div>
-                  <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">Guruhlari</span>
+                  <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">{tr("Guruhlari")}</span>
                   {!groups ? (
-                    <p className="text-xs text-[var(--color-text-muted)]">Guruhlar yuklanmoqda...</p>
+                    <p className="text-xs text-[var(--color-text-muted)]">{tr("Guruhlar yuklanmoqda...")}</p>
                   ) : groups.length === 0 ? (
                     <p className="text-xs text-[var(--color-text-muted)]">
-                      Avval guruh oching — tarbiyachi qaysi guruhga biriktirilishi kerakligi shundan aniqlanadi.
+                      {tr("Avval guruh oching — tarbiyachi qaysi guruhga biriktirilishi kerakligi shundan aniqlanadi.")}
                     </p>
                   ) : (
                     <div className="flex flex-wrap gap-2">
@@ -561,13 +550,13 @@ export function CreateEmployeeModal({
                                 : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]"
                             }`}
                           >
-                            {group.name}
+                            {tr(group.name)}
                           </button>
                         );
                       })}
                     </div>
                   )}
-                  {groupsError && <span className="mt-1.5 block text-xs text-[var(--color-danger)]">{groupsError}</span>}
+                  {groupsError && <span className="mt-1.5 block text-xs text-[var(--color-danger)]">{tr(groupsError)}</span>}
                 </div>
               )}
             </div>
@@ -577,10 +566,10 @@ export function CreateEmployeeModal({
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={handleClose}>
-            Bekor qilish
+            {tr("Bekor qilish")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Yaratish
+            {tr("Yaratish")}
           </Button>
         </div>
       </form>
@@ -602,7 +591,8 @@ export function CreateEmployeeModal({
         slug={slug}
         selected={subjects}
         onToggle={(name) => {
-          setSubjects((prev) => (prev.includes(name) ? prev.filter((s) => s !== name) : [...prev, name]));
+          // Bitta o'qituvchiga bitta fan: yangisini bosish avvalgisini almashtiradi
+          setSubjects((prev) => (prev.includes(name) ? [] : [name]));
           setSubjectsError(null);
         }}
       />

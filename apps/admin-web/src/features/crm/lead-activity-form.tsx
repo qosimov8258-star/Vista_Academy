@@ -10,6 +10,7 @@ import type { LeadActivity } from "@/lib/types";
 import { Select, Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ACTIVITY_LABEL } from "./labels";
+import { useTr } from "@/i18n/tr";
 
 const schema = z.object({
   type: z.enum(["CALL", "MESSAGE", "MEETING", "TRIAL_DAY", "STAGE_CHANGE", "NOTE"]),
@@ -19,6 +20,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export function LeadActivityForm({ slug, leadId }: { slug: string; leadId: string }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -40,7 +42,7 @@ export function LeadActivityForm({ slug, leadId }: { slug: string; leadId: strin
       reset({ type: "NOTE", note: "" });
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
@@ -48,22 +50,22 @@ export function LeadActivityForm({ slug, leadId }: { slug: string; leadId: strin
     <form className="space-y-3" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
       {serverError && (
         <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-          {serverError}
+          {tr(serverError)}
         </div>
       )}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-[200px_1fr]">
-        <Select label="Turi" {...register("type")}>
+        <Select label={tr("Turi")} {...register("type")}>
           {Object.entries(ACTIVITY_LABEL).map(([value, label]) => (
             <option key={value} value={value}>
-              {label}
+              {tr(label)}
             </option>
           ))}
         </Select>
-        <Textarea label="Izoh (ixtiyoriy)" rows={2} placeholder="Qo'shimcha ma'lumot" {...register("note")} />
+        <Textarea label={tr("Izoh (ixtiyoriy)")} rows={2} placeholder={tr("Qo'shimcha ma'lumot")} {...register("note")} />
       </div>
       <div className="flex justify-end">
         <Button type="submit" size="sm" loading={isSubmitting || mutation.isPending}>
-          Qo&apos;shish
+          {tr("Qo'shish")}
         </Button>
       </div>
     </form>

@@ -1,6 +1,7 @@
 "use client";
 
 import clsx from "clsx";
+import { useTr } from "@/i18n/tr";
 
 /**
  * Yozuvsiz on/off tugmasi. Yoqilganda yashil, o'chirilganda kulrang —
@@ -21,12 +22,13 @@ export function Switch({
   className?: string;
   "aria-label"?: string;
 }) {
+  const tr = useTr();
   return (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
-      aria-label={ariaLabel}
+      aria-label={tr(ariaLabel)}
       disabled={disabled || loading}
       onClick={onChange}
       className={clsx(

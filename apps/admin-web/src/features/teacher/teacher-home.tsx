@@ -12,6 +12,7 @@ import { BellIcon, CalendarIcon, ClockIcon, GroupIcon } from "@/components/ui/ic
 import { EmptyRow, Group, GroupAction, LargeTitle, PrimaryButton, Row, SkeletonRows, TeacherPage, formatDayLong, todayIso } from "./teacher-ui";
 import { TeacherReminders } from "./teacher-reminders";
 import styles from "./teacher.module.css";
+import { useTr } from "@/i18n/tr";
 
 const WEEK: { key: Weekday; label: string }[] = [
   { key: "MONDAY", label: "Dushanba" },
@@ -43,6 +44,7 @@ function tashkentHour(): number {
  * ro'yxatda. Rangli fonli ikonkalar yo'q — belgilar tizim rangida.
  */
 export function TeacherHome({ slug }: { slug: string }) {
+  const tr = useTr();
   const { user } = useAuth();
   const today = todayIso();
   const todayWeekday = WEEKDAY_BY_JS_DAY[new Date().getDay()];
@@ -98,7 +100,7 @@ export function TeacherHome({ slug }: { slug: string }) {
         title={greeting(tashkentHour())}
         subtitle={[user?.fullName, groups.map((g) => g.name).join(", ")].filter(Boolean).join(" · ")}
         trailing={
-          <Link href={`/${slug}/settings`} aria-label="Profil" className="block rounded-full transition-transform active:scale-95">
+          <Link href={`/${slug}/settings`} aria-label={tr("Profil")} className="block rounded-full transition-transform active:scale-95">
             <Avatar user={user} size={46} />
           </Link>
         }
@@ -118,26 +120,26 @@ export function TeacherHome({ slug }: { slug: string }) {
           ) : total === 0 ? (
             <EmptyRow
               icon={GroupIcon}
-              title="Hozircha ish yo'q"
-              description="Guruhingizda hali bola yo'q. Filial admini bolalarni ro'yxatga olgach, davomat shu yerda paydo bo'ladi."
+              title={tr("Hozircha ish yo'q")}
+              description={tr("Guruhingizda hali bola yo'q. Filial admini bolalarni ro'yxatga olgach, davomat shu yerda paydo bo'ladi.")}
             />
           ) : (
             <>
               <div className="flex items-center gap-5">
                 <AttendanceRing present={present} absent={absent} total={total} />
                 <div className="min-w-0 flex-1">
-                  <p className="text-[13px] font-semibold uppercase tracking-[0.05em] text-[var(--color-text-muted)]">Bugungi davomat</p>
+                  <p className="text-[13px] font-semibold uppercase tracking-[0.05em] text-[var(--color-text-muted)]">{tr("Bugungi davomat")}</p>
                   <p className="mt-1 text-[19px] font-bold leading-snug tracking-[-0.015em] text-[var(--color-text)]">
-                    {marked === 0 ? "Hali belgilanmagan" : marked >= total ? "Hammasi belgilandi" : `${total - marked} ta bola qoldi`}
+                    {marked === 0 ? tr("Hali belgilanmagan") : marked >= total ? "Hammasi belgilandi" : tr("{0} ta bola qoldi", total - marked)}
                   </p>
                   <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-[14px]">
-                    <Legend color="var(--color-success)" label="Keldi" value={present} />
-                    <Legend color="var(--color-danger)" label="Kelmadi" value={absent} />
+                    <Legend color="var(--color-success)" label={tr("Keldi")} value={present} />
+                    <Legend color="var(--color-danger)" label={tr("Kelmadi")} value={absent} />
                   </div>
                 </div>
               </div>
               <PrimaryButton href={attendanceHref} className="mt-5">
-                {!canMark ? "Davomatni ko'rish" : marked === 0 ? "Davomatni belgilash" : "Davomatni ochish"}
+                {!canMark ? tr("Davomatni ko'rish") : marked === 0 ? "Davomatni belgilash" : "Davomatni ochish"}
               </PrimaryButton>
             </>
           )}
@@ -147,22 +149,22 @@ export function TeacherHome({ slug }: { slug: string }) {
       {user?.branchId && <TeacherReminders slug={slug} branchId={user.branchId} date={today} />}
 
       {subjectTeacher && (
-        <PrimaryButton href={attendanceHref}>Dars davomatini belgilash</PrimaryButton>
+        <PrimaryButton href={attendanceHref}>{tr("Dars davomatini belgilash")}</PrimaryButton>
       )}
 
-      <Group title="Guruhlarim">
+      <Group title={tr("Guruhlarim")}>
         {groupsQuery.isLoading ? (
           <SkeletonRows rows={1} />
         ) : groups.length === 0 ? (
-          <EmptyRow icon={GroupIcon} title="Sizga hali guruh biriktirilmagan" description="Filial admini guruh biriktirgach, shu yerda ko'rinadi." />
+          <EmptyRow icon={GroupIcon} title={tr("Sizga hali guruh biriktirilmagan")} description={tr("Filial admini guruh biriktirgach, shu yerda ko'rinadi.")} />
         ) : (
           groups.map((group, i) => (
             <Row
               key={group.id}
               first={i === 0}
               icon={GroupIcon}
-              title={group.name}
-              value={`${group._count?.children ?? 0} bola`}
+              title={tr(group.name)}
+              value={tr("{0} bola", group._count?.children ?? 0)}
               href={subjectTeacher ? undefined : `/${slug}/children`}
             />
           ))
@@ -171,12 +173,12 @@ export function TeacherHome({ slug }: { slug: string }) {
 
       <Group
         title={subjectTeacher ? "Darslarim" : "Bu haftaki darslar"}
-        action={lessons.length > 0 ? <GroupAction href={`/${slug}/my-lessons/schedule`}>Jadval</GroupAction> : undefined}
+        action={lessons.length > 0 ? <GroupAction href={`/${slug}/my-lessons/schedule`}>{tr("Jadval")}</GroupAction> : undefined}
       >
         {lessonsQuery.isLoading ? (
           <SkeletonRows rows={2} />
         ) : lessons.length === 0 ? (
-          <EmptyRow icon={ClockIcon} title="Bu hafta dars yo'q" />
+          <EmptyRow icon={ClockIcon} title={tr("Bu hafta dars yo'q")} />
         ) : (
           lessons.slice(0, LESSONS_PREVIEW).map(({ lesson, day }, i) => {
             const isToday = day.key === todayWeekday;
@@ -186,17 +188,17 @@ export function TeacherHome({ slug }: { slug: string }) {
                 first={i === 0}
                 leading={
                   <span className="flex w-[40px] shrink-0 flex-col items-start leading-tight tabular-nums">
-                    <span className="text-[15px] font-semibold text-[var(--color-text)]">{lesson.startTime}</span>
-                    <span className="text-[12.5px] text-[var(--color-text-muted)]">{lesson.endTime}</span>
+                    <span className="text-[15px] font-semibold text-[var(--color-text)]">{tr(lesson.startTime)}</span>
+                    <span className="text-[12.5px] text-[var(--color-text-muted)]">{tr(lesson.endTime)}</span>
                   </span>
                 }
                 title={lesson.subject || "Dars"}
                 subtitle={`${lesson.group.name} guruhi`}
                 trailing={
                   isToday ? (
-                    <span className="shrink-0 rounded-full bg-[var(--color-primary)] px-2.5 py-1 text-[12px] font-semibold text-white">Bugun</span>
+                    <span className="shrink-0 rounded-full bg-[var(--color-primary)] px-2.5 py-1 text-[12px] font-semibold text-white">{tr("Bugun")}</span>
                   ) : (
-                    <span className="shrink-0 text-[14px] text-[var(--color-text-muted)]">{day.label}</span>
+                    <span className="shrink-0 text-[14px] text-[var(--color-text-muted)]">{tr(day.label)}</span>
                   )
                 }
               />
@@ -204,7 +206,7 @@ export function TeacherHome({ slug }: { slug: string }) {
           })
         )}
         {lessons.length > LESSONS_PREVIEW && (
-          <Row icon={CalendarIcon} title={`Yana ${lessons.length - LESSONS_PREVIEW} ta dars`} href={`/${slug}/my-lessons/schedule`} />
+          <Row icon={CalendarIcon} title={tr("Yana {0} ta dars", lessons.length - LESSONS_PREVIEW)} href={`/${slug}/my-lessons/schedule`} />
         )}
       </Group>
 
@@ -212,7 +214,7 @@ export function TeacherHome({ slug }: { slug: string }) {
         <Row
           first
           icon={BellIcon}
-          title="Bildirishnomalar"
+          title={tr("Bildirishnomalar")}
           href={`/${slug}/my-notifications`}
           trailing={
             unread > 0 ? (
@@ -222,24 +224,26 @@ export function TeacherHome({ slug }: { slug: string }) {
             ) : undefined
           }
         />
-        {!subjectTeacher && <Row icon={CalendarIcon} title="Dars jadvali" href={`/${slug}/my-lessons/schedule`} />}
+        {!subjectTeacher && <Row icon={CalendarIcon} title={tr("Dars jadvali")} href={`/${slug}/my-lessons/schedule`} />}
       </Group>
     </TeacherPage>
   );
 }
 
 function Legend({ color, label, value }: { color: string; label: string; value: number }) {
+  const tr = useTr();
   return (
     <span className="inline-flex items-center gap-1.5 text-[var(--color-text-muted)]">
       <span className="h-2 w-2 rounded-full" style={{ background: color }} aria-hidden="true" />
-      {label}
-      <b className="font-semibold tabular-nums text-[var(--color-text)]">{value}</b>
+      {tr(label)}
+      <b className="font-semibold tabular-nums text-[var(--color-text)]">{tr(value)}</b>
     </span>
   );
 }
 
 /** Davomat halqasi: yashil — kelgan, qizil — kelmagan, kulrang — belgilanmagan. */
 function AttendanceRing({ present, absent, total }: { present: number; absent: number; total: number }) {
+  const tr = useTr();
   const size = 104;
   const stroke = 10;
   const r = (size - stroke) / 2;
@@ -248,7 +252,7 @@ function AttendanceRing({ present, absent, total }: { present: number; absent: n
   const presentLen = (Math.min(present, safeTotal) / safeTotal) * c;
   const absentLen = (Math.min(absent, safeTotal - Math.min(present, safeTotal)) / safeTotal) * c;
   return (
-    <div className="relative shrink-0" style={{ width: size, height: size }} role="img" aria-label={`${total} boladan ${present} tasi keldi, ${absent} tasi kelmadi`}>
+    <div className="relative shrink-0" style={{ width: size, height: size }} role="img" aria-label={tr("{0} boladan {1} tasi keldi, {2} tasi kelmadi", total, present, absent)}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(118,118,128,0.14)" strokeWidth={stroke} />
         {absentLen > 0 && (
@@ -280,8 +284,8 @@ function AttendanceRing({ present, absent, total }: { present: number; absent: n
         )}
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-[26px] font-bold leading-none tracking-[-0.02em] tabular-nums text-[var(--color-text)]">{present}</span>
-        <span className="mt-1 text-[12.5px] font-medium tabular-nums text-[var(--color-text-muted)]">/ {total}</span>
+        <span className="text-[26px] font-bold leading-none tracking-[-0.02em] tabular-nums text-[var(--color-text)]">{tr(present)}</span>
+        <span className="mt-1 text-[12.5px] font-medium tabular-nums text-[var(--color-text-muted)]">/ {tr(total)}</span>
       </div>
     </div>
   );

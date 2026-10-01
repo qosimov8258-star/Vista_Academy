@@ -208,7 +208,7 @@ export class ParentService {
       const agg = await tx.coinTransaction.aggregate({ where: { childId: child.id }, _sum: { amount: true } });
       const balance = agg._sum.amount ?? 0;
       if (balance < product.priceCoins) {
-        throw new BadRequestException("Coin yetarli emas");
+        throw new BadRequestException("Yulduzcha yetarli emas");
       }
       const decremented = await tx.product.updateMany({
         where: { id: product.id, quantity: { gt: 0 } },

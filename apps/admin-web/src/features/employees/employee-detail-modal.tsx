@@ -16,6 +16,7 @@ import { formatPositionLabel, isCabinetlessPosition, isGrouplessPosition, isSubj
 import { EmployeeTopics } from "@/features/employees/employee-topics";
 import { PasswordChecklist, getPasswordRules } from "@/components/ui/password-checklist";
 import { Toast, type ToastState } from "@/components/ui/toast";
+import { useTr } from "@/i18n/tr";
 
 const LOGIN_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{1,30}[A-Za-z0-9]$/;
 
@@ -38,6 +39,7 @@ export function EmployeeDetailModal({
   employee: Employee | null;
   canWrite: boolean;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
 
   const [visiblePassword, setVisiblePassword] = useState<string | null>(null);
@@ -128,8 +130,8 @@ export function EmployeeDetailModal({
       setToast({ type: "success", message: "Saqlandi" });
     },
     onError: (err) => {
-      setCredentialsError(err instanceof ApiError ? err.message : "Saqlab bo'lmadi");
-      setToast({ type: "error", message: "Saqlab bo'lmadi" });
+      setCredentialsError(err instanceof ApiError ? err.message : tr("Saqlab bo'lmadi"));
+      setToast({ type: "error", message: tr("Saqlab bo'lmadi") });
     },
   });
 
@@ -155,7 +157,7 @@ export function EmployeeDetailModal({
       }
     },
     onError: (err) => {
-      setAccountError(err instanceof ApiError ? err.message : "Kabinet ochib bo'lmadi");
+      setAccountError(err instanceof ApiError ? err.message : tr("Kabinet ochib bo'lmadi"));
     },
   });
 
@@ -182,7 +184,7 @@ export function EmployeeDetailModal({
       // u yangi login qoidasidan o'tmasligi saqlashga to'sqinlik qilmasin
       // (server ham faqat o'zgargan loginni oladi va tekshiradi).
       if (trimmedLogin !== savedLogin && !LOGIN_PATTERN.test(trimmedLogin)) {
-        setLoginError("Login lotin harf, raqam, . _ - dan iborat bo'lishi va kamida 3 belgi bo'lishi kerak");
+        setLoginError(tr("Login lotin harf, raqam, . _ - dan iborat bo'lishi va kamida 3 belgi bo'lishi kerak"));
         return;
       }
       if (newPassword) {
@@ -206,8 +208,8 @@ export function EmployeeDetailModal({
       try {
         await topicsSettingMutation.mutateAsync(topicsManagedByAdmin);
       } catch (err) {
-        setTopicsSaveError(err instanceof ApiError ? err.message : "Saqlab bo'lmadi");
-        setToast({ type: "error", message: "Saqlab bo'lmadi" });
+        setTopicsSaveError(err instanceof ApiError ? err.message : tr("Saqlab bo'lmadi"));
+        setToast({ type: "error", message: tr("Saqlab bo'lmadi") });
         return;
       }
     }
@@ -218,7 +220,8 @@ export function EmployeeDetailModal({
   };
 
   const toggleGroup = (id: string) => {
-    setGroupIds((prev) => (prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]));
+    // Xodim faqat bitta guruhga biriktiriladi
+    setGroupIds((prev) => (prev.includes(id) ? [] : [id]));
   };
 
   const handleShowPassword = async () => {
@@ -255,21 +258,21 @@ export function EmployeeDetailModal({
 
   if (createdCredentials) {
     return (
-      <Modal open={open} onClose={onClose} title="Kabinet ochildi" widthClassName="max-w-md">
+      <Modal open={open} onClose={onClose} title={tr("Kabinet ochildi")} widthClassName="max-w-md">
         <div className="space-y-4">
           <div className="flex flex-col items-center gap-2 text-center">
             <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-success-bg)] text-[var(--color-success)]">
               <CheckIcon className="h-6 w-6" />
             </span>
             <p className="text-sm text-[var(--color-text-muted)]">
-              Login va parolni xodimga bering — parol qayta ko&apos;rsatilmaydi.
+              {tr("Login va parolni xodimga bering — parol qayta ko'rsatilmaydi.")}
             </p>
           </div>
-          <CredentialRow label="Login" value={createdCredentials.login} />
-          <CredentialRow label="Parol" value={createdCredentials.password} />
+          <CredentialRow label={tr("Login")} value={createdCredentials.login} />
+          <CredentialRow label={tr("Parol")} value={createdCredentials.password} />
           <div className="flex justify-end pt-1">
             <Button type="button" onClick={onClose}>
-              Yopish
+              {tr("Yopish")}
             </Button>
           </div>
         </div>
@@ -278,7 +281,7 @@ export function EmployeeDetailModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Xodim" widthClassName="max-w-md">
+    <Modal open={open} onClose={onClose} title={tr("Xodim")} widthClassName="max-w-md">
       <div className="space-y-5">
         <div className="flex flex-col items-center gap-2">
           <EmployeePhoto
@@ -289,9 +292,9 @@ export function EmployeeDetailModal({
             className="text-[22px]"
           />
           <div className="text-center">
-            <p className="text-[16px] font-semibold text-[var(--color-text)]">{employee.fullName}</p>
+            <p className="text-[16px] font-semibold text-[var(--color-text)]">{tr(employee.fullName)}</p>
             <p className="text-[13px] text-[var(--color-text-muted)]">
-              {formatPositionLabel(employee.position, employee.subjects)}
+              {tr(formatPositionLabel(employee.position, employee.subjects))}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -303,7 +306,7 @@ export function EmployeeDetailModal({
                 className="flex cursor-pointer items-center gap-1 rounded-full bg-[var(--color-danger-bg)] px-2.5 py-1 text-[12px] font-medium text-[var(--color-danger)] hover:brightness-[0.96]"
               >
                 <TrashIcon className="h-3.5 w-3.5" />
-                O&apos;chirish
+                {tr("O'chirish")}
               </button>
             )}
           </div>
@@ -312,10 +315,9 @@ export function EmployeeDetailModal({
         {deleteConfirming && (
           <div className="space-y-2 rounded-[var(--radius-lg)] border border-[var(--color-danger)]/25 bg-[var(--color-danger-bg)] p-3.5">
             <p className="text-[13px] text-[var(--color-danger)]">
-              &quot;{employee.fullName}&quot;ni butunlay o&apos;chirmoqchimisiz? Uning davomat va oylik tarixi ham
-              qaytarib bo&apos;lmas tarzda o&apos;chadi.
+              &quot;{tr(employee.fullName)}{tr("\"ni butunlay o'chirmoqchimisiz? Uning davomat va oylik tarixi ham qaytarib bo'lmas tarzda o'chadi.")}
             </p>
-            {deleteError && <p className="text-xs text-[var(--color-danger)]">{deleteError}</p>}
+            {deleteError && <p className="text-xs text-[var(--color-danger)]">{tr(deleteError)}</p>}
             <div className="flex justify-end gap-2">
               <Button
                 type="button"
@@ -327,10 +329,10 @@ export function EmployeeDetailModal({
                   setDeleteError(null);
                 }}
               >
-                Bekor qilish
+                {tr("Bekor qilish")}
               </Button>
               <Button type="button" variant="danger" size="sm" loading={deleting} onClick={handleDelete}>
-                Ha, o&apos;chirish
+                {tr("Ha, o'chirish")}
               </Button>
             </div>
           </div>
@@ -345,7 +347,7 @@ export function EmployeeDetailModal({
           <div className="flex flex-wrap gap-1.5">
             {employee.teachingGroups.map((link) => (
               <Badge key={link.groupId} tone="primary">
-                {link.group?.name ?? "Guruh"}
+                {link.group?.name ?? tr("Guruh")}
               </Badge>
             ))}
           </div>
@@ -355,7 +357,7 @@ export function EmployeeDetailModal({
           <div className="space-y-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] p-4">
             <div>
               <label className="mb-1.5 block text-[13px] font-medium text-[var(--color-text)]" htmlFor="employee-login">
-                Login
+                {tr("Login")}
               </label>
               <input
                 id="employee-login"
@@ -374,12 +376,12 @@ export function EmployeeDetailModal({
                 aria-invalid={!!loginError}
                 className={`w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[var(--color-primary)] disabled:opacity-60 ${loginError ? "border-[var(--color-danger)]" : "border-[var(--color-border)]"}`}
               />
-              {loginError && <p className="mt-1.5 text-xs text-[var(--color-danger)]">{loginError}</p>}
+              {loginError && <p className="mt-1.5 text-xs text-[var(--color-danger)]">{tr(loginError)}</p>}
             </div>
 
             <div className="flex items-center justify-between gap-3 border-t border-[var(--color-border)] pt-3">
               <div className="min-w-0">
-                <p className="text-[13px] font-medium text-[var(--color-text)]">Joriy parol</p>
+                <p className="text-[13px] font-medium text-[var(--color-text)]">{tr("Joriy parol")}</p>
                 <p className="truncate font-mono text-sm text-[var(--color-text-muted)]">
                   {visiblePassword ?? "••••••••••"}
                 </p>
@@ -390,7 +392,7 @@ export function EmployeeDetailModal({
                   onClick={handleShowPassword}
                   disabled={revealing}
                   className="flex shrink-0 cursor-pointer items-center gap-1 rounded-full bg-[var(--color-surface-sunken)] px-2.5 py-1.5 text-[12px] font-medium text-[var(--color-text)] hover:bg-[var(--color-border)] disabled:cursor-wait disabled:opacity-60"
-                  aria-label={visiblePassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+                  aria-label={visiblePassword ? "Parolni yashirish" : tr("Parolni ko'rsatish")}
                 >
                   {revealing ? (
                     <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -399,11 +401,11 @@ export function EmployeeDetailModal({
                   ) : (
                     <EyeIcon className="h-3.5 w-3.5" />
                   )}
-                  {revealing ? "Tasdiqlanmoqda..." : visiblePassword ? "Yashirish" : "Ko'rsatish"}
+                  {revealing ? "Tasdiqlanmoqda..." : visiblePassword ? "Yashirish" : tr("Ko'rsatish")}
                 </button>
               )}
             </div>
-            {revealError && <p className="text-xs text-[var(--color-danger)]">{revealError}</p>}
+            {revealError && <p className="text-xs text-[var(--color-danger)]">{tr(revealError)}</p>}
 
             {canWrite && (
               <div className="border-t border-[var(--color-border)] pt-3">
@@ -411,7 +413,7 @@ export function EmployeeDetailModal({
                   className="mb-1.5 block text-[13px] font-medium text-[var(--color-text)]"
                   htmlFor="employee-new-password"
                 >
-                  Yangi parol
+                  {tr("Yangi parol")}
                 </label>
                 <div className="relative">
                   <input
@@ -425,7 +427,7 @@ export function EmployeeDetailModal({
                         handleSave();
                       }
                     }}
-                    placeholder="O'zgartirmaslik uchun bo'sh qoldiring"
+                    placeholder={tr("O'zgartirmaslik uchun bo'sh qoldiring")}
                     autoComplete="new-password"
                     disabled={credentialsMutation.isPending}
                     className="w-full rounded-xl border border-[var(--color-border)] bg-white px-3.5 py-2.5 pr-10 text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[var(--color-primary)] disabled:opacity-60"
@@ -433,7 +435,7 @@ export function EmployeeDetailModal({
                   <button
                     type="button"
                     onClick={() => setShowNewPassword((v) => !v)}
-                    aria-label={showNewPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+                    aria-label={showNewPassword ? "Parolni yashirish" : tr("Parolni ko'rsatish")}
                     className="absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
                   >
                     {showNewPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
@@ -452,7 +454,7 @@ export function EmployeeDetailModal({
                           handleSave();
                         }
                       }}
-                      placeholder="Yangi parolni tasdiqlang"
+                      placeholder={tr("Yangi parolni tasdiqlang")}
                       autoComplete="new-password"
                       disabled={credentialsMutation.isPending}
                       className="mt-2 w-full rounded-xl border border-[var(--color-border)] bg-white px-3.5 py-2.5 text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[var(--color-primary)] disabled:opacity-60"
@@ -462,21 +464,21 @@ export function EmployeeDetailModal({
                     </div>
                   </>
                 )}
-                {passwordError && <p className="mt-1.5 text-xs text-[var(--color-danger)]">{passwordError}</p>}
+                {passwordError && <p className="mt-1.5 text-xs text-[var(--color-danger)]">{tr(passwordError)}</p>}
               </div>
             )}
 
-            {credentialsError && <p className="text-xs text-[var(--color-danger)]">{credentialsError}</p>}
+            {credentialsError && <p className="text-xs text-[var(--color-danger)]">{tr(credentialsError)}</p>}
           </div>
         ) : (
           <div className="space-y-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] p-4">
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm text-[var(--color-text-muted)]">
-                {isCabinetlessPosition(employee.position) ? "Bu lavozim tizimga kirmaydi — kabinet kerak emas" : "Kabinet ochilmagan"}
+                {isCabinetlessPosition(employee.position) ? tr("Bu lavozim tizimga kirmaydi — kabinet kerak emas") : "Kabinet ochilmagan"}
               </p>
               {canWrite && !accountOpen && !isCabinetlessPosition(employee.position) && (
                 <Button type="button" variant="outline" size="sm" onClick={() => setAccountOpen(true)}>
-                  Kabinet ochish
+                  {tr("Kabinet ochish")}
                 </Button>
               )}
             </div>
@@ -485,19 +487,19 @@ export function EmployeeDetailModal({
               <div className="space-y-3 border-t border-[var(--color-border)] pt-3">
                 {accountError && (
                   <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-                    {accountError}
+                    {tr(accountError)}
                   </div>
                 )}
                 <p className="text-xs text-[var(--color-text-muted)]">
-                  Login va parol avtomatik generatsiya qilinadi va bir marta ko&apos;rsatiladi.
+                  {tr("Login va parol avtomatik generatsiya qilinadi va bir marta ko'rsatiladi.")}
                 </p>
                 {!isGrouplessPosition(employee.position) && (
                 <div>
-                  <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">Guruhlari</span>
+                  <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">{tr("Guruhlari")}</span>
                   {!groups ? (
-                    <p className="text-xs text-[var(--color-text-muted)]">Guruhlar yuklanmoqda...</p>
+                    <p className="text-xs text-[var(--color-text-muted)]">{tr("Guruhlar yuklanmoqda...")}</p>
                   ) : groups.length === 0 ? (
-                    <p className="text-xs text-[var(--color-text-muted)]">Avval guruh oching.</p>
+                    <p className="text-xs text-[var(--color-text-muted)]">{tr("Avval guruh oching.")}</p>
                   ) : (
                     <div className="flex flex-wrap gap-2">
                       {groups.map((group) => {
@@ -514,7 +516,7 @@ export function EmployeeDetailModal({
                                 : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]"
                             }`}
                           >
-                            {group.name}
+                            {tr(group.name)}
                           </button>
                         );
                       })}
@@ -524,7 +526,7 @@ export function EmployeeDetailModal({
                 )}
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="ghost" size="sm" onClick={() => setAccountOpen(false)}>
-                    Bekor qilish
+                    {tr("Bekor qilish")}
                   </Button>
                   <Button
                     type="button"
@@ -532,14 +534,14 @@ export function EmployeeDetailModal({
                     loading={accountMutation.isPending}
                     onClick={() => {
                       if (groupIds.length === 0 && !isGrouplessPosition(employee.position)) {
-                        setAccountError("Kamida bitta guruh tanlang");
+                        setAccountError(tr("Kamida bitta guruh tanlang"));
                         return;
                       }
                       setAccountError(null);
                       accountMutation.mutate();
                     }}
                   >
-                    Ochish
+                    {tr("Ochish")}
                   </Button>
                 </div>
               </div>
@@ -556,7 +558,7 @@ export function EmployeeDetailModal({
           />
         )}
 
-        {topicsSaveError && <p className="text-xs text-[var(--color-danger)]">{topicsSaveError}</p>}
+        {topicsSaveError && <p className="text-xs text-[var(--color-danger)]">{tr(topicsSaveError)}</p>}
 
         <div className="flex justify-end pt-1">
           {dirty ? (
@@ -566,11 +568,11 @@ export function EmployeeDetailModal({
               loading={credentialsMutation.isPending || topicsSettingMutation.isPending}
               onClick={handleSave}
             >
-              Saqlash
+              {tr("Saqlash")}
             </Button>
           ) : (
             <Button type="button" variant="secondary" onClick={onClose}>
-              Yopish
+              {tr("Yopish")}
             </Button>
           )}
         </div>

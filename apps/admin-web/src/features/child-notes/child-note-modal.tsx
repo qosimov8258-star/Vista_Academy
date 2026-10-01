@@ -6,6 +6,7 @@ import { api, ApiError } from "@/lib/api";
 import { Modal } from "@/components/ui/modal";
 import { Input, Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useTr } from "@/i18n/tr";
 
 export interface ChildReminder {
   id: string;
@@ -49,6 +50,7 @@ export function ChildNoteModal({
   childName: string;
   date: string;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [allergies, setAllergies] = useState("");
   const [time, setTime] = useState("");
@@ -94,7 +96,7 @@ export function ChildNoteModal({
     onSuccess: () => {
       setTime("");
       setText("");
-      setMessage("Eslatma qo'shildi");
+      setMessage(tr("Eslatma qo'shildi"));
       invalidateReminders();
     },
     onError: (err) => setError(errorText(err)),
@@ -119,28 +121,28 @@ export function ChildNoteModal({
   const sectionTitle = "text-[13px] font-semibold text-[var(--color-text)]";
 
   return (
-    <Modal open={open} onClose={onClose} title={childName} widthClassName="max-w-xl">
+    <Modal open={open} onClose={onClose} title={tr(childName)} widthClassName="max-w-xl">
       <div className="space-y-6">
         {error && (
-          <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">{error}</div>
+          <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">{tr(error)}</div>
         )}
         {message && !error && (
-          <div className="rounded-lg bg-[var(--color-success-bg)] px-3 py-2 text-sm text-[var(--color-success)]">{message}</div>
+          <div className="rounded-lg bg-[var(--color-success-bg)] px-3 py-2 text-sm text-[var(--color-success)]">{tr(message)}</div>
         )}
 
         <section className="space-y-2">
-          <p className={sectionTitle}>Bugungi eslatma — ota-ona aytgan dori yoki alohida e&apos;tibor (yozgan xodim ismi ko&apos;rinadi)</p>
+          <p className={sectionTitle}>{tr("Bugungi eslatma — ota-ona aytgan dori yoki alohida e'tibor (yozgan xodim ismi ko'rinadi)")}</p>
           {remindersQuery.data && remindersQuery.data.length > 0 && (
             <ul className="divide-y divide-[var(--color-separator)] rounded-lg border border-[var(--color-border)] text-[14px]">
               {remindersQuery.data.map((r) => (
                 <li key={r.id} className="flex items-center justify-between gap-3 px-3 py-2">
                   <span>
                     <span className={r.doneAt ? "text-[var(--color-text-muted)] line-through" : undefined}>
-                      {r.time && <b className="mr-2 tabular-nums">{r.time}</b>}
-                      {r.text}
+                      {r.time && <b className="mr-2 tabular-nums">{tr(r.time)}</b>}
+                      {tr(r.text)}
                     </span>
                     <span className="block text-[12.5px] text-[var(--color-text-muted)]">
-                      Yozdi: {r.authorName}
+                      {tr("Yozdi:")}{" "}{tr(r.authorName)}
                       {r.doneAt && ` · Berdi: ${r.doneByName ?? "—"}`}
                     </span>
                   </span>
@@ -154,7 +156,7 @@ export function ChildNoteModal({
                     {r.doneAt ? "Qaytarish" : "Berildi"}
                   </Button>
                   <Button size="sm" variant="danger" loading={removeReminder.isPending && removeReminder.variables === r.id} onClick={() => { setError(null); removeReminder.mutate(r.id); }}>
-                    O&apos;chirish
+                    {tr("O'chirish")}
                   </Button>
                   </span>
                 </li>
@@ -162,20 +164,20 @@ export function ChildNoteModal({
             </ul>
           )}
           <div className="flex flex-wrap items-end gap-2">
-            <Input label="Vaqt" type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-[120px]" />
-            <Input label="Eslatma" value={text} onChange={(e) => setText(e.target.value)} placeholder="Dori ichishi kerak" className="min-w-[200px] flex-1" />
+            <Input label={tr("Vaqt")} type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-[120px]" />
+            <Input label={tr("Eslatma")} value={text} onChange={(e) => setText(e.target.value)} placeholder={tr("Dori ichishi kerak")} className="min-w-[200px] flex-1" />
             <Button size="sm" loading={addReminder.isPending} disabled={text.trim().length < 2} onClick={() => { setError(null); addReminder.mutate(); }}>
-              Qo&apos;shish
+              {tr("Qo'shish")}
             </Button>
           </div>
         </section>
 
         <section className="space-y-2 border-t border-[var(--color-separator)] pt-4">
-          <p className={sectionTitle}>Allergiya</p>
-          <Input value={allergies} onChange={(e) => setAllergies(e.target.value)} placeholder="sut, yong'oq (bo'sh — allergiya yo'q)" />
+          <p className={sectionTitle}>{tr("Allergiya")}</p>
+          <Input value={allergies} onChange={(e) => setAllergies(e.target.value)} placeholder={tr("sut, yong'oq (bo'sh — allergiya yo'q)")} />
           <div className="flex justify-end">
             <Button size="sm" variant="outline" loading={allergyMutation.isPending} onClick={() => { setError(null); allergyMutation.mutate(); }}>
-              Allergiyani saqlash
+              {tr("Allergiyani saqlash")}
             </Button>
           </div>
         </section>

@@ -8,6 +8,7 @@ import { canWriteTeaching } from "@/lib/permissions";
 import { CheckIcon } from "@/components/ui/icons";
 import type { ChildReminder } from "@/features/child-notes/child-note-modal";
 import { Group } from "./teacher-ui";
+import { useTr } from "@/i18n/tr";
 
 /**
  * Bugungi eslatmalar (dori vaqti va h.k.) — tarbiyachi kabinetining iOS
@@ -16,6 +17,7 @@ import { Group } from "./teacher-ui";
  * Eslatma bo'lmasa hech narsa chizilmaydi.
  */
 export function TeacherReminders({ slug, branchId, date }: { slug: string; branchId: string; date: string }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const canMark = canWriteTeaching(user?.role);
@@ -38,7 +40,7 @@ export function TeacherReminders({ slug, branchId, date }: { slug: string; branc
   const pending = reminders.filter((r) => !r.doneAt).length;
 
   return (
-    <Group title="Bugungi eslatmalar" action={pending > 0 ? <span className="text-[13px] font-semibold text-[var(--color-warning)]">{pending} ta kutilmoqda</span> : undefined}>
+    <Group title={tr("Bugungi eslatmalar")} action={pending > 0 ? <span className="text-[13px] font-semibold text-[var(--color-warning)]">{tr(pending)} {tr("ta kutilmoqda")}</span> : undefined}>
       {reminders.map((r, i) => {
         const done = !!r.doneAt;
         const busy = doneMutation.isPending && doneMutation.variables?.id === r.id;
@@ -64,11 +66,11 @@ export function TeacherReminders({ slug, branchId, date }: { slug: string; branc
             <div className="min-w-0 flex-1">
               <p className="flex items-baseline gap-2">
                 <span className={clsx("text-[16px] font-medium", done ? "text-[var(--color-text-muted)] line-through" : "text-[var(--color-text)]")}>
-                  {r.childName}
+                  {tr(r.childName)}
                 </span>
-                {r.time && <span className="ml-auto shrink-0 text-[14px] font-semibold tabular-nums text-[var(--color-primary)]">{r.time}</span>}
+                {r.time && <span className="ml-auto shrink-0 text-[14px] font-semibold tabular-nums text-[var(--color-primary)]">{tr(r.time)}</span>}
               </p>
-              <p className={clsx("mt-0.5 text-[14.5px] leading-snug", done ? "text-[var(--color-text-muted)]" : "text-[var(--color-text)]")}>{r.text}</p>
+              <p className={clsx("mt-0.5 text-[14.5px] leading-snug", done ? "text-[var(--color-text-muted)]" : "text-[var(--color-text)]")}>{tr(r.text)}</p>
               <p className="mt-1 text-[12.5px] text-[var(--color-text-muted)]">
                 {done
                   ? `Berildi ${new Date(r.doneAt!).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" })}${r.doneByName ? ` · ${r.doneByName}` : ""}`

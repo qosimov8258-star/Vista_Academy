@@ -10,6 +10,7 @@ import type { Branch } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Input, PasswordInput } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useTr } from "@/i18n/tr";
 
 const LOGIN_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{1,30}[A-Za-z0-9]$/;
 const LOGIN_MESSAGE = "Login lotin harf, raqam, . _ - dan iborat bo'lishi va kamida 3 belgi bo'lishi kerak";
@@ -25,6 +26,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export function CreateBranchModal({ open, onClose, slug }: { open: boolean; onClose: () => void; slug: string }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -45,43 +47,43 @@ export function CreateBranchModal({ open, onClose, slug }: { open: boolean; onCl
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
   return (
-    <Modal open={open} onClose={onClose} title="Yangi filial (bog'cha)">
+    <Modal open={open} onClose={onClose} title={tr("Yangi filial (bog'cha)")}>
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
-        <Input label="Filial nomi" placeholder="Yunusobod filiali" error={errors.name?.message} {...register("name")} />
-        <Input label="Manzil" placeholder="Toshkent sh., Yunusobod tumani" {...register("address")} />
+        <Input label={tr("Filial nomi")} placeholder={tr("Yunusobod filiali")} error={errors.name?.message} {...register("name")} />
+        <Input label={tr("Manzil")} placeholder={tr("Toshkent sh., Yunusobod tumani")} {...register("address")} />
 
         <div className="border-t border-[var(--color-border)] pt-4">
-          <p className="mb-3 text-sm font-medium text-[var(--color-text)]">Filial admini</p>
+          <p className="mb-3 text-sm font-medium text-[var(--color-text)]">{tr("Filial admini")}</p>
           <p className="mb-3 text-xs text-[var(--color-text-muted)]">
-            Bu filialni boshqaradigan filial adminining login ma&apos;lumotlari — filial bilan birga bir vaqtda yaratiladi.
+            {tr("Bu filialni boshqaradigan filial adminining login ma'lumotlari — filial bilan birga bir vaqtda yaratiladi.")}
           </p>
           <div className="space-y-4">
             <Input
-              label="Filial admini to'liq ismi"
-              placeholder="Aziz Rahimov"
+              label={tr("Filial admini to'liq ismi")}
+              placeholder={tr("Aziz Rahimov")}
               error={errors.managerFullName?.message}
               {...register("managerFullName")}
             />
             <Input
-              label="Login"
+              label={tr("Login")}
               type="text"
               placeholder="filial_admin"
               error={errors.managerLogin?.message}
               {...register("managerLogin")}
             />
             <PasswordInput
-              label="Parol"
-              placeholder="Kamida 8 belgi"
+              label={tr("Parol")}
+              placeholder={tr("Kamida 8 belgi")}
               error={errors.managerPassword?.message}
               {...register("managerPassword")}
             />
@@ -90,10 +92,10 @@ export function CreateBranchModal({ open, onClose, slug }: { open: boolean; onCl
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Bekor qilish
+            {tr("Bekor qilish")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Yaratish
+            {tr("Yaratish")}
           </Button>
         </div>
       </form>

@@ -10,6 +10,7 @@ import type { LessonTopic, TopicQuestion } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Input, Select, Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useTr } from "@/i18n/tr";
 
 const schema = z.object({
   topicId: z.string().optional(),
@@ -47,6 +48,7 @@ export function TopicQuestionModal({
   /** Tahrirlash uchun — bo'lmasa yangi savol yaratiladi. */
   question?: TopicQuestion | null;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
   const isEdit = !!question;
@@ -87,7 +89,7 @@ export function TopicQuestionModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
@@ -99,12 +101,12 @@ export function TopicQuestionModal({
   const noTopicsAvailable = needsTopicPicker && (!topics || topics.length === 0);
 
   return (
-    <Modal open={open} onClose={handleClose} title={isEdit ? "Savolni tahrirlash" : "Yangi savol"}>
+    <Modal open={open} onClose={handleClose} title={isEdit ? "Savolni tahrirlash" : tr("Yangi savol")}>
       <form
         className="space-y-4"
         onSubmit={handleSubmit((values) => {
           if (needsTopicPicker && !values.topicId) {
-            setServerError("Mavzuni tanlang");
+            setServerError(tr("Mavzuni tanlang"));
             return;
           }
           setServerError(null);
@@ -113,39 +115,39 @@ export function TopicQuestionModal({
       >
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
         {noTopicsAvailable ? (
           <p className="text-sm text-[var(--color-text-muted)]">
-            Hozircha mavzu yo&apos;q — avval mavzu qo&apos;shing, so&apos;ng savolni unga biriktiring.
+            {tr("Hozircha mavzu yo'q — avval mavzu qo'shing, so'ng savolni unga biriktiring.")}
           </p>
         ) : (
           <>
             {needsTopicPicker && (
-              <Select label="Mavzu" {...register("topicId")}>
+              <Select label={tr("Mavzu")} {...register("topicId")}>
                 {topics!.map((topic) => (
                   <option key={topic.id} value={topic.id}>
-                    {topic.title}
+                    {tr(topic.title)}
                   </option>
                 ))}
               </Select>
             )}
             <Textarea
-              label="Savol matni"
+              label={tr("Savol matni")}
               rows={2}
-              placeholder="5 + 3 nechiga teng?"
+              placeholder={tr("5 + 3 nechiga teng?")}
               error={errors.question?.message}
               {...register("question")}
             />
             <Textarea
-              label="Javob variantlari (ixtiyoriy)"
+              label={tr("Javob variantlari (ixtiyoriy)")}
               rows={4}
               placeholder={"Har bir variant alohida qatorda:\n6\n7\n8\n9"}
-              hint="Har qatorga bitta variant"
+              hint={tr("Har qatorga bitta variant")}
               {...register("options")}
             />
-            <Input label="To'g'ri javob (ixtiyoriy)" placeholder="8" {...register("answer")} />
+            <Input label={tr("To'g'ri javob (ixtiyoriy)")} placeholder="8" {...register("answer")} />
           </>
         )}
 
@@ -155,7 +157,7 @@ export function TopicQuestionModal({
           </Button>
           {!noTopicsAvailable && (
             <Button type="submit" loading={isSubmitting || mutation.isPending}>
-              {isEdit ? "Saqlash" : "Qo'shish"}
+              {isEdit ? "Saqlash" : tr("Qo'shish")}
             </Button>
           )}
         </div>

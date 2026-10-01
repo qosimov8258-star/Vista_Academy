@@ -23,6 +23,7 @@ import { PeriodPicker, formatPeriod } from "@/features/network/period-picker";
 import { ChildIcon, EyeIcon, EyeOffIcon, MoneyIcon, TeacherIcon, WalletIcon } from "@/components/ui/icons";
 import { useAuth } from "@/lib/use-auth";
 import { useHiddenAmounts } from "@/lib/use-hidden-amounts";
+import { useTr } from "@/i18n/tr";
 
 type Tab = "groups" | "children" | "payroll";
 
@@ -51,6 +52,7 @@ function currentPeriod(): string {
  * ketyapti.
  */
 export default function NetworkFinancePage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const [tab, setTab] = useState<Tab>("groups");
   // Joriy oy mijoz soatiga bog'liq — effektda hisoblanadi, aks holda
@@ -119,9 +121,9 @@ export default function NetworkFinancePage({ params }: { params: Promise<{ slug:
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">Moliya</h1>
+          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">{tr("Moliya")}</h1>
           <p className="text-[14px] text-[var(--color-text-muted)]">
-            Tarmoq bo&apos;ylab tushum, qarzdorlik va ish haqi
+            {tr("Tarmoq bo'ylab tushum, qarzdorlik va ish haqi")}
           </p>
         </div>
         {period && <PeriodPicker period={period} max={currentPeriod()} onChange={setPeriod} />}
@@ -130,23 +132,23 @@ export default function NetworkFinancePage({ params }: { params: Promise<{ slug:
       {!period || summaryQuery.isLoading ? (
         <LoadingState rows={4} />
       ) : summaryQuery.isError ? (
-        <ErrorState message={(summaryQuery.error as Error).message} />
+        <ErrorState message={tr((summaryQuery.error as Error).message)} />
       ) : !summary ? (
-        <EmptyState title="Ma'lumot topilmadi" />
+        <EmptyState title={tr("Ma'lumot topilmadi")} />
       ) : (
         <>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <KpiTile
-              label="Hisoblangan"
+              label={tr("Hisoblangan")}
               value={summary.totals.billed}
-              hint={`${summary.totals.invoiceCount} ta hisob-faktura`}
+              hint={tr("{0} ta hisob-faktura", summary.totals.invoiceCount)}
               icon={<MoneyIcon className="h-5 w-5" />}
               tone="brand"
               hidden={isHidden("billed")}
               onToggle={() => toggle("billed")}
             />
             <KpiTile
-              label="Yig'ilgan"
+              label={tr("Yig'ilgan")}
               value={summary.totals.collected}
               hint={
                 summary.totals.billed > 0
@@ -159,16 +161,16 @@ export default function NetworkFinancePage({ params }: { params: Promise<{ slug:
               onToggle={() => toggle("collected")}
             />
             <KpiTile
-              label="Qarzdorlik"
+              label={tr("Qarzdorlik")}
               value={summary.totals.outstanding}
-              hint={summary.totals.outstanding > 0 ? "To'lanmagan qoldiq" : "Qarz yo'q"}
+              hint={summary.totals.outstanding > 0 ? tr("To'lanmagan qoldiq") : tr("Qarz yo'q")}
               icon={<ChildIcon className="h-5 w-5" />}
               tone={summary.totals.outstanding > 0 ? "danger" : "neutral"}
               hidden={isHidden("outstanding")}
               onToggle={() => toggle("outstanding")}
             />
             <KpiTile
-              label="Kassaga tushgan"
+              label={tr("Kassaga tushgan")}
               value={summary.totals.collectedInPeriod}
               hint={`${formatPeriod(summary.period)} davomida`}
               icon={<TeacherIcon className="h-5 w-5" />}
@@ -192,7 +194,7 @@ export default function NetworkFinancePage({ params }: { params: Promise<{ slug:
                     : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
                 )}
               >
-                {item.label}
+                {tr(item.label)}
               </button>
             ))}
           </div>
@@ -256,20 +258,21 @@ function KpiTile({
   hidden?: boolean;
   onToggle?: () => void;
 }) {
+  const tr = useTr();
   return (
     <Card className="p-5">
       <div className="flex items-center gap-2.5">
         <span className={clsx("flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)]", KPI_TONE[tone])}>
-          {icon}
+          {tr(icon)}
         </span>
-        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-[var(--color-text-muted)]">{label}</span>
+        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-[var(--color-text-muted)]">{tr(label)}</span>
         {onToggle && (
           <button
             type="button"
             onClick={onToggle}
             aria-pressed={hidden}
-            aria-label={hidden ? `${label} summasini ko'rsatish` : `${label} summasini berkitish`}
-            title={hidden ? "Summani ko'rsatish" : "Summani berkitish"}
+            aria-label={hidden ? tr("{0} summasini ko'rsatish", label) : `${label} summasini berkitish`}
+            title={hidden ? tr("Summani ko'rsatish") : "Summani berkitish"}
             className="-mr-1 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-text)]"
           >
             {hidden ? <EyeOffIcon className="h-[18px] w-[18px]" /> : <EyeIcon className="h-[18px] w-[18px]" />}
@@ -286,7 +289,7 @@ function KpiTile({
       >
         {hidden ? "•••••" : formatCompact(value)}
       </p>
-      {hint && <p className="mt-1.5 text-[12.5px] text-[var(--color-text-muted)]">{hint}</p>}
+      {hint && <p className="mt-1.5 text-[12.5px] text-[var(--color-text-muted)]">{tr(hint)}</p>}
     </Card>
   );
 }
@@ -298,18 +301,19 @@ function GroupsPanel({
   rows: FinanceSummary["groups"];
   slug: string;
 }) {
+  const tr = useTr();
   if (rows.length === 0) {
-    return <EmptyState title="Bu oyda hisob-faktura yo'q" description="Boshqa oyni tanlab ko'ring" />;
+    return <EmptyState title={tr("Bu oyda hisob-faktura yo'q")} description={tr("Boshqa oyni tanlab ko'ring")} />;
   }
   const max = Math.max(...rows.map((r) => r.billed), 1);
   return (
     <Card className="overflow-hidden">
       <div className="hairline border-b border-[var(--color-separator)] px-5 py-4 sm:px-6">
         <h2 className="text-[15px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
-          Guruh bo&apos;yicha daromad
+          {tr("Guruh bo'yicha daromad")}
         </h2>
         <p className="text-[12.5px] text-[var(--color-text-muted)]">
-          Yashil — yig&apos;ilgan, qizil — qarz. Yo&apos;lak uzunligi hisoblangan summaga mos.
+          {tr("Yashil — yig'ilgan, qizil — qarz. Yo'lak uzunligi hisoblangan summaga mos.")}
         </p>
       </div>
       <ul className="divide-y divide-[var(--color-separator)]">
@@ -334,10 +338,10 @@ function GroupsPanel({
                       href={`/${slug}/network/groups/${row.groupId}`}
                       className="truncate text-[14px] font-semibold text-[var(--color-text)] hover:text-[var(--color-primary)]"
                     >
-                      {row.groupName}
+                      {tr(row.groupName)}
                     </Link>
                   ) : (
-                    <span className="truncate text-[14px] font-semibold text-[var(--color-text)]">{row.groupName}</span>
+                    <span className="truncate text-[14px] font-semibold text-[var(--color-text)]">{tr(row.groupName)}</span>
                   )}
                 </div>
                 <p className="text-[14px] tabular-nums text-[var(--color-text)]">
@@ -349,11 +353,11 @@ function GroupsPanel({
                 <SplitBar collected={row.collected} billed={row.billed} />
               </div>
               <p className="mt-1.5 text-[12.5px] text-[var(--color-text-muted)]">
-                {row.branchName}
+                {tr(row.branchName)}
                 {row.outstanding > 0 ? (
-                  <span className="text-[var(--color-danger)]"> · {formatSum(row.outstanding)} qarz</span>
+                  <span className="text-[var(--color-danger)]"> · {formatSum(row.outstanding)} {tr("qarz")}</span>
                 ) : (
-                  <span className="text-[var(--color-success)]"> · to&apos;liq yig&apos;ilgan</span>
+                  <span className="text-[var(--color-success)]"> {tr("· to'liq yig'ilgan")}</span>
                 )}
               </p>
             </li>
@@ -381,19 +385,20 @@ function ChildrenPanel({
   onSearch: (value: string) => void;
   slug: string;
 }) {
+  const tr = useTr();
   const counts = query.data?.counts;
   const chips: { key: FinanceChildStatus | "all"; label: string; count?: number }[] = [
     { key: "all", label: "Hammasi", count: counts?.total },
-    { key: "PAID", label: "To'langan", count: counts?.paid },
+    { key: "PAID", label: tr("To'langan"), count: counts?.paid },
     { key: "PARTIAL", label: "Qisman", count: counts?.partial },
-    { key: "UNPAID", label: "To'lanmagan", count: counts?.unpaid },
+    { key: "UNPAID", label: tr("To'lanmagan"), count: counts?.unpaid },
   ];
 
   return (
     <div className="space-y-4">
       <Card className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
         <Input
-          placeholder="Ism yoki ID bo'yicha qidirish"
+          placeholder={tr("Ism yoki ID bo'yicha qidirish")}
           value={search}
           onChange={(e) => onSearch(e.target.value)}
           className="sm:max-w-xs"
@@ -411,8 +416,8 @@ function ChildrenPanel({
                   : "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
               )}
             >
-              {chip.label}
-              {chip.count != null && <span className="ml-1.5 opacity-70">{chip.count}</span>}
+              {tr(chip.label)}
+              {chip.count != null && <span className="ml-1.5 opacity-70">{tr(chip.count)}</span>}
             </button>
           ))}
         </div>
@@ -421,9 +426,9 @@ function ChildrenPanel({
       {query.isLoading ? (
         <LoadingState rows={5} />
       ) : query.isError ? (
-        <ErrorState message={(query.error as Error).message} />
+        <ErrorState message={tr((query.error as Error).message)} />
       ) : rows.length === 0 ? (
-        <EmptyState title="Bola topilmadi" description="Filtr yoki qidiruvni o'zgartirib ko'ring" />
+        <EmptyState title={tr("Bola topilmadi")} description={tr("Filtr yoki qidiruvni o'zgartirib ko'ring")} />
       ) : (
         <Card className="overflow-hidden">
           <ul className="divide-y divide-[var(--color-separator)]">
@@ -437,12 +442,12 @@ function ChildrenPanel({
                       href={`/${slug}/finance/${row.childId}`}
                       className="truncate text-[14px] font-medium text-[var(--color-text)] hover:text-[var(--color-primary)]"
                     >
-                      {row.fullName}
+                      {tr(row.fullName)}
                     </Link>
                     <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">
                       {formatChildId(row.publicId)}
                       {row.groupName && ` · ${row.groupName}`}
-                      {row.overdue && <span className="text-[var(--color-danger)]"> · muddati o&apos;tgan</span>}
+                      {row.overdue && <span className="text-[var(--color-danger)]"> {tr("· muddati o'tgan")}</span>}
                     </p>
                   </div>
                   <div className="shrink-0 text-right">
@@ -451,7 +456,7 @@ function ChildrenPanel({
                       <span className="text-[var(--color-text-muted)]"> / {formatSum(row.billed)}</span>
                     </p>
                     <span className={clsx("mt-0.5 inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold", status.chip)}>
-                      {status.label}
+                      {tr(status.label)}
                       {row.outstanding > 0 && ` · ${formatSum(row.outstanding)}`}
                     </span>
                   </div>
@@ -482,6 +487,7 @@ function PayrollPanel({
   isHidden: (id: string) => boolean;
   toggle: (id: string) => void;
 }) {
+  const tr = useTr();
   // Ish haqi hali hisoblanmagan xodimlar ham ko'rinsin: ularda oylik
   // sxemasi bor, lekin bu oy uchun yozuv yo'q.
   const byEmployee = new Map(entries.map((entry) => [entry.employeeId, entry]));
@@ -497,16 +503,16 @@ function PayrollPanel({
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-3">
         <KpiTile
-          label="Oylik fondi"
+          label={tr("Oylik fondi")}
           value={summary?.totals.total ?? 0}
-          hint={`${summary?.totals.entries ?? 0} ta yozuv`}
+          hint={tr("{0} ta yozuv", summary?.totals.entries ?? 0)}
           icon={<WalletIcon className="h-5 w-5" />}
           tone="brand"
           hidden={isHidden("payrollTotal")}
           onToggle={() => toggle("payrollTotal")}
         />
         <KpiTile
-          label="To'langan"
+          label={tr("To'langan")}
           value={summary?.totals.paid ?? 0}
           icon={<MoneyIcon className="h-5 w-5" />}
           tone="success"
@@ -514,9 +520,9 @@ function PayrollPanel({
           onToggle={() => toggle("payrollPaid")}
         />
         <KpiTile
-          label="To'lanmagan"
+          label={tr("To'lanmagan")}
           value={summary?.totals.unpaid ?? 0}
-          hint={(summary?.totals.unpaid ?? 0) > 0 ? "Hali berilmagan" : "Hammasi berilgan"}
+          hint={(summary?.totals.unpaid ?? 0) > 0 ? tr("Hali berilmagan") : "Hammasi berilgan"}
           icon={<TeacherIcon className="h-5 w-5" />}
           tone={(summary?.totals.unpaid ?? 0) > 0 ? "danger" : "neutral"}
           hidden={isHidden("payrollUnpaid")}
@@ -525,14 +531,14 @@ function PayrollPanel({
       </div>
 
       {rows.length === 0 ? (
-        <EmptyState title="Xodim topilmadi" />
+        <EmptyState title={tr("Xodim topilmadi")} />
       ) : (
         <Card className="overflow-hidden">
           <div className="hairline border-b border-[var(--color-separator)] px-5 py-4 sm:px-6">
             <h2 className="text-[15px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
-              Xodimlar oyligi
+              {tr("Xodimlar oyligi")}
             </h2>
-            <p className="text-[12.5px] text-[var(--color-text-muted)]">{formatPeriod(period)} uchun</p>
+            <p className="text-[12.5px] text-[var(--color-text-muted)]">{formatPeriod(period)} {tr("uchun")}</p>
           </div>
           <ul className="divide-y divide-[var(--color-separator)]">
             {rows.map(({ employee, entry, scheme }) => (
@@ -541,9 +547,9 @@ function PayrollPanel({
                   {monogram(employee.fullName)}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[14px] font-medium text-[var(--color-text)]">{employee.fullName}</p>
+                  <p className="truncate text-[14px] font-medium text-[var(--color-text)]">{tr(employee.fullName)}</p>
                   <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">
-                    {employee.position}
+                    {tr(employee.position)}
                     {entry?.branch && ` · ${entry.branch.name}`}
                   </p>
                 </div>
@@ -561,7 +567,7 @@ function PayrollPanel({
                             : "bg-[var(--color-warning-bg)] text-[var(--color-warning)]",
                         )}
                       >
-                        {entry.status === "PAID" ? "To'langan" : "Hisoblangan"}
+                        {entry.status === "PAID" ? tr("To'langan") : "Hisoblangan"}
                       </span>
                     </>
                   ) : (
@@ -570,7 +576,7 @@ function PayrollPanel({
                         {scheme ? formatSum(scheme) : "—"}
                       </p>
                       <span className="mt-0.5 inline-flex rounded-full bg-[var(--color-surface-sunken)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-text-muted)]">
-                        Hisoblanmagan
+                        {tr("Hisoblanmagan")}
                       </span>
                     </>
                   )}

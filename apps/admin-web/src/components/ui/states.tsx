@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { AlertIcon, InfoIcon } from "./icons";
+import { useTr } from "@/i18n/tr";
 
 /**
  * Yuklanish. Ro'yxat kutilayotgan joyda aylanadigan halqa emas, mazmun
@@ -22,15 +23,16 @@ export function LoadingState({ rows = 3, label }: { rows?: number; label?: strin
 }
 
 export function ErrorState({ message }: { message: string }) {
+  const tr = useTr();
   return (
     <div className="flex flex-col items-center justify-center gap-3 rounded-[var(--radius-xl)] bg-[var(--color-danger-bg)] px-6 py-14 text-center">
       <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-danger)]/10 text-[var(--color-danger)]">
         <AlertIcon className="h-[26px] w-[26px]" />
       </span>
       <p className="text-[17px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-danger)]">
-        Xatolik yuz berdi
+        {tr("Xatolik yuz berdi")}
       </p>
-      <p className="max-w-[320px] text-[15px] text-[var(--color-danger)]/80">{message}</p>
+      <p className="max-w-[320px] text-[15px] text-[var(--color-danger)]/80">{tr(message)}</p>
     </div>
   );
 }
@@ -46,14 +48,15 @@ export function EmptyState({
   icon?: ReactNode;
   action?: ReactNode;
 }) {
+  const tr = useTr();
   return (
     <div className="flex flex-col items-center justify-center gap-3 rounded-[var(--radius-xl)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-6 py-16 text-center">
       <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)]">
         {icon ?? <InfoIcon className="h-[26px] w-[26px]" />}
       </span>
-      <p className="text-[17px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">{title}</p>
-      {description && <p className="max-w-[320px] text-[15px] text-[var(--color-text-muted)]">{description}</p>}
-      {action && <div className="mt-1">{action}</div>}
+      <p className="text-[17px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">{tr(title)}</p>
+      {description && <p className="max-w-[320px] text-[15px] text-[var(--color-text-muted)]">{tr(description)}</p>}
+      {action && <div className="mt-1">{tr(action)}</div>}
     </div>
   );
 }

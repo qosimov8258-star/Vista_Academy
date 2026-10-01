@@ -17,6 +17,7 @@ import { Toast, type ToastState } from "@/components/ui/toast";
 import { PasswordChecklist, getPasswordRules } from "@/components/ui/password-checklist";
 import {
   BriefcaseIcon,
+  BuildingIcon,
   CameraIcon,
   CheckIcon,
   CopyIcon,
@@ -29,9 +30,14 @@ import { ROLE_LABEL, isTeacher } from "@/lib/permissions";
 import { MAX_UPLOAD_BYTES, resizeToSquare } from "@/lib/resize-image";
 import { ThemePickerCard } from "@/features/settings/theme-picker-card";
 import { SettingsGroup, SettingsPlainIcons, SettingsRow, SettingsSheet } from "@/features/settings/settings-ui";
+import { useTr } from "@/i18n/tr";
 
 const profileSchema = z.object({
   fullName: z.string().trim().min(2, "To'liq ism kamida 2 belgi"),
+});
+
+const orgNameSchema = z.object({
+  name: z.string().trim().min(2, "Nom kamida 2 belgi"),
 });
 
 const loginSchema = z.object({
@@ -58,9 +64,10 @@ const passwordSchema = z
   });
 
 type ProfileValues = z.infer<typeof profileSchema>;
+type OrgNameValues = z.infer<typeof orgNameSchema>;
 type LoginValues = z.infer<typeof loginSchema>;
 type PasswordValues = z.infer<typeof passwordSchema>;
-type Sheet = "name" | "security" | null;
+type Sheet = "name" | "orgName" | "security" | null;
 
 const errorText = (err: unknown, fallback = "Kutilmagan xatolik") => (err instanceof ApiError ? err.message : fallback);
 
@@ -70,6 +77,7 @@ const errorText = (err: unknown, fallback = "Kutilmagan xatolik") => (err instan
  * Barcha rollar uchun umumiy sahifa.
  */
 export default function SettingsPage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -79,6 +87,7 @@ export default function SettingsPage({ params }: { params: Promise<{ slug: strin
   const [sheet, setSheet] = useState<Sheet>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
+  const [orgNameError, setOrgNameError] = useState<string | null>(null);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -87,6 +96,11 @@ export default function SettingsPage({ params }: { params: Promise<{ slug: strin
   const profileForm = useForm<ProfileValues>({
     resolver: zodResolver(profileSchema),
     values: { fullName: user?.fullName ?? "" },
+  });
+
+  const orgNameForm = useForm<OrgNameValues>({
+    resolver: zodResolver(orgNameSchema),
+    values: { name: user?.organizationName ?? "" },
   });
 
   const loginForm = useForm<LoginValues>({
@@ -106,10 +120,12 @@ export default function SettingsPage({ params }: { params: Promise<{ slug: strin
   const closeSheet = () => {
     setSheet(null);
     setNameError(null);
+    setOrgNameError(null);
     setLoginError(null);
     setPasswordError(null);
     passwordForm.reset();
     profileForm.reset();
+    orgNameForm.reset();
     loginForm.reset();
   };
 
@@ -123,12 +139,23 @@ export default function SettingsPage({ params }: { params: Promise<{ slug: strin
     onError: (err) => setNameError(errorText(err)),
   });
 
+  const orgNameMutation = useMutation({
+    mutationFn: (values: OrgNameValues) => api.patch("/app/organizations/me", values),
+    onSuccess: () => {
+      refreshUser();
+      queryClient.invalidateQueries({ queryKey: ["org", slug] });
+      setSheet(null);
+      setToast({ type: "success", message: tr("Logo nomi saqlandi") });
+    },
+    onError: (err) => setOrgNameError(errorText(err)),
+  });
+
   const loginMutation = useMutation({
     mutationFn: (values: LoginValues) => api.post("/app/profile/login", values),
     onSuccess: () => {
       refreshUser();
       setLoginError(null);
-      setToast({ type: "success", message: "Login o'zgartirildi" });
+      setToast({ type: "success", message: tr("Login o'zgartirildi") });
     },
     onError: (err) => setLoginError(errorText(err)),
   });
@@ -142,7 +169,7 @@ export default function SettingsPage({ params }: { params: Promise<{ slug: strin
     onSuccess: () => {
       passwordForm.reset();
       setSheet(null);
-      setToast({ type: "success", message: "Parol o'zgartirildi, boshqa qurilmalardagi seanslar yopildi" });
+      setToast({ type: "success", message: tr("Parol o'zgartirildi, boshqa qurilmalardagi seanslar yopildi") });
     },
     onError: (err) => setPasswordError(errorText(err)),
   });
@@ -153,7 +180,7 @@ export default function SettingsPage({ params }: { params: Promise<{ slug: strin
       refreshUser();
       setToast({ type: "success", message: "Rasm yangilandi" });
     },
-    onError: (err) => setToast({ type: "error", message: errorText(err, "Rasmni yuklab bo'lmadi") }),
+    onError: (err) => setToast({ type: "error", message: errorText(err, tr("Rasmni yuklab bo'lmadi")) }),
   });
 
   const removeAvatarMutation = useMutation({
@@ -162,7 +189,7 @@ export default function SettingsPage({ params }: { params: Promise<{ slug: strin
       refreshUser();
       setToast({ type: "success", message: "Rasm olib tashlandi" });
     },
-    onError: (err) => setToast({ type: "error", message: errorText(err, "Rasmni olib tashlab bo'lmadi") }),
+    onError: (err) => setToast({ type: "error", message: errorText(err, tr("Rasmni olib tashlab bo'lmadi")) }),
   });
 
   const handleFile = async (file: File | undefined) => {
@@ -174,7 +201,7 @@ export default function SettingsPage({ params }: { params: Promise<{ slug: strin
     try {
       avatarMutation.mutate(await resizeToSquare(file));
     } catch {
-      setToast({ type: "error", message: "Bu faylni rasm sifatida o'qib bo'lmadi" });
+      setToast({ type: "error", message: tr("Bu faylni rasm sifatida o'qib bo'lmadi") });
     }
   };
 
@@ -214,8 +241,8 @@ export default function SettingsPage({ params }: { params: Promise<{ slug: strin
     <SettingsPlainIcons enabled={isTeacher(user?.role)}>
       <div className="mx-auto w-full max-w-[720px] space-y-7 pb-4">
         <header>
-          <h1 className="text-[30px] font-bold leading-[1.1] tracking-[-0.025em] text-[var(--color-text)] md:text-[34px]">Sozlamalar</h1>
-          <p className="mt-1 text-[14px] text-[var(--color-text-muted)]">Hisobingiz, xavfsizlik va panel ko&apos;rinishi</p>
+          <h1 className="text-[30px] font-bold leading-[1.1] tracking-[-0.025em] text-[var(--color-text)] md:text-[34px]">{tr("Sozlamalar")}</h1>
+          <p className="mt-1 text-[14px] text-[var(--color-text-muted)]">{tr("Hisobingiz, xavfsizlik va panel ko'rinishi")}</p>
         </header>
 
         {/* Profil — iOS'dagi Apple ID kartasi kabi */}
@@ -235,7 +262,7 @@ export default function SettingsPage({ params }: { params: Promise<{ slug: strin
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={avatarBusy}
-                aria-label="Rasmni o'zgartirish"
+                aria-label={tr("Rasmni o'zgartirish")}
                 className="absolute bottom-1 right-1 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-[3px] border-[var(--color-surface)] bg-[var(--color-primary)] text-white shadow-[var(--shadow-card)] transition-transform duration-150 hover:bg-[var(--color-primary-hover)] active:scale-90 disabled:opacity-60"
               >
                 {avatarBusy ? (
@@ -256,9 +283,9 @@ export default function SettingsPage({ params }: { params: Promise<{ slug: strin
               />
             </div>
             <div className="mt-3 min-w-0 flex-1 sm:mt-0 sm:pb-1">
-              <p className="truncate text-[21px] font-bold tracking-[-0.015em] text-[var(--color-text)]">{user.fullName}</p>
+              <p className="truncate text-[21px] font-bold tracking-[-0.015em] text-[var(--color-text)]">{tr(user.fullName)}</p>
               <p className="truncate text-[14px] text-[var(--color-text-muted)]">
-                {ROLE_LABEL[user.role]} · {user.organizationName}
+                {tr(ROLE_LABEL[user.role])} · {tr(user.organizationName)}
                 {user.branchName ? ` · ${user.branchName}` : ""}
               </p>
             </div>
@@ -269,7 +296,7 @@ export default function SettingsPage({ params }: { params: Promise<{ slug: strin
                 disabled={avatarBusy}
                 className="h-9 cursor-pointer rounded-full bg-[var(--color-primary)]/10 px-4 text-[14px] font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)]/15 disabled:opacity-60"
               >
-                {user.avatarUpdatedAt ? "Rasmni almashtirish" : "Rasm qo'yish"}
+                {user.avatarUpdatedAt ? "Rasmni almashtirish" : tr("Rasm qo'yish")}
               </button>
               {user.avatarUpdatedAt && (
                 <button
@@ -278,35 +305,44 @@ export default function SettingsPage({ params }: { params: Promise<{ slug: strin
                   disabled={avatarBusy}
                   className="h-9 cursor-pointer rounded-full bg-[var(--color-surface-sunken)] px-4 text-[14px] font-semibold text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-danger)] disabled:opacity-60"
                 >
-                  Olib tashlash
+                  {tr("Olib tashlash")}
                 </button>
               )}
             </div>
           </div>
         </section>
 
-        <SettingsGroup title="Hisob">
-          <SettingsRow first icon={UserIcon} label="To'liq ism" value={user.fullName} onClick={() => setSheet("name")} />
+        <SettingsGroup title={tr("Hisob")}>
+          <SettingsRow first icon={UserIcon} label={tr("To'liq ism")} value={user.fullName} onClick={() => setSheet("name")} />
           <SettingsRow
             icon={KeyIcon}
-            label="Login"
+            label={tr("Login")}
             value={user.login}
             trailing={
               <button
                 type="button"
                 onClick={copyLogin}
-                aria-label="Loginni nusxalash"
+                aria-label={tr("Loginni nusxalash")}
                 className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-black/[0.05] hover:text-[var(--color-text)]"
               >
                 {copied ? <CheckIcon className="h-4 w-4 text-[var(--color-success)]" /> : <CopyIcon className="h-4 w-4" />}
               </button>
             }
           />
-          <SettingsRow icon={BriefcaseIcon} label="Rol" value={ROLE_LABEL[user.role]} />
+          <SettingsRow icon={BriefcaseIcon} label={tr("Rol")} value={ROLE_LABEL[user.role]} />
         </SettingsGroup>
 
-        <SettingsGroup title="Xavfsizlik" footer="Parol o'zgartirilganda boshqa qurilmalardagi barcha seanslar yopiladi.">
-          <SettingsRow first icon={LockIcon} label="Login va parolni o'zgartirish" onClick={() => setSheet("security")} />
+        {(user.role === "NETWORK_ADMIN" || user.role === "BRANCH_ADMIN") && (
+          <SettingsGroup
+            title={tr("Logo")}
+            footer={tr("Bu nom butun panelda — yon menyu, kirish sahifasi, xodim va bola qo'shish oynalarida ko'rinadi.")}
+          >
+            <SettingsRow first icon={BuildingIcon} label={tr("Bog'cha nomi")} value={user.organizationName} onClick={() => setSheet("orgName")} />
+          </SettingsGroup>
+        )}
+
+        <SettingsGroup title={tr("Xavfsizlik")} footer={tr("Parol o'zgartirilganda boshqa qurilmalardagi barcha seanslar yopiladi.")}>
+          <SettingsRow first icon={LockIcon} label={tr("Login va parolni o'zgartirish")} onClick={() => setSheet("security")} />
         </SettingsGroup>
 
         <ThemePickerCard />
@@ -322,7 +358,7 @@ export default function SettingsPage({ params }: { params: Promise<{ slug: strin
         </SettingsGroup>
 
         {/* Ism */}
-        <SettingsSheet open={sheet === "name"} onClose={closeSheet} title="To'liq ism">
+        <SettingsSheet open={sheet === "name"} onClose={closeSheet} title={tr("To'liq ism")}>
           <form
             className="space-y-4"
             onSubmit={profileForm.handleSubmit((values) => {
@@ -332,26 +368,54 @@ export default function SettingsPage({ params }: { params: Promise<{ slug: strin
           >
             <div className="rounded-[20px] bg-[var(--color-surface)] p-4">
               <Input
-                label="Ism va familiya"
-                placeholder="Yusupova Dilnoza"
+                label={tr("Ism va familiya")}
+                placeholder={tr("Yusupova Dilnoza")}
                 autoFocus
                 error={profileForm.formState.errors.fullName?.message}
                 {...profileForm.register("fullName")}
               />
-              <p className="mt-2 text-[13px] text-[var(--color-text-muted)]">Hamkasblaringiz va hisobotlarda shu ism ko&apos;rinadi.</p>
+              <p className="mt-2 text-[13px] text-[var(--color-text-muted)]">{tr("Hamkasblaringiz va hisobotlarda shu ism ko'rinadi.")}</p>
             </div>
-            {nameError && <p className="px-1 text-[13px] text-[var(--color-danger)]">{nameError}</p>}
+            {nameError && <p className="px-1 text-[13px] text-[var(--color-danger)]">{tr(nameError)}</p>}
             <Button type="submit" size="lg" fullWidth loading={profileMutation.isPending}>
-              Saqlash
+              {tr("Saqlash")}
+            </Button>
+          </form>
+        </SettingsSheet>
+
+        {/* Logo (bog'cha nomi) */}
+        <SettingsSheet open={sheet === "orgName"} onClose={closeSheet} title={tr("Logo")}>
+          <form
+            className="space-y-4"
+            onSubmit={orgNameForm.handleSubmit((values) => {
+              setOrgNameError(null);
+              orgNameMutation.mutate(values);
+            })}
+          >
+            <div className="rounded-[20px] bg-[var(--color-surface)] p-4">
+              <Input
+                label={tr("Bog'cha nomi")}
+                placeholder={tr("Masalan, Vista Academy")}
+                autoFocus
+                error={orgNameForm.formState.errors.name?.message ? tr(orgNameForm.formState.errors.name.message) : undefined}
+                {...orgNameForm.register("name")}
+              />
+              <p className="mt-2 text-[13px] text-[var(--color-text-muted)]">
+                {tr("Yon menyu, kirish sahifasi va oynalarda shu nom yashil rangda ko'rinadi.")}
+              </p>
+            </div>
+            {orgNameError && <p className="px-1 text-[13px] text-[var(--color-danger)]">{tr(orgNameError)}</p>}
+            <Button type="submit" size="lg" fullWidth loading={orgNameMutation.isPending}>
+              {tr("Saqlash")}
             </Button>
           </form>
         </SettingsSheet>
 
         {/* Login va parol */}
-        <SettingsSheet open={sheet === "security"} onClose={closeSheet} title="Login va parolni o'zgartirish">
+        <SettingsSheet open={sheet === "security"} onClose={closeSheet} title={tr("Login va parolni o'zgartirish")}>
           <div className="space-y-7">
             <div>
-              <h3 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--color-text-muted)]">Login</h3>
+              <h3 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--color-text-muted)]">{tr("Login")}</h3>
               <form
                 className="space-y-4"
                 onSubmit={loginForm.handleSubmit((values) => {
@@ -361,21 +425,21 @@ export default function SettingsPage({ params }: { params: Promise<{ slug: strin
               >
                 <div className="rounded-[20px] bg-[var(--color-surface)] p-4">
                   <Input
-                    label="Login"
+                    label={tr("Login")}
                     autoFocus
                     error={loginForm.formState.errors.login?.message}
                     {...loginForm.register("login")}
                   />
                 </div>
-                {loginError && <p className="px-1 text-[13px] text-[var(--color-danger)]">{loginError}</p>}
+                {loginError && <p className="px-1 text-[13px] text-[var(--color-danger)]">{tr(loginError)}</p>}
                 <Button type="submit" size="lg" fullWidth loading={loginMutation.isPending}>
-                  Loginni saqlash
+                  {tr("Loginni saqlash")}
                 </Button>
               </form>
             </div>
 
             <div>
-              <h3 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--color-text-muted)]">Parol</h3>
+              <h3 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--color-text-muted)]">{tr("Parol")}</h3>
               <form
                 className="space-y-4"
                 onSubmit={passwordForm.handleSubmit((values) => {
@@ -385,19 +449,19 @@ export default function SettingsPage({ params }: { params: Promise<{ slug: strin
               >
                 <div className="space-y-4 rounded-[20px] bg-[var(--color-surface)] p-4">
                   <PasswordInput
-                    label="Joriy parol"
+                    label={tr("Joriy parol")}
                     autoComplete="current-password"
                     error={passwordForm.formState.errors.currentPassword?.message}
                     {...passwordForm.register("currentPassword")}
                   />
                   <PasswordInput
-                    label="Yangi parol"
+                    label={tr("Yangi parol")}
                     autoComplete="new-password"
                     error={passwordForm.formState.errors.newPassword?.message}
                     {...passwordForm.register("newPassword")}
                   />
                   <PasswordInput
-                    label="Yangi parolni takrorlang"
+                    label={tr("Yangi parolni takrorlang")}
                     autoComplete="new-password"
                     error={passwordForm.formState.errors.repeatPassword?.message}
                     {...passwordForm.register("repeatPassword")}
@@ -408,9 +472,9 @@ export default function SettingsPage({ params }: { params: Promise<{ slug: strin
                     <PasswordChecklist rules={passwordRules} />
                   </div>
                 )}
-                {passwordError && <p className="px-1 text-[13px] text-[var(--color-danger)]">{passwordError}</p>}
+                {passwordError && <p className="px-1 text-[13px] text-[var(--color-danger)]">{tr(passwordError)}</p>}
                 <Button type="submit" size="lg" fullWidth loading={passwordMutation.isPending}>
-                  Parolni o&apos;zgartirish
+                  {tr("Parolni o'zgartirish")}
                 </Button>
               </form>
             </div>

@@ -13,6 +13,7 @@ import { BellIcon, CameraIcon, HomeIcon, MealIcon, UserIcon, type IconProps } fr
 import { todayTashkent } from "@/features/desk/shared";
 import { QuickPhotoSheet } from "./quick-photo-sheet";
 import styles from "./chef.module.css";
+import { useTr } from "@/i18n/tr";
 
 type Tab = { href: string; label: string; Icon: (p: IconProps) => React.JSX.Element; exact?: boolean; badge?: number };
 
@@ -24,6 +25,7 @@ type Tab = { href: string; label: string; Icon: (p: IconProps) => React.JSX.Elem
  * Kompyuterda ko'rinmaydi (u yerda yon panel bor).
  */
 export function ChefBottomBar({ slug }: { slug: string }) {
+  const tr = useTr();
   const { user } = useAuth();
   const pathname = useAppPathname();
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -74,7 +76,7 @@ export function ChefBottomBar({ slug }: { slug: string }) {
             </span>
           )}
         </span>
-        <span className={clsx("text-[11px] leading-none", active ? "font-semibold" : "font-medium")}>{tab.label}</span>
+        <span className={clsx("text-[11px] leading-none", active ? "font-semibold" : "font-medium")}>{tr(tab.label)}</span>
       </Link>
     );
   };
@@ -82,7 +84,7 @@ export function ChefBottomBar({ slug }: { slug: string }) {
   return (
     <>
       <nav
-        aria-label="Oshpaz menyusi"
+        aria-label={tr("Oshpaz menyusi")}
         className="fixed inset-x-0 bottom-0 z-40 px-3 md:hidden"
         style={{ paddingBottom: "max(10px, env(safe-area-inset-bottom))" }}
       >
@@ -92,7 +94,7 @@ export function ChefBottomBar({ slug }: { slug: string }) {
             <button
               type="button"
               onClick={() => setSheetOpen(true)}
-              aria-label="Taomni suratga olish"
+              aria-label={tr("Taomni suratga olish")}
               className="-mt-7 flex h-[60px] w-[60px] items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-amber-400 text-white shadow-[0_10px_22px_-6px_rgba(234,88,12,0.65)] ring-[5px] ring-[var(--color-bg)] transition-transform active:scale-95"
             >
               <CameraIcon className="h-7 w-7" />

@@ -12,8 +12,10 @@ import { formatDateTime } from "@/lib/format";
 import { useAuth } from "@/lib/use-auth";
 import { isChef, isTeacher } from "@/lib/permissions";
 import { EmptyRow, Group, GroupAction, LargeTitle, SkeletonRows, TeacherPage } from "@/features/teacher/teacher-ui";
+import { useTr } from "@/i18n/tr";
 
 export default function MyNotificationsPage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -43,18 +45,18 @@ export default function MyNotificationsPage({ params }: { params: Promise<{ slug
   if (teacher) {
     return (
       <TeacherPage>
-        <LargeTitle title="Xabarlar" subtitle={unreadCount > 0 ? `${unreadCount} ta o'qilmagan` : "Hammasi o'qilgan"} />
+        <LargeTitle title={tr("Xabarlar")} subtitle={unreadCount > 0 ? tr("{0} ta o'qilmagan", unreadCount) : tr("Hammasi o'qilgan")} />
         <Group
-          action={unreadCount > 0 ? <GroupAction onClick={() => markAllReadMutation.mutate()}>Hammasini o&apos;qish</GroupAction> : undefined}
-          title={notifications.length > 0 ? "So'nggi" : undefined}
-          footer="Dars jadvalingiz belgilanganda yoki o'zgarganda shu yerga xabar tushadi."
+          action={unreadCount > 0 ? <GroupAction onClick={() => markAllReadMutation.mutate()}>{tr("Hammasini o'qish")}</GroupAction> : undefined}
+          title={notifications.length > 0 ? tr("So'nggi") : undefined}
+          footer={tr("Dars jadvalingiz belgilanganda yoki o'zgarganda shu yerga xabar tushadi.")}
         >
           {notificationsQuery.isLoading ? (
             <SkeletonRows rows={4} />
           ) : notificationsQuery.isError ? (
-            <EmptyRow title="Yuklab bo'lmadi" description={(notificationsQuery.error as Error).message} />
+            <EmptyRow title={tr("Yuklab bo'lmadi")} description={tr((notificationsQuery.error as Error).message)} />
           ) : notifications.length === 0 ? (
-            <EmptyRow icon={BellIcon} title="Hozircha xabar yo'q" />
+            <EmptyRow icon={BellIcon} title={tr("Hozircha xabar yo'q")} />
           ) : (
             notifications.map((n, i) => (
               <button
@@ -67,10 +69,10 @@ export default function MyNotificationsPage({ params }: { params: Promise<{ slug
                 {i > 0 && <span className="absolute left-9 right-0 top-0 h-px bg-[var(--color-separator)]" aria-hidden="true" />}
                 <span
                   className={`mt-[7px] h-2.5 w-2.5 shrink-0 rounded-full ${n.isRead ? "bg-transparent" : "bg-[var(--color-primary)]"}`}
-                  aria-label={n.isRead ? undefined : "O'qilmagan"}
+                  aria-label={n.isRead ? undefined : tr("O'qilmagan")}
                 />
                 <span className="min-w-0 flex-1">
-                  <span className={`block text-[15.5px] leading-snug text-[var(--color-text)] ${n.isRead ? "" : "font-semibold"}`}>{n.message}</span>
+                  <span className={`block text-[15.5px] leading-snug text-[var(--color-text)] ${n.isRead ? "" : "font-semibold"}`}>{tr(n.message)}</span>
                   <span className="mt-1 block text-[13px] text-[var(--color-text-muted)]">{formatDateTime(n.createdAt)}</span>
                 </span>
               </button>
@@ -86,17 +88,17 @@ export default function MyNotificationsPage({ params }: { params: Promise<{ slug
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
-            Bildirishnomalarim
+            {tr("Bildirishnomalarim")}
           </h1>
           <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">
             {chef
               ? "Rahbariyat sizga yuborgan xabarlar shu yerga tushadi"
-              : "Dars jadvalingiz belgilanganda yoki o'zgarganda shu yerga xabar tushadi"}
+              : tr("Dars jadvalingiz belgilanganda yoki o'zgarganda shu yerga xabar tushadi")}
           </p>
         </div>
         {unreadCount > 0 && (
           <Button variant="outline" onClick={() => markAllReadMutation.mutate()} loading={markAllReadMutation.isPending}>
-            Barchasini o&apos;qilgan deb belgilash
+            {tr("Barchasini o'qilgan deb belgilash")}
           </Button>
         )}
       </div>
@@ -104,12 +106,12 @@ export default function MyNotificationsPage({ params }: { params: Promise<{ slug
       {notificationsQuery.isLoading ? (
         <LoadingState rows={4} />
       ) : notificationsQuery.isError ? (
-        <ErrorState message={(notificationsQuery.error as Error).message} />
+        <ErrorState message={tr((notificationsQuery.error as Error).message)} />
       ) : notifications.length === 0 ? (
         <EmptyState
           icon={<BellIcon className="h-[26px] w-[26px]" />}
-          title="Hozircha bildirishnoma yo'q"
-          description={chef ? "Sizga xabar yuborilganda shu yerda ko'rinadi" : "Sizga dars jadvali belgilanganda shu yerda ko'rinadi"}
+          title={tr("Hozircha bildirishnoma yo'q")}
+          description={chef ? tr("Sizga xabar yuborilganda shu yerda ko'rinadi") : tr("Sizga dars jadvali belgilanganda shu yerda ko'rinadi")}
         />
       ) : (
         <div className="space-y-2">
@@ -128,7 +130,7 @@ export default function MyNotificationsPage({ params }: { params: Promise<{ slug
                 <BellIcon className="h-[18px] w-[18px]" />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-sm text-[var(--color-text)]">{notification.message}</p>
+                <p className="text-sm text-[var(--color-text)]">{tr(notification.message)}</p>
                 <p className="mt-1 text-xs text-[var(--color-text-muted)]">{formatDateTime(notification.createdAt)}</p>
               </div>
               {!notification.isRead && (
@@ -137,7 +139,7 @@ export default function MyNotificationsPage({ params }: { params: Promise<{ slug
                   onClick={() => markReadMutation.mutate(notification.id)}
                   className="shrink-0 cursor-pointer text-[12.5px] font-medium text-[var(--color-primary)] hover:underline"
                 >
-                  O&apos;qildi
+                  {tr("O'qildi")}
                 </button>
               )}
             </Card>

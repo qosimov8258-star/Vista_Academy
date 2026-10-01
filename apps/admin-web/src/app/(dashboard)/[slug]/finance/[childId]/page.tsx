@@ -25,6 +25,7 @@ import { AddGuardianModal } from "@/features/guardians/add-guardian-modal";
 import { ParentCabinetModal } from "@/features/guardians/parent-cabinet-modal";
 import { EditChildModal } from "@/features/children/edit-child-modal";
 import { ReceiptReviewModal } from "@/features/finance/receipt-review-modal";
+import { useTr } from "@/i18n/tr";
 
 const LEDGER_TYPE_LABEL: Record<LedgerEntry["type"], string> = {
   CHARGE: "Hisoblandi",
@@ -76,9 +77,10 @@ function Fact({
   muted?: boolean;
   numeric?: boolean;
 }) {
+  const tr = useTr();
   return (
     <div className="px-5 py-3.5 sm:px-6">
-      <dt className="text-[12px] font-medium text-[var(--color-text-muted)]">{label}</dt>
+      <dt className="text-[12px] font-medium text-[var(--color-text-muted)]">{tr(label)}</dt>
       <dd
         className={clsx(
           "mt-1 truncate text-[15px] font-medium",
@@ -86,14 +88,15 @@ function Fact({
           muted ? "text-[var(--color-text-muted)]" : "text-[var(--color-text)]",
         )}
       >
-        {value}
+        {tr(value)}
       </dd>
-      {hint && <p className="text-[12px] text-[var(--color-text-muted)]">{hint}</p>}
+      {hint && <p className="text-[12px] text-[var(--color-text-muted)]">{tr(hint)}</p>}
     </div>
   );
 }
 
 export default function ChildFinancePage({ params }: { params: Promise<{ slug: string; childId: string }> }) {
+  const tr = useTr();
   const { slug, childId } = use(params);
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -123,7 +126,7 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
     try {
       await downloadCsv(`/app/exports/payments/${paymentId}/pdf`, `tolov-kvitansiyasi-${paymentId}.pdf`);
     } catch {
-      setReceiptError("Kvitansiya yuklab bo'lmadi — qayta urinib ko'ring");
+      setReceiptError(tr("Kvitansiya yuklab bo'lmadi — qayta urinib ko'ring"));
     } finally {
       setDownloadingReceiptId(null);
     }
@@ -162,7 +165,7 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
       queryClient.invalidateQueries({ queryKey: ["invoices", slug] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-summary", slug] });
     },
-    onError: (err) => alert(err instanceof ApiError ? err.message : "Kutilmagan xatolik"),
+    onError: (err) => alert(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik")),
   });
 
   const photoMutation = useMutation({
@@ -172,7 +175,7 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
       queryClient.invalidateQueries({ queryKey: ["child", slug, childId] });
       queryClient.invalidateQueries({ queryKey: ["children", slug] });
     },
-    onError: (err) => setPhotoError(err instanceof ApiError ? err.message : "Suratni saqlab bo'lmadi"),
+    onError: (err) => setPhotoError(err instanceof ApiError ? err.message : tr("Suratni saqlab bo'lmadi")),
   });
 
   const removePhotoMutation = useMutation({
@@ -182,7 +185,7 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
       queryClient.invalidateQueries({ queryKey: ["child", slug, childId] });
       queryClient.invalidateQueries({ queryKey: ["children", slug] });
     },
-    onError: (err) => setPhotoError(err instanceof ApiError ? err.message : "Suratni o'chirib bo'lmadi"),
+    onError: (err) => setPhotoError(err instanceof ApiError ? err.message : tr("Suratni o'chirib bo'lmadi")),
   });
 
   const handlePhotoPick = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -238,7 +241,7 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
   const historyMonths = [...historyByMonth.keys()].sort().reverse();
 
   if (childQuery.isLoading) return <LoadingState />;
-  if (childQuery.isError) return <ErrorState message={(childQuery.error as Error).message} />;
+  if (childQuery.isError) return <ErrorState message={tr((childQuery.error as Error).message)} />;
   const child = childQuery.data;
   if (!child) return null;
 
@@ -249,7 +252,7 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
         className="group inline-flex items-center gap-1.5 text-[14px] font-medium text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
       >
         <ArrowLeftIcon className="h-4 w-4 transition-transform group-hover:-translate-x-0.5 motion-reduce:transition-none" />
-        Moliya
+        {tr("Moliya")}
       </Link>
 
       <Card className="overflow-hidden">
@@ -262,8 +265,8 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
                   type="button"
                   onClick={() => photoInputRef.current?.click()}
                   disabled={photoChecking || photoMutation.isPending}
-                  aria-label="Bolaning suratini almashtirish"
-                  title="Suratni almashtirish"
+                  aria-label={tr("Bolaning suratini almashtirish")}
+                  title={tr("Suratni almashtirish")}
                   className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-full bg-black/45 text-white opacity-0 transition-opacity duration-[var(--dur-fast)] hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none disabled:cursor-wait disabled:opacity-100 motion-reduce:transition-none"
                 >
                   {photoChecking || photoMutation.isPending ? (
@@ -285,14 +288,14 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2.5">
               <h1 className="text-[24px] font-semibold leading-tight tracking-[var(--tracking-title)] text-[var(--color-text)]">
-                {child.fullName}
+                {tr(child.fullName)}
               </h1>
               <Badge tone={child.status === "ACTIVE" ? "success" : child.status === "QUARANTINED" ? "danger" : "neutral"}>
                 {child.status === "ACTIVE" ? "Faol" : child.status === "QUARANTINED" ? "Karantinda" : "Nofaol"}
               </Badge>
               {canWriteChild && (
                 <Button size="sm" variant="outline" onClick={() => setEditChildOpen(true)}>
-                  Tahrirlash
+                  {tr("Tahrirlash")}
                 </Button>
               )}
               {canWriteChild && (
@@ -309,16 +312,16 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
                         try {
                           await downloadCsv(`/app/exports/children/${childId}/${kind}-pdf`, `${kind === "contract" ? "shartnoma" : "malumotnoma"}-${childId}.pdf`);
                         } catch {
-                          setDocError("Hujjatni yuklab bo'lmadi — qayta urinib ko'ring");
+                          setDocError(tr("Hujjatni yuklab bo'lmadi — qayta urinib ko'ring"));
                         } finally {
                           setDocLoading(null);
                         }
                       }}
                     >
-                      {kind === "contract" ? "Shartnoma (PDF)" : "Ma'lumotnoma (PDF)"}
+                      {kind === "contract" ? "Shartnoma (PDF)" : tr("Ma'lumotnoma (PDF)")}
                     </Button>
                   ))}
-                  {docError && <span className="text-[12.5px] text-[var(--color-danger)]">{docError}</span>}
+                  {docError && <span className="text-[12.5px] text-[var(--color-danger)]">{tr(docError)}</span>}
                 </>
               )}
             </div>
@@ -326,7 +329,7 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
               <span className="rounded-full bg-[var(--color-surface-sunken)] px-2.5 py-1 text-[12px] font-semibold tabular-nums text-[var(--color-text-muted)]">
                 {formatChildId(child.publicId)}
               </span>
-              <CopyButton value={formatChildId(child.publicId)} label="ID nusxalash" />
+              <CopyButton value={formatChildId(child.publicId)} label={tr("ID nusxalash")} />
               {canWriteChild && (
                 <>
                   <button
@@ -335,7 +338,7 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
                     disabled={photoChecking || photoMutation.isPending}
                     className="cursor-pointer text-[12.5px] font-medium text-[var(--color-primary)] hover:underline disabled:opacity-60"
                   >
-                    {photoChecking ? "Tekshirilmoqda..." : child.avatarUpdatedAt ? "Suratni almashtirish" : "Surat qo'yish"}
+                    {photoChecking ? "Tekshirilmoqda..." : child.avatarUpdatedAt ? "Suratni almashtirish" : tr("Surat qo'yish")}
                   </button>
                   {child.avatarUpdatedAt && (
                     <>
@@ -346,7 +349,7 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
                         disabled={removePhotoMutation.isPending}
                         className="cursor-pointer text-[12.5px] font-medium text-[var(--color-danger)] hover:underline disabled:opacity-60"
                       >
-                        O&apos;chirish
+                        {tr("O'chirish")}
                       </button>
                     </>
                   )}
@@ -355,23 +358,23 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
             </div>
             {photoError && (
               <p role="alert" className="mt-1.5 max-w-[420px] text-[12.5px] text-[var(--color-danger)]">
-                {photoError}
+                {tr(photoError)}
               </p>
             )}
             {canWriteChild && !photoError && !child.avatarUpdatedAt && (
               <p className="mt-1.5 text-[12px] text-[var(--color-text-muted)]">
-                Yuzi ko&apos;rinib turgan surat, 3 MB gacha
+                {tr("Yuzi ko'rinib turgan surat, 3 MB gacha")}
               </p>
             )}
           </div>
         </div>
 
         <dl className="grid grid-cols-2 divide-x divide-y divide-[var(--color-separator)] border-t border-[var(--color-separator)] sm:grid-cols-4 sm:divide-y-0">
-          <Fact label="Filial" value={child.branch?.name ?? "—"} />
-          <Fact label="Guruh" value={child.group?.name ?? "Guruhsiz"} muted={!child.group} />
-          <Fact label="Jinsi" value={formatGender(child.gender)} muted={!child.gender} />
+          <Fact label={tr("Filial")} value={child.branch?.name ?? "—"} />
+          <Fact label={tr("Guruh")} value={child.group?.name ?? "Guruhsiz"} muted={!child.group} />
+          <Fact label={tr("Jinsi")} value={formatGender(child.gender)} muted={!child.gender} />
           <Fact
-            label="Tug'ilgan sana"
+            label={tr("Tug'ilgan sana")}
             value={child.birthDate ? formatDate(child.birthDate) : "—"}
             hint={child.birthDate ? formatAge(child.birthDate) : undefined}
             numeric
@@ -383,13 +386,13 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
         <div className="hairline flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-separator)] px-5 py-4 sm:px-6">
           <div>
             <h2 className="text-[15px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
-              Bog&apos;langan ota-ona
+              {tr("Bog'langan ota-ona")}
             </h2>
-            <p className="text-[12.5px] text-[var(--color-text-muted)]">Telefon raqamini bosib nusxalang</p>
+            <p className="text-[12.5px] text-[var(--color-text-muted)]">{tr("Telefon raqamini bosib nusxalang")}</p>
           </div>
           {canWriteChild && guardiansQuery.isSuccess && guardiansQuery.data.length === 0 && (
             <Button size="sm" variant="outline" onClick={() => setGuardianOpen(true)}>
-              + Ota-ona qo&apos;shish
+              {tr("+ Ota-ona qo'shish")}
             </Button>
           )}
         </div>
@@ -399,13 +402,13 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
           </div>
         ) : guardiansQuery.isError ? (
           <div className="px-5 py-5 sm:px-6">
-            <ErrorState message={(guardiansQuery.error as Error).message} />
+            <ErrorState message={tr((guardiansQuery.error as Error).message)} />
           </div>
         ) : !guardiansQuery.data || guardiansQuery.data.length === 0 ? (
           <div className="px-5 py-5 sm:px-6">
             <EmptyState
-              title="Hali ota-ona biriktirilmagan"
-              description={canWriteChild ? "Bola bilan bog'lanish uchun ota-ona qo'shing" : undefined}
+              title={tr("Hali ota-ona biriktirilmagan")}
+              description={canWriteChild ? tr("Bola bilan bog'lanish uchun ota-ona qo'shing") : undefined}
               icon={<GroupIcon className="h-[26px] w-[26px]" />}
             />
           </div>
@@ -419,13 +422,13 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
                 <div className="min-w-0 flex-1 basis-[10rem]">
                   <div className="flex flex-wrap items-center gap-1.5">
                     <p className="truncate text-[15px] font-medium text-[var(--color-text)]">
-                      {link.guardian.fullName}
+                      {tr(link.guardian.fullName)}
                     </p>
-                    {link.isPrimary && <Badge tone="primary">Asosiy</Badge>}
-                    {link.guardian.hasCabinet && <Badge tone="success">Kabinet logini</Badge>}
+                    {link.isPrimary && <Badge tone="primary">{tr("Asosiy")}</Badge>}
+                    {link.guardian.hasCabinet && <Badge tone="success">{tr("Kabinet logini")}</Badge>}
                   </div>
                   <p className="text-[12.5px] text-[var(--color-text-muted)]">
-                    {GUARDIAN_RELATION_LABEL[link.relation]}
+                    {tr(GUARDIAN_RELATION_LABEL[link.relation])}
                     {link.canPickup && " · olib ketadi"}
                   </p>
                 </div>
@@ -437,7 +440,7 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
                     <PhoneIcon className="h-3.5 w-3.5" />
                     {formatPhone(link.guardian.phone)}
                   </a>
-                  <CopyButton value={link.guardian.phone} label="Telefon raqamini nusxalash" />
+                  <CopyButton value={link.guardian.phone} label={tr("Telefon raqamini nusxalash")} />
                 </div>
               </li>
             ))}
@@ -462,8 +465,8 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
               </p>
               <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">
                 {cabinetHolder
-                  ? `Login: ${formatPhone(cabinetHolder.guardian.phone)} · ota-ona ikkalasi shu kabinetdan foydalanadi`
-                  : "Ota-ona davomat, ovqat va mashg'ulotlarni ko'rishi uchun kabinet oching"}
+                  ? tr("Login: {0} · ota-ona ikkalasi shu kabinetdan foydalanadi", formatPhone(cabinetHolder.guardian.phone))
+                  : tr("Ota-ona davomat, ovqat va mashg'ulotlarni ko'rishi uchun kabinet oching")}
               </p>
             </div>
             <Button size="sm" variant={cabinetHolder ? "outline" : "primary"} onClick={() => setCabinetOpen(true)}>
@@ -475,13 +478,13 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
 
       {receiptError && (
         <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-          {receiptError}
+          {tr(receiptError)}
         </div>
       )}
 
       <Card className="overflow-hidden">
         <CardHeader>
-          <CardTitle>To&apos;lovlar</CardTitle>
+          <CardTitle>{tr("To'lovlar")}</CardTitle>
         </CardHeader>
         <CardBody className="p-0">
           {paymentsQuery.isLoading || receiptsQuery.isLoading ? (
@@ -490,13 +493,13 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
             </div>
           ) : paymentsQuery.isError ? (
             <div className="px-5 py-5 sm:px-6">
-              <ErrorState message={(paymentsQuery.error as Error).message} />
+              <ErrorState message={tr((paymentsQuery.error as Error).message)} />
             </div>
           ) : currentMonthEntries.length === 0 ? (
             <div className="px-5 py-5 sm:px-6">
               <EmptyState
-                title="Bu oy to'lov yo'q"
-                description="Joriy oy uchun hali to'lov qayd etilmagan"
+                title={tr("Bu oy to'lov yo'q")}
+                description={tr("Joriy oy uchun hali to'lov qayd etilmagan")}
                 icon={<WalletIcon className="h-[26px] w-[26px]" />}
               />
             </div>
@@ -517,7 +520,7 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
       {historyMonths.length > 0 && (
         <Card className="overflow-hidden">
           <CardHeader>
-            <CardTitle>To&apos;lov tarixi</CardTitle>
+            <CardTitle>{tr("To'lov tarixi")}</CardTitle>
           </CardHeader>
           <CardBody className="p-0">
             <ul className="divide-y divide-[var(--color-separator)]">
@@ -546,7 +549,7 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
                           {monthLabel(key)}
                         </span>
                         <span className="block text-[12.5px] text-[var(--color-text-muted)]">
-                          {monthEntries.length} ta yozuv · {formatMoney(total)}
+                          {tr(monthEntries.length)} {tr("ta yozuv ·")}{" "}{formatMoney(total)}
                         </span>
                       </span>
                       <ChevronDownIcon
@@ -577,7 +580,7 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
 
       <Card className="overflow-hidden">
         <CardHeader>
-          <CardTitle>Moliyaviy tarix (ledger)</CardTitle>
+          <CardTitle>{tr("Moliyaviy tarix (ledger)")}</CardTitle>
         </CardHeader>
         <CardBody className="p-0">
           {ledgerQuery.isLoading ? (
@@ -586,28 +589,28 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
             </div>
           ) : ledgerQuery.isError ? (
             <div className="px-5 py-5 sm:px-6">
-              <ErrorState message={(ledgerQuery.error as Error).message} />
+              <ErrorState message={tr((ledgerQuery.error as Error).message)} />
             </div>
           ) : !ledgerQuery.data || ledgerQuery.data.length === 0 ? (
             <div className="px-5 py-5 sm:px-6">
-              <EmptyState title="Yozuvlar yo'q" />
+              <EmptyState title={tr("Yozuvlar yo'q")} />
             </div>
           ) : (
             <DataTable>
               <THead>
                 <tr>
-                  <Th>Sana</Th>
-                  <Th>Turi</Th>
-                  <Th numeric>Summa</Th>
-                  <Th>Davr</Th>
-                  <Th>Izoh</Th>
+                  <Th>{tr("Sana")}</Th>
+                  <Th>{tr("Turi")}</Th>
+                  <Th numeric>{tr("Summa")}</Th>
+                  <Th>{tr("Davr")}</Th>
+                  <Th>{tr("Izoh")}</Th>
                 </tr>
               </THead>
               <TBody>
                 {ledgerQuery.data.map((entry) => (
                   <Tr key={entry.id}>
                     <Td className="tabular-nums text-[var(--color-text-muted)]">{formatDateTime(entry.createdAt)}</Td>
-                    <Td>{LEDGER_TYPE_LABEL[entry.type]}</Td>
+                    <Td>{tr(LEDGER_TYPE_LABEL[entry.type])}</Td>
                     <Td
                       numeric
                       className={`font-medium ${Number(entry.amount) < 0 ? "text-[var(--color-success)]" : "text-[var(--color-text)]"}`}
@@ -672,6 +675,7 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
  * ochiladigan oynada.
  */
 function TimelineRow({ entry, onOpen }: { entry: TimelineEntry; onOpen: () => void }) {
+  const tr = useTr();
   const amount = entry.kind === "payment" ? entry.payment.amount : entry.receipt.claimedAmount;
   const currency = entry.kind === "payment" ? entry.payment.currency : entry.receipt.currency;
   return (
@@ -681,7 +685,7 @@ function TimelineRow({ entry, onOpen }: { entry: TimelineEntry; onOpen: () => vo
         <p className="text-[12.5px] text-[var(--color-text-muted)]">{formatDateTime(entry.createdAt)}</p>
       </div>
       <Button size="sm" variant="outline" onClick={onOpen}>
-        Batafsil
+        {tr("Batafsil")}
       </Button>
     </li>
   );

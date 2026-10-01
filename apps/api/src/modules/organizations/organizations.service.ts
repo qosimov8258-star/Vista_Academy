@@ -203,6 +203,20 @@ export class OrganizationsService {
     return host;
   }
 
+  /**
+   * Tashkilot nomini (brend) o'zgartirish — Super Admin (NETWORK_ADMIN)ning
+   * o'z kabinetidan, Sozlamalar bo'limida. Bu nom butun panelda (yon panel,
+   * kirish sahifasi va h.k.) ko'rinadi, shuning uchun boshqa hech qaysi
+   * maydonni o'zgartirmaydi.
+   */
+  async updateName(organizationId: string, name: string) {
+    return this.prisma.organization.update({
+      where: { id: organizationId },
+      data: { name },
+      select: { id: true, name: true },
+    });
+  }
+
   /** Tashkilotning Super Admin (NETWORK_ADMIN) kabineti — bog'cha URL'iga shu bilan kiriladi. */
   private async requireAdminAccount(organizationId: string) {
     const admin = await this.prisma.tenantUser.findFirst({

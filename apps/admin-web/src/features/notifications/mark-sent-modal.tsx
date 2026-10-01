@@ -10,6 +10,7 @@ import type { NotificationChannel, NotificationLog } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useTr } from "@/i18n/tr";
 
 const channelOptions: { value: NotificationChannel; label: string }[] = [
   { value: "PHONE_CALL", label: "Telefon qo'ng'iroq" },
@@ -36,6 +37,7 @@ export function MarkSentModal({
   slug: string;
   notification: NotificationLog | null;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -60,7 +62,7 @@ export function MarkSentModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
@@ -73,33 +75,32 @@ export function MarkSentModal({
   if (!notification) return null;
 
   return (
-    <Modal open={open} onClose={handleClose} title="Yuborildi deb belgilash">
+    <Modal open={open} onClose={handleClose} title={tr("Yuborildi deb belgilash")}>
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         <p className="text-sm text-[var(--color-text-muted)]">
-          Qabul qiluvchiga <span className="font-medium text-[var(--color-text)]">{notification.recipientName}</span> haqiqatda
-          qaysi kanal orqali xabar berdingiz? Tizim haqiqiy SMS/Telegram yubormaydi — bu faqat qayd etish uchun.
+          {tr("Qabul qiluvchiga")}{" "}<span className="font-medium text-[var(--color-text)]">{tr(notification.recipientName)}</span> {tr("haqiqatda qaysi kanal orqali xabar berdingiz? Tizim haqiqiy SMS/Telegram yubormaydi — bu faqat qayd etish uchun.")}
         </p>
 
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
 
-        <Select label="Kanal" error={errors.channel?.message} {...register("channel")}>
+        <Select label={tr("Kanal")} error={errors.channel?.message} {...register("channel")}>
           {channelOptions.map((opt) => (
             <option key={opt.value} value={opt.value}>
-              {opt.label}
+              {tr(opt.label)}
             </option>
           ))}
         </Select>
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={handleClose}>
-            Bekor qilish
+            {tr("Bekor qilish")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Tasdiqlash
+            {tr("Tasdiqlash")}
           </Button>
         </div>
       </form>

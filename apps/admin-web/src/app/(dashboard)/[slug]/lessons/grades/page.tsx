@@ -15,6 +15,7 @@ import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { StarIcon } from "@/components/ui/icons";
 import { GradeChildModal } from "@/features/lessons/grade-child-modal";
+import { useTr } from "@/i18n/tr";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 
@@ -29,6 +30,7 @@ function scoreTone(score: number): "success" | "warning" | "danger" {
 }
 
 export default function LessonGradesPage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const { user } = useAuth();
   const canWrite = canWriteTeaching(user?.role);
@@ -72,10 +74,10 @@ export default function LessonGradesPage({ params }: { params: Promise<{ slug: s
     <div className="space-y-5">
       <div>
         <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
-          Baholari
+          {tr("Baholari")}
         </h1>
         <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">
-          Bolaning kunlik ishtiroki va bajargan topshiriqlari bo&apos;yicha 1–10 baho
+          {tr("Bolaning kunlik ishtiroki va bajargan topshiriqlari bo'yicha 1–10 baho")}
         </p>
       </div>
 
@@ -83,18 +85,18 @@ export default function LessonGradesPage({ params }: { params: Promise<{ slug: s
         {groupsQuery.isLoading ? (
           <LoadingState rows={1} />
         ) : groups.length === 0 ? (
-          <p className="text-[14px] text-[var(--color-text-muted)]">Hali guruh yo&apos;q</p>
+          <p className="text-[14px] text-[var(--color-text-muted)]">{tr("Hali guruh yo'q")}</p>
         ) : (
-          <Select label="Guruh" value={groupId} onChange={(e) => setGroupId(e.target.value)} className="sm:max-w-xs">
+          <Select label={tr("Guruh")} value={groupId} onChange={(e) => setGroupId(e.target.value)} className="sm:max-w-xs">
             {groups.map((group) => (
               <option key={group.id} value={group.id}>
-                {group.name}
+                {tr(group.name)}
               </option>
             ))}
           </Select>
         )}
         <div className="block">
-          <span className="mb-2 block text-[13px] font-medium text-[var(--color-text)]">Sana</span>
+          <span className="mb-2 block text-[13px] font-medium text-[var(--color-text)]">{tr("Sana")}</span>
           <input
             type="date"
             value={date}
@@ -110,30 +112,30 @@ export default function LessonGradesPage({ params }: { params: Promise<{ slug: s
         groupsQuery.isLoading ? (
           <LoadingState />
         ) : (
-          <EmptyState title="Guruh tanlanmagan" description="Avval yuqoridan guruh va sanani tanlang" />
+          <EmptyState title={tr("Guruh tanlanmagan")} description={tr("Avval yuqoridan guruh va sanani tanlang")} />
         )
       ) : gradesQuery.isLoading ? (
         <LoadingState />
       ) : gradesQuery.isError ? (
-        <ErrorState message={(gradesQuery.error as Error).message} />
+        <ErrorState message={tr((gradesQuery.error as Error).message)} />
       ) : !gradesQuery.data || gradesQuery.data.children.length === 0 ? (
-        <EmptyState icon={<StarIcon className="h-[26px] w-[26px]" />} title="Bu guruhda faol bola yo'q" />
+        <EmptyState icon={<StarIcon className="h-[26px] w-[26px]" />} title={tr("Bu guruhda faol bola yo'q")} />
       ) : (
         <Card className="overflow-hidden">
           <ul className="divide-y divide-[var(--color-separator)]">
             {gradesQuery.data.children.map((child) => (
               <li key={child.childId} className="flex flex-col items-start gap-2 px-5 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-[var(--color-text)]">{child.fullName}</p>
+                  <p className="text-sm font-medium text-[var(--color-text)]">{tr(child.fullName)}</p>
                   {child.grade?.note && (
-                    <p className="mt-0.5 truncate text-xs text-[var(--color-text-muted)]">{child.grade.note}</p>
+                    <p className="mt-0.5 truncate text-xs text-[var(--color-text-muted)]">{tr(child.grade.note)}</p>
                   )}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   {child.grade ? (
-                    <Badge tone={scoreTone(child.grade.score)}>{child.grade.score} / 10</Badge>
+                    <Badge tone={scoreTone(child.grade.score)}>{tr(child.grade.score)} / 10</Badge>
                   ) : (
-                    <Badge tone="neutral">Baholanmagan</Badge>
+                    <Badge tone="neutral">{tr("Baholanmagan")}</Badge>
                   )}
                   {canWrite && (
                     <Button

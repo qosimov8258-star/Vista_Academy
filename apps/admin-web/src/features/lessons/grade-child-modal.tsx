@@ -10,6 +10,7 @@ import type { LessonGrade, LessonTopic } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Select, Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useTr } from "@/i18n/tr";
 
 const SCORES = Array.from({ length: 10 }, (_, i) => i + 1);
 
@@ -42,6 +43,7 @@ export function GradeChildModal({
   grade: LessonGrade | null;
   topics: LessonTopic[];
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -73,7 +75,7 @@ export function GradeChildModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
@@ -87,34 +89,34 @@ export function GradeChildModal({
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
-        <Select label="Baho (1–10)" {...register("score")}>
+        <Select label={tr("Baho (1–10)")} {...register("score")}>
           {SCORES.map((score) => (
             <option key={score} value={score}>
-              {score}
+              {tr(score)}
             </option>
           ))}
         </Select>
 
-        <Select label="Mavzu bilan bog'lash (ixtiyoriy)" defaultValue="" {...register("topicId")}>
-          <option value="">Bog'lanmagan</option>
+        <Select label={tr("Mavzu bilan bog'lash (ixtiyoriy)")} defaultValue="" {...register("topicId")}>
+          <option value="">{tr("Bog'lanmagan")}</option>
           {topics.map((topic) => (
             <option key={topic.id} value={topic.id}>
-              {topic.title}
+              {tr(topic.title)}
             </option>
           ))}
         </Select>
 
-        <Textarea label="Izoh (ixtiyoriy)" rows={2} placeholder="Bugungi ishtiroki haqida..." {...register("note")} />
+        <Textarea label={tr("Izoh (ixtiyoriy)")} rows={2} placeholder={tr("Bugungi ishtiroki haqida...")} {...register("note")} />
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={handleClose}>
-            Bekor qilish
+            {tr("Bekor qilish")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Saqlash
+            {tr("Saqlash")}
           </Button>
         </div>
       </form>

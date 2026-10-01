@@ -10,6 +10,7 @@ import type { LessonTopic } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useTr } from "@/i18n/tr";
 
 const schema = z.object({
   title: z.string().min(2, "Sarlavha kamida 2 belgi"),
@@ -32,6 +33,7 @@ export function TopicModal({
   /** Tahrirlash uchun — bo'lmasa yangi mavzu yaratiladi. */
   topic?: LessonTopic | null;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
   const isEdit = !!topic;
@@ -62,7 +64,7 @@ export function TopicModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
@@ -72,19 +74,19 @@ export function TopicModal({
   };
 
   return (
-    <Modal open={open} onClose={handleClose} title={isEdit ? "Mavzuni tahrirlash" : "Yangi mavzu"}>
+    <Modal open={open} onClose={handleClose} title={isEdit ? "Mavzuni tahrirlash" : tr("Yangi mavzu")}>
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
-        <Input label="Mavzu sarlavhasi" placeholder="Sonlar va raqamlar" error={errors.title?.message} {...register("title")} />
-        <Input label="Sana" type="date" error={errors.date?.message} {...register("date")} />
+        <Input label={tr("Mavzu sarlavhasi")} placeholder={tr("Sonlar va raqamlar")} error={errors.title?.message} {...register("title")} />
+        <Input label={tr("Sana")} type="date" error={errors.date?.message} {...register("date")} />
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={handleClose}>
-            Bekor qilish
+            {tr("Bekor qilish")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
             {isEdit ? "Saqlash" : "Yaratish"}

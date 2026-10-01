@@ -16,8 +16,10 @@ import { PhoneIcon } from "@/components/ui/icons";
 import { isCallOperatorUser } from "@/lib/employee-position";
 import { canWriteMoney } from "@/lib/permissions";
 import { saveCsv, type DebtorsResult } from "@/features/cash/shared";
+import { useTr } from "@/i18n/tr";
 
 export default function DebtorsPage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const { user } = useAuth();
   // Ota-onaga eslatmani administrator yuboradi; kassir (Moliyachi) to'lov qabul qiladi.
@@ -38,7 +40,7 @@ export default function DebtorsPage({ params }: { params: Promise<{ slug: string
       setError(null);
       setSent((s) => new Set(s).add(childId));
     },
-    onError: (err) => setError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi"),
+    onError: (err) => setError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi")),
   });
 
   const rows = (query.data?.rows ?? []).filter(
@@ -47,7 +49,7 @@ export default function DebtorsPage({ params }: { params: Promise<{ slug: string
 
   const exportCsv = () =>
     saveCsv("qarzdorlar.csv", [
-      ["Bola", "Guruh", "Ota-ona", "Telefon", "Jami qarz", "Muddati o'tgan"],
+      [tr("Bola"), tr("Guruh"), tr("Ota-ona"), "Telefon", "Jami qarz", tr("Muddati o'tgan")],
       ...rows.map((r) => [r.childName, r.groupName ?? "", r.guardianName ?? "", r.guardianPhone ?? "", r.balance, r.overdue]),
     ]);
 
@@ -55,45 +57,45 @@ export default function DebtorsPage({ params }: { params: Promise<{ slug: string
     <div className="space-y-5">
       <div className="flex items-start justify-between gap-3 md:flex-wrap md:items-end">
         <div className="min-w-0">
-          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">Qarzdorlar</h1>
-          <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">Kim qancha qarz va muddati o&apos;tganlar</p>
+          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">{tr("Qarzdorlar")}</h1>
+          <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">{tr("Kim qancha qarz va muddati o'tganlar")}</p>
         </div>
         <Button variant="outline" className="shrink-0" onClick={exportCsv} disabled={rows.length === 0}>
-          Eksport (CSV)
+          {tr("Eksport (CSV)")}
         </Button>
       </div>
 
       {error && (
-        <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">{error}</div>
+        <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">{tr(error)}</div>
       )}
 
       {query.isLoading ? (
         <LoadingState rows={5} />
       ) : query.isError ? (
-        <ErrorState message={(query.error as Error).message} />
+        <ErrorState message={tr((query.error as Error).message)} />
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3">
             <Card className="p-4">
-              <p className="text-[12.5px] text-[var(--color-text-muted)]">Jami qarz</p>
+              <p className="text-[12.5px] text-[var(--color-text-muted)]">{tr("Jami qarz")}</p>
               <p className="mt-1 text-[20px] font-semibold tabular-nums">{formatMoney(query.data?.totalDebt ?? 0)}</p>
             </Card>
             <Card className="p-4">
-              <p className="text-[12.5px] text-[var(--color-text-muted)]">Shundan muddati o&apos;tgan</p>
+              <p className="text-[12.5px] text-[var(--color-text-muted)]">{tr("Shundan muddati o'tgan")}</p>
               <p className="mt-1 text-[20px] font-semibold tabular-nums text-[var(--color-danger)]">{formatMoney(query.data?.totalOverdue ?? 0)}</p>
             </Card>
           </div>
 
           <Card className="flex flex-wrap items-end gap-3 p-4">
-            <Input label="Bola ismi" placeholder="Qidirish" value={search} onChange={(e) => setSearch(e.target.value)} className="min-w-[220px]" />
+            <Input label={tr("Bola ismi")} placeholder={tr("Qidirish")} value={search} onChange={(e) => setSearch(e.target.value)} className="min-w-[220px]" />
             <Button variant={overdueOnly ? "danger" : "outline"} onClick={() => setOverdueOnly((v) => !v)}>
-              Faqat muddati o&apos;tganlar
+              {tr("Faqat muddati o'tganlar")}
             </Button>
           </Card>
 
           {rows.length === 0 ? (
             <Card>
-              <EmptyState title="Qarzdor yo'q" />
+              <EmptyState title={tr("Qarzdor yo'q")} />
             </Card>
           ) : (
             <>
@@ -106,7 +108,7 @@ export default function DebtorsPage({ params }: { params: Promise<{ slug: string
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate text-[16px] font-semibold tracking-[-0.01em] text-[var(--color-text)]">{r.childName}</p>
+                      <p className="truncate text-[16px] font-semibold tracking-[-0.01em] text-[var(--color-text)]">{tr(r.childName)}</p>
                       <p className="text-[13px] text-[var(--color-text-muted)]">
                         {[r.groupName, r.guardianName].filter(Boolean).join(" · ") || "—"}
                       </p>
@@ -115,13 +117,13 @@ export default function DebtorsPage({ params }: { params: Promise<{ slug: string
                       <p className="text-[16px] font-bold tabular-nums text-[var(--color-text)]">{formatMoney(r.balance)}</p>
                       {r.overdue > 0 && (
                         <p className="text-[12px] font-semibold tabular-nums text-[var(--color-danger)]">
-                          shundan {formatMoney(r.overdue)} kechikkan
+                          {tr("shundan")}{" "}{formatMoney(r.overdue)} {tr("kechikkan")}
                         </p>
                       )}
                     </div>
                   </div>
                   {r.oldestDueDate && r.overdue > 0 && (
-                    <p className="mt-1 text-[12px] text-[var(--color-text-muted)]">{formatDate(r.oldestDueDate)} dan beri</p>
+                    <p className="mt-1 text-[12px] text-[var(--color-text-muted)]">{formatDate(r.oldestDueDate)} {tr("dan beri")}</p>
                   )}
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     {r.guardianPhone && (
@@ -130,7 +132,7 @@ export default function DebtorsPage({ params }: { params: Promise<{ slug: string
                         className="inline-flex min-h-10 items-center gap-2 rounded-full bg-[var(--accent-soft)] px-4 text-[14.5px] font-semibold tabular-nums text-[var(--accent-soft-ink)] active:scale-[0.98]"
                       >
                         <PhoneIcon className="h-4 w-4 text-[var(--accent-soft-icon)]" />
-                        {r.guardianPhone}
+                        {tr(r.guardianPhone)}
                       </a>
                     )}
                     {canWrite && (
@@ -152,10 +154,10 @@ export default function DebtorsPage({ params }: { params: Promise<{ slug: string
               <DataTable>
                 <THead>
                   <tr>
-                    <Th>Bola</Th>
-                    <Th>Ota-ona</Th>
-                    <Th>Jami qarz</Th>
-                    <Th>Muddati o&apos;tgan</Th>
+                    <Th>{tr("Bola")}</Th>
+                    <Th>{tr("Ota-ona")}</Th>
+                    <Th>{tr("Jami qarz")}</Th>
+                    <Th>{tr("Muddati o'tgan")}</Th>
                     <Th />
                   </tr>
                 </THead>
@@ -164,16 +166,16 @@ export default function DebtorsPage({ params }: { params: Promise<{ slug: string
                     <Tr key={r.childId}>
                       <Td className="font-medium">
                         <Link href={`/${slug}/finance/${r.childId}`} className="text-[var(--color-primary)] hover:underline">
-                          {r.childName}
+                          {tr(r.childName)}
                         </Link>
-                        {r.groupName && <div className="text-[12.5px] font-normal text-[var(--color-text-muted)]">{r.groupName}</div>}
+                        {r.groupName && <div className="text-[12.5px] font-normal text-[var(--color-text-muted)]">{tr(r.groupName)}</div>}
                       </Td>
                       <Td>
                         {r.guardianName ?? "—"}
                         {r.guardianPhone && (
                           <div className="text-[12.5px]">
                             <a href={`tel:${r.guardianPhone}`} className="text-[var(--color-primary)] hover:underline">
-                              {r.guardianPhone}
+                              {tr(r.guardianPhone)}
                             </a>
                           </div>
                         )}
@@ -184,7 +186,7 @@ export default function DebtorsPage({ params }: { params: Promise<{ slug: string
                           <>
                             <Badge tone="danger">{formatMoney(r.overdue)}</Badge>
                             {r.oldestDueDate && (
-                              <div className="mt-0.5 text-[12px] text-[var(--color-text-muted)]">{formatDate(r.oldestDueDate)} dan</div>
+                              <div className="mt-0.5 text-[12px] text-[var(--color-text-muted)]">{formatDate(r.oldestDueDate)} {tr("dan")}</div>
                             )}
                           </>
                         ) : (
@@ -206,7 +208,7 @@ export default function DebtorsPage({ params }: { params: Promise<{ slug: string
                           )}
                           {!isCallOperatorUser(user) && (
                             <Link href={`/${slug}/finance?search=${encodeURIComponent(r.childName)}`}>
-                              <Button size="sm">To&apos;lov</Button>
+                              <Button size="sm">{tr("To'lov")}</Button>
                             </Link>
                           )}
                         </div>

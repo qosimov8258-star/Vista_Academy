@@ -11,6 +11,7 @@ import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { Button } from "@/components/ui/button";
+import { useTr } from "@/i18n/tr";
 
 const STATUS_OPTIONS = [
   { value: "ACTIVE", label: "Faol" },
@@ -36,6 +37,7 @@ export function EditGroupModal({
   slug: string;
   group: Group;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -61,34 +63,34 @@ export function EditGroupModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
   return (
-    <Modal open={open} onClose={onClose} title="Guruhni tahrirlash" widthClassName="max-w-md">
+    <Modal open={open} onClose={onClose} title={tr("Guruhni tahrirlash")} widthClassName="max-w-md">
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
-        <Input label="Guruh nomi" error={errors.name?.message} {...register("name")} />
-        <Input label="Sig'imi" type="number" min={1} max={100} error={errors.capacity?.message} {...register("capacity")} />
+        <Input label={tr("Guruh nomi")} error={errors.name?.message} {...register("name")} />
+        <Input label={tr("Sig'imi")} type="number" min={1} max={100} error={errors.capacity?.message} {...register("capacity")} />
         <Controller
           control={control}
           name="status"
           render={({ field }) => (
-            <SelectMenu label="Holati" options={STATUS_OPTIONS} value={field.value} onChange={field.onChange} error={errors.status?.message} />
+            <SelectMenu label={tr("Holati")} options={STATUS_OPTIONS} value={field.value} onChange={field.onChange} error={errors.status?.message} />
           )}
         />
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Bekor qilish
+            {tr("Bekor qilish")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Saqlash
+            {tr("Saqlash")}
           </Button>
         </div>
       </form>

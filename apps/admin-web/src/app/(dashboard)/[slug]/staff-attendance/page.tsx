@@ -18,6 +18,7 @@ import { canWriteOperational } from "@/lib/permissions";
 import { formatPositionLabel } from "@/lib/employee-position";
 import { LockIcon } from "@/components/ui/icons";
 import { EmployeeHistoryModal } from "@/features/staff-attendance/employee-history-modal";
+import { useTr } from "@/i18n/tr";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 // Ko'pchilik xodim har kuni shu vaqt oralig'ida ishlaydi — har birini qo'lda
@@ -35,6 +36,7 @@ function currentPeriodString(): string {
 }
 
 export default function StaffAttendancePage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const queryClient = useQueryClient();
   const { branchId: forcedBranchId } = useBranchContext(slug);
@@ -167,8 +169,8 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">Xodimlar davomati</h1>
-        <p className="text-[14px] text-[var(--color-text-muted)]">Tarbiyachi va boshqa xodimlarning kunlik davomati</p>
+        <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">{tr("Xodimlar davomati")}</h1>
+        <p className="text-[14px] text-[var(--color-text-muted)]">{tr("Tarbiyachi va boshqa xodimlarning kunlik davomati")}</p>
       </div>
 
       {/* Ikki bo'lim: kunlik belgilash va xodimlar ro'yxati + oylik jamlanma. */}
@@ -176,7 +178,7 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
         {(
           [
             ["davomat", "Davomat"],
-            ["royxat", "Xodimlar ro'yxati"],
+            ["royxat", tr("Xodimlar ro'yxati")],
           ] as const
         ).map(([key, label]) => (
           <button
@@ -191,7 +193,7 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
                 : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
             }`}
           >
-            {label}
+            {tr(label)}
           </button>
         ))}
       </div>
@@ -200,16 +202,16 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
         <>
           <Card className="flex flex-col gap-3 p-4 sm:flex-row">
             {!forcedBranchId && branches.length > 1 && (
-              <Select label="Filial" value={branchId} onChange={(e) => setBranchId(e.target.value)} className="sm:max-w-xs">
+              <Select label={tr("Filial")} value={branchId} onChange={(e) => setBranchId(e.target.value)} className="sm:max-w-xs">
                 {branches.map((branch) => (
                   <option key={branch.id} value={branch.id}>
-                    {branch.name}
+                    {tr(branch.name)}
                   </option>
                 ))}
               </Select>
             )}
             <div className="block">
-              <span className="mb-2 block text-[13px] font-medium text-[var(--color-text)]">Sana</span>
+              <span className="mb-2 block text-[13px] font-medium text-[var(--color-text)]">{tr("Sana")}</span>
               <input
                 type="date"
                 value={date}
@@ -225,9 +227,8 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
             <div className="flex items-center gap-2.5 rounded-[var(--radius-lg)] border border-[var(--color-warning)]/30 bg-[var(--color-warning-bg)] px-4 py-3 text-[13.5px] text-[var(--color-warning)]">
               <LockIcon className="h-4 w-4 shrink-0" />
               <span>
-                Bu kun uchun davomat saqlangan va qulflangan
-                {attendanceQuery.data?.lockedByName ? ` — ${attendanceQuery.data.lockedByName}` : ""}. Endi
-                o&apos;zgartirib bo&apos;lmaydi.
+                {tr("Bu kun uchun davomat saqlangan va qulflangan")}
+                {attendanceQuery.data?.lockedByName ? ` — ${attendanceQuery.data.lockedByName}` : ""}{tr(". Endi o'zgartirib bo'lmaydi.")}
               </span>
             </div>
           )}
@@ -235,21 +236,21 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
           {!date ? (
             <LoadingState />
           ) : !branchId ? (
-            <EmptyState title="Filial mavjud emas" />
+            <EmptyState title={tr("Filial mavjud emas")} />
           ) : attendanceQuery.isLoading ? (
             <LoadingState />
           ) : attendanceQuery.isError ? (
-            <ErrorState message={(attendanceQuery.error as Error).message} />
+            <ErrorState message={tr((attendanceQuery.error as Error).message)} />
           ) : !attendanceQuery.data || attendanceQuery.data.employees.length === 0 ? (
-            <EmptyState title="Bu filialda faol xodim yo'q" />
+            <EmptyState title={tr("Bu filialda faol xodim yo'q")} />
           ) : (
             <Card className="overflow-hidden">
               <ul className="divide-y divide-[var(--color-separator)]">
                 {attendanceQuery.data.employees.map((employee) => (
                   <li key={employee.employeeId} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
                     <div>
-                      <p className="text-sm font-medium text-[var(--color-text)]">{employee.fullName}</p>
-                      <p className="text-xs text-[var(--color-text-muted)]">{employee.position}</p>
+                      <p className="text-sm font-medium text-[var(--color-text)]">{tr(employee.fullName)}</p>
+                      <p className="text-xs text-[var(--color-text-muted)]">{tr(employee.position)}</p>
                     </div>
                     {editable ? (
                       <div className="flex flex-wrap items-center justify-end gap-3">
@@ -257,7 +258,7 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
                           <>
                             <input
                               type="time"
-                              aria-label="Kelgan vaqti"
+                              aria-label={tr("Kelgan vaqti")}
                               value={timeFor(employee.employeeId, employee).checkInTime}
                               onChange={(e) =>
                                 setTimes((t) => ({
@@ -269,7 +270,7 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
                             />
                             <input
                               type="time"
-                              aria-label="Ketgan vaqti"
+                              aria-label={tr("Ketgan vaqti")}
                               value={timeFor(employee.employeeId, employee).checkOutTime}
                               onChange={(e) =>
                                 setTimes((t) => ({
@@ -321,10 +322,10 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
               {editable && (
                 <div className="hairline flex items-center justify-between gap-3 border-t border-[var(--color-separator)] px-5 py-3.5 sm:px-6">
                   {saveMutation.isError && (
-                    <span className="text-[13px] text-[var(--color-danger)]">Saqlashda xatolik yuz berdi</span>
+                    <span className="text-[13px] text-[var(--color-danger)]">{tr("Saqlashda xatolik yuz berdi")}</span>
                   )}
                   <Button className="ml-auto" loading={saveMutation.isPending} onClick={() => saveMutation.mutate()}>
-                    Saqlash
+                    {tr("Saqlash")}
                   </Button>
                 </div>
               )}
@@ -336,7 +337,7 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
       {tab === "royxat" && (
         <Card className="overflow-hidden">
           <CardHeader className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle>Xodimlar ro&apos;yxati — {period}</CardTitle>
+            <CardTitle>{tr("Xodimlar ro'yxati —")}{" "}{tr(period)}</CardTitle>
             <input
               type="month"
               value={period}
@@ -351,20 +352,20 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
               </div>
             ) : summaryQuery.isError ? (
               <div className="px-5 py-5 sm:px-6">
-                <ErrorState message={(summaryQuery.error as Error).message} />
+                <ErrorState message={tr((summaryQuery.error as Error).message)} />
               </div>
             ) : !summaryQuery.data || summaryQuery.data.employees.length === 0 ? (
-              <EmptyState title="Bu oy uchun ma'lumot yo'q" />
+              <EmptyState title={tr("Bu oy uchun ma'lumot yo'q")} />
             ) : (
               <DataTable compact>
                 <THead>
                   <tr>
-                    <Th>Xodim</Th>
-                    <Th numeric>Keldi</Th>
-                    <Th numeric>Kelmadi</Th>
+                    <Th>{tr("Xodim")}</Th>
+                    <Th numeric>{tr("Keldi")}</Th>
+                    <Th numeric>{tr("Kelmadi")}</Th>
                     {/* Mobilda torlik qilib "Foiz" tashqariga chiqib ketardi — u yerda
                         foiz xodim ismi ostida (badge sifatida) ko'rsatiladi. */}
-                    <Th numeric className="hidden md:table-cell">Foiz</Th>
+                    <Th numeric className="hidden md:table-cell">{tr("Foiz")}</Th>
                   </tr>
                 </THead>
                 <TBody>
@@ -378,21 +379,21 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
                       className="cursor-pointer"
                     >
                       <Td className="font-medium">
-                        {employee.fullName}
+                        {tr(employee.fullName)}
                         <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[12px] font-normal text-[var(--color-text-muted)]">
-                          {formatPositionLabel(employee.position, employee.subjects)}
+                          {tr(formatPositionLabel(employee.position, employee.subjects))}
                           {employee.groups.length > 0 ? ` · ${employee.groups.join(", ")}` : ""}
                           {employee.rate !== null && (
                             <Badge
                               tone={employee.rate >= 80 ? "success" : employee.rate >= 50 ? "warning" : "danger"}
                               className="md:hidden"
                             >
-                              {employee.rate}%
+                              {tr(employee.rate)}%
                             </Badge>
                           )}
                         </span>
                       </Td>
-                      <Td numeric className="text-[var(--color-text-muted)]">{employee.present}</Td>
+                      <Td numeric className="text-[var(--color-text-muted)]">{tr(employee.present)}</Td>
                       {/* Kech qoldi, kasal va ta'til — barchasi "Kelmadi" qatoriga qo'shib ko'rsatiladi */}
                       <Td numeric className="text-[var(--color-text-muted)]">
                         {employee.absent + employee.late + employee.sick + employee.onLeave}
@@ -402,7 +403,7 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
                           "—"
                         ) : (
                           <Badge tone={employee.rate >= 80 ? "success" : employee.rate >= 50 ? "warning" : "danger"}>
-                            {employee.rate}%
+                            {tr(employee.rate)}%
                           </Badge>
                         )}
                       </Td>

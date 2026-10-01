@@ -54,6 +54,7 @@ import {
   StarIcon,
   TeacherIcon,
 } from "@/components/ui/icons";
+import { useTr } from "@/i18n/tr";
 
 const BADGE_TONE: Record<NonNullable<NavLeaf["badgeTone"]>, string> = {
   warning: "bg-[var(--color-warning-bg)] text-[var(--color-warning)]",
@@ -62,6 +63,7 @@ const BADGE_TONE: Record<NonNullable<NavLeaf["badgeTone"]>, string> = {
 };
 
 function Badge({ value, tone = "warning" }: { value: number; tone?: NavLeaf["badgeTone"] }) {
+  const tr = useTr();
   return (
     <span
       className={clsx(
@@ -69,7 +71,7 @@ function Badge({ value, tone = "warning" }: { value: number; tone?: NavLeaf["bad
         BADGE_TONE[tone ?? "warning"],
       )}
     >
-      {value}
+      {tr(value)}
     </span>
   );
 }
@@ -77,6 +79,7 @@ function Badge({ value, tone = "warning" }: { value: number; tone?: NavLeaf["bad
 const RAIL_HINT_KEY = "bogcha:director-rail";
 
 export function Sidebar({ slug }: { slug: string }) {
+  const tr = useTr();
   const pathname = useAppPathname();
   const router = useRouter();
   const t = useTranslations("sidebar");
@@ -256,7 +259,7 @@ export function Sidebar({ slug }: { slug: string }) {
   const financeMobileEntries: NavEntry[] = [
     { href: `/${slug}`, label: "Bosh sahifa", icon: HomeIcon, show: true, exact: true },
     { href: financeBase ? `${financeBase}/employees` : `/${slug}`, label: "Xodimlar", icon: TeacherIcon, show: true },
-    { href: financeBase ? `${financeBase}/children` : `/${slug}`, label: "O'quvchilar", icon: ChildIcon, show: true },
+    { href: financeBase ? `${financeBase}/children` : `/${slug}`, label: tr("O'quvchilar"), icon: ChildIcon, show: true },
     { href: financeBase ? `${financeBase}/reminders` : `/${slug}`, label: "Eslatmalar", icon: ClockIcon, show: true },
     financeFiliallarEntry,
   ];
@@ -327,12 +330,12 @@ export function Sidebar({ slug }: { slug: string }) {
   const cashierEntries: NavEntry[] = [
     { href: `/${slug}`, label: "Bosh sahifa", icon: HomeIcon, show: true, exact: true },
     { href: `/${slug}/cash`, label: "Kassa", icon: MoneyIcon, show: true },
-    { href: `/${slug}/finance`, label: "Hisob-fakturalar", icon: NoteIcon, show: true },
-    { href: `/${slug}/group-payments`, label: "Guruhlar bo'yicha to'lov", icon: GroupIcon, show: true },
+    { href: `/${slug}/finance`, label: tr("Hisob-fakturalar"), icon: NoteIcon, show: true },
+    { href: `/${slug}/group-payments`, label: tr("Guruhlar bo'yicha to'lov"), icon: GroupIcon, show: true },
     { href: `/${slug}/cash-report`, label: "Oylik hisobot", icon: ChartIcon, show: true },
     {
       id: "oqituvchilar",
-      label: "O'qituvchilar",
+      label: tr("O'qituvchilar"),
       icon: TeacherIcon,
       items: [
         { href: `/${slug}/hr`, label: "Ish haqi", icon: BriefcaseIcon, show: true },
@@ -389,7 +392,7 @@ export function Sidebar({ slug }: { slug: string }) {
   // pastki panelda turadi, qolganlari "Menyu" ichida — shuning uchun eng kerakligi oldinda.
   const callOperatorEntries: NavEntry[] = [
     { href: base, label: t("nav.home"), icon: HomeIcon, show: true, exact: true },
-    { href: `${base}/calls`, label: "Qo'ng'iroqlar", icon: PhoneIcon, show: true },
+    { href: `${base}/calls`, label: tr("Qo'ng'iroqlar"), icon: PhoneIcon, show: true },
     { href: `${base}/crm`, label: t("nav.crm"), icon: PhoneIcon, show: true },
     { href: `${base}/debtors`, label: "Qarzdorlar", icon: MoneyIcon, show: true },
     { href: `${base}/notifications`, label: t("nav.notifications"), icon: BellIcon, show: true },
@@ -407,8 +410,8 @@ export function Sidebar({ slug }: { slug: string }) {
       label: "Bugungi ishlar",
       icon: PhoneIcon,
       items: [
-        { href: `${base}/calls`, label: "Qo'ng'iroqlar", icon: PhoneIcon, show: (isManager || isBranchAdmin) && !inBranchContext },
-        { href: `${base}/pickups`, label: "Olib ketish", icon: ChildIcon, show: !inBranchContext && !isManager },
+        { href: `${base}/calls`, label: tr("Qo'ng'iroqlar"), icon: PhoneIcon, show: (isManager || isBranchAdmin) && !inBranchContext },
+        { href: `${base}/pickups`, label: "Olib ketish", icon: ChildIcon, show: !inBranchContext && !isManager && !isBranchAdmin },
         { href: `${base}/board`, label: "Bugungi holat", icon: ChartIcon, show: !inBranchContext },
         { href: `${base}/weekly-report`, label: "Haftalik hisobot", icon: NoteIcon, show: !inBranchContext },
       ],
@@ -479,12 +482,12 @@ export function Sidebar({ slug }: { slug: string }) {
       label: t("nav.financeAndContact"),
       icon: MoneyIcon,
       items: [
-        { href: `${base}/finance`, label: t("nav.finance"), icon: MoneyIcon, show: !isManager },
+        { href: `${base}/finance`, label: t("nav.finance"), icon: MoneyIcon, show: !isManager && !isBranchAdmin },
         // Qarzdorlarga qo'ng'iroq qilib eslatish administratorning ishi
-        { href: `${base}/debtors`, label: "Qarzdorlar", icon: PhoneIcon, show: true },
+        { href: `${base}/debtors`, label: "Qarzdorlar", icon: PhoneIcon, show: !isBranchAdmin },
         { href: `${base}/notifications`, label: t("nav.notifications"), icon: BellIcon, show: true },
         // Avtomatik to'lov eslatmasi sozlamalari — ota-ona kabinetidagi kartani boshqaradi
-        { href: `${base}/reminders`, label: t("nav.reminders"), icon: ClockIcon, show: true },
+        { href: `${base}/reminders`, label: t("nav.reminders"), icon: ClockIcon, show: !isBranchAdmin },
         // Branch/user management stay a network-wide (root-level) concern, never
         // duplicated inside a single branch's panel.
         { href: `/${slug}/users`, label: t("nav.admins"), icon: KeyIcon, show: showUsersNav && !inBranchContext },
@@ -652,7 +655,7 @@ export function Sidebar({ slug }: { slug: string }) {
           <div className="min-w-0 flex-1">
             {user ? (
               <p className="truncate text-[15px] font-bold leading-tight tracking-[-0.01em] text-[var(--color-text)]">
-                {user.organizationName}
+                {tr(user.organizationName)}
               </p>
             ) : (
               <span className="block h-3.5 w-24 animate-pulse rounded-full bg-black/[0.06]" aria-hidden="true" />
@@ -690,7 +693,7 @@ export function Sidebar({ slug }: { slug: string }) {
             className="group flex items-center gap-1.5 text-xs font-medium text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
           >
             <ArrowLeftIcon className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" />
-            Filiallar
+            {tr("Filiallar")}
           </Link>
           <p className="mt-1 truncate text-sm font-semibold text-[var(--color-text)]">{branch?.name ?? "..."}</p>
         </div>
@@ -737,7 +740,7 @@ export function Sidebar({ slug }: { slug: string }) {
                     <Link
                       key={item.href}
                       href={item.href}
-                      title={item.label}
+                      title={tr(item.label)}
                       aria-current={active ? "page" : undefined}
                       onMouseEnter={trackHover}
                       onFocus={trackHover}
@@ -763,8 +766,8 @@ export function Sidebar({ slug }: { slug: string }) {
                       toggleCollapsed();
                       if (!(openSections["filiallar"] ?? false)) toggleSection("filiallar");
                     }}
-                    title="Filiallar"
-                    aria-label="Filiallar"
+                    title={tr("Filiallar")}
+                    aria-label={tr("Filiallar")}
                     className={clsx(
                       "group relative z-10 mx-auto mb-1 flex h-11 w-11 cursor-pointer items-center justify-center rounded-full text-[15px] outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/30 motion-reduce:transition-none",
                       idleRow,
@@ -793,7 +796,7 @@ export function Sidebar({ slug }: { slug: string }) {
                       filled={active}
                       className={clsx("h-5 w-5 shrink-0", active ? (dark ? "text-[var(--accent-orb-ink)]" : "text-[var(--color-primary)]") : "text-current")}
                     />
-                    <span className="truncate">{entry.label}</span>
+                    <span className="truncate">{tr(entry.label)}</span>
                     {entry.badge != null && <Badge value={entry.badge} tone={entry.badgeTone} />}
                   </Link>
                 );
@@ -817,7 +820,7 @@ export function Sidebar({ slug }: { slug: string }) {
                     className={clsx(rowBase, "h-11 w-full cursor-pointer gap-3 px-3 text-left", idleRow)}
                   >
                     <Icon className="h-5 w-5 shrink-0 text-current" />
-                    <span className="truncate">{entry.label}</span>
+                    <span className="truncate">{tr(entry.label)}</span>
                     <ChevronRightIcon
                       className={clsx(
                         "ml-auto h-4 w-4 shrink-0 transition-transform duration-200 motion-reduce:transition-none",
@@ -853,7 +856,7 @@ export function Sidebar({ slug }: { slug: string }) {
                               onBlur={clearHover}
                               className={clsx(rowBase, "mb-0.5 ml-9 h-10 gap-2 pl-3 pr-3", active ? activeRow : idleRow)}
                             >
-                              <span className="truncate">{item.label}</span>
+                              <span className="truncate">{tr(item.label)}</span>
                               {item.badge != null && <Badge value={item.badge} tone={item.badgeTone} />}
                             </Link>
                           </div>
@@ -877,7 +880,7 @@ export function Sidebar({ slug }: { slug: string }) {
               className={clsx(rowBase, "h-11 w-full cursor-pointer gap-3 px-3 text-left", idleRow)}
             >
               <BuildingIcon className="h-5 w-5 shrink-0 text-current" />
-              <span className="truncate">Filiallar</span>
+              <span className="truncate">{tr("Filiallar")}</span>
               <ChevronRightIcon
                 className={clsx(
                   "ml-auto h-4 w-4 shrink-0 transition-transform duration-200 motion-reduce:transition-none",
@@ -892,7 +895,7 @@ export function Sidebar({ slug }: { slug: string }) {
                   const selected = financeSelectedBranchId === b.id;
                   const last = index === branches.length - 1;
                   const subLinks = [
-                    { href: `/${slug}/${b.slug}/children`, label: "O'quvchilar", icon: ChildIcon },
+                    { href: `/${slug}/${b.slug}/children`, label: tr("O'quvchilar"), icon: ChildIcon },
                     { href: `/${slug}/${b.slug}/employees`, label: "Xodimlar", icon: TeacherIcon },
                     { href: `/${slug}/${b.slug}/reminders`, label: "Eslatmalar", icon: ClockIcon },
                   ];
@@ -922,7 +925,7 @@ export function Sidebar({ slug }: { slug: string }) {
                             selected ? activeRow : idleRow,
                           )}
                         >
-                          <span className="truncate">{b.name}</span>
+                          <span className="truncate">{tr(b.name)}</span>
                           <ChevronRightIcon
                             className={clsx(
                               "ml-auto h-3.5 w-3.5 shrink-0 transition-transform duration-200",
@@ -948,7 +951,7 @@ export function Sidebar({ slug }: { slug: string }) {
                                 className={clsx(rowBase, "mb-0.5 h-10 gap-2 pl-3 pr-3", active ? activeRow : idleRow)}
                               >
                                 <Icon className="h-4 w-4 shrink-0" />
-                                <span className="truncate">{item.label}</span>
+                                <span className="truncate">{tr(item.label)}</span>
                               </Link>
                             );
                           })}
@@ -980,7 +983,7 @@ export function Sidebar({ slug }: { slug: string }) {
                   isActive(settingsItem) ? (dark ? "text-[var(--accent-orb-ink)]" : "text-[var(--color-primary)]") : "text-current",
                 )}
               />
-              <span className="truncate">{settingsItem.label}</span>
+              <span className="truncate">{tr(settingsItem.label)}</span>
             </Link>
           </>
         )}
@@ -1068,23 +1071,23 @@ export function Sidebar({ slug }: { slug: string }) {
         <div className="absolute inset-0 bg-black/40" aria-hidden onClick={() => setDrawerOpen(false)} />
         <aside
           className="absolute inset-y-0 left-0 flex w-[82%] max-w-[320px] flex-col bg-[var(--color-surface)] shadow-[var(--shadow-modal)]"
-          aria-label="Asosiy menyu"
+          aria-label={tr("Asosiy menyu")}
         >
           <div className="flex h-[60px] shrink-0 items-center justify-between gap-2 border-b border-[var(--color-separator)] px-4">
             <div className="min-w-0">
-              <p className="truncate text-[15px] font-semibold text-[var(--color-text)]">{user?.fullName}</p>
-              <p className="truncate text-xs text-[var(--color-text-muted)]">{user ? ROLE_LABEL[user.role] : ""}</p>
+              <p className="truncate text-[15px] font-semibold text-[var(--color-text)]">{tr(user?.fullName)}</p>
+              <p className="truncate text-xs text-[var(--color-text-muted)]">{user ? tr(ROLE_LABEL[user.role]) : ""}</p>
             </div>
             <button
               type="button"
               onClick={() => setDrawerOpen(false)}
-              aria-label="Menyuni yopish"
+              aria-label={tr("Menyuni yopish")}
               className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--color-text-muted)] hover:bg-black/[0.05]"
             >
               <CloseIcon className="h-5 w-5" />
             </button>
           </div>
-          <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto p-3" aria-label="Menyu">
+          <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto p-3" aria-label={tr("Menyu")}>
             {[...entries, settingsItem].map((entry) => {
               const renderLink = (item: NavLeaf, nested: boolean) => {
                 const active = isActive(item);
@@ -1104,7 +1107,7 @@ export function Sidebar({ slug }: { slug: string }) {
                     )}
                   >
                     <Icon filled={active} className="h-5 w-5 shrink-0" />
-                    {item.label}
+                    {tr(item.label)}
                   </Link>
                 );
               };
@@ -1114,7 +1117,7 @@ export function Sidebar({ slug }: { slug: string }) {
                 <div key={entry.id} className="pt-2">
                   <p className="flex items-center gap-2 px-3.5 pb-1 text-[12px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
                     <SectionIcon className="h-4 w-4" />
-                    {entry.label}
+                    {tr(entry.label)}
                   </p>
                   {entry.items.map((item) => renderLink(item, true))}
                 </div>

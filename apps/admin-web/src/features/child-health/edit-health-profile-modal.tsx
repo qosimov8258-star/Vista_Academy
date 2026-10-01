@@ -10,6 +10,7 @@ import type { HealthProfile } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Select, Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useTr } from "@/i18n/tr";
 
 const schema = z.object({
   bloodType: z.enum([
@@ -54,6 +55,7 @@ export function EditHealthProfileModal({
   childId: string;
   existing: HealthProfile | null;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -84,36 +86,36 @@ export function EditHealthProfileModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
   return (
-    <Modal open={open} onClose={onClose} title="Sog'liq profili">
+    <Modal open={open} onClose={onClose} title={tr("Sog'liq profili")}>
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
-        <Select label="Qon guruhi" defaultValue="" {...register("bloodType")}>
-          <option value="">Kiritilmagan</option>
+        <Select label={tr("Qon guruhi")} defaultValue="" {...register("bloodType")}>
+          <option value="">{tr("Kiritilmagan")}</option>
           {Object.entries(BLOOD_TYPE_LABEL).map(([value, label]) => (
             <option key={value} value={value}>
-              {label}
+              {tr(label)}
             </option>
           ))}
         </Select>
-        <Textarea label="Allergiyalar (ixtiyoriy)" rows={2} {...register("allergies")} />
-        <Textarea label="Surunkali kasalliklar (ixtiyoriy)" rows={2} {...register("chronicConditions")} />
-        <Textarea label="Qo'shimcha izoh (ixtiyoriy)" rows={2} {...register("notes")} />
+        <Textarea label={tr("Allergiyalar (ixtiyoriy)")} rows={2} {...register("allergies")} />
+        <Textarea label={tr("Surunkali kasalliklar (ixtiyoriy)")} rows={2} {...register("chronicConditions")} />
+        <Textarea label={tr("Qo'shimcha izoh (ixtiyoriy)")} rows={2} {...register("notes")} />
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Bekor qilish
+            {tr("Bekor qilish")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Saqlash
+            {tr("Saqlash")}
           </Button>
         </div>
       </form>

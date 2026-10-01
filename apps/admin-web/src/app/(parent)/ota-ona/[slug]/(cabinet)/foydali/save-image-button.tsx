@@ -8,6 +8,7 @@ import { parentApi } from "@/lib/parent-api";
 import type { ParentAccount, ParentChild } from "@/lib/types";
 import styles from "../../parent.module.css";
 import { saveImages } from "./share-image";
+import { useTr } from "@/i18n/tr";
 
 /**
  * Bog'cha nomi — rasm pastiga yoziladi. Kabinet qobig'i bilan bir xil so'rov
@@ -54,6 +55,7 @@ export function SaveImageButton({
   shareTitle: string;
   shareText: string;
 }) {
+  const tr = useTr();
   const [building, setBuilding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previews, setPreviews] = useState<Preview[] | null>(null);
@@ -76,7 +78,7 @@ export function SaveImageButton({
       urls.current = next.map((preview) => preview.url);
       setPreviews(next);
     } catch {
-      setError("Rasmni tayyorlab bo'lmadi. Qayta urinib ko'ring.");
+      setError(tr("Rasmni tayyorlab bo'lmadi. Qayta urinib ko'ring."));
     } finally {
       setBuilding(false);
     }
@@ -102,7 +104,7 @@ export function SaveImageButton({
         )}
         {building ? "Rasm tayyorlanmoqda…" : label}
       </button>
-      {error && <p className="mt-2 text-center text-[13px] font-medium text-[var(--p-coral)]">{error}</p>}
+      {error && <p className="mt-2 text-center text-[13px] font-medium text-[var(--p-coral)]">{tr(error)}</p>}
       {previews && <ImageSheet previews={previews} onClose={close} shareTitle={shareTitle} shareText={shareText} />}
     </>
   );
@@ -119,6 +121,7 @@ function ImageSheet({
   shareTitle: string;
   shareText: string;
 }) {
+  const tr = useTr();
   const [status, setStatus] = useState<"idle" | "saving" | "downloaded">("idle");
   const saveRef = useRef<HTMLButtonElement>(null);
   const many = previews.length > 1;
@@ -150,16 +153,16 @@ function ImageSheet({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center" role="dialog" aria-modal="true" aria-label="Rasmni saqlash">
-      <button type="button" aria-label="Yopish" onClick={onClose} className={`${styles.fadeIn} absolute inset-0 cursor-default bg-black/45`} />
+    <div className="fixed inset-0 z-50 flex items-end justify-center" role="dialog" aria-modal="true" aria-label={tr("Rasmni saqlash")}>
+      <button type="button" aria-label={tr("Yopish")} onClick={onClose} className={`${styles.fadeIn} absolute inset-0 cursor-default bg-black/45`} />
       <div
         className={`${styles.sheetIn} relative max-h-[92dvh] w-full max-w-[520px] overflow-y-auto rounded-t-[30px] bg-[var(--p-card)] px-5 pt-3 shadow-[var(--p-shadow)]`}
         style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom))" }}
       >
         <span aria-hidden="true" className="mx-auto block h-1.5 w-10 rounded-full bg-[var(--p-muted)]/30" />
-        <p className={`${styles.roundedFont} mt-3 text-[20px] font-extrabold text-[var(--p-ink)]`}>Rasm tayyor</p>
+        <p className={`${styles.roundedFont} mt-3 text-[20px] font-extrabold text-[var(--p-ink)]`}>{tr("Rasm tayyor")}</p>
         <p className="mt-0.5 text-[13.5px] text-[var(--p-muted)]">
-          {many ? `${previews.length} ta sahifa — hammasi birga saqlanadi` : "Pastki chekkada bog'changiz nomi"}
+          {many ? tr("{0} ta sahifa — hammasi birga saqlanadi", previews.length) : tr("Pastki chekkada bog'changiz nomi")}
         </p>
 
         <div className={clsx("mt-4 flex gap-3", many && "snap-x snap-mandatory overflow-x-auto pb-2")}>
@@ -177,7 +180,7 @@ function ImageSheet({
           ))}
         </div>
         <p className="mt-2 text-center text-[12.5px] text-[var(--p-muted)]">
-          Rasmni bosib turib ham saqlashingiz mumkin
+          {tr("Rasmni bosib turib ham saqlashingiz mumkin")}
         </p>
 
         <button
@@ -195,7 +198,7 @@ function ImageSheet({
           onClick={onClose}
           className="mt-1.5 w-full cursor-pointer rounded-full py-3 text-[15px] font-bold text-[var(--p-muted)] transition-colors active:bg-[var(--p-sunken)]"
         >
-          Yopish
+          {tr("Yopish")}
         </button>
       </div>
     </div>
