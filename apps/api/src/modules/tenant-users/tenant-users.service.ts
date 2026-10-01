@@ -21,15 +21,16 @@ const SAFE_SELECT = {
 
 /**
  * Ish haqi (payroll) `Employee` kartochkasiga bog'langan — shu modul orqali
- * yaratilgan har bir login (NETWORK_ADMIN'dan boshqa hammasi) moliya panelida
- * "Xodimlar va maosh sxemasi" ro'yxatida chiqishi uchun shu lavozim nomi bilan
- * xodim kartochkasi ham olishi kerak. Nomlar `schema.prisma`dagi
+ * yaratilgan login moliya panelida "Xodimlar va maosh sxemasi" ro'yxatida
+ * chiqishi uchun shu lavozim nomi bilan xodim kartochkasi ham olishi kerak.
+ * NETWORK_ADMIN (Super Admin) va FINANCE (Moliyachi) bundan mustasno —
+ * ularning oyligi tizim orqali emas, Super Admin tomonidan alohida hal
+ * qilinadi, shuning uchun xodim kartochkasi olmaydi. Nomlar `schema.prisma`dagi
  * `TenantUserRole` izohlari va admin-web'dagi shu kontekstdagi UI yorlig'i
  * ("Call Operator") bilan bir xil.
  */
 const EMPLOYEE_POSITION_BY_ROLE: Partial<Record<TenantUserRole, string>> = {
   BRANCH_ADMIN: "Filial admini",
-  FINANCE: "Moliyachi",
   MANAGER: "Call Operator",
 };
 
@@ -74,12 +75,11 @@ export class TenantUsersService {
           },
           select: SAFE_SELECT,
         });
-        // NETWORK_ADMIN (Super Admin) oylik olmaydi — xodim kartochkasi
-        // faqat filialga biriktirilgan rollarga yaratiladi. `resolveTarget`
-        // bu metodda NETWORK_ADMIN hech qachon qaytarmaydi va `branchId`
-        // har doim to'ldirilgan bo'ladi, lekin kelajakda rollar ro'yxati
-        // kengaysa ham xato sababini aniq ko'rsatish uchun tekshirib o'tamiz.
-        if (targetRole !== "NETWORK_ADMIN") {
+        // NETWORK_ADMIN (Super Admin) va FINANCE (Moliyachi) oylik olmaydi —
+        // xodim kartochkasi faqat `EMPLOYEE_POSITION_BY_ROLE`da ro'yxatdagi
+        // rollarga yaratiladi.
+        const employeePosition = EMPLOYEE_POSITION_BY_ROLE[targetRole];
+        if (employeePosition) {
           if (!branchId) {
             throw new BadRequestException(
               "Filialsiz hisobga xodim kartochkasi yaratib bo'lmaydi",
@@ -93,7 +93,7 @@ export class TenantUsersService {
               firstName,
               lastName,
               fullName: tenantUser.fullName,
-              position: EMPLOYEE_POSITION_BY_ROLE[targetRole] ?? targetRole,
+              position: employeePosition,
               isActive: tenantUser.isActive,
               tenantUserId: tenantUser.id,
             },

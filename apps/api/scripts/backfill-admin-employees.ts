@@ -1,11 +1,13 @@
 /**
  * Bir martalik backfill: `tenant-users` moduli orqali yaratilgan hisoblar
- * (BRANCH_ADMIN, FINANCE, MANAGER va kelajakda shu modulga qo'shiladigan
- * boshqa NETWORK_ADMIN'dan farqli rollar) ilgari to'g'ridan-to'g'ri
- * `TenantUser` yozuvi sifatida yaratilgan va hech qachon bog'langan
- * `Employee` kartochkasi olmagan edi. Shu sababli ular moliya panelidagi
- * "Xodimlar va maosh sxemasi" ro'yxatida ko'rinmaydi va oylik sxemasi/ish
- * haqi hisoblanmaydi.
+ * (BRANCH_ADMIN, MANAGER va kelajakda shu modulga qo'shiladigan boshqa
+ * oylik oladigan rollar) ilgari to'g'ridan-to'g'ri `TenantUser` yozuvi
+ * sifatida yaratilgan va hech qachon bog'langan `Employee` kartochkasi
+ * olmagan edi. Shu sababli ular moliya panelidagi "Xodimlar va maosh
+ * sxemasi" ro'yxatida ko'rinmaydi va oylik sxemasi/ish haqi hisoblanmaydi.
+ * NETWORK_ADMIN (Super Admin) va FINANCE (Moliyachi) bundan mustasno —
+ * ularning oyligi tizim orqali emas, Super Admin tomonidan alohida hal
+ * qilinadi.
  *
  * Bu skript shunday TenantUser'larni topib, har biriga mos `Employee`
  * yozuvini yaratadi (`tenant-users.service.ts`dagi `create()` bilan bir xil
@@ -23,7 +25,6 @@ const prisma = new PrismaClient();
 /** `tenant-users.service.ts`dagi EMPLOYEE_POSITION_BY_ROLE bilan bir xil. */
 const EMPLOYEE_POSITION_BY_ROLE: Partial<Record<TenantUserRole, string>> = {
   BRANCH_ADMIN: "Filial admini",
-  FINANCE: "Moliyachi",
   MANAGER: "Call Operator",
 };
 
@@ -38,7 +39,7 @@ function splitFullName(fullName: string): { firstName: string; lastName: string 
 
 async function main() {
   const candidates = await prisma.tenantUser.findMany({
-    where: { role: { not: "NETWORK_ADMIN" } },
+    where: { role: { notIn: ["NETWORK_ADMIN", "FINANCE"] } },
     select: {
       id: true,
       organizationId: true,
@@ -54,7 +55,7 @@ async function main() {
   const missing = candidates.filter((user) => !user.employee);
 
   console.log(
-    `Jami ${candidates.length} ta NETWORK_ADMIN bo'lmagan login topildi, ${missing.length} tasida xodim kartochkasi yo'q.`,
+    `Jami ${candidates.length} ta oylikka loyiq login topildi, ${missing.length} tasida xodim kartochkasi yo'q.`,
   );
 
   const createdCounts = new Map<string, number>();
