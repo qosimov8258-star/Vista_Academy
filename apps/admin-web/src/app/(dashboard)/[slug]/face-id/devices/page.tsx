@@ -19,6 +19,7 @@ import { FaceIdTabs } from "@/features/face-id/face-id-tabs";
 import { DeviceFormModal } from "@/features/face-id/device-form-modal";
 import { AgentTokenModal } from "@/features/face-id/agent-token-modal";
 import { DeviceCommandsModal } from "@/features/face-id/device-commands-modal";
+import { AgentPairingCard } from "@/features/face-id/agent-pairing-card";
 import { formatDateTime } from "@/lib/format";
 
 const STATUS_TONE: Record<FaceIdDevice["status"], { label: string; tone: "success" | "neutral" | "warning" }> = {
@@ -127,6 +128,8 @@ export default function FaceIdDevicesPage({ params }: { params: Promise<{ slug: 
           </button>
         </div>
       )}
+
+      <AgentPairingCard branchId={forcedBranchId ?? null} canWrite={canWrite} />
 
       {devicesQuery.isLoading ? (
         <LoadingState />
