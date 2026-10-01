@@ -1859,14 +1859,35 @@ model Guardian {
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
 
-  organization    Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  children        ChildGuardian[]
-  refreshTokens   GuardianRefreshToken[]
-  paymentReceipts PaymentReceipt[]
+  organization      Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  children          ChildGuardian[]
+  refreshTokens     GuardianRefreshToken[]
+  paymentReceipts   PaymentReceipt[]
+  pushSubscriptions GuardianPushSubscription[]
 
   @@unique([organizationId, phone])
   @@index([organizationId])
   @@map("guardians")
+}
+
+/**
+ * Ota-ona kabineti brauzer push obunasi. Bitta ota-ona bir nechta qurilmadan
+ * (telefon + kompyuter) obuna bo'lishi mumkin — shuning uchun guardianId
+ * emas, `endpoint` unikal: har bir qurilma/brauzer alohida obuna yaratadi.
+ */
+model GuardianPushSubscription {
+  id         String   @id @default(uuid())
+  guardianId String   @map("guardian_id")
+  endpoint   String   @unique
+  p256dh     String
+  auth       String
+  userAgent  String?  @map("user_agent")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  guardian Guardian @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+
+  @@index([guardianId])
+  @@map("guardian_push_subscriptions")
 }
 
 /**

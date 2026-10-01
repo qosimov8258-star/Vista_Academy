@@ -1,4 +1,4 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma, TenantUserRole } from "@prisma/client";
 import * as argon2 from "argon2";
 import { PrismaService } from "../../database/prisma.service";
@@ -19,6 +19,37 @@ const SAFE_SELECT = {
   branch: { select: { id: true, name: true, slug: true } },
 } satisfies Prisma.TenantUserSelect;
 
+/**
+ * Ish haqi (payroll) `Employee` kartochkasiga bog'langan — shu modul orqali
+ * yaratilgan login moliya panelida "Xodimlar va maosh sxemasi" ro'yxatida
+ * chiqishi uchun shu lavozim nomi bilan xodim kartochkasi ham olishi kerak.
+ * NETWORK_ADMIN (Super Admin) va FINANCE (Moliyachi) bundan mustasno —
+ * ularning oyligi tizim orqali emas, Super Admin tomonidan alohida hal
+ * qilinadi, shuning uchun xodim kartochkasi olmaydi. Nomlar `schema.prisma`dagi
+ * `TenantUserRole` izohlari va admin-web'dagi shu kontekstdagi UI yorlig'i
+ * ("Call Operator") bilan bir xil.
+ */
+const EMPLOYEE_POSITION_BY_ROLE: Partial<Record<TenantUserRole, string>> = {
+  BRANCH_ADMIN: "Filial admini",
+  MANAGER: "Call Operator",
+};
+
+/**
+ * Bitta `fullName` maydonini xodim kartochkasi talab qiladigan
+ * `firstName`/`lastName`ga ajratadi. Bu modulda ikkalasi alohida
+ * kiritilmaydi (faqat to'liq ism bor), shuning uchun birinchi so'z ism,
+ * qolgani familiya deb olinadi — ko'rinadigan `fullName` esa asl shaklida
+ * (kiritilgan tartibda) saqlanadi, familiya-ism tartibiga qayta terilmaydi.
+ */
+function splitFullName(fullName: string): { firstName: string; lastName: string } {
+  const trimmed = fullName.trim().replace(/\s+/g, " ");
+  const spaceIndex = trimmed.indexOf(" ");
+  if (spaceIndex === -1) {
+    return { firstName: trimmed, lastName: "" };
+  }
+  return { firstName: trimmed.slice(0, spaceIndex), lastName: trimmed.slice(spaceIndex + 1) };
+}
+
 @Injectable()
 export class TenantUsersService {
   constructor(
@@ -32,16 +63,43 @@ export class TenantUsersService {
     const passwordHash = await argon2.hash(dto.password);
     let created;
     try {
-      created = await this.prisma.tenantUser.create({
-        data: {
-          organizationId: caller.organizationId,
-          branchId,
-          login: dto.login.toLowerCase(),
-          passwordHash,
-          fullName: dto.fullName,
-          role: targetRole,
-        },
-        select: SAFE_SELECT,
+      created = await this.prisma.$transaction(async (tx) => {
+        const tenantUser = await tx.tenantUser.create({
+          data: {
+            organizationId: caller.organizationId,
+            branchId,
+            login: dto.login.toLowerCase(),
+            passwordHash,
+            fullName: dto.fullName,
+            role: targetRole,
+          },
+          select: SAFE_SELECT,
+        });
+        // NETWORK_ADMIN (Super Admin) va FINANCE (Moliyachi) oylik olmaydi —
+        // xodim kartochkasi faqat `EMPLOYEE_POSITION_BY_ROLE`da ro'yxatdagi
+        // rollarga yaratiladi.
+        const employeePosition = EMPLOYEE_POSITION_BY_ROLE[targetRole];
+        if (employeePosition) {
+          if (!branchId) {
+            throw new BadRequestException(
+              "Filialsiz hisobga xodim kartochkasi yaratib bo'lmaydi",
+            );
+          }
+          const { firstName, lastName } = splitFullName(tenantUser.fullName);
+          await tx.employee.create({
+            data: {
+              organizationId: caller.organizationId,
+              branchId,
+              firstName,
+              lastName,
+              fullName: tenantUser.fullName,
+              position: employeePosition,
+              isActive: tenantUser.isActive,
+              tenantUserId: tenantUser.id,
+            },
+          });
+        }
+        return tenantUser;
       });
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {

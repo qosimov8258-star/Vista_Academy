@@ -1,11 +1,12 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { parentApi } from "@/lib/parent-api";
+import { getPushStatus, subscribeToPush, unsubscribeFromPush, type PushStatus } from "@/lib/push";
 import type { ParentAccount, ParentChild } from "@/lib/types";
-import { KeyIcon, LogoutIcon } from "@/components/ui/icons";
+import { BellIcon, KeyIcon, LogoutIcon } from "@/components/ui/icons";
 import styles from "../../parent.module.css";
 import clsx from "clsx";
 import { CardFx } from "../card-fx";
@@ -65,6 +66,31 @@ export default function ParentSettingsPage({ params }: { params: Promise<{ slug:
   const [leaving, setLeaving] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
+  const [pushStatus, setPushStatus] = useState<PushStatus>("unsubscribed");
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushError, setPushError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getPushStatus().then(setPushStatus);
+  }, []);
+
+  const togglePush = async () => {
+    setPushBusy(true);
+    setPushError(null);
+    try {
+      if (pushStatus === "subscribed") {
+        await unsubscribeFromPush();
+        setPushStatus("unsubscribed");
+      } else {
+        await subscribeToPush();
+        setPushStatus("subscribed");
+      }
+    } catch (error) {
+      setPushError(error instanceof Error ? error.message : "Xatolik yuz berdi");
+    } finally {
+      setPushBusy(false);
+    }
+  };
 
   const meQuery = useQuery({
     queryKey: ["parent-me", slug],
@@ -77,6 +103,7 @@ export default function ParentSettingsPage({ params }: { params: Promise<{ slug:
 
   const logout = async () => {
     setLeaving(true);
+    // Ota-ona seansi cookie'da — logout uni server tomonda bekor qiladi
     await parentApi.post("/app/parent/logout").catch(() => undefined);
     // Keyingi kiruvchi (umumiy qurilmada boshqa ota-ona) avvalgi bolalar
     // ma'lumotini keshdan ko'rmasin
@@ -207,13 +234,47 @@ export default function ParentSettingsPage({ params }: { params: Promise<{ slug:
         )}
       </section>
 
-      {/* Hali tayyor bo'lmagan qismlar — bo'sh sahifa qoldirmaymiz */}
+      {/* To'lov eslatmasi kabi voqealar endi panel yopiq bo'lsa ham brauzer orqali kelishi mumkin */}
+      {pushStatus !== "unsupported" && (
+        <section className="mt-3 rounded-[var(--p-radius)] bg-[var(--p-card)] p-5 shadow-[var(--p-shadow)]">
+          <div className="flex items-center gap-3.5">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--p-sun)]/14 text-[var(--p-sun-ink)]">
+              <BellIcon filled={pushStatus === "subscribed"} className="h-[18px] w-[18px]" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[15.5px] font-bold text-[var(--p-ink)]">{tr("Bildirishnomalar")}</span>
+              <span className="block text-[13px] text-[var(--p-muted)]">
+                {tr("To'lov eslatmasi kabi xabarlarni brauzer orqali, kabinetni ochmasdan ham oling")}
+              </span>
+            </span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={pushStatus === "subscribed"}
+              onClick={togglePush}
+              disabled={pushBusy}
+              className={`relative h-7 w-12 shrink-0 cursor-pointer rounded-full transition-colors disabled:opacity-60 ${
+                pushStatus === "subscribed" ? "bg-[var(--p-sun)]" : "bg-[var(--p-sunken)]"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${
+                  pushStatus === "subscribed" ? "translate-x-[22px]" : "translate-x-0.5"
+                }`}
+              />
+            </button>
+          </div>
+          {pushError && <p className="mt-3 text-[13px] text-[var(--p-coral)]">{pushError}</p>}
+        </section>
+      )}
+
+      {/* Hali tayyor bo'lmagan qism — bo'sh sahifa qoldirmaymiz (bildirishnomalar yuqorida) */}
       <section className="mt-3 rounded-[var(--p-radius)] bg-[var(--p-card)]/60 px-5 py-4">
         <span className="inline-flex items-center rounded-full bg-[var(--p-sun)]/18 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--p-sun-ink)]">
           {tr("Tez orada")}
         </span>
         <p className="mt-2.5 text-[14px] leading-relaxed text-[var(--p-muted)]">
-          {tr("Bildirishnomalar va aloqa ma'lumotlari shu yerda bo'ladi.")}
+          {tr("Aloqa ma'lumotlari shu yerda bo'ladi.")}
         </p>
       </section>
 

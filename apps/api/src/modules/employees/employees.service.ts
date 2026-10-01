@@ -45,16 +45,14 @@ const SUBJECT_TEACHER_POSITION = normalizePosition(DEFAULT_POSITIONS[0]);
 
 // Tizimga kirmaydigan lavozimlar: ro'yxatda turadi, lekin login/parol berilmaydi.
 const CABINETLESS_POSITIONS = new Set(["oshpaz yordamchisi", "idish yuvuchi", "idish yuvuvchi"]);
-// Kabineti bor, lekin guruhi yo'q lavozimlar; kassir esa TEACHER emas, Moliyachi (FINANCE) roli bilan kiradi.
-const GROUPLESS_POSITIONS = new Set(["kassir", "bosh oshpaz", "call operator"]);
-const CASHIER_POSITION = "kassir";
+// Kabineti bor, lekin guruhi yo'q lavozimlar.
+const GROUPLESS_POSITIONS = new Set(["bosh oshpaz", "call operator"]);
 const GROUP_REQUIRED_MESSAGE = "Kamida bitta guruh tanlang";
 
 // Call Operator MANAGER roli bilan kiradi: qarzdorlarga eslatma va filial ishlarini yuritadi.
 // Bosh oshpaz CHEF roli bilan kiradi: faqat oshxona (menyu, porsiyalar, taom suratlari).
-function roleForPosition(position: string): "FINANCE" | "MANAGER" | "TEACHER" | "CHEF" {
+function roleForPosition(position: string): "MANAGER" | "TEACHER" | "CHEF" {
   const normalized = normalizePosition(position);
-  if (normalized === CASHIER_POSITION) return "FINANCE";
   if (normalized === "call operator") return "MANAGER";
   if (normalized === "bosh oshpaz") return "CHEF";
   return "TEACHER";

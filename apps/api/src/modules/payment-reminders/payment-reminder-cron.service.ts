@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 import { PrismaService } from "../../database/prisma.service";
+import { PushService } from "../push/push.service";
 import { PaymentRemindersService, daysBetween, tashkentCurrentTime, tashkentTodayUtcMidnight } from "./payment-reminders.service";
 
 const CHECK_INTERVAL_MS = 5 * 60 * 1000;
@@ -11,9 +12,11 @@ const MINUTES_PER_DAY = 24 * 60;
  * Har 5 daqiqada barcha yoqilgan filial sozlamalarini tekshiradi: joriy
  * Toshkent vaqti `sendTimes`dagi biror qiymatga to'g'ri kelsa, o'sha
  * filialning eslatma oynasidagi to'lanmagan hisob-fakturalari uchun
- * `PaymentReminderDispatch` yozuvini yaratadi (faqat tarix/hisobot uchun —
- * tashqi xabar yuborilmaydi, ota-ona kabineti kartasi buni kutib turmaydi,
- * u har safar jonli hisoblanadi — `ParentService`ga qarang).
+ * `PaymentReminderDispatch` yozuvini yaratadi (tarix/hisobot uchun — ota-ona
+ * kabineti kartasi buni kutib turmaydi, u har safar jonli hisoblanadi,
+ * `ParentService`ga qarang) va obuna bo'lgan ota-onaga brauzer push
+ * bildirishnoma yuboradi (`PushService`) — shu orqali eslatma panel
+ * yopiq bo'lsa ham yetib boradi.
  */
 @Injectable()
 export class PaymentReminderCronService implements OnModuleInit, OnModuleDestroy {
@@ -23,6 +26,7 @@ export class PaymentReminderCronService implements OnModuleInit, OnModuleDestroy
   constructor(
     private readonly prisma: PrismaService,
     private readonly paymentRemindersService: PaymentRemindersService,
+    private readonly pushService: PushService,
   ) {}
 
   onModuleInit() {
@@ -79,8 +83,15 @@ export class PaymentReminderCronService implements OnModuleInit, OnModuleDestroy
           });
         } catch {
           // `@@unique([invoiceId, sendTime, dispatchDate])` — bugun shu slot uchun
-          // allaqachon yaratilgan, e'tiborsiz qoldiramiz.
+          // allaqachon yaratilgan, e'tiborsiz qoldiramiz (push ham qayta yuborilmaydi).
+          continue;
         }
+
+        const guardianIds = invoice.child.guardians.map((g) => g.guardianId);
+        await this.pushService.sendToGuardians(guardianIds, {
+          title: "To'lov eslatmasi",
+          body: message,
+        });
       }
     }
   }
