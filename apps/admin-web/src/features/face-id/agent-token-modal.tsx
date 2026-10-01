@@ -5,6 +5,42 @@ import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { CopyIcon } from "@/components/ui/icons";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
+
+/**
+ * Obyektdagi hik-agent uchun tayyor sozlama fayli: ERP manzili (shu sayt) va token
+ * ichida — o'rnatuvchi uni agent papkasiga tashlaydi, hech narsa qo'lda yozilmaydi.
+ * Agent `.env` bilan birga `hik-agent*.env` fayllarni ham o'qiydi (bir nechta
+ * terminal bo'lsa tokenlar birlashadi). Qolganlari — hik-agent/.env.example sukutlari.
+ */
+function agentEnvFile(token: string, deviceName: string): string {
+  const erpUrl = new URL(API_URL, window.location.origin).href.replace(/\/+$/, "");
+  return [
+    `# hik-agent sozlamasi — "${deviceName}" qurilmasi (${new Date().toLocaleString("uz-UZ")})`,
+    "# Faylni hik-agent papkasiga qo'ying (nomini o'zgartirish shart emas) va agentni qayta ishga tushiring.",
+    "# Token maxfiy: faylni boshqalarga yubormang.",
+    `ERP_URL=${erpUrl}`,
+    `AGENT_TOKENS=${token}`,
+    "POLL_INTERVAL_SEC=5",
+    "DATA_DIR=./data",
+    "INITIAL_LOOKBACK_HOURS=24",
+    "LOG_LEVEL=info",
+    "",
+  ].join("\n");
+}
+
+function downloadAgentEnv(token: string, deviceName: string) {
+  const blob = new Blob([agentEnvFile(token, deviceName)], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "hik-agent.env";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 /**
  * Agent tokeni faqat bir marta — yaratilganda yoki yangilanganda —
  * ko'rsatiladi. Bazada faqat hash'i saqlanadi, shuning uchun oyna yopilgach
@@ -28,9 +64,12 @@ export function AgentTokenModal({ token, deviceName, onClose }: { token: string 
     <Modal open={!!token} onClose={onClose} title="Agent tokeni">
       <div className="space-y-4">
         <p className="text-[14px] leading-relaxed text-[var(--color-text-muted)]">
-          <b className="text-[var(--color-text)]">{deviceName}</b> uchun obyektdagi <code>hik-agent</code> shu token bilan ulanadi. Uni
-          agentning <code>.env</code> faylidagi <code>AGENT_TOKENS</code> ga qo&apos;ying.
+          <b className="text-[var(--color-text)]">{deviceName}</b> uchun obyektdagi <code>hik-agent</code> shu token bilan ulanadi.
+          Sozlama faylini yuklab oling va agent papkasiga qo&apos;ying — token va ERP manzili ichida tayyor.
         </p>
+        <Button onClick={() => token && downloadAgentEnv(token, deviceName)} className="w-full">
+          Agent sozlamasini yuklab olish (hik-agent.env)
+        </Button>
         <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface-sunken)] p-3">
           <code className="min-w-0 flex-1 select-all break-all font-mono text-[13px] text-[var(--color-text)]">{token}</code>
           <button

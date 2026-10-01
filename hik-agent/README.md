@@ -38,15 +38,21 @@ Saqlagach **agent tokeni** bir marta ko'rsatiladi — nusxalab oling (yo'qolsa: 
 git clone <repo> && cd <repo>/hik-agent   # yoki faqat hik-agent papkasini ko'chiring
 npm ci
 npm run build
-cp .env.example .env                       # Windows: copy .env.example .env
 ```
 
-`.env` da kamida:
+**Sozlama (eng oson yo'l):** ERP → Face ID → Qurilmalar → qurilma qo'shilganda (yoki "Yangi token") chiqadigan oynada
+**"Agent sozlamasini yuklab olish"** ni bosing va `hik-agent.env` faylini shu papkaga qo'ying — ERP manzili va token
+ichida tayyor, nomini o'zgartirish shart emas. Bir obyektda bir nechta terminal bo'lsa, har birining faylini tashlang
+(`hik-agent (1).env` va h.k.) — agent tokenlarni birlashtiradi.
+
+**Qo'lda (ixtiyoriy):** `cp .env.example .env` (Windows: `copy .env.example .env`) va kamida:
 
 ```ini
-ERP_URL=https://vista-academy.uz/api/v1
+ERP_URL=https://<bog'cha>.zeeron.uz/api/v1
 AGENT_TOKENS=hik_...        # bir nechta terminal bo'lsa: hik_aaa,hik_bbb
 ```
+
+`.env` dagi qiymatlar `hik-agent*.env` dagilardan ustun.
 
 Tekshirish (terminal nimani qo'llashini ko'rsatadi, hech narsani o'zgartirmaydi):
 
@@ -120,8 +126,8 @@ npm test     # mock ISAPI server (haqiqiy Digest auth) + mock ERP bilan
 ## Qo'lda sinov checklisti (haqiqiy terminal bilan)
 
 1. [ ] Terminalda ISAPI yoqilgan, IP statik, agent kompyuteridan `http://<IP>` brauzerda ochiladi.
-2. [ ] ERP → Face ID → Qurilmalar → yangi qurilma (IP, port, login, parol). Tokenni nusxalang.
-3. [ ] `.env` ga `ERP_URL` va `AGENT_TOKENS` ni yozing, `npm run build && npm run probe` — model, capabilities chiqadi,
+2. [ ] ERP → Face ID → Qurilmalar → yangi qurilma (IP, port, login, parol). "Agent sozlamasini yuklab olish".
+3. [ ] `hik-agent.env` ni agent papkasiga qo'ying, `npm run build && npm run probe` — model, capabilities chiqadi,
        401 yo'q. Yuqoridagi "tasdiqlanishi kerak" bandlarini solishtiring.
 4. [ ] `npm start` (yoki pm2). Logda "Sozlamalar olindi" chiqadi; ERP'da qurilma qatorida **Onlayn**.
 5. [ ] ERP → Xodimlar → yangi xodim qo'shing. Qurilmalar sahifasida "Navbatda" 1 bo'ladi, bir necha soniyada 0 ga tushadi;

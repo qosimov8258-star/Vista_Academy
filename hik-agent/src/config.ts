@@ -1,6 +1,47 @@
 import "dotenv/config";
+import { readdirSync, readFileSync } from "fs";
+import { join } from "path";
+import { parse as parseEnv } from "dotenv";
 
-/** Agent sozlamalari — .env'dan. Tokenlar hech qachon logga chiqmaydi. */
+/** ERP'dagi "Agent sozlamasini yuklab olish" beradigan fayl(lar): hik-agent.env, "hik-agent (1).env" ... */
+const DOWNLOADED_ENV_FILE = /^hik-agent.*\.env$/i;
+
+/**
+ * Agent papkasidagi ERP'dan yuklab olingan sozlama fayllarini qo'shadi — qayta
+ * nomlash yoki tokenni qo'lda nusxalash shart emas. `.env` dagi qiymatlar ustun;
+ * AGENT_TOKENS esa birlashtiriladi (bir obyektda bir nechta terminal bo'lsa
+ * har birining fayli shu papkaga tashlanadi).
+ */
+export function applyDownloadedEnvFiles(dir: string, env: NodeJS.ProcessEnv = process.env): string[] {
+  let files: string[];
+  try {
+    files = readdirSync(dir).filter((f) => DOWNLOADED_ENV_FILE.test(f)).sort();
+  } catch {
+    return [];
+  }
+  const tokens = new Set(
+    (env.AGENT_TOKENS ?? env.AGENT_TOKEN ?? "")
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean),
+  );
+  for (const file of files) {
+    const parsed = parseEnv(readFileSync(join(dir, file)));
+    for (const [key, value] of Object.entries(parsed)) {
+      if (key === "AGENT_TOKENS" || key === "AGENT_TOKEN") {
+        value.split(",").map((t) => t.trim()).filter(Boolean).forEach((t) => tokens.add(t));
+      } else if (env[key] === undefined || env[key] === "") {
+        env[key] = value;
+      }
+    }
+  }
+  if (tokens.size > 0) env.AGENT_TOKENS = [...tokens].join(",");
+  return files;
+}
+
+applyDownloadedEnvFiles(process.cwd());
+
+/** Agent sozlamalari — .env va hik-agent*.env dan. Tokenlar hech qachon logga chiqmaydi. */
 export interface AgentConfig {
   erpUrl: string;
   tokens: string[];
