@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from "@nes
 import { unlink } from "fs/promises";
 import { basename, join } from "path";
 import { PrismaService } from "../../database/prisma.service";
+import { landingOwnerSlug } from "./landing-owner.guard";
 import { LANDING_UPLOAD_DIR } from "../../common/constants/uploads";
 import { normalizeWebsiteHost } from "../../common/website-host";
 import { CreateScheduleItemDto } from "./dto/create-schedule-item.dto";
@@ -111,8 +112,9 @@ export class LandingService {
   }
 
   async deleteMeal(id: string) {
-    await this.findMeal(id);
+    const meal = await this.findMeal(id);
     await this.prisma.landingMeal.delete({ where: { id } });
+    await this.deleteUploadedPhoto(meal.photoPath);
   }
 
   async setMealPhoto(id: string, photoPath: string) {
@@ -193,8 +195,9 @@ export class LandingService {
   }
 
   async deleteTeacher(id: string) {
-    await this.findTeacher(id);
+    const teacher = await this.findTeacher(id);
     await this.prisma.landingTeacher.delete({ where: { id } });
+    await this.deleteUploadedPhoto(teacher.photoPath);
   }
 
   async setTeacherPhoto(id: string, photoPath: string) {
@@ -238,8 +241,16 @@ export class LandingService {
   }
 
   async deleteGroup(id: string) {
-    await this.findGroup(id);
+    const group = await this.findGroup(id);
+    // Galereya va o'quvchilar kaskad bilan o'chadi — ularning fayllarini oldindan yig'amiz
+    const [photos, students] = await Promise.all([
+      this.prisma.landingGroupPhoto.findMany({ where: { groupId: id }, select: { path: true } }),
+      this.prisma.landingGroupStudent.findMany({ where: { groupId: id }, select: { photoPath: true } }),
+    ]);
     await this.prisma.landingGroup.delete({ where: { id } });
+    for (const path of [group.photoPath, ...photos.map((p) => p.path), ...students.map((s) => s.photoPath)]) {
+      await this.deleteUploadedPhoto(path);
+    }
   }
 
   async setGroupPhoto(id: string, photoPath: string) {
@@ -279,8 +290,9 @@ export class LandingService {
   }
 
   async deleteGroupStudent(groupId: string, studentId: string) {
-    await this.findGroupStudent(groupId, studentId);
+    const student = await this.findGroupStudent(groupId, studentId);
     await this.prisma.landingGroupStudent.delete({ where: { id: studentId } });
+    await this.deleteUploadedPhoto(student.photoPath);
   }
 
   async setGroupStudentPhoto(groupId: string, studentId: string, photoPath: string) {
@@ -409,7 +421,8 @@ export class LandingService {
       if (org) return org.id;
     }
 
-    const fallbackSlug = (process.env.LANDING_ORGANIZATION_SLUG ?? "").trim();
+    // LandingOwnerGuard bilan bir xil sukut — server sozlamasi unutilsa ham ariza yo'qolmasin
+    const fallbackSlug = landingOwnerSlug();
     if (fallbackSlug) {
       const org = await this.prisma.organization.findUnique({ where: { slug: fallbackSlug }, select: { id: true } });
       if (org) return org.id;

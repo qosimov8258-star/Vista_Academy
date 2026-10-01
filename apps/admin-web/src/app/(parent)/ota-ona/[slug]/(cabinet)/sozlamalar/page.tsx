@@ -2,7 +2,7 @@
 
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { parentApi } from "@/lib/parent-api";
 import type { ParentAccount, ParentChild } from "@/lib/types";
 import { KeyIcon, LogoutIcon } from "@/components/ui/icons";
@@ -71,10 +71,14 @@ export default function ParentSettingsPage({ params }: { params: Promise<{ slug:
   });
   const parent = meQuery.data?.parent;
   const { mode, setMode, dark, sky } = useCabinetTheme();
+  const queryClient = useQueryClient();
 
   const logout = async () => {
     setLeaving(true);
     await parentApi.post("/app/parent/logout").catch(() => undefined);
+    // Keyingi kiruvchi (umumiy qurilmada boshqa ota-ona) avvalgi bolalar
+    // ma'lumotini keshdan ko'rmasin
+    queryClient.clear();
     router.replace(`/ota-ona/${slug}/kirish`);
   };
 

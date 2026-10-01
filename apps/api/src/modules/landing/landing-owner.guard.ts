@@ -1,5 +1,5 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from "@nestjs/common";
-import type { TenantAuthenticatedUser } from "../iam/tenant-auth.types";
+import { requireOperationalScope, toTenantScope, type TenantAuthenticatedUser } from "../iam/tenant-auth.types";
 
 /**
  * Lending sayt (vista-academy.uz) bitta tashkilotniki: `Landing*` jadvallarida
@@ -22,6 +22,9 @@ export class LandingOwnerGuard implements CanActivate {
     if (!user || user.organizationSlug.toLowerCase() !== landingOwnerSlug()) {
       throw new ForbiddenException("Lending sahifani faqat uning egasi bo'lgan tashkilot tahrirlaydi");
     }
+    // Rol ham shu yerda (interceptor'dan oldin) tekshiriladi: aks holda o'qituvchi
+    // yuborgan 5 MB fayl rad etilishidan oldin diskka yozilib, qolib ketardi.
+    requireOperationalScope(toTenantScope(user));
     return true;
   }
 }
