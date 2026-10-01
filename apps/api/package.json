@@ -40,7 +40,8 @@
     "prisma": "^6.19.3",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
-    "uuid": "^14.0.2"
+    "uuid": "^14.0.2",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@nestjs/cli": "^12.0.0",
@@ -53,6 +54,7 @@
     "@types/passport-jwt": "^4.0.1",
     "@types/pdfkit": "^0.17.6",
     "@types/uuid": "^10.0.0",
+    "@types/web-push": "^3.6.4",
     "dotenv": "^17.4.2",
     "source-map-support": "^0.5.21",
     "ts-loader": "^9.6.2",

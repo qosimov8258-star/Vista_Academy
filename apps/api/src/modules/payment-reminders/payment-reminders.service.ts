@@ -49,7 +49,14 @@ export class PaymentRemindersService {
         dueDate: { gte: lowerBound, lte: upperBound },
       },
       include: {
-        child: { select: { id: true, fullName: true, group: { select: { name: true } } } },
+        child: {
+          select: {
+            id: true,
+            fullName: true,
+            group: { select: { name: true } },
+            guardians: { where: { canReceiveNotifications: true }, select: { guardianId: true } },
+          },
+        },
       },
       orderBy: { dueDate: "asc" },
     });

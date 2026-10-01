@@ -1,6 +1,8 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../database/prisma.service";
-import { TenantScope, requireMoneyScope } from "../iam/tenant-auth.types";
+import { TenantAuthenticatedUser, TenantScope, requireMoneyScope, toTenantScope } from "../iam/tenant-auth.types";
+import { AuditLogService } from "../audit-log/audit-log.service";
+import { PushService } from "../push/push.service";
 import { CloseCashDto, CreateExpenseDto } from "./dto/cash-desk.dto";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -37,7 +39,11 @@ function emptyByMethod() {
 
 @Injectable()
 export class CashDeskService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditLog: AuditLogService,
+    private readonly pushService: PushService,
+  ) {}
 
   /** Kunlik kassa: kirim usullar bo'yicha, qaytarishlar, xarajatlar va kassada bo'lishi kerak naqd. */
   async day(scope: TenantScope, date: string) {
@@ -111,17 +117,27 @@ export class CashDeskService {
     };
   }
 
-  async addExpense(scope: TenantScope, actorName: string, dto: CreateExpenseDto) {
+  async addExpense(caller: TenantAuthenticatedUser, dto: CreateExpenseDto) {
+    const scope = toTenantScope(caller);
     const branchId = requireMoneyScope(scope);
     const date = assertDate(dto.date.slice(0, 10));
     await this.assertNotClosed(branchId, date);
+    const category = dto.category.trim();
     const row = await this.prisma.expense.create({
-      data: { branchId, date: toDateOnly(date), amount: dto.amount, category: dto.category.trim(), note: dto.note?.trim() || null, createdByName: actorName },
+      data: { branchId, date: toDateOnly(date), amount: dto.amount, category, note: dto.note?.trim() || null, createdByName: caller.fullName },
+    });
+    await this.auditLog.logFromUser(caller, {
+      action: "expense.create",
+      entityType: "Expense",
+      entityId: row.id,
+      branchId,
+      summary: `"${category}" uchun ${dto.amount} xarajat yozildi`,
     });
     return { id: row.id };
   }
 
-  async removeExpense(scope: TenantScope, id: string) {
+  async removeExpense(caller: TenantAuthenticatedUser, id: string) {
+    const scope = toTenantScope(caller);
     const branchId = requireMoneyScope(scope);
     const row = await this.prisma.expense.findFirst({ where: { id, branchId } });
     if (!row) {
@@ -129,11 +145,19 @@ export class CashDeskService {
     }
     await this.assertNotClosed(branchId, row.date.toISOString().slice(0, 10));
     await this.prisma.expense.delete({ where: { id } });
+    await this.auditLog.logFromUser(caller, {
+      action: "expense.delete",
+      entityType: "Expense",
+      entityId: id,
+      branchId,
+      summary: `"${row.category}" uchun ${Number(row.amount)} xarajat o'chirildi`,
+    });
     return { success: true };
   }
 
   /** Kunni yopish: tizim hisoblagan naqd bilan kassir sanagan naqd farqi saqlanadi. Yopilgan kun o'zgarmaydi. */
-  async close(scope: TenantScope, actorName: string, dto: CloseCashDto) {
+  async close(caller: TenantAuthenticatedUser, dto: CloseCashDto) {
+    const scope = toTenantScope(caller);
     const branchId = requireMoneyScope(scope);
     const date = assertDate(dto.date.slice(0, 10));
     await this.assertNotClosed(branchId, date);
@@ -142,7 +166,7 @@ export class CashDeskService {
     if (Math.abs(difference) > 0.005 && !dto.note?.trim()) {
       throw new BadRequestException("Kassada farq bor — sababini izohga yozing");
     }
-    await this.prisma.cashClosing.create({
+    const closing = await this.prisma.cashClosing.create({
       data: {
         branchId,
         date: toDateOnly(date),
@@ -150,8 +174,15 @@ export class CashDeskService {
         countedCash: dto.countedCash,
         difference,
         note: dto.note?.trim() || null,
-        closedByName: actorName,
+        closedByName: caller.fullName,
       },
+    });
+    await this.auditLog.logFromUser(caller, {
+      action: "cash.close",
+      entityType: "CashClosing",
+      entityId: closing.id,
+      branchId,
+      summary: `${date} kuni kassa yopildi (hisoblangan ${day.expectedCash}, sanalgan ${dto.countedCash})`,
     });
     return { expectedCash: day.expectedCash, countedCash: dto.countedCash, difference };
   }
@@ -226,7 +257,15 @@ export class CashDeskService {
     }
     const child = await this.prisma.child.findFirst({
       where: { id: childId, branchId, organizationId: scope.organizationId },
-      select: { id: true, fullName: true, guardians: { orderBy: [{ isPrimary: "desc" }], take: 1, select: { guardian: { select: { fullName: true, phone: true } } } } },
+      select: {
+        id: true,
+        fullName: true,
+        guardians: {
+          where: { canReceiveNotifications: true },
+          orderBy: [{ isPrimary: "desc" }],
+          select: { guardian: { select: { id: true, fullName: true, phone: true } } },
+        },
+      },
     });
     if (!child) {
       throw new NotFoundException("Bola topilmadi");
@@ -238,6 +277,7 @@ export class CashDeskService {
     }
     const guardian = child.guardians[0]?.guardian;
     const amount = new Intl.NumberFormat("uz-UZ", { maximumFractionDigits: 0 }).format(debt.balance);
+    const message = `${child.fullName} uchun ${amount} UZS to'lov qarzi bor. Iltimos, to'lovni amalga oshiring.`;
     await this.prisma.notificationLog.create({
       data: {
         organizationId: scope.organizationId,
@@ -247,10 +287,12 @@ export class CashDeskService {
         channel: "SMS",
         recipientName: guardian?.fullName ?? "Ota-ona",
         recipientContact: guardian?.phone ?? null,
-        message: `${child.fullName} uchun ${amount} UZS to'lov qarzi bor. Iltimos, to'lovni amalga oshiring.`,
+        message,
         sentByUserId: userId,
       },
     });
+    const guardianIds = child.guardians.map((g) => g.guardian.id);
+    await this.pushService.sendToGuardians(guardianIds, { title: "To'lov eslatmasi", body: message });
     return { success: true };
   }
 
