@@ -205,7 +205,7 @@ export class ParentService {
     }
     const balance = await this.coinBalance(child.id);
     if (balance < product.priceCoins) {
-      throw new BadRequestException("Coin yetarli emas");
+      throw new BadRequestException("Yulduzcha yetarli emas");
     }
 
     const [updatedProduct] = await this.prisma.$transaction([
