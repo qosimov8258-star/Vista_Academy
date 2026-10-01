@@ -18,6 +18,13 @@ import { ConvertLeadDto } from "./dto/convert-lead.dto";
 import { AssignLeadDto } from "./dto/assign-lead.dto";
 import { UpdateLeadDetailsDto } from "./dto/update-lead-details.dto";
 
+/** Lidlar (ota-ona ismi va telefoni) — sotuv/qabul ishi; o'qituvchiga ko'rinmaydi. */
+function assertLeadReader(scope: TenantScope) {
+  if (scope.role === "TEACHER") {
+    throw new ForbiddenException("O'qituvchi CRM bo'limiga kira olmaydi");
+  }
+}
+
 const leadInclude = {
   assignedTo: { select: { id: true, fullName: true } },
   activities: { orderBy: { createdAt: "desc" as const }, include: { createdBy: { select: { id: true, fullName: true } } } },
@@ -56,6 +63,7 @@ export class CrmService {
   }
 
   async findAll(scope: TenantScope, query: LeadQueryDto) {
+    assertLeadReader(scope);
     const where: Prisma.LeadWhereInput = {
       organizationId: scope.organizationId,
       branchId: scope.branchId ?? query.branchId,
@@ -77,6 +85,7 @@ export class CrmService {
   }
 
   async findOne(scope: TenantScope, id: string) {
+    assertLeadReader(scope);
     const lead = await this.prisma.lead.findFirst({
       where: { id, organizationId: scope.organizationId },
       include: leadInclude,
@@ -134,8 +143,9 @@ export class CrmService {
     if (lead.branchId !== branchId) {
       throw new ForbiddenException("Bu arizaga kirish huquqingiz yo'q");
     }
+    // Lid shu filial xodimiga biriktiriladi — boshqa filial xodimi uni ko'ra olmaydi
     const nextUser = await this.prisma.tenantUser.findFirst({
-      where: { id: dto.assignedToUserId, organizationId: scope.organizationId },
+      where: { id: dto.assignedToUserId, organizationId: scope.organizationId, branchId },
     });
     if (!nextUser) {
       throw new NotFoundException("Xodim topilmadi");
@@ -256,6 +266,7 @@ export class CrmService {
   }
 
   async stats(scope: TenantScope, branchId?: string) {
+    assertLeadReader(scope);
     const where: Prisma.LeadWhereInput = { organizationId: scope.organizationId, branchId: scope.branchId ?? branchId };
     const [byStageGrouped, bySourceGrouped] = await Promise.all([
       this.prisma.lead.groupBy({ by: ["stage"], where, _count: true }),
