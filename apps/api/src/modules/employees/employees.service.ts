@@ -1,6 +1,6 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
-import { Prisma } from "@prisma/client";
+import { Prisma, type TenantUserRole } from "@prisma/client";
 import * as argon2 from "argon2";
 import { PrismaService } from "../../database/prisma.service";
 import { normalizePhone } from "../../common/phone";
@@ -78,6 +78,26 @@ const employeeInclude = {
   // oyliklarni ko'rsatish uchun har bir xodimga alohida so'rov ketardi.
   salaryScheme: { select: { ruleType: true, fixedAmount: true, rate: true } },
 } satisfies Prisma.EmployeeInclude;
+
+/**
+ * Xodim kabinetining login/parolini kim boshqara oladi (yangilash, o'zgartirish,
+ * ko'rsatish). Call operator (MANAGER) faqat o'qituvchi va oshpazni; filial admini
+ * ularga qo'shimcha call operatorni ham. Moliyachi va adminlar hisobi bu yerdan
+ * boshqarilmaydi — aks holda call operator kassir parolini olib, uning nomidan
+ * pul amallarini bajara olardi (tenant-users dagi qoida bilan bir xil ruh).
+ */
+function assertCanManageCredentials(callerRole: TenantUserRole, targetRole: TenantUserRole | null | undefined) {
+  const allowed: Partial<Record<TenantUserRole, TenantUserRole[]>> = {
+    BRANCH_ADMIN: ["TEACHER", "CHEF", "MANAGER"],
+    MANAGER: ["TEACHER", "CHEF"],
+  };
+  if (!targetRole || !(allowed[callerRole] ?? []).includes(targetRole)) {
+    throw new ForbiddenException("Bu xodimning login/parolini boshqarishga huquqingiz yo'q");
+  }
+}
+
+/** O'qituvchi va oshpaz xodimlar ro'yxatida hamkasblarining oyligi va loginini ko'rmaydi. */
+const ROLES_WITHOUT_STAFF_DETAILS: TenantUserRole[] = ["TEACHER", "CHEF"];
 
 @Injectable()
 export class EmployeesService {
@@ -235,17 +255,25 @@ export class EmployeesService {
     return { login, password, passwordHash, passwordEncrypted };
   }
 
-  findAll(scope: TenantScope, query: EmployeeQueryDto) {
+  async findAll(scope: TenantScope, query: EmployeeQueryDto) {
     const where: Prisma.EmployeeWhereInput = {
       organizationId: scope.organizationId,
       branchId: resolveReadBranchFilter(scope, query.branchId),
       ...(query.isActive !== undefined ? { isActive: query.isActive } : {}),
     };
-    return this.prisma.employee.findMany({
+    const rows = await this.prisma.employee.findMany({
       where,
       include: employeeInclude,
       orderBy: { createdAt: "desc" },
     });
+    if (!ROLES_WITHOUT_STAFF_DETAILS.includes(scope.role)) {
+      return rows;
+    }
+    return rows.map(({ salaryScheme: _salary, tenantUser, ...rest }) => ({
+      ...rest,
+      salaryScheme: null,
+      tenantUser: tenantUser ? { ...tenantUser, login: "" } : null,
+    }));
   }
 
   /** Tarbiyachining guruhlarini almashtiradi (qo'shish/olib tashlash bitta amalda). */
@@ -342,7 +370,7 @@ export class EmployeesService {
     const branchId = requireOperationalScope(scope);
     const employee = await this.prisma.employee.findFirst({
       where: { id, organizationId: scope.organizationId, branchId },
-      select: { id: true, fullName: true, tenantUserId: true },
+      select: { id: true, fullName: true, tenantUserId: true, tenantUser: { select: { role: true } } },
     });
     if (!employee) {
       throw new NotFoundException("Xodim topilmadi");
@@ -350,6 +378,7 @@ export class EmployeesService {
     if (!employee.tenantUserId) {
       throw new BadRequestException("Bu xodimning kabineti yo'q");
     }
+    assertCanManageCredentials(scope.role, employee.tenantUser?.role);
 
     const password = generateEmployeePassword();
     const [passwordHash, passwordEncrypted] = await Promise.all([
@@ -384,7 +413,7 @@ export class EmployeesService {
     const branchId = requireOperationalScope(scope);
     const employee = await this.prisma.employee.findFirst({
       where: { id, organizationId: scope.organizationId, branchId },
-      select: { tenantUserId: true },
+      select: { tenantUserId: true, tenantUser: { select: { role: true } } },
     });
     if (!employee) {
       throw new NotFoundException("Xodim topilmadi");
@@ -392,6 +421,7 @@ export class EmployeesService {
     if (!employee.tenantUserId) {
       throw new BadRequestException("Bu xodimning kabineti yo'q");
     }
+    assertCanManageCredentials(scope.role, employee.tenantUser?.role);
     if (!dto.login && !dto.password) {
       throw new BadRequestException("O'zgartiradigan hech narsa yo'q");
     }
@@ -439,11 +469,12 @@ export class EmployeesService {
     const branchId = requireOperationalScope(scope);
     const employee = await this.prisma.employee.findFirst({
       where: { id, organizationId: scope.organizationId, branchId },
-      select: { tenantUser: { select: { login: true, passwordEncrypted: true } } },
+      select: { tenantUser: { select: { login: true, passwordEncrypted: true, role: true } } },
     });
     if (!employee?.tenantUser) {
       throw new NotFoundException("Xodimning kabineti yo'q");
     }
+    assertCanManageCredentials(scope.role, employee.tenantUser.role);
     if (!employee.tenantUser.passwordEncrypted) {
       throw new BadRequestException("Bu xodim uchun parol saqlanmagan — yangi parol generatsiya qiling");
     }

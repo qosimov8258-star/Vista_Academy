@@ -83,20 +83,25 @@ export class FaceIdAgentService {
     }
     const rows = [...unique.values()];
 
-    // Terminal raqami → xodim (1001…) yoki bola (C14732), faqat shu tashkilot ichida
+    // Terminal raqami → xodim (1001…) yoki bola (C14732), faqat shu qurilma filialida
+    // (boshqa filial odamiga davomat/coin yozilmasin)
     const numbers = [...new Set(rows.map((r) => r.employeeNo).filter((n): n is string => !!n))];
     const childNumbers = numbers.filter((n) => parseChildDeviceNo(n) !== null);
     const employeeNumbers = numbers.filter((n) => parseChildDeviceNo(n) === null);
     const employees = employeeNumbers.length
       ? await this.prisma.employee.findMany({
-          where: { organizationId: device.organizationId, employeeNo: { in: employeeNumbers } },
+          where: { organizationId: device.organizationId, branchId: device.branchId, employeeNo: { in: employeeNumbers } },
           select: { id: true, employeeNo: true, branchId: true },
         })
       : [];
     const byNo = new Map(employees.map((e) => [e.employeeNo, e]));
     const children = childNumbers.length
       ? await this.prisma.child.findMany({
-          where: { organizationId: device.organizationId, publicId: { in: childNumbers.map((n) => parseChildDeviceNo(n)!) } },
+          where: {
+            organizationId: device.organizationId,
+            branchId: device.branchId,
+            publicId: { in: childNumbers.map((n) => parseChildDeviceNo(n)!) },
+          },
           select: { id: true, publicId: true, branchId: true, organizationId: true },
         })
       : [];

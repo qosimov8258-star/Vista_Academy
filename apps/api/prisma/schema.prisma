@@ -2015,7 +2015,7 @@ model FaceIdDevice {
   branchId          String             @map("branch_id")
   name              String
   model             String             @default("DS-K1T342MX")
-  serialNumber      String?            @unique @map("serial_number")
+  serialNumber      String?            @map("serial_number")
   ipAddress         String?            @map("ip_address")
   // ISAPI (HTTP) porti va qurilma administratori logini. Parol qaytarib
   // olinadigan holda shifrlanadi (AES-256-GCM, kalit — DEVICE_SECRET_KEY):
@@ -2040,6 +2040,9 @@ model FaceIdDevice {
   events       FaceIdEvent[]
   commands     FaceIdCommand[]
 
+  /// Seriya raqami tashkilot ichida noyob: boshqa bog'cha birovning terminal
+  /// raqamini oldindan band qilib qo'ya olmasin va uni bilib ham olmasin.
+  @@unique([organizationId, serialNumber])
   @@index([organizationId])
   @@index([branchId])
   @@map("face_id_devices")

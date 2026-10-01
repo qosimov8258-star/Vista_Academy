@@ -38,7 +38,7 @@ export function LoginForm() {
       // Dashboard va uning boshlang'ich ma'lumotlari tayyor bo'lgunicha
       // LoadingScreen'ni ko'rsatamiz — uni dashboard sahifasi o'zi yashiradi.
       startPostLoginLoading();
-      const next = searchParams.get("next") ?? "/";
+      const next = safeNextPath(searchParams.get("next")) ?? "/";
       router.push(next);
       router.refresh();
     } catch (err) {
@@ -87,4 +87,14 @@ export function LoginForm() {
       </Button>
     </form>
   );
+}
+
+/**
+ * `?next=` faqat shu saytdagi yo'l bo'lishi mumkin ("/..." lekin "//" yoki "/\\"
+ * emas) — aks holda login havolasi orqali foydalanuvchini begona saytga
+ * yo'naltirib yuborish (phishing) mumkin edi.
+ */
+function safeNextPath(next: string | null): string | null {
+  if (!next || !next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) return null;
+  return next;
 }
