@@ -215,30 +215,28 @@ h3 {
   animation: ios-pulse 1.6s ease-in-out infinite;
 }
 
-/* LoadingScreen: "..." nuqtalari navbat bilan kichraygan-ochiq holatdan
-   kattalashgan-to'q holatga o'tib turadi */
-@keyframes zeeron-dot-blink {
+/* LoadingScreen: logotipdagi ikkita "e" navbatma-navbat ozgina tepaga
+   ko'tarilib qaytadi (ikkinchisiga kechikish komponentda beriladi) */
+@keyframes zeeron-e-bob {
   0%,
-  80%,
+  60%,
   100% {
-    opacity: 0.3;
-    transform: scale(0.6);
+    transform: translateY(0);
   }
-  40% {
-    opacity: 1;
-    transform: scale(1);
+  30% {
+    transform: translateY(-64px);
   }
 }
 
-.animate-zeeron-dot-blink {
-  animation: zeeron-dot-blink 1.4s ease-in-out infinite;
+.zeeron-e-bob {
+  animation: zeeron-e-bob 0.9s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .animate-scrim-in,
   .animate-sheet-in,
   .animate-skeleton,
-  .animate-zeeron-dot-blink {
+  .zeeron-e-bob {
     animation: none;
   }
 }
