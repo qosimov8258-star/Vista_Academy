@@ -53,6 +53,7 @@ import { EditGuardianLinkModal } from "@/features/guardians/edit-guardian-link-m
 import { EditChildModal } from "@/features/children/edit-child-modal";
 import { ChildAttendanceCalendar } from "@/features/attendance/child-attendance-calendar";
 import { canWriteOperational, canWriteTeaching } from "@/lib/permissions";
+import { useTr } from "@/i18n/tr";
 
 const VACCINATION_STATUS_LABEL: Record<string, string> = {
   SCHEDULED: "Rejalashtirilgan",
@@ -113,9 +114,10 @@ function Fact({
   muted?: boolean;
   numeric?: boolean;
 }) {
+  const tr = useTr();
   return (
     <div className="px-5 py-3.5 sm:px-6">
-      <dt className="text-[12px] font-medium text-[var(--color-text-muted)]">{label}</dt>
+      <dt className="text-[12px] font-medium text-[var(--color-text-muted)]">{tr(label)}</dt>
       <dd
         className={clsx(
           "mt-1 truncate text-[15px] font-medium",
@@ -123,20 +125,21 @@ function Fact({
           muted ? "text-[var(--color-text-muted)]" : "text-[var(--color-text)]",
         )}
       >
-        {value}
+        {tr(value)}
       </dd>
-      {hint && <p className="text-[12px] text-[var(--color-text-muted)]">{hint}</p>}
+      {hint && <p className="text-[12px] text-[var(--color-text-muted)]">{tr(hint)}</p>}
     </div>
   );
 }
 
 function RatingBadge({ label, value }: { label: string; value: string | null }) {
+  const tr = useTr();
   return (
     <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
-      <p className="text-[12.5px] text-[var(--color-text-muted)]">{label}</p>
+      <p className="text-[12.5px] text-[var(--color-text-muted)]">{tr(label)}</p>
       {value ? (
         <Badge tone={RATING_TONE[value]} className="mt-1.5">
-          {RATING_LABEL[value]}
+          {tr(RATING_LABEL[value])}
         </Badge>
       ) : (
         <p className="mt-1.5 text-[14px] font-medium text-[var(--color-text-muted)]">—</p>
@@ -146,6 +149,7 @@ function RatingBadge({ label, value }: { label: string; value: string | null }) 
 }
 
 export default function ChildDetailPage({ params }: { params: Promise<{ slug: string; childId: string }> }) {
+  const tr = useTr();
   const { slug, childId } = use(params);
   const [assessOpen, setAssessOpen] = useState(false);
   const [docLoading, setDocLoading] = useState<string | null>(null);
@@ -245,7 +249,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
       queryClient.invalidateQueries({ queryKey: ["child", slug, childId] });
       queryClient.invalidateQueries({ queryKey: ["children", slug] });
     },
-    onError: (err) => setPhotoError(err instanceof ApiError ? err.message : "Suratni saqlab bo'lmadi"),
+    onError: (err) => setPhotoError(err instanceof ApiError ? err.message : tr("Suratni saqlab bo'lmadi")),
   });
 
   const removePhotoMutation = useMutation({
@@ -255,7 +259,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
       queryClient.invalidateQueries({ queryKey: ["child", slug, childId] });
       queryClient.invalidateQueries({ queryKey: ["children", slug] });
     },
-    onError: (err) => setPhotoError(err instanceof ApiError ? err.message : "Suratni o'chirib bo'lmadi"),
+    onError: (err) => setPhotoError(err instanceof ApiError ? err.message : tr("Suratni o'chirib bo'lmadi")),
   });
 
   const handlePhotoPick = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -279,7 +283,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
   };
 
   if (childQuery.isLoading) return <LoadingState />;
-  if (childQuery.isError) return <ErrorState message={(childQuery.error as Error).message} />;
+  if (childQuery.isError) return <ErrorState message={tr((childQuery.error as Error).message)} />;
   const child = childQuery.data;
   if (!child) return null;
 
@@ -293,7 +297,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
         className="group inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
       >
         <ArrowLeftIcon className="h-4 w-4 transition-transform group-hover:-translate-x-0.5 motion-reduce:transition-none" />
-        Bolalar
+        {tr("Bolalar")}
       </Link>
 
       {/* Bolaning asosiy ma'lumotlari — ilgari sarlavha ostidagi bitta kulrang
@@ -309,8 +313,8 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
                   type="button"
                   onClick={() => photoInputRef.current?.click()}
                   disabled={photoChecking || photoMutation.isPending}
-                  aria-label="Bolaning suratini almashtirish"
-                  title="Suratni almashtirish"
+                  aria-label={tr("Bolaning suratini almashtirish")}
+                  title={tr("Suratni almashtirish")}
                   className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-full bg-black/45 text-white opacity-0 transition-opacity duration-[var(--dur-fast)] hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none disabled:cursor-wait disabled:opacity-100 motion-reduce:transition-none"
                 >
                   {photoChecking || photoMutation.isPending ? (
@@ -332,14 +336,14 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2.5">
               <h1 className="text-[24px] font-semibold leading-tight tracking-[var(--tracking-title)] text-[var(--color-text)]">
-                {child.fullName}
+                {tr(child.fullName)}
               </h1>
               <Badge tone={child.status === "ACTIVE" ? "success" : child.status === "QUARANTINED" ? "danger" : "neutral"}>
                 {child.status === "ACTIVE" ? "Faol" : child.status === "QUARANTINED" ? "Karantinda" : "Nofaol"}
               </Badge>
               {canWrite && (
                 <Button size="sm" variant="outline" onClick={() => setEditChildOpen(true)}>
-                  Tahrirlash
+                  {tr("Tahrirlash")}
                 </Button>
               )}
               {canWrite && (
@@ -356,16 +360,16 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
                         try {
                           await downloadCsv(`/app/exports/children/${childId}/${kind}-pdf`, `${kind === "contract" ? "shartnoma" : "malumotnoma"}-${childId}.pdf`);
                         } catch {
-                          setDocError("Hujjatni yuklab bo'lmadi — qayta urinib ko'ring");
+                          setDocError(tr("Hujjatni yuklab bo'lmadi — qayta urinib ko'ring"));
                         } finally {
                           setDocLoading(null);
                         }
                       }}
                     >
-                      {kind === "contract" ? "Shartnoma (PDF)" : "Ma'lumotnoma (PDF)"}
+                      {kind === "contract" ? "Shartnoma (PDF)" : tr("Ma'lumotnoma (PDF)")}
                     </Button>
                   ))}
-                  {docError && <span className="text-[12.5px] text-[var(--color-danger)]">{docError}</span>}
+                  {docError && <span className="text-[12.5px] text-[var(--color-danger)]">{tr(docError)}</span>}
                 </>
               )}
             </div>
@@ -373,7 +377,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
               <span className="rounded-full bg-[var(--color-surface-sunken)] px-2.5 py-1 text-[12px] font-semibold tabular-nums text-[var(--color-text-muted)]">
                 {formatChildId(child.publicId)}
               </span>
-              <CopyButton value={formatChildId(child.publicId)} label="ID nusxalash" />
+              <CopyButton value={formatChildId(child.publicId)} label={tr("ID nusxalash")} />
               {canWrite && (
                 <>
                   <button
@@ -382,7 +386,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
                     disabled={photoChecking || photoMutation.isPending}
                     className="cursor-pointer text-[12.5px] font-medium text-[var(--color-primary)] hover:underline disabled:opacity-60"
                   >
-                    {photoChecking ? "Tekshirilmoqda..." : child.avatarUpdatedAt ? "Suratni almashtirish" : "Surat qo'yish"}
+                    {photoChecking ? "Tekshirilmoqda..." : child.avatarUpdatedAt ? "Suratni almashtirish" : tr("Surat qo'yish")}
                   </button>
                   {child.avatarUpdatedAt && (
                     <>
@@ -393,7 +397,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
                         disabled={removePhotoMutation.isPending}
                         className="cursor-pointer text-[12.5px] font-medium text-[var(--color-danger)] hover:underline disabled:opacity-60"
                       >
-                        O&apos;chirish
+                        {tr("O'chirish")}
                       </button>
                     </>
                   )}
@@ -402,23 +406,23 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
             </div>
             {photoError && (
               <p role="alert" className="mt-1.5 max-w-[420px] text-[12.5px] text-[var(--color-danger)]">
-                {photoError}
+                {tr(photoError)}
               </p>
             )}
             {canWrite && !photoError && !child.avatarUpdatedAt && (
               <p className="mt-1.5 text-[12px] text-[var(--color-text-muted)]">
-                Yuzi ko&apos;rinib turgan surat, 3 MB gacha
+                {tr("Yuzi ko'rinib turgan surat, 3 MB gacha")}
               </p>
             )}
           </div>
         </div>
 
         <dl className="grid grid-cols-2 divide-x divide-y divide-[var(--color-separator)] border-t border-[var(--color-separator)] sm:grid-cols-4 sm:divide-y-0">
-          <Fact label="Filial" value={child.branch?.name ?? "—"} />
-          <Fact label="Guruh" value={child.group?.name ?? "Guruhsiz"} muted={!child.group} />
-          <Fact label="Jinsi" value={formatGender(child.gender)} muted={!child.gender} />
+          <Fact label={tr("Filial")} value={child.branch?.name ?? "—"} />
+          <Fact label={tr("Guruh")} value={child.group?.name ?? "Guruhsiz"} muted={!child.group} />
+          <Fact label={tr("Jinsi")} value={formatGender(child.gender)} muted={!child.gender} />
           <Fact
-            label="Tug'ilgan sana"
+            label={tr("Tug'ilgan sana")}
             value={child.birthDate ? formatDate(child.birthDate) : "—"}
             hint={child.birthDate ? formatAge(child.birthDate) : undefined}
             numeric
@@ -429,7 +433,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
       {/* Davomat — ochilib boshqa sahifaga o'tmaydi, bola profilida darhol ko'rinadi */}
       <Card className="overflow-hidden">
         <CardHeader className="flex flex-wrap items-center justify-between gap-3">
-          <CardTitle>Davomat ({attendanceHistoryQuery.data?.year ?? new Date().getFullYear()})</CardTitle>
+          <CardTitle>{tr("Davomat (")}{attendanceHistoryQuery.data?.year ?? new Date().getFullYear()})</CardTitle>
           {attendanceHistoryQuery.data?.stats.attendanceRate != null && (
             <Badge
               tone={
@@ -440,7 +444,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
                     : "danger"
               }
             >
-              Davomat: {attendanceHistoryQuery.data.stats.attendanceRate}%
+              {tr("Davomat:")}{" "}{tr(attendanceHistoryQuery.data.stats.attendanceRate)}%
             </Badge>
           )}
         </CardHeader>
@@ -450,31 +454,31 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
           </CardBody>
         ) : attendanceHistoryQuery.isError ? (
           <CardBody>
-            <ErrorState message={(attendanceHistoryQuery.error as Error).message} />
+            <ErrorState message={tr((attendanceHistoryQuery.error as Error).message)} />
           </CardBody>
         ) : (
           <>
             <CardBody className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
-                <p className="text-[12.5px] text-[var(--color-text-muted)]">Kelgan kunlar</p>
+                <p className="text-[12.5px] text-[var(--color-text-muted)]">{tr("Kelgan kunlar")}</p>
                 <p className="mt-1 text-[18px] font-semibold tabular-nums text-[var(--color-text)]">
                   {attendanceHistoryQuery.data?.stats.present ?? 0}
                 </p>
               </div>
               <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
-                <p className="text-[12.5px] text-[var(--color-text-muted)]">Kelmagan kunlar</p>
+                <p className="text-[12.5px] text-[var(--color-text-muted)]">{tr("Kelmagan kunlar")}</p>
                 <p className="mt-1 text-[18px] font-semibold tabular-nums text-[var(--color-text)]">
                   {attendanceHistoryQuery.data?.stats.absent ?? 0}
                 </p>
               </div>
               <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
-                <p className="text-[12.5px] text-[var(--color-text-muted)]">Sababli</p>
+                <p className="text-[12.5px] text-[var(--color-text-muted)]">{tr("Sababli")}</p>
                 <p className="mt-1 text-[18px] font-semibold tabular-nums text-[var(--color-warning)]">
                   {attendanceHistoryQuery.data?.stats.excusedAbsent ?? 0}
                 </p>
               </div>
               <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
-                <p className="text-[12.5px] text-[var(--color-text-muted)]">Sababsiz</p>
+                <p className="text-[12.5px] text-[var(--color-text-muted)]">{tr("Sababsiz")}</p>
                 <p className="mt-1 text-[18px] font-semibold tabular-nums text-[var(--color-danger)]">
                   {attendanceHistoryQuery.data?.stats.unexcusedAbsent ?? 0}
                 </p>
@@ -493,14 +497,14 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
 
             <CardBody className="border-t border-[var(--color-separator)] p-0">
               {attendanceAbsences.length === 0 ? (
-                <EmptyState title="Bu yil hali kelmagan kun yo'q" icon={<CalendarIcon className="h-[26px] w-[26px]" />} />
+                <EmptyState title={tr("Bu yil hali kelmagan kun yo'q")} icon={<CalendarIcon className="h-[26px] w-[26px]" />} />
               ) : (
                 <DataTable>
                   <THead>
                     <tr>
-                      <Th>Sana</Th>
-                      <Th>Holati</Th>
-                      <Th>Sababi</Th>
+                      <Th>{tr("Sana")}</Th>
+                      <Th>{tr("Holati")}</Th>
+                      <Th>{tr("Sababi")}</Th>
                     </tr>
                   </THead>
                   <TBody>
@@ -526,13 +530,13 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
         <div className="hairline flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-separator)] px-5 py-4 sm:px-6">
           <div>
             <h2 className="text-[15px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
-              Bog&apos;langan ota-ona
+              {tr("Bog'langan ota-ona")}
             </h2>
-            <p className="text-[12.5px] text-[var(--color-text-muted)]">Telefon raqamini bosib nusxalang</p>
+            <p className="text-[12.5px] text-[var(--color-text-muted)]">{tr("Telefon raqamini bosib nusxalang")}</p>
           </div>
           {canWrite && guardiansQuery.isSuccess && guardiansQuery.data.length === 0 && (
             <Button size="sm" variant="outline" onClick={() => setGuardianOpen(true)}>
-              + Ota-ona qo&apos;shish
+              {tr("+ Ota-ona qo'shish")}
             </Button>
           )}
         </div>
@@ -542,13 +546,13 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
           </div>
         ) : guardiansQuery.isError ? (
           <div className="px-5 py-5 sm:px-6">
-            <ErrorState message={(guardiansQuery.error as Error).message} />
+            <ErrorState message={tr((guardiansQuery.error as Error).message)} />
           </div>
         ) : !guardiansQuery.data || guardiansQuery.data.length === 0 ? (
           <div className="px-5 py-5 sm:px-6">
             <EmptyState
-              title="Hali ota-ona biriktirilmagan"
-              description={canWrite ? "Bola bilan bog'lanish uchun ota-ona qo'shing" : undefined}
+              title={tr("Hali ota-ona biriktirilmagan")}
+              description={canWrite ? tr("Bola bilan bog'lanish uchun ota-ona qo'shing") : undefined}
               icon={<GroupIcon className="h-[26px] w-[26px]" />}
             />
           </div>
@@ -562,14 +566,14 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
                 <div className="min-w-0 flex-1 basis-[10rem]">
                   <div className="flex flex-wrap items-center gap-1.5">
                     <p className="truncate text-[15px] font-medium text-[var(--color-text)]">
-                      {link.guardian.fullName}
+                      {tr(link.guardian.fullName)}
                     </p>
-                    {link.isPrimary && <Badge tone="primary">Asosiy</Badge>}
+                    {link.isPrimary && <Badge tone="primary">{tr("Asosiy")}</Badge>}
                     {/* Kabinet bolaga bitta — bu raqam login ekanini bildiradi */}
-                    {link.guardian.hasCabinet && <Badge tone="success">Kabinet logini</Badge>}
+                    {link.guardian.hasCabinet && <Badge tone="success">{tr("Kabinet logini")}</Badge>}
                   </div>
                   <p className="text-[12.5px] text-[var(--color-text-muted)]">
-                    {GUARDIAN_RELATION_LABEL[link.relation]}
+                    {tr(GUARDIAN_RELATION_LABEL[link.relation])}
                     {link.canPickup && " · olib ketadi"}
                   </p>
                 </div>
@@ -581,7 +585,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
                     <PhoneIcon className="h-3.5 w-3.5" />
                     {formatPhone(link.guardian.phone)}
                   </a>
-                  <CopyButton value={link.guardian.phone} label="Telefon raqamini nusxalash" />
+                  <CopyButton value={link.guardian.phone} label={tr("Telefon raqamini nusxalash")} />
                 </div>
               </li>
             ))}
@@ -607,8 +611,8 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
               </p>
               <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">
                 {cabinetHolder
-                  ? `Login: ${formatPhone(cabinetHolder.guardian.phone)} · ota-ona ikkalasi shu kabinetdan foydalanadi`
-                  : "Ota-ona davomat, ovqat va mashg'ulotlarni ko'rishi uchun kabinet oching"}
+                  ? tr("Login: {0} · ota-ona ikkalasi shu kabinetdan foydalanadi", formatPhone(cabinetHolder.guardian.phone))
+                  : tr("Ota-ona davomat, ovqat va mashg'ulotlarni ko'rishi uchun kabinet oching")}
               </p>
             </div>
             <Button size="sm" variant={cabinetHolder ? "outline" : "primary"} onClick={() => setCabinetOpen(true)}>
@@ -623,9 +627,9 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
       {canReadMoney && (
         <Card className="overflow-hidden">
           <CardHeader className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle>Moliya</CardTitle>
+            <CardTitle>{tr("Moliya")}</CardTitle>
             <Link href={financeHref} className="text-[13px] font-medium text-[var(--color-primary)] hover:underline">
-              To&apos;liq tarix →
+              {tr("To'liq tarix →")}
             </Link>
           </CardHeader>
           <CardBody className="p-0">
@@ -635,16 +639,16 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
               </div>
             ) : ledgerQuery.isError ? (
               <div className="px-5 py-5 sm:px-6">
-                <ErrorState message={(ledgerQuery.error as Error).message} />
+                <ErrorState message={tr((ledgerQuery.error as Error).message)} />
               </div>
             ) : !ledgerQuery.data || ledgerQuery.data.length === 0 ? (
               <div className="px-5 py-5 sm:px-6">
-                <EmptyState title="Moliyaviy yozuv yo'q" icon={<WalletIcon className="h-[26px] w-[26px]" />} />
+                <EmptyState title={tr("Moliyaviy yozuv yo'q")} icon={<WalletIcon className="h-[26px] w-[26px]" />} />
               </div>
             ) : (
               <>
                 <div className="border-b border-[var(--color-separator)] px-5 py-3.5 sm:px-6">
-                  <p className="text-[12px] font-medium text-[var(--color-text-muted)]">Joriy qarzdorlik</p>
+                  <p className="text-[12px] font-medium text-[var(--color-text-muted)]">{tr("Joriy qarzdorlik")}</p>
                   {(() => {
                     const balance = ledgerQuery.data.reduce((sum, e) => sum + Number(e.amount), 0);
                     return (
@@ -688,7 +692,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
 
       <Card>
         <CardHeader className="flex flex-wrap items-center justify-between gap-3">
-          <CardTitle>Rivojlanish ({latestAssessment?.period ?? "hali baholanmagan"})</CardTitle>
+          <CardTitle>{tr("Rivojlanish (")}{latestAssessment?.period ?? tr("hali baholanmagan")})</CardTitle>
           {canWrite && (
             <Button size="sm" variant="outline" onClick={() => setAssessOpen(true)}>
               {latestAssessment ? "Tahrirlash" : "Baholash"}
@@ -696,19 +700,19 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
           )}
         </CardHeader>
         <CardBody className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <RatingBadge label="Nutq" value={latestAssessment?.speechRating ?? null} />
-          <RatingBadge label="Motorika" value={latestAssessment?.motorRating ?? null} />
-          <RatingBadge label="Ijtimoiy ko'nikma" value={latestAssessment?.socialRating ?? null} />
-          <RatingBadge label="Bilim / idrok" value={latestAssessment?.cognitiveRating ?? null} />
+          <RatingBadge label={tr("Nutq")} value={latestAssessment?.speechRating ?? null} />
+          <RatingBadge label={tr("Motorika")} value={latestAssessment?.motorRating ?? null} />
+          <RatingBadge label={tr("Ijtimoiy ko'nikma")} value={latestAssessment?.socialRating ?? null} />
+          <RatingBadge label={tr("Bilim / idrok")} value={latestAssessment?.cognitiveRating ?? null} />
         </CardBody>
         {latestAssessment?.note && (
-          <CardBody className="pt-0 text-[14px] text-[var(--color-text-muted)]">{latestAssessment.note}</CardBody>
+          <CardBody className="pt-0 text-[14px] text-[var(--color-text-muted)]">{tr(latestAssessment.note)}</CardBody>
         )}
       </Card>
 
       <Card className="overflow-hidden">
         <CardHeader>
-          <CardTitle>Kundalik hisobotlar tarixi</CardTitle>
+          <CardTitle>{tr("Kundalik hisobotlar tarixi")}</CardTitle>
         </CardHeader>
         <CardBody className="p-0">
           {reportsQuery.isLoading ? (
@@ -717,24 +721,24 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
             </div>
           ) : reportsQuery.isError ? (
             <div className="px-5 py-5 sm:px-6">
-              <ErrorState message={(reportsQuery.error as Error).message} />
+              <ErrorState message={tr((reportsQuery.error as Error).message)} />
             </div>
           ) : !reportsQuery.data || reportsQuery.data.length === 0 ? (
             <EmptyState
-              title="Hali kundalik hisobot yo'q"
-              description="Tarbiyachi kunlik hisobot kiritgach, shu yerda ko'rinadi"
+              title={tr("Hali kundalik hisobot yo'q")}
+              description={tr("Tarbiyachi kunlik hisobot kiritgach, shu yerda ko'rinadi")}
               icon={<CalendarIcon className="h-[26px] w-[26px]" />}
             />
           ) : (
             <DataTable>
               <THead>
                 <tr>
-                  <Th>Sana</Th>
-                  <Th>Ovqatlanishi</Th>
-                  <Th numeric>Uyqu</Th>
-                  <Th>Kayfiyati</Th>
-                  <Th>Tualet</Th>
-                  <Th>Faoliyat</Th>
+                  <Th>{tr("Sana")}</Th>
+                  <Th>{tr("Ovqatlanishi")}</Th>
+                  <Th numeric>{tr("Uyqu")}</Th>
+                  <Th>{tr("Kayfiyati")}</Th>
+                  <Th>{tr("Tualet")}</Th>
+                  <Th>{tr("Faoliyat")}</Th>
                 </tr>
               </THead>
               <TBody>
@@ -760,10 +764,10 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
 
       <Card>
         <CardHeader className="flex flex-wrap items-center justify-between gap-3">
-          <CardTitle>Sog'liq profili</CardTitle>
+          <CardTitle>{tr("Sog'liq profili")}</CardTitle>
           {canWrite && (
             <Button size="sm" variant="outline" onClick={() => setHealthOpen(true)}>
-              {health ? "Tahrirlash" : "To'ldirish"}
+              {health ? "Tahrirlash" : tr("To'ldirish")}
             </Button>
           )}
         </CardHeader>
@@ -771,26 +775,26 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
           {healthQuery.isLoading ? (
             <LoadingState rows={2} />
           ) : healthQuery.isError ? (
-            <ErrorState message={(healthQuery.error as Error).message} />
+            <ErrorState message={tr((healthQuery.error as Error).message)} />
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
-                <p className="text-[12.5px] text-[var(--color-text-muted)]">Qon guruhi</p>
+                <p className="text-[12.5px] text-[var(--color-text-muted)]">{tr("Qon guruhi")}</p>
                 <p className="mt-1 text-[14px] font-medium text-[var(--color-text)]">
-                  {health?.bloodType ? BLOOD_TYPE_LABEL[health.bloodType] : "Hali kiritilmagan"}
+                  {health?.bloodType ? BLOOD_TYPE_LABEL[health.bloodType] : tr("Hali kiritilmagan")}
                 </p>
               </div>
               <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
-                <p className="text-[12.5px] text-[var(--color-text-muted)]">Allergiyalar</p>
-                <p className="mt-1 text-[14px] font-medium text-[var(--color-text)]">{health?.allergies || "Hali kiritilmagan"}</p>
+                <p className="text-[12.5px] text-[var(--color-text-muted)]">{tr("Allergiyalar")}</p>
+                <p className="mt-1 text-[14px] font-medium text-[var(--color-text)]">{health?.allergies || tr("Hali kiritilmagan")}</p>
               </div>
               <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
-                <p className="text-[12.5px] text-[var(--color-text-muted)]">Surunkali kasalliklar</p>
-                <p className="mt-1 text-[14px] font-medium text-[var(--color-text)]">{health?.chronicConditions || "Hali kiritilmagan"}</p>
+                <p className="text-[12.5px] text-[var(--color-text-muted)]">{tr("Surunkali kasalliklar")}</p>
+                <p className="mt-1 text-[14px] font-medium text-[var(--color-text)]">{health?.chronicConditions || tr("Hali kiritilmagan")}</p>
               </div>
               <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
-                <p className="text-[12.5px] text-[var(--color-text-muted)]">Qo'shimcha izoh</p>
-                <p className="mt-1 text-[14px] font-medium text-[var(--color-text)]">{health?.notes || "Hali kiritilmagan"}</p>
+                <p className="text-[12.5px] text-[var(--color-text-muted)]">{tr("Qo'shimcha izoh")}</p>
+                <p className="mt-1 text-[14px] font-medium text-[var(--color-text)]">{health?.notes || tr("Hali kiritilmagan")}</p>
               </div>
             </div>
           )}
@@ -799,10 +803,10 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
 
       <Card className="overflow-hidden">
         <CardHeader className="flex flex-wrap items-center justify-between gap-3">
-          <CardTitle>Vaksinatsiyalar</CardTitle>
+          <CardTitle>{tr("Vaksinatsiyalar")}</CardTitle>
           {canWrite && (
             <Button size="sm" variant="outline" onClick={() => setVaccinationOpen(true)}>
-              + Yangi vaksinatsiya
+              {tr("+ Yangi vaksinatsiya")}
             </Button>
           )}
         </CardHeader>
@@ -813,36 +817,36 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
             </div>
           ) : vaccinationsQuery.isError ? (
             <div className="px-5 py-5 sm:px-6">
-              <ErrorState message={(vaccinationsQuery.error as Error).message} />
+              <ErrorState message={tr((vaccinationsQuery.error as Error).message)} />
             </div>
           ) : !vaccinationsQuery.data || vaccinationsQuery.data.length === 0 ? (
             <EmptyState
-              title="Hali vaksinatsiya yo'q"
-              description={canWrite ? "Yangi vaksinatsiya qo'shish uchun tugmani bosing" : undefined}
+              title={tr("Hali vaksinatsiya yo'q")}
+              description={canWrite ? tr("Yangi vaksinatsiya qo'shish uchun tugmani bosing") : undefined}
               icon={<ChecklistIcon className="h-[26px] w-[26px]" />}
             />
           ) : (
             <DataTable>
               <THead>
                 <tr>
-                  <Th>Nomi</Th>
-                  <Th>Rejalashtirilgan sana</Th>
-                  <Th>Holati</Th>
-                  <Th>Bajarilgan sana</Th>
-                  <Th>Izoh</Th>
+                  <Th>{tr("Nomi")}</Th>
+                  <Th>{tr("Rejalashtirilgan sana")}</Th>
+                  <Th>{tr("Holati")}</Th>
+                  <Th>{tr("Bajarilgan sana")}</Th>
+                  <Th>{tr("Izoh")}</Th>
                   {canWrite && <Th />}
                 </tr>
               </THead>
               <TBody>
                 {vaccinationsQuery.data.map((v) => (
                   <Tr key={v.id}>
-                    <Td className="font-medium">{v.name}</Td>
+                    <Td className="font-medium">{tr(v.name)}</Td>
                     <Td className="tabular-nums text-[var(--color-text-muted)]">{formatDate(v.scheduledDate)}</Td>
                     <Td>
                       {isVaccinationOverdue(v) ? (
-                        <Badge tone="danger">Muddati o&apos;tgan</Badge>
+                        <Badge tone="danger">{tr("Muddati o'tgan")}</Badge>
                       ) : (
-                        <Badge tone={VACCINATION_STATUS_TONE[v.status]}>{VACCINATION_STATUS_LABEL[v.status]}</Badge>
+                        <Badge tone={VACCINATION_STATUS_TONE[v.status]}>{tr(VACCINATION_STATUS_LABEL[v.status])}</Badge>
                       )}
                     </Td>
                     <Td className="tabular-nums text-[var(--color-text-muted)]">{v.doneDate ? formatDate(v.doneDate) : "—"}</Td>
@@ -851,7 +855,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
                       <Td className="text-right">
                         {v.status === "SCHEDULED" && (
                           <Button size="sm" variant="ghost" onClick={() => setUpdatingVaccination(v)}>
-                            Yangilash
+                            {tr("Yangilash")}
                           </Button>
                         )}
                       </Td>
@@ -866,10 +870,10 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
 
       <Card className="overflow-hidden">
         <CardHeader className="flex flex-wrap items-center justify-between gap-3">
-          <CardTitle>Dori-darmon jurnali</CardTitle>
+          <CardTitle>{tr("Dori-darmon jurnali")}</CardTitle>
           {canWrite && (
             <Button size="sm" variant="outline" onClick={() => setMedicationOpen(true)}>
-              + Yangi yozuv
+              {tr("+ Yangi yozuv")}
             </Button>
           )}
         </CardHeader>
@@ -880,34 +884,34 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
             </div>
           ) : medicationsQuery.isError ? (
             <div className="px-5 py-5 sm:px-6">
-              <ErrorState message={(medicationsQuery.error as Error).message} />
+              <ErrorState message={tr((medicationsQuery.error as Error).message)} />
             </div>
           ) : !medicationsQuery.data || medicationsQuery.data.length === 0 ? (
             <EmptyState
-              title="Hali dori-darmon yozuvi yo'q"
-              description={canWrite ? "Yangi yozuv qo'shish uchun tugmani bosing" : undefined}
+              title={tr("Hali dori-darmon yozuvi yo'q")}
+              description={canWrite ? tr("Yangi yozuv qo'shish uchun tugmani bosing") : undefined}
               icon={<NoteIcon className="h-[26px] w-[26px]" />}
             />
           ) : (
             <DataTable>
               <THead>
                 <tr>
-                  <Th>Dori nomi</Th>
-                  <Th>Doza</Th>
-                  <Th>Berilgan vaqti</Th>
-                  <Th>Ota-ona ruxsati</Th>
-                  <Th>Izoh</Th>
+                  <Th>{tr("Dori nomi")}</Th>
+                  <Th>{tr("Doza")}</Th>
+                  <Th>{tr("Berilgan vaqti")}</Th>
+                  <Th>{tr("Ota-ona ruxsati")}</Th>
+                  <Th>{tr("Izoh")}</Th>
                 </tr>
               </THead>
               <TBody>
                 {medicationsQuery.data.map((m) => (
                   <Tr key={m.id}>
-                    <Td className="font-medium">{m.medicationName}</Td>
-                    <Td className="tabular-nums text-[var(--color-text-muted)]">{m.dose}</Td>
+                    <Td className="font-medium">{tr(m.medicationName)}</Td>
+                    <Td className="tabular-nums text-[var(--color-text-muted)]">{tr(m.dose)}</Td>
                     <Td className="tabular-nums text-[var(--color-text-muted)]">{formatDateTime(m.givenAt)}</Td>
                     <Td>
                       <Badge tone={m.parentAuthorized ? "success" : "danger"}>
-                        {m.parentAuthorized ? "Ha" : "Yo'q"}
+                        {m.parentAuthorized ? "Ha" : tr("Yo'q")}
                       </Badge>
                     </Td>
                     <Td className="text-[var(--color-text-muted)]">{m.note || "—"}</Td>
@@ -922,9 +926,9 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
       <Card className="overflow-hidden">
         <CardHeader className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <CardTitle>Ota-ona huquqlari</CardTitle>
+            <CardTitle>{tr("Ota-ona huquqlari")}</CardTitle>
             <p className="text-[12.5px] text-[var(--color-text-muted)]">
-              Kim olib keta oladi, kim moliyani ko&apos;radi, kimga bildirishnoma boradi
+              {tr("Kim olib keta oladi, kim moliyani ko'radi, kimga bildirishnoma boradi")}
             </p>
           </div>
         </CardHeader>
@@ -935,27 +939,27 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
             </div>
           ) : guardiansQuery.isError ? (
             <div className="px-5 py-5 sm:px-6">
-              <ErrorState message={(guardiansQuery.error as Error).message} />
+              <ErrorState message={tr((guardiansQuery.error as Error).message)} />
             </div>
           ) : !guardiansQuery.data || guardiansQuery.data.length === 0 ? (
             <div className="px-5 py-5 sm:px-6">
-              <EmptyState title="Hali ota-ona biriktirilmagan" icon={<GroupIcon className="h-[26px] w-[26px]" />} />
+              <EmptyState title={tr("Hali ota-ona biriktirilmagan")} icon={<GroupIcon className="h-[26px] w-[26px]" />} />
             </div>
           ) : (
             <DataTable>
               <THead>
                 <tr>
-                  <Th>Ism</Th>
-                  <Th>Telefon</Th>
-                  <Th>Qarindoshlik</Th>
-                  <Th>Belgilar</Th>
+                  <Th>{tr("Ism")}</Th>
+                  <Th>{tr("Telefon")}</Th>
+                  <Th>{tr("Qarindoshlik")}</Th>
+                  <Th>{tr("Belgilar")}</Th>
                   {canWrite && <Th />}
                 </tr>
               </THead>
               <TBody>
                 {guardiansQuery.data.map((link) => (
                   <Tr key={link.id}>
-                    <Td className="font-medium">{link.guardian.fullName}</Td>
+                    <Td className="font-medium">{tr(link.guardian.fullName)}</Td>
                     <Td nowrap>
                       <span className="inline-flex items-center gap-1">
                         <a
@@ -964,23 +968,23 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
                         >
                           {formatPhone(link.guardian.phone)}
                         </a>
-                        <CopyButton value={link.guardian.phone} label="Telefon raqamini nusxalash" />
+                        <CopyButton value={link.guardian.phone} label={tr("Telefon raqamini nusxalash")} />
                       </span>
                     </Td>
-                    <Td className="text-[var(--color-text-muted)]">{GUARDIAN_RELATION_LABEL[link.relation]}</Td>
+                    <Td className="text-[var(--color-text-muted)]">{tr(GUARDIAN_RELATION_LABEL[link.relation])}</Td>
                     <Td>
                       <div className="flex flex-wrap gap-1.5">
-                        {link.isPrimary && <Badge tone="primary">Asosiy</Badge>}
-                        {link.canPickup && <Badge tone="success">Olib ketadi</Badge>}
-                        {link.canViewFinance && <Badge tone="neutral">Moliya</Badge>}
-                        {link.canReceiveNotifications && <Badge tone="neutral">Bildirishnoma</Badge>}
+                        {link.isPrimary && <Badge tone="primary">{tr("Asosiy")}</Badge>}
+                        {link.canPickup && <Badge tone="success">{tr("Olib ketadi")}</Badge>}
+                        {link.canViewFinance && <Badge tone="neutral">{tr("Moliya")}</Badge>}
+                        {link.canReceiveNotifications && <Badge tone="neutral">{tr("Bildirishnoma")}</Badge>}
                       </div>
                     </Td>
                     {canWrite && (
                       <Td className="text-right">
                         <div className="flex justify-end gap-1.5">
                           <Button size="sm" variant="ghost" onClick={() => setEditingLink(link)}>
-                            Tahrirlash
+                            {tr("Tahrirlash")}
                           </Button>
                           <Button
                             size="sm"
@@ -988,7 +992,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
                             className="hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]"
                             onClick={() => setDeletingLink(link)}
                           >
-                            O&apos;chirish
+                            {tr("O'chirish")}
                           </Button>
                         </div>
                       </Td>
@@ -1065,15 +1069,13 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
       <ConfirmDialog
         open={!!deletingLink}
         onClose={() => setDeletingLink(null)}
-        title="Ota-ona bog'lanishini o'chirish"
-        confirmLabel="O'chirish"
+        title={tr("Ota-ona bog'lanishini o'chirish")}
+        confirmLabel={tr("O'chirish")}
         tone="danger"
         loading={removeGuardianLinkMutation.isPending}
         description={
           <>
-            <b className="text-[var(--color-text)]">{deletingLink?.guardian.fullName}</b> bu bola bilan bog'lanishi
-            butunlay o&apos;chiriladi. O&apos;zi (vasiy sifatida) tizimda qoladi, faqat shu bola bilan aloqasi
-            uziladi.
+            <b className="text-[var(--color-text)]">{tr(deletingLink?.guardian.fullName)}</b> {tr("bu bola bilan bog'lanishi butunlay o'chiriladi. O'zi (vasiy sifatida) tizimda qoladi, faqat shu bola bilan aloqasi uziladi.")}
           </>
         }
         onConfirm={() => deletingLink && removeGuardianLinkMutation.mutate(deletingLink.id)}

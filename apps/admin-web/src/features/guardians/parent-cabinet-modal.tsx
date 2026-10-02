@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { CopyButton } from "@/components/ui/copy-button";
 import { formatDateTime, formatPhone } from "@/lib/format";
 import { AlertIcon, CheckIcon, GroupIcon } from "@/components/ui/icons";
+import { useTr } from "@/i18n/tr";
 
 const RELATION_LABEL: Record<string, string> = {
   MOTHER: "Onasi",
@@ -43,6 +44,7 @@ export function ParentCabinetModal({
   childName: string;
   links: ChildGuardian[];
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [credentials, setCredentials] = useState<GuardianCabinetCredentials | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +69,7 @@ export function ParentCabinetModal({
       setCredentials(data);
       queryClient.invalidateQueries({ queryKey: ["child-guardians", slug, childId] });
     },
-    onError: (err) => setError(err instanceof ApiError ? err.message : "Amalni bajarib bo'lmadi"),
+    onError: (err) => setError(err instanceof ApiError ? err.message : tr("Amalni bajarib bo'lmadi")),
   });
 
   const closeMutation = useMutation({
@@ -78,7 +80,7 @@ export function ParentCabinetModal({
       queryClient.invalidateQueries({ queryKey: ["child-guardians", slug, childId] });
       onClose();
     },
-    onError: (err) => setError(err instanceof ApiError ? err.message : "Kabinetni yopib bo'lmadi"),
+    onError: (err) => setError(err instanceof ApiError ? err.message : tr("Kabinetni yopib bo'lmadi")),
   });
 
   const handleClose = () => {
@@ -93,20 +95,20 @@ export function ParentCabinetModal({
     typeof window !== "undefined" ? `${window.location.origin}/ota-ona/${slug}` : `/ota-ona/${slug}`;
 
   return (
-    <Modal open={open} onClose={handleClose} title="Ota-ona kabineti">
+    <Modal open={open} onClose={handleClose} title={tr("Ota-ona kabineti")}>
       <div className="space-y-4">
         {error && (
           <div
             role="alert"
             className="rounded-[var(--radius-md)] bg-[var(--color-danger-bg)] px-3.5 py-2.5 text-[14px] leading-relaxed text-[var(--color-danger)]"
           >
-            {error}
+            {tr(error)}
           </div>
         )}
 
         <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
-          <p className="text-[13px] text-[var(--color-text-muted)]">Bola</p>
-          <p className="text-[15px] font-medium text-[var(--color-text)]">{childName}</p>
+          <p className="text-[13px] text-[var(--color-text-muted)]">{tr("Bola")}</p>
+          <p className="text-[15px] font-medium text-[var(--color-text)]">{tr(childName)}</p>
         </div>
 
         {credentials ? (
@@ -115,29 +117,28 @@ export function ParentCabinetModal({
             <div className="rounded-[var(--radius-md)] bg-[var(--color-success-bg)] px-4 py-3.5">
               <p className="flex items-center gap-1.5 text-[14px] font-semibold text-[var(--color-success)]">
                 <CheckIcon className="h-4 w-4" />
-                {issuedAsReset ? "Yangi parol tayyor" : "Kabinet ochildi"}
+                {issuedAsReset ? tr("Yangi parol tayyor") : "Kabinet ochildi"}
               </p>
               <p className="mt-1 text-[13px] leading-relaxed text-[var(--color-success)]/85">
-                Bu parol boshqa ko&apos;rsatilmaydi — hoziroq ota-onaga yetkazing.
+                {tr("Bu parol boshqa ko'rsatilmaydi — hoziroq ota-onaga yetkazing.")}
                 {issuedAsReset && " Eski parol shu daqiqadan ishlamaydi."}
               </p>
             </div>
 
-            <Field label="Havola" value={cabinetUrl} />
-            <Field label="Login (telefon)" value={credentials.login} mono />
-            <Field label="Parol" value={credentials.password} mono />
+            <Field label={tr("Havola")} value={cabinetUrl} />
+            <Field label={tr("Login (telefon)")} value={credentials.login} mono />
+            <Field label={tr("Parol")} value={credentials.password} mono />
 
             <div className="rounded-[var(--radius-md)] bg-[var(--color-warning-bg)] px-3.5 py-3">
               <p className="flex items-start gap-2 text-[13px] leading-relaxed text-[var(--color-warning)]">
                 <AlertIcon className="mt-px h-4 w-4 shrink-0" />
-                Ota va ona shu bitta login bilan kiradi. Parol unutilsa qayta ko&apos;rsatib bo&apos;lmaydi —
-                faqat yangisini yaratasiz.
+                {tr("Ota va ona shu bitta login bilan kiradi. Parol unutilsa qayta ko'rsatib bo'lmaydi — faqat yangisini yaratasiz.")}
               </p>
             </div>
 
             <div className="flex justify-end pt-1">
               <Button type="button" onClick={handleClose}>
-                Yopish
+                {tr("Yopish")}
               </Button>
             </div>
           </>
@@ -147,27 +148,27 @@ export function ParentCabinetModal({
             <div className="rounded-[var(--radius-md)] border border-[var(--color-success)]/30 bg-[var(--color-success-bg)] px-4 py-3.5">
               <p className="flex items-center gap-1.5 text-[14px] font-semibold text-[var(--color-success)]">
                 <CheckIcon className="h-4 w-4" />
-                Kabinet ochiq
+                {tr("Kabinet ochiq")}
               </p>
               <p className="mt-1 text-[13px] leading-relaxed text-[var(--color-success)]/85">
-                Ota va ona shu bitta login bilan kiradi.
+                {tr("Ota va ona shu bitta login bilan kiradi.")}
               </p>
             </div>
 
-            <Field label="Havola" value={cabinetUrl} />
-            <Field label="Login (telefon)" value={holder.guardian.phone} mono />
+            <Field label={tr("Havola")} value={cabinetUrl} />
+            <Field label={tr("Login (telefon)")} value={holder.guardian.phone} mono />
 
             <dl className="grid grid-cols-2 gap-3">
               <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-2.5">
-                <dt className="text-[12.5px] text-[var(--color-text-muted)]">Kimning raqami</dt>
+                <dt className="text-[12.5px] text-[var(--color-text-muted)]">{tr("Kimning raqami")}</dt>
                 <dd className="truncate text-[14px] font-medium text-[var(--color-text)]">
-                  {holder.guardian.fullName}
+                  {tr(holder.guardian.fullName)}
                 </dd>
               </div>
               <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-2.5">
-                <dt className="text-[12.5px] text-[var(--color-text-muted)]">Oxirgi kirish</dt>
+                <dt className="text-[12.5px] text-[var(--color-text-muted)]">{tr("Oxirgi kirish")}</dt>
                 <dd className="text-[14px] font-medium text-[var(--color-text)]">
-                  {holder.guardian.lastLoginAt ? formatDateTime(holder.guardian.lastLoginAt) : "Hali kirmagan"}
+                  {holder.guardian.lastLoginAt ? formatDateTime(holder.guardian.lastLoginAt) : tr("Hali kirmagan")}
                 </dd>
               </div>
             </dl>
@@ -176,22 +177,20 @@ export function ParentCabinetModal({
               <div className="rounded-[var(--radius-md)] bg-[var(--color-warning-bg)] px-3.5 py-3">
                 <p className="flex items-start gap-2 text-[13px] leading-relaxed text-[var(--color-warning)]">
                   <AlertIcon className="mt-px h-4 w-4 shrink-0" />
-                  Yangi parol yaratilsa, eski parol darhol ishlamay qoladi va ota-ona tizimdan chiqariladi.
-                  Davom etamizmi?
+                  {tr("Yangi parol yaratilsa, eski parol darhol ishlamay qoladi va ota-ona tizimdan chiqariladi. Davom etamizmi?")}
                 </p>
                 <div className="mt-3 flex flex-wrap justify-end gap-2">
                   <Button type="button" size="sm" variant="outline" onClick={() => setConfirmingReset(false)}>
-                    Yo&apos;q
+                    {tr("Yo'q")}
                   </Button>
                   <Button type="button" size="sm" loading={openMutation.isPending} onClick={() => openMutation.mutate()}>
-                    Ha, yangilansin
+                    {tr("Ha, yangilansin")}
                   </Button>
                 </div>
               </div>
             ) : (
               <p className="text-[13.5px] leading-relaxed text-[var(--color-text-muted)]">
-                Parolni qayta ko&apos;rsatib bo&apos;lmaydi — u bazada xeshlangan holda saqlanadi. Ota-ona
-                parolni unutgan bo&apos;lsa, yangisini yaratib bering.
+                {tr("Parolni qayta ko'rsatib bo'lmaydi — u bazada xeshlangan holda saqlanadi. Ota-ona parolni unutgan bo'lsa, yangisini yaratib bering.")}
               </p>
             )}
 
@@ -203,13 +202,13 @@ export function ParentCabinetModal({
                   loading={closeMutation.isPending}
                   onClick={() => closeMutation.mutate()}
                 >
-                  Kabinetni yopish
+                  {tr("Kabinetni yopish")}
                 </Button>
                 <Button type="button" variant="outline" onClick={handleClose}>
-                  Yopish
+                  {tr("Yopish")}
                 </Button>
                 <Button type="button" onClick={() => setConfirmingReset(true)}>
-                  Yangi parol yaratish
+                  {tr("Yangi parol yaratish")}
                 </Button>
               </div>
             )}
@@ -220,12 +219,12 @@ export function ParentCabinetModal({
             <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-4 py-6 text-center">
               <GroupIcon className="mx-auto h-6 w-6 text-[var(--color-text-muted)]" />
               <p className="mt-2 text-[14px] text-[var(--color-text-muted)]">
-                Avval bolaga ota-ona biriktiring — kabinet logini uning telefon raqami bo&apos;ladi.
+                {tr("Avval bolaga ota-ona biriktiring — kabinet logini uning telefon raqami bo'ladi.")}
               </p>
             </div>
             <div className="flex justify-end">
               <Button type="button" variant="outline" onClick={handleClose}>
-                Yopish
+                {tr("Yopish")}
               </Button>
             </div>
           </>
@@ -233,8 +232,7 @@ export function ParentCabinetModal({
           /* ---- Kabinet ochish ---- */
           <>
             <p className="text-[14.5px] leading-relaxed text-[var(--color-text-muted)]">
-              Bolaga bitta kabinet ochiladi — ota ham, ona ham shu login bilan kirib, davomat, ovqat va
-              mashg&apos;ulotlarni ko&apos;radi. Login sifatida qaysi raqam ishlatilsin?
+              {tr("Bolaga bitta kabinet ochiladi — ota ham, ona ham shu login bilan kirib, davomat, ovqat va mashg'ulotlarni ko'radi. Login sifatida qaysi raqam ishlatilsin?")}
             </p>
 
             <ul className="space-y-2">
@@ -264,9 +262,9 @@ export function ParentCabinetModal({
                       <span className="min-w-0 flex-1">
                         <span className="flex flex-wrap items-center gap-1.5">
                           <span className="truncate text-[15px] font-medium text-[var(--color-text)]">
-                            {link.guardian.fullName}
+                            {tr(link.guardian.fullName)}
                           </span>
-                          {link.isPrimary && <Badge tone="primary">Asosiy</Badge>}
+                          {link.isPrimary && <Badge tone="primary">{tr("Asosiy")}</Badge>}
                         </span>
                         <span className="mt-0.5 block text-[13px] tabular-nums text-[var(--color-text-muted)]">
                           {formatPhone(link.guardian.phone)} · {RELATION_LABEL[link.relation] ?? link.relation}
@@ -280,7 +278,7 @@ export function ParentCabinetModal({
 
             <div className="flex flex-wrap justify-end gap-2 pt-1">
               <Button type="button" variant="outline" onClick={handleClose}>
-                Bekor qilish
+                {tr("Bekor qilish")}
               </Button>
               <Button
                 type="button"
@@ -288,7 +286,7 @@ export function ParentCabinetModal({
                 loading={openMutation.isPending}
                 onClick={() => openMutation.mutate()}
               >
-                Kabinet ochish
+                {tr("Kabinet ochish")}
               </Button>
             </div>
           </>
@@ -299,12 +297,13 @@ export function ParentCabinetModal({
 }
 
 function Field({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  const tr = useTr();
   return (
     <div>
-      <p className="mb-1.5 text-[13px] font-medium text-[var(--color-text)]">{label}</p>
+      <p className="mb-1.5 text-[13px] font-medium text-[var(--color-text)]">{tr(label)}</p>
       <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface-sunken)] px-3.5 py-2.5">
         <span className={`min-w-0 flex-1 break-all text-[15px] text-[var(--color-text)] ${mono ? "font-mono" : ""}`}>
-          {value}
+          {tr(value)}
         </span>
         <CopyButton value={value} label={`${label} nusxalash`} />
       </div>

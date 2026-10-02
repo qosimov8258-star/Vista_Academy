@@ -5,6 +5,7 @@ import type { Product } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Badge } from "@/components/ui/badge";
 import { ChevronRightIcon, CoinIcon, ShopIcon } from "@/components/ui/icons";
+import { useTr } from "@/i18n/tr";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
 
@@ -18,6 +19,7 @@ function imagePositions(product: Product): (1 | 2 | 3)[] {
 
 /** Mahsulot suratlari — chapda miniatyuralar, o'ngda katta rasm; o'q tugmalari yoki surish (swipe) bilan almashtiriladi. */
 function ProductImageGallery({ product, positions }: { product: Product; positions: (1 | 2 | 3)[] }) {
+  const tr = useTr();
   const [index, setIndex] = useState(0);
   const dragStartX = useRef<number | null>(null);
   const hasMultiple = positions.length > 1;
@@ -72,7 +74,7 @@ function ProductImageGallery({ product, positions }: { product: Product; positio
           <img
             key={positions[index]}
             src={imageUrl(positions[index])}
-            alt={product.name}
+            alt={tr(product.name)}
             draggable={false}
             className="h-full w-full object-cover"
           />
@@ -84,7 +86,7 @@ function ProductImageGallery({ product, positions }: { product: Product; positio
               type="button"
               onClick={() => goTo(index - 1)}
               className="absolute left-0 top-1/2 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-[var(--color-surface)] text-[var(--color-text)] shadow-[var(--shadow-raised)] transition-transform hover:scale-105"
-              aria-label="Oldingi rasm"
+              aria-label={tr("Oldingi rasm")}
             >
               <ChevronRightIcon className="h-4 w-4 -scale-x-100" />
             </button>
@@ -92,7 +94,7 @@ function ProductImageGallery({ product, positions }: { product: Product; positio
               type="button"
               onClick={() => goTo(index + 1)}
               className="absolute right-0 top-1/2 flex h-8 w-8 translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-[var(--color-surface)] text-[var(--color-text)] shadow-[var(--shadow-raised)] transition-transform hover:scale-105"
-              aria-label="Keyingi rasm"
+              aria-label={tr("Keyingi rasm")}
             >
               <ChevronRightIcon className="h-4 w-4" />
             </button>
@@ -112,6 +114,7 @@ export function ProductDetailModal({
   onClose: () => void;
   product: Product;
 }) {
+  const tr = useTr();
   const positions = imagePositions(product);
   const inStock = product.quantity > 0;
 
@@ -119,7 +122,7 @@ export function ProductDetailModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={product.name}
+      title={tr(product.name)}
       widthClassName={positions.length > 1 ? "max-w-md" : "max-w-sm"}
     >
       <div className="space-y-4">
@@ -132,16 +135,16 @@ export function ProductDetailModal({
         )}
 
         <div>
-          <h3 className="text-[17px] font-semibold text-[var(--color-text)]">{product.name}</h3>
-          {product.color && <p className="mt-0.5 text-[13px] text-[var(--color-text-muted)]">{product.color}</p>}
+          <h3 className="text-[17px] font-semibold text-[var(--color-text)]">{tr(product.name)}</h3>
+          {product.color && <p className="mt-0.5 text-[13px] text-[var(--color-text-muted)]">{tr(product.color)}</p>}
         </div>
 
         {product.description && (
-          <p className="text-[14px] leading-relaxed text-[var(--color-text-muted)]">{product.description}</p>
+          <p className="text-[14px] leading-relaxed text-[var(--color-text-muted)]">{tr(product.description)}</p>
         )}
 
         <div className="flex items-center gap-1.5 text-[15px] font-semibold text-[var(--color-text)]">
-          Qiymati: {product.priceCoins}
+          {tr("Qiymati:")}{" "}{tr(product.priceCoins)}
           <CoinIcon className="h-4 w-4 text-[var(--color-warning)]" />
         </div>
 

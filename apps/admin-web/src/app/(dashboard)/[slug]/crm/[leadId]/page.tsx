@@ -21,6 +21,7 @@ import { LeadActivityForm } from "@/features/crm/lead-activity-form";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { isCallOperatorUser } from "@/lib/employee-position";
 import { canWriteOperational } from "@/lib/permissions";
+import { useTr } from "@/i18n/tr";
 
 type LeadActivityWithCreator = LeadActivity & { createdBy?: { id: string; fullName: string } | null };
 type LeadDetail = Lead & {
@@ -29,6 +30,7 @@ type LeadDetail = Lead & {
 };
 
 export default function LeadDetailPage({ params }: { params: Promise<{ slug: string; leadId: string }> }) {
+  const tr = useTr();
   const { slug, leadId } = use(params);
   const [stageModalOpen, setStageModalOpen] = useState(false);
   const [convertModalOpen, setConvertModalOpen] = useState(false);
@@ -46,7 +48,7 @@ export default function LeadDetailPage({ params }: { params: Promise<{ slug: str
   });
 
   if (leadQuery.isLoading) return <LoadingState />;
-  if (leadQuery.isError) return <ErrorState message={(leadQuery.error as Error).message} />;
+  if (leadQuery.isError) return <ErrorState message={tr((leadQuery.error as Error).message)} />;
   const lead = leadQuery.data;
   if (!lead) return null;
 
@@ -58,18 +60,18 @@ export default function LeadDetailPage({ params }: { params: Promise<{ slug: str
     <div className="space-y-6">
       <div>
         <Link href={crmHref} className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
-          ← Arizalar
+          {tr("← Arizalar")}
         </Link>
         <div className="mt-1 flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-[var(--color-text)]">{lead.childFullName}</h1>
-          <Badge tone={STAGE_TONE[lead.stage]}>{STAGE_LABEL[lead.stage]}</Badge>
+          <h1 className="text-xl font-semibold text-[var(--color-text)]">{tr(lead.childFullName)}</h1>
+          <Badge tone={STAGE_TONE[lead.stage]}>{tr(STAGE_LABEL[lead.stage])}</Badge>
         </div>
         <p className="text-sm text-[var(--color-text-muted)]">
-          {lead.parentName} • {lead.parentPhone}
-          {lead.ageGroup ? ` • ${AGE_GROUP_LABEL[lead.ageGroup]}` : ""} • {SOURCE_LABEL[lead.source]}
+          {tr(lead.parentName)} • {tr(lead.parentPhone)}
+          {lead.ageGroup ? ` • ${AGE_GROUP_LABEL[lead.ageGroup]}` : ""} • {tr(SOURCE_LABEL[lead.source])}
         </p>
         <p className="text-xs text-[var(--color-text-muted)]">
-          Yaratildi: {formatDate(lead.createdAt)} • Mas&apos;ul: {lead.assignedTo?.fullName ?? "—"}
+          {tr("Yaratildi:")}{" "}{formatDate(lead.createdAt)} {tr("• Mas'ul:")}{" "}{lead.assignedTo?.fullName ?? "—"}
         </p>
       </div>
 
@@ -77,17 +79,17 @@ export default function LeadDetailPage({ params }: { params: Promise<{ slug: str
 
       {lead.lostReason && (
         <div className="rounded-lg border border-[var(--color-danger)]/30 bg-[var(--color-danger-bg)] px-4 py-3 text-sm text-[var(--color-danger)]">
-          Yo&apos;qotish sababi: {lead.lostReason}
+          {tr("Yo'qotish sababi:")}{" "}{tr(lead.lostReason)}
         </div>
       )}
 
       {isConverted && (
         <div className="flex items-center justify-between rounded-lg border border-[var(--color-success)]/30 bg-[var(--color-success-bg)] px-4 py-3">
-          <p className="text-sm font-medium text-[var(--color-success)]">Bu ariza bola profiliga aylantirilgan</p>
+          <p className="text-sm font-medium text-[var(--color-success)]">{tr("Bu ariza bola profiliga aylantirilgan")}</p>
           {!callOperator && (
             <Link href={`/${slug}/children/${lead.convertedChildId}`}>
               <Button size="sm" variant="outline">
-                Bola profilini ko&apos;rish →
+                {tr("Bola profilini ko'rish →")}
               </Button>
             </Link>
           )}
@@ -97,33 +99,33 @@ export default function LeadDetailPage({ params }: { params: Promise<{ slug: str
       {canWrite && !isConverted && (
         <Card>
           <CardHeader>
-            <CardTitle>Amallar</CardTitle>
+            <CardTitle>{tr("Amallar")}</CardTitle>
           </CardHeader>
           <CardBody className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => setStageModalOpen(true)}>
-              Bosqichni o&apos;zgartirish
+              {tr("Bosqichni o'zgartirish")}
             </Button>
             <Button variant="outline" onClick={() => setAssignModalOpen(true)}>
-              Mas&apos;ulni belgilash
+              {tr("Mas'ulni belgilash")}
             </Button>
             {/* Bola yaratish call operatorning ishi emas — uni administrator qiladi */}
-            {!isFinal && !callOperator && <Button onClick={() => setConvertModalOpen(true)}>Bolaga aylantirish</Button>}
+            {!isFinal && !callOperator && <Button onClick={() => setConvertModalOpen(true)}>{tr("Bolaga aylantirish")}</Button>}
           </CardBody>
         </Card>
       )}
 
       <Card>
         <CardHeader className="flex items-center justify-between gap-3">
-          <CardTitle>Tafsilotlar</CardTitle>
+          <CardTitle>{tr("Tafsilotlar")}</CardTitle>
           {canWrite && (
             <Button size="sm" variant="outline" onClick={() => setDetailsModalOpen(true)}>
-              Tahrirlash
+              {tr("Tahrirlash")}
             </Button>
           )}
         </CardHeader>
         <CardBody className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
-            <p className="text-[12.5px] text-[var(--color-text-muted)]">Keyingi bog&apos;lanish</p>
+            <p className="text-[12.5px] text-[var(--color-text-muted)]">{tr("Keyingi bog'lanish")}</p>
             <p
               className={`mt-1 text-[14px] font-medium ${
                 lead.followUpDate && !isFinal && new Date(lead.followUpDate) < new Date()
@@ -135,21 +137,21 @@ export default function LeadDetailPage({ params }: { params: Promise<{ slug: str
             </p>
           </div>
           <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
-            <p className="text-[12.5px] text-[var(--color-text-muted)]">Sinov kuni</p>
+            <p className="text-[12.5px] text-[var(--color-text-muted)]">{tr("Sinov kuni")}</p>
             <p className="mt-1 text-[14px] font-medium text-[var(--color-text)]">
               {lead.trialDate ? formatDate(lead.trialDate) : "Belgilanmagan"}
             </p>
           </div>
           <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
-            <p className="text-[12.5px] text-[var(--color-text-muted)]">Shartnoma sanasi</p>
+            <p className="text-[12.5px] text-[var(--color-text-muted)]">{tr("Shartnoma sanasi")}</p>
             <p className="mt-1 text-[14px] font-medium text-[var(--color-text)]">
               {lead.contractDate ? formatDate(lead.contractDate) : "Belgilanmagan"}
             </p>
           </div>
           {lead.contractNote && (
             <div className="col-span-2 rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3 sm:col-span-3">
-              <p className="text-[12.5px] text-[var(--color-text-muted)]">Shartnoma izohi</p>
-              <p className="mt-1 text-[14px] text-[var(--color-text)]">{lead.contractNote}</p>
+              <p className="text-[12.5px] text-[var(--color-text-muted)]">{tr("Shartnoma izohi")}</p>
+              <p className="mt-1 text-[14px] text-[var(--color-text)]">{tr(lead.contractNote)}</p>
             </div>
           )}
         </CardBody>
@@ -157,22 +159,22 @@ export default function LeadDetailPage({ params }: { params: Promise<{ slug: str
 
       <Card>
         <CardHeader>
-          <CardTitle>Faoliyat tarixi</CardTitle>
+          <CardTitle>{tr("Faoliyat tarixi")}</CardTitle>
         </CardHeader>
         <CardBody className="space-y-4">
           {activities.length === 0 ? (
-            <p className="text-sm text-[var(--color-text-muted)]">Hali faoliyat yo&apos;q</p>
+            <p className="text-sm text-[var(--color-text-muted)]">{tr("Hali faoliyat yo'q")}</p>
           ) : (
             <ul className="space-y-3">
               {activities.map((activity) => (
                 <li key={activity.id} className="rounded-lg border border-[var(--color-border)] px-4 py-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-[var(--color-text)]">{ACTIVITY_LABEL[activity.type]}</span>
+                    <span className="text-sm font-medium text-[var(--color-text)]">{tr(ACTIVITY_LABEL[activity.type])}</span>
                     <span className="text-xs text-[var(--color-text-muted)]">{formatDateTime(activity.createdAt)}</span>
                   </div>
-                  {activity.note && <p className="mt-1 text-sm text-[var(--color-text-muted)]">{activity.note}</p>}
+                  {activity.note && <p className="mt-1 text-sm text-[var(--color-text-muted)]">{tr(activity.note)}</p>}
                   {activity.createdBy && (
-                    <p className="mt-1 text-xs text-[var(--color-text-muted)]">{activity.createdBy.fullName}</p>
+                    <p className="mt-1 text-xs text-[var(--color-text-muted)]">{tr(activity.createdBy.fullName)}</p>
                   )}
                 </li>
               ))}

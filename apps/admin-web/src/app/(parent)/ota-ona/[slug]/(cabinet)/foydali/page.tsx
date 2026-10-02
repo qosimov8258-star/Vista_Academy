@@ -22,6 +22,7 @@ import {
   TongueTwisterIcon,
   type Tone,
 } from "./ui";
+import { useTr } from "@/i18n/tr";
 
 /**
  * "Foydali" — bola bilan birga o'qish va yodlash uchun.
@@ -31,6 +32,7 @@ import {
  * yuklaydi (qarang: content.ts).
  */
 export default function UsefulPage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const base = `/ota-ona/${slug}/foydali`;
   const poemsQuery = usePoems();
@@ -57,7 +59,7 @@ export default function UsefulPage({ params }: { params: Promise<{ slug: string 
   }> = [
     {
       href: `${base}/sherlar`,
-      title: "She'rlar",
+      title: tr("She'rlar"),
       note: "Qatorma-qator yodlang",
       Icon: PoemIcon,
       tone: "lilac",
@@ -69,7 +71,7 @@ export default function UsefulPage({ params }: { params: Promise<{ slug: string 
     {
       href: `${base}/maqollar`,
       title: "Maqollar",
-      note: "Ma'nosi bilan",
+      note: tr("Ma'nosi bilan"),
       Icon: ProverbIcon,
       tone: "mint",
       total: proverbsQuery.data?.length ?? null,
@@ -80,7 +82,7 @@ export default function UsefulPage({ params }: { params: Promise<{ slug: string 
     {
       href: `${base}/ertaklar`,
       title: "Ertaklar",
-      note: "Uxlashdan oldin o'qing",
+      note: tr("Uxlashdan oldin o'qing"),
       Icon: TaleIcon,
       tone: "sky",
       total: talesQuery.data?.length ?? null,
@@ -92,13 +94,13 @@ export default function UsefulPage({ params }: { params: Promise<{ slug: string 
 
   const soon = [
     { title: "Topishmoqlar", Icon: RiddleIcon },
-    { title: "Qo'shiqlar", Icon: SongIcon },
+    { title: tr("Qo'shiqlar"), Icon: SongIcon },
     { title: "Tez aytishlar", Icon: TongueTwisterIcon },
   ];
 
   return (
     <div className="mx-auto w-full max-w-[520px] px-4">
-      <FoydaliHeader title="Foydali" subtitle="Bolangiz bilan birga o'qing, yodlang va o'ynang" />
+      <FoydaliHeader title={tr("Foydali")} subtitle={tr("Bolangiz bilan birga o'qing, yodlang va o'ynang")} />
 
       {failed && (
         <LoadErrorCard
@@ -120,25 +122,25 @@ export default function UsefulPage({ params }: { params: Promise<{ slug: string 
           <SparkleDeco className="absolute right-4 top-4 h-16 w-16" />
           <span className="relative inline-flex items-center gap-1.5 rounded-full bg-[var(--p-lilac)]/16 px-2.5 py-1 text-[11.5px] font-bold uppercase tracking-[0.06em] text-[var(--p-lilac-ink)]">
             <StarIcon filled className="h-3.5 w-3.5" />
-            Bugungi she&apos;r
+            {tr("Bugungi she'r")}
           </span>
           <p className={`${styles.roundedFont} relative mt-3 text-[26px] font-extrabold leading-tight text-[var(--p-ink)]`}>
-            {featured.title}
+            {tr(featured.title)}
           </p>
           <p className={`${styles.roundedFont} relative mt-2 text-[16.5px] font-semibold leading-relaxed text-[var(--p-muted)]`}>
-            {featured.stanzas[0]?.[0]}
+            {tr(featured.stanzas[0]?.[0])}
             <br />
-            {featured.stanzas[0]?.[1]}
+            {tr(featured.stanzas[0]?.[1])}
           </p>
           <span className="relative mt-4 inline-flex items-center gap-1.5 rounded-full bg-[var(--p-coral)] px-4 py-2.5 text-[14.5px] font-bold text-white shadow-[0_8px_18px_-8px_rgba(255,122,102,0.8)]">
-            Yodlashni boshlash
+            {tr("Yodlashni boshlash")}
             <ChevronRightIcon className="h-4 w-4" />
           </span>
         </Link>
       )}
 
       <section className="mt-7">
-        <SectionLabel>Bo&apos;limlar</SectionLabel>
+        <SectionLabel>{tr("Bo'limlar")}</SectionLabel>
         <ul className="mt-3 space-y-3">
           {sections.map((section) => {
             const tone = TONES[section.tone];
@@ -154,7 +156,7 @@ export default function UsefulPage({ params }: { params: Promise<{ slug: string 
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className={`${styles.roundedFont} block text-[18px] font-extrabold text-[var(--p-ink)]`}>
-                      {section.title}
+                      {tr(section.title)}
                     </span>
                     <span className="mt-0.5 block text-[13px] text-[var(--p-muted)]">
                       {section.total === null
@@ -162,10 +164,8 @@ export default function UsefulPage({ params }: { params: Promise<{ slug: string 
                           ? section.note
                           : "Yuklanmoqda…"
                         : section.total === 0
-                          ? "Hozircha yo'q · tarbiyachi qo'shadi"
-                          : `${section.total} ta ${section.unit}${
-                              section.done > 0 ? ` · ${section.done} tasi ${section.doneWord}` : ` · ${section.note}`
-                            }`}
+                          ? tr("Hozircha yo'q · tarbiyachi qo'shadi")
+                          : tr("{0} ta {1}{2}", section.total, section.unit, section.done > 0 ? ` · ${section.done} tasi ${section.doneWord}` : ` · ${section.note}`)}
                     </span>
                     <span className="mt-2.5 block h-1.5 overflow-hidden rounded-full bg-[var(--p-sunken)]">
                       <span
@@ -183,7 +183,7 @@ export default function UsefulPage({ params }: { params: Promise<{ slug: string 
       </section>
 
       <section className="mt-7">
-        <SectionLabel>Tez orada</SectionLabel>
+        <SectionLabel>{tr("Tez orada")}</SectionLabel>
         <div className="mt-3 grid grid-cols-3 gap-2.5">
           {soon.map((item) => (
             <div
@@ -191,7 +191,7 @@ export default function UsefulPage({ params }: { params: Promise<{ slug: string 
               className="flex flex-col items-center gap-2 rounded-[20px] border border-dashed border-[var(--p-line)] px-2 py-4 text-center"
             >
               <item.Icon className="h-7 w-7 text-[var(--p-muted)] opacity-70" />
-              <span className="text-[12.5px] font-semibold leading-tight text-[var(--p-muted)]">{item.title}</span>
+              <span className="text-[12.5px] font-semibold leading-tight text-[var(--p-muted)]">{tr(item.title)}</span>
             </div>
           ))}
         </div>
@@ -200,7 +200,7 @@ export default function UsefulPage({ params }: { params: Promise<{ slug: string 
       <div className="mt-7 flex items-start gap-3 rounded-[20px] bg-[var(--p-sun)]/12 px-4 py-3.5">
         <BulbIcon className="mt-0.5 h-5 w-5 shrink-0 text-[var(--p-sun-ink)]" />
         <p className="text-[13.5px] leading-relaxed text-[var(--p-ink)]">
-          Bolalar takrorlash orqali yodlaydi. Kuniga 5 daqiqa — bir oyda o&apos;nlab she&apos;r va maqol!
+          {tr("Bolalar takrorlash orqali yodlaydi. Kuniga 5 daqiqa — bir oyda o'nlab she'r va maqol!")}
         </p>
       </div>
     </div>

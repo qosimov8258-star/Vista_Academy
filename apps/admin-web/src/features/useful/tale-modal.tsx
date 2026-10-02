@@ -11,6 +11,7 @@ import { Modal } from "@/components/ui/modal";
 import { Input, Select, Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { splitIntoBlocks } from "./split-blocks";
+import { useTr } from "@/i18n/tr";
 
 const COVERS = [
   { value: "tun", label: "Tungi osmon" },
@@ -72,6 +73,7 @@ export function TaleModal({
   isTeacher: boolean;
   tale?: Tale | null;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
   const isEdit = !!tale;
@@ -128,7 +130,7 @@ export function TaleModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
@@ -138,19 +140,19 @@ export function TaleModal({
   };
 
   return (
-    <Modal open={open} onClose={handleClose} title={isEdit ? "Ertakni tahrirlash" : "Yangi ertak"} widthClassName="max-w-3xl">
+    <Modal open={open} onClose={handleClose} title={isEdit ? "Ertakni tahrirlash" : tr("Yangi ertak")} widthClassName="max-w-3xl">
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Input label="Sarlavha" placeholder="Sholg'om" error={errors.title?.message} {...register("title")} />
+          <Input label={tr("Sarlavha")} placeholder={tr("Sholg'om")} error={errors.title?.message} {...register("title")} />
           <Input
-            label="Kelib chiqishi"
-            placeholder="O'zbek xalq ertagi"
+            label={tr("Kelib chiqishi")}
+            placeholder={tr("O'zbek xalq ertagi")}
             error={errors.origin?.message}
             {...register("origin")}
           />
@@ -158,21 +160,21 @@ export function TaleModal({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Textarea
-            label="Matn"
-            hint="Xatboshilar orasida bitta bo'sh qator qoldiring"
+            label={tr("Matn")}
+            hint={tr("Xatboshilar orasida bitta bo'sh qator qoldiring")}
             rows={10}
             error={errors.text?.message}
             {...register("text")}
           />
           <div>
-            <span className="mb-2 block text-[13px] font-medium text-[var(--color-text)]">Ko'rinishi</span>
+            <span className="mb-2 block text-[13px] font-medium text-[var(--color-text)]">{tr("Ko'rinishi")}</span>
             <div className="h-full min-h-[220px] space-y-3 rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface-sunken)]/40 px-4 py-3.5">
               {preview.length === 0 ? (
-                <p className="text-[13px] text-[var(--color-text-muted)]">Matn kiritilgach shu yerda ko&apos;rinadi</p>
+                <p className="text-[13px] text-[var(--color-text-muted)]">{tr("Matn kiritilgach shu yerda ko'rinadi")}</p>
               ) : (
                 preview.map((paragraph, i) => (
                   <p key={i} className="text-[14px] leading-relaxed text-[var(--color-text)]">
-                    {paragraph}
+                    {tr(paragraph)}
                   </p>
                 ))
               )}
@@ -180,10 +182,10 @@ export function TaleModal({
           </div>
         </div>
 
-        <Textarea label="Saboq" rows={2} error={errors.moral?.message} {...register("moral")} />
+        <Textarea label={tr("Saboq")} rows={2} error={errors.moral?.message} {...register("moral")} />
         <Textarea
-          label="Savollar (ixtiyoriy, har qatorga bitta)"
-          hint="Ko'pi bilan 8 ta"
+          label={tr("Savollar (ixtiyoriy, har qatorga bitta)")}
+          hint={tr("Ko'pi bilan 8 ta")}
           rows={3}
           error={errors.questionsText?.message}
           {...register("questionsText")}
@@ -191,42 +193,42 @@ export function TaleModal({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Input
-            label="O'qish daqiqasi (ixtiyoriy)"
+            label={tr("O'qish daqiqasi (ixtiyoriy)")}
             type="number"
             min={1}
-            placeholder="Bo'sh qoldirilsa — avtomatik hisoblanadi"
+            placeholder={tr("Bo'sh qoldirilsa — avtomatik hisoblanadi")}
             error={errors.minutesText?.message}
             {...register("minutesText")}
           />
-          <Select label="Muqova" error={errors.cover?.message} {...register("cover")}>
+          <Select label={tr("Muqova")} error={errors.cover?.message} {...register("cover")}>
             {COVERS.map((c) => (
               <option key={c.value} value={c.value}>
-                {c.label}
+                {tr(c.label)}
               </option>
             ))}
           </Select>
 
-          <Select label="Guruh" error={errors.groupId?.message} {...register("groupId")}>
-            {!isTeacher && <option value="">Butun filial</option>}
-            {isTeacher && <option value="">Guruhni tanlang</option>}
+          <Select label={tr("Guruh")} error={errors.groupId?.message} {...register("groupId")}>
+            {!isTeacher && <option value="">{tr("Butun filial")}</option>}
+            {isTeacher && <option value="">{tr("Guruhni tanlang")}</option>}
             {groups.map((group) => (
               <option key={group.id} value={group.id}>
-                {group.name}
+                {tr(group.name)}
               </option>
             ))}
           </Select>
-          <Select label="Ota-onalarga ko'rsatish" error={errors.status?.message} {...register("status")}>
-            <option value="PUBLISHED">Chop etilgan</option>
-            <option value="DRAFT">Qoralama</option>
+          <Select label={tr("Ota-onalarga ko'rsatish")} error={errors.status?.message} {...register("status")}>
+            <option value="PUBLISHED">{tr("Chop etilgan")}</option>
+            <option value="DRAFT">{tr("Qoralama")}</option>
           </Select>
 
-          <Input label="Yosh (dan)" type="number" min={2} max={7} error={errors.ageFrom?.message} {...register("ageFrom")} />
-          <Input label="Yosh (gacha)" type="number" min={2} max={7} error={errors.ageTo?.message} {...register("ageTo")} />
+          <Input label={tr("Yosh (dan)")} type="number" min={2} max={7} error={errors.ageFrom?.message} {...register("ageFrom")} />
+          <Input label={tr("Yosh (gacha)")} type="number" min={2} max={7} error={errors.ageTo?.message} {...register("ageTo")} />
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={handleClose}>
-            Bekor qilish
+            {tr("Bekor qilish")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
             {isEdit ? "Saqlash" : "Yaratish"}

@@ -15,9 +15,11 @@ import { Input, PasswordInput } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { LockIcon } from "@/components/ui/icons";
 import type { TenantAuthenticatedUser } from "@/lib/types";
+import { useTr } from "@/i18n/tr";
 
 /** `submitClassName` — kirish tugmasining sahifaga xos ko'rinishi (gradient) */
 export function LoginForm({ slug, submitClassName }: { slug: string; submitClassName?: string }) {
+  const tr = useTr();
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
@@ -102,7 +104,7 @@ export function LoginForm({ slug, submitClassName }: { slug: string; submitClass
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
       {serverError && (
         <div role="alert" className="rounded-xl bg-[var(--color-danger-bg)] px-3.5 py-2.5 text-sm text-[var(--color-danger)]">
-          {serverError}
+          {tr(serverError)}
         </div>
       )}
       <Input

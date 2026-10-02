@@ -5,6 +5,7 @@ import { ApiError } from "@/lib/api";
 import { parentApi } from "@/lib/parent-api";
 import { CheckIcon, EyeIcon, EyeOffIcon } from "@/components/ui/icons";
 import styles from "../../parent.module.css";
+import { useTr } from "@/i18n/tr";
 
 /** API bilan bir xil: `ChangeParentPasswordDto.newPassword` — kamida 6 belgi */
 const MIN_LENGTH = 6;
@@ -28,12 +29,13 @@ function PasswordField({
   invalid?: boolean;
   inputRef?: React.Ref<HTMLInputElement>;
 }) {
+  const tr = useTr();
   const [visible, setVisible] = useState(false);
   const hintId = useId();
 
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[14px] font-semibold text-[var(--p-ink)]">{label}</span>
+      <span className="mb-1.5 block text-[14px] font-semibold text-[var(--p-ink)]">{tr(label)}</span>
       <span className="relative block">
         <input
           ref={inputRef}
@@ -42,7 +44,7 @@ function PasswordField({
           autoCapitalize="none"
           autoCorrect="off"
           spellCheck={false}
-          placeholder={placeholder}
+          placeholder={tr(placeholder)}
           value={value}
           onChange={(event) => onChange(event.target.value)}
           aria-invalid={invalid || undefined}
@@ -54,7 +56,7 @@ function PasswordField({
         <button
           type="button"
           onClick={() => setVisible((v) => !v)}
-          aria-label={visible ? "Parolni yashirish" : "Parolni ko'rsatish"}
+          aria-label={visible ? "Parolni yashirish" : tr("Parolni ko'rsatish")}
           aria-pressed={visible}
           className="absolute right-2 top-1/2 flex h-11 w-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-[var(--p-muted)] transition-colors active:bg-[var(--p-sunken)]"
         >
@@ -66,7 +68,7 @@ function PasswordField({
           id={hintId}
           className={`mt-1.5 block text-[12.5px] ${invalid ? "font-medium text-[var(--p-coral)]" : "text-[var(--p-muted)]"}`}
         >
-          {hint}
+          {tr(hint)}
         </span>
       )}
     </label>
@@ -91,6 +93,7 @@ export function PasswordSheet({
   /** Qayta kirib bo'lmasa — kirish sahifasiga */
   onSignedOut: () => void;
 }) {
+  const tr = useTr();
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [repeat, setRepeat] = useState("");
@@ -138,7 +141,7 @@ export function PasswordSheet({
     try {
       await parentApi.post("/app/parent/password", { currentPassword: current, newPassword: next });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi. Qayta urinib ko'ring.");
+      setError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi. Qayta urinib ko'ring."));
       setBusy(false);
       return;
     }
@@ -153,10 +156,10 @@ export function PasswordSheet({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center" role="dialog" aria-modal="true" aria-label="Parolni almashtirish">
+    <div className="fixed inset-0 z-50 flex items-end justify-center" role="dialog" aria-modal="true" aria-label={tr("Parolni almashtirish")}>
       <button
         type="button"
-        aria-label="Yopish"
+        aria-label={tr("Yopish")}
         onClick={() => !busy && onClose()}
         className={`${styles.fadeIn} absolute inset-0 cursor-default bg-black/45`}
       />
@@ -171,23 +174,23 @@ export function PasswordSheet({
             <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--p-mint)]/16 text-[var(--p-mint)]">
               <CheckIcon className="h-8 w-8" />
             </span>
-            <p className={`${styles.roundedFont} mt-4 text-[21px] font-extrabold text-[var(--p-ink)]`}>Parol almashtirildi</p>
+            <p className={`${styles.roundedFont} mt-4 text-[21px] font-extrabold text-[var(--p-ink)]`}>{tr("Parol almashtirildi")}</p>
             <p className="mt-1.5 max-w-[340px] text-[14px] leading-relaxed text-[var(--p-muted)]">
-              Endi yangi parol bilan kirasiz. Ikkinchi ota-onaga ham yangi parolni ayting — uning telefonida kabinet qayta kirishni so&apos;raydi.
+              {tr("Endi yangi parol bilan kirasiz. Ikkinchi ota-onaga ham yangi parolni ayting — uning telefonida kabinet qayta kirishni so'raydi.")}
             </p>
             <button
               type="button"
               onClick={onClose}
               className="mt-6 flex h-14 w-full cursor-pointer items-center justify-center rounded-full bg-[var(--p-coral)] text-[16px] font-extrabold text-white transition-transform active:scale-[0.98]"
             >
-              Yaxshi
+              {tr("Yaxshi")}
             </button>
           </div>
         ) : (
           <form onSubmit={submit} noValidate>
-            <p className={`${styles.roundedFont} mt-3 text-[20px] font-extrabold text-[var(--p-ink)]`}>Parolni almashtirish</p>
+            <p className={`${styles.roundedFont} mt-3 text-[20px] font-extrabold text-[var(--p-ink)]`}>{tr("Parolni almashtirish")}</p>
             <p className="mt-0.5 text-[13.5px] leading-relaxed text-[var(--p-muted)]">
-              Ota va ona bitta kabinetdan foydalanadi — yangi parolni ikkalangiz bilishingiz kerak.
+              {tr("Ota va ona bitta kabinetdan foydalanadi — yangi parolni ikkalangiz bilishingiz kerak.")}
             </p>
 
             {/* Parol menejeri yangi parolni qaysi login uchun saqlashni bilsin */}
@@ -196,34 +199,34 @@ export function PasswordSheet({
             <div className="mt-4 space-y-3.5">
               <PasswordField
                 inputRef={firstRef}
-                label="Hozirgi parol"
-                placeholder="Hozir kirayotgan parolingiz"
+                label={tr("Hozirgi parol")}
+                placeholder={tr("Hozir kirayotgan parolingiz")}
                 autoComplete="current-password"
                 value={current}
                 onChange={edit(setCurrent)}
                 invalid={touched && current.length === 0}
-                hint={touched && current.length === 0 ? "Hozirgi parolni kiriting" : null}
+                hint={touched && current.length === 0 ? tr("Hozirgi parolni kiriting") : null}
               />
               <PasswordField
-                label="Yangi parol"
-                placeholder="Kamida 6 ta belgi"
+                label={tr("Yangi parol")}
+                placeholder={tr("Kamida 6 ta belgi")}
                 autoComplete="new-password"
                 value={next}
                 onChange={edit(setNext)}
                 invalid={tooShort || sameAsCurrent || (touched && next.length === 0)}
                 hint={
                   sameAsCurrent
-                    ? "Yangi parol hozirgisidan farq qilishi kerak"
+                    ? tr("Yangi parol hozirgisidan farq qilishi kerak")
                     : tooShort
-                      ? `Yana ${MIN_LENGTH - next.length} ta belgi kerak`
+                      ? tr("Yana {0} ta belgi kerak", MIN_LENGTH - next.length)
                       : touched && next.length === 0
-                        ? "Yangi parolni kiriting"
+                        ? tr("Yangi parolni kiriting")
                         : null
                 }
               />
               <PasswordField
-                label="Yangi parolni takrorlang"
-                placeholder="Xuddi shu parol"
+                label={tr("Yangi parolni takrorlang")}
+                placeholder={tr("Xuddi shu parol")}
                 autoComplete="new-password"
                 value={repeat}
                 onChange={edit(setRepeat)}
@@ -234,7 +237,7 @@ export function PasswordSheet({
                     : repeat.length > 0 && repeat === next && next.length >= MIN_LENGTH
                       ? "Parollar mos keldi"
                       : touched && repeat.length === 0
-                        ? "Yangi parolni qayta kiriting"
+                        ? tr("Yangi parolni qayta kiriting")
                         : null
                 }
               />
@@ -242,7 +245,7 @@ export function PasswordSheet({
 
             {error && (
               <p role="alert" className="mt-3 rounded-[16px] bg-[var(--p-coral)]/12 px-4 py-3 text-[14px] font-medium text-[var(--p-coral)]">
-                {error}
+                {tr(error)}
               </p>
             )}
 
@@ -261,7 +264,7 @@ export function PasswordSheet({
               disabled={busy}
               className="mt-1.5 w-full cursor-pointer rounded-full py-3 text-[15px] font-bold text-[var(--p-muted)] transition-colors active:bg-[var(--p-sunken)] disabled:opacity-50"
             >
-              Bekor qilish
+              {tr("Bekor qilish")}
             </button>
           </form>
         )}

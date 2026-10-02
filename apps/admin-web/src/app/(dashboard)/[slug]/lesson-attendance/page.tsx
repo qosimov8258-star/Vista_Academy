@@ -17,6 +17,7 @@ import {
   formatDayLong,
   formatDayShort,
 } from "@/features/teacher/teacher-ui";
+import { useTr } from "@/i18n/tr";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 
@@ -65,6 +66,7 @@ function pickCurrentLesson(lessons: MyLesson[], date: string): MyLesson | null {
 }
 
 export default function LessonAttendancePage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const queryClient = useQueryClient();
   // "Bugun" mijoz soatiga bog'liq — server va brauzer render'i mos kelishi
@@ -147,7 +149,7 @@ export default function LessonAttendancePage({ params }: { params: Promise<{ slu
     <TeacherPage className="pb-4">
       <LargeTitle
         eyebrow={date ? formatDayLong(date) : " "}
-        title="Davomat"
+        title={tr("Davomat")}
         trailing={
           <label className="relative flex h-9 cursor-pointer items-center gap-1.5 rounded-full bg-[var(--color-surface)] px-3.5 text-[15px] font-medium text-[var(--color-primary)] shadow-[0_1px_2px_rgba(16,24,40,0.06)] transition-transform active:scale-95">
             <CalendarIcon className="h-[18px] w-[18px]" strokeWidth={1.9} />
@@ -156,7 +158,7 @@ export default function LessonAttendancePage({ params }: { params: Promise<{ slu
               type="date"
               value={date}
               onChange={(e) => e.target.value && setDate(e.target.value)}
-              aria-label="Sanani tanlash"
+              aria-label={tr("Sanani tanlash")}
               className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
             />
           </label>
@@ -169,16 +171,16 @@ export default function LessonAttendancePage({ params }: { params: Promise<{ slu
         </Group>
       ) : lessonsQuery.isError ? (
         <Group>
-          <EmptyRow title="Yuklab bo'lmadi" description={(lessonsQuery.error as Error).message} />
+          <EmptyRow title={tr("Yuklab bo'lmadi")} description={tr((lessonsQuery.error as Error).message)} />
         </Group>
       ) : !lessons || lessons.length === 0 ? (
         <Group>
-          <EmptyRow icon={ClockIcon} title="Bu kunda darsingiz yo'q" description="Dars jadvalida sizga dars belgilanganda shu yerda ko'rinadi" />
+          <EmptyRow icon={ClockIcon} title={tr("Bu kunda darsingiz yo'q")} description={tr("Dars jadvalida sizga dars belgilanganda shu yerda ko'rinadi")} />
         </Group>
       ) : (
         <>
           {/* Darslar — bittasini tanlang (hozirgi dars o'zi tanlanadi) */}
-          <Group title="Darslar">
+          <Group title={tr("Darslar")}>
             {lessons.map((lesson, i) => {
               const active = lesson.scheduleId === scheduleId;
               return (
@@ -189,12 +191,12 @@ export default function LessonAttendancePage({ params }: { params: Promise<{ slu
                   chevron={false}
                   leading={
                     <span className="flex w-[40px] shrink-0 flex-col items-start leading-tight tabular-nums">
-                      <span className="text-[15px] font-semibold text-[var(--color-text)]">{lesson.startTime}</span>
-                      <span className="text-[12.5px] text-[var(--color-text-muted)]">{lesson.endTime}</span>
+                      <span className="text-[15px] font-semibold text-[var(--color-text)]">{tr(lesson.startTime)}</span>
+                      <span className="text-[12.5px] text-[var(--color-text-muted)]">{tr(lesson.endTime)}</span>
                     </span>
                   }
                   title={lesson.subject || "Dars"}
-                  subtitle={lesson.groupName}
+                  subtitle={tr(lesson.groupName)}
                   trailing={active ? <CheckIcon className="h-5 w-5 shrink-0 text-[var(--color-primary)]" strokeWidth={2.6} /> : undefined}
                 />
               );
@@ -207,21 +209,21 @@ export default function LessonAttendancePage({ params }: { params: Promise<{ slu
             </Group>
           ) : dayQuery.isError ? (
             <Group>
-              <EmptyRow title="Yuklab bo'lmadi" description={(dayQuery.error as Error).message} />
+              <EmptyRow title={tr("Yuklab bo'lmadi")} description={tr((dayQuery.error as Error).message)} />
             </Group>
           ) : children.length === 0 ? (
             <Group>
-              <EmptyRow icon={ChecklistIcon} title="Bu guruhda faol bola yo'q" />
+              <EmptyRow icon={ChecklistIcon} title={tr("Bu guruhda faol bola yo'q")} />
             </Group>
           ) : (
             <Group
               title={`${selectedLesson.groupName} · ${present}/${children.length}`}
-              footer="Hamma «Keldi» bo'lib ochiladi — faqat kelmaganlarni belgilab, «Saqlash»ni bosing."
+              footer={tr("Hamma «Keldi» bo'lib ochiladi — faqat kelmaganlarni belgilab, «Saqlash»ni bosing.")}
             >
               {children.map((child, i) => (
                 <div key={child.childId} className="relative flex items-center gap-3 px-4 py-2.5">
                   {i > 0 && <span className="absolute left-4 right-0 top-0 h-px bg-[var(--color-separator)]" aria-hidden="true" />}
-                  <p className="min-w-0 flex-1 truncate text-[16px] text-[var(--color-text)]">{child.fullName}</p>
+                  <p className="min-w-0 flex-1 truncate text-[16px] text-[var(--color-text)]">{tr(child.fullName)}</p>
                   <Segmented
                     size="sm"
                     className="w-[168px] shrink-0"
@@ -247,7 +249,7 @@ export default function LessonAttendancePage({ params }: { params: Promise<{ slu
               "Saqlanmoqda…"
             ) : unsaved === 0 && saveMutation.isSuccess ? (
               <>
-                <CheckIcon className="h-5 w-5" strokeWidth={2.6} /> Saqlandi
+                <CheckIcon className="h-5 w-5" strokeWidth={2.6} /> {tr("Saqlandi")}
               </>
             ) : (
               "Saqlash"
@@ -255,7 +257,7 @@ export default function LessonAttendancePage({ params }: { params: Promise<{ slu
           </PrimaryButton>
           {saveMutation.isError && (
             <p className="mt-1.5 text-center text-[13px] font-medium text-[var(--color-danger)]">
-              {(saveMutation.error as Error).message || "Saqlashda xatolik yuz berdi"}
+              {(saveMutation.error as Error).message || tr("Saqlashda xatolik yuz berdi")}
             </p>
           )}
         </FloatingBar>

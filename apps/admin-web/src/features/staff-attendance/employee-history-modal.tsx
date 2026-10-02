@@ -9,6 +9,7 @@ import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { formatPositionLabel } from "@/lib/employee-position";
 import { formatDate } from "@/lib/format";
 import { initials } from "@/components/ui/avatar";
+import { useTr } from "@/i18n/tr";
 
 const STATUS_LABEL = { PRESENT: "Keldi", ABSENT: "Kelmadi", LATE: "Kech qoldi", SICK: "Kasal", ON_LEAVE: "Ta'til" } as const;
 const STATUS_TONE = {
@@ -41,6 +42,7 @@ export function EmployeeHistoryModal({
   period: string;
   onPeriodChange: (period: string) => void;
 }) {
+  const tr = useTr();
   const historyQuery = useQuery({
     queryKey: ["staff-attendance-history", slug, employeeId, branchId, period],
     queryFn: () =>
@@ -64,11 +66,11 @@ export function EmployeeHistoryModal({
   const missed = (counts.ABSENT ?? 0) + (counts.LATE ?? 0) + (counts.SICK ?? 0) + (counts.ON_LEAVE ?? 0);
 
   return (
-    <Modal open={open} onClose={onClose} title="Xodim tarixi" widthClassName="max-w-lg">
+    <Modal open={open} onClose={onClose} title={tr("Xodim tarixi")} widthClassName="max-w-lg">
       {!data && historyQuery.isLoading ? (
         <LoadingState rows={4} />
       ) : historyQuery.isError ? (
-        <ErrorState message={(historyQuery.error as Error).message} />
+        <ErrorState message={tr((historyQuery.error as Error).message)} />
       ) : !data ? null : (
         <div className="space-y-5">
           <div className="flex items-center gap-3">
@@ -76,9 +78,9 @@ export function EmployeeHistoryModal({
               {initials(data.employee.fullName)}
             </span>
             <div className="min-w-0">
-              <p className="truncate text-[16px] font-semibold text-[var(--color-text)]">{data.employee.fullName}</p>
+              <p className="truncate text-[16px] font-semibold text-[var(--color-text)]">{tr(data.employee.fullName)}</p>
               <p className="text-[13px] text-[var(--color-text-muted)]">
-                {formatPositionLabel(data.employee.position, data.employee.subjects)}
+                {tr(formatPositionLabel(data.employee.position, data.employee.subjects))}
                 {data.employee.groups.length > 0 ? ` · ${data.employee.groups.join(", ")}` : ""}
               </p>
             </div>
@@ -86,8 +88,8 @@ export function EmployeeHistoryModal({
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex gap-2">
-              <Badge tone="success">Keldi: {present}</Badge>
-              <Badge tone="danger">Kelmadi: {missed}</Badge>
+              <Badge tone="success">{tr("Keldi:")}{" "}{tr(present)}</Badge>
+              <Badge tone="danger">{tr("Kelmadi:")}{" "}{tr(missed)}</Badge>
             </div>
             <input
               type="month"
@@ -98,7 +100,7 @@ export function EmployeeHistoryModal({
           </div>
 
           {data.days.length === 0 ? (
-            <EmptyState title="Bu oy uchun davomat belgilanmagan" />
+            <EmptyState title={tr("Bu oy uchun davomat belgilanmagan")} />
           ) : (
             <ul className="max-h-[45vh] space-y-1.5 overflow-y-auto scrollbar-thin">
               {data.days.map((day) => (
@@ -113,9 +115,9 @@ export function EmployeeHistoryModal({
                         {day.checkInTime ?? "—"} – {day.checkOutTime ?? "—"}
                       </p>
                     )}
-                    {day.note && <p className="text-[12px] text-[var(--color-text-muted)]">{day.note}</p>}
+                    {day.note && <p className="text-[12px] text-[var(--color-text-muted)]">{tr(day.note)}</p>}
                   </div>
-                  <Badge tone={STATUS_TONE[day.status]}>{STATUS_LABEL[day.status]}</Badge>
+                  <Badge tone={STATUS_TONE[day.status]}>{tr(STATUS_LABEL[day.status])}</Badge>
                 </li>
               ))}
             </ul>

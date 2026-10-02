@@ -11,6 +11,7 @@ import { OrganizationsService } from "./organizations.service";
 import { CreateBranchDto } from "./dto/create-branch.dto";
 import { UpdateBranchDto } from "./dto/update-branch.dto";
 import { UpdateBranchAvatarDto } from "./dto/update-branch-avatar.dto";
+import { UpdateOrganizationNameDto } from "./dto/update-organization-name.dto";
 import { AllowChef } from "../iam/decorators/allow-chef.decorator";
 
 @ApiBearerAuth()
@@ -50,6 +51,15 @@ export class TenantOrganizationsController {
       throw new ForbiddenException("Faqat Super Admin yangi filial qo'sha oladi");
     }
     return this.organizationsService.addBranch(user.organizationId, dto);
+  }
+
+  /** Tashkilot nomini (brend/logo) o'zgartirish — Sozlamalar bo'limida, Super Admin va filial admini. */
+  @Patch("me")
+  updateName(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: UpdateOrganizationNameDto) {
+    if (user.role !== "NETWORK_ADMIN" && user.role !== "BRANCH_ADMIN") {
+      throw new ForbiddenException("Faqat Super Admin yoki filial admini tashkilot nomini o'zgartira oladi");
+    }
+    return this.organizationsService.updateName(user.organizationId, dto.name);
   }
 
   @AllowChef()

@@ -11,6 +11,7 @@ import { useAuth } from "@/lib/use-auth";
 import { Modal } from "@/components/ui/modal";
 import { Input, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useTr } from "@/i18n/tr";
 
 const schema = z
   .object({
@@ -33,6 +34,7 @@ function currentPeriod(): string {
 }
 
 export function BulkCreateInvoiceModal({ open, onClose, slug }: { open: boolean; onClose: () => void; slug: string }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
   const [resultMessage, setResultMessage] = useState<string | null>(null);
@@ -86,40 +88,40 @@ export function BulkCreateInvoiceModal({ open, onClose, slug }: { open: boolean;
       queryClient.invalidateQueries({ queryKey: ["invoices", slug] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-summary", slug] });
       setResultMessage(
-        `${result.createdCount} ta hisob-faktura yaratildi` +
-          (result.skippedCount > 0 ? `, ${result.skippedCount} tasi shu davr uchun allaqachon bor edi` : ""),
+        tr("{0} ta hisob-faktura yaratildi", result.createdCount) +
+          (result.skippedCount > 0 ? tr(", {0} tasi shu davr uchun allaqachon bor edi", result.skippedCount) : ""),
       );
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
   return (
-    <Modal open={open} onClose={onClose} title="Ommaviy hisob-faktura">
+    <Modal open={open} onClose={onClose} title={tr("Ommaviy hisob-faktura")}>
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
         {resultMessage && (
           <div className="rounded-lg bg-[var(--color-success-bg)] px-3 py-2 text-sm text-[var(--color-success)]">
-            {resultMessage}
+            {tr(resultMessage)}
           </div>
         )}
-        <Select label="Guruh" defaultValue="" hint="Tanlanmasa — butun filialdagi barcha faol bolalar" {...register("groupId")}>
-          <option value="">Butun filial</option>
+        <Select label={tr("Guruh")} defaultValue="" hint={tr("Tanlanmasa — butun filialdagi barcha faol bolalar")} {...register("groupId")}>
+          <option value="">{tr("Butun filial")}</option>
           {groups?.filter((g) => g.status === "ACTIVE").map((group) => (
             <option key={group.id} value={group.id}>
-              {group.name}
+              {tr(group.name)}
             </option>
           ))}
         </Select>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input label="Summa (UZS)" type="number" placeholder="850000" error={errors.amount?.message} {...register("amount")} />
+          <Input label={tr("Summa (UZS)")} type="number" placeholder="850000" error={errors.amount?.message} {...register("amount")} />
           <Input
-            label="Chegirma (ixtiyoriy)"
+            label={tr("Chegirma (ixtiyoriy)")}
             type="number"
             placeholder="0"
             error={errors.discountAmount?.message}
@@ -127,16 +129,16 @@ export function BulkCreateInvoiceModal({ open, onClose, slug }: { open: boolean;
           />
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input label="Davr (YYYY-MM)" placeholder="2026-09" error={errors.period?.message} {...register("period")} />
-          <Input label="To'lov muddati" type="date" error={errors.dueDate?.message} {...register("dueDate")} />
+          <Input label={tr("Davr (YYYY-MM)")} placeholder="2026-09" error={errors.period?.message} {...register("period")} />
+          <Input label={tr("To'lov muddati")} type="date" error={errors.dueDate?.message} {...register("dueDate")} />
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Yopish
+            {tr("Yopish")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Yaratish
+            {tr("Yaratish")}
           </Button>
         </div>
       </form>

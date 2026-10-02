@@ -9,6 +9,7 @@ import { PARENT_API_URL, parentApi } from "@/lib/parent-api";
 import type { ParentAccount, ParentChild, ParentPurchaseResult, ParentShop, Product } from "@/lib/types";
 import { CoinIcon, ShopIcon } from "@/components/ui/icons";
 import styles from "../../parent.module.css";
+import { useTr } from "@/i18n/tr";
 
 function firstImagePosition(product: Product): 1 | 2 | 3 | null {
   if (product.hasImage1) return 1;
@@ -28,6 +29,7 @@ function productImageUrl(product: Product): string | null {
  * balans yetarli bo'lsagina xarid o'tadi, aks holda sabab shu yerda aytiladi.
  */
 export default function ParentShopPage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const router = useRouter();
   const [activeChildId, setActiveChildId] = useState<string | null>(null);
@@ -62,11 +64,11 @@ export default function ParentShopPage({ params }: { params: Promise<{ slug: str
   return (
     <div className="mx-auto w-full max-w-[520px] px-4 pt-5">
       <header className="flex items-center justify-between gap-3">
-        <h1 className="text-[22px] font-bold tracking-[-0.02em] text-[var(--p-ink)]">Do&apos;kon</h1>
+        <h1 className="text-[22px] font-bold tracking-[-0.02em] text-[var(--p-ink)]">{tr("Do'kon")}</h1>
         {shopQuery.data && (
           <div className="flex shrink-0 items-center gap-1.5 rounded-full bg-[var(--p-sun)]/16 px-3.5 py-2 text-[15px] font-bold text-[var(--p-sun-ink)]">
             <CoinIcon className="h-4 w-4" />
-            {shopQuery.data.balance}
+            {tr(shopQuery.data.balance)}
           </div>
         )}
       </header>
@@ -83,7 +85,7 @@ export default function ParentShopPage({ params }: { params: Promise<{ slug: str
                 c.id === childId ? "bg-[var(--p-coral)] text-white" : "bg-[var(--p-panel)] text-[var(--p-muted)]",
               )}
             >
-              {c.fullName.split(" ").slice(-1)[0]}
+              {tr(c.fullName.split(" ").slice(-1)[0])}
             </button>
           ))}
         </div>
@@ -97,7 +99,7 @@ export default function ParentShopPage({ params }: { params: Promise<{ slug: str
         </div>
       ) : shopQuery.data && shopQuery.data.products.length === 0 ? (
         <p className="mt-10 text-center text-[15px] text-[var(--p-muted)]">
-          Hozircha do&apos;konda tovar yo&apos;q — tarbiyachi tez orada qo&apos;shadi.
+          {tr("Hozircha do'konda tovar yo'q — tarbiyachi tez orada qo'shadi.")}
         </p>
       ) : (
         <div className="mt-5 grid grid-cols-2 gap-3">
@@ -120,6 +122,7 @@ export default function ParentShopPage({ params }: { params: Promise<{ slug: str
 }
 
 function ProductTile({ product, onOpen }: { product: Product; onOpen: () => void }) {
+  const tr = useTr();
   const imageUrl = productImageUrl(product);
   const inStock = product.quantity > 0;
 
@@ -132,21 +135,21 @@ function ProductTile({ product, onOpen }: { product: Product; onOpen: () => void
       <div className="flex aspect-square items-center justify-center overflow-hidden bg-[var(--p-sunken)]">
         {imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- tashqi manzil, Next optimizatsiyasi sozlanmagan
-          <img src={imageUrl} alt={product.name} className="h-full w-full object-cover" />
+          <img src={imageUrl} alt={tr(product.name)} className="h-full w-full object-cover" />
         ) : (
           <ShopIcon className="h-9 w-9 text-[var(--p-muted)]" />
         )}
       </div>
       <div className="space-y-1.5 p-3">
-        <p className="truncate text-[14px] font-semibold text-[var(--p-ink)]">{product.name}</p>
+        <p className="truncate text-[14px] font-semibold text-[var(--p-ink)]">{tr(product.name)}</p>
         <div className="flex items-center justify-between gap-1.5">
           <span className="flex items-center gap-1 text-[13px] font-bold text-[var(--p-sun-ink)]">
             <CoinIcon className="h-3.5 w-3.5" />
-            {product.priceCoins}
+            {tr(product.priceCoins)}
           </span>
           {!inStock && (
             <span className="rounded-full bg-[var(--p-coral)]/14 px-2 py-0.5 text-[11px] font-bold text-[var(--p-coral)]">
-              Tugagan
+              {tr("Tugagan")}
             </span>
           )}
         </div>
@@ -166,6 +169,7 @@ function ProductSheet({
   balance: number;
   onClose: () => void;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [result, setResult] = useState<ParentPurchaseResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -201,7 +205,7 @@ function ProductSheet({
       );
     },
     onError: (err) => {
-      setError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
@@ -212,12 +216,12 @@ function ProductSheet({
       : !inStock
         ? "Tovar tugagan"
         : !canAfford
-          ? "Coin yetarli emas"
+          ? "Yulduzcha yetarli emas"
           : "Sotib olish";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center" role="dialog" aria-modal="true" aria-label={current.name}>
-      <button type="button" aria-label="Yopish" onClick={onClose} className={`${styles.fadeIn} absolute inset-0 cursor-default bg-black/45`} />
+    <div className="fixed inset-0 z-50 flex items-end justify-center" role="dialog" aria-modal="true" aria-label={tr(current.name)}>
+      <button type="button" aria-label={tr("Yopish")} onClick={onClose} className={`${styles.fadeIn} absolute inset-0 cursor-default bg-black/45`} />
       <div
         className={`${styles.sheetIn} relative max-h-[92dvh] w-full max-w-[520px] overflow-y-auto rounded-t-[30px] bg-[var(--p-card)] px-5 pt-3 shadow-[var(--p-shadow)]`}
         style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom))" }}
@@ -227,26 +231,26 @@ function ProductSheet({
         <div className="mt-3 flex aspect-square items-center justify-center overflow-hidden rounded-[22px] bg-[var(--p-sunken)]">
           {imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- tashqi manzil, Next optimizatsiyasi sozlanmagan
-            <img src={imageUrl} alt={current.name} className="h-full w-full object-cover" />
+            <img src={imageUrl} alt={tr(current.name)} className="h-full w-full object-cover" />
           ) : (
             <ShopIcon className="h-14 w-14 text-[var(--p-muted)]" />
           )}
         </div>
 
-        <h2 className="mt-4 text-[19px] font-bold text-[var(--p-ink)]">{current.name}</h2>
-        {current.color && <p className="mt-0.5 text-[13.5px] text-[var(--p-muted)]">{current.color}</p>}
+        <h2 className="mt-4 text-[19px] font-bold text-[var(--p-ink)]">{tr(current.name)}</h2>
+        {current.color && <p className="mt-0.5 text-[13.5px] text-[var(--p-muted)]">{tr(current.color)}</p>}
         {current.description && (
-          <p className="mt-2 text-[14.5px] leading-relaxed text-[var(--p-ink)]">{current.description}</p>
+          <p className="mt-2 text-[14.5px] leading-relaxed text-[var(--p-ink)]">{tr(current.description)}</p>
         )}
 
         <div className="mt-3 flex items-center gap-1.5 text-[16px] font-bold text-[var(--p-ink)]">
-          Qiymati: {current.priceCoins}
+          {tr("Qiymati:")}{" "}{tr(current.priceCoins)}
           <CoinIcon className="h-4 w-4 text-[var(--p-sun-ink)]" />
         </div>
 
         {error && (
           <div className="mt-3 rounded-[16px] bg-[var(--p-coral)]/12 px-4 py-2.5 text-[14px] font-medium text-[var(--p-coral)]">
-            {error}
+            {tr(error)}
           </div>
         )}
 
@@ -265,14 +269,14 @@ function ProductSheet({
           disabled={!inStock || !canAfford || purchase.isPending || !!result}
           className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[var(--p-coral)] py-4 text-[16px] font-extrabold text-white shadow-[0_10px_24px_-10px_rgba(255,122,102,0.9)] transition-transform active:scale-[0.98] disabled:cursor-default disabled:opacity-50"
         >
-          {buttonLabel}
+          {tr(buttonLabel)}
         </button>
         <button
           type="button"
           onClick={onClose}
           className="mt-1.5 w-full cursor-pointer rounded-full py-3 text-[15px] font-bold text-[var(--p-muted)] transition-colors active:bg-[var(--p-sunken)]"
         >
-          Yopish
+          {tr("Yopish")}
         </button>
       </div>
     </div>

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { CoinIcon, PencilIcon, ShopIcon } from "@/components/ui/icons";
 import { EditProductModal } from "./edit-product-modal";
 import { ProductDetailModal } from "./product-detail-modal";
+import { useTr } from "@/i18n/tr";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
 
@@ -29,6 +30,7 @@ export function ProductCard({
   product: Product;
   canWrite: boolean;
 }) {
+  const tr = useTr();
   const [detailOpen, setDetailOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const imagePosition = firstImagePosition(product);
@@ -40,7 +42,7 @@ export function ProductCard({
           // eslint-disable-next-line @next/next/no-img-element -- tashqi manzil, Next optimizatsiyasi sozlanmagan
           <img
             src={`${API_URL}/app/products/${product.id}/images/${imagePosition}?v=${encodeURIComponent(product.imagesUpdatedAt ?? "")}`}
-            alt={product.name}
+            alt={tr(product.name)}
             className="h-full w-full object-cover"
           />
         ) : (
@@ -48,22 +50,22 @@ export function ProductCard({
         )}
       </div>
       <div className="space-y-2 p-3.5">
-        <p className="truncate text-[14px] font-medium text-[var(--color-text)]">{product.name}</p>
-        {product.color && <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">{product.color}</p>}
+        <p className="truncate text-[14px] font-medium text-[var(--color-text)]">{tr(product.name)}</p>
+        {product.color && <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">{tr(product.color)}</p>}
         <Badge tone={product.quantity > 0 ? "success" : "danger"}>
-          {product.quantity > 0 ? `${product.quantity} ta` : "Tugagan"}
+          {product.quantity > 0 ? tr("{0} ta", product.quantity) : "Tugagan"}
         </Badge>
         <div className="flex items-center gap-1.5 pt-1">
           <div className="flex flex-1 items-center justify-center gap-1 rounded-full bg-[var(--color-warning-bg)] px-3 py-2 text-[14px] font-semibold text-[var(--color-warning)]">
             <CoinIcon className="h-4 w-4" />
-            {product.priceCoins}
+            {tr(product.priceCoins)}
           </div>
           {canWrite && (
             <Button
               size="sm"
               variant="outline"
               isIconOnly
-              aria-label="Tovarni tahrirlash"
+              aria-label={tr("Tovarni tahrirlash")}
               onClick={(e) => {
                 e.stopPropagation();
                 setEditOpen(true);

@@ -16,8 +16,10 @@ import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { CreateGroupModal } from "@/features/groups/create-group-modal";
 import { canWriteOperational } from "@/lib/permissions";
+import { useTr } from "@/i18n/tr";
 
 export default function GroupsPage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const router = useRouter();
   const [createOpen, setCreateOpen] = useState(false);
@@ -43,11 +45,11 @@ export default function GroupsPage({ params }: { params: Promise<{ slug: string 
       <div className="flex items-start justify-between gap-3 md:flex-wrap md:items-center">
         <div className="min-w-0">
           <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
-            Guruhlar
+            {tr("Guruhlar")}
           </h1>
-          <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">Yosh toifalari bo'yicha guruhlar</p>
+          <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">{tr("Yosh toifalari bo'yicha guruhlar")}</p>
         </div>
-        {canWrite && <Button className="shrink-0" onClick={() => setCreateOpen(true)}>+ Yangi guruh</Button>}
+        {canWrite && <Button className="shrink-0" onClick={() => setCreateOpen(true)}>{tr("+ Yangi guruh")}</Button>}
       </div>
 
       {!canWrite && <ViewOnlyNote role={user?.role} />}
@@ -55,22 +57,22 @@ export default function GroupsPage({ params }: { params: Promise<{ slug: string 
       {groupsQuery.isLoading ? (
         <LoadingState rows={5} />
       ) : groupsQuery.isError ? (
-        <ErrorState message={(groupsQuery.error as Error).message} />
+        <ErrorState message={tr((groupsQuery.error as Error).message)} />
       ) : !groupsQuery.data || groupsQuery.data.length === 0 ? (
-        <EmptyState title="Guruh topilmadi" description={canWrite ? "Yangi guruh qo'shish uchun tugmani bosing" : undefined} />
+        <EmptyState title={tr("Guruh topilmadi")} description={canWrite ? tr("Yangi guruh qo'shish uchun tugmani bosing") : undefined} />
       ) : (
         <Card className="overflow-hidden">
           <DataTable compact>
             <THead>
               <tr>
-                <Th>Nomi</Th>
-                {!forcedBranchId && <Th className="hidden md:table-cell">Filial</Th>}
-                <Th className="hidden md:table-cell">Tarbiyachi</Th>
+                <Th>{tr("Nomi")}</Th>
+                {!forcedBranchId && <Th className="hidden md:table-cell">{tr("Filial")}</Th>}
+                <Th className="hidden md:table-cell">{tr("Tarbiyachi")}</Th>
                 <Th numeric>
-                  <span className="md:hidden">Bolalar</span>
-                  <span className="hidden md:inline">Bolalar / Sig'im</span>
+                  <span className="md:hidden">{tr("Bolalar")}</span>
+                  <span className="hidden md:inline">{tr("Bolalar / Sig'im")}</span>
                 </Th>
-                <Th>Holat</Th>
+                <Th>{tr("Holat")}</Th>
               </tr>
             </THead>
             <TBody>
@@ -78,7 +80,7 @@ export default function GroupsPage({ params }: { params: Promise<{ slug: string 
                 <Tr key={group.id} {...rowLinkProps(`/${slug}/groups/${group.id}`, (href) => router.push(href))}>
                   <Td className="font-medium">
                     <Link href={`/${slug}/groups/${group.id}`} className="text-[var(--color-primary)] hover:underline">
-                      {group.name}
+                      {tr(group.name)}
                     </Link>
                     <div className="mt-1 text-[12.5px] font-normal text-[var(--color-text-muted)] md:hidden">
                       {group.teachers && group.teachers.length > 0
@@ -93,11 +95,11 @@ export default function GroupsPage({ params }: { params: Promise<{ slug: string 
                         {group.teachers.map((t) => t.employee?.fullName).filter(Boolean).join(", ")}
                       </span>
                     ) : (
-                      <Badge tone="warning">Biriktirilmagan</Badge>
+                      <Badge tone="warning">{tr("Biriktirilmagan")}</Badge>
                     )}
                   </Td>
                   <Td numeric className="text-[var(--color-text-muted)]">
-                    {group._count?.children ?? 0} / {group.capacity}
+                    {group._count?.children ?? 0} / {tr(group.capacity)}
                   </Td>
                   <Td>
                     <Badge tone={group.status === "ACTIVE" ? "success" : "neutral"}>

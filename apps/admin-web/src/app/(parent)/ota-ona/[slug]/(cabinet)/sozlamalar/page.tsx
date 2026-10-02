@@ -4,7 +4,6 @@ import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { parentApi } from "@/lib/parent-api";
-import { clearParentTokens, getParentRefreshToken } from "@/lib/parent-session";
 import { getPushStatus, subscribeToPush, unsubscribeFromPush, type PushStatus } from "@/lib/push";
 import type { ParentAccount, ParentChild } from "@/lib/types";
 import { BellIcon, KeyIcon, LogoutIcon } from "@/components/ui/icons";
@@ -13,6 +12,7 @@ import clsx from "clsx";
 import { CardFx } from "../card-fx";
 import { useCabinetTheme, type ThemeMode } from "../theme";
 import { PasswordSheet } from "./password-sheet";
+import { useTr } from "@/i18n/tr";
 
 /**
  * Sozlamalar: ko'rinish, parolni almashtirish va kabinetdan chiqish.
@@ -60,6 +60,7 @@ const THEME_OPTIONS: Array<{ mode: ThemeMode; label: string; Icon: (props: { cla
 ];
 
 export default function ParentSettingsPage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const router = useRouter();
   const [leaving, setLeaving] = useState(false);
@@ -102,8 +103,8 @@ export default function ParentSettingsPage({ params }: { params: Promise<{ slug:
 
   const logout = async () => {
     setLeaving(true);
-    await parentApi.post("/app/parent/logout", { refreshToken: getParentRefreshToken() }).catch(() => undefined);
-    clearParentTokens();
+    // Ota-ona seansi cookie'da — logout uni server tomonda bekor qiladi
+    await parentApi.post("/app/parent/logout").catch(() => undefined);
     // Keyingi kiruvchi (umumiy qurilmada boshqa ota-ona) avvalgi bolalar
     // ma'lumotini keshdan ko'rmasin
     queryClient.clear();
@@ -113,30 +114,30 @@ export default function ParentSettingsPage({ params }: { params: Promise<{ slug:
   return (
     <div className="mx-auto w-full max-w-[520px] px-4 pt-5">
       <h1 className="text-[26px] font-extrabold leading-tight tracking-[-0.02em] text-[var(--p-ink)]">
-        Sozlamalar
+        {tr("Sozlamalar")}
       </h1>
 
       {parent && (
         <section className={`${styles.childCard} mt-4 rounded-[var(--p-radius)] p-5 shadow-[var(--p-shadow)]`}>
           <CardFx sky={sky} />
           <p className="text-[12px] font-semibold uppercase tracking-[0.06em] text-[var(--p-muted)]">
-            Kabinet egasi
+            {tr("Kabinet egasi")}
           </p>
-          <p className="mt-1 text-[19px] font-bold tracking-[-0.01em] text-[var(--p-ink)]">{parent.fullName}</p>
-          <p className="mt-0.5 text-[15px] tabular-nums text-[var(--p-muted)]">{parent.phone}</p>
+          <p className="mt-1 text-[19px] font-bold tracking-[-0.01em] text-[var(--p-ink)]">{tr(parent.fullName)}</p>
+          <p className="mt-0.5 text-[15px] tabular-nums text-[var(--p-muted)]">{tr(parent.phone)}</p>
           <p className="mt-3 text-[13.5px] leading-relaxed text-[var(--p-muted)]">
-            Shu raqam — kabinetning logini. Ota va ona bitta kabinetdan foydalanadi.
+            {tr("Shu raqam — kabinetning logini. Ota va ona bitta kabinetdan foydalanadi.")}
           </p>
         </section>
       )}
 
       {/* Ko'rinish: avto (quyosh botganda qorong'i), yorug', qorong'i */}
       <section className="mt-3 rounded-[var(--p-radius)] bg-[var(--p-card)] p-5 shadow-[var(--p-shadow)]">
-        <p className="text-[15.5px] font-bold text-[var(--p-ink)]">Ko&apos;rinish</p>
+        <p className="text-[15.5px] font-bold text-[var(--p-ink)]">{tr("Ko'rinish")}</p>
         <p className="mt-1 text-[13.5px] leading-relaxed text-[var(--p-muted)]">
-          Avtomatik rejimda quyosh botganda qorong&apos;i ko&apos;rinish o&apos;zi yonadi, tongda o&apos;chadi.
+          {tr("Avtomatik rejimda quyosh botganda qorong'i ko'rinish o'zi yonadi, tongda o'chadi.")}
         </p>
-        <div className="mt-3.5 grid grid-cols-3 gap-2" role="radiogroup" aria-label="Ko'rinish">
+        <div className="mt-3.5 grid grid-cols-3 gap-2" role="radiogroup" aria-label={tr("Ko'rinish")}>
           {THEME_OPTIONS.map((option) => {
             const active = option.mode === mode;
             return (
@@ -154,7 +155,7 @@ export default function ParentSettingsPage({ params }: { params: Promise<{ slug:
                 )}
               >
                 <option.Icon className="h-6 w-6" />
-                {option.label}
+                {tr(option.label)}
               </button>
             );
           })}
@@ -162,8 +163,8 @@ export default function ParentSettingsPage({ params }: { params: Promise<{ slug:
         {mode === "avto" && sky && (
           <p className="mt-3 text-[12.5px] text-[var(--p-muted)]">
             {dark
-              ? `Hozir tun — qorong'i ko'rinish yoqilgan${sky.sunrise ? `, tong ${clock(sky.sunrise)} da yorishadi` : ""}.`
-              : `Hozir kunduz — qorong'i ko'rinish quyosh botganda${sky.sunset ? ` (${clock(sky.sunset)})` : ""} yonadi.`}
+              ? tr("Hozir tun — qorong'i ko'rinish yoqilgan{0}.", sky.sunrise ? `, tong ${clock(sky.sunrise)} da yorishadi` : "")
+              : tr("Hozir kunduz — qorong'i ko'rinish quyosh botganda{0} yonadi.", sky.sunset ? ` (${clock(sky.sunset)})` : "")}
           </p>
         )}
       </section>
@@ -180,8 +181,8 @@ export default function ParentSettingsPage({ params }: { params: Promise<{ slug:
               <KeyIcon className="h-[18px] w-[18px]" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[15.5px] font-bold text-[var(--p-ink)]">Parolni almashtirish</span>
-              <span className="block text-[13px] text-[var(--p-muted)]">Bog&apos;cha bergan parol o&apos;rniga o&apos;zingiznikini qo&apos;ying</span>
+              <span className="block text-[15.5px] font-bold text-[var(--p-ink)]">{tr("Parolni almashtirish")}</span>
+              <span className="block text-[13px] text-[var(--p-muted)]">{tr("Bog'cha bergan parol o'rniga o'zingiznikini qo'ying")}</span>
             </span>
             <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 text-[var(--p-muted)]/70" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="m9 6 6 6-6 6" />
@@ -194,9 +195,9 @@ export default function ParentSettingsPage({ params }: { params: Promise<{ slug:
       <section className="mt-3 overflow-hidden rounded-[var(--p-radius)] bg-[var(--p-card)] shadow-[var(--p-shadow)]">
         {confirming ? (
           <div className="p-5">
-            <p className="text-[15.5px] font-semibold text-[var(--p-ink)]">Kabinetdan chiqasizmi?</p>
+            <p className="text-[15.5px] font-semibold text-[var(--p-ink)]">{tr("Kabinetdan chiqasizmi?")}</p>
             <p className="mt-1 text-[13.5px] leading-relaxed text-[var(--p-muted)]">
-              Keyingi safar telefon raqamingiz va parolingiz bilan qayta kirasiz.
+              {tr("Keyingi safar telefon raqamingiz va parolingiz bilan qayta kirasiz.")}
             </p>
             <div className="mt-4 flex gap-2.5">
               <button
@@ -204,7 +205,7 @@ export default function ParentSettingsPage({ params }: { params: Promise<{ slug:
                 onClick={() => setConfirming(false)}
                 className="flex-1 cursor-pointer rounded-full bg-[var(--p-sunken)] py-3 text-[15px] font-bold text-[var(--p-ink)] transition-colors active:bg-[var(--p-sunken)]"
               >
-                Qolaman
+                {tr("Qolaman")}
               </button>
               <button
                 type="button"
@@ -226,8 +227,8 @@ export default function ParentSettingsPage({ params }: { params: Promise<{ slug:
               <LogoutIcon className="h-[18px] w-[18px]" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[15.5px] font-bold text-[var(--p-ink)]">Kabinetdan chiqish</span>
-              <span className="block text-[13px] text-[var(--p-muted)]">Telefoningizda boshqa hech kim ko&apos;rmaydi</span>
+              <span className="block text-[15.5px] font-bold text-[var(--p-ink)]">{tr("Kabinetdan chiqish")}</span>
+              <span className="block text-[13px] text-[var(--p-muted)]">{tr("Telefoningizda boshqa hech kim ko'rmaydi")}</span>
             </span>
           </button>
         )}
@@ -241,9 +242,9 @@ export default function ParentSettingsPage({ params }: { params: Promise<{ slug:
               <BellIcon filled={pushStatus === "subscribed"} className="h-[18px] w-[18px]" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[15.5px] font-bold text-[var(--p-ink)]">Bildirishnomalar</span>
+              <span className="block text-[15.5px] font-bold text-[var(--p-ink)]">{tr("Bildirishnomalar")}</span>
               <span className="block text-[13px] text-[var(--p-muted)]">
-                To&apos;lov eslatmasi kabi xabarlarni brauzer orqali, kabinetni ochmasdan ham oling
+                {tr("To'lov eslatmasi kabi xabarlarni brauzer orqali, kabinetni ochmasdan ham oling")}
               </span>
             </span>
             <button
@@ -266,6 +267,16 @@ export default function ParentSettingsPage({ params }: { params: Promise<{ slug:
           {pushError && <p className="mt-3 text-[13px] text-[var(--p-coral)]">{pushError}</p>}
         </section>
       )}
+
+      {/* Hali tayyor bo'lmagan qism — bo'sh sahifa qoldirmaymiz (bildirishnomalar yuqorida) */}
+      <section className="mt-3 rounded-[var(--p-radius)] bg-[var(--p-card)]/60 px-5 py-4">
+        <span className="inline-flex items-center rounded-full bg-[var(--p-sun)]/18 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--p-sun-ink)]">
+          {tr("Tez orada")}
+        </span>
+        <p className="mt-2.5 text-[14px] leading-relaxed text-[var(--p-muted)]">
+          {tr("Aloqa ma'lumotlari shu yerda bo'ladi.")}
+        </p>
+      </section>
 
       {passwordOpen && parent && (
         <PasswordSheet

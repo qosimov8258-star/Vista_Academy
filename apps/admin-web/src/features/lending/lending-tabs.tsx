@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useAppPathname } from "@/lib/tenant-host-context";
 import clsx from "clsx";
+import { useTr } from "@/i18n/tr";
 
 /**
  * "Lending sahifa" bo'limining uchta sahifasi (o'qituvchilar/menu/guruhlar)
@@ -10,9 +11,10 @@ import clsx from "clsx";
  * xil manzillarga olib boradi — bu shunchaki sahifa ichidagi tezkor almashtirgich.
  */
 export function LendingTabs({ base }: { base: string }) {
+  const tr = useTr();
   const pathname = useAppPathname();
   const tabs = [
-    { href: `${base}/lending/teachers`, label: "O'qituvchilar" },
+    { href: `${base}/lending/teachers`, label: tr("O'qituvchilar") },
     { href: `${base}/lending/menu`, label: "Menu" },
     { href: `${base}/lending/groups`, label: "Guruhlar" },
   ];
@@ -34,7 +36,7 @@ export function LendingTabs({ base }: { base: string }) {
                 : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
             )}
           >
-            {tab.label}
+            {tr(tab.label)}
           </Link>
         );
       })}

@@ -9,6 +9,7 @@ import type { ParentAccount, PublicOrganization } from "@/lib/types";
 import { KindergartenBackdrop } from "@/components/brand/kindergarten-backdrop";
 import { EyeIcon, EyeOffIcon } from "@/components/ui/icons";
 import styles from "../parent.module.css";
+import { useTr } from "@/i18n/tr";
 
 /**
  * Ota-ona kirishi. Login — bolaga biriktirilgan telefon raqami, parolni
@@ -16,6 +17,7 @@ import styles from "../parent.module.css";
  * birinchi taassurot muhim.
  */
 export default function ParentLoginPage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -52,7 +54,7 @@ export default function ParentLoginPage({ params }: { params: Promise<{ slug: st
       router.push(`/ota-ona/${slug}`);
       router.refresh();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
       setFailCount((n) => n + 1);
     } finally {
       setBusy(false);
@@ -76,19 +78,19 @@ export default function ParentLoginPage({ params }: { params: Promise<{ slug: st
             <SmilingSun key={failCount} sad={!!error} />
             <div className="min-w-0 flex-1">
               <span className="inline-flex items-center rounded-full bg-[var(--p-sun)]/18 px-2.5 py-1 text-[11.5px] font-bold uppercase tracking-[0.07em] text-[#a8720a]">
-                Ota-ona kabineti
+                {tr("Ota-ona kabineti")}
               </span>
               <h1 className="mt-2 text-[30px] font-extrabold leading-[1.1] tracking-[-0.025em] text-[var(--p-ink)] [@media(max-height:560px)]:text-[24px]">
-                Assalomu
+                {tr("Assalomu")}
                 <br />
-                alaykum<span className="text-[var(--p-coral)]">!</span>
+                {tr("alaykum")}<span className="text-[var(--p-coral)]">!</span>
               </h1>
             </div>
           </div>
           <p className="mt-3.5 text-[15.5px] leading-relaxed text-[var(--p-muted)] [@media(max-height:560px)]:hidden">
-            Bolangizning bugungi kuni — <b className="font-semibold text-[var(--p-ink)]">davomati</b>,{" "}
-            <b className="font-semibold text-[var(--p-ink)]">ovqati</b> va{" "}
-            <b className="font-semibold text-[var(--p-ink)]">mashg&apos;ulotlari</b> shu yerda.
+            {tr("Bolangizning bugungi kuni —")}{" "}<b className="font-semibold text-[var(--p-ink)]">{tr("davomati")}</b>,{" "}
+            <b className="font-semibold text-[var(--p-ink)]">{tr("ovqati")}</b> {tr("va")}{" "}
+            <b className="font-semibold text-[var(--p-ink)]">{tr("mashg'ulotlari")}</b> {tr("shu yerda.")}
           </p>
 
           <form onSubmit={submit} className="mt-6 space-y-4 [@media(max-height:560px)]:mt-4 [@media(max-height:560px)]:space-y-3">
@@ -97,12 +99,12 @@ export default function ParentLoginPage({ params }: { params: Promise<{ slug: st
                 role="alert"
                 className="rounded-[16px] bg-[#ffeceb] px-4 py-3 text-[14px] font-medium text-[#c1372a]"
               >
-                {error}
+                {tr(error)}
               </div>
             )}
 
             <label className="block">
-              <span className="mb-2 block text-[14px] font-semibold text-[var(--p-ink)]">Telefon raqamingiz</span>
+              <span className="mb-2 block text-[14px] font-semibold text-[var(--p-ink)]">{tr("Telefon raqamingiz")}</span>
               <input
                 type="tel"
                 inputMode="tel"
@@ -115,12 +117,12 @@ export default function ParentLoginPage({ params }: { params: Promise<{ slug: st
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-[14px] font-semibold text-[var(--p-ink)]">Parol</span>
+              <span className="mb-2 block text-[14px] font-semibold text-[var(--p-ink)]">{tr("Parol")}</span>
               <span className="relative block">
                 <input
                   type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
-                  placeholder="Bog'cha bergan parol"
+                  placeholder={tr("Bog'cha bergan parol")}
                   value={password}
                   onChange={edit(setPassword)}
                   className="h-14 w-full rounded-[18px] border-2 border-[var(--p-line)] bg-[#fffdfa] pl-4 pr-14 text-[17px] text-[var(--p-ink)] outline-none transition-colors placeholder:text-[var(--p-muted)]/60 focus:border-[var(--p-sun)]"
@@ -130,7 +132,7 @@ export default function ParentLoginPage({ params }: { params: Promise<{ slug: st
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  aria-label={showPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+                  aria-label={showPassword ? "Parolni yashirish" : tr("Parolni ko'rsatish")}
                   aria-pressed={showPassword}
                   className="absolute right-2 top-1/2 flex h-11 w-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-[var(--p-muted)] transition-colors active:bg-black/[0.05]"
                 >
@@ -145,12 +147,12 @@ export default function ParentLoginPage({ params }: { params: Promise<{ slug: st
               className="flex h-14 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[var(--p-coral)] text-[17px] font-bold text-white shadow-[0_2px_4px_rgba(255,122,102,0.3),0_10px_22px_-8px_rgba(255,122,102,0.6)] transition-transform active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:active:scale-100"
             >
               {busy && <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />}
-              Kirish
+              {tr("Kirish")}
             </button>
           </form>
 
           <p className="mt-6 text-center text-[13.5px] leading-relaxed text-[var(--p-muted)]">
-            Parolni bilmasangiz yoki unutgan bo&apos;lsangiz — bog&apos;cha ma&apos;muriyatiga murojaat qiling.
+            {tr("Parolni bilmasangiz yoki unutgan bo'lsangiz — bog'cha ma'muriyatiga murojaat qiling.")}
           </p>
         </div>
       </div>

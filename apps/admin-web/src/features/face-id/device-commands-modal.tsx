@@ -7,6 +7,7 @@ import { Modal } from "@/components/ui/modal";
 import { Badge } from "@/components/ui/badge";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { formatDateTime } from "@/lib/format";
+import { useTr } from "@/i18n/tr";
 
 const TYPE_LABEL: Record<FaceIdCommandType, string> = {
   ADD_OR_UPDATE_USER: "Qo'shish",
@@ -23,6 +24,7 @@ const STATUS: Record<FaceIdCommandStatus, { label: string; tone: "neutral" | "wa
 
 /** Qurilmaning so'nggi buyruqlari — nima yetib bordi, nima xato berdi. */
 export function DeviceCommandsModal({ slug, device, onClose }: { slug: string; device: FaceIdDevice | null; onClose: () => void }) {
+  const tr = useTr();
   const query = useQuery({
     queryKey: ["face-id-commands", slug, device?.id],
     queryFn: () => api.get<FaceIdCommand[]>(`/app/face-id/devices/${device!.id}/commands`),
@@ -35,24 +37,24 @@ export function DeviceCommandsModal({ slug, device, onClose }: { slug: string; d
       {query.isLoading ? (
         <LoadingState rows={4} />
       ) : query.isError ? (
-        <ErrorState message={query.error instanceof ApiError ? query.error.message : "Xatolik yuz berdi"} />
+        <ErrorState message={query.error instanceof ApiError ? query.error.message : tr("Xatolik yuz berdi")} />
       ) : !query.data?.length ? (
-        <EmptyState title="Hali buyruq yo'q" description="Xodim qo'shilganda yoki «Sinxronlash» bosilganda shu yerda paydo bo'ladi" />
+        <EmptyState title={tr("Hali buyruq yo'q")} description={tr("Xodim qo'shilganda yoki «Sinxronlash» bosilganda shu yerda paydo bo'ladi")} />
       ) : (
         <ul className="divide-y divide-[var(--color-separator)]">
           {query.data.map((c) => (
             <li key={c.id} className="flex items-start gap-3 py-2.5">
               <div className="min-w-0 flex-1">
                 <p className="text-[14px] text-[var(--color-text)]">
-                  {TYPE_LABEL[c.type]} · <span className="font-medium">{c.employee?.fullName ?? c.child?.fullName ?? `№ ${c.employeeNo}`}</span>
-                  <span className="text-[var(--color-text-muted)]"> ({c.employeeNo})</span>
+                  {tr(TYPE_LABEL[c.type])} · <span className="font-medium">{c.employee?.fullName ?? c.child?.fullName ?? `№ ${c.employeeNo}`}</span>
+                  <span className="text-[var(--color-text-muted)]"> ({tr(c.employeeNo)})</span>
                 </p>
                 <p className="mt-0.5 text-[12.5px] text-[var(--color-text-muted)]">
-                  {formatDateTime(c.createdAt)} · urinish {c.attempts}
+                  {formatDateTime(c.createdAt)} {tr("· urinish")}{" "}{tr(c.attempts)}
                 </p>
-                {c.lastError && c.status !== "DONE" && <p className="mt-1 break-words text-[12.5px] text-[var(--color-danger)]">{c.lastError}</p>}
+                {c.lastError && c.status !== "DONE" && <p className="mt-1 break-words text-[12.5px] text-[var(--color-danger)]">{tr(c.lastError)}</p>}
               </div>
-              <Badge tone={STATUS[c.status].tone}>{STATUS[c.status].label}</Badge>
+              <Badge tone={STATUS[c.status].tone}>{tr(STATUS[c.status].label)}</Badge>
             </li>
           ))}
         </ul>

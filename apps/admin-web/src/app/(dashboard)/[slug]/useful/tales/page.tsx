@@ -19,8 +19,10 @@ import { formatDate } from "@/lib/format";
 import { UsefulTabs } from "@/features/useful/useful-tabs";
 import { TaleModal } from "@/features/useful/tale-modal";
 import { TeacherUsefulList } from "@/features/teacher/teacher-useful";
+import { useTr } from "@/i18n/tr";
 
 export default function TalesPage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const { user } = useAuth();
   const canWrite = canWriteUseful(user?.role);
@@ -73,12 +75,12 @@ export default function TalesPage({ params }: { params: Promise<{ slug: string }
       <ConfirmDialog
         open={!!deleting}
         onClose={() => setDeleting(null)}
-        title="Ertakni o'chirish"
-        confirmLabel="O'chirish"
+        title={tr("Ertakni o'chirish")}
+        confirmLabel={tr("O'chirish")}
         tone="danger"
         loading={deleteMutation.isPending}
         error={deleteMutation.isError ? ((deleteMutation.error as Error)?.message ?? null) : null}
-        description={<><b className="text-[var(--color-text)]">{deleting?.title}</b> o&apos;chiriladi.</>}
+        description={<><b className="text-[var(--color-text)]">{tr(deleting?.title)}</b> {tr("o'chiriladi.")}</>}
         onConfirm={() => deleting && deleteMutation.mutate(deleting.id)}
       />
     </>
@@ -95,12 +97,12 @@ export default function TalesPage({ params }: { params: Promise<{ slug: string }
           id: p.id,
           title: p.title,
           detail: null,
-          meta: [p.group?.name ?? "Barcha guruhlar", formatDate(p.createdAt)].filter(Boolean).join(" · "),
+          meta: [p.group?.name ?? tr("Barcha guruhlar"), formatDate(p.createdAt)].filter(Boolean).join(" · "),
           published: p.status === "PUBLISHED",
           canEdit: canWrite && p.createdById === user?.id,
         }))}
         loading={talesQuery.isLoading}
-        error={talesQuery.isError ? (talesQuery.error instanceof ApiError ? talesQuery.error.message : "Xatolik yuz berdi") : null}
+        error={talesQuery.isError ? (talesQuery.error instanceof ApiError ? talesQuery.error.message : tr("Xatolik yuz berdi")) : null}
         canWrite={canWrite}
         groups={groups}
         groupFilter={groupFilter}
@@ -109,7 +111,7 @@ export default function TalesPage({ params }: { params: Promise<{ slug: string }
         onEdit={(id) => setModal({ open: true, tale: talesQuery.data?.find((x) => x.id === id) ?? null })}
         onDelete={(id) => setDeleting(talesQuery.data?.find((x) => x.id === id) ?? null)}
       >
-        {dialogs}
+        {tr(dialogs)}
       </TeacherUsefulList>
     );
   }
@@ -118,16 +120,16 @@ export default function TalesPage({ params }: { params: Promise<{ slug: string }
     <div className="space-y-5">
       <div className="flex items-start justify-between gap-3 md:flex-wrap md:items-center">
         <div className="min-w-0">
-          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">Foydali</h1>
+          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">{tr("Foydali")}</h1>
           <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">
-            She&apos;rlar, maqollar va ertaklar — ota-ona kabinetida shu yerdan ko&apos;rinadi
+            {tr("She'rlar, maqollar va ertaklar — ota-ona kabinetida shu yerdan ko'rinadi")}
           </p>
         </div>
         {canWrite && (
           <Button className="shrink-0 max-md:!h-auto max-md:!py-2" onClick={() => setModal({ open: true, tale: null })}>
             <span className="max-md:text-center max-md:leading-tight">
-              + Yangi ertak
-              <br className="md:hidden" /> qo&apos;shish
+              {tr("+ Yangi ertak")}
+              <br className="md:hidden" /> {tr("qo'shish")}
             </span>
           </Button>
         )}
@@ -141,11 +143,11 @@ export default function TalesPage({ params }: { params: Promise<{ slug: string }
         {groupsQuery.isLoading ? (
           <LoadingState rows={1} />
         ) : (
-          <Select label="Guruh" value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)} className="sm:max-w-xs">
-            <option value="">Barcha guruhlar</option>
+          <Select label={tr("Guruh")} value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)} className="sm:max-w-xs">
+            <option value="">{tr("Barcha guruhlar")}</option>
             {groups.map((group) => (
               <option key={group.id} value={group.id}>
-                {group.name}
+                {tr(group.name)}
               </option>
             ))}
           </Select>
@@ -155,12 +157,12 @@ export default function TalesPage({ params }: { params: Promise<{ slug: string }
       {talesQuery.isLoading ? (
         <LoadingState rows={4} />
       ) : talesQuery.isError ? (
-        <ErrorState message={talesQuery.error instanceof ApiError ? talesQuery.error.message : "Xatolik yuz berdi"} />
+        <ErrorState message={talesQuery.error instanceof ApiError ? talesQuery.error.message : tr("Xatolik yuz berdi")} />
       ) : !talesQuery.data || talesQuery.data.length === 0 ? (
         <EmptyState
           icon={<BookIcon className="h-[26px] w-[26px]" />}
-          title="Hali ertak yo'q"
-          description={canWrite ? "\"+ Yangi ertak qo'shish\" tugmasi orqali birinchisini qo'shing" : undefined}
+          title={tr("Hali ertak yo'q")}
+          description={canWrite ? tr("\"+ Yangi ertak qo'shish\" tugmasi orqali birinchisini qo'shing") : undefined}
         />
       ) : (
         <div className="space-y-3">
@@ -176,7 +178,7 @@ export default function TalesPage({ params }: { params: Promise<{ slug: string }
         </div>
       )}
 
-      {dialogs}
+      {tr(dialogs)}
     </div>
   );
 }
@@ -192,6 +194,7 @@ function TaleRow({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const tr = useTr();
   return (
     <Card className="overflow-hidden">
       <div className="flex flex-wrap items-center gap-3 px-5 py-4">
@@ -200,17 +203,17 @@ function TaleRow({
         </span>
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-medium text-[var(--color-text)]">{tale.title}</span>
+            <span className="text-sm font-medium text-[var(--color-text)]">{tr(tale.title)}</span>
             <Badge tone={tale.status === "PUBLISHED" ? "success" : "neutral"}>
               {tale.status === "PUBLISHED" ? "Chop etilgan" : "Qoralama"}
             </Badge>
           </span>
           <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-[var(--color-text-muted)]">
-            <span>{tale.group?.name ?? "Barcha guruhlar"}</span>
-            <span>· {tale.origin}</span>
-            <span>· {tale.minutes} daq</span>
+            <span>{tale.group?.name ?? tr("Barcha guruhlar")}</span>
+            <span>· {tr(tale.origin)}</span>
+            <span>· {tr(tale.minutes)} {tr("daq")}</span>
             <span>· {formatDate(tale.createdAt)}</span>
-            <span>· {tale.createdBy.fullName}</span>
+            <span>· {tr(tale.createdBy.fullName)}</span>
           </span>
         </span>
         {canEdit && (
@@ -218,7 +221,7 @@ function TaleRow({
             <button
               type="button"
               onClick={onEdit}
-              aria-label="Ertakni tahrirlash"
+              aria-label={tr("Ertakni tahrirlash")}
               className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-text)]"
             >
               <PencilIcon className="h-4 w-4" />
@@ -226,7 +229,7 @@ function TaleRow({
             <button
               type="button"
               onClick={onDelete}
-              aria-label="Ertakni o'chirish"
+              aria-label={tr("Ertakni o'chirish")}
               className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]"
             >
               <TrashIcon className="h-4 w-4" />

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useAppPathname } from "@/lib/tenant-host-context";
 import clsx from "clsx";
+import { useTr } from "@/i18n/tr";
 
 /**
  * "Foydali" bo'limining uchta sahifasi (she'rlar/maqollar/ertaklar) orasida
@@ -10,9 +11,10 @@ import clsx from "clsx";
  * manzillarga olib boradi — bu shunchaki sahifa ichidagi tezkor almashtirgich.
  */
 export function UsefulTabs({ base }: { base: string }) {
+  const tr = useTr();
   const pathname = useAppPathname();
   const tabs = [
-    { href: `${base}/useful/poems`, label: "She'rlar" },
+    { href: `${base}/useful/poems`, label: tr("She'rlar") },
     { href: `${base}/useful/proverbs`, label: "Maqollar" },
     { href: `${base}/useful/tales`, label: "Ertaklar" },
   ];
@@ -34,7 +36,7 @@ export function UsefulTabs({ base }: { base: string }) {
                 : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
             )}
           >
-            {tab.label}
+            {tr(tab.label)}
           </Link>
         );
       })}

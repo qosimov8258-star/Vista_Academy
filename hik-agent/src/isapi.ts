@@ -1,5 +1,4 @@
 import { randomUUID, randomBytes } from "crypto";
-import sharp from "sharp";
 import type { IsapiOptions } from "./config";
 import type { ErpEvent } from "./erp-client";
 import { IsapiClient, IsapiError } from "./isapi-client";
@@ -158,6 +157,16 @@ export async function deleteUser(client: IsapiClient, employeeNo: string, opts: 
  * Avval sifat, keyin o'lcham kamaytiriladi.
  */
 export async function prepareFaceJpeg(input: Buffer, maxBytes: number): Promise<Buffer> {
+  // ERP rasmni allaqachon qurilma hajmiga keltirib beradi (?maxBytes=) — odatda shu yerda qaytadi.
+  // sharp faqat kerak bo'lsa yuklanadi: bitta faylli agent (zeeron-agent) ichida u yo'q.
+  const isJpeg = input.byteLength > 3 && input[0] === 0xff && input[1] === 0xd8;
+  if (isJpeg && input.byteLength <= maxBytes) return input;
+  let sharp: typeof import("sharp");
+  try {
+    sharp = (await import("sharp")).default;
+  } catch {
+    throw new Error(`Rasm ${input.byteLength} bayt — qurilma uchun katta va bu agentda kichraytirib bo'lmaydi (ERP'ni yangilang)`);
+  }
   let size = 640;
   let quality = 85;
   for (let i = 0; i < 12; i++) {

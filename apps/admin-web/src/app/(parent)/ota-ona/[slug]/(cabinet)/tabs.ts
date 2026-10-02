@@ -8,7 +8,7 @@ import { BulbIcon, HomeIcon, NoteIcon, SettingsIcon, ShopIcon } from "@/componen
 export const CABINET_TABS = [
   { href: "", label: "Bosh menu", icon: HomeIcon, hint: "Bugungi kun" },
   { href: "/kundalik", label: "Kundalik", icon: NoteIcon, hint: "Ovqat tartibi va kun" },
-  { href: "/dokon", label: "Do'kon", icon: ShopIcon, hint: "Coinlarga sovg'alar" },
+  { href: "/dokon", label: "Do'kon", icon: ShopIcon, hint: "Yulduzchalarga sovg'alar" },
   { href: "/foydali", label: "Foydali", icon: BulbIcon, hint: "She'rlar, maqollar, ertaklar" },
   { href: "/sozlamalar", label: "Sozlamalar", icon: SettingsIcon, hint: "Parol, ko'rinish, chiqish" },
 ] as const;

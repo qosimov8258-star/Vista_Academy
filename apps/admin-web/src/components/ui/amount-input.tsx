@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import clsx from "clsx";
+import { useTr } from "@/i18n/tr";
 
 const GROUP_SEPARATOR = " ";
 
@@ -27,6 +28,7 @@ interface AmountInputProps {
 
 /** Summa maydoni: foydalanuvchi yozayotganda ming xonalarini bo'shliq bilan ajratib ko'rsatadi (masalan 1 234 412). */
 export function AmountInput({ label, value, onChange, error, hint, placeholder }: AmountInputProps) {
+  const tr = useTr();
   const [text, setText] = useState(() => formatDigits(value !== undefined ? String(value) : ""));
 
   useEffect(() => {
@@ -35,12 +37,12 @@ export function AmountInput({ label, value, onChange, error, hint, placeholder }
 
   return (
     <label className="block">
-      {label && <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">{label}</span>}
+      {label && <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">{tr(label)}</span>}
       <input
         type="text"
         inputMode="numeric"
         value={text}
-        placeholder={placeholder}
+        placeholder={tr(placeholder)}
         onChange={(e) => {
           const digits = e.target.value.replace(/\D/g, "");
           setText(formatDigits(digits));
@@ -51,8 +53,8 @@ export function AmountInput({ label, value, onChange, error, hint, placeholder }
           error && "border-[var(--color-danger)]",
         )}
       />
-      {hint && !error && <span className="mt-1 block text-xs text-[var(--color-text-muted)]">{hint}</span>}
-      {error && <span className="mt-1 block text-xs text-[var(--color-danger)]">{error}</span>}
+      {hint && !error && <span className="mt-1 block text-xs text-[var(--color-text-muted)]">{tr(hint)}</span>}
+      {error && <span className="mt-1 block text-xs text-[var(--color-danger)]">{tr(error)}</span>}
     </label>
   );
 }

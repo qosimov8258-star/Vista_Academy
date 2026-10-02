@@ -21,6 +21,7 @@ import { initials } from "@/components/ui/avatar";
 import styles from "../parent.module.css";
 import { CardFx } from "./card-fx";
 import { useCabinetTheme } from "./theme";
+import { useTr } from "@/i18n/tr";
 
 const WEEKDAY = ["Yak", "Du", "Se", "Cho", "Pay", "Ju", "Sha"];
 /** Kalendar ustunlari — hafta dushanbadan boshlanadi */
@@ -71,6 +72,7 @@ function sleepLabel(minutes: number): string {
 }
 
 export default function ParentHomePage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -153,7 +155,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
             kunda bir marta ham bosmaydi, tepada turishi shart emas. */}
         <header className="min-w-0">
           <p className="truncate text-[17px] font-bold tracking-[-0.01em] text-[var(--p-ink)]">
-            {parent.fullName}
+            {tr(parent.fullName)}
           </p>
         </header>
 
@@ -172,7 +174,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
                     : "bg-[var(--p-panel)] text-[var(--p-muted)]",
                 )}
               >
-                {c.fullName.split(" ").slice(-1)[0]}
+                {tr(c.fullName.split(" ").slice(-1)[0])}
               </button>
             ))}
           </div>
@@ -188,7 +190,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
                   // eslint-disable-next-line @next/next/no-img-element -- tashqi manzil
                   <img
                     src={`${PARENT_API_URL}/app/parent/children/${child.id}/avatar?v=${encodeURIComponent(child.avatarUpdatedAt)}`}
-                    alt={child.fullName}
+                    alt={tr(child.fullName)}
                     className="h-[72px] w-[72px] rounded-full object-cover ring-4 ring-[var(--p-sun)]/25"
                   />
                 ) : (
@@ -199,7 +201,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
               </div>
               <div className="min-w-0 flex-1">
                 <h1 className="truncate text-[22px] font-bold leading-tight tracking-[-0.02em] text-[var(--p-ink)]">
-                  {child.fullName}
+                  {tr(child.fullName)}
                 </h1>
                 <p className="mt-0.5 truncate text-[14px] text-[var(--p-muted)]">
                   {child.group?.name ?? "Guruhsiz"}
@@ -225,7 +227,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
               </span>
               <div>
                 <p className="text-[16px] font-bold text-[var(--p-ink)]">
-                  {present ? "Bugun bog'chada" : absent ? "Bugun kelmadi" : "Hali belgilanmagan"}
+                  {present ? tr("Bugun bog'chada") : absent ? "Bugun kelmadi" : tr("Hali belgilanmagan")}
                 </p>
                 <p className="text-[13px] text-[var(--p-muted)]">
                   {present
@@ -234,8 +236,8 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
                         `${day.attendance.checkInTime} da keldi${day.attendance.checkOutTime ? ` · ${day.attendance.checkOutTime} da ketdi` : ""}`
                       : "Tarbiyachi davomatni belgiladi"
                     : absent
-                      ? day?.attendance?.parentReason || day?.attendance?.note || "Sabab ko'rsatilmagan"
-                      : "Tarbiyachi hali davomat qilmadi"}
+                      ? day?.attendance?.parentReason || day?.attendance?.note || tr("Sabab ko'rsatilmagan")
+                      : tr("Tarbiyachi hali davomat qilmadi")}
                 </p>
               </div>
             </div>
@@ -252,13 +254,13 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
                 className="mt-3 space-y-2"
               >
                 <label className="block text-[12px] font-semibold uppercase tracking-[0.05em] text-[var(--p-muted)]">
-                  Nega kelmadi? Sababini yozing
+                  {tr("Nega kelmadi? Sababini yozing")}
                 </label>
                 <textarea
                   value={reasonDraft}
                   onChange={(e) => setReasonDraft(e.target.value)}
                   rows={2}
-                  placeholder="Masalan: shifokorga bordik"
+                  placeholder={tr("Masalan: shifokorga bordik")}
                   className="w-full resize-none rounded-[14px] bg-[var(--p-card)] px-3.5 py-2.5 text-[14px] text-[var(--p-ink)] outline-none ring-1 ring-[var(--p-muted)]/20 focus:ring-[var(--p-coral)]"
                 />
                 <button
@@ -269,7 +271,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
                   {reasonMutation.isPending ? "Yuborilmoqda..." : "Yuborish"}
                 </button>
                 {reasonMutation.isError && (
-                  <p className="text-[12px] text-[var(--p-coral)]">Yuborib bo&apos;lmadi — qayta urinib ko&apos;ring</p>
+                  <p className="text-[12px] text-[var(--p-coral)]">{tr("Yuborib bo'lmadi — qayta urinib ko'ring")}</p>
                 )}
               </form>
             )}
@@ -306,28 +308,28 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
               {/* Kayfiyat, ovqat, uyqu */}
               <div className="grid grid-cols-3 gap-3">
                 <MiniCard
-                  label="Kayfiyat"
+                  label={tr("Kayfiyat")}
                   value={day.report?.mood ? MOOD[day.report.mood].label : "—"}
                   tone={day.report?.mood ? MOOD[day.report.mood].tone : "lilac"}
                 />
                 <MiniCard
-                  label="Ovqat"
+                  label={tr("Ovqat")}
                   value={day.report?.eatingQuality ? EATING[day.report.eatingQuality].label.split(" ")[0] : "—"}
                   tone={day.report?.eatingQuality ? EATING[day.report.eatingQuality].tone : "lilac"}
                 />
                 <MiniCard
-                  label="Uyqu"
+                  label={tr("Uyqu")}
                   value={day.report?.sleepMinutes != null ? sleepLabel(day.report.sleepMinutes) : "—"}
                   tone="sky"
                 />
               </div>
 
               {/* Nima bilan shug'ullandi */}
-              <Panel title="Bugun nima qildik" accent="lilac">
+              <Panel title={tr("Bugun nima qildik")} accent="lilac">
                 {day.report?.activityNotes ? (
-                  <p className="text-[15px] leading-relaxed text-[var(--p-ink)]">{day.report.activityNotes}</p>
+                  <p className="text-[15px] leading-relaxed text-[var(--p-ink)]">{tr(day.report.activityNotes)}</p>
                 ) : (
-                  <Empty text="Tarbiyachi hali yozmadi" />
+                  <Empty text={tr("Tarbiyachi hali yozmadi")} />
                 )}
               </Panel>
 
@@ -335,8 +337,8 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
               <TodayMealsLink slug={slug} day={day} />
 
               {day.report?.toiletNotes && (
-                <Panel title="Qo'shimcha" accent="mint">
-                  <p className="text-[15px] leading-relaxed text-[var(--p-ink)]">{day.report.toiletNotes}</p>
+                <Panel title={tr("Qo'shimcha")} accent="mint">
+                  <p className="text-[15px] leading-relaxed text-[var(--p-ink)]">{tr(day.report.toiletNotes)}</p>
                 </Panel>
               )}
             </div>
@@ -344,7 +346,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
         )}
 
       <p className="mt-8 text-center text-[13px] text-[var(--p-muted)]">
-        Savolingiz bo&apos;lsa — tarbiyachi yoki bog&apos;cha ma&apos;muriyatiga murojaat qiling
+        {tr("Savolingiz bo'lsa — tarbiyachi yoki bog'cha ma'muriyatiga murojaat qiling")}
       </p>
     </div>
   );
@@ -359,6 +361,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
  * oddiy so'z bilan yozilgan izoh bor.
  */
 function AttendanceCalendar({ strip }: { strip: ParentAttendanceStrip }) {
+  const tr = useTr();
   // Dushanbadan boshlanadigan hafta: birinchi kun o'z ustuniga tushishi
   // uchun oldiga bo'sh kataklar qo'yiladi.
   const firstDay = new Date(`${strip.items[0]?.date ?? ""}T00:00:00.000Z`);
@@ -378,19 +381,19 @@ function AttendanceCalendar({ strip }: { strip: ParentAttendanceStrip }) {
 
   return (
     <div className="mt-4 rounded-[18px] bg-[var(--p-panel)] px-4 py-3.5">
-      <p className="text-[14px] font-bold text-[var(--p-ink)]">Oxirgi 2 hafta</p>
+      <p className="text-[14px] font-bold text-[var(--p-ink)]">{tr("Oxirgi 2 hafta")}</p>
 
       {/* Avval son bilan javob: eng ko'p so'raladigan savol shu */}
       <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1.5">
-        <Tally count={strip.present} label="kun keldi" dot="bg-[var(--p-mint)]" />
-        <Tally count={strip.absent} label="kun kelmadi" dot="bg-[var(--p-coral)]" />
-        {unmarked > 0 && <Tally count={unmarked} label="kun belgilanmagan" dot="bg-[var(--p-muted)]/50" />}
+        <Tally count={strip.present} label={tr("kun keldi")} dot="bg-[var(--p-mint)]" />
+        <Tally count={strip.absent} label={tr("kun kelmadi")} dot="bg-[var(--p-coral)]" />
+        {unmarked > 0 && <Tally count={unmarked} label={tr("kun belgilanmagan")} dot="bg-[var(--p-muted)]/50" />}
       </div>
 
       <div className="mt-3 grid grid-cols-7 gap-1">
         {WEEKDAY_SHORT.map((d) => (
           <span key={d} className="text-center text-[11px] font-semibold text-[var(--p-muted)]">
-            {d}
+            {tr(d)}
           </span>
         ))}
         {Array.from({ length: lead }, (_, i) => (
@@ -433,32 +436,35 @@ function AttendanceCalendar({ strip }: { strip: ParentAttendanceStrip }) {
 }
 
 function Tally({ count, label, dot }: { count: number; label: string; dot: string }) {
+  const tr = useTr();
   return (
     <span className="flex items-center gap-1.5 text-[13.5px] text-[var(--p-muted)]">
       <span className={clsx("h-2.5 w-2.5 rounded-full", dot)} />
-      <b className="text-[15px] font-bold text-[var(--p-ink)]">{count}</b> {label}
+      <b className="text-[15px] font-bold text-[var(--p-ink)]">{count}</b> {tr(label)}
     </span>
   );
 }
 
 function MiniCard({ label, value, tone }: { label: string; value: string; tone: string }) {
+  const tr = useTr();
   return (
     <div className="rounded-[20px] bg-[var(--p-card)] p-3 text-center shadow-[var(--p-shadow)] min-[360px]:p-3.5">
       <span className={clsx("mx-auto flex h-9 w-9 items-center justify-center rounded-full text-[13px] font-bold", TONE_BG[tone])}>
-        {label[0]}
+        {tr(label[0])}
       </span>
-      <p className="mt-2 text-[clamp(10px,3vw,11.5px)] font-semibold uppercase tracking-[0.04em] text-[var(--p-muted)]">{label}</p>
-      <p className="mt-0.5 text-[clamp(12.5px,3.7vw,14px)] font-bold leading-tight text-[var(--p-ink)]">{value}</p>
+      <p className="mt-2 text-[clamp(10px,3vw,11.5px)] font-semibold uppercase tracking-[0.04em] text-[var(--p-muted)]">{tr(label)}</p>
+      <p className="mt-0.5 text-[clamp(12.5px,3.7vw,14px)] font-bold leading-tight text-[var(--p-ink)]">{tr(value)}</p>
     </div>
   );
 }
 
 function Panel({ title, accent, children }: { title: string; accent: string; children: React.ReactNode }) {
+  const tr = useTr();
   return (
     <section className="overflow-hidden rounded-[var(--p-radius)] bg-[var(--p-card)] shadow-[var(--p-shadow)]">
       <div className="flex items-center gap-2.5 px-5 pt-4">
         <span className={clsx("h-2.5 w-2.5 shrink-0 rounded-full", TONE_DOT[accent])} />
-        <h2 className="text-[15px] font-bold tracking-[-0.01em] text-[var(--p-ink)]">{title}</h2>
+        <h2 className="text-[15px] font-bold tracking-[-0.01em] text-[var(--p-ink)]">{tr(title)}</h2>
       </div>
       <div className="px-5 pb-5 pt-3">{children}</div>
     </section>
@@ -467,6 +473,7 @@ function Panel({ title, accent, children }: { title: string; accent: string; chi
 
 /** Bugungi ovqat — qisqacha; bosilsa Kundalik'dagi to'liq ovqat tartibiga o'tadi */
 function TodayMealsLink({ slug, day }: { slug: string; day: ParentDay }) {
+  const tr = useTr();
   const photos = day.menuPhotos ?? [];
   const main = day.menu?.lunch || day.menu?.breakfast || day.menu?.snack || null;
   const firstPhoto = photos[0];
@@ -479,7 +486,7 @@ function TodayMealsLink({ slug, day }: { slug: string; day: ParentDay }) {
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={`${PARENT_API_URL}/app/parent/children/${day.child.id}/menu-photos/${firstPhoto.id}`}
-          alt="Bugungi ovqat"
+          alt={tr("Bugungi ovqat")}
           className="h-14 w-14 shrink-0 rounded-2xl object-cover"
         />
       ) : (
@@ -490,10 +497,10 @@ function TodayMealsLink({ slug, day }: { slug: string; day: ParentDay }) {
         </span>
       )}
       <span className="min-w-0 flex-1">
-        <span className="block text-[15px] font-bold text-[var(--p-ink)]">Bugungi ovqat tartibi</span>
+        <span className="block text-[15px] font-bold text-[var(--p-ink)]">{tr("Bugungi ovqat tartibi")}</span>
         <span className="block truncate text-[13.5px] text-[var(--p-muted)]">
-          {main ?? "Menyu hali kiritilmagan"}
-          {photos.length > 0 ? ` · ${photos.length} ta surat` : ""}
+          {main ?? tr("Menyu hali kiritilmagan")}
+          {photos.length > 0 ? tr(" · {0} ta surat", photos.length) : ""}
         </span>
       </span>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 shrink-0 text-[var(--p-muted)]" aria-hidden>
@@ -504,7 +511,8 @@ function TodayMealsLink({ slug, day }: { slug: string; day: ParentDay }) {
 }
 
 function Empty({ text }: { text: string }) {
-  return <p className="text-[15px] text-[var(--p-muted)]">{text}</p>;
+  const tr = useTr();
+  return <p className="text-[15px] text-[var(--p-muted)]">{tr(text)}</p>;
 }
 
 /**
@@ -513,6 +521,7 @@ function Empty({ text }: { text: string }) {
  * turadi, buni backend har safar jonli hisoblab beradi.
  */
 function PaymentReminderCard({ reminder }: { reminder: ParentPaymentReminder }) {
+  const tr = useTr();
   const overdue = !!reminder.overdue;
   return (
     <section
@@ -532,9 +541,9 @@ function PaymentReminderCard({ reminder }: { reminder: ParentPaymentReminder }) 
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-[15px] font-bold text-[var(--p-ink)]">
-            {overdue ? "To'lov muddati o'tib ketdi" : "To'lov muddati yaqinlashmoqda"}
+            {overdue ? tr("To'lov muddati o'tib ketdi") : tr("To'lov muddati yaqinlashmoqda")}
           </p>
-          <p className="mt-0.5 text-[14px] leading-relaxed text-[var(--p-ink)]/85">{reminder.message}</p>
+          <p className="mt-0.5 text-[14px] leading-relaxed text-[var(--p-ink)]/85">{tr(reminder.message)}</p>
           {reminder.amount && (
             <p className="mt-2 text-[15px] font-bold text-[var(--p-ink)]">{formatMoney(reminder.amount)}</p>
           )}
@@ -570,6 +579,7 @@ function PaymentReceiptSection({
   canSubmit: boolean;
   receipts: ParentPaymentReceipt[];
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
@@ -592,7 +602,7 @@ function PaymentReceiptSection({
       queryClient.invalidateQueries({ queryKey: ["parent-payment-receipts", childId] });
       closeForm();
     },
-    onError: (err) => setFormError(err instanceof ApiError ? err.message : "Yuborib bo'lmadi — qayta urinib ko'ring"),
+    onError: (err) => setFormError(err instanceof ApiError ? err.message : tr("Yuborib bo'lmadi — qayta urinib ko'ring")),
   });
 
   const handlePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -616,14 +626,14 @@ function PaymentReceiptSection({
   return (
     <section className="mt-4 rounded-[var(--p-radius)] bg-[var(--p-card)] p-4 shadow-[var(--p-shadow)]">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[15px] font-bold text-[var(--p-ink)]">To&apos;lov cheki</p>
+        <p className="text-[15px] font-bold text-[var(--p-ink)]">{tr("To'lov cheki")}</p>
         {canSubmit && !open && (
           <button
             type="button"
             onClick={() => setOpen(true)}
             className="rounded-full bg-[var(--p-coral)] px-3.5 py-1.5 text-[13px] font-semibold text-white"
           >
-            Chek yuklash
+            {tr("Chek yuklash")}
           </button>
         )}
       </div>
@@ -633,11 +643,11 @@ function PaymentReceiptSection({
           onSubmit={(e) => {
             e.preventDefault();
             if (!image) {
-              setFormError("Chek suratini tanlang");
+              setFormError(tr("Chek suratini tanlang"));
               return;
             }
             if (!amount || Number(amount) <= 0) {
-              setFormError("Summani kiriting");
+              setFormError(tr("Summani kiriting"));
               return;
             }
             setFormError(null);
@@ -651,7 +661,7 @@ function PaymentReceiptSection({
             min={1}
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            placeholder="To'lov summasi (so'm)"
+            placeholder={tr("To'lov summasi (so'm)")}
             className="w-full rounded-[14px] bg-[var(--p-sunken)] px-3.5 py-2.5 text-[14px] text-[var(--p-ink)] outline-none ring-1 ring-[var(--p-muted)]/20 focus:ring-[var(--p-coral)]"
           />
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePick} />
@@ -659,7 +669,7 @@ function PaymentReceiptSection({
             // eslint-disable-next-line @next/next/no-img-element -- tanlangan fayl, brauzerda tayyorlangan
             <img
               src={image}
-              alt="Tanlangan chek"
+              alt={tr("Tanlangan chek")}
               onClick={() => fileInputRef.current?.click()}
               className="max-h-44 w-full cursor-pointer rounded-[14px] object-contain"
             />
@@ -673,14 +683,14 @@ function PaymentReceiptSection({
               {preparing ? "Tayyorlanmoqda..." : "Chek suratini tanlash"}
             </button>
           )}
-          {formError && <p className="text-[12.5px] text-[var(--p-coral)]">{formError}</p>}
+          {formError && <p className="text-[12.5px] text-[var(--p-coral)]">{tr(formError)}</p>}
           <div className="flex gap-2 pt-1">
             <button
               type="button"
               onClick={closeForm}
               className="flex-1 rounded-full bg-[var(--p-sunken)] px-4 py-2.5 text-[13.5px] font-semibold text-[var(--p-muted)]"
             >
-              Bekor qilish
+              {tr("Bekor qilish")}
             </button>
             <button
               type="submit"
@@ -702,7 +712,7 @@ function PaymentReceiptSection({
                 {r.status === "REJECTED" && r.reviewNote ? ` — ${r.reviewNote}` : ""}
               </span>
               <span className={clsx("shrink-0 rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold", RECEIPT_STATUS_TONE[r.status])}>
-                {RECEIPT_STATUS_LABEL[r.status]}
+                {tr(RECEIPT_STATUS_LABEL[r.status])}
               </span>
             </li>
           ))}

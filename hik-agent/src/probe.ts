@@ -1,5 +1,6 @@
 import { loadConfig } from "./config";
 import { ErpClient } from "./erp-client";
+import { listAgentDevices, readPairedAgent } from "./pairing";
 import { IsapiClient } from "./isapi-client";
 import { redact } from "./logger";
 
@@ -19,8 +20,15 @@ const ENDPOINTS = [
 
 async function main() {
   const config = loadConfig();
-  for (const token of config.tokens) {
-    const erp = new ErpClient(config.erpUrl, token);
+  // Ulangan agent: qurilmalar ERP'dan; aks holda .env dagi tokenlar
+  const paired = readPairedAgent(config.dataDir);
+  const clients = paired
+    ? (await listAgentDevices(paired)).map((d) => new ErpClient(paired.erpUrl, paired.agentKey, undefined, d.id))
+    : config.tokens.map((token) => new ErpClient(config.erpUrl, token));
+  if (clients.length === 0) {
+    console.log("Qurilma yo'q: agentni ulang (npm run pair) yoki .env ga AGENT_TOKENS yozing");
+  }
+  for (const erp of clients) {
     const { device } = await erp.config();
     console.log(`\n===== ${device.name} (${device.ip}:${device.port}) =====`);
     if (!device.ip || !device.username || !device.password) {

@@ -6,6 +6,7 @@ import clsx from "clsx";
 import { PARENT_API_URL, parentApi } from "@/lib/parent-api";
 import type { MenuMeal, ParentDay } from "@/lib/types";
 import { MEAL_LOOK } from "@/features/chef/meal-card";
+import { useTr } from "@/i18n/tr";
 
 /** Ovqatlar kun tartibi bo'yicha; rangi kabinet palitrasidan (qorong'i rejimda ham mos) */
 const MEALS: { meal: MenuMeal; label: string; field: "breakfast" | "lunch" | "snack"; tint: string; ink: string }[] = [
@@ -20,6 +21,7 @@ const MEALS: { meal: MenuMeal; label: string; field: "breakfast" | "lunch" | "sn
  * sahifada — bola kunining bir qismi.
  */
 export function MealsSection({ childId, date, isFuture }: { childId: string; date: string; isFuture: boolean }) {
+  const tr = useTr();
   const [viewing, setViewing] = useState<{ src: string; label: string } | null>(null);
 
   const dayQuery = useQuery({
@@ -34,7 +36,7 @@ export function MealsSection({ childId, date, isFuture }: { childId: string; dat
     <section className="mt-5 rounded-[var(--p-radius)] bg-[var(--p-card)] p-5 shadow-[var(--p-shadow)]">
       <h3 className="flex items-center gap-2 text-[15px] font-bold text-[var(--p-ink)]">
         <span className="h-2.5 w-2.5 rounded-full bg-[var(--p-sun)]" />
-        Ovqat tartibi
+        {tr("Ovqat tartibi")}
       </h3>
 
       {dayQuery.isLoading ? (
@@ -45,7 +47,7 @@ export function MealsSection({ childId, date, isFuture }: { childId: string; dat
         </div>
       ) : !hasMenu && !hasPhotos ? (
         <p className="mt-3 text-[15px] leading-relaxed text-[var(--p-muted)]">
-          {isFuture ? "Bu kun uchun menyu hali tuzilmagan" : "Bu kun uchun menyu kiritilmagan"}
+          {isFuture ? tr("Bu kun uchun menyu hali tuzilmagan") : tr("Bu kun uchun menyu kiritilmagan")}
         </p>
       ) : (
         <ol className="relative mt-4">
@@ -62,7 +64,7 @@ export function MealsSection({ childId, date, isFuture }: { childId: string; dat
                   <Icon className="h-6 w-6" />
                 </span>
                 <div className="min-w-0 flex-1 pt-0.5">
-                  <p className="text-[12px] font-semibold uppercase tracking-[0.05em] text-[var(--p-muted)]">{m.label}</p>
+                  <p className="text-[12px] font-semibold uppercase tracking-[0.05em] text-[var(--p-muted)]">{tr(m.label)}</p>
                   <p className={clsx("mt-0.5 text-[15.5px] leading-relaxed", text ? "text-[var(--p-ink)]" : "text-[var(--p-muted)]")}>
                     {text || "—"}
                   </p>
@@ -76,10 +78,10 @@ export function MealsSection({ childId, date, isFuture }: { childId: string; dat
                             type="button"
                             onClick={() => setViewing({ src, label: m.label })}
                             className="h-28 w-36 shrink-0 overflow-hidden rounded-2xl bg-[var(--p-sunken)] active:opacity-80"
-                            aria-label={`${m.label} suratini kattalashtirish`}
+                            aria-label={tr(`${m.label} suratini kattalashtirish`)}
                           >
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={src} alt={m.label} loading="lazy" className="h-full w-full object-cover" />
+                            <img src={src} alt={tr(m.label)} loading="lazy" className="h-full w-full object-cover" />
                           </button>
                         );
                       })}
@@ -97,11 +99,11 @@ export function MealsSection({ childId, date, isFuture }: { childId: string; dat
           type="button"
           onClick={() => setViewing(null)}
           className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-black/90 p-4"
-          aria-label="Yopish"
+          aria-label={tr("Yopish")}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={viewing.src} alt={viewing.label} className="max-h-[85dvh] max-w-full rounded-2xl object-contain" />
-          <span className="text-[14px] font-semibold text-white/80">{viewing.label} · yopish uchun bosing</span>
+          <img src={viewing.src} alt={tr(viewing.label)} className="max-h-[85dvh] max-w-full rounded-2xl object-contain" />
+          <span className="text-[14px] font-semibold text-white/80">{tr(viewing.label)} {tr("· yopish uchun bosing")}</span>
         </button>
       )}
     </section>

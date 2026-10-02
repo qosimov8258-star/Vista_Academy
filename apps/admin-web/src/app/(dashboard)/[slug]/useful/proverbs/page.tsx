@@ -19,8 +19,10 @@ import { formatDate } from "@/lib/format";
 import { UsefulTabs } from "@/features/useful/useful-tabs";
 import { ProverbModal } from "@/features/useful/proverb-modal";
 import { TeacherUsefulList } from "@/features/teacher/teacher-useful";
+import { useTr } from "@/i18n/tr";
 
 export default function ProverbsPage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const { user } = useAuth();
   const canWrite = canWriteUseful(user?.role);
@@ -73,12 +75,12 @@ export default function ProverbsPage({ params }: { params: Promise<{ slug: strin
       <ConfirmDialog
         open={!!deleting}
         onClose={() => setDeleting(null)}
-        title="Maqolni o'chirish"
-        confirmLabel="O'chirish"
+        title={tr("Maqolni o'chirish")}
+        confirmLabel={tr("O'chirish")}
         tone="danger"
         loading={deleteMutation.isPending}
         error={deleteMutation.isError ? ((deleteMutation.error as Error)?.message ?? null) : null}
-        description={<><b className="text-[var(--color-text)]">{deleting?.text}</b> o&apos;chiriladi.</>}
+        description={<><b className="text-[var(--color-text)]">{tr(deleting?.text)}</b> {tr("o'chiriladi.")}</>}
         onConfirm={() => deleting && deleteMutation.mutate(deleting.id)}
       />
     </>
@@ -95,12 +97,12 @@ export default function ProverbsPage({ params }: { params: Promise<{ slug: strin
           id: p.id,
           title: p.text,
           detail: p.meaning,
-          meta: [p.group?.name ?? "Barcha guruhlar", formatDate(p.createdAt)].filter(Boolean).join(" · "),
+          meta: [p.group?.name ?? tr("Barcha guruhlar"), formatDate(p.createdAt)].filter(Boolean).join(" · "),
           published: p.status === "PUBLISHED",
           canEdit: canWrite && p.createdById === user?.id,
         }))}
         loading={proverbsQuery.isLoading}
-        error={proverbsQuery.isError ? (proverbsQuery.error instanceof ApiError ? proverbsQuery.error.message : "Xatolik yuz berdi") : null}
+        error={proverbsQuery.isError ? (proverbsQuery.error instanceof ApiError ? proverbsQuery.error.message : tr("Xatolik yuz berdi")) : null}
         canWrite={canWrite}
         groups={groups}
         groupFilter={groupFilter}
@@ -109,7 +111,7 @@ export default function ProverbsPage({ params }: { params: Promise<{ slug: strin
         onEdit={(id) => setModal({ open: true, proverb: proverbsQuery.data?.find((x) => x.id === id) ?? null })}
         onDelete={(id) => setDeleting(proverbsQuery.data?.find((x) => x.id === id) ?? null)}
       >
-        {dialogs}
+        {tr(dialogs)}
       </TeacherUsefulList>
     );
   }
@@ -118,16 +120,16 @@ export default function ProverbsPage({ params }: { params: Promise<{ slug: strin
     <div className="space-y-5">
       <div className="flex items-start justify-between gap-3 md:flex-wrap md:items-center">
         <div className="min-w-0">
-          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">Foydali</h1>
+          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">{tr("Foydali")}</h1>
           <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">
-            She&apos;rlar, maqollar va ertaklar — ota-ona kabinetida shu yerdan ko&apos;rinadi
+            {tr("She'rlar, maqollar va ertaklar — ota-ona kabinetida shu yerdan ko'rinadi")}
           </p>
         </div>
         {canWrite && (
           <Button className="shrink-0 max-md:!h-auto max-md:!py-2" onClick={() => setModal({ open: true, proverb: null })}>
             <span className="max-md:text-center max-md:leading-tight">
-              + Yangi maqol
-              <br className="md:hidden" /> qo&apos;shish
+              {tr("+ Yangi maqol")}
+              <br className="md:hidden" /> {tr("qo'shish")}
             </span>
           </Button>
         )}
@@ -141,11 +143,11 @@ export default function ProverbsPage({ params }: { params: Promise<{ slug: strin
         {groupsQuery.isLoading ? (
           <LoadingState rows={1} />
         ) : (
-          <Select label="Guruh" value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)} className="sm:max-w-xs">
-            <option value="">Barcha guruhlar</option>
+          <Select label={tr("Guruh")} value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)} className="sm:max-w-xs">
+            <option value="">{tr("Barcha guruhlar")}</option>
             {groups.map((group) => (
               <option key={group.id} value={group.id}>
-                {group.name}
+                {tr(group.name)}
               </option>
             ))}
           </Select>
@@ -155,12 +157,12 @@ export default function ProverbsPage({ params }: { params: Promise<{ slug: strin
       {proverbsQuery.isLoading ? (
         <LoadingState rows={4} />
       ) : proverbsQuery.isError ? (
-        <ErrorState message={proverbsQuery.error instanceof ApiError ? proverbsQuery.error.message : "Xatolik yuz berdi"} />
+        <ErrorState message={proverbsQuery.error instanceof ApiError ? proverbsQuery.error.message : tr("Xatolik yuz berdi")} />
       ) : !proverbsQuery.data || proverbsQuery.data.length === 0 ? (
         <EmptyState
           icon={<BulbIcon className="h-[26px] w-[26px]" />}
-          title="Hali maqol yo'q"
-          description={canWrite ? "\"+ Yangi maqol qo'shish\" tugmasi orqali birinchisini qo'shing" : undefined}
+          title={tr("Hali maqol yo'q")}
+          description={canWrite ? tr("\"+ Yangi maqol qo'shish\" tugmasi orqali birinchisini qo'shing") : undefined}
         />
       ) : (
         <div className="space-y-3">
@@ -176,7 +178,7 @@ export default function ProverbsPage({ params }: { params: Promise<{ slug: strin
         </div>
       )}
 
-      {dialogs}
+      {tr(dialogs)}
     </div>
   );
 }
@@ -192,6 +194,7 @@ function ProverbRow({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const tr = useTr();
   return (
     <Card className="overflow-hidden">
       <div className="flex flex-wrap items-center gap-3 px-5 py-4">
@@ -200,16 +203,16 @@ function ProverbRow({
         </span>
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-medium text-[var(--color-text)]">{proverb.text}</span>
+            <span className="text-sm font-medium text-[var(--color-text)]">{tr(proverb.text)}</span>
             <Badge tone={proverb.status === "PUBLISHED" ? "success" : "neutral"}>
               {proverb.status === "PUBLISHED" ? "Chop etilgan" : "Qoralama"}
             </Badge>
           </span>
-          <span className="mt-0.5 block text-xs text-[var(--color-text-muted)]">{proverb.meaning}</span>
+          <span className="mt-0.5 block text-xs text-[var(--color-text-muted)]">{tr(proverb.meaning)}</span>
           <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-[var(--color-text-muted)]">
-            <span>{proverb.group?.name ?? "Barcha guruhlar"}</span>
+            <span>{proverb.group?.name ?? tr("Barcha guruhlar")}</span>
             <span>· {formatDate(proverb.createdAt)}</span>
-            <span>· {proverb.createdBy.fullName}</span>
+            <span>· {tr(proverb.createdBy.fullName)}</span>
           </span>
         </span>
         {canEdit && (
@@ -217,7 +220,7 @@ function ProverbRow({
             <button
               type="button"
               onClick={onEdit}
-              aria-label="Maqolni tahrirlash"
+              aria-label={tr("Maqolni tahrirlash")}
               className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-text)]"
             >
               <PencilIcon className="h-4 w-4" />
@@ -225,7 +228,7 @@ function ProverbRow({
             <button
               type="button"
               onClick={onDelete}
-              aria-label="Maqolni o'chirish"
+              aria-label={tr("Maqolni o'chirish")}
               className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]"
             >
               <TrashIcon className="h-4 w-4" />

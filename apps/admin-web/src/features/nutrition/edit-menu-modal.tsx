@@ -11,6 +11,7 @@ import { Modal } from "@/components/ui/modal";
 import { Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/format";
+import { useTr } from "@/i18n/tr";
 
 const schema = z.object({
   breakfast: z.string().optional(),
@@ -33,6 +34,7 @@ export function EditMenuModal({
   date: string;
   entry: MenuEntry | null;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -52,7 +54,7 @@ export function EditMenuModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
@@ -61,19 +63,19 @@ export function EditMenuModal({
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
-        <Textarea label="Nonushta" placeholder="Sutli botqa, non, choy" rows={2} {...register("breakfast")} />
-        <Textarea label="Tushlik" placeholder="Sho'rva, osh, salat" rows={2} {...register("lunch")} />
-        <Textarea label="Kechki ovqat / gazak" placeholder="Meva, kefir" rows={2} {...register("snack")} />
+        <Textarea label={tr("Nonushta")} placeholder={tr("Sutli botqa, non, choy")} rows={2} {...register("breakfast")} />
+        <Textarea label={tr("Tushlik")} placeholder={tr("Sho'rva, osh, salat")} rows={2} {...register("lunch")} />
+        <Textarea label={tr("Kechki ovqat / gazak")} placeholder={tr("Meva, kefir")} rows={2} {...register("snack")} />
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Bekor qilish
+            {tr("Bekor qilish")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Saqlash
+            {tr("Saqlash")}
           </Button>
         </div>
       </form>

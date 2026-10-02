@@ -19,7 +19,9 @@ import { FaceIdTabs } from "@/features/face-id/face-id-tabs";
 import { DeviceFormModal } from "@/features/face-id/device-form-modal";
 import { AgentTokenModal } from "@/features/face-id/agent-token-modal";
 import { DeviceCommandsModal } from "@/features/face-id/device-commands-modal";
+import { AgentPairingCard } from "@/features/face-id/agent-pairing-card";
 import { formatDateTime } from "@/lib/format";
+import { useTr } from "@/i18n/tr";
 
 const STATUS_TONE: Record<FaceIdDevice["status"], { label: string; tone: "success" | "neutral" | "warning" }> = {
   ACTIVE: { label: "Faol", tone: "success" },
@@ -31,8 +33,9 @@ const STATUS_TONE: Record<FaceIdDevice["status"], { label: string; tone: "succes
 const ONLINE_WINDOW_MS = 2 * 60_000;
 
 function AgentStatus({ device }: { device: FaceIdDevice }) {
+  const tr = useTr();
   if (!device.lastSeenAt) {
-    return <span className="text-[13px] text-[var(--color-text-muted)]">Hali ulanmagan</span>;
+    return <span className="text-[13px] text-[var(--color-text-muted)]">{tr("Hali ulanmagan")}</span>;
   }
   const online = Date.now() - new Date(device.lastSeenAt).getTime() < ONLINE_WINDOW_MS;
   return (
@@ -44,6 +47,7 @@ function AgentStatus({ device }: { device: FaceIdDevice }) {
 }
 
 export default function FaceIdDevicesPage({ params }: { params: Promise<{ slug: string }> }) {
+  const tr = useTr();
   const { slug } = use(params);
   const { user } = useAuth();
   const canWrite = canWriteOperational(user?.role);
@@ -83,9 +87,9 @@ export default function FaceIdDevicesPage({ params }: { params: Promise<{ slug: 
     onSuccess: (result, device) => {
       queryClient.invalidateQueries({ queryKey: ["face-id-devices", slug] });
       queryClient.invalidateQueries({ queryKey: ["face-id-enrollments", slug] });
-      setNotice(`"${device.name}": ${result.employees} ta xodim va ${result.children} ta bola qurilmaga yuborish navbatiga qo'yildi`);
+      setNotice(tr("\"{0}\": {1} ta xodim va {2} ta bola qurilmaga yuborish navbatiga qo'yildi", device.name, result.employees, result.children));
     },
-    onError: (err) => setNotice(err instanceof ApiError ? err.message : "Sinxronlab bo'lmadi"),
+    onError: (err) => setNotice(err instanceof ApiError ? err.message : tr("Sinxronlab bo'lmadi")),
   });
 
   const deleteMutation = useMutation({
@@ -103,14 +107,14 @@ export default function FaceIdDevicesPage({ params }: { params: Promise<{ slug: 
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-[var(--color-text)]">Face ID</h1>
+          <h1 className="text-xl font-semibold text-[var(--color-text)]">{tr("Face ID")}</h1>
           <p className="text-sm text-[var(--color-text-muted)]">
-            Kirish-chiqishni nazorat qiluvchi yuz tanish qurilmalari (masalan Hikvision Turniket Terminal Kontrol DS-K1T342MX)
+            {tr("Kirish-chiqishni nazorat qiluvchi yuz tanish qurilmalari (masalan Hikvision Turniket Terminal Kontrol DS-K1T342MX)")}
           </p>
         </div>
         {canWrite && (
           <Button variant="outline" onClick={() => setFormModal({ open: true, device: null })}>
-            + Yangi qurilma
+            {tr("+ Yangi qurilma")}
           </Button>
         )}
       </div>
@@ -121,34 +125,36 @@ export default function FaceIdDevicesPage({ params }: { params: Promise<{ slug: 
 
       {notice && (
         <div role="status" className="flex items-start justify-between gap-3 rounded-[var(--radius-lg)] bg-[var(--color-success-bg)] px-3.5 py-2.5 text-[13.5px] text-[var(--color-success)]">
-          <span>{notice}</span>
+          <span>{tr(notice)}</span>
           <button type="button" onClick={() => setNotice(null)} className="shrink-0 cursor-pointer font-semibold">
-            Yopish
+            {tr("Yopish")}
           </button>
         </div>
       )}
 
+      <AgentPairingCard branchId={forcedBranchId ?? null} canWrite={canWrite} />
+
       {devicesQuery.isLoading ? (
         <LoadingState />
       ) : devicesQuery.isError ? (
-        <ErrorState message={devicesQuery.error instanceof ApiError ? devicesQuery.error.message : "Xatolik yuz berdi"} />
+        <ErrorState message={devicesQuery.error instanceof ApiError ? devicesQuery.error.message : tr("Xatolik yuz berdi")} />
       ) : devices.length === 0 ? (
         <EmptyState
           icon={<FaceIdIcon className="h-[26px] w-[26px]" />}
-          title="Hali qurilma yo'q"
-          description={canWrite ? "Yuqoridagi \"+ Yangi qurilma\" tugmasi orqali birinchi terminalni qo'shing" : undefined}
+          title={tr("Hali qurilma yo'q")}
+          description={canWrite ? tr("Yuqoridagi \"+ Yangi qurilma\" tugmasi orqali birinchi terminalni qo'shing") : undefined}
         />
       ) : (
         <Card className="overflow-hidden">
           <DataTable>
             <THead>
               <tr>
-                <Th>Nomi</Th>
-                <Th>Rusumi</Th>
-                <Th>IP manzili</Th>
-                <Th>Agent</Th>
-                <Th numeric>Navbatda</Th>
-                <Th>Holati</Th>
+                <Th>{tr("Nomi")}</Th>
+                <Th>{tr("Rusumi")}</Th>
+                <Th>{tr("IP manzili")}</Th>
+                <Th>{tr("Agent")}</Th>
+                <Th numeric>{tr("Navbatda")}</Th>
+                <Th>{tr("Holati")}</Th>
                 {canWrite && <Th>&nbsp;</Th>}
               </tr>
             </THead>
@@ -156,14 +162,14 @@ export default function FaceIdDevicesPage({ params }: { params: Promise<{ slug: 
               {devices.map((device) => (
                 <Tr key={device.id}>
                   <Td className="font-medium">
-                    {device.name}
-                    {device.location && <p className="text-[12.5px] font-normal text-[var(--color-text-muted)]">{device.location}</p>}
+                    {tr(device.name)}
+                    {device.location && <p className="text-[12.5px] font-normal text-[var(--color-text-muted)]">{tr(device.location)}</p>}
                   </Td>
-                  <Td>{device.model}</Td>
+                  <Td>{tr(device.model)}</Td>
                   <Td nowrap className="tabular-nums">
                     {device.ipAddress ? `${device.ipAddress}:${device.port}` : "—"}
                     {device.ipAddress && !device.hasPassword && (
-                      <p className="text-[12.5px] text-[var(--color-warning)]">Parol kiritilmagan</p>
+                      <p className="text-[12.5px] text-[var(--color-warning)]">{tr("Parol kiritilmagan")}</p>
                     )}
                   </Td>
                   <Td nowrap>
@@ -174,13 +180,13 @@ export default function FaceIdDevicesPage({ params }: { params: Promise<{ slug: 
                       type="button"
                       onClick={() => setCommandsFor(device)}
                       className="cursor-pointer tabular-nums text-[var(--color-primary)] hover:underline"
-                      title="Buyruqlarni ko'rish"
+                      title={tr("Buyruqlarni ko'rish")}
                     >
-                      {device.queuedCommands}
+                      {tr(device.queuedCommands)}
                     </button>
                   </Td>
                   <Td>
-                    <Badge tone={STATUS_TONE[device.status].tone}>{STATUS_TONE[device.status].label}</Badge>
+                    <Badge tone={STATUS_TONE[device.status].tone}>{tr(STATUS_TONE[device.status].label)}</Badge>
                   </Td>
                   {canWrite && (
                     <Td nowrap>
@@ -191,17 +197,17 @@ export default function FaceIdDevicesPage({ params }: { params: Promise<{ slug: 
                           disabled={device.status !== "ACTIVE"}
                           loading={syncMutation.isPending && syncMutation.variables?.id === device.id}
                           onClick={() => syncMutation.mutate(device)}
-                          title="Filialdagi barcha faol xodim va bolalarni qurilmaga qayta yuborish"
+                          title={tr("Filialdagi barcha faol xodim va bolalarni qurilmaga qayta yuborish")}
                         >
-                          Sinxronlash
+                          {tr("Sinxronlash")}
                         </Button>
-                        <Button size="sm" variant="tertiary" onClick={() => setRotating(device)} title="Agent uchun yangi token">
-                          Yangi token
+                        <Button size="sm" variant="tertiary" onClick={() => setRotating(device)} title={tr("Agent uchun yangi token")}>
+                          {tr("Yangi token")}
                         </Button>
                         <button
                           type="button"
                           onClick={() => setFormModal({ open: true, device })}
-                          aria-label="Tahrirlash"
+                          aria-label={tr("Tahrirlash")}
                           className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-text)]"
                         >
                           <PencilIcon className="h-4 w-4" />
@@ -209,7 +215,7 @@ export default function FaceIdDevicesPage({ params }: { params: Promise<{ slug: 
                         <button
                           type="button"
                           onClick={() => setDeleting(device)}
-                          aria-label="O'chirish"
+                          aria-label={tr("O'chirish")}
                           className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]"
                         >
                           <TrashIcon className="h-4 w-4" />
@@ -240,14 +246,14 @@ export default function FaceIdDevicesPage({ params }: { params: Promise<{ slug: 
       <ConfirmDialog
         open={!!rotating}
         onClose={() => setRotating(null)}
-        title="Yangi agent tokeni"
+        title={tr("Yangi agent tokeni")}
         description={
           <>
-            <strong>{rotating?.name}</strong> uchun yangi token yaratilsa, eskisi darhol ishlamay qoladi — obyektdagi agentning{" "}
-            <code>.env</code> faylini yangi token bilan almashtirish kerak bo&apos;ladi.
+            <strong>{tr(rotating?.name)}</strong> {tr("uchun yangi token yaratilsa, eskisi darhol ishlamay qoladi — obyektdagi agentning")}{" "}
+            <code>.env</code> {tr("faylini yangi token bilan almashtirish kerak bo'ladi.")}
           </>
         }
-        confirmLabel="Yangi token yaratish"
+        confirmLabel={tr("Yangi token yaratish")}
         loading={rotateMutation.isPending}
         error={rotateMutation.error instanceof ApiError ? rotateMutation.error.message : null}
         onConfirm={() => rotating && rotateMutation.mutate(rotating)}
@@ -256,14 +262,13 @@ export default function FaceIdDevicesPage({ params }: { params: Promise<{ slug: 
       <ConfirmDialog
         open={!!deleting}
         onClose={() => setDeleting(null)}
-        title="Qurilmani o'chirish"
+        title={tr("Qurilmani o'chirish")}
         description={
           <>
-            <strong>{deleting?.name}</strong> qurilmasini o&apos;chirmoqchimisiz? Unga bog&apos;langan barcha yuz
-            yozuvlari ham o&apos;chib ketadi.
+            <strong>{tr(deleting?.name)}</strong> {tr("qurilmasini o'chirmoqchimisiz? Unga bog'langan barcha yuz yozuvlari ham o'chib ketadi.")}
           </>
         }
-        confirmLabel="O'chirish"
+        confirmLabel={tr("O'chirish")}
         tone="danger"
         loading={deleteMutation.isPending}
         error={deleteMutation.error instanceof ApiError ? deleteMutation.error.message : null}

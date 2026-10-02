@@ -11,6 +11,7 @@ import { Modal } from "@/components/ui/modal";
 import { Input, Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { SelectMenu } from "@/components/ui/select-menu";
+import { useTr } from "@/i18n/tr";
 
 const schema = z.object({
   name: z.string().min(2, "Nomi kamida 2 belgi"),
@@ -50,6 +51,7 @@ export function DeviceFormModal({
   /** Yangi qurilma yaratilganda — agent tokeni faqat shu bir marta keladi */
   onCreated?: (device: FaceIdDevice, agentToken: string) => void;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
   const [status, setStatus] = useState<FaceIdDeviceStatus>(device?.status ?? "ACTIVE");
@@ -119,42 +121,42 @@ export function DeviceFormModal({
       onClose();
       if (created) onCreated?.(created.device, created.agentToken);
     },
-    onError: (err) => setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi"),
+    onError: (err) => setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi")),
   });
 
   return (
-    <Modal open={open} onClose={onClose} title={isEditing ? "Qurilmani tahrirlash" : "Yangi qurilma"}>
+    <Modal open={open} onClose={onClose} title={isEditing ? "Qurilmani tahrirlash" : tr("Yangi qurilma")}>
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div role="alert" className="rounded-[var(--radius-lg)] bg-[var(--color-danger-bg)] px-3 py-2.5 text-[13px] text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
 
         <Input
-          label="Nomi"
-          placeholder="Asosiy kirish turniketi"
+          label={tr("Nomi")}
+          placeholder={tr("Asosiy kirish turniketi")}
           error={errors.name?.message}
           {...register("name")}
         />
         <Input
-          label="Qurilma rusumi"
+          label={tr("Qurilma rusumi")}
           placeholder="DS-K1T342MX"
-          hint="Masalan: Hikvision Turniket Terminal Kontrol DS-K1T342MX"
+          hint={tr("Masalan: Hikvision Turniket Terminal Kontrol DS-K1T342MX")}
           error={errors.model?.message}
           {...register("model")}
         />
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
-            label="Seriya raqami"
-            placeholder="Ixtiyoriy"
+            label={tr("Seriya raqami")}
+            placeholder={tr("Ixtiyoriy")}
             error={errors.serialNumber?.message}
             {...register("serialNumber")}
           />
           <Input
-            label="IP manzili"
-            placeholder="192.168.1.50 (ixtiyoriy)"
+            label={tr("IP manzili")}
+            placeholder={tr("192.168.1.50 (ixtiyoriy)")}
             error={errors.ipAddress?.message}
             {...register("ipAddress")}
           />
@@ -162,41 +164,41 @@ export function DeviceFormModal({
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_120px]">
           <Input
-            label="Qurilma logini"
+            label={tr("Qurilma logini")}
             placeholder="admin"
             autoComplete="off"
             error={errors.username?.message}
             {...register("username")}
           />
-          <Input label="Port" inputMode="numeric" placeholder="80" error={errors.port?.message} {...register("port")} />
+          <Input label={tr("Port")} inputMode="numeric" placeholder="80" error={errors.port?.message} {...register("port")} />
         </div>
         <Input
-          label="Qurilma paroli"
+          label={tr("Qurilma paroli")}
           type="password"
           autoComplete="new-password"
-          placeholder={isEditing && device?.hasPassword ? "O'zgartirmaslik uchun bo'sh qoldiring" : "Qurilma administratori paroli"}
-          hint="Shifrlab saqlanadi va faqat obyektdagi agentga beriladi — hech kimga ko'rsatilmaydi."
+          placeholder={isEditing && device?.hasPassword ? tr("O'zgartirmaslik uchun bo'sh qoldiring") : "Qurilma administratori paroli"}
+          hint={tr("Shifrlab saqlanadi va faqat obyektdagi agentga beriladi — hech kimga ko'rsatilmaydi.")}
           error={errors.password?.message}
           {...register("password")}
         />
 
         <Input
-          label="Joylashuvi"
-          placeholder="Asosiy kirish eshigi (ixtiyoriy)"
+          label={tr("Joylashuvi")}
+          placeholder={tr("Asosiy kirish eshigi (ixtiyoriy)")}
           error={errors.location?.message}
           {...register("location")}
         />
 
-        {isEditing && <SelectMenu label="Holati" options={STATUS_OPTIONS} value={status} onChange={(v) => setStatus(v as FaceIdDeviceStatus)} />}
+        {isEditing && <SelectMenu label={tr("Holati")} options={STATUS_OPTIONS} value={status} onChange={(v) => setStatus(v as FaceIdDeviceStatus)} />}
 
-        <Textarea label="Izoh" rows={2} placeholder="Ixtiyoriy" error={errors.notes?.message} {...register("notes")} />
+        <Textarea label={tr("Izoh")} rows={2} placeholder={tr("Ixtiyoriy")} error={errors.notes?.message} {...register("notes")} />
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Bekor qilish
+            {tr("Bekor qilish")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            {isEditing ? "Saqlash" : "Qo'shish"}
+            {isEditing ? "Saqlash" : tr("Qo'shish")}
           </Button>
         </div>
       </form>

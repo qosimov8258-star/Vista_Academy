@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import clsx from "clsx";
 import { getTenantAccessToken } from "@/lib/tenant-session";
 import { tryRefresh } from "@/lib/api";
+import { useTr } from "@/i18n/tr";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
 
@@ -84,6 +85,7 @@ export function ChildPhoto({
   className?: string;
   fallback: React.ReactNode;
 }) {
+  const tr = useTr();
   const url = childPhotoUrl(child);
   const { src, failed } = useAuthedImage(url);
 
@@ -92,7 +94,7 @@ export function ChildPhoto({
       // eslint-disable-next-line @next/next/no-img-element -- blob manzil, Next optimizatsiyasi kerak emas
       <img
         src={src}
-        alt={child.fullName}
+        alt={tr(child.fullName)}
         width={size}
         height={size}
         className={clsx("shrink-0 rounded-full object-cover ring-1 ring-inset ring-[rgba(16,24,40,0.06)]", className)}
@@ -116,7 +118,7 @@ export function ChildPhoto({
       )}
       style={{ width: size, height: size, fontSize: Math.round(size * 0.3) }}
     >
-      {fallback}
+      {tr(fallback)}
     </span>
   );
 }

@@ -19,3 +19,25 @@ export function generateAgentToken(): string {
 export function hashAgentToken(token: string): string {
   return createHash("sha256").update(token, "utf8").digest("hex");
 }
+
+/** Ulangan obyekt agentining kaliti — filialdagi barcha qurilmalar uchun bitta. */
+export const AGENT_KEY_PREFIX = "hka_";
+
+export function generateAgentKey(): string {
+  return `${AGENT_KEY_PREFIX}${randomBytes(32).toString("base64url")}`;
+}
+
+/** Ulash kodi alifbosi — chalkashadigan belgilarsiz (0/O, 1/I/L). */
+const PAIRING_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
+/** 8 belgili bir martalik ulash kodi, ko'rsatish uchun "XXXX-XXXX". */
+export function generatePairingCode(): string {
+  const bytes = randomBytes(8);
+  const chars = Array.from(bytes, (b) => PAIRING_ALPHABET[b % PAIRING_ALPHABET.length]).join("");
+  return `${chars.slice(0, 4)}-${chars.slice(4)}`;
+}
+
+/** Foydalanuvchi qanday yozsa ham (kichik harf, chiziqchasiz, bo'shliq) bir xil xesh. */
+export function hashPairingCode(code: string): string {
+  return hashAgentToken(code.toUpperCase().replace(/[^A-Z0-9]/g, ""));
+}

@@ -10,6 +10,7 @@ import type { Employee, Shift } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Input, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useTr } from "@/i18n/tr";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 
@@ -27,6 +28,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export function LogShiftModal({ open, onClose, slug }: { open: boolean; onClose: () => void; slug: string }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -64,40 +66,40 @@ export function LogShiftModal({ open, onClose, slug }: { open: boolean; onClose:
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
   return (
-    <Modal open={open} onClose={onClose} title="Smena qo'shish">
+    <Modal open={open} onClose={onClose} title={tr("Smena qo'shish")}>
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
-        <Select label="Xodim" defaultValue="" error={errors.employeeId?.message} {...register("employeeId")}>
+        <Select label={tr("Xodim")} defaultValue="" error={errors.employeeId?.message} {...register("employeeId")}>
           <option value="" disabled>
-            Tanlang
+            {tr("Tanlang")}
           </option>
           {employees?.map((employee) => (
             <option key={employee.id} value={employee.id}>
-              {employee.fullName}
+              {tr(employee.fullName)}
             </option>
           ))}
         </Select>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input label="Sana" type="date" error={errors.date?.message} {...register("date")} />
-          <Input label="Ish soatlari" type="number" step="0.5" placeholder="8" error={errors.hours?.message} {...register("hours")} />
+          <Input label={tr("Sana")} type="date" error={errors.date?.message} {...register("date")} />
+          <Input label={tr("Ish soatlari")} type="number" step="0.5" placeholder="8" error={errors.hours?.message} {...register("hours")} />
         </div>
-        <Input label="Izoh (ixtiyoriy)" {...register("note")} />
+        <Input label={tr("Izoh (ixtiyoriy)")} {...register("note")} />
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Bekor qilish
+            {tr("Bekor qilish")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Saqlash
+            {tr("Saqlash")}
           </Button>
         </div>
       </form>

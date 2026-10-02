@@ -11,6 +11,7 @@ import type { Child, Group, Lead } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useTr } from "@/i18n/tr";
 
 const schema = z.object({
   groupId: z.string().optional(),
@@ -29,6 +30,7 @@ export function ConvertLeadModal({
   slug: string;
   leadId: string;
 }) {
+  const tr = useTr();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -61,37 +63,36 @@ export function ConvertLeadModal({
       router.push(`/${slug}/children/${result.child.id}`);
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
   return (
-    <Modal open={open} onClose={onClose} title="Bolaga aylantirish">
+    <Modal open={open} onClose={onClose} title={tr("Bolaga aylantirish")}>
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
         <p className="text-sm text-[var(--color-text-muted)]">
-          Ushbu ariza asosida yangi bola profili yaratiladi va ariza &quot;Yutildi&quot; bosqichiga o&apos;tkaziladi. Bu amalni
-          ortga qaytarib bo&apos;lmaydi.
+          {tr("Ushbu ariza asosida yangi bola profili yaratiladi va ariza \"Yutildi\" bosqichiga o'tkaziladi. Bu amalni ortga qaytarib bo'lmaydi.")}
         </p>
-        <Select label="Guruh (ixtiyoriy)" defaultValue="" {...register("groupId")}>
-          <option value="">Tanlanmagan</option>
+        <Select label={tr("Guruh (ixtiyoriy)")} defaultValue="" {...register("groupId")}>
+          <option value="">{tr("Tanlanmagan")}</option>
           {groups?.map((group) => (
             <option key={group.id} value={group.id}>
-              {group.name}
+              {tr(group.name)}
             </option>
           ))}
         </Select>
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Bekor qilish
+            {tr("Bekor qilish")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Tasdiqlash
+            {tr("Tasdiqlash")}
           </Button>
         </div>
       </form>

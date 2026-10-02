@@ -13,6 +13,7 @@ import { Input, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { EyeIcon, EyeOffIcon } from "@/components/ui/icons";
 import { PasswordChecklist, getPasswordRules } from "@/components/ui/password-checklist";
+import { useTr } from "@/i18n/tr";
 
 const LOGIN_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{1,30}[A-Za-z0-9]$/;
 const LOGIN_MESSAGE = "Login lotin harf, raqam, . _ - dan iborat bo'lishi va kamida 3 belgi bo'lishi kerak";
@@ -53,6 +54,7 @@ export function CreateTenantUserModal({
   currentUser: TenantAuthenticatedUser;
   branches: Branch[];
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -92,7 +94,7 @@ export function CreateTenantUserModal({
   // Sarlavha va login namunasi tanlangan rolga qarab o'zgaradi
   const selectedRole = watch("role") ?? "BRANCH_ADMIN";
   const targetRole: TenantUserRole = isNetworkAdmin ? selectedRole : "MANAGER";
-  const targetRoleLabel = ROLE_LABEL[targetRole];
+  const targetRoleLabel = tr(ROLE_LABEL[targetRole]);
   const loginPlaceholder =
     targetRole === "FINANCE" ? "moliyachi" : targetRole === "BRANCH_ADMIN" ? "filial_admin" : "administrator";
 
@@ -113,54 +115,54 @@ export function CreateTenantUserModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
   return (
-    <Modal open={open} onClose={onClose} title={`Yangi ${targetRoleLabel.toLowerCase()}`}>
+    <Modal open={open} onClose={onClose} title={tr("Yangi {0}", targetRoleLabel.toLowerCase())}>
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
         {isNetworkAdmin && (
           <>
-            <Select label="Filial" error={errors.branchId?.message} {...register("branchId")}>
+            <Select label={tr("Filial")} error={errors.branchId?.message} {...register("branchId")}>
               {branches.map((branch) => (
                 <option key={branch.id} value={branch.id}>
-                  {branch.name}
+                  {tr(branch.name)}
                 </option>
               ))}
             </Select>
             <Select
-              label="Rol"
+              label={tr("Rol")}
               error={errors.role?.message}
               hint={
                 selectedRole === "FINANCE"
-                  ? "Moliya va Ish haqi bo'limlarida ishlaydi, qolgan bo'limlarni faqat ko'radi"
-                  : "Filialning barcha bo'limlarida to'liq ishlaydi va administrator qo'sha oladi"
+                  ? tr("Moliya va Ish haqi bo'limlarida ishlaydi, qolgan bo'limlarni faqat ko'radi")
+                  : tr("Filialning barcha bo'limlarida to'liq ishlaydi va administrator qo'sha oladi")
               }
               {...register("role")}
             >
-              <option value="BRANCH_ADMIN">{ROLE_LABEL.BRANCH_ADMIN}</option>
-              <option value="FINANCE">{ROLE_LABEL.FINANCE}</option>
+              <option value="BRANCH_ADMIN">{tr(ROLE_LABEL.BRANCH_ADMIN)}</option>
+              <option value="FINANCE">{tr(ROLE_LABEL.FINANCE)}</option>
             </Select>
           </>
         )}
-        <Input label="To'liq ism" placeholder="Aziz Rahimov" error={errors.fullName?.message} {...register("fullName")} />
+        <Input label={tr("To'liq ism")} placeholder={tr("Aziz Rahimov")} error={errors.fullName?.message} {...register("fullName")} />
         <Input
-          label="Login"
+          label={tr("Login")}
           type="text"
-          placeholder={loginPlaceholder}
+          placeholder={tr(loginPlaceholder)}
           error={errors.login?.message}
           {...register("login")}
         />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="relative">
             <Input
-              label="Parol"
+              label={tr("Parol")}
               type={showPassword ? "text" : "password"}
               error={errors.password?.message}
               {...register("password")}
@@ -169,14 +171,14 @@ export function CreateTenantUserModal({
               type="button"
               onClick={() => setShowPassword((v) => !v)}
               className="absolute right-3 top-[38px] cursor-pointer text-gray-400 hover:text-[var(--color-text)]"
-              aria-label={showPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+              aria-label={showPassword ? "Parolni yashirish" : tr("Parolni ko'rsatish")}
             >
               {showPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
             </button>
           </div>
           <div className="relative">
             <Input
-              label="Parolni tasdiqlang"
+              label={tr("Parolni tasdiqlang")}
               type={showConfirmPassword ? "text" : "password"}
               error={errors.confirmPassword?.message}
               {...register("confirmPassword")}
@@ -185,7 +187,7 @@ export function CreateTenantUserModal({
               type="button"
               onClick={() => setShowConfirmPassword((v) => !v)}
               className="absolute right-3 top-[38px] cursor-pointer text-gray-400 hover:text-[var(--color-text)]"
-              aria-label={showConfirmPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+              aria-label={showConfirmPassword ? "Parolni yashirish" : tr("Parolni ko'rsatish")}
             >
               {showConfirmPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
             </button>
@@ -200,10 +202,10 @@ export function CreateTenantUserModal({
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Bekor qilish
+            {tr("Bekor qilish")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Yaratish
+            {tr("Yaratish")}
           </Button>
         </div>
       </form>

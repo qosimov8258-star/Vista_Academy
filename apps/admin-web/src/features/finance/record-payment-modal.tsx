@@ -11,6 +11,7 @@ import { Modal } from "@/components/ui/modal";
 import { Input, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/lib/format";
+import { useTr } from "@/i18n/tr";
 
 const schema = z.object({
   amount: z.coerce.number().positive("Summa musbat bo'lishi kerak"),
@@ -31,6 +32,7 @@ export function RecordPaymentModal({
   slug: string;
   invoice: Invoice;
 }) {
+  const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -54,35 +56,35 @@ export function RecordPaymentModal({
       onClose();
     },
     onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : "Kutilmagan xatolik yuz berdi");
+      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
 
   return (
-    <Modal open={open} onClose={onClose} title="To'lov qabul qilish">
+    <Modal open={open} onClose={onClose} title={tr("To'lov qabul qilish")}>
       <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
           <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {serverError}
+            {tr(serverError)}
           </div>
         )}
         <p className="text-sm text-[var(--color-text-muted)]">
-          {invoice.child?.fullName} — {invoice.period} — qolgan qarz: <strong>{formatMoney(remaining, invoice.currency)}</strong>
+          {tr(invoice.child?.fullName)} — {tr(invoice.period)} {tr("— qolgan qarz:")}{" "}<strong>{formatMoney(remaining, invoice.currency)}</strong>
         </p>
-        <Input label="Summa" type="number" error={errors.amount?.message} {...register("amount")} />
-        <Select label="To'lov usuli" error={errors.method?.message} {...register("method")}>
-          <option value="CASH">Naqd</option>
-          <option value="CARD">Karta</option>
-          <option value="BANK_TRANSFER">Bank o'tkazmasi</option>
+        <Input label={tr("Summa")} type="number" error={errors.amount?.message} {...register("amount")} />
+        <Select label={tr("To'lov usuli")} error={errors.method?.message} {...register("method")}>
+          <option value="CASH">{tr("Naqd")}</option>
+          <option value="CARD">{tr("Karta")}</option>
+          <option value="BANK_TRANSFER">{tr("Bank o'tkazmasi")}</option>
         </Select>
-        <Input label="Izoh (ixtiyoriy)" {...register("note")} />
+        <Input label={tr("Izoh (ixtiyoriy)")} {...register("note")} />
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
-            Bekor qilish
+            {tr("Bekor qilish")}
           </Button>
           <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            Qabul qilish
+            {tr("Qabul qilish")}
           </Button>
         </div>
       </form>
