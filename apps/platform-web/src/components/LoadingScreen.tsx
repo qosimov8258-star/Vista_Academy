@@ -106,21 +106,16 @@ export function LoadingScreen({
     >
       <div className="flex items-center gap-4 text-[clamp(48px,9vw,96px)]">
         <span
-          className="font-bold leading-none tracking-[25px] text-[var(--color-primary)]"
+          className="font-bold leading-none tracking-[0.18em] text-[var(--color-primary)]"
           style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
         >
-          NYX
+          ZEERON
         </span>
-        <img
-          src="/ring_380x380.png"
-          alt="Zeeron"
-          className="animate-nyx-logo-spin h-[1em] w-auto shrink-0"
-        />
         <span className="flex items-center gap-[0.22em] self-end" aria-hidden="true">
           {[0, 1, 2].map((dot) => (
             <span
               key={dot}
-              className="h-[0.16em] w-[0.16em] animate-nyx-dot-blink rounded-full bg-[var(--color-primary)]"
+              className="h-[0.16em] w-[0.16em] animate-zeeron-dot-blink rounded-full bg-[var(--color-primary)]"
               style={{ animationDelay: `${dot * 200}ms` }}
             />
           ))}
