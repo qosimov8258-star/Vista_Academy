@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { AlertIcon } from "@/components/ui/icons";
 import { formatDayMonth, formatNumber } from "@/lib/format";
+import { organizationAccessUrl } from "@/lib/admin-web";
 
 /** Bog'cha holati o'zgarganda yangilanadigan hamma so'rovlar. */
 export function useInvalidateOrganization(id: string) {
@@ -203,6 +204,31 @@ export function NotesCard({ organization }: { organization: Organization }) {
       </div>
     </section>
   );
+}
+
+/**
+ * "Bog'chaga kirish": yangi tab bosish paytida (sinxron) ochiladi — so'rovdan
+ * keyin ochilsa brauzer uni popup deb bloklaydi. Chipta kelgach manzil beriladi.
+ */
+export function useEnterOrganization() {
+  const mutation = useMutation({
+    mutationFn: async ({ id, tab }: { id: string; tab: Window | null }) => {
+      const { ticket, slug } = await api.post<{ ticket: string; slug: string }>(`/platform/organizations/${id}/enter`);
+      return { tab, url: `${organizationAccessUrl(slug)}/enter#t=${encodeURIComponent(ticket)}` };
+    },
+    onSuccess: ({ tab, url }) => {
+      if (tab && !tab.closed) tab.location.href = url;
+      else window.location.href = url;
+    },
+    onError: (_err, { tab }) => tab?.close(),
+  });
+  const enter = (id: string) => {
+    const tab = window.open("about:blank", "_blank");
+    // Yangi tab platforma oynasini boshqara olmasin
+    if (tab) tab.opener = null;
+    mutation.mutate({ id, tab });
+  };
+  return { enter, mutation };
 }
 
 // ─── Holat amallari ─────────────────────────────────────────────────────────

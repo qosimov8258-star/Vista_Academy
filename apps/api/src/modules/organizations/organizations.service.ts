@@ -5,7 +5,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from "@nestjs/common";
-import { Prisma } from "@prisma/client";
+import { OrganizationStatus, Prisma } from "@prisma/client";
 import * as argon2 from "argon2";
 import { JwtService } from "@nestjs/jwt";
 import { PrismaService } from "../../database/prisma.service";
@@ -128,28 +128,65 @@ export class OrganizationsService {
   }
 
   async findAll(query: OrganizationQueryDto) {
+    const search = query.search?.trim();
+    const insensitive = "insensitive" as Prisma.QueryMode;
+    const searchWhere: Prisma.OrganizationWhereInput = search
+      ? {
+          OR: [
+            { name: { contains: search, mode: insensitive } },
+            { slug: { contains: search, mode: insensitive } },
+            { contactPhone: { contains: search, mode: insensitive } },
+            { contactEmail: { contains: search, mode: insensitive } },
+          ],
+        }
+      : {};
     const where: Prisma.OrganizationWhereInput = {
+      ...searchWhere,
       // Arxivlanganlar faqat "Arxiv" filtrida ko'rinadi
       ...(query.status ? { status: query.status } : { status: { not: "ARCHIVED" } }),
-      ...(query.search
-        ? { name: { contains: query.search, mode: "insensitive" as Prisma.QueryMode } }
-        : {}),
     };
+    const orderBy: Prisma.OrganizationOrderByWithRelationInput[] = {
+      created: [{ createdAt: "desc" as const }],
+      name: [{ name: "asc" as const }],
+      children: [{ children: { _count: "desc" as const } }, { createdAt: "desc" as const }],
+      balance: [{ wallet: { balance: "desc" as const } }, { createdAt: "desc" as const }],
+    }[query.sort ?? "created"];
 
-    const [items, total] = await this.prisma.$transaction([
+    const [items, total, byStatus] = await this.prisma.$transaction([
       this.prisma.organization.findMany({
         where,
-        include: organizationInclude,
-        orderBy: { createdAt: "desc" },
+        include: {
+          ...organizationInclude,
+          // Ro'yxatda tarif limitiga nisbatan foydalanish ko'rinsin
+          _count: {
+            select: {
+              children: { where: { status: "ACTIVE" } },
+              employees: { where: { isActive: true } },
+            },
+          },
+        },
+        orderBy,
         skip: (query.page - 1) * query.limit,
         take: query.limit,
       }),
       this.prisma.organization.count({ where }),
+      // Holat filtrlaridagi sonlar — qidiruv hisobga olinadi, holat filtri emas
+      this.prisma.organization.groupBy({
+        by: ["status"],
+        where: searchWhere,
+        _count: { _all: true },
+        orderBy: { status: "asc" },
+      }),
     ]);
+
+    const statusCounts = { ACTIVE: 0, SUSPENDED: 0, ARCHIVED: 0 } as Record<OrganizationStatus, number>;
+    for (const row of byStatus) {
+      statusCounts[row.status] = typeof row._count === "object" ? (row._count._all ?? 0) : 0;
+    }
 
     return {
       data: items,
-      meta: { page: query.page, limit: query.limit, total },
+      meta: { page: query.page, limit: query.limit, total, statusCounts },
     };
   }
 

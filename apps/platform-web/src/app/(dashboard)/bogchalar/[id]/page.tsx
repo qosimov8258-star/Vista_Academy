@@ -36,6 +36,7 @@ import {
   OrgStatusPill,
   SuspendModal,
   UsageTiles,
+  useEnterOrganization,
   useInvalidateOrganization,
 } from "@/features/organizations/lifecycle";
 
@@ -79,25 +80,8 @@ export default function BogchaDetailPage({ params }: { params: Promise<{ id: str
     onSuccess: invalidate,
   });
 
-  // "Bog'chaga kirish": yangi tab bosish paytida (sinxron) ochiladi — so'rovdan
-  // keyin ochilsa brauzer uni popup deb bloklaydi. Chipta kelgach manzil beriladi.
-  const enterMutation = useMutation({
-    mutationFn: async (tab: Window | null) => {
-      const { ticket, slug } = await api.post<{ ticket: string; slug: string }>(`/platform/organizations/${id}/enter`);
-      return { tab, url: `${organizationAccessUrl(slug)}/enter#t=${encodeURIComponent(ticket)}` };
-    },
-    onSuccess: ({ tab, url }) => {
-      if (tab && !tab.closed) tab.location.href = url;
-      else window.location.href = url;
-    },
-    onError: (_err, tab) => tab?.close(),
-  });
-  const enter = () => {
-    const tab = window.open("about:blank", "_blank");
-    // Yangi tab platforma oynasini boshqara olmasin
-    if (tab) tab.opener = null;
-    enterMutation.mutate(tab);
-  };
+  const { enter: enterOrganization, mutation: enterMutation } = useEnterOrganization();
+  const enter = () => enterOrganization(id);
 
   if (orgQuery.isLoading) return <LoadingState />;
   if (orgQuery.isError) return <ErrorState message={(orgQuery.error as Error).message} />;

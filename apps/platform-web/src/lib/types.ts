@@ -92,7 +92,11 @@ export interface Organization {
   branches: Branch[];
   subscription: Subscription | null;
   wallet: Wallet | null;
+  /** Faqat ro'yxat javobida: faol bolalar va xodimlar soni (tarif limitiga nisbatan). */
+  _count?: { children: number; employees: number };
 }
+
+export type OrganizationSort = "created" | "name" | "children" | "balance";
 
 export type LandingScheduleType = "LESSON" | "SLEEP" | "MEAL" | "OTHER";
 

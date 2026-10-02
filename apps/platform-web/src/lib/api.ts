@@ -108,7 +108,7 @@ export const api = {
 
 export interface Paginated<T> {
   data: T[];
-  meta: { page: number; limit: number; total: number };
+  meta: { page: number; limit: number; total: number; statusCounts?: Record<string, number> };
 }
 
 export async function getPaginated<T>(path: string): Promise<Paginated<T>> {
