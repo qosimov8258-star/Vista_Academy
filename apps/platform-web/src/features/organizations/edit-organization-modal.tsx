@@ -20,7 +20,6 @@ const schema = z.object({
   contactName: z.string().optional(),
   contactPhone: z.string().optional(),
   website: z.string().optional(),
-  status: z.enum(["ACTIVE", "SUSPENDED"]),
   planId: z.string().optional(),
   subscriptionStatus: z.enum(["ACTIVE", "GRACE_PERIOD", "SUSPENDED", "CANCELLED"]),
 });
@@ -169,7 +168,6 @@ export function EditOrganizationModal({
       contactName: organization.contactName ?? "",
       contactPhone: organization.contactPhone ?? "",
       website: organization.website ?? "",
-      status: organization.status,
       planId: subscription?.planId ?? "",
       subscriptionStatus: subscription?.status ?? "ACTIVE",
     },
@@ -184,7 +182,6 @@ export function EditOrganizationModal({
         contactName: emptyToNull(values.contactName),
         contactPhone: emptyToNull(values.contactPhone),
         website: emptyToNull(values.website),
-        status: values.status,
       });
 
       if (!values.planId) return;
@@ -341,14 +338,6 @@ export function EditOrganizationModal({
             </>
           )}
         </div>
-        <Select
-          label="Tashkilot holati"
-          hint="To'xtatilgan tashkilot platformadan foydalana olmaydi"
-          {...register("status")}
-        >
-          <option value="ACTIVE">Faol</option>
-          <option value="SUSPENDED">To&apos;xtatilgan</option>
-        </Select>
 
         <div className="space-y-4 border-t border-[var(--color-border)] pt-4">
           <Select
@@ -396,17 +385,20 @@ export function EditOrganizationModal({
         </div>
       </form>
 
-      <div className="mt-6 space-y-3 rounded-[var(--radius-lg)] border border-[var(--color-danger)]/25 bg-[var(--color-danger-bg)] p-4">
-        <div>
-          <p className="text-[13px] font-semibold text-[var(--color-danger)]">Xavfli hudud</p>
-          <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-            Bog&apos;chani platformadan butunlay o&apos;chirish — bu amalni ortga qaytarib bo&apos;lmaydi.
-          </p>
+      {/* Butunlay o'chirish — faqat arxivdagi bog'cha (ikki bosqichli himoya; arxiv bog'cha sahifasida) */}
+      {organization.status === "ARCHIVED" && (
+        <div className="mt-6 space-y-3 rounded-[var(--radius-lg)] border border-[var(--color-danger)]/25 bg-[var(--color-danger-bg)] p-4">
+          <div>
+            <p className="text-[13px] font-semibold text-[var(--color-danger)]">Xavfli hudud</p>
+            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+              Arxivdagi bog&apos;chani platformadan butunlay o&apos;chirish — bu amalni ortga qaytarib bo&apos;lmaydi.
+            </p>
+          </div>
+          <Button type="button" variant="danger" size="sm" onClick={() => setDeleteOpen(true)}>
+            Bog&apos;chani o&apos;chirish
+          </Button>
         </div>
-        <Button type="button" variant="danger" size="sm" onClick={() => setDeleteOpen(true)}>
-          Bog&apos;chani o&apos;chirish
-        </Button>
-      </div>
+      )}
     </Modal>
 
     <Modal

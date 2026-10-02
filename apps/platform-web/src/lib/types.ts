@@ -11,7 +11,7 @@ export interface AuthenticatedUser {
   role: PlatformUserRole;
 }
 
-export type OrganizationStatus = "ACTIVE" | "SUSPENDED";
+export type OrganizationStatus = "ACTIVE" | "SUSPENDED" | "ARCHIVED";
 
 export interface Branch {
   id: string;
@@ -48,6 +48,8 @@ export interface Subscription {
   currentPeriodStart: string;
   currentPeriodEnd: string;
   graceUntil: string | null;
+  /** Sinov muddati tugash sanasi; bo'sh — sinov emas. */
+  trialEndsAt: string | null;
   plan?: Plan;
   organization?: Organization;
 }
@@ -82,11 +84,21 @@ export interface Organization {
   contactEmail: string | null;
   contactPhone: string | null;
   status: OrganizationStatus;
+  /** To'xtatish sababi — bog'cha xodimlariga kirishda ko'rsatiladi. */
+  suspendReason: string | null;
+  suspendedAt: string | null;
+  archivedAt: string | null;
+  /** Operatorning ichki izohi (bog'chaga ko'rinmaydi). */
+  notes: string | null;
   createdAt: string;
   branches: Branch[];
   subscription: Subscription | null;
   wallet: Wallet | null;
+  /** Faqat ro'yxat javobida: faol bolalar va xodimlar soni (tarif limitiga nisbatan). */
+  _count?: { children: number; employees: number };
 }
+
+export type OrganizationSort = "created" | "name" | "children" | "balance";
 
 export type LandingScheduleType = "LESSON" | "SLEEP" | "MEAL" | "OTHER";
 
@@ -140,4 +152,98 @@ export interface DashboardSummary {
   totalWalletBalance: string;
   mrr: string;
   recentOrganizations: Organization[];
+}
+
+export type AnalyticsPeriod = "day" | "week" | "month" | "year";
+
+export interface OrganizationRef {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+/** GET /platform/dashboard/analytics — pul qiymatlari son (so'm). */
+export interface DashboardAnalytics {
+  period: AnalyticsPeriod;
+  range: { start: string; end: string };
+  kpis: {
+    revenue: { value: number; previous: number; changePct: number | null };
+    activeChildren: { value: number; added: number; changePct: number | null };
+    newOrganizations: { value: number; previous: number; changePct: number | null };
+    mrr: { value: number; activeSubscriptions: number };
+  };
+  revenueByMonth: { month: string; total: number }[];
+  subscriptions: { total: number; active: number; grace: number; suspended: number; cancelled: number; none: number };
+  plans: { id: string; name: string; priceMonthly: number; subscribers: number }[];
+  expiring: {
+    organization: OrganizationRef;
+    plan: { name: string; priceMonthly: number };
+    status: SubscriptionStatus;
+    periodEnd: string;
+    graceUntil: string | null;
+  }[];
+  recentTransactions: {
+    id: string;
+    type: WalletTransactionType;
+    amount: number;
+    balanceAfter: number;
+    note: string | null;
+    createdAt: string;
+    createdBy: string | null;
+    organization: OrganizationRef;
+  }[];
+}
+
+/** GET /platform/organizations/:id/usage */
+export interface OrganizationUsage {
+  plan: { name: string; maxBranches: number; maxChildren: number; maxEmployees: number; maxStorageGb: number } | null;
+  counts: { branches: number; children: number; employees: number; staffAccounts: number; guardians: number; groups: number };
+  branches: {
+    id: string;
+    name: string;
+    slug: string;
+    address: string | null;
+    createdAt: string;
+    children: number;
+    employees: number;
+    groups: number;
+  }[];
+  admins: { id: string; login: string; fullName: string; isActive: boolean; lastLoginAt: string | null }[];
+  lastLoginAt: string | null;
+}
+
+/** GET /platform/billing/overview */
+export interface BillingOverview {
+  /** Serverda SUBSCRIPTION_BILLING_CRON=on — obunalar avtomatik yangilanadi. */
+  autoRenew: boolean;
+  month: { start: string; end: string };
+  topUps: { amount: number; count: number };
+  charges: { amount: number; count: number };
+  walletBalance: number;
+  upcomingWeek: { count: number; amount: number; insufficient: number };
+  overdue: { grace: number; suspended: number; amount: number };
+}
+
+/** GET /platform/billing/renewals */
+export interface BillingRenewal {
+  organization: OrganizationRef & { status: OrganizationStatus };
+  plan: { name: string; priceMonthly: number };
+  status: SubscriptionStatus;
+  periodEnd: string;
+  graceUntil: string | null;
+  trialEndsAt: string | null;
+  balance: number;
+  enough: boolean;
+}
+
+/** GET /platform/billing/transactions */
+export interface BillingTransaction {
+  id: string;
+  type: WalletTransactionType;
+  amount: number;
+  balanceAfter: number;
+  note: string | null;
+  createdAt: string;
+  createdBy: string | null;
+  organization: OrganizationRef;
 }

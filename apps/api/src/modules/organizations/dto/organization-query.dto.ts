@@ -1,7 +1,10 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from "class-validator";
+import { IsEnum, IsIn, IsInt, IsOptional, IsString, Max, Min } from "class-validator";
 import { OrganizationStatus } from "@prisma/client";
+
+export const ORGANIZATION_SORTS = ["created", "name", "children", "balance"] as const;
+export type OrganizationSort = (typeof ORGANIZATION_SORTS)[number];
 
 export class OrganizationQueryDto {
   @ApiPropertyOptional({ default: 1 })
@@ -19,7 +22,7 @@ export class OrganizationQueryDto {
   @Max(100)
   limit: number = 20;
 
-  @ApiPropertyOptional({ description: "Nomi bo'yicha qidiruv" })
+  @ApiPropertyOptional({ description: "Nomi, manzili (slug), telefon yoki email bo'yicha qidiruv" })
   @IsOptional()
   @IsString()
   search?: string;
@@ -28,4 +31,9 @@ export class OrganizationQueryDto {
   @IsOptional()
   @IsEnum(OrganizationStatus)
   status?: OrganizationStatus;
+
+  @ApiPropertyOptional({ enum: ORGANIZATION_SORTS, default: "created" })
+  @IsOptional()
+  @IsIn(ORGANIZATION_SORTS)
+  sort?: OrganizationSort;
 }

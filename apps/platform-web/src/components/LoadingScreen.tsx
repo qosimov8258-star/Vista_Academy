@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ZeeronLogo } from "@/components/ui/zeeron-logo";
 
 /**
  * Butun sahifani qoplaydigan yuklanish ekrani.
@@ -104,28 +105,7 @@ export function LoadingScreen({
         isFadingOut ? "opacity-0" : "opacity-100"
       }`}
     >
-      <div className="flex items-center gap-4 text-[clamp(48px,9vw,96px)]">
-        <span
-          className="font-bold leading-none tracking-[25px] text-[var(--color-primary)]"
-          style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
-        >
-          NYX
-        </span>
-        <img
-          src="/ring_380x380.png"
-          alt="Bog'chalar tarmog'i"
-          className="animate-nyx-logo-spin h-[1em] w-auto shrink-0"
-        />
-        <span className="flex items-center gap-[0.22em] self-end" aria-hidden="true">
-          {[0, 1, 2].map((dot) => (
-            <span
-              key={dot}
-              className="h-[0.16em] w-[0.16em] animate-nyx-dot-blink rounded-full bg-[var(--color-primary)]"
-              style={{ animationDelay: `${dot * 200}ms` }}
-            />
-          ))}
-        </span>
-      </div>
+      <ZeeronLogo animated className="h-[clamp(44px,8vw,72px)] w-auto" />
     </div>
   );
 }

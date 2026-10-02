@@ -14,6 +14,7 @@ import { UpdateBranchAvatarDto } from "./dto/update-branch-avatar.dto";
 import { UpdateOrganizationNameDto } from "./dto/update-organization-name.dto";
 import { DeleteBranchDto } from "./dto/delete-branch.dto";
 import { AllowChef } from "../iam/decorators/allow-chef.decorator";
+import { isAutoRenewEnabled } from "../subscriptions/subscription-billing.service";
 
 @ApiBearerAuth()
 @ApiTags("Tenant Organization")
@@ -32,7 +33,9 @@ export class TenantOrganizationsController {
   async getCurrent(@CurrentTenantUser() user: TenantAuthenticatedUser) {
     const organization = await this.organizationsService.findOne(user.organizationId);
     if (!user.branchId) {
-      return organization;
+      // Super Admin paneli obuna ogohlantirishini faqat avtomatik yangilash
+      // yoqilganda ko'rsatadi (aks holda muddat tugashi hech narsani o'zgartirmaydi)
+      return { ...organization, billingAutoRenew: isAutoRenewEnabled() };
     }
     // Branch-scoped roles (Kichik admin / menejer) only see their own branch,
     // and org-wide financials (wallet/subscription) are none of their business.

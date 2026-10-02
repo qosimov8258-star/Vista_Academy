@@ -88,24 +88,33 @@ model RefreshToken {
 enum OrganizationStatus {
   ACTIVE
   SUSPENDED
+  /// Platformada arxivlangan: panel yopiq, ro'yxatlarda ko'rinmaydi, ma'lumot
+  /// saqlanadi — qaytarish mumkin. Butunlay o'chirish faqat shu holatdan.
+  ARCHIVED
 }
 
 model Organization {
-  id           String             @id @default(uuid())
-  name         String
-  slug         String             @unique
+  id            String             @id @default(uuid())
+  name          String
+  slug          String             @unique
   /// Tashkilotning mustaqil lending (marketing) sayti domeni — masalan
   /// "vista-academy.uz". Protokol/"www."/yo'lsiz, normallashtirilgan holda
   /// saqlanadi (qarang: common/website-host.ts). Shu domendan kelgan
   /// "Ariza qoldirish" so'rovlari shu tashkilotga bog'lanadi — qarang:
   /// LandingService.resolveApplicationOrganizationId va main.ts'dagi CORS.
-  website      String?            @unique
-  contactName  String?            @map("contact_name")
-  contactEmail String?            @map("contact_email")
-  contactPhone String?            @map("contact_phone")
-  status       OrganizationStatus @default(ACTIVE)
-  createdAt    DateTime           @default(now()) @map("created_at")
-  updatedAt    DateTime           @updatedAt @map("updated_at")
+  website       String?            @unique
+  contactName   String?            @map("contact_name")
+  contactEmail  String?            @map("contact_email")
+  contactPhone  String?            @map("contact_phone")
+  status        OrganizationStatus @default(ACTIVE)
+  /// To'xtatish sababi — bog'cha xodimlariga kirishda ko'rsatiladi.
+  suspendReason String?            @map("suspend_reason")
+  suspendedAt   DateTime?          @map("suspended_at")
+  archivedAt    DateTime?          @map("archived_at")
+  /// Platforma operatorining ichki izohi (bog'chaga ko'rinmaydi).
+  notes         String?
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
 
   branches                  Branch[]
   subscription              Subscription?
@@ -1605,6 +1614,9 @@ model Subscription {
   currentPeriodStart DateTime           @map("current_period_start")
   currentPeriodEnd   DateTime           @map("current_period_end")
   graceUntil         DateTime?          @map("grace_until")
+  /// Sinov muddati tugash sanasi — bo'sh bo'lsa sinov emas. Sinov tugagach
+  /// odatiy yangilash (hamyondan yechish yoki imtiyozli davr) ishlaydi.
+  trialEndsAt        DateTime?          @map("trial_ends_at")
   createdAt          DateTime           @default(now()) @map("created_at")
   updatedAt          DateTime           @updatedAt @map("updated_at")
 

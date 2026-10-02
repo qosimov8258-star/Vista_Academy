@@ -27,9 +27,11 @@ export interface TenantAuthenticatedUser {
   subjects: string[];
   /** Administrator xodim tafsilotida "Mavzu qo'shasizmi?"ni yoqib saqlagan bo'lsa — true. Shu holatda o'qituvchi "Savol-javob"ga o'zi mavzu qo'sha olmaydi. */
   topicsManagedByAdmin: boolean;
+  /** Platforma operatori "Bog'chaga kirish" bilan kirgan bo'lsa — operator ismi. */
+  impersonatedBy?: string | null;
 }
 
-export type OrganizationStatus = "ACTIVE" | "SUSPENDED";
+export type OrganizationStatus = "ACTIVE" | "SUSPENDED" | "ARCHIVED";
 
 export interface Branch {
   id: string;
@@ -55,6 +57,18 @@ export interface Organization {
   status: OrganizationStatus;
   createdAt: string;
   branches: Branch[];
+  /** Faqat Super Admin'ga (filial rollaridan yashirin) — platforma obunasi. */
+  subscription?: {
+    status: "ACTIVE" | "GRACE_PERIOD" | "SUSPENDED" | "CANCELLED";
+    currentPeriodEnd: string;
+    graceUntil: string | null;
+    trialEndsAt: string | null;
+    plan: { name: string; priceMonthly: string };
+  } | null;
+  /** Faqat Super Admin'ga — platforma hamyoni (obuna to'lovi shundan yechiladi). */
+  wallet?: { balance: string; currency: string } | null;
+  /** Faqat Super Admin'ga — obuna hamyondan avtomatik yangilanadimi (platformada yoqilgan). */
+  billingAutoRenew?: boolean;
 }
 
 export type GroupStatus = "ACTIVE" | "INACTIVE";

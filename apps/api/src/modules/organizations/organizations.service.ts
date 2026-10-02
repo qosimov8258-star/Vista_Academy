@@ -5,7 +5,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from "@nestjs/common";
-import { Prisma } from "@prisma/client";
+import { OrganizationStatus, Prisma } from "@prisma/client";
 import * as argon2 from "argon2";
 import { JwtService } from "@nestjs/jwt";
 import { PrismaService } from "../../database/prisma.service";
@@ -103,7 +103,11 @@ export class OrganizationsService {
 
         const now = new Date();
         const periodEnd = new Date(now);
-        periodEnd.setMonth(periodEnd.getMonth() + 1);
+        if (dto.trialDays) {
+          periodEnd.setDate(periodEnd.getDate() + dto.trialDays);
+        } else {
+          periodEnd.setMonth(periodEnd.getMonth() + 1);
+        }
         await tx.subscription.create({
           data: {
             organizationId: organization.id,
@@ -111,6 +115,7 @@ export class OrganizationsService {
             status: "ACTIVE",
             currentPeriodStart: now,
             currentPeriodEnd: periodEnd,
+            trialEndsAt: dto.trialDays ? periodEnd : null,
           },
         });
 
@@ -128,27 +133,65 @@ export class OrganizationsService {
   }
 
   async findAll(query: OrganizationQueryDto) {
+    const search = query.search?.trim();
+    const insensitive = "insensitive" as Prisma.QueryMode;
+    const searchWhere: Prisma.OrganizationWhereInput = search
+      ? {
+          OR: [
+            { name: { contains: search, mode: insensitive } },
+            { slug: { contains: search, mode: insensitive } },
+            { contactPhone: { contains: search, mode: insensitive } },
+            { contactEmail: { contains: search, mode: insensitive } },
+          ],
+        }
+      : {};
     const where: Prisma.OrganizationWhereInput = {
-      ...(query.status ? { status: query.status } : {}),
-      ...(query.search
-        ? { name: { contains: query.search, mode: "insensitive" as Prisma.QueryMode } }
-        : {}),
+      ...searchWhere,
+      // Arxivlanganlar faqat "Arxiv" filtrida ko'rinadi
+      ...(query.status ? { status: query.status } : { status: { not: "ARCHIVED" } }),
     };
+    const orderBy: Prisma.OrganizationOrderByWithRelationInput[] = {
+      created: [{ createdAt: "desc" as const }],
+      name: [{ name: "asc" as const }],
+      children: [{ children: { _count: "desc" as const } }, { createdAt: "desc" as const }],
+      balance: [{ wallet: { balance: "desc" as const } }, { createdAt: "desc" as const }],
+    }[query.sort ?? "created"];
 
-    const [items, total] = await this.prisma.$transaction([
+    const [items, total, byStatus] = await this.prisma.$transaction([
       this.prisma.organization.findMany({
         where,
-        include: organizationInclude,
-        orderBy: { createdAt: "desc" },
+        include: {
+          ...organizationInclude,
+          // Ro'yxatda tarif limitiga nisbatan foydalanish ko'rinsin
+          _count: {
+            select: {
+              children: { where: { status: "ACTIVE" } },
+              employees: { where: { isActive: true } },
+            },
+          },
+        },
+        orderBy,
         skip: (query.page - 1) * query.limit,
         take: query.limit,
       }),
       this.prisma.organization.count({ where }),
+      // Holat filtrlaridagi sonlar — qidiruv hisobga olinadi, holat filtri emas
+      this.prisma.organization.groupBy({
+        by: ["status"],
+        where: searchWhere,
+        _count: { _all: true },
+        orderBy: { status: "asc" },
+      }),
     ]);
+
+    const statusCounts = { ACTIVE: 0, SUSPENDED: 0, ARCHIVED: 0 } as Record<OrganizationStatus, number>;
+    for (const row of byStatus) {
+      statusCounts[row.status] = typeof row._count === "object" ? (row._count._all ?? 0) : 0;
+    }
 
     return {
       data: items,
-      meta: { page: query.page, limit: query.limit, total },
+      meta: { page: query.page, limit: query.limit, total, statusCounts },
     };
   }
 
@@ -169,8 +212,21 @@ export class OrganizationsService {
   }
 
   async update(id: string, dto: UpdateOrganizationDto) {
-    await this.findOne(id);
+    const current = await this.findOne(id);
+    if (current.status === "ARCHIVED" && dto.status) {
+      throw new BadRequestException("Bog'cha arxivda — avval arxivdan qaytaring");
+    }
     const data: Prisma.OrganizationUpdateInput = { ...dto };
+    if (dto.notes !== undefined) {
+      data.notes = dto.notes?.trim() || null;
+    }
+    // Holat tahrirlash oynasidan o'zgarsa, to'xtatish sanasi/sababi ham mos bo'lsin
+    if (dto.status === "ACTIVE" && current.status !== "ACTIVE") {
+      data.suspendReason = null;
+      data.suspendedAt = null;
+    } else if (dto.status === "SUSPENDED" && current.status !== "SUSPENDED") {
+      data.suspendedAt = new Date();
+    }
     if (dto.website !== undefined) {
       data.website = dto.website === null ? null : this.normalizeWebsiteOrThrow(dto.website);
     }
@@ -538,7 +594,10 @@ export class OrganizationsService {
    * tekshiruvi bor.
    */
   async remove(id: string) {
-    await this.findOne(id);
+    const target = await this.findOne(id);
+    if (target.status !== "ARCHIVED") {
+      throw new BadRequestException("Butunlay o'chirishdan oldin bog'chani arxivga oling");
+    }
 
     await this.prisma.$transaction(
       async (tx) => {

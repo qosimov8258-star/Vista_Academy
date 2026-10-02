@@ -1,8 +1,8 @@
 "use client";
 
-import { InputHTMLAttributes, ReactNode, TextareaHTMLAttributes, forwardRef } from "react";
+import { InputHTMLAttributes, ReactNode, TextareaHTMLAttributes, forwardRef, useState } from "react";
 import clsx from "clsx";
-import { ChevronDownIcon, CloseIcon, SearchIcon } from "./icons";
+import { ChevronDownIcon, CloseIcon, EyeIcon, EyeOffIcon, SearchIcon } from "./icons";
 
 interface FieldWrapperProps {
   label?: string;
@@ -33,6 +33,43 @@ function FieldShell({
     </label>
   );
 }
+
+/**
+ * Parol maydoni — o'ng tomonida ko'z tugmasi: bosilsa terilgan parol
+ * ko'rinadi, yana bosilsa yashirinadi. Kirishdan oldin xato terilmaganini
+ * tekshirish uchun.
+ */
+export const PasswordInput = forwardRef<
+  HTMLInputElement,
+  Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & FieldWrapperProps
+>(({ label, error, hint, className, id, ...props }, ref) => {
+  const [visible, setVisible] = useState(false);
+  return (
+    <FieldShell label={label} error={error} hint={hint} htmlFor={id}>
+      <span className="relative block">
+        <input
+          ref={ref}
+          id={id}
+          type={visible ? "text" : "password"}
+          aria-invalid={error ? true : undefined}
+          className={clsx(fieldBase, "pr-11", error && "border-[var(--color-danger)]", className)}
+          {...props}
+        />
+        <button
+          type="button"
+          onClick={() => setVisible((v) => !v)}
+          aria-label={visible ? "Parolni yashirish" : "Parolni ko'rsatish"}
+          aria-pressed={visible}
+          title={visible ? "Yashirish" : "Ko'rsatish"}
+          className="absolute inset-y-0 right-1 my-auto flex h-9 w-9 cursor-pointer items-center justify-center rounded-[var(--radius-md)] text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)]"
+        >
+          {visible ? <EyeOffIcon className="h-[18px] w-[18px]" /> : <EyeIcon className="h-[18px] w-[18px]" />}
+        </button>
+      </span>
+    </FieldShell>
+  );
+});
+PasswordInput.displayName = "PasswordInput";
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement> & FieldWrapperProps>(
   ({ label, error, hint, className, id, ...props }, ref) => {

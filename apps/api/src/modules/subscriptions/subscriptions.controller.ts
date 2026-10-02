@@ -1,4 +1,8 @@
 import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { CurrentUser } from "../../common/decorators/current-user.decorator";
+import { AuthenticatedUser } from "../auth/auth.types";
+import { SubscriptionBillingService } from "./subscription-billing.service";
+import { ExtendSubscriptionDto } from "./dto/extend-subscription.dto";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { PlatformUserRole, SubscriptionStatus } from "@prisma/client";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
@@ -14,7 +18,20 @@ import { ChangePlanDto } from "./dto/change-plan.dto";
 @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN)
 @Controller("platform/subscriptions")
 export class SubscriptionsController {
-  constructor(private readonly subscriptionsService: SubscriptionsService) {}
+  constructor(
+    private readonly subscriptionsService: SubscriptionsService,
+    private readonly billing: SubscriptionBillingService,
+  ) {}
+
+  /** Obunani N oyga uzaytirish — hamyondan yechib yoki bepul. */
+  @Post("organization/:organizationId/extend")
+  extend(
+    @Param("organizationId") organizationId: string,
+    @Body() dto: ExtendSubscriptionDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.billing.extend(organizationId, dto.months, dto.charge, user.id);
+  }
 
   @Get()
   findAll() {

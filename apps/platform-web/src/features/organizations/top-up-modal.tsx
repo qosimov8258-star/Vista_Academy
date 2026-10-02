@@ -39,9 +39,11 @@ export function TopUpModal({
     mutationFn: (values: FormValues) =>
       api.post(`/platform/organizations/${organizationId}/wallet/top-up`, values),
     onSuccess: () => {
+      // To'ldirish obunani ham yangilashi mumkin (imtiyozli davr → faol)
       queryClient.invalidateQueries({ queryKey: ["wallet", organizationId] });
-      queryClient.invalidateQueries({ queryKey: ["organizations", organizationId] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard", "summary"] });
+      queryClient.invalidateQueries({ queryKey: ["organizations"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["billing"] });
       reset();
       onClose();
     },

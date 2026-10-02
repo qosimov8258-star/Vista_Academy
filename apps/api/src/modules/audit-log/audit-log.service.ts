@@ -24,7 +24,8 @@ export class AuditLogService {
         organizationId: user.organizationId,
         branchId: entry.branchId ?? user.branchId ?? undefined,
         actorUserId: user.id,
-        actorName: user.fullName,
+        // Operator bog'cha nomidan ishlasa, jurnalda kim aslida qilgani ko'rinsin
+        actorName: user.impersonatedBy ? `${user.fullName} (platforma: ${user.impersonatedBy})` : user.fullName,
         action: entry.action,
         entityType: entry.entityType,
         entityId: entry.entityId ?? undefined,

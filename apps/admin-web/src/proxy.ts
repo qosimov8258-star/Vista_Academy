@@ -43,6 +43,7 @@ const KNOWN_ORG_PAGES = new Set([
   "network",
   "reminders",
   "report",
+  "enter",
 ]);
 
 function base64UrlDecode(input: string): string {
@@ -132,7 +133,8 @@ function routeTenant(req: NextRequest, pathname: string, hostSlug: string | null
 
   const slug = segments[0];
   const second = segments[1];
-  const isLogin = second === "login";
+  // "enter" — platforma operatorining bir martalik kirish havolasi: seans hali yo'q
+  const isLogin = second === "login" || second === "enter";
 
   const token = req.cookies.get("bogcha_tenant_at")?.value;
   const { organizationSlug: tokenOrgSlug, role } = decodeRoutingClaims(token);

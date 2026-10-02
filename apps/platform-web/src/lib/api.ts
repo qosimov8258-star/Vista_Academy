@@ -9,6 +9,11 @@ export function assetUrl(path?: string | null): string | null {
   return `${API_ORIGIN}${path}`;
 }
 
+/** API'dagi fayl (masalan CSV eksport) uchun to'liq havola — cookie bilan yuklanadi. */
+export function apiUrl(path: string): string {
+  return `${API_URL}${path}`;
+}
+
 export class ApiError extends Error {
   code: string;
   status: number;
@@ -108,7 +113,7 @@ export const api = {
 
 export interface Paginated<T> {
   data: T[];
-  meta: { page: number; limit: number; total: number };
+  meta: { page: number; limit: number; total: number; statusCounts?: Record<string, number> };
 }
 
 export async function getPaginated<T>(path: string): Promise<Paginated<T>> {

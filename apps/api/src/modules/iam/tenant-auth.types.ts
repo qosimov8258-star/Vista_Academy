@@ -22,6 +22,8 @@ export interface TenantAuthenticatedUser {
   subjects: string[];
   /** Administrator xodim tafsilotida "Mavzu qo'shasizmi?"ni yoqib saqlagan bo'lsa — true. Shu holatda o'qituvchi "Savol-javob"ga o'zi mavzu qo'sha olmaydi. */
   topicsManagedByAdmin: boolean;
+  /** Platforma operatori "Bog'chaga kirish" bilan kirgan bo'lsa — operator ismi (panelda banner, audit). */
+  impersonatedBy?: string | null;
 }
 
 export interface TenantAccessTokenPayload {
@@ -33,6 +35,8 @@ export interface TenantAccessTokenPayload {
   branchId: string | null;
   login: string;
   role: TenantUserRole;
+  /** Faqat platforma operatori seansida (qarang: platform-entry-ticket.ts). */
+  impersonatedBy?: string;
 }
 
 /**

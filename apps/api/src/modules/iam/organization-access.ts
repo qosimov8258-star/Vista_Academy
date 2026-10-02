@@ -13,9 +13,21 @@ export function isOrganizationSuspended(
   organization: { status: OrganizationStatus },
   subscription: { status: SubscriptionStatus } | null | undefined,
 ): boolean {
-  if (organization.status === "SUSPENDED") return true;
+  // ARCHIVED ham yopiq — faqat ACTIVE bog'cha ishlaydi
+  if (organization.status !== "ACTIVE") return true;
   return subscription?.status === "SUSPENDED" || subscription?.status === "CANCELLED";
 }
 
 /** Tashkilot bilan birga obuna holatini olish uchun Prisma include. */
 export const ORGANIZATION_WITH_SUBSCRIPTION_STATUS = { subscription: { select: { status: true } } } as const;
+
+/**
+ * Kirishda ko'rsatiladigan xabar: operator to'xtatish sababini yozgan
+ * bo'lsa, bog'cha xodimi nima uchun yopilganini ko'radi.
+ */
+export function organizationBlockedMessage(organization: { status: OrganizationStatus; suspendReason?: string | null }): string {
+  if (organization.status === "SUSPENDED" && organization.suspendReason?.trim()) {
+    return `${ORGANIZATION_SUSPENDED_MESSAGE}. Sabab: ${organization.suspendReason.trim()}`;
+  }
+  return ORGANIZATION_SUSPENDED_MESSAGE;
+}

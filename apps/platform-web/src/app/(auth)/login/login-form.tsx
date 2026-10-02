@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { api, ApiError } from "@/lib/api";
 import { usePostLoginLoading } from "@/lib/post-login-loading";
-import { Input } from "@/components/ui/input";
+import { Input, PasswordInput } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { AlertIcon } from "@/components/ui/icons";
 import type { AuthenticatedUser } from "@/lib/types";
@@ -53,7 +53,7 @@ export function LoginForm() {
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
-      className="space-y-4 rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[var(--shadow-card)]"
+      className="space-y-4 rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[0_1px_2px_rgba(17,17,19,0.04),0_16px_48px_-16px_rgba(17,17,19,0.18)]"
     >
       {serverError && (
         <div
@@ -68,15 +68,14 @@ export function LoginForm() {
         id="login"
         label="Login"
         type="text"
-        placeholder="platform_admin"
+        placeholder="Login"
         autoComplete="username"
         error={errors.login?.message}
         {...register("login")}
       />
-      <Input
+      <PasswordInput
         id="password"
         label="Parol"
-        type="password"
         placeholder="••••••••"
         autoComplete="current-password"
         error={errors.password?.message}
