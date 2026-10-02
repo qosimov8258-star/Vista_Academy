@@ -17,6 +17,7 @@ import { initials } from "@/components/ui/avatar";
 import { BranchAvatar } from "@/components/ui/branch-avatar";
 import { MAX_UPLOAD_BYTES, resizeToSquare } from "@/lib/resize-image";
 import { EditBranchModal } from "@/features/branches/edit-branch-modal";
+import { DeleteBranchCard } from "@/features/branches/delete-branch-card";
 import { CreateTenantUserModal } from "@/features/users/create-tenant-user-modal";
 import { EditTenantUserModal } from "@/features/users/edit-tenant-user-modal";
 import { ROLE_LABEL, canManageUser } from "@/lib/permissions";
@@ -393,6 +394,8 @@ export default function BranchDetailPage({ params }: { params: Promise<{ slug: s
           )}
         </Card>
       )}
+
+      {currentUser?.role === "NETWORK_ADMIN" && <DeleteBranchCard slug={slug} branch={branch} />}
 
       <EditBranchModal open={editBranchOpen} onClose={() => setEditBranchOpen(false)} slug={slug} branch={branch} />
       {currentUser && (

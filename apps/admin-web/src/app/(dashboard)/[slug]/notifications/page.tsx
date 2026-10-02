@@ -56,7 +56,7 @@ export default function NotificationsPage({ params }: { params: Promise<{ slug: 
   const { user } = useAuth();
   const canWrite = canWriteOperational(user?.role);
   const [broadcastOpen, setBroadcastOpen] = useState(false);
-  const { branchId: forcedBranchId } = useBranchContext(slug);
+  const { branchId: forcedBranchId, base } = useBranchContext(slug);
 
   const notificationsQuery = useQuery({
     queryKey: ["notifications", slug, page, status, forcedBranchId],
@@ -203,7 +203,7 @@ export default function NotificationsPage({ params }: { params: Promise<{ slug: 
                         isCallOperatorUser(user) ? (
                           n.child.fullName
                         ) : (
-                          <Link href={`/${slug}/children/${n.child.id}`} className="text-[var(--color-primary)] hover:underline">
+                          <Link href={`${base}/children/${n.child.id}`} className="text-[var(--color-primary)] hover:underline">
                             {tr(n.child.fullName)}
                           </Link>
                         )

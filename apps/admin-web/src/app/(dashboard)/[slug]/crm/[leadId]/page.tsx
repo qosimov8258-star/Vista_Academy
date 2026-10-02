@@ -39,7 +39,7 @@ export default function LeadDetailPage({ params }: { params: Promise<{ slug: str
   const { user } = useAuth();
   const callOperator = isCallOperatorUser(user);
   const canWrite = canWriteOperational(user?.role);
-  const { branchSlug } = useBranchContext(slug);
+  const { branchSlug, base } = useBranchContext(slug);
   const crmHref = branchSlug ? `/${slug}/${branchSlug}/crm` : `/${slug}/crm`;
 
   const leadQuery = useQuery({
@@ -87,7 +87,7 @@ export default function LeadDetailPage({ params }: { params: Promise<{ slug: str
         <div className="flex items-center justify-between rounded-lg border border-[var(--color-success)]/30 bg-[var(--color-success-bg)] px-4 py-3">
           <p className="text-sm font-medium text-[var(--color-success)]">{tr("Bu ariza bola profiliga aylantirilgan")}</p>
           {!callOperator && (
-            <Link href={`/${slug}/children/${lead.convertedChildId}`}>
+            <Link href={`${base}/children/${lead.convertedChildId}`}>
               <Button size="sm" variant="outline">
                 {tr("Bola profilini ko'rish →")}
               </Button>

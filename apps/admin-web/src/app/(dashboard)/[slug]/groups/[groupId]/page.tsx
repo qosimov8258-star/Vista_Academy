@@ -7,6 +7,7 @@ import clsx from "clsx";
 import { api } from "@/lib/api";
 import type { Group, GroupOverview, GroupAttendanceRange, GroupAttendanceDay } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
+import { useBranchContext } from "@/lib/use-branch-context";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable, THead, TBody, Tr, Th, Td } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -76,6 +77,7 @@ function FilterPill({ active, onClick, children }: { active: boolean; onClick: (
 export default function GroupDetailPage({ params }: { params: Promise<{ slug: string; groupId: string }> }) {
   const tr = useTr();
   const { slug, groupId } = use(params);
+  const { base } = useBranchContext(slug);
   const { user } = useAuth();
   const canWrite = canWriteOperational(user?.role);
   const [editOpen, setEditOpen] = useState(false);
@@ -127,7 +129,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
   return (
     <div className="space-y-5">
       <Link
-        href={`/${slug}/groups`}
+        href={`${base}/groups`}
         className="group inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
       >
         <ArrowLeftIcon className="h-4 w-4 transition-transform group-hover:-translate-x-0.5 motion-reduce:transition-none" />
@@ -246,7 +248,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
                   {rosterQuery.data.items.map((item) => (
                     <Tr key={item.childId}>
                       <Td className="font-medium">
-                        <Link href={`/${slug}/children/${item.childId}`} className="text-[var(--color-primary)] hover:underline">
+                        <Link href={`${base}/children/${item.childId}`} className="text-[var(--color-primary)] hover:underline">
                           {tr(item.fullName)}
                         </Link>
                         <span className="ml-1.5 text-[12px] text-[var(--color-text-muted)]">{formatChildId(item.publicId)}</span>
@@ -323,7 +325,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
                 {overview.children.items.map((child) => (
                   <Tr key={child.id}>
                     <Td>
-                      <Link href={`/${slug}/children/${child.id}`} className="font-medium text-[var(--color-primary)] hover:underline">
+                      <Link href={`${base}/children/${child.id}`} className="font-medium text-[var(--color-primary)] hover:underline">
                         {tr(child.fullName)}
                       </Link>
                       <span className="ml-1.5 text-[12px] text-[var(--color-text-muted)]">{formatChildId(child.publicId)}</span>

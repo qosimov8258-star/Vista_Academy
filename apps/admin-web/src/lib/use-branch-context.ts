@@ -27,6 +27,10 @@ export function useBranchContext(slug: string) {
 
   return {
     branchSlug: branchSlug ?? null,
+    /** Sahifa ichidagi havolalar uchun: filial ichida `/{slug}/{branchSlug}`,
+     *  aks holda `/{slug}`. Prefiks tushib qolsa Super Admin filialdan
+     *  tarmoq menyusiga chiqib ketadi. */
+    base: branchSlug ? `/${slug}/${branchSlug}` : `/${slug}`,
     branch,
     branchId: branch?.id ?? null,
     branches: orgQuery.data?.branches ?? [],

@@ -23,6 +23,7 @@ import { CreateBranchDto } from "./dto/create-branch.dto";
 import { UpdateBranchDto } from "./dto/update-branch.dto";
 import { UpdateBranchAvatarDto } from "./dto/update-branch-avatar.dto";
 import { slugify } from "./slugify";
+import { isUsableBranchSlug } from "./branch-slug";
 import { MAX_TENANT_SLUG_LENGTH, isValidTenantSlug } from "../../common/tenant-domain";
 import { normalizeWebsiteHost } from "../../common/website-host";
 import { R2Service } from "../storage/r2.service";
@@ -67,7 +68,7 @@ export class OrganizationsService {
           data: {
             organizationId: organization.id,
             name: firstBranchName,
-            slug: await this.generateUniqueBranchSlug(organization.id, firstBranchName, tx),
+            slug: await this.generateUniqueBranchSlug(organization.id, organization.slug, firstBranchName, tx),
           },
         });
 
@@ -292,7 +293,7 @@ export class OrganizationsService {
   }
 
   async addBranch(organizationId: string, dto: CreateBranchDto) {
-    await this.findOne(organizationId);
+    const organization = await this.findOne(organizationId);
     try {
       return await this.prisma.$transaction(async (tx) => {
         const branch = await tx.branch.create({
@@ -300,7 +301,7 @@ export class OrganizationsService {
             organizationId,
             name: dto.name,
             address: dto.address,
-            slug: await this.generateUniqueBranchSlug(organizationId, dto.name, tx),
+            slug: await this.generateUniqueBranchSlug(organizationId, organization.slug, dto.name, tx),
           },
         });
 
@@ -429,6 +430,93 @@ export class OrganizationsService {
       summary: `"${updated.name}" filiali ma'lumotlari tahrirlandi`,
     });
     return updated;
+  }
+
+  /** Filialni o'chirishdan oldin tasdiqlash oynasida nima yo'qolishini ko'rsatish uchun. */
+  async getBranchDeletionSummary(organizationId: string, branchId: string) {
+    await this.getBranch(organizationId, branchId);
+    const where = { branchId };
+    const [children, employees, users, groups, invoices, payments, branchCount] = await Promise.all([
+      this.prisma.child.count({ where }),
+      this.prisma.employee.count({ where }),
+      this.prisma.tenantUser.count({ where }),
+      this.prisma.group.count({ where }),
+      this.prisma.invoice.count({ where }),
+      this.prisma.payment.count({ where }),
+      this.prisma.branch.count({ where: { organizationId } }),
+    ]);
+    return { children, employees, users, groups, invoices, payments, isLastBranch: branchCount <= 1 };
+  }
+
+  /**
+   * Filialni BUTUNLAY o'chiradi: bolalar, xodimlar, filial kabinetlari,
+   * guruhlar, davomat, moliya, Face ID va boshqa hamma filial yozuvlari.
+   * Qaytarib bo'lmaydi — shuning uchun filial nomini aynan yozib tasdiqlash
+   * shart va bog'chaning oxirgi filiali o'chirilmaydi.
+   *
+   * Filialga ishora qiluvchi barcha jadvallar `onDelete: Cascade`, faqat
+   * she'r/maqol/ertakning `createdBy` (TenantUser) Restrict — kaskad
+   * tartibida muallif ulardan oldin o'chsa xato beradi, shuning uchun ular
+   * avval o'chiriladi. Faqat shu filialdagi bolalarga bog'langan ota-onalar
+   * (boshqa filialda farzandi qolmasa) ham o'chadi, R2'dagi rasmlar esa
+   * tranzaksiyadan keyin tozalanadi.
+   */
+  async removeBranch(caller: TenantAuthenticatedUser, branchId: string, confirmName: string) {
+    const branch = await this.getBranch(caller.organizationId, branchId);
+    if (confirmName.trim() !== branch.name.trim()) {
+      throw new BadRequestException("Tasdiqlash uchun filial nomini aynan yozing");
+    }
+    const branchCount = await this.prisma.branch.count({ where: { organizationId: caller.organizationId } });
+    if (branchCount <= 1) {
+      throw new BadRequestException("Oxirgi filialni o'chirib bo'lmaydi — bog'chada kamida bitta filial qolishi kerak");
+    }
+
+    const where = { branchId };
+    const [users, children, employees, menuPhotos, receipts, products, guardianLinks] = await Promise.all([
+      this.prisma.tenantUser.findMany({ where, select: { avatarKey: true } }),
+      this.prisma.child.findMany({ where, select: { avatarKey: true } }),
+      this.prisma.employee.findMany({ where, select: { avatarKey: true } }),
+      this.prisma.menuPhoto.findMany({ where, select: { imageKey: true } }),
+      this.prisma.paymentReceipt.findMany({ where, select: { imageKey: true } }),
+      this.prisma.product.findMany({ where, select: { image1Key: true, image2Key: true, image3Key: true } }),
+      this.prisma.childGuardian.findMany({ where: { child: { branchId } }, select: { guardianId: true } }),
+    ]);
+    const r2Keys = [
+      branch.avatarKey,
+      ...users.map((u) => u.avatarKey),
+      ...children.map((c) => c.avatarKey),
+      ...employees.map((e) => e.avatarKey),
+      ...menuPhotos.map((m) => m.imageKey),
+      ...receipts.map((r) => r.imageKey),
+      ...products.flatMap((p) => [p.image1Key, p.image2Key, p.image3Key]),
+    ].filter((key): key is string => !!key);
+    const guardianIds = [...new Set(guardianLinks.map((link) => link.guardianId))];
+
+    await this.prisma.$transaction(
+      async (tx) => {
+        await tx.poem.deleteMany({ where });
+        await tx.proverb.deleteMany({ where });
+        await tx.tale.deleteMany({ where });
+        await tx.branch.delete({ where: { id: branchId } });
+        if (guardianIds.length > 0) {
+          await tx.guardian.deleteMany({
+            where: { id: { in: guardianIds }, organizationId: caller.organizationId, children: { none: {} } },
+          });
+        }
+      },
+      { timeout: 60_000 },
+    );
+
+    await this.auditLog.logFromUser(caller, {
+      action: "branch.delete",
+      entityType: "Branch",
+      entityId: branchId,
+      summary: `"${branch.name}" filiali o'chirildi (${children.length} bola, ${employees.length} xodim)`,
+    });
+    for (const key of r2Keys) {
+      await this.r2.deleteObject(key);
+    }
+    return { id: branchId };
   }
 
   /**
@@ -575,12 +663,15 @@ export class OrganizationsService {
     }
   }
 
+  /** Bog'cha slug'i va panel sahifalari nomlari band (qarang: branch-slug.ts). */
   private async generateUniqueBranchSlug(
     organizationId: string,
+    organizationSlug: string,
     name: string,
     client: Prisma.TransactionClient | PrismaService = this.prisma,
   ): Promise<string> {
-    const base = slugify(name);
+    let base = slugify(name);
+    if (!isUsableBranchSlug(base, organizationSlug)) base = `${base}-filial`;
     let candidate = base;
     let suffix = 1;
     // eslint-disable-next-line no-constant-condition
@@ -588,7 +679,7 @@ export class OrganizationsService {
       const existing = await client.branch.findUnique({
         where: { organizationId_slug: { organizationId, slug: candidate } },
       });
-      if (!existing) return candidate;
+      if (!existing && isUsableBranchSlug(candidate, organizationSlug)) return candidate;
       suffix += 1;
       candidate = `${base}-${suffix}`;
     }

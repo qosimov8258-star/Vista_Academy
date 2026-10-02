@@ -70,7 +70,7 @@ function BranchChildren({ slug }: { slug: string }) {
   const canWrite = canWriteOperational(user?.role);
   // Tarbiyachiga bitta guruh biriktiriladi — guruh filtri, guruh va filial ustuni unga keraksiz.
   const teacher = isTeacher(user?.role);
-  const { branchId: forcedBranchId, branchSlug } = useBranchContext(slug);
+  const { branchId: forcedBranchId, branchSlug, base } = useBranchContext(slug);
   const router = useRouter();
   // Moliyachi shu ro'yxatdan o'quvchini bosganda to'liq profilga emas, faqat
   // to'lovlar va moliyaviy tarix ko'rinadigan alohida sahifaga o'tadi —
@@ -81,7 +81,7 @@ function BranchChildren({ slug }: { slug: string }) {
       ? branchSlug
         ? `/${slug}/${branchSlug}/finance/${childId}`
         : `/${slug}/finance/${childId}`
-      : `/${slug}/children/${childId}`;
+      : `${base}/children/${childId}`;
 
   const groupsQuery = useQuery({
     queryKey: ["groups", slug, forcedBranchId],

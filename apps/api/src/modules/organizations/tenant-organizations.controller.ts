@@ -12,6 +12,7 @@ import { CreateBranchDto } from "./dto/create-branch.dto";
 import { UpdateBranchDto } from "./dto/update-branch.dto";
 import { UpdateBranchAvatarDto } from "./dto/update-branch-avatar.dto";
 import { UpdateOrganizationNameDto } from "./dto/update-organization-name.dto";
+import { DeleteBranchDto } from "./dto/delete-branch.dto";
 import { AllowChef } from "../iam/decorators/allow-chef.decorator";
 
 @ApiBearerAuth()
@@ -80,6 +81,24 @@ export class TenantOrganizationsController {
     return this.organizationsService.updateBranch(user, branchId, dto);
   }
 
+  /** O'chirishdan oldin: filialda nechta bola, xodim, to'lov bor — tasdiqlash oynasi uchun. */
+  @Get("me/branches/:branchId/deletion-summary")
+  getBranchDeletionSummary(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("branchId") branchId: string) {
+    this.requireNetworkAdmin(user);
+    return this.organizationsService.getBranchDeletionSummary(user.organizationId, branchId);
+  }
+
+  /** Filialni butunlay o'chirish — faqat Super Admin, filial nomini yozib tasdiqlaydi. */
+  @Delete("me/branches/:branchId")
+  removeBranch(
+    @CurrentTenantUser() user: TenantAuthenticatedUser,
+    @Param("branchId") branchId: string,
+    @Body() dto: DeleteBranchDto,
+  ) {
+    this.requireNetworkAdmin(user);
+    return this.organizationsService.removeBranch(user, branchId, dto.confirmName);
+  }
+
   /** Filial belgisini yuklash. Filial admini o'z filialiga qo'ya oladi. */
   @Put("me/branches/:branchId/avatar")
   updateBranchAvatar(
@@ -117,6 +136,12 @@ export class TenantOrganizationsController {
       { key: record.avatarKey, bytes: record.avatar, mimeType: record.avatarMimeType ?? "image/jpeg" },
       "Filial belgisi yo'q",
     );
+  }
+
+  private requireNetworkAdmin(user: TenantAuthenticatedUser) {
+    if (user.role !== "NETWORK_ADMIN") {
+      throw new ForbiddenException("Faqat Super Admin filialni o'chira oladi");
+    }
   }
 
   private requireBranchAccess(user: TenantAuthenticatedUser, branchId: string) {

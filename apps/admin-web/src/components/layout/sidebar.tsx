@@ -483,8 +483,9 @@ export function Sidebar({ slug }: { slug: string }) {
       icon: MoneyIcon,
       items: [
         { href: `${base}/finance`, label: t("nav.finance"), icon: MoneyIcon, show: !isManager && !isBranchAdmin },
-        // Qarzdorlarga qo'ng'iroq qilib eslatish administratorning ishi
-        { href: `${base}/debtors`, label: "Qarzdorlar", icon: PhoneIcon, show: !isBranchAdmin },
+        // Qarzdorlarga qo'ng'iroq qilib eslatish administratorning ishi.
+        // Filial ichidagi Super Admin uchun bu sahifaning filial nusxasi yo'q (404 edi).
+        { href: `${base}/debtors`, label: "Qarzdorlar", icon: PhoneIcon, show: !isBranchAdmin && !inBranchContext },
         { href: `${base}/notifications`, label: t("nav.notifications"), icon: BellIcon, show: true },
         // Avtomatik to'lov eslatmasi sozlamalari — ota-ona kabinetidagi kartani boshqaradi
         { href: `${base}/reminders`, label: t("nav.reminders"), icon: ClockIcon, show: !isBranchAdmin },
