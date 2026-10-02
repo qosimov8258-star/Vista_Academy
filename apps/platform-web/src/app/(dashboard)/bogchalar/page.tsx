@@ -27,6 +27,7 @@ import { useDebounced } from "@/lib/use-debounced";
 import { subscriptionStatusLabel, subscriptionStatusTone } from "@/features/subscriptions/status";
 import { CreateOrganizationModal } from "@/features/organizations/create-organization-modal";
 import { EditOrganizationModal } from "@/features/organizations/edit-organization-modal";
+import { ORG_STATUS_LABEL } from "@/features/organizations/lifecycle";
 
 const PAGE_SIZE = 20;
 
@@ -34,6 +35,7 @@ const STATUS_OPTIONS = [
   { value: "", label: "Barchasi" },
   { value: "ACTIVE", label: "Faol" },
   { value: "SUSPENDED", label: "To'xtatilgan" },
+  { value: "ARCHIVED", label: "Arxiv" },
 ] as const;
 
 type StatusFilter = (typeof STATUS_OPTIONS)[number]["value"];
@@ -238,8 +240,8 @@ function BogchalarContent() {
                       {org.wallet ? formatMoney(org.wallet.balance, org.wallet.currency) : "—"}
                     </td>
                     <td className="px-3 py-3">
-                      <Badge dot tone={org.status === "ACTIVE" ? "success" : "danger"}>
-                        {org.status === "ACTIVE" ? "Faol" : "To'xtatilgan"}
+                      <Badge dot tone={org.status === "ACTIVE" ? "success" : org.status === "ARCHIVED" ? "neutral" : "danger"}>
+                        {ORG_STATUS_LABEL[org.status]}
                       </Badge>
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap text-[13px] text-[var(--color-text-muted)]">
@@ -294,8 +296,8 @@ function BogchalarContent() {
                         obuna holati esa doim. */}
                     <div className="mt-1.5 flex flex-wrap gap-1.5">
                       {org.status !== "ACTIVE" && (
-                        <Badge dot tone="danger">
-                          To&apos;xtatilgan
+                        <Badge dot tone={org.status === "ARCHIVED" ? "neutral" : "danger"}>
+                          {ORG_STATUS_LABEL[org.status]}
                         </Badge>
                       )}
                       {org.subscription ? (

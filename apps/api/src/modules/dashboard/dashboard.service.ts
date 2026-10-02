@@ -25,7 +25,7 @@ export class DashboardService {
       walletBalanceAgg,
       recentOrganizations,
     ] = await this.prisma.$transaction([
-      this.prisma.organization.count(),
+      this.prisma.organization.count({ where: { status: { not: "ARCHIVED" } } }),
       this.prisma.organization.count({ where: { status: "ACTIVE" } }),
       this.prisma.branch.count(),
       this.prisma.subscription.count({ where: { status: SubscriptionStatus.ACTIVE } }),
@@ -91,7 +91,7 @@ export class DashboardService {
       this.prisma.child.count({ where: { status: "ACTIVE" } }),
       this.prisma.child.count({ where: { createdAt: { lt: range.start } } }),
       this.prisma.child.count({ where: { createdAt: current } }),
-      this.prisma.organization.count(),
+      this.prisma.organization.count({ where: { status: { not: "ARCHIVED" } } }),
       this.prisma.subscription.groupBy({ by: ["status"], _count: { _all: true }, orderBy: { status: "asc" } }),
       this.prisma.plan.findMany({
         orderBy: { priceMonthly: "asc" },

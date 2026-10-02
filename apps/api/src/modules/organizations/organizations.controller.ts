@@ -7,6 +7,8 @@ import { Roles } from "../../common/decorators/roles.decorator";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { AuthenticatedUser } from "../auth/auth.types";
 import { OrganizationsService } from "./organizations.service";
+import { OrganizationLifecycleService } from "./organization-lifecycle.service";
+import { ArchiveOrganizationDto, SuspendOrganizationDto } from "./dto/organization-lifecycle.dto";
 import { CreateOrganizationDto } from "./dto/create-organization.dto";
 import { UpdateOrganizationDto } from "./dto/update-organization.dto";
 import { OrganizationQueryDto } from "./dto/organization-query.dto";
@@ -18,7 +20,10 @@ import { UpdateOrganizationAdminDto } from "./dto/update-organization-admin.dto"
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller("platform/organizations")
 export class OrganizationsController {
-  constructor(private readonly organizationsService: OrganizationsService) {}
+  constructor(
+    private readonly organizationsService: OrganizationsService,
+    private readonly lifecycle: OrganizationLifecycleService,
+  ) {}
 
   @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN, PlatformUserRole.PLATFORM_SUPPORT)
   @Get()
@@ -36,6 +41,44 @@ export class OrganizationsController {
   @Get(":id")
   findOne(@Param("id") id: string) {
     return this.organizationsService.findOne(id);
+  }
+
+  /** Tarif limitlariga nisbatan foydalanish, filiallar, administratorlar. */
+  @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN, PlatformUserRole.PLATFORM_SUPPORT)
+  @Get(":id/usage")
+  getUsage(@Param("id") id: string) {
+    return this.lifecycle.getUsage(id);
+  }
+
+  @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN)
+  @Post(":id/suspend")
+  suspend(@Param("id") id: string, @Body() dto: SuspendOrganizationDto) {
+    return this.lifecycle.suspend(id, dto.reason);
+  }
+
+  @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN)
+  @Post(":id/activate")
+  activate(@Param("id") id: string) {
+    return this.lifecycle.activate(id);
+  }
+
+  @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN)
+  @Post(":id/archive")
+  archive(@Param("id") id: string, @Body() dto: ArchiveOrganizationDto) {
+    return this.lifecycle.archive(id, dto.confirmSlug);
+  }
+
+  @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN)
+  @Post(":id/restore")
+  restore(@Param("id") id: string) {
+    return this.lifecycle.restore(id);
+  }
+
+  /** "Bog'chaga kirish" — 60 soniyalik bir martalik chipta (qarang: platform-entry-ticket.ts). */
+  @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN)
+  @Post(":id/enter")
+  enter(@Param("id") id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.lifecycle.createEntryTicket(id, user);
   }
 
   @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN)
@@ -75,7 +118,8 @@ export class OrganizationsController {
 
   /**
    * Tashkilotni BUTUNLAY o'chiradi (hard delete) — qaytarib bo'lmaydi.
-   * Faqat Platform Super Admin uchun; Support bu amalni bajara olmaydi.
+   * Faqat Platform Super Admin uchun va faqat arxivlangan bog'cha —
+   * tasodifiy o'chirishdan ikki bosqichli himoya.
    */
   @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN)
   @Delete(":id")

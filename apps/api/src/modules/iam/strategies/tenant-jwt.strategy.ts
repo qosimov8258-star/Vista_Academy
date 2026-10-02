@@ -4,7 +4,7 @@ import { ExtractJwt, Strategy } from "passport-jwt";
 import type { Request } from "express";
 import { PrismaService } from "../../../database/prisma.service";
 import { requireTenantAccessSecret } from "../tenant-auth.service";
-import { ORGANIZATION_SUSPENDED_MESSAGE, ORGANIZATION_WITH_SUBSCRIPTION_STATUS, isOrganizationSuspended } from "../organization-access";
+import { ORGANIZATION_WITH_SUBSCRIPTION_STATUS, isOrganizationSuspended, organizationBlockedMessage } from "../organization-access";
 import { TenantAccessTokenPayload, TenantAuthenticatedUser } from "../tenant-auth.types";
 
 function extractFromCookie(req: Request): string | null {
@@ -28,7 +28,11 @@ export class TenantJwtStrategy extends PassportStrategy(Strategy, "tenant-jwt") 
     });
   }
 
-  async validate(payload: TenantAccessTokenPayload): Promise<TenantAuthenticatedUser> {
+  async validate(payload: TenantAccessTokenPayload & { purpose?: string }): Promise<TenantAuthenticatedUser> {
+    // Bir xil kalit bilan imzolangan "kirish chiptasi" seans tokeni o'rnida ishlamasin
+    if (payload.purpose) {
+      throw new UnauthorizedException("Noto'g'ri token");
+    }
     const tenantUser = await this.prisma.tenantUser.findUnique({
       where: { id: payload.sub },
       include: { organization: { include: ORGANIZATION_WITH_SUBSCRIPTION_STATUS }, branch: true, employee: true },
@@ -43,7 +47,7 @@ export class TenantJwtStrategy extends PassportStrategy(Strategy, "tenant-jwt") 
     }
     // Platformada to'xtatilgan bog'cha — ochiq seanslar ham darhol to'xtaydi
     if (isOrganizationSuspended(tenantUser.organization, tenantUser.organization.subscription)) {
-      throw new UnauthorizedException(ORGANIZATION_SUSPENDED_MESSAGE);
+      throw new UnauthorizedException(organizationBlockedMessage(tenantUser.organization));
     }
     return {
       id: tenantUser.id,
@@ -61,6 +65,7 @@ export class TenantJwtStrategy extends PassportStrategy(Strategy, "tenant-jwt") 
       position: tenantUser.employee?.position ?? null,
       subjects: tenantUser.employee?.subjects ?? [],
       topicsManagedByAdmin: tenantUser.employee?.topicsManagedByAdmin ?? false,
+      impersonatedBy: payload.impersonatedBy ?? null,
     };
   }
 }

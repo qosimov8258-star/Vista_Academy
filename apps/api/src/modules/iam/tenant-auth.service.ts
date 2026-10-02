@@ -4,7 +4,15 @@ import * as argon2 from "argon2";
 import { createHash, randomBytes } from "crypto";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantAccessTokenPayload, TenantAuthenticatedUser } from "./tenant-auth.types";
-import { ORGANIZATION_SUSPENDED_MESSAGE, ORGANIZATION_WITH_SUBSCRIPTION_STATUS, isOrganizationSuspended } from "./organization-access";
+import { AuditLogService } from "../audit-log/audit-log.service";
+import {
+  ENTRY_TICKET_PURPOSE,
+  IMPERSONATION_TTL,
+  IMPERSONATION_TTL_MS,
+  consumeTicketId,
+  type PlatformEntryTicketPayload,
+} from "./platform-entry-ticket";
+import { ORGANIZATION_WITH_SUBSCRIPTION_STATUS, isOrganizationSuspended, organizationBlockedMessage } from "./organization-access";
 
 export interface IssuedTenantTokens {
   accessToken: string;
@@ -25,7 +33,63 @@ export class TenantAuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
+    private readonly auditLog: AuditLogService,
   ) {}
+
+  /**
+   * Platforma operatorining bir martalik chiptasini 30 daqiqalik seansga
+   * almashtiradi (refresh token yo'q). Bog'cha audit jurnaliga yoziladi.
+   */
+  async enterWithPlatformTicket(ticket: string): Promise<{ user: TenantAuthenticatedUser; accessToken: string; accessTokenTtlMs: number }> {
+    let payload: PlatformEntryTicketPayload & { exp: number };
+    try {
+      payload = this.jwt.verify(ticket, { secret: requireTenantAccessSecret() });
+    } catch {
+      throw new UnauthorizedException("Kirish havolasi eskirgan — platformada \"Bog'chaga kirish\"ni qaytadan bosing");
+    }
+    if (payload.purpose !== ENTRY_TICKET_PURPOSE || !payload.jti || !payload.operatorName) {
+      throw new UnauthorizedException("Noto'g'ri kirish havolasi");
+    }
+    if (!consumeTicketId(payload.jti, payload.exp * 1000)) {
+      throw new UnauthorizedException("Bu kirish havolasi allaqachon ishlatilgan");
+    }
+
+    const tenantUser = await this.prisma.tenantUser.findUnique({
+      where: { id: payload.sub },
+      include: { organization: { include: ORGANIZATION_WITH_SUBSCRIPTION_STATUS }, branch: true, employee: true },
+    });
+    if (!tenantUser || !tenantUser.isActive || tenantUser.organizationId !== payload.organizationId) {
+      throw new UnauthorizedException("Bog'cha hisobi topilmadi yoki faol emas");
+    }
+    if (isOrganizationSuspended(tenantUser.organization, tenantUser.organization.subscription)) {
+      throw new ForbiddenException(organizationBlockedMessage(tenantUser.organization));
+    }
+
+    const user: TenantAuthenticatedUser = {
+      ...this.toAuthenticatedUser(tenantUser, tenantUser.organization),
+      impersonatedBy: payload.operatorName,
+    };
+    const tokenPayload: TenantAccessTokenPayload = {
+      sub: user.id,
+      organizationId: user.organizationId,
+      organizationSlug: user.organizationSlug,
+      branchSlug: user.branchSlug,
+      branchId: user.branchId,
+      login: user.login,
+      role: user.role,
+      impersonatedBy: payload.operatorName,
+    };
+    const accessToken = this.jwt.sign(tokenPayload, { secret: requireTenantAccessSecret(), expiresIn: IMPERSONATION_TTL });
+
+    await this.auditLog.logFromUser(user, {
+      action: "platform.impersonate",
+      entityType: "Organization",
+      entityId: user.organizationId,
+      summary: `Platforma operatori ${payload.operatorName} panelga kirdi (30 daqiqa)`,
+    });
+
+    return { user, accessToken, accessTokenTtlMs: IMPERSONATION_TTL_MS };
+  }
 
   async validateCredentials(orgSlug: string, login: string, password: string): Promise<TenantAuthenticatedUser> {
     const organization = await this.prisma.organization.findUnique({
@@ -36,7 +100,7 @@ export class TenantAuthService {
       throw new UnauthorizedException("Tashkilot topilmadi");
     }
     if (isOrganizationSuspended(organization, organization.subscription)) {
-      throw new ForbiddenException(ORGANIZATION_SUSPENDED_MESSAGE);
+      throw new ForbiddenException(organizationBlockedMessage(organization));
     }
 
     const tenantUser = await this.prisma.tenantUser.findUnique({

@@ -129,7 +129,8 @@ export class OrganizationsService {
 
   async findAll(query: OrganizationQueryDto) {
     const where: Prisma.OrganizationWhereInput = {
-      ...(query.status ? { status: query.status } : {}),
+      // Arxivlanganlar faqat "Arxiv" filtrida ko'rinadi
+      ...(query.status ? { status: query.status } : { status: { not: "ARCHIVED" } }),
       ...(query.search
         ? { name: { contains: query.search, mode: "insensitive" as Prisma.QueryMode } }
         : {}),
@@ -169,8 +170,21 @@ export class OrganizationsService {
   }
 
   async update(id: string, dto: UpdateOrganizationDto) {
-    await this.findOne(id);
+    const current = await this.findOne(id);
+    if (current.status === "ARCHIVED" && dto.status) {
+      throw new BadRequestException("Bog'cha arxivda — avval arxivdan qaytaring");
+    }
     const data: Prisma.OrganizationUpdateInput = { ...dto };
+    if (dto.notes !== undefined) {
+      data.notes = dto.notes?.trim() || null;
+    }
+    // Holat tahrirlash oynasidan o'zgarsa, to'xtatish sanasi/sababi ham mos bo'lsin
+    if (dto.status === "ACTIVE" && current.status !== "ACTIVE") {
+      data.suspendReason = null;
+      data.suspendedAt = null;
+    } else if (dto.status === "SUSPENDED" && current.status !== "SUSPENDED") {
+      data.suspendedAt = new Date();
+    }
     if (dto.website !== undefined) {
       data.website = dto.website === null ? null : this.normalizeWebsiteOrThrow(dto.website);
     }
@@ -538,7 +552,10 @@ export class OrganizationsService {
    * tekshiruvi bor.
    */
   async remove(id: string) {
-    await this.findOne(id);
+    const target = await this.findOne(id);
+    if (target.status !== "ARCHIVED") {
+      throw new BadRequestException("Butunlay o'chirishdan oldin bog'chani arxivga oling");
+    }
 
     await this.prisma.$transaction(
       async (tx) => {

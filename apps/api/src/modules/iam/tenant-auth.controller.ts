@@ -16,6 +16,7 @@ import { Public } from "../../common/decorators/public.decorator";
 import { TenantAuthService, IssuedTenantTokens } from "./tenant-auth.service";
 import { TenantLoginDto } from "./dto/tenant-login.dto";
 import { TenantRefreshDto } from "./dto/tenant-refresh.dto";
+import { TenantEnterDto } from "./dto/tenant-enter.dto";
 import { TenantAuthenticatedUser } from "./tenant-auth.types";
 import { TenantJwtAuthGuard } from "./guards/tenant-jwt-auth.guard";
 import { CurrentTenantUser } from "./decorators/current-tenant-user.decorator";
@@ -39,6 +40,27 @@ export class TenantAuthController {
     const tokens = await this.authService.issueTokens(user, requestMeta(req));
     setAuthCookies(res, tokens);
     return { user, ...tokenResponse(tokens) };
+  }
+
+  /**
+   * Platforma operatori "Bog'chaga kirish" — bir martalik chipta evaziga
+   * 30 daqiqalik seans. Refresh token berilmaydi (cookie'dagisi ham
+   * o'chiriladi): muddat tugagach operator qaytadan platformadan kiradi.
+   */
+  @LoginThrottle()
+  @Post("enter")
+  @HttpCode(HttpStatus.OK)
+  async enter(@Body() dto: TenantEnterDto, @Res({ passthrough: true }) res: Response) {
+    const result = await this.authService.enterWithPlatformTicket(dto.ticket);
+    clearAuthCookies(res);
+    res.cookie(ACCESS_COOKIE, result.accessToken, {
+      httpOnly: true,
+      secure: process.env.COOKIE_SECURE === "true",
+      sameSite: "lax",
+      maxAge: result.accessTokenTtlMs,
+      path: "/",
+    });
+    return { user: result.user, accessToken: result.accessToken, refreshToken: null };
   }
 
   @Post("refresh")

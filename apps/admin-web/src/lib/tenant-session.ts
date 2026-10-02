@@ -28,6 +28,13 @@ export function setTenantTokens(tokens: { accessToken: string; refreshToken: str
   sessionStorage.setItem(REFRESH_KEY, tokens.refreshToken);
 }
 
+/** Platforma operatori seansi: faqat access token, refresh yo'q (30 daqiqa). */
+export function setTenantAccessOnly(accessToken: string): void {
+  if (!isBrowser()) return;
+  sessionStorage.setItem(ACCESS_KEY, accessToken);
+  sessionStorage.removeItem(REFRESH_KEY);
+}
+
 export function clearTenantTokens(): void {
   if (!isBrowser()) return;
   sessionStorage.removeItem(ACCESS_KEY);

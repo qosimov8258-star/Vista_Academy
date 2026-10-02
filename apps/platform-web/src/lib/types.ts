@@ -11,7 +11,7 @@ export interface AuthenticatedUser {
   role: PlatformUserRole;
 }
 
-export type OrganizationStatus = "ACTIVE" | "SUSPENDED";
+export type OrganizationStatus = "ACTIVE" | "SUSPENDED" | "ARCHIVED";
 
 export interface Branch {
   id: string;
@@ -82,6 +82,12 @@ export interface Organization {
   contactEmail: string | null;
   contactPhone: string | null;
   status: OrganizationStatus;
+  /** To'xtatish sababi — bog'cha xodimlariga kirishda ko'rsatiladi. */
+  suspendReason: string | null;
+  suspendedAt: string | null;
+  archivedAt: string | null;
+  /** Operatorning ichki izohi (bog'chaga ko'rinmaydi). */
+  notes: string | null;
   createdAt: string;
   branches: Branch[];
   subscription: Subscription | null;
@@ -180,4 +186,22 @@ export interface DashboardAnalytics {
     createdBy: string | null;
     organization: OrganizationRef;
   }[];
+}
+
+/** GET /platform/organizations/:id/usage */
+export interface OrganizationUsage {
+  plan: { name: string; maxBranches: number; maxChildren: number; maxEmployees: number; maxStorageGb: number } | null;
+  counts: { branches: number; children: number; employees: number; staffAccounts: number; guardians: number; groups: number };
+  branches: {
+    id: string;
+    name: string;
+    slug: string;
+    address: string | null;
+    createdAt: string;
+    children: number;
+    employees: number;
+    groups: number;
+  }[];
+  admins: { id: string; login: string; fullName: string; isActive: boolean; lastLoginAt: string | null }[];
+  lastLoginAt: string | null;
 }

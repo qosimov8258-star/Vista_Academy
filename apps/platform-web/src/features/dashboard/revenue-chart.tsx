@@ -30,6 +30,8 @@ export function RevenueChart({ data, loading }: { data: { month: string; total: 
   const max = niceMax(Math.max(0, ...data.map((d) => d.total)));
   const total = data.reduce((sum, d) => sum + d.total, 0);
   const ticks = Array.from({ length: TICKS + 1 }, (_, i) => (max / TICKS) * (TICKS - i));
+  // Hali hech qanday tushum yo'q — "0,25 / 0,5" kabi ma'nosiz o'q o'rniga izoh
+  const empty = !loading && total === 0;
 
   return (
     <section className="rounded-[var(--radius-xl)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
@@ -55,13 +57,18 @@ export function RevenueChart({ data, loading }: { data: { month: string; total: 
           {/* Yuklanishda yozuvsiz: Intl server (Node) va brauzerda kasrni turlicha yozadi — hydration farqi */}
           {ticks.map((tick) => (
             <span key={tick} className="min-w-[38px] leading-none">
-              {loading ? "\u00a0" : formatCompactMoney(tick)}
+              {loading || (empty && tick > 0) ? "\u00a0" : formatCompactMoney(tick)}
             </span>
           ))}
         </div>
 
         {/* Ustunlar */}
-        <div className="flex min-w-0 flex-1 items-end justify-between gap-2 sm:gap-3">
+        <div className="relative flex min-w-0 flex-1 items-end justify-between gap-2 sm:gap-3">
+          {empty && (
+            <p className="pointer-events-none absolute inset-x-0 top-[38%] text-center text-[13.5px] text-[var(--color-text-muted)]">
+              Hali tushum yo&apos;q — hamyon to&apos;ldirilganda shu yerda ko&apos;rinadi
+            </p>
+          )}
           {data.map((point, index) => {
             const isActive = point.month === active;
             const height = loading ? 30 + ((index * 37) % 50) : max > 0 ? (point.total / max) * 100 : 0;
@@ -71,7 +78,7 @@ export function RevenueChart({ data, loading }: { data: { month: string; total: 
                 className={clsx("flex h-full min-w-0 flex-1 flex-col items-center", index < data.length - 6 && "hidden sm:flex")}
               >
                 <div className="relative flex w-full flex-1 items-end justify-center">
-                  {isActive && !loading && (
+                  {isActive && !loading && !empty && (
                     <span className="absolute z-10 -translate-y-2 whitespace-nowrap rounded-full bg-[var(--color-ink)] px-2.5 py-1 text-[11.5px] font-semibold text-white shadow-[var(--shadow-raised)]" style={{ bottom: `${Math.max(height, 4)}%` }}>
                       {formatCompactMoney(point.total)}
                     </span>

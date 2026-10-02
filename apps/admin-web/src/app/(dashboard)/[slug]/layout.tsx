@@ -1,5 +1,6 @@
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
+import { ImpersonationBanner } from "@/components/layout/impersonation-banner";
 import { MainScroll } from "@/components/layout/main-scroll";
 import { ChefBottomBar } from "@/features/chef/chef-bottom-bar";
 import { TeacherTabBar } from "@/features/teacher/teacher-tab-bar";
@@ -22,6 +23,7 @@ export default async function DashboardLayout({
     <div className="flex h-dvh overflow-hidden bg-[var(--color-bg)]">
       <Sidebar slug={slug} />
       <div className="flex min-w-0 flex-1 flex-col">
+        <ImpersonationBanner slug={slug} />
         <Topbar slug={slug} />
         {/* min-h-0 bo'lmasa flex elementi mazmunidan kichrayolmaydi va scroll ishlamaydi.
             Pastki bo'shliq mobilda kattaroq — o'qituvchi uchun ekran pastida
