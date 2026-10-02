@@ -1614,6 +1614,9 @@ model Subscription {
   currentPeriodStart DateTime           @map("current_period_start")
   currentPeriodEnd   DateTime           @map("current_period_end")
   graceUntil         DateTime?          @map("grace_until")
+  /// Sinov muddati tugash sanasi — bo'sh bo'lsa sinov emas. Sinov tugagach
+  /// odatiy yangilash (hamyondan yechish yoki imtiyozli davr) ishlaydi.
+  trialEndsAt        DateTime?          @map("trial_ends_at")
   createdAt          DateTime           @default(now()) @map("created_at")
   updatedAt          DateTime           @updatedAt @map("updated_at")
 

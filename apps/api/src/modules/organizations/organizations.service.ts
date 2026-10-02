@@ -103,7 +103,11 @@ export class OrganizationsService {
 
         const now = new Date();
         const periodEnd = new Date(now);
-        periodEnd.setMonth(periodEnd.getMonth() + 1);
+        if (dto.trialDays) {
+          periodEnd.setDate(periodEnd.getDate() + dto.trialDays);
+        } else {
+          periodEnd.setMonth(periodEnd.getMonth() + 1);
+        }
         await tx.subscription.create({
           data: {
             organizationId: organization.id,
@@ -111,6 +115,7 @@ export class OrganizationsService {
             status: "ACTIVE",
             currentPeriodStart: now,
             currentPeriodEnd: periodEnd,
+            trialEndsAt: dto.trialDays ? periodEnd : null,
           },
         });
 

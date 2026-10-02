@@ -28,6 +28,7 @@ import {
   RefreshIcon,
   SearchIcon,
   UserIcon,
+  WalletIcon,
 } from "@/components/ui/icons";
 import { CommandPalette } from "./command-palette";
 
@@ -70,6 +71,7 @@ const NAV_SECTIONS: NavSection[] = [
           return attention ? { value: attention, tone: "alert" } : null;
         },
       },
+      { href: "/billing", label: "Moliya", icon: WalletIcon },
       { href: "/plans", label: "Tarif rejalar", icon: CardIcon },
     ],
   },

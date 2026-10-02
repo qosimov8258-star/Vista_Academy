@@ -48,6 +48,8 @@ export interface Subscription {
   currentPeriodStart: string;
   currentPeriodEnd: string;
   graceUntil: string | null;
+  /** Sinov muddati tugash sanasi; bo'sh — sinov emas. */
+  trialEndsAt: string | null;
   plan?: Plan;
   organization?: Organization;
 }
@@ -208,4 +210,40 @@ export interface OrganizationUsage {
   }[];
   admins: { id: string; login: string; fullName: string; isActive: boolean; lastLoginAt: string | null }[];
   lastLoginAt: string | null;
+}
+
+/** GET /platform/billing/overview */
+export interface BillingOverview {
+  /** Serverda SUBSCRIPTION_BILLING_CRON=on — obunalar avtomatik yangilanadi. */
+  autoRenew: boolean;
+  month: { start: string; end: string };
+  topUps: { amount: number; count: number };
+  charges: { amount: number; count: number };
+  walletBalance: number;
+  upcomingWeek: { count: number; amount: number; insufficient: number };
+  overdue: { grace: number; suspended: number; amount: number };
+}
+
+/** GET /platform/billing/renewals */
+export interface BillingRenewal {
+  organization: OrganizationRef & { status: OrganizationStatus };
+  plan: { name: string; priceMonthly: number };
+  status: SubscriptionStatus;
+  periodEnd: string;
+  graceUntil: string | null;
+  trialEndsAt: string | null;
+  balance: number;
+  enough: boolean;
+}
+
+/** GET /platform/billing/transactions */
+export interface BillingTransaction {
+  id: string;
+  type: WalletTransactionType;
+  amount: number;
+  balanceAfter: number;
+  note: string | null;
+  createdAt: string;
+  createdBy: string | null;
+  organization: OrganizationRef;
 }

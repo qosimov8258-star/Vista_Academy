@@ -25,6 +25,11 @@ const schema = z.object({
   website: z.string().optional(),
   planId: z.string().min(1, "Tarif tanlang"),
   adminPassword: z.string().min(8, "Kamida 8 belgi"),
+  // Bo'sh — sinovsiz (birinchi oy); 1–90 — shuncha kunlik bepul sinov
+  trialDays: z
+    .string()
+    .optional()
+    .refine((v) => !v || (/^\d+$/.test(v) && Number(v) >= 1 && Number(v) <= 90), "1 dan 90 gacha kun"),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -50,7 +55,7 @@ export function CreateOrganizationModal({ open, onClose }: { open: boolean; onCl
 
   useEffect(() => {
     if (open) {
-      reset({ name: "", contactName: "", contactPhone: "", website: "", planId: "", adminPassword: "" });
+      reset({ name: "", contactName: "", contactPhone: "", website: "", planId: "", adminPassword: "", trialDays: "" });
       setServerError(null);
     }
   }, [open, reset]);
@@ -64,6 +69,7 @@ export function CreateOrganizationModal({ open, onClose }: { open: boolean; onCl
         // Bo'sh qoldirilsa umuman yuborilmaydi — keyinroq "Tahrirlash" orqali qo'shish mumkin.
         ...(values.website?.trim() ? { website: values.website.trim() } : {}),
         planId: values.planId,
+        ...(values.trialDays ? { trialDays: Number(values.trialDays) } : {}),
         // Ism maydoni Super Admin login sifatida ham ishlatiladi — to'liq ismni
         // keyinroq super admin o'zi panelda o'zgartiradi.
         adminFullName: values.contactName,
@@ -181,6 +187,14 @@ export function CreateOrganizationModal({ open, onClose }: { open: boolean; onCl
             </option>
           ))}
         </Select>
+        <Input
+          label="Sinov muddati (kun)"
+          inputMode="numeric"
+          placeholder="Masalan: 14"
+          hint="Bo'sh qoldirilsa — birinchi oy. Sinov tugagach obuna hamyondan avtomatik yangilanadi."
+          error={errors.trialDays?.message}
+          {...register("trialDays")}
+        />
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={handleClose}>

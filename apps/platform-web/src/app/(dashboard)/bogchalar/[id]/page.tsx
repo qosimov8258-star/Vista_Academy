@@ -28,6 +28,7 @@ import { AssignSubscriptionModal } from "@/features/organizations/assign-subscri
 import { TopUpModal } from "@/features/organizations/top-up-modal";
 import { EditOrganizationModal } from "@/features/organizations/edit-organization-modal";
 import { WALLET_TX_TYPE_LABEL } from "@/features/organizations/wallet-labels";
+import { AdjustWalletModal, ExtendSubscriptionModal } from "@/features/billing/modals";
 import {
   AdminsCard,
   ArchiveModal,
@@ -52,6 +53,8 @@ export default function BogchaDetailPage({ params }: { params: Promise<{ id: str
   const [editOpen, setEditOpen] = useState(false);
   const [suspendOpen, setSuspendOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
+  const [extendOpen, setExtendOpen] = useState(false);
+  const [adjustOpen, setAdjustOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const orgQuery = useQuery({
@@ -227,10 +230,15 @@ export default function BogchaDetailPage({ params }: { params: Promise<{ id: str
                   {formatMoney(walletQuery.data?.wallet.balance ?? "0", walletQuery.data?.wallet.currency)}
                 </p>
               </div>
-              <Button size="sm" onClick={() => setTopUpOpen(true)} disabled={archived}>
-                <PlusIcon className="h-3.5 w-3.5" />
-                To&apos;ldirish
-              </Button>
+              <div className="flex gap-2">
+                <Button size="sm" variant="secondary" onClick={() => setAdjustOpen(true)} disabled={archived}>
+                  Tuzatish
+                </Button>
+                <Button size="sm" onClick={() => setTopUpOpen(true)} disabled={archived}>
+                  <PlusIcon className="h-3.5 w-3.5" />
+                  To&apos;ldirish
+                </Button>
+              </div>
             </div>
             {walletQuery.isLoading ? (
               <LoadingState />
@@ -290,7 +298,12 @@ export default function BogchaDetailPage({ params }: { params: Promise<{ id: str
             </div>
             {org.subscription ? (
               <>
-                <p className="mt-3 text-[24px] font-semibold tracking-[-0.02em]">{org.subscription.plan?.name}</p>
+                <p className="mt-3 flex items-center gap-2 text-[24px] font-semibold tracking-[-0.02em]">
+                  {org.subscription.plan?.name}
+                  {org.subscription.trialEndsAt && new Date(org.subscription.trialEndsAt) > new Date() && (
+                    <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-[12px] font-semibold tracking-normal">Sinov</span>
+                  )}
+                </p>
                 <p className="text-[13.5px] text-[var(--color-ink-muted)]">{formatMoney(org.subscription.plan?.priceMonthly ?? "0")} / oy</p>
                 <dl className="mt-4 space-y-2 rounded-[16px] bg-white/[0.06] px-4 py-3 text-[13px]">
                   <div className="flex justify-between gap-3">
@@ -306,7 +319,20 @@ export default function BogchaDetailPage({ params }: { params: Promise<{ id: str
                     </dd>
                   </div>
                 </dl>
+                {org.subscription.status === "GRACE_PERIOD" && org.subscription.graceUntil && (
+                  <p className="mt-3 rounded-[14px] bg-[var(--color-danger-on-ink)]/15 px-3.5 py-2.5 text-[12.5px] text-[var(--color-danger-on-ink)]">
+                    Hamyonda mablag&apos; yetmadi — imtiyozli davr. {formatDayMonth(org.subscription.graceUntil)} da panel yopiladi.
+                  </p>
+                )}
                 <div className="mt-4 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setExtendOpen(true)}
+                    disabled={archived}
+                    className="cursor-pointer rounded-full bg-white px-4 py-2 text-[13px] font-semibold text-[var(--color-ink)] transition-opacity hover:opacity-90 disabled:opacity-50"
+                  >
+                    Uzaytirish
+                  </button>
                   <button
                     type="button"
                     onClick={() => setSubscriptionModal("change")}
@@ -370,6 +396,16 @@ export default function BogchaDetailPage({ params }: { params: Promise<{ id: str
         }}
       />
       <SuspendModal organization={org} open={suspendOpen} onClose={() => setSuspendOpen(false)} />
+      {org.subscription && (
+        <ExtendSubscriptionModal
+          open={extendOpen}
+          onClose={() => setExtendOpen(false)}
+          organizationId={id}
+          subscription={org.subscription}
+          balance={Number(walletQuery.data?.wallet.balance ?? 0)}
+        />
+      )}
+      <AdjustWalletModal open={adjustOpen} onClose={() => setAdjustOpen(false)} organizationId={id} />
       <ArchiveModal organization={org} open={archiveOpen} onClose={() => setArchiveOpen(false)} />
     </div>
   );

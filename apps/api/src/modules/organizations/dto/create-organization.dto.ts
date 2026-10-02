@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsEmail, IsOptional, IsString, Matches, MinLength } from "class-validator";
+import { Type } from "class-transformer";
+import { IsEmail, IsInt, IsOptional, IsString, Matches, Max, Min, MinLength } from "class-validator";
 import { LOGIN_PATTERN, LOGIN_PATTERN_MESSAGE } from "../../../common/validators/login";
 
 export class CreateOrganizationDto {
@@ -37,6 +38,19 @@ export class CreateOrganizationDto {
   @ApiProperty({ description: "Tarif reja ID — bog'cha yaratilishi bilan shu tarifga obuna ochiladi" })
   @IsString()
   planId!: string;
+
+  /**
+   * Sinov muddati (kun). Berilsa birinchi davr shuncha kun (bepul), keyin
+   * odatiy yangilash: hamyondan yechish yoki imtiyozli davr. Berilmasa —
+   * avvalgidek birinchi oy.
+   */
+  @ApiPropertyOptional({ minimum: 1, maximum: 90 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(90)
+  trialDays?: number;
 
   @ApiProperty({ example: "Aziza Karimova", description: "Tashkilotning Super Admin akkaunti to'liq ismi" })
   @IsString()
