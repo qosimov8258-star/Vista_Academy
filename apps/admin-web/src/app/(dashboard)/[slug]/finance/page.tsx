@@ -64,7 +64,7 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
   const [exportError, setExportError] = useState<string | null>(null);
   const { user } = useAuth();
   const canWrite = canWriteMoney(user?.role);
-  const { branchId: forcedBranchId } = useBranchContext(slug);
+  const { branchId: forcedBranchId, base } = useBranchContext(slug);
 
   const invoicesQuery = useQuery({
     queryKey: ["invoices", slug, page, forcedBranchId, overdueOnly, search, period],
@@ -255,7 +255,7 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
                   <Tr key={invoice.id}>
                     <Td className="font-medium">
                       <Link
-                        href={`/${slug}/finance/${invoice.childId}`}
+                        href={`${base}/finance/${invoice.childId}`}
                         className="text-[var(--color-primary)] hover:underline"
                       >
                         {invoice.child?.fullName ?? "—"}

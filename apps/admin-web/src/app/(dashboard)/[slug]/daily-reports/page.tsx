@@ -30,7 +30,7 @@ export default function DailyReportsPage({ params }: { params: Promise<{ slug: s
   const tr = useTr();
   const { slug } = use(params);
   const queryClient = useQueryClient();
-  const { branchId: forcedBranchId } = useBranchContext(slug);
+  const { branchId: forcedBranchId, base } = useBranchContext(slug);
   const [branchId, setBranchId] = useState("");
   // "Today" depends on the viewer's clock, which can differ between the
   // server-rendered pass and the client hydration pass — computing it lazily
@@ -181,7 +181,7 @@ export default function DailyReportsPage({ params }: { params: Promise<{ slug: s
             {reportsQuery.data.children.map((c) => (
               <li key={c.childId} className="flex flex-wrap items-center justify-between gap-2.5 px-5 py-3">
                 <div className="min-w-0">
-                  <Link href={`/${slug}/children/${c.childId}`} className="text-sm font-medium text-[var(--color-primary)] hover:underline">
+                  <Link href={`${base}/children/${c.childId}`} className="text-sm font-medium text-[var(--color-primary)] hover:underline">
                     {tr(c.fullName)}
                   </Link>
                   {allergyByChildId.has(c.childId) && (

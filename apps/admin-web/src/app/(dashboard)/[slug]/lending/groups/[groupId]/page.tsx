@@ -9,6 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, assetUrl } from "@/lib/api";
 import type { LandingGroup, LandingGroupStudent } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
+import { useBranchContext } from "@/lib/use-branch-context";
 import { canWriteOperational } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
@@ -42,6 +43,7 @@ type StudentFormValues = z.infer<typeof studentSchema>;
 export default function LendingGroupDetailPage({ params }: { params: Promise<{ slug: string; groupId: string }> }) {
   const tr = useTr();
   const { slug, groupId } = use(params);
+  const { base } = useBranchContext(slug);
   const { user } = useAuth();
   const canWrite = canWriteOperational(user?.role);
   const queryClient = useQueryClient();
@@ -129,7 +131,7 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
   return (
     <div className="space-y-5">
       <Link
-        href={`/${slug}/lending/groups`}
+        href={`${base}/lending/groups`}
         className="inline-flex items-center gap-1.5 text-[14px] font-medium text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
       >
         <ArrowLeftIcon className="h-4 w-4" />

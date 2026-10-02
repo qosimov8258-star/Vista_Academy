@@ -25,7 +25,7 @@ export default function GroupsPage({ params }: { params: Promise<{ slug: string 
   const [createOpen, setCreateOpen] = useState(false);
   const { user } = useAuth();
   const canWrite = canWriteOperational(user?.role);
-  const { branchId: forcedBranchId } = useBranchContext(slug);
+  const { branchId: forcedBranchId, base } = useBranchContext(slug);
 
   const orgQuery = useQuery({
     queryKey: ["org", slug],
@@ -77,9 +77,9 @@ export default function GroupsPage({ params }: { params: Promise<{ slug: string 
             </THead>
             <TBody>
               {groupsQuery.data.map((group) => (
-                <Tr key={group.id} {...rowLinkProps(`/${slug}/groups/${group.id}`, (href) => router.push(href))}>
+                <Tr key={group.id} {...rowLinkProps(`${base}/groups/${group.id}`, (href) => router.push(href))}>
                   <Td className="font-medium">
-                    <Link href={`/${slug}/groups/${group.id}`} className="text-[var(--color-primary)] hover:underline">
+                    <Link href={`${base}/groups/${group.id}`} className="text-[var(--color-primary)] hover:underline">
                       {tr(group.name)}
                     </Link>
                     <div className="mt-1 text-[12.5px] font-normal text-[var(--color-text-muted)] md:hidden">

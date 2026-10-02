@@ -3,6 +3,9 @@ import { TENANT_SLUG_HEADER, tenantSlugFromHost, toExternalPath, toInternalPath 
 
 // Top-level page names that live directly under /{orgSlug}/... — anything else
 // in that position is treated as a per-branch entry link (see below).
+// app/(dashboard)/[slug]/ ga yangi papka qo'shilsa, shu yerga ham qo'shing —
+// aks holda filial xodimi u sahifani ochganda bosh sahifaga tushib qoladi.
+// API'dagi RESERVED_BRANCH_SLUGS ham shu ro'yxat bilan bir xil bo'lsin.
 const KNOWN_ORG_PAGES = new Set([
   "login",
   "children",
@@ -35,6 +38,11 @@ const KNOWN_ORG_PAGES = new Set([
   "useful",
   "lending",
   "face-id",
+  "audit-logs",
+  "daily-reports",
+  "network",
+  "reminders",
+  "report",
 ]);
 
 function base64UrlDecode(input: string): string {

@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
+import { useBranchContext } from "@/lib/use-branch-context";
 import type { Child, Group, Lead } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/input";
@@ -32,6 +33,7 @@ export function ConvertLeadModal({
 }) {
   const tr = useTr();
   const router = useRouter();
+  const { base } = useBranchContext(slug);
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -60,7 +62,7 @@ export function ConvertLeadModal({
       queryClient.invalidateQueries({ queryKey: ["children", slug] });
       reset();
       onClose();
-      router.push(`/${slug}/children/${result.child.id}`);
+      router.push(`${base}/children/${result.child.id}`);
     },
     onError: (err) => {
       setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
