@@ -106,6 +106,8 @@ export interface LandingScheduleItem {
   id: string;
   time: string;
   title: string;
+  titleRu: string | null;
+  titleEn: string | null;
   type: LandingScheduleType;
   order: number;
 }
@@ -118,6 +120,10 @@ export interface LandingMeal {
   id: string;
   title: string;
   description: string | null;
+  titleRu: string | null;
+  titleEn: string | null;
+  descriptionRu: string | null;
+  descriptionEn: string | null;
   mealType: LandingMealType;
   weekday: LandingWeekday | null;
   time: string | null;
@@ -130,6 +136,13 @@ export interface LandingTeacher {
   fullName: string;
   role: string;
   bio: string | null;
+  experience: string | null;
+  roleRu: string | null;
+  roleEn: string | null;
+  bioRu: string | null;
+  bioEn: string | null;
+  experienceRu: string | null;
+  experienceEn: string | null;
   photoPath: string | null;
   order: number;
 }
@@ -139,6 +152,10 @@ export interface LandingContentBlock {
   key: string;
   title: string;
   body: string;
+  titleRu: string | null;
+  titleEn: string | null;
+  bodyRu: string | null;
+  bodyEn: string | null;
   photoPath: string | null;
 }
 

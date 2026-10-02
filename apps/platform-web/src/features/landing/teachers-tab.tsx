@@ -13,11 +13,19 @@ import { Input, Textarea } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { ErrorState, EmptyState, CardsSkeleton } from "@/components/ui/states";
 import { CameraIcon, CloseIcon, PencilIcon, PlusIcon, TeamIcon } from "@/components/ui/icons";
+import { LocaleTabs, type LocaleTabKey } from "./locale-tabs";
 
 const schema = z.object({
   fullName: z.string().min(2, "Ism-familiya kamida 2 belgi"),
   role: z.string().min(2, "Lavozimi kamida 2 belgi"),
   bio: z.string().optional(),
+  experience: z.string().optional(),
+  roleRu: z.string().optional(),
+  roleEn: z.string().optional(),
+  bioRu: z.string().optional(),
+  bioEn: z.string().optional(),
+  experienceRu: z.string().optional(),
+  experienceEn: z.string().optional(),
   order: z.coerce.number().int(),
 });
 type FormValues = z.infer<typeof schema>;
@@ -128,6 +136,7 @@ function TeacherFormModal({
 }) {
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [activeLocale, setActiveLocale] = useState<LocaleTabKey>("uz");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isEdit = Boolean(teacher);
 
@@ -142,10 +151,23 @@ function TeacherFormModal({
     if (open) {
       reset(
         teacher
-          ? { fullName: teacher.fullName, role: teacher.role, bio: teacher.bio ?? "", order: teacher.order }
-          : { fullName: "", role: "", bio: "", order: 0 },
+          ? {
+              fullName: teacher.fullName,
+              role: teacher.role,
+              bio: teacher.bio ?? "",
+              experience: teacher.experience ?? "",
+              roleRu: teacher.roleRu ?? "",
+              roleEn: teacher.roleEn ?? "",
+              bioRu: teacher.bioRu ?? "",
+              bioEn: teacher.bioEn ?? "",
+              experienceRu: teacher.experienceRu ?? "",
+              experienceEn: teacher.experienceEn ?? "",
+              order: teacher.order,
+            }
+          : { fullName: "", role: "", bio: "", experience: "", roleRu: "", roleEn: "", bioRu: "", bioEn: "", experienceRu: "", experienceEn: "", order: 0 },
       );
       setServerError(null);
+      setActiveLocale("uz");
     }
   }, [open, teacher, reset]);
 
@@ -206,8 +228,39 @@ function TeacherFormModal({
 
         <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
           <Input label="Ism-familiya" placeholder="Dilnoza Qosimova" error={errors.fullName?.message} {...register("fullName")} />
-          <Input label="Lavozimi" placeholder="Bosh tarbiyachi" error={errors.role?.message} {...register("role")} />
-          <Textarea label="Qisqacha ma'lumot" rows={3} placeholder="Tajribasi, sertifikatlari va h.k." error={errors.bio?.message} {...register("bio")} />
+
+          <div className="space-y-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] p-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[12px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Lavozimi va ma'lumot</p>
+              <LocaleTabs active={activeLocale} onChange={setActiveLocale} />
+            </div>
+
+            {activeLocale === "uz" && (
+              <>
+                <Input label="Lavozimi" placeholder="Bosh tarbiyachi" error={errors.role?.message} {...register("role")} />
+                <Textarea label="Qisqacha ma'lumot" rows={3} placeholder="Qisqa iqtibos" error={errors.bio?.message} {...register("bio")} />
+                <Textarea label="Tajribasi" rows={2} placeholder="Tajribasi, sertifikatlari va h.k." error={errors.experience?.message} {...register("experience")} />
+              </>
+            )}
+            {activeLocale === "ru" && (
+              <>
+                <Input label="Lavozimi (ruscha)" placeholder="Главный воспитатель" {...register("roleRu")} />
+                <Textarea label="Qisqacha ma'lumot (ruscha)" rows={3} {...register("bioRu")} />
+                <Textarea label="Tajribasi (ruscha)" rows={2} {...register("experienceRu")} />
+              </>
+            )}
+            {activeLocale === "en" && (
+              <>
+                <Input label="Lavozimi (inglizcha)" placeholder="Head caregiver" {...register("roleEn")} />
+                <Textarea label="Qisqacha ma'lumot (inglizcha)" rows={3} {...register("bioEn")} />
+                <Textarea label="Tajribasi (inglizcha)" rows={2} {...register("experienceEn")} />
+              </>
+            )}
+            <p className="text-[11.5px] text-[var(--color-text-subtle)]">
+              Ruscha/inglizcha bo'sh qoldirilsa, saytda o'zbekcha matn ko'rsatiladi.
+            </p>
+          </div>
+
           <Input label="Tartib raqami" type="number" hint="Kichik raqam avval chiqadi" error={errors.order?.message} {...register("order")} />
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={onClose}>

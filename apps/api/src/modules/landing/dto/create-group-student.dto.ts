@@ -12,6 +12,16 @@ export class CreateGroupStudentDto {
   @IsString()
   bio?: string;
 
+  @ApiPropertyOptional({ description: "`bio`ning rus tarjimasi" })
+  @IsOptional()
+  @IsString()
+  bioRu?: string;
+
+  @ApiPropertyOptional({ description: "`bio`ning ingliz tarjimasi" })
+  @IsOptional()
+  @IsString()
+  bioEn?: string;
+
   @ApiPropertyOptional({ example: 0 })
   @IsOptional()
   @IsInt()

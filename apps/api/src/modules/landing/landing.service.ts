@@ -63,7 +63,14 @@ export class LandingService {
 
   createScheduleItem(dto: CreateScheduleItemDto) {
     return this.prisma.landingScheduleItem.create({
-      data: { time: dto.time, title: dto.title, type: dto.type, order: dto.order ?? 0 },
+      data: {
+        time: dto.time,
+        title: dto.title,
+        titleRu: dto.titleRu,
+        titleEn: dto.titleEn,
+        type: dto.type,
+        order: dto.order ?? 0,
+      },
     });
   }
 
@@ -98,6 +105,10 @@ export class LandingService {
       data: {
         title: dto.title,
         description: dto.description,
+        titleRu: dto.titleRu,
+        titleEn: dto.titleEn,
+        descriptionRu: dto.descriptionRu,
+        descriptionEn: dto.descriptionEn,
         mealType: dto.mealType,
         weekday: dto.weekday,
         time: dto.time,
@@ -147,26 +158,50 @@ export class LandingService {
     {
       fullName: "Dilnoza Qosimova",
       role: "Bosh tarbiyachi",
+      roleRu: "Главный воспитатель",
+      roleEn: "Head caregiver",
       bio: "Har bir bola menga o'z farzandimdek aziz.",
+      bioRu: "Каждый ребёнок мне дорог, как родной.",
+      bioEn: "Every child is as dear to me as my own.",
       experience: "Maktabgacha ta'lim yo'nalishida 12 yillik tajribaga ega, bir necha filial jamoasini boshqargan.",
+      experienceRu: "12-летний опыт в сфере дошкольного образования, руководила командой нескольких филиалов.",
+      experienceEn: "12 years of experience in early childhood education, has led teams across several branches.",
     },
     {
       fullName: "Malika Yusupova",
       role: "Ingliz tili o'qituvchisi",
+      roleRu: "Учитель английского языка",
+      roleEn: "English teacher",
       bio: "Bolalar bilan o'ynab o'rganish eng samarali usul.",
+      bioRu: "Обучение через игру с детьми — самый эффективный способ.",
+      bioEn: "Learning through play is the most effective method.",
       experience: "Ingliz tili bo'yicha 6 yillik tajriba, xalqaro IELTS sertifikatiga ega, kichik yoshdagilar bilan ishlash metodikasi bo'yicha malaka oshirgan.",
+      experienceRu: "6-летний опыт преподавания английского языка, обладатель международного сертификата IELTS, повысила квалификацию по методике работы с детьми младшего возраста.",
+      experienceEn: "6 years of experience teaching English, holds an international IELTS certificate, and has completed additional training in early-years teaching methods.",
     },
     {
       fullName: "Nodira Karimova",
       role: "Mental arifmetika o'qituvchisi",
+      roleRu: "Учитель ментальной арифметики",
+      roleEn: "Mental math teacher",
       bio: "Mental arifmetika bolaning tafakkurini rivojlantiradi.",
+      bioRu: "Ментальная арифметика развивает мышление ребёнка.",
+      bioEn: "Mental math develops a child's thinking.",
       experience: "Mental arifmetika yo'nalishida 5 yillik tajriba, respublika miqyosidagi bolalar musobaqalarida shogirdlarini tayyorlagan.",
+      experienceRu: "5-летний опыт в сфере ментальной арифметики, готовила учеников к республиканским детским соревнованиям.",
+      experienceEn: "5 years of experience in mental math, has prepared students for national children's competitions.",
     },
     {
       fullName: "Sevara Rashidova",
       role: "Kichik guruh tarbiyachisi",
+      roleRu: "Воспитатель младшей группы",
+      roleEn: "Junior group caregiver",
       bio: "Sabr va mehr — ishimning asosi.",
+      bioRu: "Терпение и забота — основа моей работы.",
+      bioEn: "Patience and care are the foundation of my work.",
       experience: "Kichik yoshdagi bolalar bilan ishlashda 8 yillik tajribaga ega, bolalar psixologiyasi bo'yicha qo'shimcha ta'lim olgan.",
+      experienceRu: "8-летний опыт работы с детьми младшего возраста, дополнительное образование по детской психологии.",
+      experienceEn: "8 years of experience working with young children, with additional training in child psychology.",
     },
   ];
 
@@ -185,7 +220,19 @@ export class LandingService {
 
   createTeacher(dto: CreateTeacherDto) {
     return this.prisma.landingTeacher.create({
-      data: { fullName: dto.fullName, role: dto.role, bio: dto.bio, experience: dto.experience, order: dto.order ?? 0 },
+      data: {
+        fullName: dto.fullName,
+        role: dto.role,
+        bio: dto.bio,
+        experience: dto.experience,
+        roleRu: dto.roleRu,
+        roleEn: dto.roleEn,
+        bioRu: dto.bioRu,
+        bioEn: dto.bioEn,
+        experienceRu: dto.experienceRu,
+        experienceEn: dto.experienceEn,
+        order: dto.order ?? 0,
+      },
     });
   }
 
@@ -280,7 +327,7 @@ export class LandingService {
   async createGroupStudent(groupId: string, dto: CreateGroupStudentDto) {
     await this.findGroup(groupId);
     return this.prisma.landingGroupStudent.create({
-      data: { groupId, name: dto.name, bio: dto.bio, order: dto.order ?? 0 },
+      data: { groupId, name: dto.name, bio: dto.bio, bioRu: dto.bioRu, bioEn: dto.bioEn, order: dto.order ?? 0 },
     });
   }
 
@@ -352,10 +399,18 @@ export class LandingService {
   }
 
   upsertContentBlock(key: string, dto: UpdateContentBlockDto) {
+    const data = {
+      title: dto.title,
+      body: dto.body,
+      titleRu: dto.titleRu,
+      titleEn: dto.titleEn,
+      bodyRu: dto.bodyRu,
+      bodyEn: dto.bodyEn,
+    };
     return this.prisma.landingContentBlock.upsert({
       where: { key },
-      create: { key, title: dto.title, body: dto.body },
-      update: { title: dto.title, body: dto.body },
+      create: { key, ...data },
+      update: data,
     });
   }
 

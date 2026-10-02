@@ -14,6 +14,7 @@ import { Input, Select } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { ErrorState, EmptyState, TableSkeleton } from "@/components/ui/states";
 import { ClockIcon, CloseIcon, PencilIcon, PlusIcon } from "@/components/ui/icons";
+import { LocaleTabs, type LocaleTabKey } from "./locale-tabs";
 
 const TYPE_LABELS: Record<LandingScheduleType, string> = {
   LESSON: "Dars",
@@ -32,6 +33,8 @@ const TYPE_TONES: Record<LandingScheduleType, "primary" | "warning" | "success" 
 const schema = z.object({
   time: z.string().min(1, "Vaqt kiriting"),
   title: z.string().min(2, "Nomi kamida 2 belgi"),
+  titleRu: z.string().optional(),
+  titleEn: z.string().optional(),
   type: z.enum(["LESSON", "SLEEP", "MEAL", "OTHER"]),
   order: z.coerce.number().int(),
 });
@@ -138,6 +141,7 @@ function ScheduleItemFormModal({
 }) {
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [activeLocale, setActiveLocale] = useState<LocaleTabKey>("uz");
   const isEdit = Boolean(item);
 
   const {
@@ -151,10 +155,11 @@ function ScheduleItemFormModal({
     if (open) {
       reset(
         item
-          ? { time: item.time, title: item.title, type: item.type, order: item.order }
-          : { time: "08:00", title: "", type: "OTHER", order: 0 },
+          ? { time: item.time, title: item.title, titleRu: item.titleRu ?? "", titleEn: item.titleEn ?? "", type: item.type, order: item.order }
+          : { time: "08:00", title: "", titleRu: "", titleEn: "", type: "OTHER", order: 0 },
       );
       setServerError(null);
+      setActiveLocale("uz");
     }
   }, [open, item, reset]);
 
@@ -187,7 +192,18 @@ function ScheduleItemFormModal({
             <option value="OTHER">Boshqa</option>
           </Select>
         </div>
-        <Input label="Nomi" placeholder="Ingliz tili darsi" error={errors.title?.message} {...register("title")} />
+        <div className="space-y-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] p-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[12px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Nomi</p>
+            <LocaleTabs active={activeLocale} onChange={setActiveLocale} />
+          </div>
+          {activeLocale === "uz" && <Input label="Nomi" placeholder="Ingliz tili darsi" error={errors.title?.message} {...register("title")} />}
+          {activeLocale === "ru" && <Input label="Nomi (ruscha)" placeholder="Урок английского языка" {...register("titleRu")} />}
+          {activeLocale === "en" && <Input label="Nomi (inglizcha)" placeholder="English lesson" {...register("titleEn")} />}
+          <p className="text-[11.5px] text-[var(--color-text-subtle)]">
+            Ruscha/inglizcha bo'sh qoldirilsa, saytda o'zbekcha matn ko'rsatiladi.
+          </p>
+        </div>
         <Input label="Tartib raqami" type="number" hint="Kichik raqam yuqorida chiqadi" error={errors.order?.message} {...register("order")} />
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
