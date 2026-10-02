@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { ErrorState, LoadingState } from "@/components/ui/states";
 import { CameraIcon, DocumentIcon } from "@/components/ui/icons";
+import { LocaleTabs, type LocaleTabKey } from "./locale-tabs";
 
 const BLOCKS: { key: string; label: string }[] = [
   { key: "doimiy-tarbiyachi", label: "Doimiy tarbiyachi" },
@@ -44,6 +45,10 @@ export function ContentBlocksTab() {
 const schema = z.object({
   title: z.string().min(2, "Sarlavha kamida 2 belgi"),
   body: z.string().min(2, "Matn kamida 2 belgi"),
+  titleRu: z.string().optional(),
+  titleEn: z.string().optional(),
+  bodyRu: z.string().optional(),
+  bodyEn: z.string().optional(),
 });
 type FormValues = z.infer<typeof schema>;
 
@@ -58,6 +63,7 @@ function ContentBlockCard({
 }) {
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [activeLocale, setActiveLocale] = useState<LocaleTabKey>("uz");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -67,11 +73,25 @@ function ContentBlockCard({
     formState: { errors, isSubmitting, isDirty },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { title: existing?.title ?? label, body: existing?.body ?? "" },
+    defaultValues: {
+      title: existing?.title ?? label,
+      body: existing?.body ?? "",
+      titleRu: existing?.titleRu ?? "",
+      titleEn: existing?.titleEn ?? "",
+      bodyRu: existing?.bodyRu ?? "",
+      bodyEn: existing?.bodyEn ?? "",
+    },
   });
 
   useEffect(() => {
-    reset({ title: existing?.title ?? label, body: existing?.body ?? "" });
+    reset({
+      title: existing?.title ?? label,
+      body: existing?.body ?? "",
+      titleRu: existing?.titleRu ?? "",
+      titleEn: existing?.titleEn ?? "",
+      bodyRu: existing?.bodyRu ?? "",
+      bodyEn: existing?.bodyEn ?? "",
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- faqat serverdan kelgan qiymat o'zgarganda qayta to'ldiriladi
   }, [existing]);
 
@@ -130,8 +150,33 @@ function ContentBlockCard({
         </div>
 
         <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
-          <Input label="Sarlavha" error={errors.title?.message} {...register("title")} />
-          <Textarea label="Matn" rows={5} error={errors.body?.message} {...register("body")} />
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[12px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Til</p>
+            <LocaleTabs active={activeLocale} onChange={setActiveLocale} />
+          </div>
+
+          {activeLocale === "uz" && (
+            <>
+              <Input label="Sarlavha" error={errors.title?.message} {...register("title")} />
+              <Textarea label="Matn" rows={5} error={errors.body?.message} {...register("body")} />
+            </>
+          )}
+          {activeLocale === "ru" && (
+            <>
+              <Input label="Sarlavha (ruscha)" {...register("titleRu")} />
+              <Textarea label="Matn (ruscha)" rows={5} {...register("bodyRu")} />
+            </>
+          )}
+          {activeLocale === "en" && (
+            <>
+              <Input label="Sarlavha (inglizcha)" {...register("titleEn")} />
+              <Textarea label="Matn (inglizcha)" rows={5} {...register("bodyEn")} />
+            </>
+          )}
+          <p className="text-[11.5px] text-[var(--color-text-subtle)]">
+            Ruscha/inglizcha bo'sh qoldirilsa, saytda o'zbekcha matn ko'rsatiladi.
+          </p>
+
           <div className="flex justify-end pt-1">
             <Button type="submit" size="sm" loading={isSubmitting || mutation.isPending} disabled={!isDirty}>
               Saqlash

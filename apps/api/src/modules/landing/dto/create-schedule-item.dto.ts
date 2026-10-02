@@ -13,6 +13,16 @@ export class CreateScheduleItemDto {
   @MinLength(2)
   title!: string;
 
+  @ApiPropertyOptional({ description: "`title`ning rus tarjimasi" })
+  @IsOptional()
+  @IsString()
+  titleRu?: string;
+
+  @ApiPropertyOptional({ description: "`title`ning ingliz tarjimasi" })
+  @IsOptional()
+  @IsString()
+  titleEn?: string;
+
   @ApiPropertyOptional({ enum: LandingScheduleType, default: LandingScheduleType.OTHER })
   @IsOptional()
   @IsEnum(LandingScheduleType)

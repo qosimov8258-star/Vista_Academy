@@ -13,6 +13,26 @@ export class CreateMealDto {
   @IsString()
   description?: string;
 
+  @ApiPropertyOptional({ description: "`title`ning rus tarjimasi" })
+  @IsOptional()
+  @IsString()
+  titleRu?: string;
+
+  @ApiPropertyOptional({ description: "`title`ning ingliz tarjimasi" })
+  @IsOptional()
+  @IsString()
+  titleEn?: string;
+
+  @ApiPropertyOptional({ description: "`description`ning rus tarjimasi" })
+  @IsOptional()
+  @IsString()
+  descriptionRu?: string;
+
+  @ApiPropertyOptional({ description: "`description`ning ingliz tarjimasi" })
+  @IsOptional()
+  @IsString()
+  descriptionEn?: string;
+
   @ApiPropertyOptional({ enum: LandingMealType, default: LandingMealType.OTHER })
   @IsOptional()
   @IsEnum(LandingMealType)

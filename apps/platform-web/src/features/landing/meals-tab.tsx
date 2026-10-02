@@ -14,6 +14,7 @@ import { Input, Select, Textarea } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { ErrorState, EmptyState, CardsSkeleton } from "@/components/ui/states";
 import { CameraIcon, CloseIcon, FoodIcon, PencilIcon, PlusIcon } from "@/components/ui/icons";
+import { LocaleTabs, type LocaleTabKey } from "./locale-tabs";
 
 const TYPE_LABELS: Record<LandingMealType, string> = {
   BREAKFAST: "Nonushta",
@@ -38,6 +39,10 @@ const WEEKDAY_ORDER: LandingWeekday[] = ["MONDAY", "TUESDAY", "WEDNESDAY", "THUR
 const schema = z.object({
   title: z.string().min(2, "Nomi kamida 2 belgi"),
   description: z.string().optional(),
+  titleRu: z.string().optional(),
+  titleEn: z.string().optional(),
+  descriptionRu: z.string().optional(),
+  descriptionEn: z.string().optional(),
   mealType: z.enum(["BREAKFAST", "LUNCH", "SNACK", "DINNER", "OTHER"]),
   weekday: z.enum(["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"]),
   time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Vaqt SS:DD formatida bo'lsin (masalan, 08:30)"),
@@ -163,6 +168,7 @@ function MealFormModal({
 }) {
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [activeLocale, setActiveLocale] = useState<LocaleTabKey>("uz");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isEdit = Boolean(meal);
 
@@ -180,14 +186,30 @@ function MealFormModal({
           ? {
               title: meal.title,
               description: meal.description ?? "",
+              titleRu: meal.titleRu ?? "",
+              titleEn: meal.titleEn ?? "",
+              descriptionRu: meal.descriptionRu ?? "",
+              descriptionEn: meal.descriptionEn ?? "",
               mealType: meal.mealType,
               weekday: meal.weekday ?? "MONDAY",
               time: meal.time ?? "08:00",
               order: meal.order,
             }
-          : { title: "", description: "", mealType: "OTHER", weekday: "MONDAY", time: "08:00", order: 0 },
+          : {
+              title: "",
+              description: "",
+              titleRu: "",
+              titleEn: "",
+              descriptionRu: "",
+              descriptionEn: "",
+              mealType: "OTHER",
+              weekday: "MONDAY",
+              time: "08:00",
+              order: 0,
+            },
       );
       setServerError(null);
+      setActiveLocale("uz");
     }
   }, [open, meal, reset]);
 
@@ -247,7 +269,35 @@ function MealFormModal({
         )}
 
         <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
-          <Input label="Nomi" placeholder="Sabzavotli osh" error={errors.title?.message} {...register("title")} />
+          <div className="space-y-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] p-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[12px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Nomi va tavsifi</p>
+              <LocaleTabs active={activeLocale} onChange={setActiveLocale} />
+            </div>
+
+            {activeLocale === "uz" && (
+              <>
+                <Input label="Nomi" placeholder="Sabzavotli osh" error={errors.title?.message} {...register("title")} />
+                <Textarea label="Tavsif" rows={3} placeholder="Tarkibi va foydasi haqida qisqacha" error={errors.description?.message} {...register("description")} />
+              </>
+            )}
+            {activeLocale === "ru" && (
+              <>
+                <Input label="Nomi (ruscha)" placeholder="Плов, салат, компот" {...register("titleRu")} />
+                <Textarea label="Tavsif (ruscha)" rows={3} {...register("descriptionRu")} />
+              </>
+            )}
+            {activeLocale === "en" && (
+              <>
+                <Input label="Nomi (inglizcha)" placeholder="Plov, salad, compote" {...register("titleEn")} />
+                <Textarea label="Tavsif (inglizcha)" rows={3} {...register("descriptionEn")} />
+              </>
+            )}
+            <p className="text-[11.5px] text-[var(--color-text-subtle)]">
+              Ruscha/inglizcha bo'sh qoldirilsa, saytda o'zbekcha matn ko'rsatiladi.
+            </p>
+          </div>
+
           <Select label="Turi" error={errors.mealType?.message} {...register("mealType")}>
             <option value="BREAKFAST">Nonushta</option>
             <option value="LUNCH">Tushlik</option>
@@ -265,7 +315,6 @@ function MealFormModal({
             </Select>
             <Input label="Vaqti" type="time" error={errors.time?.message} {...register("time")} />
           </div>
-          <Textarea label="Tavsif" rows={3} placeholder="Tarkibi va foydasi haqida qisqacha" error={errors.description?.message} {...register("description")} />
           <Input label="Tartib raqami" type="number" hint="Kichik raqam avval chiqadi" error={errors.order?.message} {...register("order")} />
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={onClose}>

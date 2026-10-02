@@ -1855,7 +1855,7 @@ model Guardian {
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
 
-  organization      Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization      Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   children          ChildGuardian[]
   refreshTokens     GuardianRefreshToken[]
   paymentReceipts   PaymentReceipt[]
@@ -2385,6 +2385,9 @@ model LandingScheduleItem {
   id        String              @id @default(uuid())
   time      String
   title     String
+  /// `title`ning rus/ingliz tarjimasi — bo'sh bo'lsa landing-web `title`ga (uz) qaytadi.
+  titleRu   String?             @map("title_ru")
+  titleEn   String?             @map("title_en")
   type      LandingScheduleType @default(OTHER)
   order     Int                 @default(0)
   createdAt DateTime            @default(now()) @map("created_at")
@@ -2403,16 +2406,21 @@ enum LandingMealType {
 
 /// "Sog'lom taomlar" bo'limi.
 model LandingMeal {
-  id          String          @id @default(uuid())
-  title       String
-  description String?
-  mealType    LandingMealType @default(OTHER) @map("meal_type")
-  weekday     Weekday?
-  time        String?
-  photoPath   String?         @map("photo_path")
-  order       Int             @default(0)
-  createdAt   DateTime        @default(now()) @map("created_at")
-  updatedAt   DateTime        @updatedAt @map("updated_at")
+  id            String          @id @default(uuid())
+  title         String
+  description   String?
+  /// `title`/`description`ning rus/ingliz tarjimasi — bo'sh bo'lsa uz matnga qaytadi.
+  titleRu       String?         @map("title_ru")
+  titleEn       String?         @map("title_en")
+  descriptionRu String?         @map("description_ru")
+  descriptionEn String?         @map("description_en")
+  mealType      LandingMealType @default(OTHER) @map("meal_type")
+  weekday       Weekday?
+  time          String?
+  photoPath     String?         @map("photo_path")
+  order         Int             @default(0)
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
 
   @@index([weekday])
   @@map("landing_meals")
@@ -2420,15 +2428,23 @@ model LandingMeal {
 
 /// "O'qituvchilar" bo'limi.
 model LandingTeacher {
-  id         String   @id @default(uuid())
-  fullName   String   @map("full_name")
-  role       String
-  bio        String?
-  experience String?
-  photoPath  String?  @map("photo_path")
-  order      Int      @default(0)
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  id           String   @id @default(uuid())
+  fullName     String   @map("full_name")
+  role         String
+  bio          String?
+  experience   String?
+  /// `role`/`bio`/`experience`ning rus/ingliz tarjimasi — bo'sh bo'lsa uz matnga
+  /// qaytadi. `fullName` tarjima qilinmaydi (ism).
+  roleRu       String?  @map("role_ru")
+  roleEn       String?  @map("role_en")
+  bioRu        String?  @map("bio_ru")
+  bioEn        String?  @map("bio_en")
+  experienceRu String?  @map("experience_ru")
+  experienceEn String?  @map("experience_en")
+  photoPath    String?  @map("photo_path")
+  order        Int      @default(0)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   @@map("landing_teachers")
 }
@@ -2440,6 +2456,11 @@ model LandingContentBlock {
   key       String   @unique
   title     String
   body      String
+  /// `title`/`body`ning rus/ingliz tarjimasi — bo'sh bo'lsa uz matnga qaytadi.
+  titleRu   String?  @map("title_ru")
+  titleEn   String?  @map("title_en")
+  bodyRu    String?  @map("body_ru")
+  bodyEn    String?  @map("body_en")
   photoPath String?  @map("photo_path")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -2485,6 +2506,9 @@ model LandingGroupStudent {
   group     LandingGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
   name      String
   bio       String?
+  /// `bio`ning rus/ingliz tarjimasi — bo'sh bo'lsa uz matnga qaytadi. `name` tarjima qilinmaydi (ism).
+  bioRu     String?      @map("bio_ru")
+  bioEn     String?      @map("bio_en")
   photoPath String?      @map("photo_path")
   order     Int          @default(0)
   createdAt DateTime     @default(now()) @map("created_at")
