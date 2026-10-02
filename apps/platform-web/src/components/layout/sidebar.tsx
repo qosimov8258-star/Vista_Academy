@@ -31,6 +31,7 @@ import {
   WalletIcon,
 } from "@/components/ui/icons";
 import { CommandPalette } from "./command-palette";
+import { ZeeronLogo, ZeeronMark } from "@/components/ui/zeeron-logo";
 
 type NavIcon = ComponentType<SVGProps<SVGSVGElement>>;
 
@@ -86,13 +87,6 @@ const COLLAPSE_KEY = "zeeron.sidebar.collapsed";
 
 const isActive = (pathname: string, item: { href: string; exact?: boolean }) =>
   item.exact ? pathname === item.href : pathname.startsWith(item.href);
-
-/** Brend yozuvi — logotip rasmi o'rniga matn: har o'lchamda tiniq. */
-export function ZeeronWordmark({ className }: { className?: string }) {
-  return (
-    <span className={clsx("font-bold tracking-[-0.045em] text-[var(--color-text)]", className)}>Zeeron</span>
-  );
-}
 
 /**
  * Yon panel — kulrang tuvalda suzib turuvchi oq karta:
@@ -190,15 +184,17 @@ export function Sidebar() {
       <div className="flex min-h-0 w-full flex-col rounded-[28px] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
         {/* Brend va yig'ish tugmasi */}
         <div className={clsx("flex items-center pb-4 pt-5", collapsed ? "flex-col gap-3 px-3" : "justify-between pl-6 pr-3")}>
-          <Link href="/" aria-label="Zeeron — Dashboard" className="flex items-baseline gap-2 rounded-[10px]">
+          <Link
+            href="/"
+            aria-label="Zeeron — Dashboard"
+            className={clsx("flex rounded-[10px]", collapsed ? "items-center" : "flex-col items-start gap-1.5")}
+          >
             {collapsed ? (
-              <span className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-[var(--color-ink)] text-[20px] font-bold tracking-[-0.04em] text-white">
-                Z
-              </span>
+              <ZeeronMark className="h-11 w-11" />
             ) : (
               <>
-                <ZeeronWordmark className="text-[26px] leading-none" />
-                <span className="text-[10.5px] font-semibold uppercase tracking-[0.09em] text-[var(--color-text-subtle)]">Platforma</span>
+                <ZeeronLogo className="h-[26px] w-auto" />
+                <span className="pl-0.5 text-[10px] font-semibold uppercase leading-none tracking-[0.14em] text-[var(--color-text-subtle)]">Platforma</span>
               </>
             )}
           </Link>

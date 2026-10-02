@@ -10,7 +10,7 @@ import { useAuth } from "@/lib/use-auth";
 import type { DashboardAnalytics } from "@/lib/types";
 import { expiryLabel, formatDayMonth, initials } from "@/lib/format";
 import { BellIcon, SearchIcon } from "@/components/ui/icons";
-import { ZeeronWordmark } from "./sidebar";
+import { ZeeronLogo } from "@/components/ui/zeeron-logo";
 
 export function Topbar() {
   const router = useRouter();
@@ -29,7 +29,7 @@ export function Topbar() {
   return (
     <header className="sticky top-0 z-20 flex h-[68px] items-center justify-between gap-3 bg-[var(--color-bg)]/90 px-4 backdrop-blur-sm sm:px-6">
       <Link href="/" className="md:hidden">
-        <ZeeronWordmark className="text-[22px]" />
+        <ZeeronLogo className="h-[22px] w-auto" />
       </Link>
 
       <form onSubmit={submitSearch} role="search" className="ml-auto hidden w-full max-w-[300px] sm:block">

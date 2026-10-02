@@ -34,3 +34,16 @@ export function ZeeronLogo({ className, animated = false }: { className?: string
     </svg>
   );
 }
+
+/**
+ * Ixcham belgi — qora yumaloq kvadratda logodagi "Z" (yig'ilgan sidebar;
+ * xuddi shu shakl src/app/icon.svg da brauzer tab belgisi).
+ */
+export function ZeeronMark({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 64 64" role="img" aria-label="Zeeron" className={clsx("block", className)}>
+      <rect width="64" height="64" rx="14" fill="#0B0B0C" />
+      <path fill="#FFFFFF" transform="translate(15.80,50.00) scale(0.04932,-0.04932)" d="M46 0V122L449 610L451 589L421 629L441 613H58V730H606V608L202 121L199 144L232 99L208 117H611V0Z" />
+    </svg>
+  );
+}
