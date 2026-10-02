@@ -28,14 +28,8 @@ import {
 import { AssignSubscriptionModal } from "@/features/organizations/assign-subscription-modal";
 import { TopUpModal } from "@/features/organizations/top-up-modal";
 import { EditOrganizationModal } from "@/features/organizations/edit-organization-modal";
+import { WALLET_TX_TYPE_LABEL } from "@/features/organizations/wallet-labels";
 
-const TX_TYPE_LABEL: Record<WalletTransaction["type"], string> = {
-  TOP_UP: "To'ldirish",
-  SUBSCRIPTION_CHARGE: "Obuna to'lovi",
-  REFUND: "Qaytarish",
-  BONUS: "Bonus",
-  ADJUSTMENT: "Tuzatish",
-};
 
 export default function BogchaDetailPage({
   params,
@@ -358,7 +352,7 @@ export default function BogchaDetailPage({
                         className="transition-colors hover:bg-[var(--color-surface-hover)]"
                       >
                         <td className="px-5 py-3 text-[var(--color-text)]">
-                          {TX_TYPE_LABEL[tx.type]}
+                          {WALLET_TX_TYPE_LABEL[tx.type]}
                         </td>
                         <td
                           className={`px-3 py-3 text-right font-medium tabular-nums ${

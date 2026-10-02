@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { getPaginated } from "@/lib/api";
 import type { Organization } from "@/lib/types";
@@ -43,11 +43,26 @@ function initial(name: string): string {
   return name.trim()[0]?.toUpperCase() ?? "?";
 }
 
+// useSearchParams Suspense ichida bo'lishi shart (Next prerender)
 export default function BogchalarPage() {
+  return (
+    <Suspense fallback={<TableSkeleton />}>
+      <BogchalarContent />
+    </Suspense>
+  );
+}
+
+function BogchalarContent() {
   const router = useRouter();
-  const [search, setSearch] = useState("");
+  const urlSearch = useSearchParams().get("search") ?? "";
+  const [search, setSearch] = useState(urlSearch);
   const [status, setStatus] = useState<StatusFilter>("");
   const [page, setPage] = useState(1);
+  // Yuqoridagi umumiy qidiruvdan kelganda (sahifa ochiq bo'lsa ham) maydon yangilanadi
+  useEffect(() => {
+    setSearch(urlSearch);
+    setPage(1);
+  }, [urlSearch]);
   const [createOpen, setCreateOpen] = useState(false);
   const [editOrg, setEditOrg] = useState<Organization | null>(null);
 

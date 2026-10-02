@@ -141,3 +141,43 @@ export interface DashboardSummary {
   mrr: string;
   recentOrganizations: Organization[];
 }
+
+export type AnalyticsPeriod = "day" | "week" | "month" | "year";
+
+export interface OrganizationRef {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+/** GET /platform/dashboard/analytics — pul qiymatlari son (so'm). */
+export interface DashboardAnalytics {
+  period: AnalyticsPeriod;
+  range: { start: string; end: string };
+  kpis: {
+    revenue: { value: number; previous: number; changePct: number | null };
+    activeChildren: { value: number; added: number; changePct: number | null };
+    newOrganizations: { value: number; previous: number; changePct: number | null };
+    mrr: { value: number; activeSubscriptions: number };
+  };
+  revenueByMonth: { month: string; total: number }[];
+  subscriptions: { total: number; active: number; grace: number; suspended: number; cancelled: number; none: number };
+  plans: { id: string; name: string; priceMonthly: number; subscribers: number }[];
+  expiring: {
+    organization: OrganizationRef;
+    plan: { name: string; priceMonthly: number };
+    status: SubscriptionStatus;
+    periodEnd: string;
+    graceUntil: string | null;
+  }[];
+  recentTransactions: {
+    id: string;
+    type: WalletTransactionType;
+    amount: number;
+    balanceAfter: number;
+    note: string | null;
+    createdAt: string;
+    createdBy: string | null;
+    organization: OrganizationRef;
+  }[];
+}

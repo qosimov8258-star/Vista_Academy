@@ -113,7 +113,7 @@ export function LoadingScreen({
         </span>
         <img
           src="/ring_380x380.png"
-          alt="Bog'chalar tarmog'i"
+          alt="Zeeron"
           className="animate-nyx-logo-spin h-[1em] w-auto shrink-0"
         />
         <span className="flex items-center gap-[0.22em] self-end" aria-hidden="true">

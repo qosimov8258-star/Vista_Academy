@@ -5,7 +5,7 @@ import { QueryProvider } from "@/lib/query-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Bog'chalar tarmog'i — Platform Admin",
+  title: "Zeeron — Platforma",
   description: "SaaS Platform Super Admin paneli",
 };
 
