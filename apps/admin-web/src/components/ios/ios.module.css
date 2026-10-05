@@ -1,0 +1,78 @@
+/* iOS grouped dizayn tizimi — animatsiyalar (framer-motion o'rniga CSS) */
+
+/* Faollik ko'rsatkichi tig'lari */
+.spinner > span {
+  animation: blade 0.8s linear infinite;
+}
+@keyframes blade {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.15;
+  }
+}
+
+/*
+ * Varaq (IosSheet): telefonda pastdan chiqadi, sm dan markazda kattalashib
+ * paydo bo'ladi. Yopilishda teskari — keyin DOM'dan olinadi.
+ * Egri chiziq iOS'dagi "spring" ga yaqin (380/34).
+ */
+.overlay {
+  transition: opacity 0.28s ease;
+  opacity: 0;
+}
+.overlay[data-open="true"] {
+  opacity: 1;
+}
+.sheet {
+  transition:
+    transform 0.42s cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 0.3s ease;
+  transform: translateY(100%);
+}
+.sheet[data-open="true"] {
+  transform: translateY(0);
+}
+@media (min-width: 640px) {
+  .sheet {
+    transform: translateY(16px) scale(0.96);
+    opacity: 0;
+  }
+  .sheet[data-open="true"] {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+/* Segment "tabletkasi" suriladi */
+.thumb {
+  transition:
+    transform 0.34s cubic-bezier(0.32, 0.72, 0, 1),
+    width 0.34s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Davomat chizig'i — kirishda chapdan to'ladi */
+.grow {
+  transform-origin: left center;
+  animation: grow 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner > span {
+    animation-duration: 1.6s;
+  }
+  .overlay,
+  .sheet,
+  .thumb {
+    transition: none;
+  }
+  .grow {
+    animation: none;
+  }
+}

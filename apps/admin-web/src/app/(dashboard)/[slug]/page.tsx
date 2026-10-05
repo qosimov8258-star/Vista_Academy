@@ -15,6 +15,7 @@ import { isCallOperatorUser, isCashierPosition } from "@/lib/employee-position";
 import { ChefHome } from "@/features/nutrition/chef-home";
 import { CashierHome } from "@/features/cash/cashier-home";
 import { AdminHome } from "@/features/desk/admin-home";
+import { BranchAdminHome } from "@/features/branch-admin/branch-admin-home";
 import { DirectorHome } from "@/features/director/director-home";
 import { TeacherHome } from "@/features/teacher/teacher-home";
 import { ChildIcon, ChevronRightIcon, MoneyIcon } from "@/components/ui/icons";
@@ -366,9 +367,14 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
     return <OperatorHome slug={slug} />;
   }
 
+  // Filial admini — Sabot Kidz (iOS) uslubidagi o'z bosh sahifasi: bugungi
+  // davomat, guruhlar, ishda yo'q xodimlar va bo'limlar (qarzdorlar unga yopiq)
+  if (user?.role === "BRANCH_ADMIN") {
+    return <BranchAdminHome slug={slug} branchName={user.branchName ?? org.name} />;
+  }
+
   // Administrator (MANAGER) uchun alohida bosh sahifa: bugungi holat va qo'ng'iroqlar.
-  // Filial admini ham shu ko'rinishda, lekin qo'ng'iroq ro'yxatisiz (qarzdorlar unga yopiq).
-  if (user?.role === "MANAGER" || user?.role === "BRANCH_ADMIN") {
+  if (user?.role === "MANAGER") {
     return (
       <div className="space-y-6">
         <div>
@@ -377,7 +383,7 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
           </h1>
           <p className="text-[13px] text-[var(--color-text-muted)]">{tr("Bugun ·")}{" "}{todayLabel()}</p>
         </div>
-        <AdminHome slug={slug} showCalls={user?.role === "MANAGER"} />
+        <AdminHome slug={slug} />
       </div>
     );
   }

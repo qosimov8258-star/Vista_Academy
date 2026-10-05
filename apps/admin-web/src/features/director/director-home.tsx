@@ -25,11 +25,11 @@ import styles from "./director-home.module.css";
 import { useTr } from "@/i18n/tr";
 
 const TZ = "Asia/Tashkent";
-const WEEKDAYS = ["Yakshanba", "Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba"];
-const MONTHS = ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avgust", "sentabr", "oktabr", "noyabr", "dekabr"];
+export const WEEKDAYS = ["Yakshanba", "Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba"];
+export const MONTHS = ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avgust", "sentabr", "oktabr", "noyabr", "dekabr"];
 
 /** Toshkent vaqti bo'yicha soat va sana — foydalanuvchi qaysi mintaqada bo'lishidan qat'i nazar */
-function tashkentNow() {
+export function tashkentNow() {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: TZ,
     year: "numeric",
@@ -43,7 +43,7 @@ function tashkentNow() {
   return { hour: get("hour"), date };
 }
 
-function greeting(hour: number) {
+export function greeting(hour: number) {
   if (hour >= 5 && hour < 11) return "Xayrli tong";
   if (hour >= 11 && hour < 17) return "Xayrli kun";
   if (hour >= 17 && hour < 22) return "Xayrli kech";
