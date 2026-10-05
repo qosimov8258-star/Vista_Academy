@@ -3,7 +3,9 @@
 // yuboradigan { title, body, url } payload'ini kutadi).
 
 self.addEventListener("push", (event) => {
-  let data = { title: "Vista Academy", body: "" };
+  // Sarlavha API'dan keladi; kelmasa — neytral matn (bitta bog'cha nomi
+  // qattiq yozilmaydi: bu fayl hamma bog'chalar uchun bitta)
+  let data = { title: "Yangi bildirishnoma", body: "" };
   try {
     if (event.data) data = { ...data, ...event.data.json() };
   } catch {
@@ -13,8 +15,9 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
-      icon: "/logo.png",
-      badge: "/logo.png",
+      icon: "/push-icon.png",
+      // Android holat qatorida faqat shaffoflik (alfa) ko'rinadi — fonsiz "Z"
+      badge: "/push-badge.png",
       data: { url: data.url || "/" },
     }),
   );

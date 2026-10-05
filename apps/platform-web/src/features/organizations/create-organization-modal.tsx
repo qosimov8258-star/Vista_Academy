@@ -166,7 +166,7 @@ export function CreateOrganizationModal({ open, onClose }: { open: boolean; onCl
         </div>
         <Input
           label="Veb-sayt (lending sahifa)"
-          placeholder="vista-academy.uz"
+          placeholder="bogcha-sayti.uz"
           hint="Ixtiyoriy — mustaqil lending saytingiz domeni. Kiritilsa, shu saytdan kelgan arizalar avtomatik shu bog'chaga tushadi"
           error={errors.website?.message}
           {...register("website")}

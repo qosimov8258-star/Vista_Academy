@@ -395,7 +395,7 @@ export default function SettingsPage({ params }: { params: Promise<{ slug: strin
             <div className="rounded-[20px] bg-[var(--color-surface)] p-4">
               <Input
                 label={tr("Bog'cha nomi")}
-                placeholder={tr("Masalan, Vista Academy")}
+                placeholder={tr("Masalan, Quyoshcha bog'chasi")}
                 autoFocus
                 error={orgNameForm.formState.errors.name?.message ? tr(orgNameForm.formState.errors.name.message) : undefined}
                 {...orgNameForm.register("name")}

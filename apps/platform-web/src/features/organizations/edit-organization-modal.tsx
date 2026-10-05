@@ -268,7 +268,7 @@ export function EditOrganizationModal({
         </div>
         <Input
           label="Veb-sayt (lending sahifa)"
-          placeholder="vista-academy.uz"
+          placeholder="bogcha-sayti.uz"
           hint="Mustaqil lending saytingiz domeni. Kiritilsa, shu saytdan kelgan arizalar avtomatik shu bog'chaning admin panel va call-centriga tushadi"
           error={errors.website?.message}
           {...register("website")}
