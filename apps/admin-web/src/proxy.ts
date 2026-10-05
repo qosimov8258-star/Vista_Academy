@@ -180,13 +180,15 @@ export const config = {
   // `ota-ona` — ota-ona kabineti: u o'z autentifikatsiyasiga ega, proxy
   // unga faqat subdomenda (manzilni ichki yo'lga o'girish uchun) tegadi.
   // `api` — lokalda API shu host orqali (next.config rewrites), serverda nginx.
-  // `face-model`, `logo.png`, `cursor.png`/`cursor@2x.png`,
+  // `sw.js` — ota-ona push bildirishnomasining service worker'i (yo'naltirilsa
+  // brauzer uni ro'yxatdan o'tkazmaydi va push umuman ishlamaydi).
+  // `face-model`, `push-icon.png`/`push-badge.png`, `icon.svg`, `cursor.png`/`cursor@2x.png`,
   // `pointer.png`/`pointer@2x.png` — public/ dagi statik fayllar (yuzni
-  // aniqlash modeli, brend logotipi, custom kursor rasmlari — @2x
+  // aniqlash modeli, push bildirishnoma belgilari, sayt belgisi, custom kursor rasmlari — @2x
   // Retina/HiDPI ekranlar uchun). Ular chiqarib tashlanmasa, proxy
   // birinchi bo'lakni tashkilot slug'i deb o'ylab, so'rovni login
   // sahifasiga yo'naltiradi.
   matcher: [
-    "/((?!_next/static|_next/image|api/|favicon.ico|face-model|logo.png|cursor.png|cursor@2x.png|pointer.png|pointer@2x.png).*)",
+    "/((?!_next/static|_next/image|api/|favicon.ico|icon.svg|sw.js|face-model|push-icon.png|push-badge.png|cursor.png|cursor@2x.png|pointer.png|pointer@2x.png).*)",
   ],
 };
