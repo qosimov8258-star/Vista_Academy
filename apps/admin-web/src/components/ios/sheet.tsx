@@ -142,10 +142,20 @@ export function IosSheet({
           )}
         </header>
 
-        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-4 pb-[max(1.75rem,env(safe-area-inset-bottom))]">
+        <div
+          className={clsx(
+            "min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-4",
+            view.footer ? "pb-4" : "pb-[max(1.75rem,env(safe-area-inset-bottom))]",
+          )}
+        >
           {view.children}
-          {view.footer && <div className="space-y-2.5 pt-1">{view.footer}</div>}
         </div>
+        {/* Bosh amal doim pastda — uzun formani oxirigacha aylantirish shart emas */}
+        {view.footer && (
+          <div className="relative space-y-2.5 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 before:pointer-events-none before:absolute before:inset-x-0 before:-top-6 before:h-6 before:bg-gradient-to-t before:from-[#f2f2f7] before:to-transparent">
+            {view.footer}
+          </div>
+        )}
       </div>
     </div>,
     document.body,
@@ -174,10 +184,53 @@ export function SheetRow({ label, children, error }: { label: ReactNode; childre
   );
 }
 
-/** Varaq pastidagi keng asosiy tugma (h-12, brend rang) */
-export function SheetPrimaryButton({ children, onClick, href }: { children: ReactNode; onClick?: () => void; href?: string }) {
-  const className =
-    "flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[var(--color-primary)] text-[16px] font-semibold text-white shadow-[0_8px_18px_-8px_color-mix(in_srgb,var(--color-primary)_55%,transparent)] transition-transform active:scale-[0.96]";
+/**
+ * Varaq pastidagi keng asosiy tugma (h-12, brend rang) — bosh barmoq
+ * yetadigan joyda. Formada `type="submit"` + `form` bilan ishlaydi;
+ * `dim` — forma hali to'liq emas (xira, lekin bosiladi va nima
+ * yetishmasligini aytadi); `loading` — spinner, qayta bosilmaydi.
+ */
+export function SheetPrimaryButton({
+  children,
+  onClick,
+  href,
+  type = "button",
+  form,
+  loading = false,
+  dim = false,
+}: {
+  children: ReactNode;
+  onClick?: () => void;
+  href?: string;
+  type?: "button" | "submit";
+  form?: string;
+  loading?: boolean;
+  dim?: boolean;
+}) {
+  const className = clsx(
+    "flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[var(--color-primary)] text-[16px] font-semibold text-white shadow-[0_8px_18px_-8px_color-mix(in_srgb,var(--color-primary)_55%,transparent)] transition-[transform,opacity] active:scale-[0.96] disabled:pointer-events-none",
+    dim && "opacity-45",
+  );
+  if (href) {
+    return (
+      <Link href={href} className={className}>
+        {children}
+      </Link>
+    );
+  }
+  return (
+    <button type={type} form={form} onClick={onClick} disabled={loading} aria-busy={loading || undefined} className={className}>
+      {loading ? <Spinner className="h-5 w-5 text-white" /> : children}
+    </button>
+  );
+}
+
+/** Varaq pastidagi ikkinchi darajali tugma (kulrang) */
+export function SheetSecondaryButton({ children, onClick, href, danger = false }: { children: ReactNode; onClick?: () => void; href?: string; danger?: boolean }) {
+  const className = clsx(
+    "flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#767680]/[0.12] text-[16px] font-semibold transition-transform active:scale-[0.96]",
+    danger ? "text-[#ff3b30]" : "text-[var(--color-primary)]",
+  );
   if (href) {
     return (
       <Link href={href} className={className}>
