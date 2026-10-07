@@ -23,7 +23,7 @@ export function Toast({ toast, onDismiss }: { toast: ToastState | null; onDismis
   if (!toast || typeof document === "undefined") return null;
 
   return createPortal(
-    <div className="pointer-events-none fixed inset-x-0 top-4 z-[60] flex justify-center px-4 sm:inset-x-auto sm:right-4 sm:justify-end">
+    <div className="pointer-events-none fixed inset-x-0 top-4 z-[90] flex justify-center px-4 sm:inset-x-auto sm:right-4 sm:justify-end">
       <div
         role="status"
         className={clsx(
