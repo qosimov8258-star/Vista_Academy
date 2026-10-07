@@ -1,6 +1,8 @@
 import { ParentTabBar } from "./tab-bar";
 import { ParentPageTransition } from "./page-transition";
 import { CabinetThemeProvider } from "./theme";
+import { tenantMetadata } from "@/lib/tenant-metadata";
+import type { Metadata } from "next";
 
 /**
  * Kabinet qobig'i. Fon va ko'rinish (yorug'/qorong'i) CabinetThemeProvider'da
@@ -9,6 +11,10 @@ import { CabinetThemeProvider } from "./theme";
  *
  * Kirish sahifasi bu guruhdan tashqarida: u yerda pastki menyu kerak emas.
  */
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  return tenantMetadata((await params).slug);
+}
+
 export default async function ParentCabinetLayout({
   children,
   params,
