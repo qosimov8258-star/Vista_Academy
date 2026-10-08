@@ -20,6 +20,7 @@ import { prepareReceiptPhoto } from "@/lib/receipt-photo";
 import { initials } from "@/components/ui/avatar";
 import styles from "../parent.module.css";
 import { CardFx } from "./card-fx";
+import { NotifyTeacher } from "./notify-teacher";
 import { useCabinetTheme } from "./theme";
 import { useTr } from "@/i18n/tr";
 
@@ -279,6 +280,8 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
             {stripQuery.data && <AttendanceCalendar strip={stripQuery.data} />}
           </section>
         )}
+
+        {childId && <NotifyTeacher childId={childId} />}
 
         {/* To'lov eslatmasi — bog'cha sozlagan kunlar oynasida to'lanmagan
             hisob-faktura bo'lsa chiqadi, to'lov qilingach o'zi yo'qoladi. */}
