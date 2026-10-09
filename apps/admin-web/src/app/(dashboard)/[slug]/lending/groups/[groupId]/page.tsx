@@ -54,6 +54,7 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
   );
   const [deletingStudent, setDeletingStudent] = useState<LandingGroupStudent | null>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
+  const cardInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
   const groupsQuery = useQuery({
@@ -81,6 +82,12 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
   });
 
   const coverMutation = useMutation({
+    mutationFn: (file: File) => api.upload<LandingGroup>(`/app/landing/groups/${groupId}/cover-photo`, file),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["landing-groups"] }),
+    onError: (err) => setServerError(err instanceof ApiError ? err.message : tr("Rasm yuklashda xatolik")),
+  });
+
+  const cardMutation = useMutation({
     mutationFn: (file: File) => api.upload<LandingGroup>(`/app/landing/groups/${groupId}/photo`, file),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["landing-groups"] }),
     onError: (err) => setServerError(err instanceof ApiError ? err.message : tr("Rasm yuklashda xatolik")),
@@ -119,6 +126,15 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
     }
   };
 
+  const handleCardPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (file) {
+      setServerError(null);
+      cardMutation.mutate(file);
+    }
+  };
+
   const handlePhotoPick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
@@ -154,11 +170,11 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
         <ErrorState message={tr("Guruh topilmadi")} />
       ) : (
         <>
-          {/* Hero — guruh sahifasidagi bosh rasm bilan bir xil joylashuv (object-contain — saytdagi kabi kesilmasdan to'liq ko'rinadi) */}
+          {/* Hero — guruh sahifasidagi bosh rasm (object-contain — saytdagi kabi kesilmasdan to'liq ko'rinadi). Kartochkadagi rasmdan alohida. */}
           <div className="relative h-[220px] w-full overflow-hidden rounded-[var(--radius-xl)] bg-[var(--color-surface-sunken)] sm:h-[300px]">
-            {group.photoPath ? (
+            {group.coverPhotoPath ? (
               // eslint-disable-next-line @next/next/no-img-element -- API'dan kelgan dinamik rasm
-              <img src={assetUrl(group.photoPath) ?? undefined} alt={tr(group.name)} className="absolute inset-0 h-full w-full object-contain" />
+              <img src={assetUrl(group.coverPhotoPath) ?? undefined} alt={tr(group.name)} className="absolute inset-0 h-full w-full object-contain" />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center">
                 <GroupIcon className="h-10 w-10 text-[var(--color-text-subtle)]" />
@@ -176,7 +192,7 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
                   type="button"
                   onClick={() => coverInputRef.current?.click()}
                   disabled={coverMutation.isPending}
-                  title={tr("Tavsiya: kvadrat (1:1) rasm, kamida 800x800px — bosh sahifadagi kartochkada ham, bu yerdagi katta rasmda ham kesilmasdan to'liq chiqadi")}
+                  title={tr("Tavsiya: kvadrat (1:1) rasm, kamida 800x800px — guruh sahifasining katta rasmida kesilmasdan to'liq chiqadi")}
                   className="absolute right-4 top-4 flex items-center gap-1.5 rounded-full bg-black/40 px-3.5 py-2 text-[13px] font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/55 disabled:cursor-wait"
                 >
                   <CameraIcon className="h-3.5 w-3.5" />
@@ -187,7 +203,7 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
           </div>
           {canWrite && (
             <p className="text-[12.5px] text-[var(--color-text-muted)]">
-              {tr("Tavsiya: kvadrat (1:1) rasm, kamida 800×800px, fon oq yoki shaffof — shu rasm bosh sahifadagi kartochkada va guruh sahifasining katta rasmida kesilmasdan to'liq ko'rinadi.")}
+              {tr("Tavsiya: kvadrat (1:1) rasm, kamida 800×800px, fon oq yoki shaffof — shu rasm faqat guruh sahifasining katta (bosh) rasmida kesilmasdan to'liq ko'rinadi.")}
             </p>
           )}
 
@@ -339,6 +355,35 @@ export default function LendingGroupDetailPage({ params }: { params: Promise<{ s
             {group.photos.length === 0 && !canWrite && (
               <p className="mt-4 text-[13px] text-[var(--color-text-muted)]">{tr("Hali rasm qo'shilmagan")}</p>
             )}
+          </div>
+
+          {/* Kartochka rasmi — guruhlar ro'yxatida ko'rinadigan rasm, hero'dan alohida */}
+          <div className="rounded-[var(--radius-xl)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] p-4 sm:p-5">
+            <h2 className="text-[16px] font-semibold text-[var(--color-text)]">{tr("Kartochka rasmi")}</h2>
+            <p className="mt-0.5 text-[13px] text-[var(--color-text-muted)]">
+              {tr("Guruhlar ro'yxatida (kartochkada) ko'rinadigan rasm — bosh (hero) rasmdan alohida.")}
+            </p>
+            <div className="mt-3 flex items-center gap-3">
+              <div className="h-20 w-20 shrink-0 overflow-hidden rounded-[var(--radius-lg)] bg-[var(--color-surface-sunken)]">
+                {group.photoPath ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- API'dan kelgan dinamik rasm
+                  <img src={assetUrl(group.photoPath) ?? undefined} alt={tr(group.name)} className="h-full w-full object-contain" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <GroupIcon className="h-6 w-6 text-[var(--color-text-subtle)]" />
+                  </div>
+                )}
+              </div>
+              {canWrite && (
+                <>
+                  <input ref={cardInputRef} type="file" accept="image/*" className="hidden" onChange={handleCardPick} />
+                  <Button type="button" size="sm" variant="outline" loading={cardMutation.isPending} onClick={() => cardInputRef.current?.click()}>
+                    <CameraIcon className="h-4 w-4" />
+                    {tr("Rasmni almashtirish")}
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
         </>
       )}

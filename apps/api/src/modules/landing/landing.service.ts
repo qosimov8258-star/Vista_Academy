@@ -295,15 +295,29 @@ export class LandingService {
       this.prisma.landingGroupStudent.findMany({ where: { groupId: id }, select: { photoPath: true } }),
     ]);
     await this.prisma.landingGroup.delete({ where: { id } });
-    for (const path of [group.photoPath, ...photos.map((p) => p.path), ...students.map((s) => s.photoPath)]) {
+    for (const path of [
+      group.photoPath,
+      group.coverPhotoPath,
+      ...photos.map((p) => p.path),
+      ...students.map((s) => s.photoPath),
+    ]) {
       await this.deleteUploadedPhoto(path);
     }
   }
 
+  /** Kartochkada (guruhlar ro'yxatida) ko'rinadigan rasm. */
   async setGroupPhoto(id: string, photoPath: string) {
     const group = await this.findGroup(id);
     const updated = await this.prisma.landingGroup.update({ where: { id }, data: { photoPath } });
     await this.deleteUploadedPhoto(group.photoPath);
+    return updated;
+  }
+
+  /** Guruhning o'z sahifasidagi bosh (hero) rasmi — kartochkadagi rasmdan alohida. */
+  async setGroupCoverPhoto(id: string, coverPhotoPath: string) {
+    const group = await this.findGroup(id);
+    const updated = await this.prisma.landingGroup.update({ where: { id }, data: { coverPhotoPath } });
+    await this.deleteUploadedPhoto(group.coverPhotoPath);
     return updated;
   }
 

@@ -2528,7 +2528,10 @@ model LandingGroup {
   id        String                @id @default(uuid())
   name      String
   slug      String                @unique
+  /// Kartochkada (guruhlar ro'yxatida) ko'rinadigan kichik rasm.
   photoPath String?               @map("photo_path")
+  /// Guruhning o'z sahifasidagi katta bosh (hero) rasm — kartochkadagi rasmdan alohida.
+  coverPhotoPath String?          @map("cover_photo_path")
   order     Int                   @default(0)
   createdAt DateTime              @default(now()) @map("created_at")
   updatedAt DateTime              @updatedAt @map("updated_at")
