@@ -1,18 +1,19 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { Controller, useForm, type FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { CreateChildResult, ChildCredentials, Group } from "@/lib/types";
-import { Modal } from "@/components/ui/modal";
-import { Input, Select } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { PasswordChecklist, getPasswordRules } from "@/components/ui/password-checklist";
 import { CredentialRow } from "@/components/ui/credential-row";
-import { EyeIcon, EyeOffIcon, CheckIcon, PencilIcon } from "@/components/ui/icons";
+import { CameraIcon, CheckIcon } from "@/components/ui/icons";
+import { Toast, type ToastState } from "@/components/ui/toast";
+import { IosSheet, SheetPrimaryButton } from "@/components/ios/sheet";
+import { DobPicker, FieldRow, FormSection, IosSwitch, MoneyInput, PasswordInput, Segmented, SelectInput, TextInput } from "@/components/ios/form";
+import { Spinner } from "@/components/ios/spinner";
 import { prepareChildPhoto } from "@/lib/child-photo";
 import { initials } from "@/components/ui/avatar";
 import { validateUzbekPhone } from "@/lib/phone";
@@ -77,8 +78,30 @@ function buildSchema(hasGroups: boolean) {
 
 type FormValues = z.infer<ReturnType<typeof buildSchema>>;
 
+/** Xatolar formadagi tartibda — toast birinchisini aytadi */
+const FIELD_ORDER: (keyof FormValues)[] = [
+  "lastName",
+  "firstName",
+  "gender",
+  "groupId",
+  "birthDate",
+  "guardianFullName",
+  "guardianRelation",
+  "guardianPhone",
+  "guardianPassword",
+  "guardianConfirmPassword",
+  "invoiceAmount",
+  "invoiceDueDate",
+];
+
+/**
+ * Yangi bola — iOS varag'ida. Bo'limlar: surat, bola, ota-ona, ota-ona
+ * kabineti paroli (ixtiyoriy), birinchi hisob-faktura (ixtiyoriy).
+ * Saqlangach ota-ona login/paroli shu varaqning o'zida bir marta ko'rsatiladi.
+ */
 export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClose: () => void; slug: string }) {
   const tr = useTr();
+  const formId = useId();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
   const [photoImage, setPhotoImage] = useState<string | null>(null);
@@ -86,8 +109,7 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
   const [photoChecking, setPhotoChecking] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [createdCredentials, setCreatedCredentials] = useState<ChildCredentials | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [toast, setToast] = useState<ToastState | null>(null);
 
   const { data: groups } = useQuery({
     queryKey: ["groups", slug],
@@ -99,14 +121,15 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
 
   const {
     register,
+    control,
     handleSubmit,
     reset,
     watch,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isValid },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     mode: "onChange",
-    defaultValues: { guardianRelation: "MOTHER", birthDate: "" },
+    defaultValues: { guardianRelation: "MOTHER", birthDate: "", groupId: "" },
   });
 
   const lastName = watch("lastName");
@@ -184,245 +207,224 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
   });
 
   const handleClose = () => {
+    if (mutation.isPending) return;
     reset();
     setServerError(null);
     setPhotoImage(null);
     setPhotoError(null);
     setCreatedCredentials(null);
-    setShowPassword(false);
-    setShowConfirmPassword(false);
     onClose();
   };
 
+  // To'liq emas: nima yetishmasligini toast aytadi, klaviatura yopiladi
+  const onInvalid = (formErrors: FieldErrors<FormValues>) => {
+    const first = FIELD_ORDER.find((key) => formErrors[key]);
+    const message = first ? formErrors[first]?.message : undefined;
+    setToast({ type: "error", message: tr(message ?? "Majburiy maydonlarni to'ldiring") });
+    (document.activeElement as HTMLElement | null)?.blur?.();
+  };
+  const submit = handleSubmit((values) => {
+    setServerError(null);
+    mutation.mutate(values);
+  }, onInvalid);
+
+  const saving = isSubmitting || mutation.isPending;
+  const err = (key: keyof FormValues) => errors[key]?.message as string | undefined;
+
   if (createdCredentials) {
     return (
-      <Modal open={open} onClose={handleClose} title={tr("Bola qo'shildi")}>
-        <div className="space-y-4">
-          <div className="flex flex-col items-center gap-2 text-center">
-            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-success-bg)] text-[var(--color-success)]">
-              <CheckIcon className="h-6 w-6" />
-            </span>
-            <p className="text-sm text-[var(--color-text-muted)]">
-              {tr("Ota-ona kabineti ochildi. Login va parolni ota-onaga bering — parol qayta ko'rsatilmaydi.")}
-            </p>
-          </div>
+      <IosSheet
+        open={open}
+        onClose={handleClose}
+        cancelLabel="Yopish"
+        title={tr("Bola qo'shildi")}
+        footer={<SheetPrimaryButton onClick={handleClose}>{tr("Tayyor")}</SheetPrimaryButton>}
+      >
+        <div className="flex flex-col items-center gap-3 pt-2 text-center">
+          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#34c759]/[0.14] text-[#34c759]">
+            <CheckIcon className="h-8 w-8" strokeWidth={2.6} />
+          </span>
+          <p className="max-w-[360px] text-[14px] text-[#6d6d72]">
+            {tr("Ota-ona kabineti ochildi. Login va parolni ota-onaga bering — parol qayta ko'rsatilmaydi.")}
+          </p>
+        </div>
+        <div className="space-y-2.5">
           <CredentialRow label={tr("Login")} value={createdCredentials.login} />
           <CredentialRow label={tr("Parol")} value={createdCredentials.password} />
-          <div className="flex justify-end pt-1">
-            <Button type="button" onClick={handleClose}>
-              {tr("Yopish")}
-            </Button>
-          </div>
         </div>
-      </Modal>
+      </IosSheet>
     );
   }
 
   return (
-    <Modal open={open} onClose={handleClose} title={tr("Yangi bola")}>
-      <form
-        className="space-y-4"
-        onSubmit={handleSubmit((values) => {
-          setServerError(null);
-          mutation.mutate(values);
-        })}
-      >
+    <IosSheet
+      open={open}
+      onClose={handleClose}
+      title={tr("Yangi bola")}
+      action={{ label: "Qo'shish", onClick: () => void submit(), ready: isValid, loading: saving }}
+      footer={
+        <SheetPrimaryButton type="submit" form={formId} loading={saving} dim={!isValid}>
+          {tr("Bolani qo'shish")}
+        </SheetPrimaryButton>
+      }
+    >
+      <form id={formId} noValidate onSubmit={submit} className="space-y-6">
         {serverError && (
-          <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
+          <p role="alert" className="rounded-[18px] bg-[#ff3b30]/[0.1] px-4 py-3 text-[14px] text-[#ff3b30]">
             {tr(serverError)}
-          </div>
+          </p>
         )}
 
-        <div className="flex flex-col items-center gap-2">
-          <div className="group relative shrink-0">
-            {photoImage ? (
-              // eslint-disable-next-line @next/next/no-img-element -- data: URL, Next optimizatsiyasi kerak emas
-              <img
-                src={photoImage}
-                alt={tr("Bola surati")}
-                width={72}
-                height={72}
-                className="h-[72px] w-[72px] shrink-0 rounded-full object-cover ring-1 ring-inset ring-[rgba(16,24,40,0.06)]"
-              />
-            ) : (
-              <span className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)]/10 text-[26px] font-semibold text-[var(--color-primary)] ring-1 ring-inset ring-[rgba(16,24,40,0.06)]">
-                {initials(`${firstName ?? ""} ${lastName ?? ""}`) || "?"}
-              </span>
-            )}
-            <button
-              type="button"
-              onClick={() => photoInputRef.current?.click()}
-              disabled={photoChecking}
-              aria-label={tr("Bola suratini tanlash")}
-              title={tr("Surat qo'yish")}
-              className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-full bg-black/45 text-white opacity-0 transition-opacity duration-[var(--dur-fast)] hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none disabled:cursor-wait disabled:opacity-100 motion-reduce:transition-none"
-            >
-              {photoChecking ? (
-                <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-              ) : (
-                <PencilIcon className="h-5 w-5" />
-              )}
-            </button>
-            <input
-              ref={photoInputRef}
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              className="hidden"
-              onChange={handlePhotoPick}
-            />
-          </div>
+        {/* Surat */}
+        <div className="flex flex-col items-center gap-2 pt-1">
           <button
             type="button"
             onClick={() => photoInputRef.current?.click()}
             disabled={photoChecking}
-            className="cursor-pointer text-[12.5px] font-medium text-[var(--color-primary)] hover:underline disabled:opacity-60"
+            aria-label={tr("Bola suratini tanlash")}
+            className="relative rounded-full transition-transform active:scale-[0.96]"
           >
-            {photoChecking ? "Tekshirilmoqda..." : photoImage ? "Rasmni almashtirish" : tr("Surat qo'yish (ixtiyoriy)")}
+            {photoImage ? (
+              // eslint-disable-next-line @next/next/no-img-element -- data: URL, Next optimizatsiyasi kerak emas
+              <img src={photoImage} alt={tr("Bola surati")} width={84} height={84} className="h-[84px] w-[84px] rounded-full object-cover" />
+            ) : (
+              <span className="flex h-[84px] w-[84px] items-center justify-center rounded-full bg-[var(--color-primary)]/12 text-[30px] font-semibold text-[var(--color-primary)]">
+                {initials(`${firstName ?? ""} ${lastName ?? ""}`) || <CameraIcon className="h-8 w-8" />}
+              </span>
+            )}
+            {photoChecking && (
+              <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 text-white">
+                <Spinner className="h-6 w-6" />
+              </span>
+            )}
           </button>
+          <button
+            type="button"
+            onClick={() => photoInputRef.current?.click()}
+            disabled={photoChecking}
+            className="rounded-full px-3 py-1 text-[15px] text-[var(--color-primary)] transition-opacity active:opacity-50 disabled:opacity-50"
+          >
+            {photoChecking ? tr("Tekshirilmoqda...") : photoImage ? tr("Rasmni almashtirish") : tr("Surat qo'yish (ixtiyoriy)")}
+          </button>
+          <input ref={photoInputRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={handlePhotoPick} />
           {photoError && (
-            <p role="alert" className="max-w-[320px] text-center text-[12.5px] text-[var(--color-danger)]">
+            <p role="alert" className="max-w-[320px] text-center text-[12.5px] text-[#ff3b30]">
               {tr(photoError)}
             </p>
           )}
         </div>
 
         {/* Familiya oldinda: ro'yxatlar va hujjatlar "Familiya Ism" tartibida */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input
-            label={tr("Familiya")}
-            placeholder={tr("Umaraliyev")}
-            error={errors.lastName?.message}
-            {...register("lastName")}
-          />
-          <Input label={tr("Ism")} placeholder={tr("Usmon")} error={errors.firstName?.message} {...register("firstName")} />
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Select label={tr("Jinsi")} defaultValue="" error={errors.gender?.message} {...register("gender")}>
-            <option value="" disabled>
-              {tr("Tanlang")}
-            </option>
-            <option value="MALE">{tr("O'g'il bola")}</option>
-            <option value="FEMALE">{tr("Qiz bola")}</option>
-          </Select>
-          <Select
-            label={activeGroups.length > 0 ? tr("Guruh") : tr("Guruh (ixtiyoriy)")}
-            defaultValue=""
-            error={errors.groupId?.message}
-            {...register("groupId")}
-          >
-            <option value="" disabled={activeGroups.length > 0}>
-              {activeGroups.length > 0 ? tr("Tanlang") : "Tanlanmagan"}
-            </option>
-            {activeGroups.map((group) => (
-              <option key={group.id} value={group.id}>
-                {tr(group.name)} ({group._count?.children ?? 0}/{tr(group.capacity)})
-              </option>
-            ))}
-          </Select>
-        </div>
-
-        <Input
-          label={tr("Tug'ilgan sana (ixtiyoriy)")}
-          type="date"
-          error={errors.birthDate?.message}
-          hint={tr("Saqlanganda bolaga qisqa ID beriladi (masalan id14732)")}
-          {...register("birthDate")}
-        />
-
-        <div className="space-y-4 border-t border-[var(--color-border)] pt-4">
-          <p className="text-sm font-medium text-[var(--color-text)]">{tr("Aloqa uchun ota-ona")}</p>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_140px]">
-            <Input
-              label={tr("Ismi va familiyasi")}
-              placeholder={tr("Umaraliyeva Aziza")}
-              error={errors.guardianFullName?.message}
-              {...register("guardianFullName")}
+        <FormSection title={tr("Bola")} footer={tr("Saqlanganda bolaga qisqa ID beriladi (masalan id14732)")}>
+          <FieldRow label={tr("Familiya")} htmlFor={`${formId}-ln`} error={err("lastName")}>
+            <TextInput id={`${formId}-ln`} placeholder={tr("Umaraliyev")} autoComplete="off" {...register("lastName")} />
+          </FieldRow>
+          <FieldRow label={tr("Ism")} htmlFor={`${formId}-fn`} error={err("firstName")}>
+            <TextInput id={`${formId}-fn`} placeholder={tr("Usmon")} autoComplete="off" {...register("firstName")} />
+          </FieldRow>
+          <FieldRow label={tr("Jinsi")} error={err("gender")}>
+            <Controller
+              control={control}
+              name="gender"
+              render={({ field }) => (
+                <Segmented
+                  label={tr("Jinsi")}
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={[
+                    { value: "MALE", label: tr("O'g'il bola") },
+                    { value: "FEMALE", label: tr("Qiz bola") },
+                  ]}
+                />
+              )}
             />
-            <Select label={tr("Kim bo'ladi")} {...register("guardianRelation")}>
+          </FieldRow>
+          <FieldRow label={activeGroups.length > 0 ? tr("Guruh") : tr("Guruh (ixtiyoriy)")} htmlFor={`${formId}-g`} error={err("groupId")}>
+            <SelectInput id={`${formId}-g`} {...register("groupId")}>
+              <option value="" disabled={activeGroups.length > 0}>
+                {activeGroups.length > 0 ? tr("Tanlang") : tr("Tanlanmagan")}
+              </option>
+              {activeGroups.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {tr(group.name)} ({group._count?.children ?? 0}/{group.capacity})
+                </option>
+              ))}
+            </SelectInput>
+          </FieldRow>
+          <FieldRow label={tr("Tug'ilgan sana")} error={err("birthDate")}>
+            <Controller control={control} name="birthDate" render={({ field }) => <DobPicker value={field.value ?? ""} onChange={field.onChange} />} />
+          </FieldRow>
+        </FormSection>
+
+        <FormSection title={tr("Aloqa uchun ota-ona")} footer={tr("Xuddi shu raqam bilan yana bola qo'shilsa, ikkalasi bir ota-onaga bog'lanadi")}>
+          <FieldRow label={tr("Ism familiya")} htmlFor={`${formId}-gn`} error={err("guardianFullName")}>
+            <TextInput id={`${formId}-gn`} placeholder={tr("Umaraliyeva Aziza")} autoComplete="off" {...register("guardianFullName")} />
+          </FieldRow>
+          <FieldRow label={tr("Kim bo'ladi")} htmlFor={`${formId}-gr`}>
+            <SelectInput id={`${formId}-gr`} {...register("guardianRelation")}>
               <option value="MOTHER">{tr("Onasi")}</option>
               <option value="FATHER">{tr("Otasi")}</option>
               <option value="GRANDPARENT">{tr("Buvi/bobo")}</option>
               <option value="OTHER">{tr("Boshqa")}</option>
-            </Select>
-          </div>
-          <Input
-            label={tr("Telefon raqami")}
-            type="tel"
-            placeholder="+998 90 123 45 67"
-            maxLength={13}
-            hint={tr("Xuddi shu raqam bilan yana bola qo'shilsa, ikkalasi bir ota-onaga bog'lanadi")}
-            error={errors.guardianPhone?.message}
-            {...register("guardianPhone")}
-          />
+            </SelectInput>
+          </FieldRow>
+          <FieldRow label={tr("Telefon")} htmlFor={`${formId}-gp`} error={err("guardianPhone")}>
+            <TextInput
+              id={`${formId}-gp`}
+              type="tel"
+              inputMode="tel"
+              autoComplete="off"
+              placeholder="+998 90 123 45 67"
+              maxLength={13}
+              className="tabular-nums"
+              {...register("guardianPhone")}
+            />
+          </FieldRow>
+        </FormSection>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="relative">
-              <Input
-                label={tr("Parol (ixtiyoriy)")}
-                type={showPassword ? "text" : "password"}
-                placeholder={tr("Bo'sh qoldirilsa avtomatik beriladi")}
-                error={errors.guardianPassword?.message}
-                {...register("guardianPassword")}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                className="absolute right-3 top-[38px] cursor-pointer text-gray-400 hover:text-[var(--color-text)]"
-                aria-label={showPassword ? "Parolni yashirish" : tr("Parolni ko'rsatish")}
-              >
-                {showPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
-              </button>
-            </div>
-            <div className="relative">
-              <Input
-                label={tr("Parolni tasdiqlang")}
-                type={showConfirmPassword ? "text" : "password"}
-                error={errors.guardianConfirmPassword?.message}
-                {...register("guardianConfirmPassword")}
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword((v) => !v)}
-                className="absolute right-3 top-[38px] cursor-pointer text-gray-400 hover:text-[var(--color-text)]"
-                aria-label={showConfirmPassword ? "Parolni yashirish" : tr("Parolni ko'rsatish")}
-              >
-                {showConfirmPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
-              </button>
-            </div>
-          </div>
+        <FormSection title={tr("Ota-ona kabineti paroli")} footer={tr("Bo'sh qoldirilsa avtomatik beriladi va saqlangach ko'rsatiladi")}>
+          <FieldRow label={tr("Parol")} htmlFor={`${formId}-pw`} error={err("guardianPassword")}>
+            <PasswordInput id={`${formId}-pw`} placeholder={tr("Ixtiyoriy")} autoComplete="new-password" {...register("guardianPassword")} />
+          </FieldRow>
+          <FieldRow label={tr("Tasdiqlash")} htmlFor={`${formId}-pw2`} error={err("guardianConfirmPassword")}>
+            <PasswordInput id={`${formId}-pw2`} placeholder={tr("Qayta kiriting")} autoComplete="new-password" {...register("guardianConfirmPassword")} />
+          </FieldRow>
           {password && (
-            <div className="rounded-[var(--radius-md)] bg-[var(--color-surface)] p-3">
+            <div className="px-4 py-3">
               <PasswordChecklist rules={passwordRules} />
             </div>
           )}
-        </div>
+        </FormSection>
 
-        <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3.5">
-          <label className="flex cursor-pointer items-start gap-2.5">
-            <input type="checkbox" className="mt-0.5 h-4 w-4 cursor-pointer accent-[var(--color-primary)]" {...register("createInvoice")} />
-            <span>
-              <span className="block text-sm font-medium text-[var(--color-text)]">{tr("Birinchi hisob-fakturani yaratish")}</span>
-              <span className="block text-xs text-[var(--color-text-muted)]">{tr("Joriy oy uchun to'lov summasi va muddatini kiriting.")}</span>
-            </span>
-          </label>
-          {createInvoice && (
-            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Input label={tr("Summa (UZS)")} type="number" placeholder="850000" error={errors.invoiceAmount?.message} {...register("invoiceAmount")} />
-              <Input label={tr("To'lov muddati")} type="date" error={errors.invoiceDueDate?.message} {...register("invoiceDueDate")} />
+        <FormSection title={tr("To'lov")} footer={tr("Joriy oy uchun to'lov summasi va muddatini kiriting.")}>
+          <FieldRow label={<span className="block leading-snug">{tr("Birinchi hisob-faktura")}</span>} htmlFor={`${formId}-inv`}>
+            <div className="flex justify-end">
+              <Controller
+                control={control}
+                name="createInvoice"
+                render={({ field }) => <IosSwitch id={`${formId}-inv`} label={tr("Birinchi hisob-fakturani yaratish")} checked={!!field.value} onChange={field.onChange} />}
+              />
             </div>
+          </FieldRow>
+          {createInvoice && (
+            <>
+              <FieldRow label={tr("Summa")} htmlFor={`${formId}-amt`} error={err("invoiceAmount")}>
+                <Controller
+                  control={control}
+                  name="invoiceAmount"
+                  render={({ field }) => (
+                    <MoneyInput id={`${formId}-amt`} name={field.name} value={field.value} onChange={field.onChange} onBlur={field.onBlur} placeholder="850 000" />
+                  )}
+                />
+              </FieldRow>
+              <FieldRow label={tr("Muddat")} htmlFor={`${formId}-due`} error={err("invoiceDueDate")}>
+                <TextInput id={`${formId}-due`} type="date" className="text-right" {...register("invoiceDueDate")} />
+              </FieldRow>
+            </>
           )}
-        </div>
-
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="outline" onClick={handleClose}>
-            {tr("Bekor qilish")}
-          </Button>
-          <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            {tr("Yaratish")}
-          </Button>
-        </div>
+        </FormSection>
       </form>
-    </Modal>
+      <Toast toast={toast} onDismiss={() => setToast(null)} />
+    </IosSheet>
   );
 }

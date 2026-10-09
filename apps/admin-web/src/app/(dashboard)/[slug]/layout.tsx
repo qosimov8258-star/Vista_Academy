@@ -6,6 +6,12 @@ import { MainScroll } from "@/components/layout/main-scroll";
 import { ChefBottomBar } from "@/features/chef/chef-bottom-bar";
 import { TeacherTabBar } from "@/features/teacher/teacher-tab-bar";
 import { ThemeSync } from "@/lib/theme";
+import { tenantMetadata } from "@/lib/tenant-metadata";
+import type { Metadata } from "next";
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  return tenantMetadata((await params).slug);
+}
 
 export default async function DashboardLayout({
   children,

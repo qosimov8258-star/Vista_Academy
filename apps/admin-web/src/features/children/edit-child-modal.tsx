@@ -1,16 +1,15 @@
 "use client";
 
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, type FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { Child, Group } from "@/lib/types";
-import { Modal } from "@/components/ui/modal";
-import { Input, Select } from "@/components/ui/input";
-import { DateOfBirthInput } from "@/components/ui/date-of-birth-input";
-import { Button } from "@/components/ui/button";
+import { Toast, type ToastState } from "@/components/ui/toast";
+import { IosSheet, SheetPrimaryButton } from "@/components/ios/sheet";
+import { DobPicker, FieldRow, FormSection, Segmented, SelectInput, TextInput } from "@/components/ios/form";
 import { useTr } from "@/i18n/tr";
 
 const schema = z.object({
@@ -24,20 +23,32 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
+const FIELD_ORDER: (keyof FormValues)[] = ["lastName", "firstName", "gender", "groupId", "birthDate", "status"];
+
+/**
+ * Bolani tahrirlash — iOS varag'ida. "Saqlash" faqat biror narsa
+ * o'zgarganda faol; saqlangach varaq yopiladi va ro'yxat o'zi yangilanadi.
+ */
 export function EditChildModal({
   open,
   onClose,
   slug,
   child,
+  onSaved,
 }: {
   open: boolean;
   onClose: () => void;
   slug: string;
   child: Child;
+  /** Saqlangandan keyin (masalan, toast ko'rsatish uchun) */
+  onSaved?: () => void;
 }) {
   const tr = useTr();
+  const formId = useId();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [toast, setToast] = useState<ToastState | null>(null);
+  const quarantined = child.status === "QUARANTINED";
 
   const { data: groups } = useQuery({
     queryKey: ["groups", slug],
@@ -49,7 +60,7 @@ export function EditChildModal({
     register,
     control,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -64,20 +75,21 @@ export function EditChildModal({
 
   const mutation = useMutation({
     // Karantindagi bola uchun "Holati" tanlagichi ekranda o'chirilgan bo'lsa
-    // ham, brauzerning o'zi hali "ACTIVE" qiymatini saqlab turadi — shuni
-    // yuborsak, backend butun so'rovni rad etadi (karantinni avval yopish
-    // kerak). Shuning uchun bunday holatda `status` maydonini umuman
-    // yubormaymiz, qolgan maydonlar (ism, guruh va h.k.) baribir saqlanadi.
+    // ham, forma hali "ACTIVE" qiymatini saqlab turadi — shuni yuborsak,
+    // backend butun so'rovni rad etadi (karantinni avval yopish kerak).
+    // Shuning uchun bunday holatda `status` maydonini umuman yubormaymiz,
+    // qolgan maydonlar (ism, guruh va h.k.) baribir saqlanadi.
     mutationFn: (values: FormValues) =>
       api.patch<Child>(`/app/children/${child.id}`, {
         ...values,
-        status: child.status === "QUARANTINED" ? undefined : values.status,
+        status: quarantined ? undefined : values.status,
         groupId: values.groupId || null,
         birthDate: values.birthDate || undefined,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["child", slug, child.id] });
       queryClient.invalidateQueries({ queryKey: ["children", slug] });
+      onSaved?.();
       onClose();
     },
     onError: (err) => {
@@ -85,80 +97,110 @@ export function EditChildModal({
     },
   });
 
+  const saving = isSubmitting || mutation.isPending;
+  const onInvalid = (formErrors: FieldErrors<FormValues>) => {
+    const first = FIELD_ORDER.find((key) => formErrors[key]);
+    setToast({ type: "error", message: tr((first && formErrors[first]?.message) || "Majburiy maydonlarni to'ldiring") });
+    (document.activeElement as HTMLElement | null)?.blur?.();
+  };
+  const submit = handleSubmit((values) => {
+    if (!isDirty) return;
+    setServerError(null);
+    mutation.mutate(values);
+  }, onInvalid);
+  const err = (key: keyof FormValues) => errors[key]?.message as string | undefined;
+
   return (
-    <Modal open={open} onClose={onClose} title={tr("Bolani tahrirlash")}>
-      <form
-        className="space-y-4"
-        onSubmit={handleSubmit((values) => {
-          setServerError(null);
-          mutation.mutate(values);
-        })}
-      >
+    <IosSheet
+      open={open}
+      onClose={() => !saving && onClose()}
+      title={tr("Bolani tahrirlash")}
+      action={{ label: "Saqlash", onClick: () => void submit(), ready: isDirty, loading: saving }}
+      footer={
+        <SheetPrimaryButton type="submit" form={formId} loading={saving} dim={!isDirty}>
+          {tr("Saqlash")}
+        </SheetPrimaryButton>
+      }
+    >
+      <form id={formId} noValidate onSubmit={submit} className="space-y-6">
         {serverError && (
-          <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
+          <p role="alert" className="rounded-[18px] bg-[#ff3b30]/[0.1] px-4 py-3 text-[14px] text-[#ff3b30]">
             {tr(serverError)}
-          </div>
+          </p>
         )}
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input label={tr("Familiya")} error={errors.lastName?.message} {...register("lastName")} />
-          <Input label={tr("Ism")} error={errors.firstName?.message} {...register("firstName")} />
-        </div>
+        <FormSection title={tr("Bola")}>
+          <FieldRow label={tr("Familiya")} htmlFor={`${formId}-ln`} error={err("lastName")}>
+            <TextInput id={`${formId}-ln`} autoComplete="off" {...register("lastName")} />
+          </FieldRow>
+          <FieldRow label={tr("Ism")} htmlFor={`${formId}-fn`} error={err("firstName")}>
+            <TextInput id={`${formId}-fn`} autoComplete="off" {...register("firstName")} />
+          </FieldRow>
+          <FieldRow label={tr("Jinsi")} error={err("gender")}>
+            <Controller
+              control={control}
+              name="gender"
+              render={({ field }) => (
+                <Segmented
+                  label={tr("Jinsi")}
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={[
+                    { value: "MALE", label: tr("O'g'il bola") },
+                    { value: "FEMALE", label: tr("Qiz bola") },
+                  ]}
+                />
+              )}
+            />
+          </FieldRow>
+          <FieldRow label={tr("Tug'ilgan sana")} error={err("birthDate")}>
+            <Controller control={control} name="birthDate" render={({ field }) => <DobPicker value={field.value ?? ""} onChange={field.onChange} />} />
+          </FieldRow>
+        </FormSection>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Select label={tr("Jinsi")} error={errors.gender?.message} {...register("gender")}>
-            <option value="MALE">{tr("O'g'il bola")}</option>
-            <option value="FEMALE">{tr("Qiz bola")}</option>
-          </Select>
-          <Select label={tr("Guruh")} {...register("groupId")}>
-            <option value="">{tr("Guruhsiz")}</option>
-            {/* Bolaning joriy guruhi nofaol bo'lsa ham ro'yxatda ko'rinib
-                tursin — aks holda tanlov shu guruh emasdek ko'rinardi.
-                Boshqa nofaol guruhga o'tkazib bo'lmaydi. */}
-            {groups
-              ?.filter((group) => group.status === "ACTIVE" || group.id === child.groupId)
-              .map((group) => (
-              <option key={group.id} value={group.id}>
-                {tr(group.name)}
-              </option>
-            ))}
-          </Select>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Controller
-            control={control}
-            name="birthDate"
-            render={({ field }) => (
-              <DateOfBirthInput
-                label={tr("Tug'ilgan sana")}
-                value={field.value ?? ""}
-                onChange={field.onChange}
-                error={errors.birthDate?.message}
+        <FormSection
+          title={tr("Bog'chada")}
+          footer={quarantined ? tr("Karantindagi bolaning holatini avval karantinni yopib o'zgartiring") : undefined}
+        >
+          <FieldRow label={tr("Guruh")} htmlFor={`${formId}-g`}>
+            <SelectInput id={`${formId}-g`} {...register("groupId")}>
+              <option value="">{tr("Guruhsiz")}</option>
+              {/* Bolaning joriy guruhi nofaol bo'lsa ham ro'yxatda ko'rinib
+                  tursin — aks holda tanlov shu guruh emasdek ko'rinardi.
+                  Boshqa nofaol guruhga o'tkazib bo'lmaydi. */}
+              {groups
+                ?.filter((group) => group.status === "ACTIVE" || group.id === child.groupId)
+                .map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {tr(group.name)}
+                  </option>
+                ))}
+            </SelectInput>
+          </FieldRow>
+          <FieldRow label={tr("Holati")} error={err("status")}>
+            {quarantined ? (
+              <p className="py-3 text-right text-[15px] font-medium text-[#ff3b30]">{tr("Karantinda")}</p>
+            ) : (
+              <Controller
+                control={control}
+                name="status"
+                render={({ field }) => (
+                  <Segmented
+                    label={tr("Holati")}
+                    value={field.value}
+                    onChange={field.onChange}
+                    options={[
+                      { value: "ACTIVE", label: tr("Faol") },
+                      { value: "INACTIVE", label: tr("Nofaol") },
+                    ]}
+                  />
+                )}
               />
             )}
-          />
-          <Select
-            label={tr("Holati")}
-            error={errors.status?.message}
-            disabled={child.status === "QUARANTINED"}
-            hint={child.status === "QUARANTINED" ? tr("Karantindagi bolaning holatini avval karantinni yopib o'zgartiring") : undefined}
-            {...register("status")}
-          >
-            <option value="ACTIVE">{tr("Faol")}</option>
-            <option value="INACTIVE">{tr("Nofaol")}</option>
-          </Select>
-        </div>
-
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="outline" onClick={onClose}>
-            {tr("Bekor qilish")}
-          </Button>
-          <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            {tr("Saqlash")}
-          </Button>
-        </div>
+          </FieldRow>
+        </FormSection>
       </form>
-    </Modal>
+      <Toast toast={toast} onDismiss={() => setToast(null)} />
+    </IosSheet>
   );
 }

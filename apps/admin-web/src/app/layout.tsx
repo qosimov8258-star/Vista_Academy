@@ -9,6 +9,7 @@ import { TENANT_SLUG_HEADER } from "@/lib/tenant-host";
 import { TrProvider } from "@/i18n/tr";
 import { loadDict } from "@/i18n/dict";
 import { TenantHostProvider } from "@/lib/tenant-host-context";
+import { tenantMetadata } from "@/lib/tenant-metadata";
 import "./globals.css";
 
 const baloo2 = Baloo_2({
@@ -17,10 +18,14 @@ const baloo2 = Baloo_2({
   variable: "--font-baloo",
 });
 
-export const metadata: Metadata = {
-  title: "Bog'chalar tarmog'i — Admin",
-  description: "Tarmoq va filial boshqaruvi",
-};
+/**
+ * Bog'cha subdomenida (babyland.zeeron.uz) — o'sha bog'cha nomi bilan;
+ * havola Telegram'ga tashlansa ham shu ko'rinadi. Subdomensiz rejimda
+ * (/{slug}/...) nomni [slug] layout'lari qo'yadi.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  return tenantMetadata((await headers()).get(TENANT_SLUG_HEADER));
+}
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale();
