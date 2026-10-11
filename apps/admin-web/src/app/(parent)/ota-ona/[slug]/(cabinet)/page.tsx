@@ -21,6 +21,8 @@ import { initials } from "@/components/ui/avatar";
 import styles from "../parent.module.css";
 import { CardFx } from "./card-fx";
 import { NotifyTeacher } from "./notify-teacher";
+import { ChildSwitcher } from "./child-switcher";
+import { useSelectedChild } from "./use-selected-child";
 import { useCabinetTheme } from "./theme";
 import { useTr } from "@/i18n/tr";
 
@@ -77,7 +79,6 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
   const { slug } = use(params);
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [activeChildId, setActiveChildId] = useState<string | null>(null);
   const [reasonDraft, setReasonDraft] = useState("");
 
   const meQuery = useQuery({
@@ -93,8 +94,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
     }
   }, [meQuery.isError, meQuery.error, router, slug]);
 
-  const children = meQuery.data?.children ?? [];
-  const childId = activeChildId ?? children[0]?.id ?? null;
+  const { child, childId, multiple } = useSelectedChild(slug, meQuery.data?.children);
 
   const dayQuery = useQuery({
     queryKey: ["parent-day", childId],
@@ -132,7 +132,6 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
     },
   });
 
-  const child = children.find((c) => c.id === childId) ?? null;
   // Osmon holati qobiqda hisoblanadi — karta ham, ko'rinish rejimi ham shundan
   const { sky } = useCabinetTheme();
 
@@ -160,26 +159,8 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
           </p>
         </header>
 
-        {/* Bir nechta bola bo'lsa — tanlash */}
-        {children.length > 1 && (
-          <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-            {children.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => setActiveChildId(c.id)}
-                className={clsx(
-                  "shrink-0 cursor-pointer rounded-full px-4 py-2.5 text-[14px] font-semibold transition-colors",
-                  c.id === childId
-                    ? "bg-[var(--p-coral)] text-white"
-                    : "bg-[var(--p-panel)] text-[var(--p-muted)]",
-                )}
-              >
-                {tr(c.fullName.split(" ").slice(-1)[0])}
-              </button>
-            ))}
-          </div>
-        )}
+        {/* Bir nechta bola bo'lsa — tanlangan farzand va almashtirish */}
+        {multiple && child && <ChildSwitcher slug={slug} child={child} />}
 
         {/* Bola kartochkasi */}
         {child && (
