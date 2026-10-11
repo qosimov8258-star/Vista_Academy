@@ -1367,7 +1367,10 @@ export interface LandingGroup {
   id: string;
   name: string;
   slug: string;
+  /** Kartochkada (guruhlar ro'yxatida) ko'rinadigan rasm. */
   photoPath: string | null;
+  /** Guruhning o'z sahifasidagi bosh (hero) rasmi — kartochkadagi rasmdan alohida. */
+  coverPhotoPath: string | null;
   order: number;
   photos: LandingGroupPhoto[];
   students: LandingGroupStudent[];
