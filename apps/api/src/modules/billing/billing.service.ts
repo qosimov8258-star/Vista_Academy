@@ -1226,7 +1226,7 @@ function todayTashkentDate(): Date {
   return new Date(`${day}T00:00:00.000Z`);
 }
 
-function decodeReceiptImage(dataUrl: string) {
+export function decodeReceiptImage(dataUrl: string) {
   const [header, base64] = dataUrl.split(",", 2);
   const mimeType = header.slice("data:".length, header.indexOf(";"));
   const buffer = Buffer.from(base64, "base64");

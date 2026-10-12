@@ -55,6 +55,8 @@ export interface ExpenseRow {
   createdByName: string;
   createdAt: string;
   updatedAt: string;
+  /** Naqddan boshqa usulda — chek surati bor */
+  hasReceiptImage: boolean;
   /** Kassa yopilgan kun — tahrirlab/o'chirib bo'lmaydi */
   locked: boolean;
 }

@@ -568,7 +568,8 @@ function AmountHint({
   );
 }
 
-function ReceiptPicker({
+/** Chek surati: tanlash, sudrab tashlash (Ctrl+V — chaqiruvchi tinglaydi); tanlangach eskiz va × */
+export function ReceiptPicker({
   photo,
   busy,
   invalid,

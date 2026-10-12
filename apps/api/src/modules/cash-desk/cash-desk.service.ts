@@ -4,6 +4,9 @@ import { TenantAuthenticatedUser, TenantScope, requireMoneyScope, toTenantScope 
 import { AuditLogService } from "../audit-log/audit-log.service";
 import { PushService } from "../push/push.service";
 import { CloseCashDto, CreateExpenseDto, UpdateExpenseDto } from "./dto/cash-desk.dto";
+import { R2Service } from "../storage/r2.service";
+import { R2_CATEGORY } from "../storage/r2.constants";
+import { decodeReceiptImage } from "../billing/billing.service";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const MONTH_RE = /^\d{4}-\d{2}$/;
@@ -50,7 +53,18 @@ function monthDateRange(month: string) {
 }
 
 function toExpenseRow(
-  e: { id: string; date: Date; amount: unknown; category: string; method: string; note: string | null; createdByName: string; createdAt: Date; updatedAt: Date },
+  e: {
+    id: string;
+    date: Date;
+    amount: unknown;
+    category: string;
+    method: string;
+    note: string | null;
+    createdByName: string;
+    receiptMimeType: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  },
   locked: boolean,
 ) {
   return {
@@ -63,6 +77,7 @@ function toExpenseRow(
     createdByName: e.createdByName,
     createdAt: e.createdAt,
     updatedAt: e.updatedAt,
+    hasReceiptImage: e.receiptMimeType !== null,
     locked,
   };
 }
@@ -77,7 +92,23 @@ export class CashDeskService {
     private readonly prisma: PrismaService,
     private readonly auditLog: AuditLogService,
     private readonly pushService: PushService,
+    private readonly r2: R2Service,
   ) {}
+
+  /** Chek suratini saqlashga tayyorlaydi: R2 yoqilgan bo'lsa — yuklanadi, aks holda baytlar bazaga */
+  private async storeReceipt(organizationId: string, dataUrl: string) {
+    const { buffer, mimeType } = decodeReceiptImage(dataUrl);
+    if (this.r2.enabled) {
+      const key = this.r2.buildKey(organizationId, R2_CATEGORY.PAYMENT_RECEIPT);
+      await this.r2.uploadBuffer(key, buffer, mimeType);
+      return { receiptImage: null, receiptImageKey: key, receiptMimeType: mimeType };
+    }
+    return { receiptImage: buffer, receiptImageKey: null, receiptMimeType: mimeType };
+  }
+
+  private dropReceiptObject(key: string | null) {
+    if (key) void this.r2.deleteObject(key).catch(() => undefined);
+  }
 
   /** Kunlik kassa: kirim usullar bo'yicha, qaytarishlar, xarajatlar va kassada bo'lishi kerak naqd. */
   async day(scope: TenantScope, date: string) {
@@ -91,7 +122,7 @@ export class CashDeskService {
         orderBy: { createdAt: "desc" },
       }),
       this.prisma.payment.findMany({ where: { branchId, refundedAt: range }, select: { method: true, amount: true } }),
-      this.prisma.expense.findMany({ where: { branchId, date: toDateOnly(date) }, orderBy: { createdAt: "desc" } }),
+      this.prisma.expense.findMany({ where: { branchId, date: toDateOnly(date) }, omit: { receiptImage: true }, orderBy: { createdAt: "desc" } }),
       this.prisma.cashClosing.findUnique({ where: { branchId_date: { branchId, date: toDateOnly(date) } } }),
     ]);
 
@@ -153,18 +184,29 @@ export class CashDeskService {
     const date = assertExpenseDate(dto.date);
     await this.assertNotClosed(branchId, date);
     const method = dto.method ?? "CASH";
-    const row = await this.prisma.expense.create({
-      data: {
-        branchId,
-        date: toDateOnly(date),
-        amount: dto.amount,
-        category: dto.category,
-        method,
-        note: dto.note?.trim() || null,
-        createdByName: caller.fullName,
-        createdByUserId: caller.id,
-      },
-    });
+    if (method !== "CASH" && !dto.receiptImage) {
+      throw new BadRequestException("Naqddan boshqa usulda chek surati majburiy");
+    }
+    const receipt = method !== "CASH" && dto.receiptImage ? await this.storeReceipt(scope.organizationId, dto.receiptImage) : null;
+    const row = await this.prisma.expense
+      .create({
+        data: {
+          branchId,
+          date: toDateOnly(date),
+          amount: dto.amount,
+          category: dto.category,
+          method,
+          note: dto.note?.trim() || null,
+          createdByName: caller.fullName,
+          createdByUserId: caller.id,
+          ...(receipt ?? {}),
+        },
+        select: { id: true },
+      })
+      .catch((error) => {
+        this.dropReceiptObject(receipt?.receiptImageKey ?? null);
+        throw error;
+      });
     await this.auditLog.logFromUser(caller, {
       action: "expense.create",
       entityType: "Expense",
@@ -188,10 +230,22 @@ export class CashDeskService {
     await this.assertNotClosed(branchId, oldDate);
     if (date !== oldDate) await this.assertNotClosed(branchId, date);
     const method = dto.method ?? row.method;
+    const hadReceipt = row.receiptMimeType !== null;
+    if (method !== "CASH" && !dto.receiptImage && !hadReceipt) {
+      throw new BadRequestException("Naqddan boshqa usulda chek surati majburiy");
+    }
+    // Naqdga o'tsa — chek olib tashlanadi; yangi surat kelsa — almashtiriladi
+    const receipt =
+      method === "CASH"
+        ? { receiptImage: null, receiptImageKey: null, receiptMimeType: null }
+        : dto.receiptImage
+          ? await this.storeReceipt(scope.organizationId, dto.receiptImage)
+          : null;
     await this.prisma.expense.update({
       where: { id },
-      data: { date: toDateOnly(date), amount: dto.amount, category: dto.category, method, note: dto.note?.trim() || null },
+      data: { date: toDateOnly(date), amount: dto.amount, category: dto.category, method, note: dto.note?.trim() || null, ...(receipt ?? {}) },
     });
+    if (receipt) this.dropReceiptObject(row.receiptImageKey);
     const changes = [
       Number(row.amount) !== dto.amount ? `summa ${Number(row.amount)} → ${dto.amount}` : null,
       row.category !== dto.category ? `turkum "${row.category}" → "${dto.category}"` : null,
@@ -217,6 +271,7 @@ export class CashDeskService {
     }
     await this.assertNotClosed(branchId, row.date.toISOString().slice(0, 10));
     await this.prisma.expense.delete({ where: { id } });
+    this.dropReceiptObject(row.receiptImageKey);
     await this.auditLog.logFromUser(caller, {
       action: "expense.delete",
       entityType: "Expense",
@@ -241,7 +296,7 @@ export class CashDeskService {
     const [y, m] = month.split("-").map(Number);
     const prev = `${m === 1 ? y - 1 : y}-${String(m === 1 ? 12 : m - 1).padStart(2, "0")}`;
     const [rows, prevAgg, closings] = await Promise.all([
-      this.prisma.expense.findMany({ where: { branchId, date: range }, orderBy: [{ date: "desc" }, { createdAt: "desc" }] }),
+      this.prisma.expense.findMany({ where: { branchId, date: range }, omit: { receiptImage: true }, orderBy: [{ date: "desc" }, { createdAt: "desc" }] }),
       this.prisma.expense.aggregate({ where: { branchId, date: monthDateRange(prev) }, _sum: { amount: true } }),
       this.prisma.cashClosing.findMany({ where: { branchId, date: range }, select: { date: true } }),
     ]);
@@ -266,6 +321,19 @@ export class CashDeskService {
       byCategory: [...byCategory.entries()].map(([category, v]) => ({ category, ...v })).sort((a, b) => b.total - a.total),
       items: rows.map((r) => toExpenseRow(r, closed.has(r.date.toISOString().slice(0, 10)))),
     };
+  }
+
+  /** Xarajat chek surati (faqat o'z filiali) */
+  async readExpenseImage(scope: TenantScope, id: string) {
+    const branchId = requireMoneyScope(scope);
+    const row = await this.prisma.expense.findFirst({
+      where: { id, branchId },
+      select: { receiptImage: true, receiptImageKey: true, receiptMimeType: true },
+    });
+    if (!row) {
+      throw new NotFoundException("Xarajat topilmadi");
+    }
+    return { image: row.receiptImage, imageKey: row.receiptImageKey, mimeType: row.receiptMimeType };
   }
 
   /** Kunni yopish: tizim hisoblagan naqd bilan kassir sanagan naqd farqi saqlanadi. Yopilgan kun o'zgarmaydi. */

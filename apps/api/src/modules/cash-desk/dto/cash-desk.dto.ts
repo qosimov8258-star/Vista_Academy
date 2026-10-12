@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsDateString, IsEnum, IsIn, IsNumber, IsOptional, IsPositive, IsString, Max, MaxLength, Min } from "class-validator";
+import { IsDateString, IsEnum, IsIn, IsNumber, IsOptional, IsPositive, IsString, Matches, Max, MaxLength, Min } from "class-validator";
 import { PaymentMethod } from "@prisma/client";
 import { EXPENSE_CATEGORIES } from "../expense-categories";
 
@@ -28,6 +28,16 @@ export class CreateExpenseDto {
   @IsString()
   @MaxLength(500)
   note?: string;
+
+  @ApiPropertyOptional({
+    description: "Naqddan boshqa usulda majburiy: data:image/... ko'rinishidagi chek surati (tahrirlashda — faqat almashtirilsa)",
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/, {
+    message: "Rasm formati qo'llab-quvvatlanmaydi (jpeg, png yoki webp bo'lishi kerak)",
+  })
+  receiptImage?: string;
 }
 
 /** Tahrirlash — to'liq almashtirish (yaratishdagi bilan bir xil maydonlar) */
