@@ -3,7 +3,7 @@
 import Link from "next/link";
 import clsx from "clsx";
 import type { ComponentType, MouseEventHandler } from "react";
-import type { IconProps } from "@/components/ui/icons";
+import type { IconProps } from "./icons";
 import { Spinner } from "./spinner";
 
 const BASE =

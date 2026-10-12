@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/use-auth";
 import { canWriteTeaching } from "@/lib/permissions";
-import { CheckIcon } from "@/components/ui/icons";
+import { CheckIcon } from "@/components/ios/icons";
 import type { ChildReminder } from "@/features/child-notes/child-note-modal";
 import { Group } from "./teacher-ui";
 import { useTr } from "@/i18n/tr";

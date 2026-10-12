@@ -7,7 +7,7 @@ import type { EmployeeNotification } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
-import { BellIcon } from "@/components/ui/icons";
+import { BellIcon } from "@/components/ios/icons";
 import { formatDateTime } from "@/lib/format";
 import { useAuth } from "@/lib/use-auth";
 import { isChef, isTeacher } from "@/lib/permissions";

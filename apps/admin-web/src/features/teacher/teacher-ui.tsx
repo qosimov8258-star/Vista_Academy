@@ -3,8 +3,8 @@
 import Link from "next/link";
 import clsx from "clsx";
 import type { ComponentType, ReactNode } from "react";
-import type { IconProps } from "@/components/ui/icons";
-import { ChevronRightIcon } from "@/components/ui/icons";
+import type { IconProps } from "@/components/ios/icons";
+import { ChevronRightIcon } from "@/components/ios/icons";
 import styles from "./teacher.module.css";
 import { useTr } from "@/i18n/tr";
 

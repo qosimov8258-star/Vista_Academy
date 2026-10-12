@@ -8,7 +8,7 @@ import { useAuth } from "@/lib/use-auth";
 import { canWriteTeaching } from "@/lib/permissions";
 import { isAssistantPosition, isSubjectTeacherPosition } from "@/lib/employee-position";
 import { Avatar } from "@/components/ui/avatar";
-import { BellIcon, CalendarIcon, ClockIcon, GroupIcon } from "@/components/ui/icons";
+import { BellIcon, CalendarIcon, ClockIcon, GroupIcon } from "@/components/ios/icons";
 import { EmptyRow, Group, GroupAction, LargeTitle, PrimaryButton, Row, SkeletonRows, TeacherPage, formatDayLong, todayIso } from "./teacher-ui";
 import { TeacherReminders } from "./teacher-reminders";
 import styles from "./teacher.module.css";

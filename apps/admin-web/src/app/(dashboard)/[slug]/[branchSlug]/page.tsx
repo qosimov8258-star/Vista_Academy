@@ -20,7 +20,7 @@ import {
   MoneyIcon,
   NoteIcon,
   TeacherIcon,
-} from "@/components/ui/icons";
+} from "@/components/ios/icons";
 import { IosIcon } from "@/features/director/ios-icon";
 import { compactMoney, fullMoney } from "@/features/director/money";
 import { useTr } from "@/i18n/tr";

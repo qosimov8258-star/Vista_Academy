@@ -3,8 +3,8 @@
 import { createContext, useContext, useEffect, type ComponentType, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
-import type { IconProps } from "@/components/ui/icons";
-import { ChevronRightIcon, CloseIcon } from "@/components/ui/icons";
+import type { IconProps } from "@/components/ios/icons";
+import { ChevronRightIcon, CloseIcon } from "@/components/ios/icons";
 import { IosIcon, type IosTint } from "@/features/director/ios-icon";
 import { useTr } from "@/i18n/tr";
 

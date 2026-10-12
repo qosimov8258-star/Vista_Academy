@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useState, type ComponentProps, type ReactNode } from "react";
 import clsx from "clsx";
-import { EyeIcon, EyeOffIcon } from "@/components/ui/icons";
+import { EyeIcon, EyeOffIcon } from "./icons";
 import { GROUP_BLOCK, ROW_SEPARATOR, SECTION_TITLE } from "./tokens";
 import styles from "./ios.module.css";
 import { useTr } from "@/i18n/tr";

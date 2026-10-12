@@ -9,7 +9,7 @@ import { api, ApiError } from "@/lib/api";
 import type { CreateChildResult, ChildCredentials, Group } from "@/lib/types";
 import { PasswordChecklist, getPasswordRules } from "@/components/ui/password-checklist";
 import { CredentialRow } from "@/components/ui/credential-row";
-import { CameraIcon, CheckIcon } from "@/components/ui/icons";
+import { CameraIcon, CheckIcon } from "@/components/ios/icons";
 import { Toast, type ToastState } from "@/components/ui/toast";
 import { IosSheet, SheetPrimaryButton } from "@/components/ios/sheet";
 import { DobPicker, FieldRow, FormSection, IosSwitch, MoneyInput, PasswordInput, Segmented, SelectInput, TextInput } from "@/components/ios/form";

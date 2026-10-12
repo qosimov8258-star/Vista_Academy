@@ -25,7 +25,7 @@ import {
   LockIcon,
   LogoutIcon,
   UserIcon,
-} from "@/components/ui/icons";
+} from "@/components/ios/icons";
 import { ROLE_LABEL, isTeacher } from "@/lib/permissions";
 import { MAX_UPLOAD_BYTES, resizeToSquare } from "@/lib/resize-image";
 import { ThemePickerCard } from "@/features/settings/theme-picker-card";

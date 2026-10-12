@@ -1,23 +1,12 @@
 "use client";
 
 import clsx from "clsx";
-import { CheckIcon, GlobeIcon } from "@/components/ui/icons";
+import { CheckIcon, GlobeIcon } from "@/components/ios/icons";
+import { Palette as PaletteIcon } from "lucide-react";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { THEMES, useTheme } from "@/lib/theme";
 import { RowIcon, SettingsGroup, SettingsRow, usePlainSettingsIcons } from "./settings-ui";
 import { useTr } from "@/i18n/tr";
-
-/** Palitra belgisi — "Tizim rangi" qatori uchun */
-function PaletteIcon({ className, style }: { className?: string; style?: React.CSSProperties }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" className={className} style={style} aria-hidden="true">
-      <path d="M12 3.5a8.5 8.5 0 1 0 0 17c1.1 0 1.7-.8 1.7-1.6 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-.9.8-1.6 1.7-1.6h2c2.3 0 4.1-1.9 4.1-4.1 0-4-3.8-7.3-8.5-7.3Z" />
-      <circle cx="7.6" cy="12" r="1.1" fill="currentColor" />
-      <circle cx="9.8" cy="7.9" r="1.1" fill="currentColor" />
-      <circle cx="14.3" cy="7.9" r="1.1" fill="currentColor" />
-    </svg>
-  );
-}
 
 /**
  * Sozlamalar → Ko'rinish: tizim rangi va til. Rang bosilishi bilan butun

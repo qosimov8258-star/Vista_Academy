@@ -8,7 +8,7 @@ import { api } from "@/lib/api";
 import type { Branch, DashboardSummary, Organization, TenantUser } from "@/lib/types";
 import { BranchAvatar } from "@/components/ui/branch-avatar";
 import { ErrorState } from "@/components/ui/states";
-import type { IconProps } from "@/components/ui/icons";
+import type { IconProps } from "@/components/ios/icons";
 import {
   BuildingIcon,
   ChevronRightIcon,
@@ -20,7 +20,7 @@ import {
   SearchIcon,
   SettingsIcon,
   TeacherIcon,
-} from "@/components/ui/icons";
+} from "@/components/ios/icons";
 import { CreateBranchModal } from "@/features/branches/create-branch-modal";
 import { IosIcon } from "@/features/director/ios-icon";
 import { compactMoney, fullMoney } from "@/features/director/money";
