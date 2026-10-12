@@ -18,6 +18,7 @@ import {
   ChecklistIcon,
   ChildIcon,
   CloseIcon,
+  CoinIcon,
   GroupIcon,
   KeyIcon,
   MoneyIcon,
@@ -37,7 +38,7 @@ const CATEGORIES: { key: string; label: string; types: string[] }[] = [
   { key: "health", label: "Sog'liq", types: ["Vaccination"] },
   { key: "groups", label: "Guruhlar", types: ["Group"] },
   { key: "employees", label: "Xodimlar", types: ["Employee"] },
-  { key: "finance", label: "Moliya", types: ["Payment", "Invoice", "PayrollEntry"] },
+  { key: "finance", label: "Moliya", types: ["Payment", "Invoice", "PayrollEntry", "Expense", "CashClosing"] },
   { key: "accounts", label: "Hisoblar", types: ["TenantUser"] },
   { key: "branches", label: "Filiallar", types: ["Branch"] },
 ];
@@ -58,6 +59,7 @@ const ENTITY_ICON: Record<string, React.ComponentType<IconProps>> = {
   Payment: MoneyIcon,
   Invoice: NoteIcon,
   PayrollEntry: BriefcaseIcon,
+  Expense: CoinIcon,
   TenantUser: KeyIcon,
   Branch: BuildingIcon,
 };
@@ -70,7 +72,7 @@ const VERB: Record<string, { label: string; tone: Tone }> = {
   update: { label: "O'zgartirildi", tone: "update" },
   delete: { label: "O'chirildi", tone: "delete" },
   record: { label: "To'lov", tone: "money" },
-  refund: { label: "Qaytarildi", tone: "delete" },
+  refund: { label: "Bekor qilindi", tone: "delete" },
   mark_paid: { label: "To'landi", tone: "money" },
   generate: { label: "Hisoblandi", tone: "money" },
   convert: { label: "Qabul qilindi", tone: "create" },

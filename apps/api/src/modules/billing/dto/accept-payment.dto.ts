@@ -44,7 +44,8 @@ export class AcceptPaymentDto {
 }
 
 export class RefundPaymentDto {
-  @ApiPropertyOptional({ description: "Bekor qilish sababi — ledger va amallar jurnaliga yoziladi" })
+  /** Majburiy (kamida 3 harf) — tekshiruv servisda, bitta aniq xabar bilan */
+  @ApiProperty({ description: "Bekor qilish sababi — to'lovda, ledgerda va amallar jurnalida saqlanadi" })
   @IsOptional()
   @IsString()
   @MaxLength(300)

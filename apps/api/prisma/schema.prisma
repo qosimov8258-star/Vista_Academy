@@ -1256,6 +1256,9 @@ model Payment {
   note             String?
   recordedByUserId String?       @map("recorded_by_user_id")
   refundedAt       DateTime?     @map("refunded_at")
+  /// Bekor qilish sababi va kim bekor qilgani (bekor qilingan to'lovda majburiy)
+  refundReason     String?       @map("refund_reason")
+  refundedByName   String?       @map("refunded_by_name")
   /// Kassir to'lovni qabul qilgach rasmga olib joylagan chek (naqddan boshqa usullarda).
   receiptImage     Bytes?        @map("receipt_image")
   receiptImageKey  String?       @map("receipt_image_key")

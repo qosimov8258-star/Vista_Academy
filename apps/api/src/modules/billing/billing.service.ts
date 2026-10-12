@@ -24,6 +24,18 @@ const EPSILON = 0.01;
 /** Ekrandan olingan skrinshotlar ham sig'sin — ota-ona cheki bilan bir xil chegara. */
 const MAX_RECEIPT_IMAGE_BYTES = 3 * 1024 * 1024;
 const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
+/** Amallar jurnali uchun usul nomi */
+const METHOD_UZ: Record<string, string> = {
+  CASH: "Naqd",
+  CARD: "Karta",
+  BANK_TRANSFER: "O'tkazma",
+  CLICK: "Click",
+  PAYME: "Payme",
+  UZUM: "Uzum",
+  MOBILE_APP: "Ilova",
+  BANKOMAT: "Bankomat",
+  OTHER: "Boshqa",
+};
 
 /** To'lovlar ro'yxati uchun: chek rasmi baytlari (`receiptImage`) har qatorda tortilmasin. */
 const paymentListSelect = {
@@ -35,6 +47,8 @@ const paymentListSelect = {
   status: true,
   note: true,
   refundedAt: true,
+  refundReason: true,
+  refundedByName: true,
   createdAt: true,
   receiptMimeType: true,
   child: { select: { id: true, fullName: true } },
@@ -474,7 +488,7 @@ export class BillingService {
         entityType: "Payment",
         entityId: result.payment.id,
         branchId,
-        summary: `${child.fullName}: ${amount} ${result.payment.currency} to'lov qabul qilindi (${dto.method}; ${result.allocations
+        summary: `${child.fullName}: ${formatSum(amount)} so'm to'lov qabul qilindi (${METHOD_UZ[dto.method] ?? dto.method}; ${result.allocations
           .map((a) => a.period)
           .join(", ")})`,
       });
@@ -493,13 +507,21 @@ export class BillingService {
     }
   }
 
-  async refundPayment(caller: TenantAuthenticatedUser, paymentId: string, dto: RefundPaymentDto = {}) {
-    const reason = dto.reason?.trim() || null;
+  /**
+   * To'lovni bekor qilish (qaytarish) — sabab majburiy. To'lov o'chirilmaydi:
+   * holati REFUNDED bo'ladi, sabab va kim bekor qilgani to'lovning o'zida,
+   * ledgerda va amallar jurnalida (kimning, qancha, qaysi oylar) qoladi.
+   */
+  async refundPayment(caller: TenantAuthenticatedUser, paymentId: string, dto: RefundPaymentDto) {
     const scope = toTenantScope(caller);
     const branchId = requireMoneyScope(scope);
+    const reason = dto.reason?.trim() ?? "";
+    if (reason.length < 3) {
+      throw new BadRequestException("Bekor qilish sababini yozing (kamida 3 harf)");
+    }
     const payment = await this.prisma.payment.findFirst({
       where: { id: paymentId, organizationId: scope.organizationId },
-      include: { allocations: { include: { invoice: true } } },
+      include: { allocations: { include: { invoice: true } }, child: { select: { fullName: true } } },
     });
     if (!payment) {
       throw new NotFoundException("To'lov topilmadi");
@@ -508,7 +530,7 @@ export class BillingService {
       throw new ForbiddenException("Bu to'lovga kirish huquqingiz yo'q");
     }
     if (payment.status === "REFUNDED") {
-      throw new BadRequestException("To'lov allaqachon qaytarilgan");
+      throw new BadRequestException("To'lov allaqachon bekor qilingan");
     }
 
     return this.prisma.$transaction(async (tx) => {
@@ -535,7 +557,8 @@ export class BillingService {
 
       const updatedPayment = await tx.payment.update({
         where: { id: payment.id },
-        data: { status: "REFUNDED", refundedAt: new Date() },
+        data: { status: "REFUNDED", refundedAt: new Date(), refundReason: reason, refundedByName: caller.fullName },
+        omit: { receiptImage: true },
       });
 
       await tx.ledgerEntry.create({
@@ -546,18 +569,20 @@ export class BillingService {
           type: "REFUND",
           amount: Number(payment.amount),
           paymentId: payment.id,
-          note: reason ? `To'lov bekor qilindi — ${reason}` : "To'lov qaytarildi",
+          note: `To'lov bekor qilindi — ${reason}`,
         },
       });
 
       return updatedPayment;
     }).then(async (updatedPayment) => {
+      const paidOn = new Date(payment.createdAt.getTime() + TASHKENT_OFFSET_MS).toISOString().slice(0, 10);
+      const periods = payment.allocations.map((a) => a.invoice.period).join(", ");
       await this.auditLog.logFromUser(caller, {
         action: "payment.refund",
         entityType: "Payment",
         entityId: updatedPayment.id,
         branchId,
-        summary: `${payment.amount} ${payment.currency} to'lov qaytarildi${reason ? ` (sabab: ${reason})` : ""}`,
+        summary: `${payment.child.fullName}: ${formatSum(Number(payment.amount))} so'm to'lov bekor qilindi (${METHOD_UZ[payment.method] ?? payment.method}, ${paidOn}${periods ? `; ${periods}` : ""}). Sabab: ${reason}`,
       });
       return updatedPayment;
     });

@@ -86,6 +86,9 @@ export interface ChildPayment {
   status: PaymentStatus;
   note: string | null;
   refundedAt: string | null;
+  /** Bekor qilish sababi va kim bekor qilgani */
+  refundReason: string | null;
+  refundedByName: string | null;
   createdAt: string;
   hasReceiptImage: boolean;
   recordedByName: string | null;
