@@ -862,6 +862,8 @@ export interface PayrollEntry {
   paidAmount: string;
   status: PayrollStatus;
   paidAt: string | null;
+  /** Oylik qanday berilgani; eski yozuvlarda bo'sh. */
+  paymentMethod?: PaymentMethod | null;
   note: string | null;
   createdAt: string;
   updatedAt: string;
@@ -875,7 +877,7 @@ export interface EmployeePayrollOverview {
   /** Shu davr uchun allaqachon hisoblangan/to'langan yozuv — bo'lmasa `null`. */
   entry: PayrollEntry | null;
   /** Yozuv hali yo'q bo'lsa, sxemadan jonli hisoblangan taxmin (hech narsa saqlanmagan). */
-  preview: { baseAmount: number; totalAmount: number } | null;
+  preview: { baseAmount: number; totalAmount: number; quantity: number | null } | null;
 }
 
 // ===== Bildirishnomalar =====

@@ -515,6 +515,8 @@ export function Sidebar({ slug }: { slug: string }) {
   // to'liq admin nav emas).
   const financeEntries: NavEntry[] = [
     { href: base, label: t("nav.home"), icon: HomeIcon, show: true, exact: true },
+    { href: `/${slug}/cash`, label: "Kassa", icon: MoneyIcon, show: true },
+    { href: `/${slug}/audit-logs`, label: "Audit", icon: AuditIcon, show: true },
   ];
 
   // Sozlamalar har bir rolda bo'ladi: bu foydalanuvchining o'z hisobi,
@@ -717,7 +719,7 @@ export function Sidebar({ slug }: { slug: string }) {
         <div
           aria-hidden
           className={clsx(
-            "pointer-events-none absolute z-0 transition-[transform,width,height,opacity] duration-200 ease-out motion-reduce:transition-none",
+            "pointer-events-none absolute left-0 top-0 z-0 transition-[transform,width,height,opacity] duration-200 ease-out motion-reduce:transition-none",
             dark ? "bg-white/10" : "bg-black/[0.045]",
             collapsed ? "rounded-full" : "rounded-[16px]",
           )}
@@ -1038,7 +1040,15 @@ export function Sidebar({ slug }: { slug: string }) {
       <DirectorBottomBar
         slug={slug}
         entries={user ? financeMobileEntries : []}
-        menuEntries={user ? [financeFiliallarEntry] : []}
+        menuEntries={
+          user
+            ? [
+                { href: `/${slug}/cash`, label: "Kassa", icon: MoneyIcon, show: true },
+                { href: `/${slug}/audit-logs`, label: "Audit", icon: AuditIcon, show: true },
+                financeFiliallarEntry,
+              ]
+            : []
+        }
         settingsItem={settingsItem}
         isActive={financeIsActive}
         user={user}

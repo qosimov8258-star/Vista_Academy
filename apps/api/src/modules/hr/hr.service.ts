@@ -5,7 +5,6 @@ import {
   TenantAuthenticatedUser,
   TenantScope,
   requireMoneyScope,
-  requireOperationalScope,
   toTenantScope,
 } from "../iam/tenant-auth.types";
 import { AuditLogService } from "../audit-log/audit-log.service";
@@ -57,10 +56,9 @@ export class HrService {
   }
 
   async upsertSalaryScheme(scope: TenantScope, employeeId: string, dto: UpsertSalarySchemeDto) {
-    // Sxemani belgilash — filial admini/administrator ishi (`requireOperationalScope`),
-    // moliyachi emas: u faqat hisoblangan summani to'laydi (`payEmployeeSalary`,
-    // pastda `requireMoneyScope` bilan qoladi), sxemani o'zi yarata olmaydi.
-    requireOperationalScope(scope);
+    // Sxemani moliyachi ham belgilaydi — xodim kartochkasidan oylikni shu yerning o'zida
+    // hisoblab to'laydi (`requireMoneyScope`: o'qituvchi va oshpaz kira olmaydi).
+    requireMoneyScope(scope);
     await this.requireEmployee(scope, employeeId);
     return this.prisma.salaryScheme.upsert({
       where: { employeeId },
@@ -106,8 +104,17 @@ export class HrService {
     scheme: { ruleType: string; fixedAmount: Prisma.Decimal | number; rate: Prisma.Decimal | number },
     period: string,
   ): Promise<number> {
+    return (await this.computeBase(employee, scheme, period)).amount;
+  }
+
+  /** `quantity` — hisob nimaga ko'paytirilgani: soatlik uchun jami soat, bola soni uchun faol bolalar soni. */
+  private async computeBase(
+    employee: { id: string; branchId: string },
+    scheme: { ruleType: string; fixedAmount: Prisma.Decimal | number; rate: Prisma.Decimal | number },
+    period: string,
+  ): Promise<{ amount: number; quantity: number | null }> {
     if (scheme.ruleType === "FIXED") {
-      return Number(scheme.fixedAmount);
+      return { amount: Number(scheme.fixedAmount), quantity: null };
     }
     if (scheme.ruleType === "PER_HOUR") {
       const { start, end } = periodRange(period);
@@ -115,13 +122,14 @@ export class HrService {
         where: { employeeId: employee.id, date: { gte: start, lt: end } },
         _sum: { hours: true },
       });
-      return Number(scheme.rate) * Number(shifts._sum.hours ?? 0);
+      const hours = Number(shifts._sum.hours ?? 0);
+      return { amount: Number(scheme.rate) * hours, quantity: hours };
     }
     if (scheme.ruleType === "PER_CHILD") {
       const childrenCount = await this.prisma.child.count({ where: { branchId: employee.branchId, status: "ACTIVE" } });
-      return Number(scheme.rate) * childrenCount;
+      return { amount: Number(scheme.rate) * childrenCount, quantity: childrenCount };
     }
-    return 0;
+    return { amount: 0, quantity: null };
   }
 
   async generatePayroll(caller: TenantAuthenticatedUser, dto: GeneratePayrollDto) {
@@ -204,10 +212,10 @@ export class HrService {
       this.prisma.payrollEntry.findUnique({ where: { employeeId_period: { employeeId, period } } }),
     ]);
 
-    let preview: { baseAmount: number; totalAmount: number } | null = null;
+    let preview: { baseAmount: number; totalAmount: number; quantity: number | null } | null = null;
     if (!entry && scheme) {
-      const baseAmount = await this.computeBaseAmount(employee, scheme, period);
-      preview = { baseAmount, totalAmount: baseAmount };
+      const { amount, quantity } = await this.computeBase(employee, scheme, period);
+      preview = { baseAmount: amount, totalAmount: amount, quantity };
     }
 
     return { scheme, entry, preview };
@@ -236,8 +244,9 @@ export class HrService {
         paidAmount: dto.amount,
         status: "PAID",
         paidAt: new Date(),
+        paymentMethod: dto.method,
       },
-      update: { paidAmount: dto.amount, status: "PAID", paidAt: new Date() },
+      update: { paidAmount: dto.amount, status: "PAID", paidAt: new Date(), paymentMethod: dto.method },
     });
     await this.auditLog.logFromUser(caller, {
       action: "payroll.pay",

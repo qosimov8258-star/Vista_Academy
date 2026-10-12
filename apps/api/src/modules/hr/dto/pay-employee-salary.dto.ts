@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsNumber, Matches, Min } from "class-validator";
+import { IsIn, IsNumber, IsOptional, Matches, Min } from "class-validator";
 
 export class PayEmployeeSalaryDto {
   @ApiProperty({ example: "2026-09" })
@@ -10,4 +10,9 @@ export class PayEmployeeSalaryDto {
   @IsNumber()
   @Min(1)
   amount!: number;
+
+  @ApiProperty({ required: false, enum: ["CASH", "CLICK", "PAYME", "MOBILE_APP", "CARD", "OTHER"] })
+  @IsOptional()
+  @IsIn(["CASH", "CLICK", "PAYME", "MOBILE_APP", "CARD", "OTHER"])
+  method?: "CASH" | "CLICK" | "PAYME" | "MOBILE_APP" | "CARD" | "OTHER";
 }

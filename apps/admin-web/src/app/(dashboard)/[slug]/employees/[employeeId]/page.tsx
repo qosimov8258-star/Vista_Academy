@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, getPaginated } from "@/lib/api";
-import type { Employee, EmployeePayrollOverview, PayrollEntry, StaffAttendanceHistory, StaffAttendanceStatus } from "@/lib/types";
+import type { Employee, EmployeePayrollOverview, PaymentMethod, PayrollEntry, SalaryScheme, StaffAttendanceHistory, StaffAttendanceStatus } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,16 +14,35 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmployeePhoto } from "@/components/ui/employee-photo";
 import { initials } from "@/components/ui/avatar";
+import { Select } from "@/components/ui/input";
 import { AmountInput } from "@/components/ui/amount-input";
 import { ArrowLeftIcon, PhoneIcon } from "@/components/ui/icons";
 import { LoadingState, ErrorState } from "@/components/ui/states";
 import { Toast, type ToastState } from "@/components/ui/toast";
 import { formatPositionLabel } from "@/lib/employee-position";
 import { formatMoney, formatDate } from "@/lib/format";
-import { canWriteOperational } from "@/lib/permissions";
+import { canWriteMoney } from "@/lib/permissions";
 import { EditSalarySchemeModal } from "@/features/hr/edit-salary-scheme-modal";
 import { PeriodPicker } from "@/features/network/period-picker";
 import { useTr } from "@/i18n/tr";
+
+type SalaryMethod = Extract<PaymentMethod, "CASH" | "CLICK" | "PAYME" | "MOBILE_APP" | "CARD" | "OTHER">;
+const SALARY_METHODS: { value: SalaryMethod; label: string }[] = [
+  { value: "CASH", label: "Naqd" },
+  { value: "CLICK", label: "Click" },
+  { value: "PAYME", label: "Payme" },
+  { value: "MOBILE_APP", label: "Ilova" },
+  { value: "CARD", label: "Karta" },
+  { value: "OTHER", label: "Boshqa" },
+];
+const methodLabel = (m?: PaymentMethod | null) => SALARY_METHODS.find((x) => x.value === m)?.label;
+
+function schemeSummary(scheme: SalaryScheme, quantity: number | null): string {
+  if (scheme.ruleType === "FIXED") return `Belgilangan oylik: ${formatMoney(scheme.fixedAmount)}`;
+  const unit = scheme.ruleType === "PER_HOUR" ? "soat" : "bola";
+  const base = `${scheme.ruleType === "PER_HOUR" ? "Soatlik" : "Bola soniga"}: ${formatMoney(scheme.rate)} × ${unit}`;
+  return quantity === null ? base : `${base} (${quantity} ${unit})`;
+}
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 // Kalendar dushanbadan boshlanadi — `Date#getUTCDay()` yakshanbani 0 deb sanaydi.
@@ -93,10 +112,8 @@ export default function EmployeeFinancePage({ params }: { params: Promise<{ slug
   const { slug, employeeId } = use(params);
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  // Maosh sxemasini belgilash — moliyachi emas, faqat filial admini/administrator ishi:
-  // moliyachi bu sahifada faqat hisoblangan summani ko'radi va to'laydi, sxemani o'zi
-  // yarata olmaydi (sxema hisoblash turini — soatlik/bola soni/belgilangan oylik — belgilaydi).
-  const canWriteScheme = canWriteOperational(user?.role);
+  // Maosh sxemasini moliyachi ham belgilaydi (API'dagi `requireMoneyScope` bilan bir xil).
+  const canWriteScheme = canWriteMoney(user?.role);
   const { branches } = useBranchContext(slug);
   // `useBranchContext`ning branchSlug/branchId'i shu sahifada ishonchsiz —
   // sabab: employees/page.tsx dagi izohga qarang (bu komponent ham xuddi
@@ -111,6 +128,7 @@ export default function EmployeeFinancePage({ params }: { params: Promise<{ slug
 
   const [period, setPeriod] = useState("");
   const [amount, setAmount] = useState<number | undefined>(undefined);
+  const [method, setMethod] = useState<SalaryMethod>("CASH");
   const [schemeModalOpen, setSchemeModalOpen] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
   const [payError, setPayError] = useState<string | null>(null);
@@ -164,7 +182,7 @@ export default function EmployeeFinancePage({ params }: { params: Promise<{ slug
 
   const payMutation = useMutation({
     mutationFn: (value: number) =>
-      api.post<PayrollEntry>(`/app/employees/${employeeId}/payroll/pay`, { period, amount: value }),
+      api.post<PayrollEntry>(`/app/employees/${employeeId}/payroll/pay`, { period, amount: value, method }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["employee-payroll-overview", slug, employeeId] });
       queryClient.invalidateQueries({ queryKey: ["payroll", slug] });
@@ -312,22 +330,39 @@ export default function EmployeeFinancePage({ params }: { params: Promise<{ slug
         <CardBody className="space-y-3">
           {overviewQuery.isLoading ? (
             <LoadingState rows={2} />
-          ) : !overview?.scheme && !overview?.entry ? (
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-sm text-[var(--color-text-muted)]">{tr("Maosh sxemasi belgilanmagan")}</p>
-              {canWriteScheme && (
-                <Button type="button" variant="outline" size="sm" onClick={() => setSchemeModalOpen(true)}>
-                  {tr("Sxema belgilash")}
-                </Button>
-              )}
-            </div>
           ) : (
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-sm text-[var(--color-text-muted)]">{tr("Hisoblangan summa")}</span>
-              <span className="text-[15px] font-semibold tabular-nums text-[var(--color-text)]">
-                {formatMoney(computedTotal ?? 0)}
-              </span>
-            </div>
+            <>
+              {overview?.scheme ? (
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-medium text-[var(--color-text)]">{schemeSummary(overview.scheme, overview.preview?.quantity ?? null)}</p>
+                    <p className="text-[12px] text-[var(--color-text-muted)]">{tr("Maosh sxemasi")}</p>
+                  </div>
+                  {canWriteScheme && (
+                    <Button type="button" variant="outline" size="sm" onClick={() => setSchemeModalOpen(true)}>
+                      {tr("O'zgartirish")}
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm text-[var(--color-text-muted)]">{tr("Maosh sxemasi belgilanmagan")}</p>
+                  {canWriteScheme && (
+                    <Button type="button" variant="outline" size="sm" onClick={() => setSchemeModalOpen(true)}>
+                      {tr("Sxema belgilash")}
+                    </Button>
+                  )}
+                </div>
+              )}
+              {(overview?.scheme || overview?.entry) && (
+                <div className="flex items-center justify-between gap-3 border-t border-[var(--color-border)] pt-3">
+                  <span className="text-sm text-[var(--color-text-muted)]">{tr("Hisoblangan summa")}</span>
+                  <span className="text-[15px] font-semibold tabular-nums text-[var(--color-text)]">
+                    {formatMoney(computedTotal ?? 0)}
+                  </span>
+                </div>
+              )}
+            </>
           )}
 
           {alreadyPaidThisPeriod ? (
@@ -336,6 +371,7 @@ export default function EmployeeFinancePage({ params }: { params: Promise<{ slug
                 <p className="text-[13px] font-medium text-[var(--color-success)]">{tr("To'langan")}</p>
                 <p className="text-[12px] text-[var(--color-text-muted)]">
                   {overview!.entry!.paidAt ? formatDate(overview!.entry!.paidAt) : ""}
+                  {methodLabel(overview!.entry!.paymentMethod) ? ` · ${tr(methodLabel(overview!.entry!.paymentMethod)!)}` : ""}
                 </p>
               </div>
               <span className="text-[15px] font-semibold tabular-nums text-[var(--color-success)]">
@@ -345,6 +381,13 @@ export default function EmployeeFinancePage({ params }: { params: Promise<{ slug
           ) : (
             <div className="max-w-sm space-y-2 border-t border-[var(--color-border)] pt-3">
               <AmountInput label={tr("To'lanadigan summa")} placeholder="2 000 000" value={amount} onChange={setAmount} />
+              <Select label={tr("To'lov usuli")} value={method} onChange={(e) => setMethod(e.target.value as SalaryMethod)}>
+                {SALARY_METHODS.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {tr(m.label)}
+                  </option>
+                ))}
+              </Select>
               {payError && <p className="text-xs text-[var(--color-danger)]">{tr(payError)}</p>}
               <div className="flex justify-end">
                 <Button
@@ -385,6 +428,7 @@ export default function EmployeeFinancePage({ params }: { params: Promise<{ slug
                     <p className="text-[13.5px] font-medium text-[var(--color-text)]">{tr(entry.period)}</p>
                     <p className="text-[12px] text-[var(--color-text-muted)]">
                       {entry.paidAt ? formatDate(entry.paidAt) : "—"}
+                      {methodLabel(entry.paymentMethod) ? ` · ${tr(methodLabel(entry.paymentMethod)!)}` : ""}
                     </p>
                   </div>
                   <span className="text-[13.5px] font-semibold tabular-nums text-[var(--color-success)]">
