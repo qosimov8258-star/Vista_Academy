@@ -332,6 +332,7 @@ export function Sidebar({ slug }: { slug: string }) {
     { href: `/${slug}`, label: "Bosh sahifa", icon: HomeIcon, show: true, exact: true },
     { href: `/${slug}/cash`, label: "Kassa", icon: MoneyIcon, show: true },
     { href: `/${slug}/payments`, label: tr("To'lovlar"), icon: WalletIcon, show: true },
+    { href: `/${slug}/expenses`, label: tr("Xarajatlar"), icon: CoinIcon, show: true },
     { href: `/${slug}/finance`, label: tr("Hisob-fakturalar"), icon: NoteIcon, show: true },
     { href: `/${slug}/group-payments`, label: tr("Guruhlar bo'yicha to'lov"), icon: GroupIcon, show: true },
     { href: `/${slug}/cash-report`, label: "Oylik hisobot", icon: ChartIcon, show: true },
@@ -519,6 +520,7 @@ export function Sidebar({ slug }: { slug: string }) {
     { href: base, label: t("nav.home"), icon: HomeIcon, show: true, exact: true },
     { href: `/${slug}/cash`, label: "Kassa", icon: MoneyIcon, show: true },
     { href: `/${slug}/payments`, label: tr("To'lovlar"), icon: WalletIcon, show: true },
+    { href: `/${slug}/expenses`, label: tr("Xarajatlar"), icon: CoinIcon, show: true },
     { href: `/${slug}/audit-logs`, label: "Audit", icon: AuditIcon, show: true },
   ];
 

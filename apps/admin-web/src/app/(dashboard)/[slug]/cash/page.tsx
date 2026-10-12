@@ -8,12 +8,13 @@ import { useAuth } from "@/lib/use-auth";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input, Select } from "@/components/ui/input";
+import { Input } from "@/components/ui/input";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { downloadCsv } from "@/lib/download";
 import { formatMoney } from "@/lib/format";
 import { canWriteMoney } from "@/lib/permissions";
-import { EXPENSE_CATEGORIES, METHODS, METHOD_LABEL, todayTashkent, type CashDay } from "@/features/cash/shared";
+import { METHODS, METHOD_LABEL, todayTashkent, type CashDay } from "@/features/cash/shared";
+import { CategoryTile, ExpenseSheet, type ExpenseSheetRequest } from "@/features/expenses/expense-sheet";
 import { useTr } from "@/i18n/tr";
 
 function Tile({ label, value, tone }: { label: string; value: string; tone?: "danger" | "success" }) {
@@ -41,10 +42,7 @@ export default function CashPage({ params }: { params: Promise<{ slug: string }>
   const [date, setDate] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [receiptId, setReceiptId] = useState<string | null>(null);
-  // xarajat formasi
-  const [amount, setAmount] = useState("");
-  const [category, setCategory] = useState(EXPENSE_CATEGORIES[0]);
-  const [note, setNote] = useState("");
+  const [expenseSheet, setExpenseSheet] = useState<ExpenseSheetRequest>(null);
 
   useEffect(() => setDate((d) => d || todayTashkent()), []);
 
@@ -56,27 +54,6 @@ export default function CashPage({ params }: { params: Promise<{ slug: string }>
     refetchInterval: 30_000,
   });
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ["cash-day", slug] });
-  const fail = (err: unknown) => setError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
-
-  const addExpense = useMutation({
-    mutationFn: () => api.post("/app/cash/expenses", { date, amount: Number(amount), category, note: note.trim() || undefined }),
-    onSuccess: () => {
-      setAmount("");
-      setNote("");
-      setError(null);
-      refresh();
-    },
-    onError: fail,
-  });
-  const removeExpense = useMutation({
-    mutationFn: (id: string) => api.delete(`/app/cash/expenses/${id}`),
-    onSuccess: () => {
-      setError(null);
-      refresh();
-    },
-    onError: fail,
-  });
   const openReceipt = async (id: string) => {
     setReceiptId(id);
     setError(null);
@@ -120,6 +97,8 @@ export default function CashPage({ params }: { params: Promise<{ slug: string }>
             ))}
             <Tile label={tr("Qaytarilgan")} value={formatMoney(day.refundTotal)} tone={day.refundTotal > 0 ? "danger" : undefined} />
             <Tile label={tr("Xarajat")} value={formatMoney(day.expensesTotal)} tone={day.expensesTotal > 0 ? "danger" : undefined} />
+            {/* Faqat naqd xarajat kassadan chiqadi — kassir sanab solishtirishi uchun */}
+            <Tile label={tr("Kassada bo'lishi kerak (naqd)")} value={formatMoney(day.expectedCash)} />
             <Tile label={tr("Sof natija")} value={formatMoney(day.netTotal)} />
           </div>
 
@@ -160,9 +139,13 @@ export default function CashPage({ params }: { params: Promise<{ slug: string }>
             </CardBody>
           </Card>
 
+          {/* Xarajatlar — qator bosilsa tafsilot (tahrirlash/o'chirish), qo'shish — Xarajatlar sahifasidagi varaq */}
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between gap-3">
               <CardTitle>{tr("Xarajatlar")}</CardTitle>
+              <Link href={`/${slug}/expenses`} className="text-[14px] font-medium text-[var(--color-primary)] hover:underline">
+                {tr("Barcha xarajatlar")} ›
+              </Link>
             </CardHeader>
             <CardBody className="space-y-4">
               {day.expenses.length === 0 ? (
@@ -170,46 +153,34 @@ export default function CashPage({ params }: { params: Promise<{ slug: string }>
               ) : (
                 <ul className="divide-y divide-[var(--color-border)] text-[14px]">
                   {day.expenses.map((e) => (
-                    <li key={e.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
-                      <div>
-                        <span className="font-medium">{tr(e.category)}</span>
-                        <p className="text-[12.5px] text-[var(--color-text-muted)]">
-                          {tr(e.createdByName)}
-                          {e.note ? ` · ${e.note}` : ""}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <b className="tabular-nums">{formatMoney(e.amount)}</b>
-                        {canWrite && !day.closing && (
-                          <Button size="sm" variant="danger" loading={removeExpense.isPending && removeExpense.variables === e.id} onClick={() => removeExpense.mutate(e.id)}>
-                            {tr("O'chirish")}
-                          </Button>
-                        )}
-                      </div>
+                    <li key={e.id}>
+                      <button
+                        type="button"
+                        onClick={() => setExpenseSheet({ kind: "view", expense: { ...e, locked: e.locked || !!day.closing } })}
+                        className="flex w-full items-center gap-3 py-2.5 text-left transition-opacity active:opacity-60"
+                      >
+                        <CategoryTile category={e.category} />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-medium text-[var(--color-text)]">{e.note || tr(e.category)}</span>
+                          <span className="block truncate text-[12.5px] text-[var(--color-text-muted)]">
+                            {[e.note ? tr(e.category) : null, tr(METHOD_LABEL[e.method]), e.createdByName].filter(Boolean).join(" · ")}
+                          </span>
+                        </span>
+                        <b className="shrink-0 tabular-nums">{formatMoney(e.amount)}</b>
+                      </button>
                     </li>
                   ))}
                 </ul>
               )}
               {canWrite && !day.closing && (
-                <div className="flex flex-wrap items-end gap-3 border-t border-[var(--color-separator)] pt-4">
-                  <Input label={tr("Summa")} type="number" min={0} value={amount} onChange={(e) => setAmount(e.target.value)} className="w-[160px]" />
-                  <Select label={tr("Turi")} value={category} onChange={(e) => setCategory(e.target.value)}>
-                    {EXPENSE_CATEGORIES.map((c) => (
-                      <option key={c} value={c}>
-                        {tr(c)}
-                      </option>
-                    ))}
-                  </Select>
-                  <Input label={tr("Izoh (ixtiyoriy)")} value={note} onChange={(e) => setNote(e.target.value)} className="min-w-[200px] flex-1" />
-                  <Button loading={addExpense.isPending} disabled={!(Number(amount) > 0)} onClick={() => { setError(null); addExpense.mutate(); }}>
-                    {tr("Qo'shish")}
-                  </Button>
-                </div>
+                <Button onClick={() => setExpenseSheet({ kind: "new", date })}>{tr("Xarajat qo'shish")}</Button>
               )}
             </CardBody>
           </Card>
         </>
       ) : null}
+
+      <ExpenseSheet request={expenseSheet} onClose={() => setExpenseSheet(null)} />
     </div>
   );
 }
