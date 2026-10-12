@@ -10,6 +10,7 @@ import { R2Service } from "../storage/r2.service";
 import { PaymentReceiptsService } from "./payment-receipts.service";
 import { ApprovePaymentReceiptDto } from "./dto/approve-payment-receipt.dto";
 import { RejectPaymentReceiptDto } from "./dto/reject-payment-receipt.dto";
+import { AttachPaymentReceiptImageDto } from "./dto/attach-payment-receipt-image.dto";
 
 /** Moliyachi tomoni — ota-ona yuklagan to'lov cheklarini ko'rib chiqish. */
 @ApiBearerAuth()
@@ -33,6 +34,28 @@ export class PaymentReceiptsController {
   @Header("Cache-Control", "private, max-age=60")
   async image(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string, @Res() res: Response) {
     const record = await this.paymentReceiptsService.readImageForStaff(toTenantScope(user), id);
+    await sendMediaResponse(
+      res,
+      this.r2,
+      { key: record.imageKey, bytes: record.image, mimeType: record.mimeType },
+      "Chek surati yo'q",
+    );
+  }
+
+  /** Kassir qabul qilgan to'lovga chek suratini biriktiradi. */
+  @Post("payments/:id/receipt-image")
+  attachImage(
+    @CurrentTenantUser() user: TenantAuthenticatedUser,
+    @Param("id") id: string,
+    @Body() dto: AttachPaymentReceiptImageDto,
+  ) {
+    return this.paymentReceiptsService.attachPaymentImage(user, id, dto);
+  }
+
+  @Get("payments/:id/receipt-image")
+  @Header("Cache-Control", "private, max-age=60")
+  async paymentImage(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string, @Res() res: Response) {
+    const record = await this.paymentReceiptsService.readPaymentImage(toTenantScope(user), id);
     await sendMediaResponse(
       res,
       this.r2,

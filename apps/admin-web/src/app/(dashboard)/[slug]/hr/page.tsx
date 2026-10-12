@@ -19,7 +19,7 @@ import { LogShiftModal } from "@/features/hr/log-shift-modal";
 import { GeneratePayrollModal } from "@/features/hr/generate-payroll-modal";
 import { EditSalarySchemeModal } from "@/features/hr/edit-salary-scheme-modal";
 import { useBranchContext } from "@/lib/use-branch-context";
-import { canWriteMoney, canWriteOperational } from "@/lib/permissions";
+import { canWriteMoney } from "@/lib/permissions";
 import { useTr } from "@/i18n/tr";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
@@ -48,7 +48,7 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
   const canWrite = canWriteMoney(user?.role);
   // Maosh sxemasini belgilash — moliyachi emas, faqat filial admini/administrator ishi
   // (moliyachi faqat hisoblangan summani to'laydi, sxemani o'zi yarata olmaydi).
-  const canWriteScheme = canWriteOperational(user?.role);
+  const canWriteScheme = canWriteMoney(user?.role);
   const { branchId: forcedBranchId } = useBranchContext(slug);
 
   // "Current period" depends on the viewer's clock, which can differ between

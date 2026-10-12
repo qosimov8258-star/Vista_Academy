@@ -173,6 +173,58 @@ export class ParentService {
     return { date, attendance: updated };
   }
 
+  /**
+   * "Yo'lga chiqdim" — ota-ona uydan chiqqanini va necha daqiqada yetib
+   * kelishini bildiradi. Bola guruhining tarbiyachilariga xodim
+   * bildirishnomasi yoziladi, shunda bolani tayyorlab qo'yishadi.
+   */
+  async notifyDeparture(parent: AuthenticatedParent, childId: string, minutes: number) {
+    const child = await this.assertOwnsChild(parent, childId);
+    const who = await this.guardianLabel(parent, childId);
+    const message = `${child.fullName}ning ${who} ${parent.fullName} yo'lga chiqdi — taxminan ${minutes} daqiqada yetib keladi. Bolani tayyorlab qo'ying.`;
+    const notified = await this.notifyGroupTeachers(child, message);
+    return { notified, minutes };
+  }
+
+  /** Ota-ona tarbiyachiga eslatma yozadi (masalan dori yoki ukol haqida). */
+  async notifyNote(parent: AuthenticatedParent, childId: string, text: string) {
+    const child = await this.assertOwnsChild(parent, childId);
+    const who = await this.guardianLabel(parent, childId);
+    const message = `${child.fullName} ${who}dan (${parent.fullName}) eslatma: ${text.trim()}`;
+    const notified = await this.notifyGroupTeachers(child, message);
+    return { notified };
+  }
+
+  /** Bolaga qarindoshligiga qarab "onasi" / "otasi"; aniq bo'lmasa "ota-onasi". */
+  private async guardianLabel(parent: AuthenticatedParent, childId: string): Promise<string> {
+    const link = await this.prisma.childGuardian.findFirst({
+      where: { guardianId: parent.id, childId },
+      select: { relation: true },
+    });
+    const word = link?.relation === "MOTHER" ? "onasi" : link?.relation === "FATHER" ? "otasi" : "ota-onasi";
+    return word;
+  }
+
+  private async notifyGroupTeachers(
+    child: { branchId: string; group: { id: string } | null },
+    message: string,
+  ): Promise<number> {
+    if (!child.group) {
+      throw new BadRequestException("Bola hali guruhga biriktirilmagan");
+    }
+    const teachers = await this.prisma.groupTeacher.findMany({
+      where: { groupId: child.group.id },
+      select: { employeeId: true },
+    });
+    if (teachers.length === 0) {
+      throw new BadRequestException("Guruhga tarbiyachi biriktirilmagan");
+    }
+    await this.prisma.employeeNotification.createMany({
+      data: teachers.map((t) => ({ branchId: child.branchId, employeeId: t.employeeId, message })),
+    });
+    return teachers.length;
+  }
+
   /** Bolaning filialidagi coin do'koni — tovarlar va bolaning joriy balansi. */
   async products(parent: AuthenticatedParent, childId: string) {
     const child = await this.assertOwnsChild(parent, childId);

@@ -164,6 +164,21 @@ export class TenantLandingController {
     return this.landingService.setGroupPhoto(id, `/uploads/landing/${file.filename}`);
   }
 
+  @Post("groups/:id/cover-photo")
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(landingPhotoUploadInterceptor())
+  async uploadGroupCoverPhoto(
+    @CurrentTenantUser() user: TenantAuthenticatedUser,
+    @Param("id") id: string,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    requireOperationalScope(toTenantScope(user));
+    if (!file) {
+      throw new BadRequestException("Fayl yuborilmadi");
+    }
+    return this.landingService.setGroupCoverPhoto(id, `/uploads/landing/${file.filename}`);
+  }
+
   @Post("groups/:id/photos")
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(landingPhotoUploadInterceptor())

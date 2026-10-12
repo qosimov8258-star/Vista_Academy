@@ -20,6 +20,8 @@ import { initials } from "@/components/ui/avatar";
 import { formatAge, formatChildId, formatDateTime, formatGender, formatMoney, formatPhone, formatDate } from "@/lib/format";
 import { downloadCsv } from "@/lib/download";
 import { useBranchContext } from "@/lib/use-branch-context";
+import { isCashierPosition } from "@/lib/employee-position";
+import { ChildCashCard } from "@/features/cash/child-cash-card";
 import { canWriteMoney, canWriteOperational } from "@/lib/permissions";
 import { AddGuardianModal } from "@/features/guardians/add-guardian-modal";
 import { ParentCabinetModal } from "@/features/guardians/parent-cabinet-modal";
@@ -101,6 +103,8 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const canWrite = canWriteMoney(user?.role);
+  // Moliyachi va kassirga ota-ona kartasi o'rnida to'lov qabul qilish kartasi ko'rinadi
+  const showCash = canWrite && (user?.role === "FINANCE" || (!!user?.position && isCashierPosition(user.position)));
   // Bola profilini tahrirlash (surat, asosiy ma'lumot, ota-ona) — moliya emas,
   // operatsion huquq. Moliyachida bu yo'q, faqat ko'radi.
   const canWriteChild = canWriteOperational(user?.role);
@@ -382,6 +386,8 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
         </dl>
       </Card>
 
+      {showCash && <ChildCashCard slug={slug} groupId={child.groupId ?? "none"} childId={childId} />}
+      {!showCash && (
       <Card className="overflow-hidden">
         <div className="hairline flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-separator)] px-5 py-4 sm:px-6">
           <div>
@@ -475,6 +481,7 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
           </div>
         )}
       </Card>
+      )}
 
       {receiptError && (
         <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
