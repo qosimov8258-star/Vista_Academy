@@ -69,3 +69,16 @@ a.card:hover {
     transition: none;
   }
 }
+
+/* Bosh sahifadagi tushum grafigi — ustunlar pastdan o'sib chiqadi */
+.bar {
+  transform-origin: bottom;
+  animation: barIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes barIn {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bar { animation: none; }
+}

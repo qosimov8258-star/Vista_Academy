@@ -1,8 +1,8 @@
 "use client";
 
 import type { ComponentType } from "react";
-import type { IconProps } from "@/components/ui/icons";
-import { AlertIcon } from "@/components/ui/icons";
+import type { IconProps } from "./icons";
+import { AlertIcon } from "./icons";
 import { GROUP_BLOCK, ROW_SEPARATOR } from "./tokens";
 import { IosButton } from "./button";
 import { useTr } from "@/i18n/tr";

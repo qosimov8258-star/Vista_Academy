@@ -5,7 +5,7 @@ import clsx from "clsx";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { LessonSchedule, Weekday } from "@/lib/types";
-import { ClockIcon } from "@/components/ui/icons";
+import { ClockIcon } from "@/components/ios/icons";
 import { EmptyRow, Group, LargeTitle, Row, SkeletonRows, TeacherPage } from "./teacher-ui";
 import styles from "./teacher.module.css";
 import { useTr } from "@/i18n/tr";

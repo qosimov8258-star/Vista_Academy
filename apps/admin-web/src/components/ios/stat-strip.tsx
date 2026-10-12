@@ -10,7 +10,7 @@ export function StatStrip({ children, tone = "gray", className }: { children: Re
   return (
     <div
       data-tone={tone}
-      className={clsx("group/strip grid grid-cols-2 gap-px overflow-hidden rounded-[22px] bg-[#c6c6c8]/45 lg:grid-cols-4", className)}
+      className={clsx("group/strip grid grid-cols-2 gap-px overflow-hidden rounded-[18px] bg-black/[0.06] lg:grid-cols-4", className)}
     >
       {children}
     </div>

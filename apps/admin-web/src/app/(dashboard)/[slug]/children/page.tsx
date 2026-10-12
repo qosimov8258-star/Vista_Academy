@@ -6,7 +6,7 @@ import { useInfiniteQuery, useQueries, useQuery } from "@tanstack/react-query";
 import { api, getPaginated } from "@/lib/api";
 import type { Child, ChildAllergy, Group } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
-import { ChildIcon, DocumentIcon, PhoneIcon, PlusIcon, SearchIcon } from "@/components/ui/icons";
+import { ChildIcon, DocumentIcon, PhoneIcon, PlusIcon, SearchIcon } from "@/components/ios/icons";
 import { rowLinkProps } from "@/components/ui/table";
 import { LoadingState } from "@/components/ui/states";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";

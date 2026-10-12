@@ -14,17 +14,20 @@ export const IOS = {
   gray: "#8e8e93",
 } as const;
 
-/** Sahifa kartasi: 32px burchak, ramkasiz, yumshoq soya */
-export const PAGE_CARD = "rounded-[32px] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(23,52,110,0.12)]";
+/** Sahifa kartasi: 18px burchak, ramka va soyasiz — iOS «inset grouped» (Sabot bilan bir xil) */
+export const PAGE_CARD = "rounded-[18px] bg-white";
 
-/** Bo'lim bloki (Group ichidagi oq blok) */
-export const GROUP_BLOCK = "overflow-hidden rounded-[22px] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-14px_rgba(23,52,110,0.10)]";
+/** Bo'lim bloki (Group ichidagi oq blok) — sahifa kartasi bilan bir xil */
+export const GROUP_BLOCK = "overflow-hidden rounded-[18px] bg-white";
 
 /** Bo'lim sarlavhasi */
-export const SECTION_TITLE = "px-4 pb-2 text-[12.5px] font-semibold uppercase tracking-[0.06em] text-[#6d6d72]";
+export const SECTION_TITLE = "px-4 pb-1.5 text-[13px] uppercase tracking-wide text-[#8e8e93]";
 
-/** Qatorlar orasidagi ajratgich — chapdan 16px ichkarida, birinchi qatorda yo'q */
-export const ROW_SEPARATOR = "pointer-events-none absolute left-4 right-0 top-0 h-px bg-[#c6c6c8]/60 group-first/row:hidden";
+/**
+ * Qatorlar orasidagi ajratgich — birinchi qatorda yo'q. Sukut bo'yicha
+ * chapdan 16px; plitka/avatar bor qatorda matndan boshlanadi (`style.left`).
+ */
+export const ROW_SEPARATOR = "pointer-events-none absolute left-4 right-0 top-0 h-px bg-black/[0.08] group-first/row:hidden";
 
 /** Bosiladigan qator foni */
 export const ROW_PRESS = "transition-colors hover:bg-[#767680]/[0.05] active:bg-[#767680]/[0.1]";

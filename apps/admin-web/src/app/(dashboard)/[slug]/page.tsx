@@ -18,7 +18,7 @@ import { AdminHome } from "@/features/desk/admin-home";
 import { BranchAdminHome } from "@/features/branch-admin/branch-admin-home";
 import { DirectorHome } from "@/features/director/director-home";
 import { TeacherHome } from "@/features/teacher/teacher-home";
-import { ChildIcon, ChevronRightIcon, MoneyIcon } from "@/components/ui/icons";
+import { ChildIcon, ChevronRightIcon, MoneyIcon } from "@/components/ios/icons";
 import { PeriodPicker } from "@/features/network/period-picker";
 import { IosIcon } from "@/features/director/ios-icon";
 import { formatCompact, formatSum } from "@/features/network/money";

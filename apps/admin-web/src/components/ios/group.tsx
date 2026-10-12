@@ -3,7 +3,7 @@
 import Link from "next/link";
 import clsx from "clsx";
 import type { ReactNode } from "react";
-import { ChevronRightIcon } from "@/components/ui/icons";
+import { ChevronRightIcon } from "./icons";
 import { GROUP_BLOCK, ROW_PRESS, ROW_SEPARATOR, SECTION_TITLE } from "./tokens";
 import { Spinner } from "./spinner";
 
@@ -81,7 +81,7 @@ function PressableRow({ href, onClick, ariaLabel, className, children }: Pressab
   return <div className={className}>{children}</div>;
 }
 
-const CHEVRON = <ChevronRightIcon className="h-[15px] w-[15px] shrink-0 text-[#c4c4c6]" strokeWidth={2.6} aria-hidden="true" />;
+const CHEVRON = <ChevronRightIcon className="h-4 w-4 shrink-0 text-[#c7c7cc]" strokeWidth={2.2} aria-hidden="true" />;
 
 /**
  * Oddiy qator (Line): chapda nom va izoh, o'ngda qiymat yoki boshqaruv.
@@ -113,7 +113,8 @@ export function Row({
         {value !== undefined && <span className="shrink-0 text-right text-[15px] tabular-nums text-[#8e8e93]">{value}</span>}
         {(chevron ?? pressable) && CHEVRON}
       </PressableRow>
-      <span className={ROW_SEPARATOR} aria-hidden="true" />
+      {/* iOS'dagidek: plitka bor qatorda chiziq matndan boshlanadi (16 + 30 + 12) */}
+      <span className={ROW_SEPARATOR} style={leading ? { left: 58 } : undefined} aria-hidden="true" />
     </div>
   );
 }
@@ -152,7 +153,8 @@ export function ListRow({
         {(chevron ?? (pressable && !trailing)) && CHEVRON}
       </PressableRow>
       {trailing && <span className="shrink-0 pr-4">{trailing}</span>}
-      <span className={ROW_SEPARATOR} aria-hidden="true" />
+      {/* Avatar bor qatorda chiziq ismdan boshlanadi (16 + 44 + 12) */}
+      <span className={ROW_SEPARATOR} style={avatar ? { left: 72 } : undefined} aria-hidden="true" />
     </div>
   );
 }

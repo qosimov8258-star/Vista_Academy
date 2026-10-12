@@ -9,7 +9,7 @@ import type { Child, ChildAllergy } from "@/lib/types";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { ChildPhoto } from "@/components/ui/child-photo";
 import { initials } from "@/components/ui/avatar";
-import { ChevronRightIcon, ChildIcon, CloseIcon, PhoneIcon, SearchIcon } from "@/components/ui/icons";
+import { ChevronRightIcon, ChildIcon, CloseIcon, PhoneIcon, SearchIcon } from "@/components/ios/icons";
 import { EmptyRow, Group, LargeTitle, Segmented, SkeletonRows, TeacherPage } from "./teacher-ui";
 import styles from "./teacher.module.css";
 import { useTr } from "@/i18n/tr";

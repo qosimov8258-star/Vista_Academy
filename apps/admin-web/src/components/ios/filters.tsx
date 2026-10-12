@@ -2,7 +2,7 @@
 
 import clsx from "clsx";
 import type { ReactNode } from "react";
-import { CheckIcon, CloseIcon, SearchIcon } from "@/components/ui/icons";
+import { CheckIcon, CloseIcon, SearchIcon } from "./icons";
 import { ChevronsUpDown } from "./form";
 import { useTr } from "@/i18n/tr";
 

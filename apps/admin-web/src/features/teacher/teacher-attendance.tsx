@@ -12,7 +12,7 @@ import { useBranchContext } from "@/lib/use-branch-context";
 import { downloadCsv } from "@/lib/download";
 import { ChildPhoto } from "@/components/ui/child-photo";
 import { initials } from "@/components/ui/avatar";
-import { CalendarIcon, CheckIcon, ChecklistIcon, DocumentIcon, NoteIcon } from "@/components/ui/icons";
+import { CalendarIcon, CheckIcon, ChecklistIcon, DocumentIcon, NoteIcon } from "@/components/ios/icons";
 import { ChildNoteModal } from "@/features/child-notes/child-note-modal";
 import { EmptyRow, FloatingBar, Group, LargeTitle, PrimaryButton, Row, Segmented, SkeletonRows, TeacherPage, formatDayLong, formatDayShort, todayIso } from "./teacher-ui";
 import { TeacherReminders } from "./teacher-reminders";
