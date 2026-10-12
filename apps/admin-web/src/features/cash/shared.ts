@@ -1,3 +1,5 @@
+import type { ExpenseRow } from "@/features/expenses/categories";
+
 // Backend (cash-desk) bilan bir xil to'liq ro'yxat — Click/Payme/Ilova kirimi ham ko'rinsin
 export const METHODS = ["CASH", "CARD", "BANK_TRANSFER", "CLICK", "PAYME", "UZUM", "MOBILE_APP", "BANKOMAT", "OTHER"] as const;
 export type CashMethod = (typeof METHODS)[number];
@@ -39,7 +41,9 @@ export interface CashDay {
     recordedByName: string | null;
     createdAt: string;
   }[];
-  expenses: { id: string; amount: number; category: string; note: string | null; createdByName: string }[];
+  /** Faqat naqd xarajatlar — kassadagi naqdni shular kamaytiradi */
+  cashExpensesTotal: number;
+  expenses: ExpenseRow[];
   closing: {
     expectedCash: number;
     countedCash: number;
@@ -82,7 +86,6 @@ export interface CashReport {
   expensesByCategory: { category: string; total: number }[];
 }
 
-export const EXPENSE_CATEGORIES = ["Xo'jalik mollari", "Tozalik", "Ta'mirlash", "Ofis", "Transport", "Boshqa"];
 
 /** Toshkent bo'yicha bugungi sana (YYYY-MM-DD). */
 export function todayTashkent(): string {

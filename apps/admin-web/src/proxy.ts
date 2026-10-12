@@ -20,6 +20,7 @@ const KNOWN_ORG_PAGES = new Set([
   "cash-report",
   "group-payments",
   "payments",
+  "expenses",
   "calls",
   "board",
   "pickups",
