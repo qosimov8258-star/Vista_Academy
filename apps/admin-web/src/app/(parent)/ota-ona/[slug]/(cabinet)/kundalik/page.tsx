@@ -3,7 +3,6 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import clsx from "clsx";
 import { ApiError } from "@/lib/api";
 import { parentApi } from "@/lib/parent-api";
 import type { ParentAccount, ParentChild } from "@/lib/types";
@@ -14,6 +13,8 @@ import { nowMinutes, useDiaryDay, useDiaryDays, type DiaryMedia } from "./diary"
 import { DiaryIcon } from "@/features/diary/kinds";
 import { MediaViewer } from "./media-viewer";
 import { MealsSection } from "./meals-section";
+import { ChildSwitcher } from "../child-switcher";
+import { useSelectedChild } from "../use-selected-child";
 import { useTr } from "@/i18n/tr";
 
 /** Har 30 soniyada yangilanadigan soat — "hozir" belgisi siljib borsin */
@@ -36,7 +37,6 @@ export default function ParentDiaryPage({ params }: { params: Promise<{ slug: st
   const tr = useTr();
   const { slug } = use(params);
   const router = useRouter();
-  const [activeChildId, setActiveChildId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [viewer, setViewer] = useState<{ items: DiaryMedia[]; index: number } | null>(null);
 
@@ -52,7 +52,7 @@ export default function ParentDiaryPage({ params }: { params: Promise<{ slug: st
   }, [meQuery.isError, meQuery.error, router, slug]);
 
   const children = meQuery.data?.children ?? [];
-  const childId = activeChildId ?? children[0]?.id ?? null;
+  const { child, childId, multiple } = useSelectedChild(slug, meQuery.data?.children);
   const daysQuery = useDiaryDays(childId);
   const dayQuery = useDiaryDay(childId, selectedDate);
   const day = dayQuery.data;
@@ -69,26 +69,7 @@ export default function ParentDiaryPage({ params }: { params: Promise<{ slug: st
         </p>
       </header>
 
-      {children.length > 1 && (
-        <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-          {children.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              onClick={() => {
-                setActiveChildId(c.id);
-                setSelectedDate(null);
-              }}
-              className={clsx(
-                "shrink-0 cursor-pointer rounded-full px-4 py-2.5 text-[14px] font-semibold transition-colors",
-                c.id === childId ? "bg-[var(--p-coral)] text-white" : "bg-[var(--p-panel)] text-[var(--p-muted)]",
-              )}
-            >
-              {tr(c.fullName.split(" ").slice(-1)[0])}
-            </button>
-          ))}
-        </div>
-      )}
+      {multiple && child && <ChildSwitcher slug={slug} child={child} />}
 
       {daysQuery.data && daysQuery.data.length > 0 && (
         <DayStrip

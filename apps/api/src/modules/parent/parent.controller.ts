@@ -23,6 +23,8 @@ import { ParentService } from "./parent.service";
 import { ParentLoginDto } from "./dto/parent-login.dto";
 import { ChangeParentPasswordDto } from "./dto/change-parent-password.dto";
 import { SubmitAbsenceReasonDto } from "./dto/submit-absence-reason.dto";
+import { NotifyDepartureDto } from "./dto/notify-departure.dto";
+import { NotifyNoteDto } from "./dto/notify-note.dto";
 import { ParentJwtAuthGuard } from "./guards/parent-jwt-auth.guard";
 import { CurrentParent } from "./decorators/current-parent.decorator";
 import { AuthenticatedParent } from "./parent-auth.types";
@@ -205,6 +207,30 @@ export class ParentController {
     @Body() dto: SubmitAbsenceReasonDto,
   ) {
     return this.parentService.submitAbsenceReason(parent, childId, date, dto.reason);
+  }
+
+  /** "Yo'lga chiqdim" — tarbiyachiga necha daqiqada yetib borishini bildiradi. */
+  @Post("children/:childId/departure")
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(ParentJwtAuthGuard)
+  notifyDeparture(
+    @CurrentParent() parent: AuthenticatedParent,
+    @Param("childId") childId: string,
+    @Body() dto: NotifyDepartureDto,
+  ) {
+    return this.parentService.notifyDeparture(parent, childId, dto.minutes);
+  }
+
+  /** Tarbiyachiga eslatma (dori, ukol va h.k.). */
+  @Post("children/:childId/note")
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(ParentJwtAuthGuard)
+  notifyNote(
+    @CurrentParent() parent: AuthenticatedParent,
+    @Param("childId") childId: string,
+    @Body() dto: NotifyNoteDto,
+  ) {
+    return this.parentService.notifyNote(parent, childId, dto.text);
   }
 
   /** Bolaning surati — kabinetda ko'rsatish uchun. */

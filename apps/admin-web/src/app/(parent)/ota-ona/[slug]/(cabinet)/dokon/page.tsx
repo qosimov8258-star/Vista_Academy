@@ -10,6 +10,8 @@ import type { ParentAccount, ParentChild, ParentPurchaseResult, ParentShop, Prod
 import { CoinIcon, ShopIcon } from "@/components/ui/icons";
 import styles from "../../parent.module.css";
 import { useTr } from "@/i18n/tr";
+import { ChildSwitcher } from "../child-switcher";
+import { useSelectedChild } from "../use-selected-child";
 
 function firstImagePosition(product: Product): 1 | 2 | 3 | null {
   if (product.hasImage1) return 1;
@@ -32,7 +34,6 @@ export default function ParentShopPage({ params }: { params: Promise<{ slug: str
   const tr = useTr();
   const { slug } = use(params);
   const router = useRouter();
-  const [activeChildId, setActiveChildId] = useState<string | null>(null);
   const [selected, setSelected] = useState<Product | null>(null);
 
   const meQuery = useQuery({
@@ -47,8 +48,7 @@ export default function ParentShopPage({ params }: { params: Promise<{ slug: str
     }
   }, [meQuery.isError, meQuery.error, router, slug]);
 
-  const children = meQuery.data?.children ?? [];
-  const childId = activeChildId ?? children[0]?.id ?? null;
+  const { child, childId, multiple } = useSelectedChild(slug, meQuery.data?.children);
 
   const shopQuery = useQuery({
     queryKey: ["parent-shop", childId],
@@ -73,23 +73,7 @@ export default function ParentShopPage({ params }: { params: Promise<{ slug: str
         )}
       </header>
 
-      {children.length > 1 && (
-        <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-          {children.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              onClick={() => setActiveChildId(c.id)}
-              className={clsx(
-                "shrink-0 cursor-pointer rounded-full px-4 py-2.5 text-[14px] font-semibold transition-colors",
-                c.id === childId ? "bg-[var(--p-coral)] text-white" : "bg-[var(--p-panel)] text-[var(--p-muted)]",
-              )}
-            >
-              {tr(c.fullName.split(" ").slice(-1)[0])}
-            </button>
-          ))}
-        </div>
-      )}
+      {multiple && child && <ChildSwitcher slug={slug} child={child} />}
 
       {shopQuery.isLoading ? (
         <div className="mt-5 grid grid-cols-2 gap-3">
