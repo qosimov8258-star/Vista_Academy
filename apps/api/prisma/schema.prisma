@@ -1401,16 +1401,21 @@ model PickupLog {
   @@map("pickup_logs")
 }
 
-/// Kassirning kunlik xarajati (xo'jalik mollari va h.k.). Kassadagi naqd pulni kamaytiradi.
+/// Filial xarajati (oziq-ovqat, xo'jalik mollari, kommunal va h.k.). Faqat naqd
+/// (`method = CASH`) xarajat kassadagi naqd pulni kamaytiradi.
 model Expense {
-  id            String   @id @default(uuid())
-  branchId      String   @map("branch_id")
-  date          DateTime @db.Date
-  amount        Decimal  @db.Decimal(12, 2)
-  category      String
-  note          String?
-  createdByName String   @map("created_by_name")
-  createdAt     DateTime @default(now()) @map("created_at")
+  id              String        @id @default(uuid())
+  branchId        String        @map("branch_id")
+  date            DateTime      @db.Date
+  amount          Decimal       @db.Decimal(12, 2)
+  category        String
+  /// Pul qanday chiqdi — karta/o'tkazma bilan to'langan xarajat kassani kamaytirmaydi
+  method          PaymentMethod @default(CASH)
+  note            String?
+  createdByName   String        @map("created_by_name")
+  createdByUserId String?       @map("created_by_user_id")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @default(now()) @updatedAt @map("updated_at")
 
   branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
 

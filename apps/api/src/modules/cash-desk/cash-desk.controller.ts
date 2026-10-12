@@ -1,11 +1,11 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { Public } from "../../common/decorators/public.decorator";
 import { TenantJwtAuthGuard } from "../iam/guards/tenant-jwt-auth.guard";
 import { CurrentTenantUser } from "../iam/decorators/current-tenant-user.decorator";
 import { TenantAuthenticatedUser, toTenantScope } from "../iam/tenant-auth.types";
 import { CashDeskService } from "./cash-desk.service";
-import { CloseCashDto, CreateExpenseDto } from "./dto/cash-desk.dto";
+import { CloseCashDto, CreateExpenseDto, UpdateExpenseDto } from "./dto/cash-desk.dto";
 
 @ApiBearerAuth()
 @ApiTags("Tenant Cash Desk")
@@ -20,9 +20,20 @@ export class CashDeskController {
     return this.service.day(toTenantScope(user), date);
   }
 
+  /** Oy bo'yicha xarajatlar: jami, turkumlar, o'tgan oy bilan solishtirish va ro'yxat. */
+  @Get("expenses")
+  expenses(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query("month") month: string) {
+    return this.service.listExpenses(toTenantScope(user), month);
+  }
+
   @Post("expenses")
   addExpense(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: CreateExpenseDto) {
     return this.service.addExpense(user, dto);
+  }
+
+  @Patch("expenses/:id")
+  updateExpense(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string, @Body() dto: UpdateExpenseDto) {
+    return this.service.updateExpense(user, id, dto);
   }
 
   @Delete("expenses/:id")

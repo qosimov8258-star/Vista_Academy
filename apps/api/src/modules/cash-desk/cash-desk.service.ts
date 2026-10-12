@@ -3,7 +3,7 @@ import { PrismaService } from "../../database/prisma.service";
 import { TenantAuthenticatedUser, TenantScope, requireMoneyScope, toTenantScope } from "../iam/tenant-auth.types";
 import { AuditLogService } from "../audit-log/audit-log.service";
 import { PushService } from "../push/push.service";
-import { CloseCashDto, CreateExpenseDto } from "./dto/cash-desk.dto";
+import { CloseCashDto, CreateExpenseDto, UpdateExpenseDto } from "./dto/cash-desk.dto";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const MONTH_RE = /^\d{4}-\d{2}$/;
@@ -31,6 +31,40 @@ function assertDate(value: string | undefined, label = "Sana"): string {
     throw new BadRequestException(`${label} noto'g'ri (YYYY-MM-DD)`);
   }
   return value;
+}
+
+/** Xarajat sanasi: YYYY-MM-DD va kelajakda emas (Toshkent bo'yicha bugun ham mumkin) */
+function assertExpenseDate(value: string): string {
+  const date = assertDate(value?.slice(0, 10));
+  const today = new Date(Date.now() + TASHKENT_OFFSET_MS).toISOString().slice(0, 10);
+  if (date > today) {
+    throw new BadRequestException("Kelajakdagi sana bilan xarajat yozib bo'lmaydi");
+  }
+  return date;
+}
+
+/** Oyning birinchi va oxirgi kuni (`@db.Date` ustuni uchun) */
+function monthDateRange(month: string) {
+  const [y, m] = month.split("-").map(Number);
+  return { gte: new Date(Date.UTC(y, m - 1, 1)), lt: new Date(Date.UTC(y, m, 1)) };
+}
+
+function toExpenseRow(
+  e: { id: string; date: Date; amount: unknown; category: string; method: string; note: string | null; createdByName: string; createdAt: Date; updatedAt: Date },
+  locked: boolean,
+) {
+  return {
+    id: e.id,
+    date: e.date.toISOString().slice(0, 10),
+    amount: Number(e.amount),
+    category: e.category,
+    method: e.method,
+    note: e.note,
+    createdByName: e.createdByName,
+    createdAt: e.createdAt,
+    updatedAt: e.updatedAt,
+    locked,
+  };
 }
 
 function emptyByMethod() {
@@ -72,8 +106,9 @@ export class CashDeskService {
       refunded[r.method].total += Number(r.amount);
     }
     const expensesTotal = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
-    // Xarajatlar kassadagi naqd puldan chiqadi deb hisoblanadi.
-    const expectedCash = income.CASH.total - refunded.CASH.total - expensesTotal;
+    // Kassadagi naqddan faqat naqd to'langan xarajat chiqadi (karta/o'tkazma emas)
+    const cashExpensesTotal = expenses.filter((e) => e.method === "CASH").reduce((sum, e) => sum + Number(e.amount), 0);
+    const expectedCash = income.CASH.total - refunded.CASH.total - cashExpensesTotal;
     const incomeTotal = METHODS.reduce((sum, m) => sum + income[m].total, 0);
     const refundTotal = METHODS.reduce((sum, m) => sum + refunded[m].total, 0);
 
@@ -84,6 +119,7 @@ export class CashDeskService {
       incomeTotal,
       refundTotal,
       expensesTotal,
+      cashExpensesTotal,
       expectedCash,
       netTotal: incomeTotal - refundTotal - expensesTotal,
       payments: payments.map((p) => ({
@@ -97,13 +133,7 @@ export class CashDeskService {
         recordedByName: p.recordedBy?.fullName ?? null,
         createdAt: p.createdAt,
       })),
-      expenses: expenses.map((e) => ({
-        id: e.id,
-        amount: Number(e.amount),
-        category: e.category,
-        note: e.note,
-        createdByName: e.createdByName,
-      })),
+      expenses: expenses.map((e) => toExpenseRow(e, !!closing)),
       closing: closing
         ? {
             expectedCash: Number(closing.expectedCash),
@@ -120,20 +150,62 @@ export class CashDeskService {
   async addExpense(caller: TenantAuthenticatedUser, dto: CreateExpenseDto) {
     const scope = toTenantScope(caller);
     const branchId = requireMoneyScope(scope);
-    const date = assertDate(dto.date.slice(0, 10));
+    const date = assertExpenseDate(dto.date);
     await this.assertNotClosed(branchId, date);
-    const category = dto.category.trim();
+    const method = dto.method ?? "CASH";
     const row = await this.prisma.expense.create({
-      data: { branchId, date: toDateOnly(date), amount: dto.amount, category, note: dto.note?.trim() || null, createdByName: caller.fullName },
+      data: {
+        branchId,
+        date: toDateOnly(date),
+        amount: dto.amount,
+        category: dto.category,
+        method,
+        note: dto.note?.trim() || null,
+        createdByName: caller.fullName,
+        createdByUserId: caller.id,
+      },
     });
     await this.auditLog.logFromUser(caller, {
       action: "expense.create",
       entityType: "Expense",
       entityId: row.id,
       branchId,
-      summary: `"${category}" uchun ${dto.amount} xarajat yozildi`,
+      summary: `"${dto.category}" uchun ${dto.amount} xarajat yozildi (${method}, ${date})`,
     });
     return { id: row.id };
+  }
+
+  /** Xarajatni tahrirlash — eski va yangi kun ham yopilmagan bo'lishi kerak. */
+  async updateExpense(caller: TenantAuthenticatedUser, id: string, dto: UpdateExpenseDto) {
+    const scope = toTenantScope(caller);
+    const branchId = requireMoneyScope(scope);
+    const row = await this.prisma.expense.findFirst({ where: { id, branchId } });
+    if (!row) {
+      throw new NotFoundException("Xarajat topilmadi");
+    }
+    const oldDate = row.date.toISOString().slice(0, 10);
+    const date = assertExpenseDate(dto.date);
+    await this.assertNotClosed(branchId, oldDate);
+    if (date !== oldDate) await this.assertNotClosed(branchId, date);
+    const method = dto.method ?? row.method;
+    await this.prisma.expense.update({
+      where: { id },
+      data: { date: toDateOnly(date), amount: dto.amount, category: dto.category, method, note: dto.note?.trim() || null },
+    });
+    const changes = [
+      Number(row.amount) !== dto.amount ? `summa ${Number(row.amount)} → ${dto.amount}` : null,
+      row.category !== dto.category ? `turkum "${row.category}" → "${dto.category}"` : null,
+      row.method !== method ? `usul ${row.method} → ${method}` : null,
+      oldDate !== date ? `sana ${oldDate} → ${date}` : null,
+    ].filter(Boolean);
+    await this.auditLog.logFromUser(caller, {
+      action: "expense.update",
+      entityType: "Expense",
+      entityId: id,
+      branchId,
+      summary: `"${dto.category}" xarajati o'zgartirildi${changes.length ? `: ${changes.join(", ")}` : ""}`,
+    });
+    return { id };
   }
 
   async removeExpense(caller: TenantAuthenticatedUser, id: string) {
@@ -150,9 +222,50 @@ export class CashDeskService {
       entityType: "Expense",
       entityId: id,
       branchId,
-      summary: `"${row.category}" uchun ${Number(row.amount)} xarajat o'chirildi`,
+      summary: `"${row.category}" uchun ${Number(row.amount)} xarajat o'chirildi (${row.method}, ${row.date.toISOString().slice(0, 10)})`,
     });
     return { success: true };
+  }
+
+  /**
+   * Xarajatlar sahifasi: tanlangan oy bo'yicha jami (va naqd qismi), o'tgan oy
+   * jami (solishtirish uchun), turkumlar bo'yicha taqsimot va ro'yxat (yangi
+   * kun birinchi). Yopilgan kunlardagi yozuv `locked` — tahrirlab bo'lmaydi.
+   */
+  async listExpenses(scope: TenantScope, month: string) {
+    const branchId = requireMoneyScope(scope);
+    if (!month || !MONTH_RE.test(month)) {
+      throw new BadRequestException("Oy noto'g'ri (YYYY-MM)");
+    }
+    const range = monthDateRange(month);
+    const [y, m] = month.split("-").map(Number);
+    const prev = `${m === 1 ? y - 1 : y}-${String(m === 1 ? 12 : m - 1).padStart(2, "0")}`;
+    const [rows, prevAgg, closings] = await Promise.all([
+      this.prisma.expense.findMany({ where: { branchId, date: range }, orderBy: [{ date: "desc" }, { createdAt: "desc" }] }),
+      this.prisma.expense.aggregate({ where: { branchId, date: monthDateRange(prev) }, _sum: { amount: true } }),
+      this.prisma.cashClosing.findMany({ where: { branchId, date: range }, select: { date: true } }),
+    ]);
+    const closed = new Set(closings.map((c) => c.date.toISOString().slice(0, 10)));
+    const byCategory = new Map<string, { total: number; count: number }>();
+    let total = 0;
+    let cashTotal = 0;
+    for (const r of rows) {
+      const amount = Number(r.amount);
+      total += amount;
+      if (r.method === "CASH") cashTotal += amount;
+      const bucket = byCategory.get(r.category) ?? { total: 0, count: 0 };
+      bucket.total += amount;
+      bucket.count += 1;
+      byCategory.set(r.category, bucket);
+    }
+    return {
+      month,
+      total,
+      cashTotal,
+      prevTotal: Number(prevAgg._sum.amount ?? 0),
+      byCategory: [...byCategory.entries()].map(([category, v]) => ({ category, ...v })).sort((a, b) => b.total - a.total),
+      items: rows.map((r) => toExpenseRow(r, closed.has(r.date.toISOString().slice(0, 10)))),
+    };
   }
 
   /** Kunni yopish: tizim hisoblagan naqd bilan kassir sanagan naqd farqi saqlanadi. Yopilgan kun o'zgarmaydi. */
