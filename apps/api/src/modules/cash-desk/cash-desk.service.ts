@@ -429,6 +429,42 @@ export class CashDeskService {
   }
 
   /**
+   * To'lovlar sahifasi: oy bo'yicha barcha bolalar (guruh nomi, ID va barcha
+   * oylardagi umumiy qarzi bilan) — guruhlar ro'yxati, guruh ichi va qidiruv
+   * bitta so'rovdan quriladi.
+   */
+  async periodChildren(scope: TenantScope, period: string) {
+    const branchId = requireMoneyScope(scope);
+    const [rows, children, groups, open] = await Promise.all([
+      this.childPaymentRows(branchId, period),
+      this.prisma.child.findMany({ where: { branchId, status: { not: "INACTIVE" } }, select: { id: true, publicId: true } }),
+      this.prisma.group.findMany({ where: { branchId }, select: { id: true, name: true } }),
+      this.prisma.invoice.findMany({
+        where: { branchId, status: { in: [...OPEN_INVOICE] } },
+        select: { childId: true, amount: true, discountAmount: true, paidAmount: true },
+      }),
+    ]);
+    const publicIds = new Map(children.map((c) => [c.id, c.publicId]));
+    const groupNames = new Map(groups.map((g) => [g.id, g.name]));
+    const debt = new Map<string, number>();
+    for (const inv of open) {
+      const remaining = Number(inv.amount) - Number(inv.discountAmount) - Number(inv.paidAmount);
+      if (remaining > 0.005) debt.set(inv.childId, (debt.get(inv.childId) ?? 0) + remaining);
+    }
+    return {
+      period,
+      children: rows
+        .map((r) => ({
+          ...r,
+          publicId: publicIds.get(r.childId) ?? null,
+          groupName: r.groupId ? (groupNames.get(r.groupId) ?? null) : null,
+          totalDebt: debt.get(r.childId) ?? 0,
+        }))
+        .sort((a, b) => a.childName.localeCompare(b.childName)),
+    };
+  }
+
+  /**
    * Har bir faol bola uchun davr bo'yicha holat:
    *  NONE — hisob-faktura yo'q; PAID — to'liq to'langan; OVERDUE — muddati o'tgan qarz bor;
    *  PARTIAL — qisman to'langan yoki muddati hali o'tmagan.

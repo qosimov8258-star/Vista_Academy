@@ -55,6 +55,12 @@ export class CashDeskController {
     return this.service.groups(toTenantScope(user), period);
   }
 
+  /** Tanlangan oy bo'yicha filialdagi barcha bolalar holati (To'lovlar sahifasi va qidiruv uchun). */
+  @Get("children")
+  periodChildren(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query("period") period: string) {
+    return this.service.periodChildren(toTenantScope(user), period);
+  }
+
   @Get("groups/:groupId")
   groupChildren(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("groupId") groupId: string, @Query("period") period: string) {
     return this.service.groupChildren(toTenantScope(user), groupId, period);

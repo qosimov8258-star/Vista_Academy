@@ -25,7 +25,7 @@ export function childPhotoUrl(child: { id: string; avatarUpdatedAt: string | nul
  * Shu yerda qolgan butun ilova qanday autentifikatsiya qilinsa, xuddi shu
  * (sessionStorage'dagi) token bilan so'rov yuboriladi — natija ishonchli.
  */
-function useAuthedImage(url: string | null): { src: string | null; failed: boolean } {
+export function useAuthedImage(url: string | null): { src: string | null; failed: boolean } {
   const [src, setSrc] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
 

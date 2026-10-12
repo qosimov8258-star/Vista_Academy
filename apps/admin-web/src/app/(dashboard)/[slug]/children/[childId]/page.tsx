@@ -530,7 +530,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
       </Card>
 
       {/* Moliyachiga ota-ona o'rniga shu bolaning kassasi ko'rinadi */}
-      {showCash && <ChildCashCard slug={slug} groupId={child.groupId ?? "none"} childId={childId} />}
+      {showCash && <ChildCashCard slug={slug} childId={childId} childName={child.fullName} />}
       {/* Bog'lanish uchun ota-ona shu yerda — ro'yxatning pastida emas */}
       {!showCash && <Card className="overflow-hidden">
         <div className="hairline flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-separator)] px-5 py-4 sm:px-6">

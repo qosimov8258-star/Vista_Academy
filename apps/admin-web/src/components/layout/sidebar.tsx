@@ -44,6 +44,7 @@ import {
   KeyIcon,
   MealIcon,
   MoneyIcon,
+  WalletIcon,
   NoteIcon,
   PhoneIcon,
   QuestionIcon,
@@ -330,6 +331,7 @@ export function Sidebar({ slug }: { slug: string }) {
   const cashierEntries: NavEntry[] = [
     { href: `/${slug}`, label: "Bosh sahifa", icon: HomeIcon, show: true, exact: true },
     { href: `/${slug}/cash`, label: "Kassa", icon: MoneyIcon, show: true },
+    { href: `/${slug}/payments`, label: tr("To'lovlar"), icon: WalletIcon, show: true },
     { href: `/${slug}/finance`, label: tr("Hisob-fakturalar"), icon: NoteIcon, show: true },
     { href: `/${slug}/group-payments`, label: tr("Guruhlar bo'yicha to'lov"), icon: GroupIcon, show: true },
     { href: `/${slug}/cash-report`, label: "Oylik hisobot", icon: ChartIcon, show: true },
@@ -516,6 +518,7 @@ export function Sidebar({ slug }: { slug: string }) {
   const financeEntries: NavEntry[] = [
     { href: base, label: t("nav.home"), icon: HomeIcon, show: true, exact: true },
     { href: `/${slug}/cash`, label: "Kassa", icon: MoneyIcon, show: true },
+    { href: `/${slug}/payments`, label: tr("To'lovlar"), icon: WalletIcon, show: true },
     { href: `/${slug}/audit-logs`, label: "Audit", icon: AuditIcon, show: true },
   ];
 

@@ -386,7 +386,7 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
         </dl>
       </Card>
 
-      {showCash && <ChildCashCard slug={slug} groupId={child.groupId ?? "none"} childId={childId} />}
+      {showCash && <ChildCashCard slug={slug} childId={childId} childName={child.fullName} />}
       {!showCash && (
       <Card className="overflow-hidden">
         <div className="hairline flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-separator)] px-5 py-4 sm:px-6">

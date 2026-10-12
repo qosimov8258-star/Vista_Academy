@@ -115,7 +115,7 @@ export default function CashPage({ params }: { params: Promise<{ slug: string }>
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <Tile label={tr("Jami kirim")} value={formatMoney(day.incomeTotal)} tone="success" />
-            {METHODS.map((m) => (
+            {METHODS.filter((m) => m === "CASH" || day.income[m].count > 0).map((m) => (
               <Tile key={m} label={tr(`${METHOD_LABEL[m]} (${day.income[m].count})`)} value={formatMoney(day.income[m].total)} />
             ))}
             <Tile label={tr("Qaytarilgan")} value={formatMoney(day.refundTotal)} tone={day.refundTotal > 0 ? "danger" : undefined} />

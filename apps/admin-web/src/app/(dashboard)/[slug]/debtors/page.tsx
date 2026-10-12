@@ -207,7 +207,7 @@ export default function DebtorsPage({ params }: { params: Promise<{ slug: string
                             </Button>
                           )}
                           {!isCallOperatorUser(user) && (
-                            <Link href={`/${slug}/finance?search=${encodeURIComponent(r.childName)}`}>
+                            <Link href={`/${slug}/payments?child=${r.childId}`}>
                               <Button size="sm">{tr("To'lov")}</Button>
                             </Link>
                           )}

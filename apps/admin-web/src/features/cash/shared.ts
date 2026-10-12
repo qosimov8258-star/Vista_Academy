@@ -1,10 +1,17 @@
-export const METHODS = ["CASH", "CARD", "BANK_TRANSFER"] as const;
+// Backend (cash-desk) bilan bir xil to'liq ro'yxat — Click/Payme/Ilova kirimi ham ko'rinsin
+export const METHODS = ["CASH", "CARD", "BANK_TRANSFER", "CLICK", "PAYME", "UZUM", "MOBILE_APP", "BANKOMAT", "OTHER"] as const;
 export type CashMethod = (typeof METHODS)[number];
 
 export const METHOD_LABEL: Record<CashMethod, string> = {
   CASH: "Naqd",
   CARD: "Karta",
   BANK_TRANSFER: "O'tkazma",
+  CLICK: "Click",
+  PAYME: "Payme",
+  UZUM: "Uzum",
+  MOBILE_APP: "Ilova",
+  BANKOMAT: "Bankomat",
+  OTHER: "Boshqa",
 };
 
 export interface MethodTotals {

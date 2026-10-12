@@ -46,7 +46,7 @@ export function CashierHome({ slug }: { slug: string }) {
                   <div className="mt-1 text-[13px] text-[var(--color-text-muted)]">{tr("bugungi kirim")}</div>
                 </div>
                 <div className="flex flex-wrap gap-x-6 gap-y-1 text-[14px] text-[var(--color-text-muted)]">
-                  {METHODS.map((m) => (
+                  {METHODS.filter((m) => m === "CASH" || day.income[m].count > 0).map((m) => (
                     <span key={m}>
                       {tr(METHOD_LABEL[m])}: <b className="text-[var(--color-text)]">{formatMoney(day.income[m].total)}</b>
                     </span>

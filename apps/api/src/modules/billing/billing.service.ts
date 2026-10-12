@@ -16,8 +16,31 @@ import { InvoiceQueryDto } from "./dto/invoice-query.dto";
 import { RecordPaymentDto } from "./dto/record-payment.dto";
 import { PaymentQueryDto } from "./dto/payment-query.dto";
 import { FinanceChildrenQueryDto, FinanceSummaryQueryDto } from "./dto/finance-query.dto";
+import { AcceptPaymentDto, RefundPaymentDto } from "./dto/accept-payment.dto";
+import { R2Service } from "../storage/r2.service";
+import { R2_CATEGORY } from "../storage/r2.constants";
 
 const EPSILON = 0.01;
+/** Ekrandan olingan skrinshotlar ham sig'sin — ota-ona cheki bilan bir xil chegara. */
+const MAX_RECEIPT_IMAGE_BYTES = 3 * 1024 * 1024;
+const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
+
+/** To'lovlar ro'yxati uchun: chek rasmi baytlari (`receiptImage`) har qatorda tortilmasin. */
+const paymentListSelect = {
+  id: true,
+  childId: true,
+  amount: true,
+  currency: true,
+  method: true,
+  status: true,
+  note: true,
+  refundedAt: true,
+  createdAt: true,
+  receiptMimeType: true,
+  child: { select: { id: true, fullName: true } },
+  recordedBy: { select: { fullName: true } },
+  allocations: { select: { amount: true, invoice: { select: { id: true, period: true } } } },
+} satisfies Prisma.PaymentSelect;
 
 @Injectable()
 export class BillingService {
@@ -25,6 +48,7 @@ export class BillingService {
     private readonly prisma: PrismaService,
     private readonly auditLog: AuditLogService,
     private readonly notifications: NotificationsService,
+    private readonly r2: R2Service,
   ) {}
 
   async create(caller: TenantAuthenticatedUser, dto: CreateInvoiceDto) {
@@ -282,7 +306,195 @@ export class BillingService {
     });
   }
 
-  async refundPayment(caller: TenantAuthenticatedUser, paymentId: string) {
+  /**
+   * Kassada bola bo'yicha to'lov qabul qilish — bitta so'rovda va bitta
+   * tranzaksiyada:
+   *  - summa ochiq hisob-fakturalarni eng eski oydan boshlab yopadi (bir
+   *    to'lov bir necha oy qarzini yopishi mumkin);
+   *  - qarz yo'q bo'lsa — `period` oyi uchun oldindan to'lov: o'sha oy uchun
+   *    hisob-faktura yo'q bo'lsagina yaratiladi (ikki marta yozilmasin);
+   *  - naqddan boshqa usulda chek surati majburiy va to'lov bilan birga
+   *    saqlanadi (to'lov cheksiz qolib ketmasin).
+   */
+  async acceptPayment(caller: TenantAuthenticatedUser, dto: AcceptPaymentDto) {
+    const scope = toTenantScope(caller);
+    const branchId = requireMoneyScope(scope);
+    const amount = Math.round(dto.amount * 100) / 100;
+    const note = dto.note?.trim() || undefined;
+
+    const [child, branch] = await Promise.all([
+      this.prisma.child.findFirst({
+        where: { id: dto.childId, organizationId: scope.organizationId },
+        select: { id: true, fullName: true, branchId: true },
+      }),
+      this.prisma.branch.findUniqueOrThrow({ where: { id: branchId }, select: { currency: true, defaultTuitionAmount: true } }),
+    ]);
+    if (!child) {
+      throw new NotFoundException("Bola topilmadi");
+    }
+    if (child.branchId !== branchId) {
+      throw new ForbiddenException("Bu bola boshqa filialda — to'lovni o'sha filial kassasi qabul qiladi");
+    }
+    if (dto.method !== "CASH" && !dto.receiptImage) {
+      throw new BadRequestException("Naqddan boshqa usulda chek surati majburiy");
+    }
+    if (dto.method === "CASH" && dto.receiptImage) {
+      throw new BadRequestException("Naqd to'lovga chek surati biriktirilmaydi");
+    }
+
+    const openInvoices = (
+      await this.prisma.invoice.findMany({
+        where: { childId: child.id, branchId, status: { in: [InvoiceStatus.PENDING, InvoiceStatus.PARTIALLY_PAID, InvoiceStatus.OVERDUE] } },
+        orderBy: [{ period: "asc" }, { dueDate: "asc" }],
+      })
+    ).filter((i) => Number(i.amount) - Number(i.discountAmount) - Number(i.paidAmount) > EPSILON);
+    const totalDebt = openInvoices.reduce((s, i) => s + Number(i.amount) - Number(i.discountAmount) - Number(i.paidAmount), 0);
+
+    let advancePeriod: string | null = null;
+    if (totalDebt > EPSILON) {
+      if (amount > totalDebt + EPSILON) {
+        throw new BadRequestException(`Qolgan qarz ${formatSum(totalDebt)} so'm — undan ko'p qabul qilib bo'lmaydi`);
+      }
+    } else {
+      if (!dto.period) {
+        throw new BadRequestException("Qarz yo'q — oldindan to'lov uchun oyni tanlang");
+      }
+      const existing = await this.prisma.invoice.findFirst({
+        where: { childId: child.id, period: dto.period, status: { not: InvoiceStatus.CANCELLED } },
+        select: { id: true },
+      });
+      if (existing) {
+        throw new BadRequestException(`${dto.period} oyi allaqachon to'langan — boshqa oyni tanlang`);
+      }
+      advancePeriod = dto.period;
+    }
+
+    // Rasm tranzaksiyadan oldin tayyorlanadi: R2 ga yuklash bazaga yozishdan
+    // oldin bo'ladi, xato chiqsa to'lov umuman yozilmaydi.
+    let receipt: { image: Buffer<ArrayBuffer> | null; key: string | null; mimeType: string } | null = null;
+    if (dto.receiptImage) {
+      const { buffer, mimeType } = decodeReceiptImage(dto.receiptImage);
+      receipt = { image: buffer, key: null, mimeType };
+      if (this.r2.enabled) {
+        receipt.key = this.r2.buildKey(scope.organizationId, R2_CATEGORY.PAYMENT_RECEIPT);
+        await this.r2.uploadBuffer(receipt.key, buffer, mimeType);
+        receipt.image = null;
+      }
+    }
+
+    try {
+      const result = await this.prisma.$transaction(async (tx) => {
+        const targets = [...openInvoices];
+        if (advancePeriod) {
+          // Oy to'lovi filial sozlamasidagi oylik summadan kam bo'lmaydi —
+          // qisman oldindan to'langan oyning qolgani qarz bo'lib ko'rinsin.
+          const invoiceAmount = Math.max(amount, Number(branch.defaultTuitionAmount ?? 0));
+          const invoice = await tx.invoice.create({
+            data: {
+              organizationId: scope.organizationId,
+              branchId,
+              childId: child.id,
+              amount: invoiceAmount,
+              currency: branch.currency,
+              period: advancePeriod,
+              dueDate: todayTashkentDate(),
+            },
+          });
+          await tx.ledgerEntry.create({
+            data: {
+              organizationId: scope.organizationId,
+              branchId,
+              childId: child.id,
+              type: "CHARGE",
+              amount: invoiceAmount,
+              invoiceId: invoice.id,
+              note: `Hisob-faktura — ${advancePeriod} (oldindan to'lov)`,
+            },
+          });
+          targets.push(invoice);
+        }
+
+        const payment = await tx.payment.create({
+          data: {
+            organizationId: scope.organizationId,
+            branchId,
+            childId: child.id,
+            amount,
+            currency: targets[0]?.currency ?? branch.currency,
+            method: dto.method,
+            note,
+            recordedByUserId: caller.id,
+            receiptImage: receipt?.image ?? null,
+            receiptImageKey: receipt?.key ?? null,
+            receiptMimeType: receipt?.mimeType ?? null,
+          },
+        });
+
+        let left = amount;
+        const allocations: { invoiceId: string; period: string; amount: number; closed: boolean }[] = [];
+        for (const invoice of targets) {
+          if (left <= EPSILON) break;
+          const netPayable = Number(invoice.amount) - Number(invoice.discountAmount);
+          const remaining = netPayable - Number(invoice.paidAmount);
+          const part = Math.min(left, remaining);
+          if (part <= EPSILON) continue;
+          left -= part;
+          const newPaidAmount = Number(invoice.paidAmount) + part;
+          const isFullyPaid = newPaidAmount >= netPayable - EPSILON;
+          await tx.paymentAllocation.create({ data: { paymentId: payment.id, invoiceId: invoice.id, amount: part } });
+          await tx.invoice.update({
+            where: { id: invoice.id },
+            data: {
+              paidAmount: newPaidAmount,
+              status: isFullyPaid ? InvoiceStatus.PAID : InvoiceStatus.PARTIALLY_PAID,
+              paidAt: isFullyPaid ? new Date() : invoice.paidAt,
+            },
+          });
+          await tx.ledgerEntry.create({
+            data: {
+              organizationId: scope.organizationId,
+              branchId,
+              childId: child.id,
+              type: "PAYMENT",
+              amount: -part,
+              invoiceId: invoice.id,
+              paymentId: payment.id,
+              note: `To'lov (${dto.method}) — ${invoice.period}`,
+            },
+          });
+          allocations.push({ invoiceId: invoice.id, period: invoice.period, amount: part, closed: isFullyPaid });
+        }
+
+        return { payment, allocations };
+      });
+
+      const remainingDebt = Math.max(0, totalDebt - amount);
+      await this.auditLog.logFromUser(caller, {
+        action: "payment.record",
+        entityType: "Payment",
+        entityId: result.payment.id,
+        branchId,
+        summary: `${child.fullName}: ${amount} ${result.payment.currency} to'lov qabul qilindi (${dto.method}; ${result.allocations
+          .map((a) => a.period)
+          .join(", ")})`,
+      });
+      const { receiptImage: _image, ...payment } = result.payment;
+      return {
+        payment: { ...payment, hasReceiptImage: receipt !== null },
+        allocations: result.allocations,
+        advancePeriod,
+        remainingDebt: advancePeriod ? 0 : remainingDebt,
+      };
+    } catch (error) {
+      if (receipt?.key) {
+        await this.r2.deleteObject(receipt.key).catch(() => undefined);
+      }
+      throw error;
+    }
+  }
+
+  async refundPayment(caller: TenantAuthenticatedUser, paymentId: string, dto: RefundPaymentDto = {}) {
+    const reason = dto.reason?.trim() || null;
     const scope = toTenantScope(caller);
     const branchId = requireMoneyScope(scope);
     const payment = await this.prisma.payment.findFirst({
@@ -334,7 +546,7 @@ export class BillingService {
           type: "REFUND",
           amount: Number(payment.amount),
           paymentId: payment.id,
-          note: "To'lov qaytarildi",
+          note: reason ? `To'lov bekor qilindi — ${reason}` : "To'lov qaytarildi",
         },
       });
 
@@ -345,7 +557,7 @@ export class BillingService {
         entityType: "Payment",
         entityId: updatedPayment.id,
         branchId,
-        summary: `${payment.amount} ${payment.currency} to'lov qaytarildi`,
+        summary: `${payment.amount} ${payment.currency} to'lov qaytarildi${reason ? ` (sabab: ${reason})` : ""}`,
       });
       return updatedPayment;
     });
@@ -362,7 +574,7 @@ export class BillingService {
     const [items, total] = await this.prisma.$transaction([
       this.prisma.payment.findMany({
         where,
-        include: { child: { select: { id: true, fullName: true } } },
+        select: paymentListSelect,
         orderBy: { createdAt: "desc" },
         skip: (query.page - 1) * query.limit,
         take: query.limit,
@@ -370,7 +582,13 @@ export class BillingService {
       this.prisma.payment.count({ where }),
     ]);
 
-    return { data: items, meta: { page: query.page, limit: query.limit, total } };
+    const data = items.map(({ receiptMimeType, recordedBy, allocations, ...item }) => ({
+      ...item,
+      hasReceiptImage: receiptMimeType !== null,
+      recordedByName: recordedBy?.fullName ?? null,
+      periods: allocations.map((a) => ({ invoiceId: a.invoice.id, period: a.invoice.period, amount: a.amount })),
+    }));
+    return { data, meta: { page: query.page, limit: query.limit, total } };
   }
 
   async childLedger(scope: TenantScope, childId: string) {
@@ -996,4 +1214,27 @@ function previousMonthRange(): { start: Date; end: Date } {
   const start = new Date(Date.UTC(year, month - 2, 1) - offsetMs);
   const end = new Date(Date.UTC(year, month - 1, 1) - offsetMs);
   return { start, end };
+}
+
+function formatSum(value: number): string {
+  return new Intl.NumberFormat("uz-UZ", { maximumFractionDigits: 0 }).format(value).replace(/,/g, " ");
+}
+
+/** Bugungi Toshkent sanasi (UTC yarim tun) — `dueDate` uchun. */
+function todayTashkentDate(): Date {
+  const day = new Date(Date.now() + TASHKENT_OFFSET_MS).toISOString().slice(0, 10);
+  return new Date(`${day}T00:00:00.000Z`);
+}
+
+function decodeReceiptImage(dataUrl: string) {
+  const [header, base64] = dataUrl.split(",", 2);
+  const mimeType = header.slice("data:".length, header.indexOf(";"));
+  const buffer = Buffer.from(base64, "base64");
+  if (buffer.byteLength === 0) {
+    throw new BadRequestException("Chek surati bo'sh");
+  }
+  if (buffer.byteLength > MAX_RECEIPT_IMAGE_BYTES) {
+    throw new BadRequestException("Chek surati hajmi juda katta (3 MB gacha)");
+  }
+  return { buffer, mimeType };
 }

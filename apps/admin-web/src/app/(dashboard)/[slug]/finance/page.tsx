@@ -18,7 +18,7 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { downloadCsv } from "@/lib/download";
 import { CreateInvoiceModal } from "@/features/finance/create-invoice-modal";
 import { BulkCreateInvoiceModal } from "@/features/finance/bulk-create-invoice-modal";
-import { RecordPaymentModal } from "@/features/finance/record-payment-modal";
+import { PaymentSheet } from "@/features/payments/payment-sheet";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { canWriteMoney } from "@/lib/permissions";
 import { useTr } from "@/i18n/tr";
@@ -326,8 +326,14 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
 
       {canWrite && <CreateInvoiceModal open={createOpen} onClose={() => setCreateOpen(false)} slug={slug} />}
       {canWrite && <BulkCreateInvoiceModal open={bulkOpen} onClose={() => setBulkOpen(false)} slug={slug} />}
-      {canWrite && payInvoice && (
-        <RecordPaymentModal open={!!payInvoice} onClose={() => setPayInvoice(null)} slug={slug} invoice={payInvoice} />
+      {/* To'lov — To'lovlar sahifasidagi bilan bir xil varaq: summa bolaning eng eski qarzidan boshlab yopiladi */}
+      {canWrite && (
+        <PaymentSheet
+          slug={slug}
+          child={payInvoice ? { id: payInvoice.childId, name: payInvoice.child?.fullName ?? tr("Bola") } : null}
+          period={payInvoice?.period}
+          onClose={() => setPayInvoice(null)}
+        />
       )}
     </div>
   );
