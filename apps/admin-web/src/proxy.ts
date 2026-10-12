@@ -19,6 +19,7 @@ const KNOWN_ORG_PAGES = new Set([
   "debtors",
   "cash-report",
   "group-payments",
+  "payments",
   "calls",
   "board",
   "pickups",

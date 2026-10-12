@@ -94,7 +94,7 @@ export default function GroupPaymentDetailPage({ params }: { params: Promise<{ s
                   {r.remaining > 0 && <b className="tabular-nums">{formatMoney(r.remaining)}</b>}
                   <Badge tone={PAY_STATE[r.state].tone}>{tr(PAY_STATE[r.state].label)}</Badge>
                   {r.state !== "PAID" && r.state !== "NONE" && (
-                    <Link href={`/${slug}/finance?search=${encodeURIComponent(r.childName)}`} className="text-[13px] font-medium text-[var(--color-primary)] hover:underline">
+                    <Link href={`/${slug}/payments?child=${r.childId}`} className="text-[13px] font-medium text-[var(--color-primary)] hover:underline">
                       {tr("To'lov")}
                     </Link>
                   )}

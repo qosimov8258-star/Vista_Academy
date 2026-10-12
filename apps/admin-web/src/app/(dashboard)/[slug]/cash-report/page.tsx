@@ -112,7 +112,7 @@ export default function CashReportPage({ params }: { params: Promise<{ slug: str
               <CardTitle>{tr("To'lov usullari")}</CardTitle>
             </CardHeader>
             <CardBody className="flex flex-wrap gap-x-8 gap-y-2 text-[14px]">
-              {METHODS.map((m) => (
+              {METHODS.filter((m) => m === "CASH" || r.byMethod[m].count > 0).map((m) => (
                 <span key={m}>
                   {tr(METHOD_LABEL[m])}: <b className="tabular-nums">{formatMoney(r.byMethod[m].total)}</b>{" "}
                   <span className="text-[var(--color-text-muted)]">({tr(r.byMethod[m].count)})</span>
