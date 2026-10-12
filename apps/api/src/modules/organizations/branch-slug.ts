@@ -25,6 +25,7 @@ export const RESERVED_BRANCH_SLUGS = new Set([
   "debtors",
   "cash-report",
   "group-payments",
+  "payments",
   "calls",
   "board",
   "pickups",

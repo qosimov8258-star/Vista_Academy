@@ -11,6 +11,7 @@ import { InvoiceQueryDto } from "./dto/invoice-query.dto";
 import { RecordPaymentDto } from "./dto/record-payment.dto";
 import { PaymentQueryDto } from "./dto/payment-query.dto";
 import { FinanceChildrenQueryDto, FinanceSummaryQueryDto } from "./dto/finance-query.dto";
+import { AcceptPaymentDto, RefundPaymentDto } from "./dto/accept-payment.dto";
 
 @ApiBearerAuth()
 @ApiTags("Tenant Billing")
@@ -58,9 +59,15 @@ export class BillingController {
     return this.billingService.recordPayment(user, dto);
   }
 
+  /** Kassada bola bo'yicha to'lov: bir necha oy qarzini yopadi, chek surati bilan birga. */
+  @Post("payments/accept")
+  acceptPayment(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: AcceptPaymentDto) {
+    return this.billingService.acceptPayment(user, dto);
+  }
+
   @Post("payments/:id/refund")
-  refundPayment(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string) {
-    return this.billingService.refundPayment(user, id);
+  refundPayment(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string, @Body() dto: RefundPaymentDto) {
+    return this.billingService.refundPayment(user, id, dto);
   }
 
   @Get("children/:id/ledger")
