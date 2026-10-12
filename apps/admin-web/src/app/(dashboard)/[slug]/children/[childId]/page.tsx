@@ -19,6 +19,7 @@ import type {
 } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChildCashCard } from "@/features/cash/child-cash-card";
 import { DataTable, THead, TBody, Tr, Th, Td } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -52,6 +53,7 @@ import { ParentCabinetModal } from "@/features/guardians/parent-cabinet-modal";
 import { EditGuardianLinkModal } from "@/features/guardians/edit-guardian-link-modal";
 import { EditChildModal } from "@/features/children/edit-child-modal";
 import { ChildAttendanceCalendar } from "@/features/attendance/child-attendance-calendar";
+import { isCashierPosition } from "@/lib/employee-position";
 import { canWriteOperational, canWriteTeaching } from "@/lib/permissions";
 import { useTr } from "@/i18n/tr";
 
@@ -168,6 +170,8 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
   const photoInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
   const canWrite = canWriteOperational(user?.role);
+  // Moliyachi va kassirga ota-ona kartasi o'rnida to'lov qabul qilish kartasi ko'rinadi
+  const showCash = user?.role === "FINANCE" || (!!user?.position && isCashierPosition(user.position));
   // Davomatga izoh yozish — tarbiyachilik ishi (kunlik davomat sahifasi bilan
   // bir xil ruxsat), operatsion `canWrite`dan alohida: o'qituvchi bu yerda
   // ham izoh yoza olishi kerak, garchi boshqa bo'limlarni tahrirlay olmasa ham.
@@ -525,8 +529,10 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
         )}
       </Card>
 
+      {/* Moliyachiga ota-ona o'rniga shu bolaning kassasi ko'rinadi */}
+      {showCash && <ChildCashCard slug={slug} groupId={child.groupId ?? "none"} childId={childId} />}
       {/* Bog'lanish uchun ota-ona shu yerda — ro'yxatning pastida emas */}
-      <Card className="overflow-hidden">
+      {!showCash && <Card className="overflow-hidden">
         <div className="hairline flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-separator)] px-5 py-4 sm:px-6">
           <div>
             <h2 className="text-[15px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
@@ -620,7 +626,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
             </Button>
           </div>
         )}
-      </Card>
+      </Card>}
 
       {!canWrite && <ViewOnlyNote role={user?.role} />}
 

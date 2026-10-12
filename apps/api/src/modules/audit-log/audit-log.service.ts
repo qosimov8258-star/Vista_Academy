@@ -71,7 +71,7 @@ export class AuditLogService {
   }
 
   private buildWhere(caller: TenantAuthenticatedUser, filter: AuditLogFilterDto): Prisma.AuditLogWhereInput {
-    if (caller.role !== "NETWORK_ADMIN" && caller.role !== "BRANCH_ADMIN") {
+    if (caller.role !== "NETWORK_ADMIN" && caller.role !== "BRANCH_ADMIN" && caller.role !== "FINANCE") {
       throw new ForbiddenException("Sizda faoliyat jurnalini ko'rish huquqi yo'q");
     }
     const entityTypes = filter.entityTypes
@@ -85,7 +85,7 @@ export class AuditLogService {
 
     return {
       organizationId: caller.organizationId,
-      // Filial admini faqat o'z filialini ko'radi — so'rovdagi branchId e'tiborga olinmaydi
+      // Filial admini va moliyachi faqat o'z filialini ko'radi — so'rovdagi branchId e'tiborga olinmaydi
       branchId: caller.role === "NETWORK_ADMIN" ? filter.branchId : caller.branchId,
       actorUserId: filter.actorUserId,
       entityType: entityTypes?.length ? { in: entityTypes } : undefined,

@@ -13,7 +13,6 @@ import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { downloadCsv } from "@/lib/download";
 import { formatMoney } from "@/lib/format";
 import { canWriteMoney } from "@/lib/permissions";
-import { AcceptPaymentCard } from "@/features/cash/accept-payment-card";
 import { EXPENSE_CATEGORIES, METHODS, METHOD_LABEL, todayTashkent, type CashDay } from "@/features/cash/shared";
 import { useTr } from "@/i18n/tr";
 
@@ -46,9 +45,6 @@ export default function CashPage({ params }: { params: Promise<{ slug: string }>
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState(EXPENSE_CATEGORIES[0]);
   const [note, setNote] = useState("");
-  // kassa yopish
-  const [counted, setCounted] = useState("");
-  const [closeNote, setCloseNote] = useState("");
 
   useEffect(() => setDate((d) => d || todayTashkent()), []);
 
@@ -81,15 +77,6 @@ export default function CashPage({ params }: { params: Promise<{ slug: string }>
     },
     onError: fail,
   });
-  const closeDay = useMutation({
-    mutationFn: () => api.post("/app/cash/close", { date, countedCash: Number(counted), note: closeNote.trim() || undefined }),
-    onSuccess: () => {
-      setError(null);
-      refresh();
-    },
-    onError: fail,
-  });
-
   const openReceipt = async (id: string) => {
     setReceiptId(id);
     setError(null);
@@ -103,7 +90,6 @@ export default function CashPage({ params }: { params: Promise<{ slug: string }>
   };
 
   const day = dayQuery.data;
-  const diff = day && counted !== "" ? Number(counted) - day.expectedCash : null;
 
   return (
     <div className="space-y-5">
@@ -121,8 +107,6 @@ export default function CashPage({ params }: { params: Promise<{ slug: string }>
         <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">{tr(error)}</div>
       )}
 
-      {canWrite && <AcceptPaymentCard slug={slug} />}
-
       {!date || dayQuery.isLoading ? (
         <LoadingState rows={5} />
       ) : dayQuery.isError ? (
@@ -138,49 +122,6 @@ export default function CashPage({ params }: { params: Promise<{ slug: string }>
             <Tile label={tr("Xarajat")} value={formatMoney(day.expensesTotal)} tone={day.expensesTotal > 0 ? "danger" : undefined} />
             <Tile label={tr("Sof natija")} value={formatMoney(day.netTotal)} />
           </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>{tr("Kassa yopilishi")}</CardTitle>
-            </CardHeader>
-            <CardBody className="space-y-3 text-[14px]">
-              <p>
-                {tr("Kassada bo'lishi kerak naqd pul:")}{" "}
-                <b className="tabular-nums">{formatMoney(day.expectedCash)}</b>
-                <span className="text-[var(--color-text-muted)]"> {tr("(naqd kirim − naqd qaytarish − xarajat)")}</span>
-              </p>
-              {day.closing ? (
-                <div className="space-y-1 rounded-lg bg-[var(--color-surface-sunken)] p-3">
-                  <p className="flex flex-wrap items-center gap-2">
-                    <Badge tone="success">{tr("Kassa yopilgan")}</Badge>
-                    <span className="text-[var(--color-text-muted)]">{tr(day.closing.closedByName)}</span>
-                  </p>
-                  <p>
-                    {tr("Sanalgan:")}{" "}<b className="tabular-nums">{formatMoney(day.closing.countedCash)}</b> {tr("· Farq:")}{" "}
-                    <b className={`tabular-nums ${Math.abs(day.closing.difference) > 0.005 ? "text-[var(--color-danger)]" : "text-[var(--color-success)]"}`}>
-                      {formatMoney(day.closing.difference)}
-                    </b>
-                  </p>
-                  {day.closing.note && <p className="text-[var(--color-text-muted)]">{tr("Izoh:")}{" "}{tr(day.closing.note)}</p>}
-                </div>
-              ) : canWrite ? (
-                <div className="flex flex-wrap items-end gap-3">
-                  <Input label={tr("Sanalgan naqd pul")} type="number" min={0} value={counted} onChange={(e) => setCounted(e.target.value)} className="w-[200px]" />
-                  <Input label={diff !== null && Math.abs(diff) > 0.005 ? "Farq sababi (majburiy)" : "Izoh (ixtiyoriy)"} value={closeNote} onChange={(e) => setCloseNote(e.target.value)} className="min-w-[220px] flex-1" />
-                  <Button loading={closeDay.isPending} disabled={counted === ""} onClick={() => { setError(null); closeDay.mutate(); }}>
-                    {tr("Kassani yopish")}
-                  </Button>
-                  {diff !== null && (
-                    <p className={`basis-full text-[13px] ${Math.abs(diff) > 0.005 ? "text-[var(--color-danger)]" : "text-[var(--color-success)]"}`}>
-                      {Math.abs(diff) > 0.005
-                        ? `Farq: ${formatMoney(diff)} (${diff > 0 ? "ortiqcha" : "kam"})`
-                        : tr("Kassa to'g'ri keldi")}
-                    </p>
-                  )}
-                </div>
-              ) : null}
-            </CardBody>
-          </Card>
 
           <Card>
             <CardHeader>

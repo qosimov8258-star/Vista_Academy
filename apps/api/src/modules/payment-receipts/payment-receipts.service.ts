@@ -10,6 +10,7 @@ import { R2_CATEGORY } from "../storage/r2.constants";
 import { SubmitPaymentReceiptDto } from "./dto/submit-payment-receipt.dto";
 import { ApprovePaymentReceiptDto } from "./dto/approve-payment-receipt.dto";
 import { RejectPaymentReceiptDto } from "./dto/reject-payment-receipt.dto";
+import { AttachPaymentReceiptImageDto } from "./dto/attach-payment-receipt-image.dto";
 
 /** Ekrandan olingan skrinshotlar kattaroq bo'lishi mumkin — bola surati (600KB)dan farqli, 3MB gacha. */
 const MAX_RECEIPT_IMAGE_BYTES = 3 * 1024 * 1024;
@@ -171,6 +172,58 @@ export class PaymentReceiptsService {
       throw new ForbiddenException("Bu chekka kirish huquqingiz yo'q");
     }
     return receipt;
+  }
+
+  /**
+   * Kassir to'lovni qabul qilgach chekni rasmga olib shu to'lovga biriktiradi
+   * (naqddan boshqa usullarda). Mavjud rasm bo'lsa — yangisi bilan almashadi.
+   */
+  async attachPaymentImage(caller: TenantAuthenticatedUser, paymentId: string, dto: AttachPaymentReceiptImageDto) {
+    const scope = toTenantScope(caller);
+    const branchId = requireMoneyScope(scope);
+    const payment = await this.prisma.payment.findFirst({
+      where: { id: paymentId, organizationId: scope.organizationId },
+      select: { id: true, branchId: true, organizationId: true, receiptImageKey: true },
+    });
+    if (!payment) {
+      throw new NotFoundException("To'lov topilmadi");
+    }
+    if (payment.branchId !== branchId) {
+      throw new ForbiddenException("Bu to'lovga kirish huquqingiz yo'q");
+    }
+    const { buffer, mimeType } = this.decodeImage(dto.image);
+
+    let receiptImage: Buffer<ArrayBuffer> | null = buffer;
+    let receiptImageKey: string | null = null;
+    if (this.r2.enabled) {
+      receiptImageKey = this.r2.buildKey(payment.organizationId, R2_CATEGORY.PAYMENT_RECEIPT);
+      await this.r2.uploadBuffer(receiptImageKey, buffer, mimeType);
+      receiptImage = null;
+    }
+    await this.prisma.payment.update({
+      where: { id: payment.id },
+      data: { receiptImage, receiptImageKey, receiptMimeType: mimeType },
+    });
+    return { id: payment.id, hasReceiptImage: true };
+  }
+
+  async readPaymentImage(scope: TenantScope, paymentId: string) {
+    assertMoneyReader(scope);
+    const payment = await this.prisma.payment.findFirst({
+      where: { id: paymentId, organizationId: scope.organizationId },
+      select: { receiptImage: true, receiptImageKey: true, receiptMimeType: true, branchId: true },
+    });
+    if (!payment) {
+      throw new NotFoundException("To'lov topilmadi");
+    }
+    if (scope.branchId && payment.branchId !== scope.branchId) {
+      throw new ForbiddenException("Bu to'lovga kirish huquqingiz yo'q");
+    }
+    return {
+      image: payment.receiptImage,
+      imageKey: payment.receiptImageKey,
+      mimeType: payment.receiptMimeType,
+    };
   }
 
   private async loadPendingReceipt(scope: TenantScope, receiptId: string) {
