@@ -48,6 +48,29 @@ const KNOWN_ORG_PAGES = new Set([
   "enter",
 ]);
 
+// app/(dashboard)/[slug]/[branchSlug]/ ostidagi bo'limlar — Super Adminning
+// filial ichidagi ko'rinishi. U yerga yangi papka qo'shilsa, shu yerga ham.
+const BRANCH_DRILL_PAGES = new Set([
+  "attendance",
+  "audit-logs",
+  "children",
+  "coin",
+  "crm",
+  "daily-reports",
+  "employees",
+  "face-id",
+  "finance",
+  "groups",
+  "hr",
+  "lending",
+  "lessons",
+  "notifications",
+  "nutrition",
+  "reminders",
+  "staff-attendance",
+  "useful",
+]);
+
 function base64UrlDecode(input: string): string {
   const padded = input.replace(/-/g, "+").replace(/_/g, "/").padEnd(input.length + ((4 - (input.length % 4)) % 4), "=");
   return atob(padded);
@@ -139,7 +162,7 @@ function routeTenant(req: NextRequest, pathname: string, hostSlug: string | null
   const isLogin = second === "login" || second === "enter";
 
   const token = req.cookies.get("bogcha_tenant_at")?.value;
-  const { organizationSlug: tokenOrgSlug, role } = decodeRoutingClaims(token);
+  const { organizationSlug: tokenOrgSlug } = decodeRoutingClaims(token);
   // A cookie only grants access to THIS org's URL if its token either predates
   // the org-slug claim (treated as unknown, not a mismatch) or actually matches.
   const hasSession = !!token && (tokenOrgSlug === null || tokenOrgSlug === slug);
@@ -168,7 +191,19 @@ function routeTenant(req: NextRequest, pathname: string, hostSlug: string | null
   // rewrites onto the same shared pages. NETWORK_ADMIN has no fixed branch, so
   // for them this segment is a REAL route: it renders a dashboard scoped to
   // that specific branch (see app/(dashboard)/[slug]/[branchSlug]/page.tsx).
-  if (second && !KNOWN_ORG_PAGES.has(second) && role !== "NETWORK_ADMIN") {
+  //
+  // Qaysi biri ekanini bu yerda ROLGA qarab hal qilib bo'lmaydi: cookie butun
+  // brauzerga bitta va oxirgi kirgan foydalanuvchiniki, tabning o'z tokeni
+  // (sessionStorage) esa sahifa so'roviga qo'shilmaydi. Avval rol cookie'dan
+  // olinardi — bitta brauzerda admin va moliyachi ochiq bo'lsa, moliyachi
+  // tabini yangilaganda unga Super Adminning filial sahifasi chiqardi.
+  // Endi faqat manzilga qaraladi: [branchSlug] ostida bor sahifa o'sha yerda
+  // ochiladi (ular umumiy sahifalarning o'zi, filial rejimini esa
+  // useBranchContext tabning o'z roli bo'yicha yoqadi), qolgani — umumiy
+  // sahifaga qayta yoziladi.
+  const third = segments[2];
+  const branchDrill = third === undefined || BRANCH_DRILL_PAGES.has(third);
+  if (second && !KNOWN_ORG_PAGES.has(second) && !branchDrill) {
     const rest = segments.slice(2).join("/");
     const target = new URL(rest ? `/${slug}/${rest}` : `/${slug}`, req.url);
     target.search = req.nextUrl.search;

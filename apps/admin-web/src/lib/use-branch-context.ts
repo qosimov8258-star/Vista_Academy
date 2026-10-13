@@ -3,6 +3,7 @@
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "./api";
+import { useAuth } from "./use-auth";
 import type { Organization } from "./types";
 
 /**
@@ -16,7 +17,13 @@ import type { Organization } from "./types";
  */
 export function useBranchContext(slug: string) {
   const params = useParams<{ branchSlug?: string }>();
-  const branchSlug = params?.branchSlug;
+  const { user } = useAuth();
+  // Filial xodimlari ham shu sahifalarga /{slug}/{filial}/... manzil bilan
+  // tushadi (proxy rolni bilmaydi — u faqat cookie'ni ko'radi, cookie esa
+  // boshqa tabdagi foydalanuvchiniki bo'lishi mumkin). Ular uchun segment
+  // shunchaki bezak: filial rejimi faqat shu tabning o'zi Super Admin bo'lsa
+  // yoqiladi. Foydalanuvchi hali yuklanmagan bo'lsa — avvalgidek manzildan.
+  const branchSlug = user && user.role !== "NETWORK_ADMIN" ? undefined : params?.branchSlug;
 
   const orgQuery = useQuery({
     queryKey: ["org", slug],
