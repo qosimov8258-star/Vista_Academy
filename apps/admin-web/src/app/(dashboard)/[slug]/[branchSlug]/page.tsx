@@ -24,6 +24,8 @@ import {
 import { IosIcon } from "@/features/director/ios-icon";
 import { compactMoney, fullMoney } from "@/features/director/money";
 import { useTr } from "@/i18n/tr";
+import { useAuth } from "@/lib/use-auth";
+import OrgHomePage from "../page";
 
 type Tone = "primary" | "success" | "danger";
 
@@ -115,7 +117,20 @@ function AttendanceTile({
   );
 }
 
-export default function BranchDashboardPage({ params }: { params: Promise<{ slug: string; branchSlug: string }> }) {
+/**
+ * /{slug}/{filial} — Super Admin uchun filial ko'rinishi; filial xodimlari
+ * (moliyachi, filial admini…) uchun esa bu manzil o'z bosh sahifasi, segment
+ * shunchaki bezak. Qaysi biri ekani shu tabning o'z tokenidagi rol bo'yicha
+ * aniqlanadi — proxy buni bilolmaydi (cookie boshqa tabniki bo'lishi mumkin).
+ */
+export default function BranchEntryPage({ params }: { params: Promise<{ slug: string; branchSlug: string }> }) {
+  const { user, isLoading } = useAuth();
+  if (isLoading) return <LoadingState />;
+  if (user?.role !== "NETWORK_ADMIN") return <OrgHomePage params={params} />;
+  return <BranchDashboardPage params={params} />;
+}
+
+function BranchDashboardPage({ params }: { params: Promise<{ slug: string; branchSlug: string }> }) {
   const tr = useTr();
   const { slug, branchSlug } = use(params);
 
