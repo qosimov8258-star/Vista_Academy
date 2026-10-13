@@ -4,7 +4,7 @@ import { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
-import { Baby, ChevronLeft, ClipboardCheck, IdCard, Pencil, UserPlus } from "lucide-react";
+import { Baby, ChevronLeft, ClipboardCheck, IdCard, Pencil, UserPlus, UsersRound } from "lucide-react";
 import { api } from "@/lib/api";
 import type { AttendanceStatus, Group, GroupAttendanceDay, GroupAttendanceRange, GroupOverview } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
@@ -24,6 +24,8 @@ import { EmptyState, ErrorState, SkeletonRows } from "@/components/ios/states";
 import { IOS } from "@/components/ios/tokens";
 import { IosIcon } from "@/features/director/ios-icon";
 import { CapacityBar, GroupFormSheet, GroupTile, TeachersSheet } from "@/features/groups/group-sheets";
+import { groupDigits } from "@/features/payments/shared";
+import { ManageChildrenSheet } from "@/features/groups/manage-children-sheet";
 import { useTr } from "@/i18n/tr";
 
 const TIMEZONE = "Asia/Tashkent";
@@ -63,6 +65,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
   const canMark = canWriteTeaching(user?.role);
   const [editOpen, setEditOpen] = useState(false);
   const [teachersOpen, setTeachersOpen] = useState(false);
+  const [childrenOpen, setChildrenOpen] = useState(false);
   const [today, setToday] = useState("");
   const [day, setDay] = useState("");
   const [rangeDays, setRangeDays] = useState<RangeDays>("14");
@@ -112,7 +115,15 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
 
   // Varaqlar `Group` shaklini kutadi — overview'dagi qismlardan yig'iladi
   const group: Group | null = overview
-    ? { id: overview.group.id, branchId: overview.branch.id, name: overview.group.name, capacity: overview.group.capacity, status: overview.group.status, createdAt: overview.group.createdAt }
+    ? {
+        id: overview.group.id,
+        branchId: overview.branch.id,
+        name: overview.group.name,
+        capacity: overview.group.capacity,
+        status: overview.group.status,
+        createdAt: overview.group.createdAt,
+        monthlyFee: overview.group.monthlyFee,
+      }
     : null;
   const active = overview?.children.active ?? 0;
   const capacity = overview?.group.capacity ?? 0;
@@ -150,7 +161,18 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
                     </h1>
                     <Pill color={overview.group.status === "ACTIVE" ? IOS.green : IOS.gray}>{overview.group.status === "ACTIVE" ? tr("Faol") : tr("Nofaol")}</Pill>
                   </div>
-                  <p className="mt-0.5 truncate text-[13px] text-[#8e8e93]">{tr(overview.branch.name)}</p>
+                  <p className="mt-0.5 truncate text-[13px] text-[#8e8e93]">
+                    {tr(overview.branch.name)}
+                    {overview.group.monthlyFee && (
+                      <>
+                        {" · "}
+                        <span className="font-semibold text-[var(--color-text)]">
+                          {groupDigits(overview.group.monthlyFee)} {tr("so'm")}
+                        </span>{" "}
+                        {tr("oyiga")}
+                      </>
+                    )}
+                  </p>
                 </div>
                 {canWrite && <IosButton label={tr("Tahrirlash")} icon={Pencil} compact onClick={() => setEditOpen(true)} />}
               </div>
@@ -177,10 +199,21 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
           <StatCell label={tr("Tarbiyachilar")} value={overview?.teachers.length ?? 0} color={overview && overview.teachers.length === 0 ? IOS.orange : undefined} loading={!overview} />
         </StatStrip>
 
-        {/* Tezkor amal */}
-        {canMark && overview && (
+        {/* Tezkor amallar */}
+        {(canMark || canWrite) && overview && (
           <IosGroup>
-            <Row href={attendanceHref} leading={<IosIcon icon={ClipboardCheck} tint="green" size={30} />} title={tr("Davomatni belgilash")} subtitle={tr("Shu guruh bo'yicha ochiladi")} />
+            {canWrite && (
+              <Row
+                onClick={() => setChildrenOpen(true)}
+                leading={<IosIcon icon={UsersRound} tint="blue" size={30} />}
+                title={tr("O'quvchilarni boshqarish")}
+                subtitle={tr("Qo'shish, chiqarish, boshqa guruhga o'tkazish")}
+                value={tr("{0} ta", active)}
+              />
+            )}
+            {canMark && (
+              <Row href={attendanceHref} leading={<IosIcon icon={ClipboardCheck} tint="green" size={30} />} title={tr("Davomatni belgilash")} subtitle={tr("Shu guruh bo'yicha ochiladi")} />
+            )}
           </IosGroup>
         )}
 
@@ -284,7 +317,16 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
         {tab === "children" && (
           <section className="space-y-3">
           {overview && overview.children.items.length > 8 && <SearchPill value={childSearch} onChange={setChildSearch} placeholder={tr("Bola ismi yoki ID")} />}
-          <IosGroup bare={!overview || children.length === 0}>
+          <IosGroup
+            action={
+              canWrite && overview ? (
+                <button type="button" className="text-[var(--color-primary)] active:opacity-50" onClick={() => setChildrenOpen(true)}>
+                  {tr("Boshqarish")}
+                </button>
+              ) : undefined
+            }
+            bare={!overview || children.length === 0}
+          >
             {!overview ? (
               <SkeletonRows rows={4} />
             ) : children.length === 0 ? (
@@ -402,6 +444,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
 
       {canWrite && <GroupFormSheet open={editOpen} onClose={() => setEditOpen(false)} slug={slug} group={group} />}
       {canWrite && <TeachersSheet open={teachersOpen} onClose={() => setTeachersOpen(false)} slug={slug} group={group} />}
+      {canWrite && <ManageChildrenSheet open={childrenOpen} onClose={() => setChildrenOpen(false)} slug={slug} group={group} />}
     </div>
   );
 }

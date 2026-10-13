@@ -19,6 +19,7 @@ import { EmptyState, ErrorState, SkeletonRows } from "@/components/ios/states";
 import { IOS } from "@/components/ios/tokens";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { CapacityBar, GroupFormSheet, GroupTile } from "@/features/groups/group-sheets";
+import { groupDigits } from "@/features/payments/shared";
 import { useTr } from "@/i18n/tr";
 
 type StatusFilter = "ACTIVE" | "INACTIVE" | "ALL";
@@ -160,6 +161,7 @@ export default function GroupsPage({ params }: { params: Promise<{ slug: string 
                       subtitle={
                         <>
                           {multiBranch && <span>{tr(branchName(g.branchId))} · </span>}
+                          {g.monthlyFee && <span className="font-medium text-[var(--color-text)]">{groupDigits(g.monthlyFee)} {tr("so'm")} · </span>}
                           {teachers.length > 0 ? teachers.join(", ") : <span className="text-[#ff9500]">{tr("Tarbiyachi biriktirilmagan")}</span>}
                         </>
                       }

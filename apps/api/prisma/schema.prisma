@@ -360,13 +360,16 @@ enum GroupStatus {
 }
 
 model Group {
-  id        String      @id @default(uuid())
-  branchId  String      @map("branch_id")
-  name      String
-  capacity  Int         @default(20)
-  status    GroupStatus @default(ACTIVE)
-  createdAt DateTime    @default(now()) @map("created_at")
-  updatedAt DateTime    @updatedAt @map("updated_at")
+  id         String      @id @default(uuid())
+  branchId   String      @map("branch_id")
+  name       String
+  capacity   Int         @default(20)
+  status     GroupStatus @default(ACTIVE)
+  /// Oylik to'lov narxi — shu guruh bolalariga hisob-faktura shu summada
+  /// yoziladi. Bo'sh bo'lsa filialning `defaultTuitionAmount`i olinadi.
+  monthlyFee Decimal?    @map("monthly_fee") @db.Decimal(12, 2)
+  createdAt  DateTime    @default(now()) @map("created_at")
+  updatedAt  DateTime    @updatedAt @map("updated_at")
 
   branch            Branch             @relation(fields: [branchId], references: [id], onDelete: Cascade)
   children          Child[]

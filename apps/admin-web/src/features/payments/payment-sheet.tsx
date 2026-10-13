@@ -47,6 +47,8 @@ type Mode = { kind: "main" } | { kind: "detail"; payment: ChildPayment } | { kin
 export interface PaymentSheetChild {
   id: string;
   name: string;
+  /** Qarz yo'q bo'lsa summa shu oylik narx bilan to'ldiriladi */
+  monthlyFee?: number | null;
 }
 
 /**
@@ -135,9 +137,10 @@ export function PaymentSheet({
   // Summa — qolgan qarz bilan to'ldiriladi (bir marta, ma'lumot kelganda)
   useEffect(() => {
     if (!open || prefilled || !loaded) return;
-    setAmount(debt > 0 ? String(debt) : "");
+    // Qarz bo'lmasa — bolaning oylik narxi (guruh narxi) oldindan to'lov sifatida
+    setAmount(debt > 0 ? String(debt) : current?.monthlyFee ? String(Math.round(current.monthlyFee)) : "");
     setPrefilled(true);
-  }, [open, prefilled, loaded, debt]);
+  }, [open, prefilled, loaded, debt, current?.monthlyFee]);
 
   const value = Number(amount || 0);
   const tooBig = debt > 0 && value > debt;
