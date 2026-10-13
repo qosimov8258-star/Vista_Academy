@@ -14,7 +14,7 @@ import { ChildPhoto } from "@/components/ui/child-photo";
 import { initials } from "@/components/ui/avatar";
 import { Toast, type ToastState } from "@/components/ui/toast";
 import { IosButton } from "@/components/ios/button";
-import { ChipRow, IosChip, IosSelect, SearchPill } from "@/components/ios/filters";
+import { ChipRow, IosChip, SearchPill } from "@/components/ios/filters";
 import { Group as IosGroup, ListRow, Row } from "@/components/ios/group";
 import { PageHeaderCard } from "@/components/ios/page-card";
 import { Pill } from "@/components/ios/pill";
@@ -189,7 +189,6 @@ function BranchChildren({ slug }: { slug: string }) {
     setEditOpen(true);
   };
 
-  const groupName = (groupFilter && groupsQuery.data?.find((g) => g.id === groupFilter)?.name) || tr("Barcha guruhlar");
   const stats = financeStatsQuery.data;
 
   return (
@@ -224,19 +223,23 @@ function BranchChildren({ slug }: { slug: string }) {
 
         {/* Qidiruv va filtrlar */}
         <div className="space-y-3 px-0">
-          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
-            <SearchPill value={searchInput} onChange={setSearchInput} placeholder={tr("Ism, ota-ona yoki ID (id14732)")} className="flex-1" />
-            {!teacher && (
-              <IosSelect label={tr("Guruh")} value={groupFilter} onChange={setGroupFilter} display={tr(groupName)}>
-                <option value="">{tr("Barcha guruhlar")}</option>
-                {(groupsQuery.data ?? []).map((group) => (
-                  <option key={group.id} value={group.id}>
+          <SearchPill value={searchInput} onChange={setSearchInput} placeholder={tr("Ism, ota-ona yoki ID (id14732)")} />
+          {/* Guruh filtri — chiplar (native select emas); guruh bitta bo'lsa kerak emas */}
+          {!teacher && (groupsQuery.data ?? []).length > 1 && (
+            <ChipRow label={tr("Guruh")}>
+              <IosChip active={!groupFilter} onClick={() => setGroupFilter("")}>
+                {tr("Barcha guruhlar")}
+              </IosChip>
+              {(groupsQuery.data ?? [])
+                .filter((g) => g.status === "ACTIVE" || g.id === groupFilter)
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map((group) => (
+                  <IosChip key={group.id} active={groupFilter === group.id} onClick={() => setGroupFilter(groupFilter === group.id ? "" : group.id)} count={group._count?.children}>
                     {tr(group.name)}
-                  </option>
+                  </IosChip>
                 ))}
-              </IosSelect>
-            )}
-          </div>
+            </ChipRow>
+          )}
           <ChipRow label={isFinance ? tr("To'lov holati") : tr("Holat")}>
             {chipOptions.map((option, i) => (
               <IosChip key={option.value || "all"} active={statusFilter === option.value} onClick={() => setStatusFilter(option.value)} count={counts[i]?.data}>
@@ -308,7 +311,7 @@ function BranchChildren({ slug }: { slug: string }) {
                       {!forcedBranchId && !teacher && <th className="px-4 py-3">{tr("Filial")}</th>}
                       {!teacher && <th className="px-4 py-3">{tr("Guruh")}</th>}
                       <th className="px-4 py-3">{tr("Holat")}</th>
-                      {canWrite && <th className="px-4 py-3" />}
+                      <th className="w-px px-4 py-3" />
                     </tr>
                   </thead>
                   <tbody>
@@ -346,20 +349,8 @@ function BranchChildren({ slug }: { slug: string }) {
                               {allergyChildIds.has(child.id) && <Pill color={IOS.red}>{tr("Allergiya")}</Pill>}
                             </div>
                           </td>
-                          {canWrite && (
-                            <td className="px-4 py-2.5 text-right">
-                              <button
-                                type="button"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  startEdit(child);
-                                }}
-                                className="h-8 rounded-full bg-[#767680]/[0.12] px-3.5 text-[13px] font-semibold text-[var(--color-primary)] transition-[transform,background-color] hover:bg-[#767680]/[0.18] active:scale-[0.96]"
-                              >
-                                {tr("Tahrirlash")}
-                              </button>
-                            </td>
-                          )}
+                          {/* Qatorda amal tugmasi yo'q — tahrirlash profilda */}
+                          <td className="w-px px-4 py-2.5 text-[#c7c7cc]">›</td>
                         </tr>
                       );
                     })}
