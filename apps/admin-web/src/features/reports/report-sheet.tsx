@@ -10,7 +10,7 @@ import { Segmented } from "@/components/ios/form";
 import { GROUP_BLOCK, SECTION_TITLE } from "@/components/ios/tokens";
 import { todayTashkent } from "@/features/cash/shared";
 import { useTr } from "@/i18n/tr";
-import { periodLabel, shiftPeriod } from "./shared";
+import { periodLabel, shiftPeriod } from "@/features/payments/shared";
 
 type Kind = "day" | "week" | "month" | "all";
 type Format = "xlsx" | "pdf";
@@ -27,11 +27,33 @@ function lastDayOfMonth(period: string): string {
 }
 
 /**
- * To'lovlar hisobotini yuklab olish: davr turi (kunlik, haftalik, oylik,
- * to'liq), davrning o'zi va fayl turi (Excel — jadval va hisob-kitob uchun,
- * PDF — chop etish va yuborish uchun). Fayl serverda tuziladi.
+ * Hisobotni yuklab olish varag'i (to'lovlar, xarajatlar): davr turi
+ * (kunlik, haftalik, oylik, to'liq), davrning o'zi va fayl turi (Excel —
+ * jadval va hisob-kitob uchun, PDF — chop etish va yuborish uchun). Fayl
+ * serverda tuziladi: `GET {endpoint}?kind=&from=&to=&format=`.
  */
-export function PaymentsReportSheet({ open, onClose, period }: { open: boolean; onClose: () => void; period?: string }) {
+export function ReportSheet({
+  open,
+  onClose,
+  period,
+  title,
+  endpoint,
+  filePrefix,
+  allHint,
+  contents,
+}: {
+  open: boolean;
+  onClose: () => void;
+  /** Oylik tanlovning boshlang'ich oyi (sahifada ko'rilayotgan oy) */
+  period?: string;
+  title: string;
+  endpoint: string;
+  filePrefix: string;
+  /** "To'liq" tanlanganda ko'rsatiladigan izoh (tarjima kaliti) */
+  allHint: string;
+  /** Hisobotda nima borligi haqida izoh (tarjima kaliti) */
+  contents: string;
+}) {
   const tr = useTr();
   const [today, setToday] = useState("");
   const [kind, setKind] = useState<Kind>("month");
@@ -70,7 +92,7 @@ export function PaymentsReportSheet({ open, onClose, period }: { open: boolean; 
     setError(null);
     try {
       const q = new URLSearchParams({ kind, format, ...(range.from ? { from: range.from, to: range.to! } : {}) });
-      await downloadCsv(`/app/cash/payments-report?${q}`, `tolovlar-hisoboti-${range.stamp}.${format}`);
+      await downloadCsv(`${endpoint}?${q}`, `${filePrefix}-${range.stamp}.${format}`);
       onClose();
     } catch {
       setError(tr("Hisobotni yuklab bo'lmadi — qayta urinib ko'ring"));
@@ -85,7 +107,7 @@ export function PaymentsReportSheet({ open, onClose, period }: { open: boolean; 
     <IosSheet
       open={open}
       onClose={() => !busy && onClose()}
-      title={tr("To'lovlar hisoboti")}
+      title={tr(title)}
       footer={
         <SheetPrimaryButton onClick={() => ready && download()} loading={busy} dim={!ready}>
           {tr("Yuklab olish")} · {format === "xlsx" ? "Excel" : "PDF"}
@@ -131,7 +153,7 @@ export function PaymentsReportSheet({ open, onClose, period }: { open: boolean; 
                 {periodLabel(month, tr)}
               </PeriodStepper>
             )}
-            {kind === "all" && <p className="text-center text-[15px] text-[#8e8e93]">{tr("Boshidan bugungacha barcha to'lovlar")}</p>}
+            {kind === "all" && <p className="text-center text-[15px] text-[#8e8e93]">{tr(allHint)}</p>}
           </div>
         </div>
       </section>
@@ -169,7 +191,7 @@ export function PaymentsReportSheet({ open, onClose, period }: { open: boolean; 
           })}
         </div>
         <p className="px-4 pt-2 text-[12.5px] leading-snug text-[#8e8e93]">
-          {tr("Hisobotda: jami summa va to'lovlar soni, usullar, guruhlar va kunlar bo'yicha, batafsil ro'yxat va bekor qilingan to'lovlar.")}
+          {tr(contents)}
         </p>
         {error && <p className="px-4 pt-2 text-[13px] text-[#ff3b30]">{error}</p>}
       </section>

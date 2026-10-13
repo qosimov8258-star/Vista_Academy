@@ -16,7 +16,7 @@ import { EmptyState, ErrorState, SkeletonRows } from "@/components/ios/states";
 import { IOS } from "@/components/ios/tokens";
 import { currentMonth } from "@/features/cash/shared";
 import { PaymentSheet, type PaymentSheetChild } from "@/features/payments/payment-sheet";
-import { PaymentsReportSheet } from "@/features/payments/report-sheet";
+import { ReportSheet } from "@/features/reports/report-sheet";
 import { groupDigits, periodLabel, shiftPeriod, type PeriodChild, type PeriodGroup } from "@/features/payments/shared";
 import { useTr } from "@/i18n/tr";
 
@@ -287,7 +287,16 @@ export default function PaymentsPage({ params }: { params: Promise<{ slug: strin
         )}
       </div>
 
-      <PaymentsReportSheet open={reportOpen} onClose={() => setReportOpen(false)} period={period || undefined} />
+      <ReportSheet
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        period={period || undefined}
+        title="To'lovlar hisoboti"
+        endpoint="/app/cash/payments-report"
+        filePrefix="tolovlar-hisoboti"
+        allHint="Boshidan bugungacha barcha to'lovlar"
+        contents="Hisobotda: jami summa va to'lovlar soni, usullar, guruhlar va kunlar bo'yicha, batafsil ro'yxat va bekor qilingan to'lovlar."
+      />
       <PaymentSheet
         slug={slug}
         child={sheetChild}

@@ -9,6 +9,7 @@ import { CurrentTenantUser } from "../iam/decorators/current-tenant-user.decorat
 import { TenantAuthenticatedUser, toTenantScope } from "../iam/tenant-auth.types";
 import { CashDeskService } from "./cash-desk.service";
 import { PaymentsReportService, type ReportFormat, type ReportKind } from "./payments-report.service";
+import { ExpensesReportService } from "./expenses-report.service";
 import { CloseCashDto, CreateExpenseDto, UpdateExpenseDto } from "./dto/cash-desk.dto";
 
 @ApiBearerAuth()
@@ -21,6 +22,7 @@ export class CashDeskController {
     private readonly service: CashDeskService,
     private readonly r2: R2Service,
     private readonly paymentsReport: PaymentsReportService,
+    private readonly expensesReport: ExpensesReportService,
   ) {}
 
   /** To'lovlar hisoboti (Excel yoki PDF): kun, hafta, oy yoki to'liq davr */
@@ -33,11 +35,20 @@ export class CashDeskController {
     @Query("format") format: ReportFormat,
     @Res() res: Response,
   ) {
-    const file = await this.paymentsReport.build(user, kind, from, to, format);
-    res.setHeader("Content-Type", file.contentType);
-    res.setHeader("Content-Disposition", `attachment; filename="${file.filename}"`);
-    res.setHeader("Cache-Control", "no-store");
-    res.send(file.buffer);
+    sendReport(res, await this.paymentsReport.build(user, kind, from, to, format));
+  }
+
+  /** Xarajatlar hisoboti (Excel yoki PDF): kun, hafta, oy yoki to'liq davr */
+  @Get("expenses-report")
+  async expensesReportFile(
+    @CurrentTenantUser() user: TenantAuthenticatedUser,
+    @Query("kind") kind: ReportKind,
+    @Query("from") from: string | undefined,
+    @Query("to") to: string | undefined,
+    @Query("format") format: ReportFormat,
+    @Res() res: Response,
+  ) {
+    sendReport(res, await this.expensesReport.build(user, kind, from, to, format));
   }
 
   @Get("day")
@@ -113,4 +124,11 @@ export class CashDeskController {
   report(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query("month") month: string) {
     return this.service.report(toTenantScope(user), month);
   }
+}
+
+function sendReport(res: Response, file: { buffer: Buffer; filename: string; contentType: string }) {
+  res.setHeader("Content-Type", file.contentType);
+  res.setHeader("Content-Disposition", `attachment; filename="${file.filename}"`);
+  res.setHeader("Cache-Control", "no-store");
+  res.send(file.buffer);
 }
