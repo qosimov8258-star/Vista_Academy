@@ -5,6 +5,7 @@ import { assertNotAssistant } from "../iam/teacher-scope";
 import { assertTeacherOwnsChild, resolveTeacherGroupIds, teacherChildWhere } from "../iam/teacher-scope";
 import { NotificationsService } from "../notifications/notifications.service";
 import { MarkAttendanceDto } from "./dto/mark-attendance.dto";
+import { BulkMarkAttendanceDto } from "./dto/bulk-mark-attendance.dto";
 import { AttendanceQueryDto } from "./dto/attendance-query.dto";
 import { AttendanceRangeQueryDto } from "./dto/attendance-range-query.dto";
 import { RequestContactDto } from "./dto/request-contact.dto";
@@ -125,6 +126,31 @@ export class AttendanceService {
     }
 
     return record;
+  }
+
+  /**
+   * Bir kunning bir nechta bolasini bitta so'rovda belgilash. Har bola uchun
+   * `mark()`ning o'zi chaqiriladi — ruxsat, guruh, coin va "kelmadi"
+   * bildirishnomasi bir xil ishlaydi. Kelajak kunni belgilab bo'lmaydi;
+   * o'tgan kunlar esa istalgan payt qayta ochib tuzatiladi.
+   */
+  async markMany(scope: TenantScope, dto: BulkMarkAttendanceDto) {
+    requireTeachingScope(scope);
+    await assertNotAssistant(this.prisma, scope);
+    if (dto.date.slice(0, 10) > todayDateString()) {
+      throw new BadRequestException("Kelajak kun uchun davomat belgilab bo'lmaydi");
+    }
+    // Bir bola ikki marta kelsa — oxirgisi hisoblanadi
+    const items = [...new Map(dto.items.map((item) => [item.childId, item])).values()];
+    const CHUNK = 8;
+    for (let i = 0; i < items.length; i += CHUNK) {
+      await Promise.all(
+        items.slice(i, i + CHUNK).map((item) =>
+          this.mark(scope, { childId: item.childId, date: dto.date, status: item.status, note: item.note }),
+        ),
+      );
+    }
+    return { date: dto.date.slice(0, 10), saved: items.length };
   }
 
   /**
