@@ -7,10 +7,14 @@ export class BulkCreateInvoiceDto {
   @IsString()
   groupId?: string;
 
-  @ApiProperty({ example: 850000, description: "Chegirmadan oldingi to'liq summa — har bir bolaga bir xil" })
+  @ApiPropertyOptional({
+    example: 850000,
+    description: "Chegirmadan oldingi to'liq summa — har bir bolaga bir xil. Berilmasa — har bola o'z guruhi narxida (bo'lmasa filial narxi)",
+  })
+  @IsOptional()
   @IsNumber()
   @IsPositive()
-  amount!: number;
+  amount?: number;
 
   @ApiPropertyOptional({ example: 85000 })
   @IsOptional()
