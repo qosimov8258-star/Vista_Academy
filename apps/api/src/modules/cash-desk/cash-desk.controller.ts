@@ -8,6 +8,7 @@ import { TenantJwtAuthGuard } from "../iam/guards/tenant-jwt-auth.guard";
 import { CurrentTenantUser } from "../iam/decorators/current-tenant-user.decorator";
 import { TenantAuthenticatedUser, toTenantScope } from "../iam/tenant-auth.types";
 import { CashDeskService } from "./cash-desk.service";
+import { PaymentsReportService, type ReportFormat, type ReportKind } from "./payments-report.service";
 import { CloseCashDto, CreateExpenseDto, UpdateExpenseDto } from "./dto/cash-desk.dto";
 
 @ApiBearerAuth()
@@ -19,7 +20,25 @@ export class CashDeskController {
   constructor(
     private readonly service: CashDeskService,
     private readonly r2: R2Service,
+    private readonly paymentsReport: PaymentsReportService,
   ) {}
+
+  /** To'lovlar hisoboti (Excel yoki PDF): kun, hafta, oy yoki to'liq davr */
+  @Get("payments-report")
+  async paymentsReportFile(
+    @CurrentTenantUser() user: TenantAuthenticatedUser,
+    @Query("kind") kind: ReportKind,
+    @Query("from") from: string | undefined,
+    @Query("to") to: string | undefined,
+    @Query("format") format: ReportFormat,
+    @Res() res: Response,
+  ) {
+    const file = await this.paymentsReport.build(user, kind, from, to, format);
+    res.setHeader("Content-Type", file.contentType);
+    res.setHeader("Content-Disposition", `attachment; filename="${file.filename}"`);
+    res.setHeader("Cache-Control", "no-store");
+    res.send(file.buffer);
+  }
 
   @Get("day")
   day(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query("date") date: string) {

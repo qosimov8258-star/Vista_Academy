@@ -2,7 +2,7 @@
 
 import { use, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, RefreshCw, UsersRound, Wallet } from "lucide-react";
+import { ChevronLeft, Download, RefreshCw, UsersRound, Wallet } from "lucide-react";
 import { api } from "@/lib/api";
 import { IosButton } from "@/components/ios/button";
 import { PeriodStepper } from "@/components/ios/day-stepper";
@@ -16,6 +16,7 @@ import { EmptyState, ErrorState, SkeletonRows } from "@/components/ios/states";
 import { IOS } from "@/components/ios/tokens";
 import { currentMonth } from "@/features/cash/shared";
 import { PaymentSheet, type PaymentSheetChild } from "@/features/payments/payment-sheet";
+import { PaymentsReportSheet } from "@/features/payments/report-sheet";
 import { groupDigits, periodLabel, shiftPeriod, type PeriodChild, type PeriodGroup } from "@/features/payments/shared";
 import { useTr } from "@/i18n/tr";
 
@@ -44,6 +45,7 @@ export default function PaymentsPage({ params }: { params: Promise<{ slug: strin
   const [sheetChild, setSheetChild] = useState<PaymentSheetChild | null>(null);
   const [deepLinkChild, setDeepLinkChild] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
 
   // Toshkent oyi va URL parametrlari faqat brauzerda o'qiladi
   useEffect(() => {
@@ -128,7 +130,12 @@ export default function PaymentsPage({ params }: { params: Promise<{ slug: strin
           title={tr("To'lovlar")}
           count={childrenQuery.data ? tr("qarzdor: {0}", debtors) : undefined}
           subtitle={tr("Oy bo'yicha to'lov qabul qilish")}
-          actions={<IosButton label={tr("Yangilash")} icon={RefreshCw} compact onClick={onRefresh} loading={refreshing} />}
+          actions={
+            <div className="flex items-center gap-2">
+              <IosButton label={tr("Hisobot")} icon={Download} compact onClick={() => setReportOpen(true)} />
+              <IosButton label={tr("Yangilash")} icon={RefreshCw} compact onClick={onRefresh} loading={refreshing} />
+            </div>
+          }
         />
 
         {failed ? (
@@ -280,6 +287,7 @@ export default function PaymentsPage({ params }: { params: Promise<{ slug: strin
         )}
       </div>
 
+      <PaymentsReportSheet open={reportOpen} onClose={() => setReportOpen(false)} period={period || undefined} />
       <PaymentSheet
         slug={slug}
         child={sheetChild}
