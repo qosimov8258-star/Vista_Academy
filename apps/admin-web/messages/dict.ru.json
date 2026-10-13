@@ -2163,5 +2163,14 @@
  "o'tgan oy": "прошлый месяц",
  "Saqlangan chek": "Сохранённый чек",
  "Chekni almashtirish": "Заменить чек",
- "Bekor qildi": "Отменил(а)"
+ "Bekor qildi": "Отменил(а)",
+ "Fayl turi": "Тип файла",
+ "Chop etish va yuborish uchun": "Для печати и отправки",
+ "Jadval: filtr va hisob-kitob uchun": "Таблица: для фильтров и расчётов",
+ "To'lovlar hisoboti": "Отчёт по оплатам",
+ "Hisobotda: jami summa va to'lovlar soni, usullar, guruhlar va kunlar bo'yicha, batafsil ro'yxat va bekor qilingan to'lovlar.": "В отчёте: общая сумма и число оплат, по способам, группам и дням, подробный список и отменённые оплаты.",
+ "Yuklab olish": "Скачать",
+ "Oylik": "За месяц",
+ "Boshidan bugungacha barcha to'lovlar": "Все оплаты с начала до сегодня",
+ "Hisobotni yuklab bo'lmadi — qayta urinib ko'ring": "Не удалось скачать отчёт — попробуйте ещё раз"
 }
