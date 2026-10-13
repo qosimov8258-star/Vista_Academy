@@ -427,6 +427,9 @@ export function Sidebar({ slug }: { slug: string }) {
         { href: `${base}/crm`, label: t("nav.crm"), icon: PhoneIcon, show: true },
         { href: `${base}/children`, label: t("nav.children"), icon: ChildIcon, show: true },
         { href: `${base}/groups`, label: t("nav.groups"), icon: GroupIcon, show: true },
+        // Bolalar davomati — filial admini va administrator belgilaydi va
+        // istalgan o'tgan kunni qayta ochib tuzatadi; Super Admin faqat ko'radi
+        { href: `${base}/attendance`, label: t("nav.attendance"), icon: ChecklistIcon, show: true },
       ],
     },
     {
