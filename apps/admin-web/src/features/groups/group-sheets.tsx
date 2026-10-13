@@ -12,6 +12,7 @@ import { IosAvatar, Pill } from "@/components/ios/pill";
 import { IosSheet, SheetPrimaryButton, SheetSection } from "@/components/ios/sheet";
 import { SkeletonRows } from "@/components/ios/states";
 import { IOS, ROW_PRESS, ROW_SEPARATOR } from "@/components/ios/tokens";
+import { groupDigits } from "@/features/payments/shared";
 import { useTr } from "@/i18n/tr";
 
 const TINTS = ["#007aff", "#34c759", "#ff9500", "#af52de", "#ff2d55", "#30b0c7", "#5856d6", "#00c7be"];
@@ -59,6 +60,8 @@ export function GroupFormSheet({ open, onClose, slug, group }: { open: boolean; 
   const [name, setName] = useState("");
   const [capacity, setCapacity] = useState(20);
   const [status, setStatus] = useState<GroupStatus>("ACTIVE");
+  /** Oylik to'lov — faqat raqamlar; bo'sh — filial narxi */
+  const [fee, setFee] = useState("");
   const [touched, setTouched] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,6 +70,7 @@ export function GroupFormSheet({ open, onClose, slug, group }: { open: boolean; 
     setName(group?.name ?? "");
     setCapacity(group?.capacity ?? 20);
     setStatus(group?.status ?? "ACTIVE");
+    setFee(group?.monthlyFee ? String(Math.round(Number(group.monthlyFee))) : "");
     setTouched(false);
     setError(null);
   }, [open, group]);
@@ -76,12 +80,17 @@ export function GroupFormSheet({ open, onClose, slug, group }: { open: boolean; 
 
   const mutation = useMutation({
     mutationFn: () => {
-      const body = { name: name.trim(), capacity };
+      // Tahrirlashda bo'sh qoldirilsa — guruh narxi olib tashlanadi (filial narxi)
+      const monthlyFee = fee ? Number(fee) : editing ? null : undefined;
+      const body = { name: name.trim(), capacity, monthlyFee };
       return editing ? api.patch<Group>(`/app/groups/${group!.id}`, { ...body, status }) : api.post<Group>("/app/groups", body);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["groups", slug] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-summary", slug] });
+      // Narx To'lovlar va moliya sahifalarida ham ko'rinadi
+      queryClient.invalidateQueries({ queryKey: ["pay-children", slug] });
+      queryClient.invalidateQueries({ queryKey: ["cash-groups", slug] });
       if (group) {
         queryClient.invalidateQueries({ queryKey: ["group", slug, group.id] });
         queryClient.invalidateQueries({ queryKey: ["group-overview", slug, group.id] });
@@ -147,6 +156,23 @@ export function GroupFormSheet({ open, onClose, slug, group }: { open: boolean; 
           </div>
           <span className={ROW_SEPARATOR} aria-hidden="true" />
         </div>
+      </SheetSection>
+      <SheetSection
+        title={tr("Oylik to'lov")}
+        footer={tr("Shu guruh bolalariga hisob-faktura shu summada yoziladi (moliya, to'lov qabul qilish, ommaviy hisob-faktura). Bo'sh qolsa — filial narxi.")}
+      >
+        <label className="group/row relative flex min-h-[56px] items-center gap-3 px-4">
+          <span className="shrink-0 text-[15px] text-[var(--color-text)]">{tr("Narxi")}</span>
+          <input
+            inputMode="numeric"
+            value={fee ? groupDigits(fee) : ""}
+            onChange={(e) => setFee(e.target.value.replace(/\D/g, "").replace(/^0+(?=\d)/, "").slice(0, 10))}
+            placeholder={tr("Filial narxi")}
+            aria-label={tr("Oylik to'lov")}
+            className="min-w-0 flex-1 bg-transparent py-3 text-right text-[20px] font-bold tabular-nums text-[var(--color-text)] outline-none placeholder:text-[15px] placeholder:font-normal placeholder:text-[#c4c4c6]"
+          />
+          {fee && <span className="shrink-0 text-[15px] font-semibold text-[#8e8e93]">{tr("so'm")}</span>}
+        </label>
       </SheetSection>
       {editing && (
         <SheetSection title={tr("Holati")} footer={tr("Nofaol guruh ro'yxatda qoladi, lekin bosh sahifadagi «Faol guruhlar»ga kirmaydi.")}>

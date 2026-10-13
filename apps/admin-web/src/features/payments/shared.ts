@@ -62,6 +62,8 @@ export interface PeriodChild {
   remaining: number;
   /** Barcha oylar bo'yicha ochiq qarz */
   totalDebt: number;
+  /** Oylik narx (guruh narxi, bo'lmasa filial narxi) */
+  monthlyFee: number | null;
 }
 
 export interface PeriodGroup {

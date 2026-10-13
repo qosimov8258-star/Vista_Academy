@@ -116,7 +116,7 @@ export default function PaymentsPage({ params }: { params: Promise<{ slug: strin
     await refresh();
     setRefreshing(false);
   };
-  const openChild = (c: PeriodChild) => setSheetChild({ id: c.childId, name: c.childName });
+  const openChild = (c: PeriodChild) => setSheetChild({ id: c.childId, name: c.childName, monthlyFee: c.monthlyFee });
 
   return (
     <div className="-mx-2 md:mx-0">
@@ -310,7 +310,18 @@ function ChildRow({ child: c, withGroup = false, onClick }: { child: PeriodChild
   if (c.state === "PAID") {
     meta = <Pill color={IOS.green}>{tr("To'langan")} ✓</Pill>;
   } else if (c.state === "NONE") {
-    meta = c.totalDebt > 0.5 ? <DebtValue amount={c.totalDebt} color={IOS.red} label={tr("eski qarz")} /> : <Pill color={IOS.gray}>{tr("Hisob yo'q")}</Pill>;
+    meta =
+      c.totalDebt > 0.5 ? (
+        <DebtValue amount={c.totalDebt} color={IOS.red} label={tr("eski qarz")} />
+      ) : c.monthlyFee ? (
+        // Hisob-faktura hali yo'q — guruh narxi (qarz emas, shuning uchun minussiz)
+        <span className="flex flex-col items-end leading-tight">
+          <span className="text-[15px] font-semibold tabular-nums text-[#8e8e93]">{groupDigits(c.monthlyFee)}</span>
+          <span className="text-[12px] text-[#8e8e93]">{tr("hisob yo'q")}</span>
+        </span>
+      ) : (
+        <Pill color={IOS.gray}>{tr("Hisob yo'q")}</Pill>
+      );
   } else {
     // PARTIAL — muddati hali o'tmagan qarz: hech narsa to'lanmagan bo'lsa "Kutilmoqda"
     const label = c.state === "OVERDUE" ? tr("Muddati o'tgan") : c.paid > 0 ? tr("Qisman") : tr("Kutilmoqda");
