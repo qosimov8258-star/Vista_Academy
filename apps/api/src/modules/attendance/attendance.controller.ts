@@ -6,6 +6,7 @@ import { CurrentTenantUser } from "../iam/decorators/current-tenant-user.decorat
 import { TenantAuthenticatedUser, toTenantScope } from "../iam/tenant-auth.types";
 import { AttendanceService } from "./attendance.service";
 import { MarkAttendanceDto } from "./dto/mark-attendance.dto";
+import { BulkMarkAttendanceDto } from "./dto/bulk-mark-attendance.dto";
 import { AttendanceQueryDto } from "./dto/attendance-query.dto";
 import { AttendanceRangeQueryDto } from "./dto/attendance-range-query.dto";
 import { RequestContactDto } from "./dto/request-contact.dto";
@@ -38,6 +39,12 @@ export class AttendanceController {
   @Post("attendance")
   mark(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: MarkAttendanceDto) {
     return this.attendanceService.mark(toTenantScope(user), dto);
+  }
+
+  /** Bir kunning davomati bitta so'rovda (faqat o'zgargan bolalar) */
+  @Post("attendance/bulk")
+  markMany(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: BulkMarkAttendanceDto) {
+    return this.attendanceService.markMany(toTenantScope(user), dto);
   }
 
   /** Tarbiyachi "Aloqaga chiqish" bosganda — administratorga bildirishnoma yaratadi. */

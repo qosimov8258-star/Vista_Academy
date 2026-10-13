@@ -1,6 +1,6 @@
 /**
  * Bir martalik test ma'lumoti: 1 ta tashkilot, 4 filial, 40 oddiy xodim +
- * 1 moliyachi, 100 o'quvchi (har biriga vasiy bilan). Doimiy fayl emas —
+ * 1 moliyachi, 1 filial admini, 100 o'quvchi (har biriga vasiy bilan). Doimiy fayl emas —
  * ishlatib bo'lingach o'chiriladi. Ishga tushirish:
  *
  *   npx ts-node --transpile-only -r dotenv/config prisma/seed-test-bogcha.ts
@@ -21,6 +21,8 @@ const ADMIN_LOGIN = "test-bogcha-admin";
 const ADMIN_PASSWORD = "Test12345!";
 const FINANCE_LOGIN = "test-bogcha-moliya";
 const FINANCE_PASSWORD = "Moliya12345!";
+const BRANCH_ADMIN_LOGIN = "test-bogcha-filial";
+const BRANCH_ADMIN_PASSWORD = "Filial12345!";
 const CHILDREN_PER_BRANCH = 25;
 const GROUPS_PER_BRANCH = ["1-guruh", "2-guruh"];
 
@@ -210,6 +212,20 @@ async function main() {
   });
   console.log(`1 ta moliyachi yaratildi (${FINANCE_LOGIN})`);
 
+  // --- 1 ta filial admini (1-filial) — davomat va kundalik ishni sinash uchun ---
+  await prisma.tenantUser.create({
+    data: {
+      organizationId: organization.id,
+      branchId: financeBranch.id,
+      login: BRANCH_ADMIN_LOGIN,
+      passwordHash: await argon2.hash(BRANCH_ADMIN_PASSWORD),
+      passwordEncrypted: encryptSecret(BRANCH_ADMIN_PASSWORD),
+      fullName: "Test Filial Admini",
+      role: "BRANCH_ADMIN",
+    },
+  });
+  console.log(`1 ta filial admini yaratildi (${BRANCH_ADMIN_LOGIN})`);
+
   // --- 100 o'quvchi: har filialga 25 tadan, guruhlarga teng taqsimlangan ---
   const CHILD_FIRST: Record<"MALE" | "FEMALE", string[]> = {
     MALE: ["Amirbek", "Sardorbek", "Diyorbek", "Islombek", "Sherali", "Ruslan", "Samandar", "Abdulloh", "Mironshoh", "Shahzod"],
@@ -272,6 +288,7 @@ async function main() {
   console.log(`Kirish:    http://localhost:3101/${organization.slug}/login`);
   console.log(`Super Admin: login=${ADMIN_LOGIN}  parol=${ADMIN_PASSWORD}`);
   console.log(`Moliyachi:   login=${FINANCE_LOGIN}  parol=${FINANCE_PASSWORD}`);
+  console.log(`Filial admini: login=${BRANCH_ADMIN_LOGIN}  parol=${BRANCH_ADMIN_PASSWORD}`);
   console.log(`Filiallar: ${branches.map((b) => b.name).join(", ")}`);
   console.log(`Xodimlar: ${employeeCount + 1} (shu jumladan 1 moliyachi)`);
   console.log(`O'quvchilar: ${childCount}`);
