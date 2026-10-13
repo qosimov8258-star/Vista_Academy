@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { InvoiceStatus } from "@prisma/client";
+import { InvoiceStatus, Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantScope, requireMoneyScope, resolveReadBranchFilter } from "../iam/tenant-auth.types";
 import { UpdateReminderSettingsDto } from "./dto/update-reminder-settings.dto";
@@ -149,11 +149,21 @@ export class PaymentRemindersService {
   }
 
   private async upsertSettings(organizationId: string, branchId: string) {
-    return this.prisma.paymentReminderSettings.upsert({
-      where: { branchId },
-      update: {},
-      create: { organizationId, branchId },
-    });
+    try {
+      return await this.prisma.paymentReminderSettings.upsert({
+        where: { branchId },
+        update: {},
+        create: { organizationId, branchId },
+      });
+    } catch (error) {
+      // Sahifa sozlama va ro'yxatni bir vaqtda so'raydi: filialda hali yozuv
+      // yo'q bo'lsa, ikkala so'rov ham yaratishga urinadi va biri unique
+      // xatosiga (409) uchrardi. Bu holda — boshqasi yaratgan yozuvni o'qiymiz.
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        return this.prisma.paymentReminderSettings.findUniqueOrThrow({ where: { branchId } });
+      }
+      throw error;
+    }
   }
 }
 
