@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
-import { Lock, Pencil, Trash2 } from "lucide-react";
+import { Lock, Pencil, Trash2, X } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
 import type { PaymentMethod } from "@/lib/types";
@@ -12,12 +12,31 @@ import { DayStepper, WEEKDAYS, dayMonthLabel } from "@/components/ios/day-steppe
 import { Spinner } from "@/components/ios/spinner";
 import { GROUP_BLOCK, SECTION_TITLE } from "@/components/ios/tokens";
 import { Toast, type ToastState } from "@/components/ui/toast";
+import { useAuthedImage } from "@/components/ui/child-photo";
+import { ReceiptPicker } from "@/features/payments/payment-sheet";
 import { todayTashkent } from "@/features/cash/shared";
-import { METHOD_COLOR, METHOD_LABEL, groupDigits } from "@/features/payments/shared";
+import { METHOD_COLOR, METHOD_LABEL, groupDigits, prepareReceiptPhoto } from "@/features/payments/shared";
 import { useTr } from "@/i18n/tr";
 import { EXPENSE_CATEGORIES, EXPENSE_METHODS, categoryMeta, type ExpenseRow } from "./categories";
 
 const FILL = "bg-[#767680]/[0.12]";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
+const receiptUrl = (id: string) => `${API_URL}/app/cash/expenses/${id}/receipt-image`;
+
+/** Saqlangan chek surati (blob orqali, token bilan) */
+function SavedReceipt({ expenseId, className }: { expenseId: string; className?: string }) {
+  const tr = useTr();
+  const image = useAuthedImage(receiptUrl(expenseId));
+  if (image.src) {
+    // eslint-disable-next-line @next/next/no-img-element -- blob URL
+    return <img src={image.src} alt={tr("Chek")} className={className} />;
+  }
+  return (
+    <span className={clsx("flex items-center justify-center text-[13px] text-[#8e8e93]", className)}>
+      {image.failed ? tr("Chekni yuklab bo'lmadi") : <Spinner className="h-5 w-5" />}
+    </span>
+  );
+}
 
 export type ExpenseSheetRequest = { kind: "new"; date?: string } | { kind: "view"; expense: ExpenseRow } | null;
 
@@ -64,6 +83,10 @@ export function ExpenseSheet({ request, onClose }: { request: ExpenseSheetReques
   const [method, setMethod] = useState<PaymentMethod>("CASH");
   const [date, setDate] = useState("");
   const [note, setNote] = useState("");
+  const [photo, setPhoto] = useState<string | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  // Tahrirlashda saqlangan chek qoldiriladi (almashtirilmaguncha)
+  const [keepSaved, setKeepSaved] = useState(false);
   const [showMissing, setShowMissing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -76,6 +99,8 @@ export function ExpenseSheet({ request, onClose }: { request: ExpenseSheetReques
     setMethod(row?.method ?? "CASH");
     setDate(row?.date ?? (day && day <= t ? day : t));
     setNote(row?.note ?? "");
+    setPhoto(null);
+    setKeepSaved(!!row?.hasReceiptImage);
     setShowMissing(false);
     setError(null);
   };
@@ -94,7 +119,42 @@ export function ExpenseSheet({ request, onClose }: { request: ExpenseSheetReques
   }, [request]);
 
   const value = Number(amount || 0);
-  const missing = value <= 0 ? "Summani kiriting" : !category ? "Turkumni tanlang" : null;
+  const needsPhoto = method !== "CASH";
+  const editingRow = mode.kind === "form" ? mode.editing : null;
+  const hasSaved = keepSaved && !!editingRow?.hasReceiptImage;
+  const missing = value <= 0 ? "Summani kiriting" : !category ? "Turkumni tanlang" : needsPhoto && !photo && !hasSaved ? "Chekni qo'shing" : null;
+
+  const takePhoto = async (file: File | null | undefined) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError(tr("Faqat rasm (JPG, PNG) yuklash mumkin"));
+      return;
+    }
+    setPhotoBusy(true);
+    try {
+      setPhoto(await prepareReceiptPhoto(file));
+      setError(null);
+    } catch (e) {
+      setError(tr(e instanceof Error ? e.message : "Rasmni o'qib bo'lmadi"));
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
+  const takePhotoRef = useRef(takePhoto);
+  takePhotoRef.current = takePhoto;
+  // Ctrl+V bilan chek rasmini qo'yish
+  useEffect(() => {
+    if (!open || mode.kind !== "form" || !needsPhoto) return;
+    const onPaste = (event: ClipboardEvent) => {
+      const file = [...(event.clipboardData?.files ?? [])].find((f) => f.type.startsWith("image/"));
+      if (file) {
+        event.preventDefault();
+        void takePhotoRef.current(file);
+      }
+    };
+    document.addEventListener("paste", onPaste);
+    return () => document.removeEventListener("paste", onPaste);
+  }, [open, mode.kind, needsPhoto]);
 
   const done = (message: string) => {
     setToast({ type: "success", message: tr(message) });
@@ -106,7 +166,7 @@ export function ExpenseSheet({ request, onClose }: { request: ExpenseSheetReques
 
   const save = useMutation({
     mutationFn: (editing: ExpenseRow | null) => {
-      const body = { date, amount: value, category, method, note: note.trim() || undefined };
+      const body = { date, amount: value, category, method, note: note.trim() || undefined, receiptImage: needsPhoto && photo ? photo : undefined };
       return editing ? api.patch(`/app/cash/expenses/${editing.id}`, body) : api.post("/app/cash/expenses", body);
     },
     onSuccess: (_res, editing) => done(editing ? "Xarajat saqlandi" : "Xarajat qo'shildi"),
@@ -205,6 +265,27 @@ export function ExpenseSheet({ request, onClose }: { request: ExpenseSheetReques
             <p className="px-1 pt-2.5 text-[12.5px] leading-snug text-[#8e8e93]">
               {method === "CASH" ? tr("Naqd xarajat kassadagi pulni kamaytiradi") : tr("Kassadagi naqd pulga ta'sir qilmaydi")}
             </p>
+            {/* Naqddan boshqa usulda chek surati majburiy */}
+            {needsPhoto && (
+              <div className="pt-3">
+                {hasSaved && !photo && editingRow ? (
+                  <div className={clsx("flex items-center gap-3 rounded-[14px] p-2 pr-3", FILL)}>
+                    <SavedReceipt expenseId={editingRow.id} className="h-14 w-14 shrink-0 rounded-[10px] object-cover" />
+                    <span className="min-w-0 flex-1 text-[15px] text-[var(--color-text)]">{tr("Saqlangan chek")}</span>
+                    <button
+                      type="button"
+                      onClick={() => setKeepSaved(false)}
+                      aria-label={tr("Chekni almashtirish")}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#767680]/[0.2] text-[#3c3c43] transition-transform active:scale-90"
+                    >
+                      <X className="h-4 w-4" strokeWidth={2.5} />
+                    </button>
+                  </div>
+                ) : (
+                  <ReceiptPicker photo={photo} busy={photoBusy} invalid={showMissing && !photo} onPick={takePhoto} onClear={() => setPhoto(null)} />
+                )}
+              </div>
+            )}
           </div>
         </section>
 
@@ -265,6 +346,11 @@ export function ExpenseSheet({ request, onClose }: { request: ExpenseSheetReques
           <SheetRow label={tr("Yozilgan")}>{formatDateTime(e.createdAt)}</SheetRow>
           {e.note && <SheetRow label={tr("Izoh")}>{e.note}</SheetRow>}
         </SheetSection>
+        {e.hasReceiptImage && (
+          <SheetSection title={tr("Chek")}>
+            <SavedReceipt expenseId={e.id} className="max-h-[50vh] min-h-40 w-full object-contain" />
+          </SheetSection>
+        )}
         {e.locked && (
           <p className="flex items-center gap-2 px-4 text-[13px] text-[#8e8e93]">
             <Lock className="h-4 w-4 shrink-0" strokeWidth={2} />

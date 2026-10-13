@@ -1256,6 +1256,9 @@ model Payment {
   note             String?
   recordedByUserId String?       @map("recorded_by_user_id")
   refundedAt       DateTime?     @map("refunded_at")
+  /// Bekor qilish sababi va kim bekor qilgani (bekor qilingan to'lovda majburiy)
+  refundReason     String?       @map("refund_reason")
+  refundedByName   String?       @map("refunded_by_name")
   /// Kassir to'lovni qabul qilgach rasmga olib joylagan chek (naqddan boshqa usullarda).
   receiptImage     Bytes?        @map("receipt_image")
   receiptImageKey  String?       @map("receipt_image_key")
@@ -1414,6 +1417,10 @@ model Expense {
   note            String?
   createdByName   String        @map("created_by_name")
   createdByUserId String?       @map("created_by_user_id")
+  /// Naqddan boshqa usulda chek surati: R2 bo'lsa `receiptImageKey`, aks holda bazada
+  receiptImage    Bytes?        @map("receipt_image")
+  receiptImageKey String?       @map("receipt_image_key")
+  receiptMimeType String?       @map("receipt_mime_type")
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @default(now()) @updatedAt @map("updated_at")
 

@@ -27,6 +27,7 @@ import { AddGuardianModal } from "@/features/guardians/add-guardian-modal";
 import { ParentCabinetModal } from "@/features/guardians/parent-cabinet-modal";
 import { EditChildModal } from "@/features/children/edit-child-modal";
 import { ReceiptReviewModal } from "@/features/finance/receipt-review-modal";
+import { PaymentSheet } from "@/features/payments/payment-sheet";
 import { useTr } from "@/i18n/tr";
 
 const LEDGER_TYPE_LABEL: Record<LedgerEntry["type"], string> = {
@@ -161,16 +162,8 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
     queryFn: () => api.get<PaymentReceipt[]>(`/app/children/${childId}/payment-receipts`),
   });
 
-  const refundMutation = useMutation({
-    mutationFn: (paymentId: string) => api.post(`/app/payments/${paymentId}/refund`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["ledger", slug, childId] });
-      queryClient.invalidateQueries({ queryKey: ["payments", slug, childId] });
-      queryClient.invalidateQueries({ queryKey: ["invoices", slug] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard-summary", slug] });
-    },
-    onError: (err) => alert(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik")),
-  });
+  // To'lovni bekor qilish — To'lovlar sahifasidagi varaqda, sabab bilan
+  const [cancelTarget, setCancelTarget] = useState<string | null>(null);
 
   const photoMutation = useMutation({
     mutationFn: (image: string) => api.put(`/app/children/${childId}/avatar`, { image }),
@@ -667,10 +660,19 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
           canWrite={canWrite}
           downloadingReceiptId={downloadingReceiptId}
           onDownloadReceipt={handleReceipt}
-          refundingId={refundMutation.isPending ? refundMutation.variables : undefined}
-          onRefund={(id) => refundMutation.mutate(id)}
+          onRefund={(id) => {
+            setDetailEntry(null);
+            setCancelTarget(id);
+          }}
         />
       )}
+
+      <PaymentSheet
+        slug={slug}
+        child={cancelTarget ? { id: childId, name: child.fullName } : null}
+        cancelPaymentId={cancelTarget ?? undefined}
+        onClose={() => setCancelTarget(null)}
+      />
     </div>
   );
 }

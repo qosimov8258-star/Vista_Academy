@@ -1,4 +1,7 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Header, Param, Patch, Post, Query, Res, UseGuards } from "@nestjs/common";
+import type { Response } from "express";
+import { sendMediaResponse } from "../../common/media-response";
+import { R2Service } from "../storage/r2.service";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { Public } from "../../common/decorators/public.decorator";
 import { TenantJwtAuthGuard } from "../iam/guards/tenant-jwt-auth.guard";
@@ -13,7 +16,10 @@ import { CloseCashDto, CreateExpenseDto, UpdateExpenseDto } from "./dto/cash-des
 @UseGuards(TenantJwtAuthGuard)
 @Controller("app/cash")
 export class CashDeskController {
-  constructor(private readonly service: CashDeskService) {}
+  constructor(
+    private readonly service: CashDeskService,
+    private readonly r2: R2Service,
+  ) {}
 
   @Get("day")
   day(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query("date") date: string) {
@@ -29,6 +35,13 @@ export class CashDeskController {
   @Post("expenses")
   addExpense(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: CreateExpenseDto) {
     return this.service.addExpense(user, dto);
+  }
+
+  @Get("expenses/:id/receipt-image")
+  @Header("Cache-Control", "private, max-age=60")
+  async expenseImage(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string, @Res() res: Response) {
+    const record = await this.service.readExpenseImage(toTenantScope(user), id);
+    await sendMediaResponse(res, this.r2, { key: record.imageKey, bytes: record.image, mimeType: record.mimeType }, "Chek surati yo'q");
   }
 
   @Patch("expenses/:id")

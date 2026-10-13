@@ -47,7 +47,6 @@ export function ReceiptReviewModal({
   canWrite,
   downloadingReceiptId,
   onDownloadReceipt,
-  refundingId,
   onRefund,
 }: {
   open: boolean;
@@ -59,7 +58,6 @@ export function ReceiptReviewModal({
   canWrite: boolean;
   downloadingReceiptId: string | null;
   onDownloadReceipt: (paymentId: string) => void;
-  refundingId?: string;
   onRefund: (paymentId: string) => void;
 }) {
   const tr = useTr();
@@ -207,14 +205,9 @@ export function ReceiptReviewModal({
               <Button
                 size="sm"
                 variant="danger"
-                loading={refundingId === payment.id}
-                onClick={() => {
-                  if (confirm(tr("Bu to'lovni qaytarishni tasdiqlaysizmi?"))) {
-                    onRefund(payment.id);
-                  }
-                }}
+                onClick={() => onRefund(payment.id)}
               >
-                {tr("Qaytarish")}
+                {tr("Bekor qilish")}
               </Button>
             )}
           </div>

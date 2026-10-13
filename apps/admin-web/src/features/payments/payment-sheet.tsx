@@ -65,12 +65,15 @@ export function PaymentSheet({
   slug,
   child,
   period,
+  cancelPaymentId,
   onClose,
 }: {
   slug: string;
   child: PaymentSheetChild | null;
   /** Qarz yo'q bo'lganda oldindan to'lov oyi (sukut — joriy oy) */
   period?: string;
+  /** Berilsa — varaq to'g'ridan-to'g'ri shu to'lovni bekor qilish bosqichida ochiladi */
+  cancelPaymentId?: string;
   onClose: () => void;
 }) {
   const tr = useTr();
@@ -116,7 +119,7 @@ export function PaymentSheet({
   });
   const paymentsQuery = useQuery({
     queryKey: ["pay-history", slug, childId],
-    queryFn: () => getPaginated<ChildPayment>(`/app/payments?childId=${childId}&limit=10`),
+    queryFn: () => getPaginated<ChildPayment>(`/app/payments?childId=${childId}&limit=${cancelPaymentId ? 100 : 10}`),
     enabled: open && !!childId,
   });
 
@@ -257,6 +260,23 @@ export function PaymentSheet({
   };
 
   const payments = paymentsQuery.data?.data ?? [];
+
+  // Boshqa sahifadan "Bekor qilish" bilan ochilganda — to'lov topilgach bekor qilish bosqichi
+  const cancelOpened = useRef<string | null>(null);
+  useEffect(() => {
+    if (!open) {
+      cancelOpened.current = null;
+      return;
+    }
+    if (!cancelPaymentId || cancelOpened.current === cancelPaymentId) return;
+    const target = payments.find((x) => x.id === cancelPaymentId);
+    if (target && target.status === "COMPLETED") {
+      cancelOpened.current = cancelPaymentId;
+      setReason("");
+      setError(null);
+      setMode({ kind: "cancel", payment: target });
+    }
+  }, [open, cancelPaymentId, payments]);
 
   let title: ReactNode = current?.name ?? "";
   let body: ReactNode;
@@ -406,7 +426,11 @@ export function PaymentSheet({
                       {groupDigits(p.amount)} {tr("so'm")} · {tr(METHOD_LABEL[p.method])}
                     </span>
                   }
-                  subtitle={[formatDateTime(p.createdAt), p.periods.map((x) => periodLabel(x.period, tr)).join(", ")].filter(Boolean).join(" · ")}
+                  subtitle={
+                    p.status === "REFUNDED" && p.refundReason
+                      ? `${tr("Bekor qilindi")}: ${p.refundReason}`
+                      : [formatDateTime(p.createdAt), p.periods.map((x) => periodLabel(x.period, tr)).join(", ")].filter(Boolean).join(" · ")
+                  }
                   value={p.status === "REFUNDED" ? <Pill color={IOS.gray}>{tr("Bekor qilingan")}</Pill> : undefined}
                 />
               ))}
@@ -568,7 +592,8 @@ function AmountHint({
   );
 }
 
-function ReceiptPicker({
+/** Chek surati: tanlash, sudrab tashlash (Ctrl+V — chaqiruvchi tinglaydi); tanlangach eskiz va × */
+export function ReceiptPicker({
   photo,
   busy,
   invalid,
@@ -674,6 +699,8 @@ function PaymentDetail({ payment: p }: { payment: ChildPayment }) {
         {p.recordedByName && <SheetRow label={tr("Qabul qildi")}>{p.recordedByName}</SheetRow>}
         {p.note && <SheetRow label={tr("Izoh")}>{p.note}</SheetRow>}
         {p.refundedAt && <SheetRow label={tr("Bekor qilindi")}>{formatDateTime(p.refundedAt)}</SheetRow>}
+        {p.refundedByName && <SheetRow label={tr("Bekor qildi")}>{p.refundedByName}</SheetRow>}
+        {p.refundReason && <SheetRow label={tr("Sabab")}>{p.refundReason}</SheetRow>}
       </SheetSection>
       {p.hasReceiptImage && (
         <SheetSection title={tr("Chek")}>
