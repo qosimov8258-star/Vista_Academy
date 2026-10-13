@@ -1,423 +1,407 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
+import { Baby, ChevronLeft, ClipboardCheck, IdCard, Pencil, UserPlus } from "lucide-react";
 import { api } from "@/lib/api";
-import type { Group, GroupOverview, GroupAttendanceRange, GroupAttendanceDay } from "@/lib/types";
+import type { AttendanceStatus, Group, GroupAttendanceDay, GroupAttendanceRange, GroupOverview } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { useBranchContext } from "@/lib/use-branch-context";
-import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
-import { DataTable, THead, TBody, Tr, Th, Td } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
-import { ArrowLeftIcon, GroupIcon, TeacherIcon } from "@/components/ui/icons";
-import { initials } from "@/components/ui/avatar";
-import { formatAge, formatChildId, formatDate, formatGender } from "@/lib/format";
-import { canWriteOperational } from "@/lib/permissions";
-import { EditGroupModal } from "@/features/groups/edit-group-modal";
-import { ManageTeachersModal } from "@/features/groups/manage-teachers-modal";
+import { canWriteOperational, canWriteTeaching } from "@/lib/permissions";
+import { formatAge, formatChildId, formatDate } from "@/lib/format";
+import { IosButton } from "@/components/ios/button";
+import { DayStepper, dayMonthLabel } from "@/components/ios/day-stepper";
+import { SearchPill } from "@/components/ios/filters";
+import { Segmented } from "@/components/ios/form";
+import { Group as IosGroup, ListRow, Row } from "@/components/ios/group";
+import { PageCard } from "@/components/ios/page-card";
+import { IosAvatar, Pill } from "@/components/ios/pill";
+import { PullToRefresh } from "@/components/ios/pull-to-refresh";
+import { StatCell, StatStrip } from "@/components/ios/stat-strip";
+import { EmptyState, ErrorState, SkeletonRows } from "@/components/ios/states";
+import { IOS } from "@/components/ios/tokens";
+import { IosIcon } from "@/features/director/ios-icon";
+import { CapacityBar, GroupFormSheet, GroupTile, TeachersSheet } from "@/features/groups/group-sheets";
 import { useTr } from "@/i18n/tr";
 
-const CHILD_STATUS_LABEL: Record<string, string> = { ACTIVE: "Faol", INACTIVE: "Nofaol", QUARANTINED: "Karantinda" };
-const CHILD_STATUS_TONE: Record<string, "success" | "neutral" | "danger"> = {
-  ACTIVE: "success",
-  INACTIVE: "neutral",
-  QUARANTINED: "danger",
-};
-const ATTENDANCE_STATUS_LABEL: Record<string, string> = {
-  PRESENT: "Keldi",
-  ABSENT: "Kelmadi",
-  LATE: "Kech qoldi",
-  SICK: "Kasal",
-};
-const ATTENDANCE_STATUS_TONE: Record<string, "success" | "danger" | "warning" | "neutral"> = {
-  PRESENT: "success",
-  ABSENT: "danger",
-  LATE: "warning",
-  SICK: "warning",
-};
-const DEFAULT_TIMEZONE = "Asia/Tashkent";
-const RANGE_PRESETS = [
-  { days: 7, label: "7 kun" },
-  { days: 14, label: "14 kun" },
-  { days: 30, label: "30 kun" },
-];
-
-function todayDateString(): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: DEFAULT_TIMEZONE }).format(new Date());
-}
-
-function shiftDays(date: string, days: number): string {
+const TIMEZONE = "Asia/Tashkent";
+const todayTashkent = () => new Intl.DateTimeFormat("en-CA", { timeZone: TIMEZONE }).format(new Date());
+const shiftDays = (date: string, days: number) => {
   const d = new Date(`${date}T00:00:00.000Z`);
   d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
-}
+};
 
-/** Filtr-pilla — CRM va Administratorlar sahifalarida ishlatilgan uslub bilan bir xil. */
-function FilterPill({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={clsx(
-        "cursor-pointer rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors",
-        active
-          ? "bg-[var(--color-primary)] text-white"
-          : "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
-      )}
-    >
-      {children}
-    </button>
-  );
-}
+const ATTENDANCE: Record<AttendanceStatus, { label: string; color: string }> = {
+  PRESENT: { label: "Keldi", color: IOS.green },
+  ABSENT: { label: "Kelmadi", color: IOS.red },
+  LATE: { label: "Kech qoldi", color: IOS.orange },
+  SICK: { label: "Kasal", color: "#af52de" },
+};
+const CHILD_STATUS: Record<string, { label: string; color: string }> = {
+  INACTIVE: { label: "Nofaol", color: IOS.gray },
+  QUARANTINED: { label: "Karantinda", color: IOS.red },
+};
 
+type RangeDays = "7" | "14" | "30";
+type Tab = "day" | "children" | "stats";
+
+/**
+ * Guruh sahifasi — iOS uslubida: sarlavha (rangli plitka, holat, filial,
+ * bolalar/sig'im chizig'i), tezkor amallar (davomat, tarbiyachilar,
+ * tahrirlash), "Kim keldi" (kun tanlab), tarbiyachilar, bolalar va
+ * davomat statistikasi (eng kam qatnashganlar tepada).
+ */
 export default function GroupDetailPage({ params }: { params: Promise<{ slug: string; groupId: string }> }) {
   const tr = useTr();
   const { slug, groupId } = use(params);
   const { base } = useBranchContext(slug);
   const { user } = useAuth();
   const canWrite = canWriteOperational(user?.role);
+  const canMark = canWriteTeaching(user?.role);
   const [editOpen, setEditOpen] = useState(false);
   const [teachersOpen, setTeachersOpen] = useState(false);
-  // Sana mijoz soatiga bog'liq — birinchi renderda emas, effektda hisoblanadi,
-  // aks holda server va brauzer HTML'i mos kelmaydi.
-  const [rosterDate, setRosterDate] = useState<string | null>(null);
-  const [range, setRange] = useState<{ from: string; to: string } | null>(null);
+  const [today, setToday] = useState("");
+  const [day, setDay] = useState("");
+  const [rangeDays, setRangeDays] = useState<RangeDays>("14");
+  const [childSearch, setChildSearch] = useState("");
+  const [tab, setTab] = useState<Tab>("day");
 
+  // Sana mijoz soatiga bog'liq — server va brauzer HTML'i mos kelsin
   useEffect(() => {
-    const today = todayDateString();
-    setRosterDate((current) => current ?? today);
-    setRange((current) => current ?? { from: shiftDays(today, -13), to: today });
+    const t = todayTashkent();
+    setToday(t);
+    setDay((d) => d || t);
   }, []);
 
   const overviewQuery = useQuery({
     queryKey: ["group-overview", slug, groupId],
     queryFn: () => api.get<GroupOverview>(`/app/groups/${groupId}/overview`),
   });
-
   const rosterQuery = useQuery({
-    queryKey: ["group-day", slug, groupId, rosterDate],
-    queryFn: () => api.get<GroupAttendanceDay>(`/app/groups/${groupId}/attendance/day?date=${rosterDate}`),
-    enabled: !!rosterDate,
+    queryKey: ["group-day", slug, groupId, day],
+    queryFn: () => api.get<GroupAttendanceDay>(`/app/groups/${groupId}/attendance/day?date=${day}`),
+    enabled: !!day,
+  });
+  const from = today ? shiftDays(today, -(Number(rangeDays) - 1)) : "";
+  const rangeQuery = useQuery({
+    queryKey: ["group-attendance-range", slug, groupId, from, today],
+    queryFn: () => api.get<GroupAttendanceRange>(`/app/groups/${groupId}/attendance?from=${from}&to=${today}`),
+    enabled: !!today,
   });
 
-  const attendanceQuery = useQuery({
-    queryKey: ["group-attendance-range", slug, groupId, range?.from, range?.to],
-    queryFn: () =>
-      api.get<GroupAttendanceRange>(`/app/groups/${groupId}/attendance?from=${range!.from}&to=${range!.to}`),
-    enabled: !!range,
-  });
-
-  if (overviewQuery.isLoading) return <LoadingState />;
-  if (overviewQuery.isError) return <ErrorState message={tr((overviewQuery.error as Error).message)} />;
   const overview = overviewQuery.data;
-  if (!overview) return null;
+  const children = useMemo(() => {
+    const q = childSearch.trim().toLowerCase();
+    return (overview?.children.items ?? []).filter((c) => !q || c.fullName.toLowerCase().includes(q) || String(c.publicId).includes(q));
+  }, [overview, childSearch]);
+  const ranked = useMemo(
+    () => [...(rangeQuery.data?.children ?? [])].sort((a, b) => (a.rate ?? 101) - (b.rate ?? 101) || a.fullName.localeCompare(b.fullName)),
+    [rangeQuery.data],
+  );
 
-  // Modal `Group` shaklini kutadi — overview'dagi qismlardan yig'ib beramiz.
-  const groupForModals: Group = {
-    id: overview.group.id,
-    branchId: overview.branch.id,
-    name: overview.group.name,
-    capacity: overview.group.capacity,
-    status: overview.group.status,
-    createdAt: overview.group.createdAt,
-  };
+  if (overviewQuery.isError) {
+    return (
+      <div className="mx-auto w-full max-w-3xl">
+        <ErrorState message={(overviewQuery.error as Error).message} onRetry={() => overviewQuery.refetch()} retrying={overviewQuery.isFetching} />
+      </div>
+    );
+  }
+
+  // Varaqlar `Group` shaklini kutadi — overview'dagi qismlardan yig'iladi
+  const group: Group | null = overview
+    ? { id: overview.group.id, branchId: overview.branch.id, name: overview.group.name, capacity: overview.group.capacity, status: overview.group.status, createdAt: overview.group.createdAt }
+    : null;
+  const active = overview?.children.active ?? 0;
+  const capacity = overview?.group.capacity ?? 0;
+  const attendanceHref = overview ? `${base}/attendance?group=${encodeURIComponent(overview.group.name)}${day && day !== today ? `&date=${day}` : ""}` : "#";
+  const year = today ? Number(today.slice(0, 4)) : undefined;
 
   return (
-    <div className="space-y-5">
-      <Link
-        href={`${base}/groups`}
-        className="group inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
-      >
-        <ArrowLeftIcon className="h-4 w-4 transition-transform group-hover:-translate-x-0.5 motion-reduce:transition-none" />
-        {tr("Guruhlar")}
-      </Link>
+    <div className="-mx-2 md:mx-0">
+      <PullToRefresh onRefresh={() => Promise.all([overviewQuery.refetch(), rosterQuery.refetch(), rangeQuery.refetch()])} />
+      <div className="mx-auto w-full max-w-3xl space-y-5 pb-2">
+        {/* Telefonda yuqori panelning o'z "←" tugmasi bor */}
+        <Link href={`${base}/groups`} className="hidden h-9 items-center md:inline-flex gap-0.5 rounded-full pr-3 text-[15px] font-medium text-[var(--color-primary)] active:opacity-50">
+          <ChevronLeft className="h-5 w-5" strokeWidth={2.4} />
+          {tr("Guruhlar")}
+        </Link>
 
-      <Card className="overflow-hidden">
-        <div className="flex flex-wrap items-start justify-between gap-4 px-5 py-5 sm:px-6">
-          <div>
-            <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
-                {tr(overview.group.name)}
-              </h1>
-              <Badge tone={overview.group.status === "ACTIVE" ? "success" : "neutral"}>
-                {overview.group.status === "ACTIVE" ? "Faol" : "Nofaol"}
-              </Badge>
-            </div>
-            <p className="mt-1 text-[14px] text-[var(--color-text-muted)]">{tr(overview.branch.name)}</p>
-          </div>
-          {canWrite && (
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => setTeachersOpen(true)}>
-                {tr("Tarbiyachilar")}
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
-                {tr("Tahrirlash")}
-              </Button>
-            </div>
-          )}
-        </div>
-
-        <dl className="grid grid-cols-2 divide-x divide-y divide-[var(--color-separator)] border-t border-[var(--color-separator)] sm:grid-cols-5 sm:divide-y-0">
-          <div className="px-5 py-3.5 sm:px-6">
-            <dt className="text-[12px] font-medium text-[var(--color-text-muted)]">{tr("Bolalar / Sig'im")}</dt>
-            <dd className="mt-1 text-[15px] font-medium tabular-nums text-[var(--color-text)]">
-              {tr(overview.children.active)} / {tr(overview.group.capacity)}
-            </dd>
-          </div>
-          <div className="px-5 py-3.5 sm:px-6">
-            <dt className="text-[12px] font-medium text-[var(--color-text-muted)]">{tr("Bo'sh o'rin")}</dt>
-            <dd className="mt-1 text-[15px] font-medium tabular-nums text-[var(--color-text)]">
-              {Math.max(0, overview.group.capacity - overview.children.active)}
-            </dd>
-          </div>
-          <div className="px-5 py-3.5 sm:px-6">
-            <dt className="text-[12px] font-medium text-[var(--color-text-muted)]">{tr("O'g'il bolalar")}</dt>
-            <dd className="mt-1 text-[15px] font-medium tabular-nums text-[var(--color-text)]">{tr(overview.children.boys)}</dd>
-          </div>
-          <div className="px-5 py-3.5 sm:px-6">
-            <dt className="text-[12px] font-medium text-[var(--color-text-muted)]">{tr("Qiz bolalar")}</dt>
-            <dd className="mt-1 text-[15px] font-medium tabular-nums text-[var(--color-text)]">{tr(overview.children.girls)}</dd>
-          </div>
-          <div className="px-5 py-3.5 sm:px-6">
-            <dt className="text-[12px] font-medium text-[var(--color-text-muted)]">{tr("Tarbiyachilar")}</dt>
-            <dd className="mt-1 text-[15px] font-medium tabular-nums text-[var(--color-text)]">{tr(overview.teachers.length)}</dd>
-          </div>
-        </dl>
-      </Card>
-
-      <Card className="overflow-hidden">
-        <div className="hairline flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-separator)] px-5 py-4 sm:px-6">
-          <CardTitle>{tr("Kim keldi")}</CardTitle>
-          <div className="flex flex-wrap items-center gap-2">
-            {rosterDate && (
-              <>
-                <FilterPill active={rosterDate === todayDateString()} onClick={() => setRosterDate(todayDateString())}>
-                  {tr("Bugun")}
-                </FilterPill>
-                <FilterPill
-                  active={rosterDate === shiftDays(todayDateString(), -1)}
-                  onClick={() => setRosterDate(shiftDays(todayDateString(), -1))}
-                >
-                  {tr("Kecha")}
-                </FilterPill>
-              </>
-            )}
-            <input
-              type="date"
-              value={rosterDate ?? ""}
-              max={todayDateString()}
-              onChange={(e) => e.target.value && setRosterDate(e.target.value)}
-              aria-label={tr("Sana")}
-              className="h-9 rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-2.5 text-[13px] text-[var(--color-text)] outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20"
-            />
-          </div>
-        </div>
-        <CardBody className="p-0">
-          {!rosterDate || rosterQuery.isLoading ? (
-            <div className="px-5 py-5 sm:px-6">
-              <LoadingState rows={3} />
-            </div>
-          ) : rosterQuery.isError ? (
-            <div className="px-5 py-5 sm:px-6">
-              <ErrorState message={tr((rosterQuery.error as Error).message)} />
-            </div>
-          ) : !rosterQuery.data || rosterQuery.data.total === 0 ? (
-            <div className="px-5 py-5 sm:px-6">
-              <EmptyState title={tr("Bu guruhda faol bola yo'q")} />
+        {/* Sarlavha */}
+        <PageCard className="px-4 py-4">
+          {!overview ? (
+            <div className="flex items-center gap-3">
+              <span className="h-14 w-14 animate-pulse rounded-[16px] bg-[#767680]/[0.12]" />
+              <span className="flex-1 space-y-2">
+                <span className="block h-5 w-1/2 animate-pulse rounded-full bg-[#767680]/[0.12]" />
+                <span className="block h-3.5 w-1/3 animate-pulse rounded-full bg-[#767680]/[0.08]" />
+              </span>
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-3 divide-x divide-[var(--color-separator)] border-b border-[var(--color-separator)]">
-                <RosterCount label={tr("Keldi")} value={rosterQuery.data.counts.present} tone="success" />
-                <RosterCount label={tr("Kelmadi")} value={rosterQuery.data.counts.absent} tone="danger" />
-                <RosterCount label={tr("Belgilanmagan")} value={rosterQuery.data.counts.unmarked} tone="neutral" />
+              <div className="flex items-center gap-3">
+                <GroupTile name={overview.group.name} size={56} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <h1 data-hero className="truncate text-[20px] font-bold leading-tight text-[var(--color-text)]">
+                      {tr(overview.group.name)}
+                    </h1>
+                    <Pill color={overview.group.status === "ACTIVE" ? IOS.green : IOS.gray}>{overview.group.status === "ACTIVE" ? tr("Faol") : tr("Nofaol")}</Pill>
+                  </div>
+                  <p className="mt-0.5 truncate text-[13px] text-[#8e8e93]">{tr(overview.branch.name)}</p>
+                </div>
+                {canWrite && <IosButton label={tr("Tahrirlash")} icon={Pencil} compact onClick={() => setEditOpen(true)} />}
               </div>
-              <DataTable>
-                <THead>
-                  <tr>
-                    <Th>{tr("Ism")}</Th>
-                    <Th>{tr("Holat")}</Th>
-                    <Th>{tr("Izoh")}</Th>
-                  </tr>
-                </THead>
-                <TBody>
-                  {rosterQuery.data.items.map((item) => (
-                    <Tr key={item.childId}>
-                      <Td className="font-medium">
-                        <Link href={`${base}/children/${item.childId}`} className="text-[var(--color-primary)] hover:underline">
-                          {tr(item.fullName)}
-                        </Link>
-                        <span className="ml-1.5 text-[12px] text-[var(--color-text-muted)]">{formatChildId(item.publicId)}</span>
-                      </Td>
-                      <Td>
-                        {item.status ? (
-                          <Badge tone={ATTENDANCE_STATUS_TONE[item.status]}>{tr(ATTENDANCE_STATUS_LABEL[item.status])}</Badge>
-                        ) : (
-                          <Badge tone="neutral">{tr("Belgilanmagan")}</Badge>
-                        )}
-                      </Td>
-                      <Td className="text-[var(--color-text-muted)]">{item.note ?? "—"}</Td>
-                    </Tr>
-                  ))}
-                </TBody>
-              </DataTable>
+              <div className="mt-4">
+                <div className="mb-1.5 flex items-baseline justify-between text-[13px]">
+                  <span className="text-[#8e8e93]">{tr("Bolalar / sig'im")}</span>
+                  <span className="font-semibold tabular-nums text-[var(--color-text)]">
+                    {active} / {capacity}
+                    <span className="ml-1.5 font-normal text-[#8e8e93]">
+                      {active > capacity ? tr("{0} ta ortiqcha", active - capacity) : tr("{0} ta bo'sh o'rin", capacity - active)}
+                    </span>
+                  </span>
+                </div>
+                <CapacityBar count={active} capacity={capacity} className="h-2" />
+              </div>
             </>
           )}
-        </CardBody>
-      </Card>
+        </PageCard>
 
-      <Card className="overflow-hidden">
-        <CardHeader>
-          <CardTitle>{tr("Tarbiyachilar")}</CardTitle>
-        </CardHeader>
-        <CardBody className="p-0">
-          {overview.teachers.length === 0 ? (
-            <div className="px-5 py-5 sm:px-6">
-              <EmptyState
-                title={tr("Hali tarbiyachi biriktirilmagan")}
-                description={canWrite ? "\"Tarbiyachilar\" tugmasi orqali biriktiring" : undefined}
-                icon={<TeacherIcon className="h-[26px] w-[26px]" />}
+        <StatStrip tone="white">
+          <StatCell label={tr("Bugun keldi")} value={rosterQuery.data && day === today ? rosterQuery.data.counts.present : "—"} color={IOS.green} hint={rosterQuery.data && day === today ? tr("{0} tadan", rosterQuery.data.total) : undefined} loading={!overview} />
+          <StatCell label={tr("O'g'il bolalar")} value={overview?.children.boys ?? 0} loading={!overview} />
+          <StatCell label={tr("Qiz bolalar")} value={overview?.children.girls ?? 0} loading={!overview} />
+          <StatCell label={tr("Tarbiyachilar")} value={overview?.teachers.length ?? 0} color={overview && overview.teachers.length === 0 ? IOS.orange : undefined} loading={!overview} />
+        </StatStrip>
+
+        {/* Tezkor amal */}
+        {canMark && overview && (
+          <IosGroup>
+            <Row href={attendanceHref} leading={<IosIcon icon={ClipboardCheck} tint="green" size={30} />} title={tr("Davomatni belgilash")} subtitle={tr("Shu guruh bo'yicha ochiladi")} />
+          </IosGroup>
+        )}
+
+        {/* Tarbiyachilar */}
+        <IosGroup
+          title={tr("Tarbiyachilar")}
+          action={canWrite && overview && overview.teachers.length > 0 ? <button type="button" className="text-[var(--color-primary)] active:opacity-50" onClick={() => setTeachersOpen(true)}>{tr("O'zgartirish")}</button> : undefined}
+          bare={!overview || (overview.teachers.length === 0 && !canWrite)}
+        >
+          {!overview ? (
+            <SkeletonRows rows={1} />
+          ) : overview.teachers.length === 0 ? (
+            canWrite ? (
+              <Row
+                onClick={() => setTeachersOpen(true)}
+                leading={<IosIcon icon={UserPlus} tint="orange" size={30} />}
+                title={<span className="font-medium text-[var(--color-primary)]">{tr("Tarbiyachi biriktirish")}</span>}
+                subtitle={tr("Hali hech kim biriktirilmagan")}
+              />
+            ) : (
+              <EmptyState icon={IdCard} title="Hali tarbiyachi biriktirilmagan" />
+            )
+          ) : (
+            overview.teachers.map((t) => (
+              <ListRow
+                key={t.id}
+                href={`${base}/employees/${t.id}`}
+                avatar={<IosAvatar name={t.fullName} size={40} />}
+                title={tr(t.fullName)}
+                subtitle={tr(t.position)}
+                meta={!t.isActive ? <Pill>{tr("Nofaol")}</Pill> : undefined}
+              />
+            ))
+          )}
+        </IosGroup>
+
+        {/* Bitta ro'yxat ko'rinadi — telefonda sahifa cheksiz cho'zilmasin */}
+        <Segmented<Tab>
+          value={tab}
+          onChange={setTab}
+          label={tr("Bo'lim")}
+          options={[
+            { value: "day", label: tr("Kim keldi") },
+            { value: "children", label: overview ? tr("Bolalar · {0}", overview.children.items.length) : tr("Bolalar") },
+            { value: "stats", label: tr("Statistika") },
+          ]}
+        />
+
+        {/* Kim keldi */}
+        {tab === "day" && (
+          <section className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {day && today && <DayStepper value={day} onChange={setDay} today={today} max={today} />}
+          </div>
+          {rosterQuery.isError ? (
+            <ErrorState message={(rosterQuery.error as Error).message} onRetry={() => rosterQuery.refetch()} retrying={rosterQuery.isFetching} />
+          ) : !rosterQuery.data ? (
+            <SkeletonRows rows={3} />
+          ) : rosterQuery.data.total === 0 ? (
+            <EmptyState icon={Baby} title="Bu guruhda faol bola yo'q" />
+          ) : (
+            <IosGroup
+              footer={
+                rosterQuery.data.counts.unmarked > 0 && canMark ? (
+                  <Link href={attendanceHref} className="font-medium text-[var(--color-primary)]">
+                    {tr("{0} ta bola belgilanmagan — belgilash", rosterQuery.data.counts.unmarked)} ›
+                  </Link>
+                ) : undefined
+              }
+            >
+              <div className="grid grid-cols-3 gap-px bg-black/[0.06]">
+                {[
+                  { label: tr("Keldi"), value: rosterQuery.data.counts.present, color: IOS.green },
+                  { label: tr("Kelmadi"), value: rosterQuery.data.counts.absent, color: IOS.red },
+                  { label: tr("Belgilanmagan"), value: rosterQuery.data.counts.unmarked, color: IOS.gray },
+                ].map((c) => (
+                  <div key={c.label} className="min-w-0 bg-white px-3 py-3 sm:px-4">
+                    <p className="text-[22px] font-bold leading-none tabular-nums" style={{ color: c.value ? c.color : "var(--color-text)" }}>
+                      {c.value}
+                    </p>
+                    <p className="mt-1 truncate text-[12px] text-[#8e8e93]">{c.label}</p>
+                  </div>
+                ))}
+              </div>
+              {rosterQuery.data.items.map((item) => (
+                <ListRow
+                  key={item.childId}
+                  href={`${base}/children/${item.childId}`}
+                  avatar={<IosAvatar name={item.fullName} size={40} />}
+                  title={tr(item.fullName)}
+                  subtitle={[formatChildId(item.publicId), item.note].filter(Boolean).join(" · ")}
+                  meta={item.status ? <Pill color={ATTENDANCE[item.status].color}>{tr(ATTENDANCE[item.status].label)}</Pill> : <Pill>{tr("Belgilanmagan")}</Pill>}
+                />
+              ))}
+            </IosGroup>
+          )}
+        </section>
+        )}
+
+        {/* Bolalar */}
+        {tab === "children" && (
+          <section className="space-y-3">
+          {overview && overview.children.items.length > 8 && <SearchPill value={childSearch} onChange={setChildSearch} placeholder={tr("Bola ismi yoki ID")} />}
+          <IosGroup bare={!overview || children.length === 0}>
+            {!overview ? (
+              <SkeletonRows rows={4} />
+            ) : children.length === 0 ? (
+              <EmptyState icon={Baby} title={childSearch ? "Bola topilmadi" : "Bu guruhda bola yo'q"} />
+            ) : (
+              children.map((c) => (
+                <ListRow
+                  key={c.id}
+                  href={`${base}/children/${c.id}`}
+                  avatar={
+                    <span
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[14px] font-semibold"
+                      style={{
+                        backgroundColor: c.gender === "FEMALE" ? "#ff2d551f" : c.gender === "MALE" ? "#007aff1f" : "#8e8e931f",
+                        color: c.gender === "FEMALE" ? "#ff2d55" : c.gender === "MALE" ? "#007aff" : "#8e8e93",
+                      }}
+                    >
+                      {c.fullName
+                        .split(/\s+/)
+                        .slice(0, 2)
+                        .map((p) => p[0]?.toUpperCase())
+                        .join("")}
+                    </span>
+                  }
+                  title={tr(c.fullName)}
+                  subtitle={[formatChildId(c.publicId), c.birthDate ? `${formatAge(c.birthDate)} · ${formatDate(c.birthDate)}` : null].filter(Boolean).join(" · ")}
+                  meta={CHILD_STATUS[c.status] ? <Pill color={CHILD_STATUS[c.status].color}>{tr(CHILD_STATUS[c.status].label)}</Pill> : undefined}
+                />
+              ))
+            )}
+          </IosGroup>
+        </section>
+        )}
+
+        {/* Davomat statistikasi */}
+        {tab === "stats" && (
+          <section className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="px-4 text-[13px] uppercase tracking-wide text-[#8e8e93]">{tr("Davr")}</h2>
+            <div className="w-[210px]">
+              <Segmented<RangeDays>
+                value={rangeDays}
+                onChange={setRangeDays}
+                label={tr("Davr")}
+                options={[
+                  { value: "7", label: tr("7 kun") },
+                  { value: "14", label: tr("14 kun") },
+                  { value: "30", label: tr("30 kun") },
+                ]}
               />
             </div>
-          ) : (
-            <ul className="divide-y divide-[var(--color-separator)]">
-              {overview.teachers.map((teacher) => (
-                <li key={teacher.id} className="flex items-center gap-3 px-5 py-3.5 sm:px-6">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)]/10 text-[12px] font-semibold text-[var(--color-primary)]">
-                    {initials(teacher.fullName)}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[14px] font-medium text-[var(--color-text)]">{tr(teacher.fullName)}</p>
-                    <p className="text-[12.5px] text-[var(--color-text-muted)]">{tr(teacher.position)}</p>
-                  </div>
-                  {!teacher.isActive && <Badge tone="neutral">{tr("Nofaol")}</Badge>}
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardBody>
-      </Card>
-
-      <Card className="overflow-hidden">
-        <CardHeader>
-          <CardTitle>{tr("Bolalar")}</CardTitle>
-        </CardHeader>
-        <CardBody className="p-0">
-          {overview.children.items.length === 0 ? (
-            <div className="px-5 py-5 sm:px-6">
-              <EmptyState title={tr("Bu guruhda bola yo'q")} icon={<GroupIcon className="h-[26px] w-[26px]" />} />
-            </div>
-          ) : (
-            <DataTable>
-              <THead>
-                <tr>
-                  <Th>{tr("Ism")}</Th>
-                  <Th>{tr("Jinsi")}</Th>
-                  <Th>{tr("Tug'ilgan sana")}</Th>
-                  <Th>{tr("Holati")}</Th>
-                </tr>
-              </THead>
-              <TBody>
-                {overview.children.items.map((child) => (
-                  <Tr key={child.id}>
-                    <Td>
-                      <Link href={`${base}/children/${child.id}`} className="font-medium text-[var(--color-primary)] hover:underline">
-                        {tr(child.fullName)}
-                      </Link>
-                      <span className="ml-1.5 text-[12px] text-[var(--color-text-muted)]">{formatChildId(child.publicId)}</span>
-                    </Td>
-                    <Td className="text-[var(--color-text-muted)]">{formatGender(child.gender)}</Td>
-                    <Td className="text-[var(--color-text-muted)]">
-                      {child.birthDate ? `${formatDate(child.birthDate)} (${formatAge(child.birthDate)})` : "—"}
-                    </Td>
-                    <Td>
-                      <Badge tone={CHILD_STATUS_TONE[child.status]}>{tr(CHILD_STATUS_LABEL[child.status])}</Badge>
-                    </Td>
-                  </Tr>
-                ))}
-              </TBody>
-            </DataTable>
-          )}
-        </CardBody>
-      </Card>
-
-      <Card className="overflow-hidden">
-        <div className="hairline flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-separator)] px-5 py-4 sm:px-6">
-          <CardTitle>{tr("Davomat (")}{attendanceQuery.data ? `${attendanceQuery.data.from} — ${attendanceQuery.data.to}` : tr("so'nggi 14 kun")})</CardTitle>
-          <div className="flex flex-wrap items-center gap-2">
-            {RANGE_PRESETS.map((preset) => {
-              const to = todayDateString();
-              const from = shiftDays(to, -(preset.days - 1));
-              const active = range?.from === from && range?.to === to;
-              return (
-                <FilterPill key={preset.days} active={active} onClick={() => setRange({ from, to })}>
-                  {tr(preset.label)}
-                </FilterPill>
-              );
-            })}
           </div>
-        </div>
-        <CardBody className="p-0">
-          {attendanceQuery.isLoading ? (
-            <div className="px-5 py-5 sm:px-6">
-              <LoadingState rows={3} />
-            </div>
-          ) : attendanceQuery.isError ? (
-            <div className="px-5 py-5 sm:px-6">
-              <ErrorState message={tr((attendanceQuery.error as Error).message)} />
-            </div>
-          ) : !attendanceQuery.data || attendanceQuery.data.children.length === 0 ? (
-            <EmptyState title={tr("Davomat ma'lumoti yo'q")} />
+          {rangeQuery.isError ? (
+            <ErrorState message={(rangeQuery.error as Error).message} onRetry={() => rangeQuery.refetch()} retrying={rangeQuery.isFetching} />
+          ) : !rangeQuery.data ? (
+            <SkeletonRows rows={3} avatar={false} />
+          ) : rangeQuery.data.children.length === 0 ? (
+            <EmptyState icon={ClipboardCheck} title="Davomat ma'lumoti yo'q" />
           ) : (
-            <DataTable>
-              <THead>
-                <tr>
-                  <Th>{tr("Bola")}</Th>
-                  <Th numeric>{tr("Keldi")}</Th>
-                  <Th numeric>{tr("Kelmadi")}</Th>
-                  <Th numeric>{tr("Foiz")}</Th>
-                </tr>
-              </THead>
-              <TBody>
-                {attendanceQuery.data.children.map((child) => (
-                  <Tr key={child.childId}>
-                    <Td className="font-medium">{tr(child.fullName)}</Td>
-                    <Td numeric className="text-[var(--color-text-muted)]">{tr(child.present)}</Td>
-                    <Td numeric className="text-[var(--color-text-muted)]">{tr(child.absent)}</Td>
-                    <Td numeric>{child.rate === null ? "—" : <Badge tone={child.rate >= 80 ? "success" : child.rate >= 50 ? "warning" : "danger"}>{tr(child.rate)}%</Badge>}</Td>
-                  </Tr>
+            <>
+              {/* Kunlik ustunlar: kelganlar ulushi */}
+              <PageCard className="px-4 pb-3 pt-4">
+                <div className="flex h-24 items-end gap-[3px]">
+                  {rangeQuery.data.days.map((d) => {
+                    const total = rangeQuery.data.totalChildren || 1;
+                    const marked = d.present + d.absent;
+                    const h = marked ? Math.max(6, (d.present / total) * 100) : 4;
+                    return (
+                      <button
+                        key={d.date}
+                        type="button"
+                        onClick={() => {
+                          setDay(d.date);
+                          setTab("day");
+                        }}
+                        title={`${dayMonthLabel(d.date, tr, year)}: ${d.present}/${total}`}
+                        className="flex h-full min-w-0 flex-1 items-end"
+                      >
+                        <span
+                          className={clsx("block w-full rounded-[4px] transition-opacity hover:opacity-80", d.date === day ? "bg-[var(--color-primary)]" : marked ? "bg-[var(--color-primary)]/35" : "bg-[#767680]/[0.14]")}
+                          style={{ height: `${h}%` }}
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="mt-2 flex justify-between text-[11.5px] tabular-nums text-[#8e8e93]">
+                  <span>{dayMonthLabel(rangeQuery.data.from, tr, year)}</span>
+                  <span>{dayMonthLabel(rangeQuery.data.to, tr, year)}</span>
+                </div>
+              </PageCard>
+              <IosGroup title={tr("Bolalar bo'yicha")} footer={tr("Eng kam qatnashganlar tepada.")}>
+                {ranked.map((c) => (
+                  <ListRow
+                    key={c.childId}
+                    href={`${base}/children/${c.childId}`}
+                    avatar={<IosAvatar name={c.fullName} size={40} />}
+                    title={tr(c.fullName)}
+                    subtitle={tr("keldi {0} · kelmadi {1}", c.present, c.absent)}
+                    meta={
+                      c.rate === null ? (
+                        <Pill>—</Pill>
+                      ) : (
+                        <Pill color={c.rate >= 80 ? IOS.green : c.rate >= 50 ? IOS.orange : IOS.red}>{c.rate}%</Pill>
+                      )
+                    }
+                  />
                 ))}
-              </TBody>
-            </DataTable>
+              </IosGroup>
+            </>
           )}
-        </CardBody>
-      </Card>
+        </section>
+        )}
+      </div>
 
-      {canWrite && editOpen && <EditGroupModal open={editOpen} onClose={() => setEditOpen(false)} slug={slug} group={groupForModals} />}
-      {canWrite && teachersOpen && (
-        <ManageTeachersModal open={teachersOpen} onClose={() => setTeachersOpen(false)} slug={slug} group={groupForModals} />
-      )}
-    </div>
-  );
-}
-
-const ROSTER_COUNT_TONE = {
-  success: { text: "text-[var(--color-success)]", bg: "bg-[var(--color-success-bg)]" },
-  danger: { text: "text-[var(--color-danger)]", bg: "bg-[var(--color-danger-bg)]" },
-  neutral: { text: "text-[var(--color-text-muted)]", bg: "bg-[var(--color-surface-sunken)]" },
-} as const;
-
-function RosterCount({ label, value, tone }: { label: string; value: number; tone: keyof typeof ROSTER_COUNT_TONE }) {
-  const tr = useTr();
-  const style = ROSTER_COUNT_TONE[tone];
-  return (
-    <div className={clsx("min-w-0 px-2 py-3.5 sm:px-6", style.bg)}>
-      <p className={clsx("text-[22px] font-semibold leading-none tabular-nums", style.text)}>{tr(value)}</p>
-      <p className="mt-1.5 break-words text-[11px] font-medium text-[var(--color-text-muted)] sm:text-[12.5px]">{tr(label)}</p>
+      {canWrite && <GroupFormSheet open={editOpen} onClose={() => setEditOpen(false)} slug={slug} group={group} />}
+      {canWrite && <TeachersSheet open={teachersOpen} onClose={() => setTeachersOpen(false)} slug={slug} group={group} />}
     </div>
   );
 }

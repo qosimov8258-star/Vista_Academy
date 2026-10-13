@@ -107,10 +107,15 @@ export function BranchAttendance({ slug }: { slug: string }) {
   const topRef = useRef<HTMLDivElement>(null);
 
   // "Bugun" brauzer soatiga bog'liq — server va mijoz farq qilmasin
+  // ?group=…&date=… — guruh sahifasidagi "Davomatni belgilash"dan kelganda
   useEffect(() => {
     const t = todayTashkent();
+    const params = new URLSearchParams(window.location.search);
+    const wanted = params.get("date");
     setToday(t);
-    setDate((d) => d || t);
+    setDate((d) => d || (wanted && /^\d{4}-\d{2}-\d{2}$/.test(wanted) && wanted <= t ? wanted : t));
+    const group = params.get("group");
+    if (group) setGroupFilter(group);
   }, []);
 
   const orgQuery = useQuery({ queryKey: ["org", slug], queryFn: () => api.get<Organization>("/app/organizations/me") });
