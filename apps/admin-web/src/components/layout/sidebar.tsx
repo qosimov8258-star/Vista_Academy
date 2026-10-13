@@ -330,7 +330,6 @@ export function Sidebar({ slug }: { slug: string }) {
   // Kassir: guruhlar emas, pul bilan ishlaydi. Moliyachi roli bilan kiradi.
   const cashierEntries: NavEntry[] = [
     { href: `/${slug}`, label: "Bosh sahifa", icon: HomeIcon, show: true, exact: true },
-    { href: `/${slug}/cash`, label: "Kassa", icon: MoneyIcon, show: true },
     { href: `/${slug}/payments`, label: tr("To'lovlar"), icon: WalletIcon, show: true },
     { href: `/${slug}/expenses`, label: tr("Xarajatlar"), icon: CoinIcon, show: true },
     { href: `/${slug}/finance`, label: tr("Hisob-fakturalar"), icon: NoteIcon, show: true },
@@ -521,7 +520,8 @@ export function Sidebar({ slug }: { slug: string }) {
   // to'liq admin nav emas).
   const financeEntries: NavEntry[] = [
     { href: base, label: t("nav.home"), icon: HomeIcon, show: true, exact: true },
-    { href: `/${slug}/cash`, label: "Kassa", icon: MoneyIcon, show: true },
+    // "Kassa" menyuda yo'q: to'lov qabul qilish — To'lovlar, chiqim —
+    // Xarajatlar sahifasida; kunning kassa holati bosh sahifadagi kartada.
     { href: `/${slug}/payments`, label: tr("To'lovlar"), icon: WalletIcon, show: true },
     { href: `/${slug}/expenses`, label: tr("Xarajatlar"), icon: CoinIcon, show: true },
     { href: `/${slug}/audit-logs`, label: "Audit", icon: AuditIcon, show: true },
@@ -1051,7 +1051,8 @@ export function Sidebar({ slug }: { slug: string }) {
         menuEntries={
           user
             ? [
-                { href: `/${slug}/cash`, label: "Kassa", icon: MoneyIcon, show: true },
+                { href: `/${slug}/payments`, label: tr("To'lovlar"), icon: WalletIcon, show: true },
+                { href: `/${slug}/expenses`, label: tr("Xarajatlar"), icon: CoinIcon, show: true },
                 { href: `/${slug}/audit-logs`, label: "Audit", icon: AuditIcon, show: true },
                 financeFiliallarEntry,
               ]
