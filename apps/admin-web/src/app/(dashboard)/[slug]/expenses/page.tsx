@@ -3,7 +3,7 @@
 import { use, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
-import { Plus, ReceiptText } from "lucide-react";
+import { Download, Plus, ReceiptText } from "lucide-react";
 import { api } from "@/lib/api";
 import { IosButton } from "@/components/ios/button";
 import { PeriodStepper } from "@/components/ios/day-stepper";
@@ -18,6 +18,7 @@ import { currentMonth, todayTashkent } from "@/features/cash/shared";
 import { categoryMeta, type ExpensesMonth } from "@/features/expenses/categories";
 import { CategoryTile, ExpenseSheet, expenseDayLabel, type ExpenseSheetRequest } from "@/features/expenses/expense-sheet";
 import { METHOD_LABEL, groupDigits, periodLabel, shiftPeriod } from "@/features/payments/shared";
+import { ReportSheet } from "@/features/reports/report-sheet";
 import { useTr } from "@/i18n/tr";
 
 /**
@@ -34,6 +35,7 @@ export default function ExpensesPage({ params }: { params: Promise<{ slug: strin
   const [month, setMonth] = useState("");
   const [filter, setFilter] = useState<string | null>(null);
   const [sheet, setSheet] = useState<ExpenseSheetRequest>(null);
+  const [reportOpen, setReportOpen] = useState(false);
 
   useEffect(() => {
     const m = currentMonth();
@@ -78,7 +80,12 @@ export default function ExpensesPage({ params }: { params: Promise<{ slug: strin
           title={tr("Xarajatlar")}
           count={data ? tr("{0} ta", data.items.length) : undefined}
           subtitle={tr("Oziq-ovqat, kommunal, ta'mirlash va boshqa chiqimlar")}
-          actions={<IosButton label={tr("Qo'shish")} icon={Plus} variant="primary" compact onClick={() => setSheet({ kind: "new", date: newDate() })} />}
+          actions={
+            <div className="flex items-center gap-2">
+              <IosButton label={tr("Hisobot")} icon={Download} compact onClick={() => setReportOpen(true)} />
+              <IosButton label={tr("Qo'shish")} icon={Plus} variant="primary" compact onClick={() => setSheet({ kind: "new", date: newDate() })} />
+            </div>
+          }
         />
 
         {month && (
@@ -219,6 +226,16 @@ export default function ExpensesPage({ params }: { params: Promise<{ slug: strin
       </div>
 
       <ExpenseSheet request={sheet} onClose={() => setSheet(null)} />
+      <ReportSheet
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        period={month || undefined}
+        title="Xarajatlar hisoboti"
+        endpoint="/app/cash/expenses-report"
+        filePrefix="xarajatlar-hisoboti"
+        allHint="Boshidan bugungacha barcha xarajatlar"
+        contents="Hisobotda: jami xarajat, naqd va boshqa usuldagi qismi, o'tgan davr bilan solishtirish, turkumlar, usullar va kunlar bo'yicha, batafsil ro'yxat (chek bor-yo'qligi bilan)."
+      />
     </div>
   );
 }

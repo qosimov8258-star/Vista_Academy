@@ -2172,5 +2172,8 @@
  "Yuklab olish": "Download",
  "Oylik": "Monthly",
  "Boshidan bugungacha barcha to'lovlar": "All payments from the start until today",
- "Hisobotni yuklab bo'lmadi — qayta urinib ko'ring": "Could not download the report — try again"
+ "Hisobotni yuklab bo'lmadi — qayta urinib ko'ring": "Could not download the report — try again",
+ "Xarajatlar hisoboti": "Expenses report",
+ "Boshidan bugungacha barcha xarajatlar": "All expenses from the start to today",
+ "Hisobotda: jami xarajat, naqd va boshqa usuldagi qismi, o'tgan davr bilan solishtirish, turkumlar, usullar va kunlar bo'yicha, batafsil ro'yxat (chek bor-yo'qligi bilan).": "Includes: total expenses, cash and non-cash parts, comparison with the previous period, breakdown by category, method and day, and a detailed list (with receipt status)."
 }

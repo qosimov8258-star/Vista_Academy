@@ -2172,5 +2172,8 @@
  "Yuklab olish": "Скачать",
  "Oylik": "За месяц",
  "Boshidan bugungacha barcha to'lovlar": "Все оплаты с начала до сегодня",
- "Hisobotni yuklab bo'lmadi — qayta urinib ko'ring": "Не удалось скачать отчёт — попробуйте ещё раз"
+ "Hisobotni yuklab bo'lmadi — qayta urinib ko'ring": "Не удалось скачать отчёт — попробуйте ещё раз",
+ "Xarajatlar hisoboti": "Отчёт по расходам",
+ "Boshidan bugungacha barcha xarajatlar": "Все расходы с начала до сегодня",
+ "Hisobotda: jami xarajat, naqd va boshqa usuldagi qismi, o'tgan davr bilan solishtirish, turkumlar, usullar va kunlar bo'yicha, batafsil ro'yxat (chek bor-yo'qligi bilan).": "В отчёте: общая сумма расходов, наличная и безналичная часть, сравнение с прошлым периодом, по категориям, способам и дням, подробный список (с отметкой о чеке)."
 }
