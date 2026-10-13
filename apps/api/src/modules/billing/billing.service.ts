@@ -12,6 +12,7 @@ import { AuditLogService } from "../audit-log/audit-log.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { CreateInvoiceDto } from "./dto/create-invoice.dto";
 import { BulkCreateInvoiceDto } from "./dto/bulk-create-invoice.dto";
+import { monthlyFeeOf } from "./monthly-fee";
 import { InvoiceQueryDto } from "./dto/invoice-query.dto";
 import { RecordPaymentDto } from "./dto/record-payment.dto";
 import { PaymentQueryDto } from "./dto/payment-query.dto";
@@ -157,14 +158,17 @@ export class BillingService {
       }
     }
 
-    const children = await this.prisma.child.findMany({
-      where: {
-        branchId,
-        status: "ACTIVE",
-        ...(dto.groupId ? { groupId: dto.groupId } : {}),
-      },
-      select: { id: true },
-    });
+    const [children, branch] = await Promise.all([
+      this.prisma.child.findMany({
+        where: {
+          branchId,
+          status: "ACTIVE",
+          ...(dto.groupId ? { groupId: dto.groupId } : {}),
+        },
+        select: { id: true, group: { select: { monthlyFee: true } } },
+      }),
+      this.prisma.branch.findUniqueOrThrow({ where: { id: branchId }, select: { defaultTuitionAmount: true } }),
+    ]);
     if (children.length === 0) {
       throw new BadRequestException("Bu tanlovda faol bola yo'q");
     }
@@ -184,12 +188,23 @@ export class BillingService {
     const alreadyInvoiced = new Set(existing.map((i) => i.childId));
     const targets = children.filter((c) => !alreadyInvoiced.has(c.id));
 
+    // Summa berilmasa — har bola o'z guruhi narxida (bo'lmasa filial narxi);
+    // narxi umuman yo'q bola tashlab ketiladi va alohida sanaladi.
     const created = [];
+    let noFeeCount = 0;
     for (const child of targets) {
+      const amount = dto.amount ?? monthlyFeeOf(child.group, branch);
+      if (!amount || amount <= 0) {
+        noFeeCount += 1;
+        continue;
+      }
+      if ((dto.discountAmount ?? 0) > amount) {
+        throw new BadRequestException("Chegirma summadan katta bo'lishi mumkin emas");
+      }
       created.push(
         await this.create(caller, {
           childId: child.id,
-          amount: dto.amount,
+          amount,
           discountAmount: dto.discountAmount,
           period: dto.period,
           dueDate: dto.dueDate,
@@ -197,7 +212,7 @@ export class BillingService {
       );
     }
 
-    return { createdCount: created.length, skippedCount: children.length - targets.length };
+    return { createdCount: created.length, skippedCount: children.length - targets.length, noFeeCount };
   }
 
   async findAll(scope: TenantScope, query: InvoiceQueryDto) {
@@ -339,7 +354,7 @@ export class BillingService {
     const [child, branch] = await Promise.all([
       this.prisma.child.findFirst({
         where: { id: dto.childId, organizationId: scope.organizationId },
-        select: { id: true, fullName: true, branchId: true },
+        select: { id: true, fullName: true, branchId: true, group: { select: { monthlyFee: true } } },
       }),
       this.prisma.branch.findUniqueOrThrow({ where: { id: branchId }, select: { currency: true, defaultTuitionAmount: true } }),
     ]);
@@ -396,13 +411,15 @@ export class BillingService {
       }
     }
 
+    // Oy to'lovi bolaning oylik narxidan (guruh narxi, bo'lmasa filial narxi)
+    // kam bo'lmaydi — qisman oldindan to'langan oyning qolgani qarz bo'lib ko'rinsin.
+    const advanceAmount = advancePeriod ? Math.max(amount, monthlyFeeOf(child.group, branch)) : 0;
+
     try {
       const result = await this.prisma.$transaction(async (tx) => {
         const targets = [...openInvoices];
         if (advancePeriod) {
-          // Oy to'lovi filial sozlamasidagi oylik summadan kam bo'lmaydi —
-          // qisman oldindan to'langan oyning qolgani qarz bo'lib ko'rinsin.
-          const invoiceAmount = Math.max(amount, Number(branch.defaultTuitionAmount ?? 0));
+          const invoiceAmount = advanceAmount;
           const invoice = await tx.invoice.create({
             data: {
               organizationId: scope.organizationId,
@@ -497,7 +514,7 @@ export class BillingService {
         payment: { ...payment, hasReceiptImage: receipt !== null },
         allocations: result.allocations,
         advancePeriod,
-        remainingDebt: advancePeriod ? 0 : remainingDebt,
+        remainingDebt: advancePeriod ? Math.max(0, advanceAmount - amount) : remainingDebt,
       };
     } catch (error) {
       if (receipt?.key) {

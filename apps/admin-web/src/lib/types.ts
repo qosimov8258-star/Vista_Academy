@@ -88,6 +88,8 @@ export interface Group {
   capacity: number;
   status: GroupStatus;
   createdAt: string;
+  /** Oylik to'lov narxi (so'm); bo'sh — filial narxi. O'qituvchi/oshpazga `null` */
+  monthlyFee?: string | null;
   _count?: { children: number };
   teachers?: GroupTeacherLink[];
 }
@@ -108,7 +110,7 @@ export interface GroupChild {
 
 /** `GET /app/groups/:id/overview` javobi. */
 export interface GroupOverview {
-  group: { id: string; name: string; capacity: number; status: GroupStatus; createdAt: string };
+  group: { id: string; name: string; capacity: number; status: GroupStatus; createdAt: string; monthlyFee: string | null };
   branch: { id: string; name: string };
   teachers: { id: string; fullName: string; position: string; isActive: boolean }[];
   children: {

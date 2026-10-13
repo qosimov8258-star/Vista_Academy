@@ -115,6 +115,8 @@ export const PAY_STATE: Record<PayState, { label: string; tone: "success" | "war
 export interface GroupPaymentSummary {
   groupId: string;
   name: string;
+  /** Guruh narxi (bo'lmasa filial narxi) */
+  monthlyFee?: number | null;
   total: number;
   paid: number;
   partial: number;

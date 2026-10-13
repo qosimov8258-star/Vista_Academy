@@ -112,6 +112,9 @@ export function CreateInvoiceModal({ open, onClose, slug }: { open: boolean; onC
           onChange={(e) => {
             setGroupId(e.target.value);
             setValue("childId", "");
+            // Guruh narxi bo'lsa — summa shu bilan to'ldiriladi (qo'lda o'zgartirsa bo'ladi)
+            const fee = groups?.groups.find((g) => g.groupId === e.target.value)?.monthlyFee;
+            if (fee) setValue("amount", fee);
           }}
         >
           <option value="" disabled>
@@ -119,7 +122,7 @@ export function CreateInvoiceModal({ open, onClose, slug }: { open: boolean; onC
           </option>
           {groups?.groups.map((g) => (
             <option key={g.groupId} value={g.groupId}>
-              {tr(g.name)} ({tr(g.total)} {tr("bola)")}
+              {tr(g.name)} ({tr(g.total)} {tr("bola)")}{g.monthlyFee ? ` · ${String(Math.round(g.monthlyFee)).replace(/\B(?=(\d{3})+(?!\d))/g, " ")}` : ""}
             </option>
           ))}
         </Select>

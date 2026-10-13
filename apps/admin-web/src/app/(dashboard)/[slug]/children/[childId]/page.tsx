@@ -1,48 +1,65 @@
 "use client";
 
-import { use, useRef, useState } from "react";
-import { downloadCsv } from "@/lib/download";
+import { use, useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
 import Link from "next/link";
 import clsx from "clsx";
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Baby,
+  Camera,
+  Check,
+  ChevronLeft,
+  Copy,
+  FileText,
+  HeartPulse,
+  KeyRound,
+  Pencil,
+  Phone,
+  Pill as PillIcon,
+  Plus,
+  Sparkles,
+  Syringe,
+  Trash2,
+  TriangleAlert,
+  UserPlus,
+  Wallet,
+} from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import type {
   Child,
   ChildAttendanceHistory,
+  ChildGuardian,
   DailyReport,
   DevelopmentAssessment,
   HealthProfile,
-  Vaccination,
-  MedicationLog,
-  ChildGuardian,
   LedgerEntry,
+  MedicationLog,
+  Vaccination,
 } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
-import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChildCashCard } from "@/features/cash/child-cash-card";
-import { DataTable, THead, TBody, Tr, Th, Td } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
-import {
-  ArrowLeftIcon,
-  CalendarIcon,
-  ChecklistIcon,
-  GroupIcon,
-  KeyIcon,
-  NoteIcon,
-  PencilIcon,
-  PhoneIcon,
-  WalletIcon,
-} from "@/components/ui/icons";
-import { CopyButton } from "@/components/ui/copy-button";
-import { ChildPhoto } from "@/components/ui/child-photo";
+import { useBranchContext } from "@/lib/use-branch-context";
+import { downloadCsv } from "@/lib/download";
 import { prepareChildPhoto } from "@/lib/child-photo";
+import { formatAge, formatChildId, formatDate, formatDateTime, formatGender, formatPhone } from "@/lib/format";
+import { isCashierPosition } from "@/lib/employee-position";
+import { canWriteOperational, canWriteTeaching } from "@/lib/permissions";
+import { WEEKDAYS, dayMonthLabel } from "@/components/ios/day-stepper";
+import { Segmented } from "@/components/ios/form";
+import { Group, ListRow, Row } from "@/components/ios/group";
+import { PageCard } from "@/components/ios/page-card";
+import { IosAvatar, Pill } from "@/components/ios/pill";
+import { PullToRefresh } from "@/components/ios/pull-to-refresh";
+import { IosSheet, SheetPrimaryButton, SheetRow, SheetSecondaryButton, SheetSection } from "@/components/ios/sheet";
+import { Spinner } from "@/components/ios/spinner";
+import { StatCell, StatStrip } from "@/components/ios/stat-strip";
+import { EmptyState, ErrorState, SkeletonRows } from "@/components/ios/states";
+import { IOS, ROW_PRESS, ROW_SEPARATOR } from "@/components/ios/tokens";
+import { ChildPhoto } from "@/components/ui/child-photo";
 import { initials } from "@/components/ui/avatar";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { formatAge, formatChildId, formatDate, formatDateTime, formatGender, formatMoney, formatPhone } from "@/lib/format";
-import { useBranchContext } from "@/lib/use-branch-context";
+import { IosIcon, type AnyIcon } from "@/features/director/ios-icon";
+import { ChildCashCard } from "@/features/cash/child-cash-card";
+import { groupDigits } from "@/features/payments/shared";
 import { EditDevelopmentModal } from "@/features/development/edit-development-modal";
 import { EditHealthProfileModal, BLOOD_TYPE_LABEL } from "@/features/child-health/edit-health-profile-modal";
 import { AddVaccinationModal } from "@/features/child-health/add-vaccination-modal";
@@ -53,1039 +70,922 @@ import { ParentCabinetModal } from "@/features/guardians/parent-cabinet-modal";
 import { EditGuardianLinkModal } from "@/features/guardians/edit-guardian-link-modal";
 import { EditChildModal } from "@/features/children/edit-child-modal";
 import { ChildAttendanceCalendar } from "@/features/attendance/child-attendance-calendar";
-import { isCashierPosition } from "@/lib/employee-position";
-import { canWriteOperational, canWriteTeaching } from "@/lib/permissions";
 import { useTr } from "@/i18n/tr";
 
-const VACCINATION_STATUS_LABEL: Record<string, string> = {
-  SCHEDULED: "Rejalashtirilgan",
-  DONE: "Bajarildi",
-  MISSED: "O'tkazib yuborildi",
-};
-const VACCINATION_STATUS_TONE: Record<string, "warning" | "success" | "danger"> = {
-  SCHEDULED: "warning",
-  DONE: "success",
-  MISSED: "danger",
-};
+type Tab = "overview" | "attendance" | "health" | "development";
+const TABS: Tab[] = ["overview", "attendance", "health", "development"];
 
-/** Rejalashtirilgan sana o'tib ketgan, lekin hali "Bajarildi"/"O'tkazib
- * yuborildi" deb belgilanmagan — buni oddiy "Rejalashtirilgan"dan ajratib
- * ko'rsatish kerak. */
-function isVaccinationOverdue(v: { status: string; scheduledDate: string }): boolean {
-  return v.status === "SCHEDULED" && new Date(v.scheduledDate) < new Date();
-}
-const GUARDIAN_RELATION_LABEL: Record<string, string> = {
-  FATHER: "Ota",
-  MOTHER: "Ona",
-  GRANDPARENT: "Bobo/Buvi",
-  OTHER: "Boshqa",
+const STATUS: Record<string, { label: string; color: string }> = {
+  ACTIVE: { label: "Faol", color: IOS.green },
+  INACTIVE: { label: "Nofaol", color: IOS.gray },
+  QUARANTINED: { label: "Karantinda", color: IOS.red },
 };
-
-const LEDGER_TYPE_LABEL: Record<string, string> = {
-  CHARGE: "Hisoblandi",
-  DISCOUNT: "Chegirma",
-  PAYMENT: "To'lov",
-  REFUND: "Qaytarish",
-  ADJUSTMENT: "Tuzatish",
+const RELATION: Record<string, string> = { FATHER: "Ota", MOTHER: "Ona", GRANDPARENT: "Bobo/Buvi", OTHER: "Boshqa" };
+const LEDGER_TYPE: Record<string, string> = { CHARGE: "Hisoblandi", DISCOUNT: "Chegirma", PAYMENT: "To'lov", REFUND: "Qaytarish", ADJUSTMENT: "Tuzatish" };
+const VACCINATION: Record<string, { label: string; color: string }> = {
+  SCHEDULED: { label: "Rejalashtirilgan", color: IOS.orange },
+  DONE: { label: "Bajarildi", color: IOS.green },
+  MISSED: { label: "O'tkazib yuborildi", color: IOS.red },
+};
+const EATING: Record<string, string> = { GOOD: "Yaxshi", AVERAGE: "O'rtacha", POOR: "Yomon" };
+const MOOD: Record<string, string> = { HAPPY: "Xursand", NEUTRAL: "Oddiy", UPSET: "Xafa" };
+const RATING: Record<string, { label: string; color: string }> = {
+  BELOW_EXPECTED: { label: "Kutilganidan past", color: IOS.red },
+  ON_TRACK: { label: "Yoshiga mos", color: IOS.green },
+  ABOVE_EXPECTED: { label: "Kutilganidan yuqori", color: IOS.blue },
 };
 
-const EATING_LABEL: Record<string, string> = { GOOD: "Yaxshi", AVERAGE: "O'rtacha", POOR: "Yomon" };
-const MOOD_LABEL: Record<string, string> = { HAPPY: "Xursand", NEUTRAL: "Oddiy", UPSET: "Xafa" };
-const RATING_LABEL: Record<string, string> = {
-  BELOW_EXPECTED: "Kutilganidan past",
-  ON_TRACK: "Yoshiga mos",
-  ABOVE_EXPECTED: "Kutilganidan yuqori",
-};
-const RATING_TONE: Record<string, "danger" | "success" | "primary"> = {
-  BELOW_EXPECTED: "danger",
-  ON_TRACK: "success",
-  ABOVE_EXPECTED: "primary",
+/** Rejalashtirilgan sanasi o'tgan, lekin hali belgilanmagan emlash */
+const isVaccinationOverdue = (v: { status: string; scheduledDate: string }) => v.status === "SCHEDULED" && new Date(v.scheduledDate) < new Date();
+const dayLabel = (iso: string, tr: (k: string) => string) => {
+  const d = iso.slice(0, 10);
+  return `${dayMonthLabel(d, tr, new Date().getUTCFullYear())}, ${tr(WEEKDAYS[new Date(`${d}T00:00:00Z`).getUTCDay()]).toLowerCase()}`;
 };
 
-/** Bolaning bitta fakti — sarlavha ostidagi to'rt katakli qatordan biri. */
-function Fact({
-  label,
-  value,
-  hint,
-  muted,
-  numeric,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-  muted?: boolean;
-  numeric?: boolean;
-}) {
-  const tr = useTr();
-  return (
-    <div className="px-5 py-3.5 sm:px-6">
-      <dt className="text-[12px] font-medium text-[var(--color-text-muted)]">{tr(label)}</dt>
-      <dd
-        className={clsx(
-          "mt-1 truncate text-[15px] font-medium",
-          numeric && "tabular-nums",
-          muted ? "text-[var(--color-text-muted)]" : "text-[var(--color-text)]",
-        )}
-      >
-        {tr(value)}
-      </dd>
-      {hint && <p className="text-[12px] text-[var(--color-text-muted)]">{tr(hint)}</p>}
-    </div>
-  );
-}
-
-function RatingBadge({ label, value }: { label: string; value: string | null }) {
-  const tr = useTr();
-  return (
-    <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
-      <p className="text-[12.5px] text-[var(--color-text-muted)]">{tr(label)}</p>
-      {value ? (
-        <Badge tone={RATING_TONE[value]} className="mt-1.5">
-          {tr(RATING_LABEL[value])}
-        </Badge>
-      ) : (
-        <p className="mt-1.5 text-[14px] font-medium text-[var(--color-text-muted)]">—</p>
-      )}
-    </div>
-  );
-}
-
+/**
+ * Bola profili — iOS uslubida. Tepada surat (bosilsa almashtiriladi), ism,
+ * holat, ID va tezkor amallar (qo'ng'iroq, hujjatlar, tahrirlash, moliya);
+ * ko'rsatkichlar; pastda bitta tanlov — Umumiy (ota-onalar va ularning
+ * huquqlari, kabinet, ma'lumot, moliya) / Davomat (statistika, kalendar,
+ * kelmagan kunlar) / Sog'liq (profil, emlashlar, dori-darmon) / Rivojlanish
+ * (baholash, kundalik hisobotlar). Barcha tahrirlash oynalari — varaqlar.
+ */
 export default function ChildDetailPage({ params }: { params: Promise<{ slug: string; childId: string }> }) {
   const tr = useTr();
   const { slug, childId } = use(params);
-  const [assessOpen, setAssessOpen] = useState(false);
-  const [docLoading, setDocLoading] = useState<string | null>(null);
-  const [docError, setDocError] = useState<string | null>(null);
-  const [healthOpen, setHealthOpen] = useState(false);
-  const [vaccinationOpen, setVaccinationOpen] = useState(false);
-  const [updatingVaccination, setUpdatingVaccination] = useState<Vaccination | null>(null);
-  const [medicationOpen, setMedicationOpen] = useState(false);
-  const [guardianOpen, setGuardianOpen] = useState(false);
-  const [editingLink, setEditingLink] = useState<ChildGuardian | null>(null);
-  const [deletingLink, setDeletingLink] = useState<ChildGuardian | null>(null);
-  const [editChildOpen, setEditChildOpen] = useState(false);
-  const [cabinetOpen, setCabinetOpen] = useState(false);
-  const [photoError, setPhotoError] = useState<string | null>(null);
-  const [photoChecking, setPhotoChecking] = useState(false);
-  const photoInputRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
   const { user } = useAuth();
   const canWrite = canWriteOperational(user?.role);
-  // Moliyachi va kassirga ota-ona kartasi o'rnida to'lov qabul qilish kartasi ko'rinadi
+  // Moliyachi va kassirga ota-ona kartasi tepasida to'lov qabul qilish kartasi
   const showCash = user?.role === "FINANCE" || (!!user?.position && isCashierPosition(user.position));
-  // Davomatga izoh yozish — tarbiyachilik ishi (kunlik davomat sahifasi bilan
-  // bir xil ruxsat), operatsion `canWrite`dan alohida: o'qituvchi bu yerda
-  // ham izoh yoza olishi kerak, garchi boshqa bo'limlarni tahrirlay olmasa ham.
+  // Davomatga izoh yozish — tarbiyachilik ishi (kunlik davomat bilan bir xil ruxsat)
   const canWriteAttendance = canWriteTeaching(user?.role);
-  const queryClient = useQueryClient();
+  // `assertMoneyReader` faqat o'qituvchini rad etadi — UI ham shunday
+  const canReadMoney = user?.role !== "TEACHER";
   const { branchSlug } = useBranchContext(slug);
   const childrenHref = branchSlug ? `/${slug}/${branchSlug}/children` : `/${slug}/children`;
   const financeHref = branchSlug ? `/${slug}/${branchSlug}/finance/${childId}` : `/${slug}/finance/${childId}`;
 
-  const childQuery = useQuery({
-    queryKey: ["child", slug, childId],
-    queryFn: () => api.get<Child>(`/app/children/${childId}`),
-  });
+  const [tab, setTab] = useState<Tab>("overview");
+  const [editChildOpen, setEditChildOpen] = useState(false);
+  const [photoOpen, setPhotoOpen] = useState(false);
+  const [docsOpen, setDocsOpen] = useState(false);
+  const [guardianSheet, setGuardianSheet] = useState<ChildGuardian | null>(null);
+  const [guardianOpen, setGuardianOpen] = useState(false);
+  const [editingLink, setEditingLink] = useState<ChildGuardian | null>(null);
+  const [cabinetOpen, setCabinetOpen] = useState(false);
+  const [assessOpen, setAssessOpen] = useState(false);
+  const [healthOpen, setHealthOpen] = useState(false);
+  const [vaccinationOpen, setVaccinationOpen] = useState(false);
+  const [updatingVaccination, setUpdatingVaccination] = useState<Vaccination | null>(null);
+  const [medicationOpen, setMedicationOpen] = useState(false);
+  const [report, setReport] = useState<DailyReport | null>(null);
 
-  const attendanceHistoryQuery = useQuery({
+  // ?tab=health kabi havola bilan to'g'ridan-to'g'ri bo'lim ochiladi
+  useEffect(() => {
+    const wanted = new URLSearchParams(window.location.search).get("tab") as Tab | null;
+    if (wanted && TABS.includes(wanted)) setTab(wanted);
+  }, []);
+  const switchTab = (next: Tab) => {
+    setTab(next);
+    const url = new URL(window.location.href);
+    if (next === "overview") url.searchParams.delete("tab");
+    else url.searchParams.set("tab", next);
+    window.history.replaceState(null, "", url);
+  };
+
+  const childQuery = useQuery({ queryKey: ["child", slug, childId], queryFn: () => api.get<Child>(`/app/children/${childId}`) });
+  const attendanceQuery = useQuery({
     queryKey: ["child-attendance-history", slug, childId],
     queryFn: () => api.get<ChildAttendanceHistory>(`/app/children/${childId}/attendance-history`),
   });
-  // Jadval faqat kelmagan/kasal kunlarni ko'rsatadi — eng yangisidan boshlab.
-  const attendanceAbsences = [...(attendanceHistoryQuery.data?.records ?? [])]
-    .filter((r) => r.status !== "PRESENT")
-    .reverse();
-
-  const reportsQuery = useQuery({
-    queryKey: ["daily-reports-history", slug, childId],
-    queryFn: () => api.get<DailyReport[]>(`/app/children/${childId}/daily-reports`),
-  });
-
-  const developmentQuery = useQuery({
-    queryKey: ["development", slug, childId],
-    queryFn: () => api.get<DevelopmentAssessment[]>(`/app/children/${childId}/development`),
-  });
-
-  const healthQuery = useQuery({
-    queryKey: ["child-health", slug, childId],
-    queryFn: () => api.get<HealthProfile | null>(`/app/children/${childId}/health`),
-  });
-
-  const vaccinationsQuery = useQuery({
-    queryKey: ["vaccinations", slug, childId],
-    queryFn: () => api.get<Vaccination[]>(`/app/children/${childId}/vaccinations`),
-  });
-
-  const medicationsQuery = useQuery({
-    queryKey: ["medications", slug, childId],
-    queryFn: () => api.get<MedicationLog[]>(`/app/children/${childId}/medications`),
-  });
-
-  const guardiansQuery = useQuery({
-    queryKey: ["child-guardians", slug, childId],
-    queryFn: () => api.get<ChildGuardian[]>(`/app/children/${childId}/guardians`),
-  });
-
-  const removeGuardianLinkMutation = useMutation({
-    mutationFn: (linkId: string) => api.delete(`/app/child-guardians/${linkId}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["child-guardians", slug, childId] });
-      queryClient.invalidateQueries({ queryKey: ["children", slug] });
-      setDeletingLink(null);
-    },
-  });
-
-  // Moliyaviy ma'lumot: `assertMoneyReader` faqat O'qituvchini rad etadi,
-  // shuning uchun UI ham xuddi shu qoidani takrorlaydi.
-  const canReadMoney = user?.role !== "TEACHER";
+  const reportsQuery = useQuery({ queryKey: ["daily-reports-history", slug, childId], queryFn: () => api.get<DailyReport[]>(`/app/children/${childId}/daily-reports`) });
+  const developmentQuery = useQuery({ queryKey: ["development", slug, childId], queryFn: () => api.get<DevelopmentAssessment[]>(`/app/children/${childId}/development`) });
+  const healthQuery = useQuery({ queryKey: ["child-health", slug, childId], queryFn: () => api.get<HealthProfile | null>(`/app/children/${childId}/health`) });
+  const vaccinationsQuery = useQuery({ queryKey: ["vaccinations", slug, childId], queryFn: () => api.get<Vaccination[]>(`/app/children/${childId}/vaccinations`) });
+  const medicationsQuery = useQuery({ queryKey: ["medications", slug, childId], queryFn: () => api.get<MedicationLog[]>(`/app/children/${childId}/medications`) });
+  const guardiansQuery = useQuery({ queryKey: ["child-guardians", slug, childId], queryFn: () => api.get<ChildGuardian[]>(`/app/children/${childId}/guardians`) });
   const ledgerQuery = useQuery({
     queryKey: ["ledger", slug, childId],
     queryFn: () => api.get<LedgerEntry[]>(`/app/children/${childId}/ledger`),
     enabled: canReadMoney,
   });
 
+  const child = childQuery.data;
+  const guardians = guardiansQuery.data ?? [];
+  const primary = guardians.find((g) => g.isPrimary) ?? guardians[0] ?? null;
   // Kabinet bolaga bitta: qaysi vasiyning raqami login ekanini shu yerda topamiz
-  const cabinetHolder = guardiansQuery.data?.find((link) => link.guardian.hasCabinet) ?? null;
+  const cabinetHolder = guardians.find((link) => link.guardian.hasCabinet) ?? null;
+  const balance = (ledgerQuery.data ?? []).reduce((sum, e) => sum + Number(e.amount), 0);
+  const stats = attendanceQuery.data?.stats;
+  const health = healthQuery.data ?? null;
+  const latest = developmentQuery.data?.[0] ?? null;
+  const absences = [...(attendanceQuery.data?.records ?? [])].filter((r) => r.status !== "PRESENT").reverse();
+  const overdueVaccinations = (vaccinationsQuery.data ?? []).filter(isVaccinationOverdue).length;
 
-  const photoMutation = useMutation({
-    mutationFn: (image: string) => api.put(`/app/children/${childId}/avatar`, { image }),
+  const refresh = () =>
+    Promise.all([childQuery, attendanceQuery, reportsQuery, developmentQuery, healthQuery, vaccinationsQuery, medicationsQuery, guardiansQuery, ...(canReadMoney ? [ledgerQuery] : [])].map((q) => q.refetch()));
+
+  if (childQuery.isError) {
+    return (
+      <div className="mx-auto w-full max-w-3xl">
+        <ErrorState message={(childQuery.error as Error).message} onRetry={() => childQuery.refetch()} retrying={childQuery.isFetching} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="-mx-2 md:mx-0">
+      <PullToRefresh onRefresh={refresh} />
+      <div className="mx-auto w-full max-w-3xl space-y-5 pb-2">
+        <Link href={childrenHref} className="hidden h-9 items-center gap-0.5 rounded-full pr-3 text-[15px] font-medium text-[var(--color-primary)] active:opacity-50 md:inline-flex">
+          <ChevronLeft className="h-5 w-5" strokeWidth={2.4} />
+          {tr("Bolalar")}
+        </Link>
+
+        {/* Sarlavha: surat, ism, holat, ID, tezkor amallar */}
+        <PageCard className="px-4 pb-4 pt-5">
+          {!child ? (
+            <div className="flex flex-col items-center gap-3">
+              <span className="h-[88px] w-[88px] animate-pulse rounded-full bg-[#767680]/[0.12]" />
+              <span className="h-5 w-48 animate-pulse rounded-full bg-[#767680]/[0.12]" />
+              <span className="h-3.5 w-32 animate-pulse rounded-full bg-[#767680]/[0.08]" />
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-col items-center text-center">
+                <button
+                  type="button"
+                  disabled={!canWrite}
+                  onClick={() => setPhotoOpen(true)}
+                  className="relative rounded-full transition-transform enabled:active:scale-95"
+                  aria-label={canWrite ? tr("Bolaning suratini almashtirish") : undefined}
+                >
+                  <ChildPhoto child={child} size={88} fallback={initials(child.fullName)} />
+                  {canWrite && (
+                    <span className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full bg-[var(--color-primary)] text-white ring-[3px] ring-white">
+                      <Camera className="h-3.5 w-3.5" strokeWidth={2.4} />
+                    </span>
+                  )}
+                </button>
+                <h1 data-hero className="mt-3 text-[22px] font-bold leading-tight text-[var(--color-text)]">
+                  {tr(child.fullName)}
+                </h1>
+                <p className="mt-1 text-[14px] text-[#8e8e93]">
+                  {[child.group?.name ? tr(child.group.name) : tr("Guruhsiz"), child.birthDate ? tr(formatAge(child.birthDate)) : null].filter(Boolean).join(" · ")}
+                </p>
+                <div className="mt-2.5 flex flex-wrap justify-center gap-1.5">
+                  <Pill color={STATUS[child.status]?.color}>{tr(STATUS[child.status]?.label ?? child.status)}</Pill>
+                  <CopyChip value={formatChildId(child.publicId)} />
+                  {health?.allergies && <Pill color={IOS.red}>{tr("Allergiya")}</Pill>}
+                </div>
+              </div>
+
+              <div className="mt-5 grid grid-cols-4 gap-2">
+                <QuickAction icon={Phone} label={tr("Qo'ng'iroq")} color={IOS.green} href={primary ? `tel:${primary.guardian.phone}` : undefined} />
+                <QuickAction icon={FileText} label={tr("Hujjatlar")} color={IOS.blue} onClick={canWrite ? () => setDocsOpen(true) : undefined} />
+                <QuickAction icon={Pencil} label={tr("Tahrirlash")} color={IOS.orange} onClick={canWrite ? () => setEditChildOpen(true) : undefined} />
+                <QuickAction icon={Wallet} label={tr("Moliya")} color="#5856d6" href={canReadMoney ? financeHref : undefined} />
+              </div>
+            </>
+          )}
+        </PageCard>
+
+        <StatStrip tone="white">
+          <StatCell
+            label={tr("Davomat")}
+            value={stats?.attendanceRate != null ? `${stats.attendanceRate}%` : "—"}
+            color={stats?.attendanceRate == null ? undefined : stats.attendanceRate >= 80 ? IOS.green : stats.attendanceRate >= 50 ? IOS.orange : IOS.red}
+            hint={attendanceQuery.data ? tr("{0}-yil", attendanceQuery.data.year) : undefined}
+            loading={attendanceQuery.isLoading}
+          />
+          <StatCell label={tr("Kelmagan")} value={stats?.absent ?? 0} hint={stats ? tr("sababsiz {0}", stats.unexcusedAbsent) : undefined} color={stats?.unexcusedAbsent ? IOS.red : undefined} loading={attendanceQuery.isLoading} />
+          {canReadMoney ? (
+            <StatCell
+              label={tr("Qarzdorlik")}
+              value={balance > 0.5 ? groupDigits(balance) : "0"}
+              hint={tr("so'm")}
+              color={balance > 0.5 ? IOS.red : IOS.green}
+              href={financeHref}
+              loading={ledgerQuery.isLoading}
+            />
+          ) : (
+            <StatCell label={tr("Ota-onalar")} value={guardians.length} loading={guardiansQuery.isLoading} />
+          )}
+          <StatCell label={tr("Emlash")} value={overdueVaccinations ? tr("{0} kechikkan", overdueVaccinations) : (vaccinationsQuery.data?.length ?? 0)} color={overdueVaccinations ? IOS.red : undefined} hint={overdueVaccinations ? undefined : tr("yozuv")} loading={vaccinationsQuery.isLoading} />
+        </StatStrip>
+
+        {!canWrite && <ViewOnlyNote role={user?.role} />}
+
+        <Segmented<Tab>
+          value={tab}
+          onChange={switchTab}
+          label={tr("Bo'lim")}
+          options={[
+            { value: "overview", label: tr("Umumiy") },
+            { value: "attendance", label: tr("Davomat") },
+            { value: "health", label: tr("Sog'liq") },
+            { value: "development", label: tr("Rivojlanish") },
+          ]}
+        />
+
+        {/* ---------------- Umumiy ---------------- */}
+        {tab === "overview" && (
+          <>
+            {showCash && child && <ChildCashCard slug={slug} childId={childId} childName={child.fullName} />}
+
+            <Group
+              title={tr("Ota-onalar")}
+              action={
+                canWrite && guardians.length > 0 ? (
+                  <button type="button" className="text-[var(--color-primary)] active:opacity-50" onClick={() => setGuardianOpen(true)}>
+                    {tr("Qo'shish")}
+                  </button>
+                ) : undefined
+              }
+              footer={guardians.length > 0 ? tr("Ota-onani bosing — qo'ng'iroq, huquqlar va tahrirlash.") : undefined}
+              bare={guardiansQuery.isLoading || guardiansQuery.isError || (guardians.length === 0 && !canWrite)}
+            >
+              {guardiansQuery.isLoading ? (
+                <SkeletonRows rows={2} />
+              ) : guardiansQuery.isError ? (
+                <ErrorState message={(guardiansQuery.error as Error).message} onRetry={() => guardiansQuery.refetch()} />
+              ) : guardians.length === 0 ? (
+                canWrite ? (
+                  <Row onClick={() => setGuardianOpen(true)} leading={<IosIcon icon={UserPlus} tint="orange" size={30} />} title={<span className="font-medium text-[var(--color-primary)]">{tr("Ota-ona qo'shish")}</span>} subtitle={tr("Bola bilan bog'lanish uchun ota-ona qo'shing")} />
+                ) : (
+                  <EmptyState icon={UserPlus} title="Hali ota-ona biriktirilmagan" />
+                )
+              ) : (
+                <>
+                  {guardians.map((link) => (
+                    <ListRow
+                      key={link.id}
+                      onClick={() => setGuardianSheet(link)}
+                      avatar={<IosAvatar name={link.guardian.fullName} size={44} />}
+                      title={
+                        <span className="flex items-center gap-1.5">
+                          <span className="truncate">{tr(link.guardian.fullName)}</span>
+                          {link.isPrimary && <Pill color={IOS.blue}>{tr("Asosiy")}</Pill>}
+                        </span>
+                      }
+                      subtitle={[tr(RELATION[link.relation]), formatPhone(link.guardian.phone), link.canPickup ? tr("olib ketadi") : null].filter(Boolean).join(" · ")}
+                      trailing={<CallButton phone={link.guardian.phone} name={link.guardian.fullName} />}
+                    />
+                  ))}
+                  {canWrite && (
+                    <Row
+                      onClick={() => setCabinetOpen(true)}
+                      leading={<IosIcon icon={KeyRound} tint={cabinetHolder ? "green" : "blue"} size={30} />}
+                      title={cabinetHolder ? tr("Kabinet ochiq") : tr("Kabinet ochish")}
+                      subtitle={
+                        cabinetHolder
+                          ? tr("Login: {0} · ota-ona ikkalasi shu kabinetdan foydalanadi", formatPhone(cabinetHolder.guardian.phone))
+                          : tr("Ota-ona davomat, ovqat va mashg'ulotlarni ko'rishi uchun")
+                      }
+                    />
+                  )}
+                </>
+              )}
+            </Group>
+
+            {child && (
+              <Group title={tr("Ma'lumot")}>
+                <Row title={tr("Filial")} value={child.branch?.name ? tr(child.branch.name) : "—"} />
+                <Row title={tr("Guruh")} value={child.group?.name ? tr(child.group.name) : tr("Guruhsiz")} />
+                <Row title={tr("Jinsi")} value={tr(formatGender(child.gender))} />
+                <Row title={tr("Tug'ilgan sana")} value={child.birthDate ? `${formatDate(child.birthDate)} · ${tr(formatAge(child.birthDate))}` : "—"} />
+                <Row title={tr("ID")} value={<span className="font-mono">{formatChildId(child.publicId)}</span>} />
+              </Group>
+            )}
+
+            {canReadMoney && !showCash && (
+              <Group title={tr("Moliya")} action={<Link href={financeHref} className="text-[var(--color-primary)] active:opacity-50">{tr("To'liq tarix")}</Link>} bare={ledgerQuery.isLoading || ledgerQuery.isError}>
+                {ledgerQuery.isLoading ? (
+                  <SkeletonRows rows={2} avatar={false} />
+                ) : ledgerQuery.isError ? (
+                  <ErrorState message={(ledgerQuery.error as Error).message} onRetry={() => ledgerQuery.refetch()} />
+                ) : (ledgerQuery.data ?? []).length === 0 ? (
+                  <Row title={<span className="text-[#8e8e93]">{tr("Moliyaviy yozuv yo'q")}</span>} />
+                ) : (
+                  <>
+                    <div className="px-4 py-3.5">
+                      <p className="text-[13px] text-[#8e8e93]">{tr("Joriy qarzdorlik")}</p>
+                      <p className="mt-0.5 text-[28px] font-bold leading-tight tabular-nums" style={{ color: balance > 0.5 ? IOS.red : IOS.green }}>
+                        {groupDigits(Math.max(0, balance))} <span className="text-[15px] font-semibold text-[#8e8e93]">{tr("so'm")}</span>
+                      </p>
+                    </div>
+                    {(ledgerQuery.data ?? []).slice(0, 4).map((e) => {
+                      const amount = Number(e.amount);
+                      return (
+                        <Row
+                          key={e.id}
+                          title={[tr(LEDGER_TYPE[e.type] ?? e.type), e.invoice?.period].filter(Boolean).join(" · ")}
+                          subtitle={formatDateTime(e.createdAt)}
+                          value={
+                            <span className="font-semibold" style={{ color: amount < 0 ? IOS.green : "var(--color-text)" }}>
+                              {amount > 0 ? "+" : "−"}
+                              {groupDigits(Math.abs(amount))}
+                            </span>
+                          }
+                        />
+                      );
+                    })}
+                  </>
+                )}
+              </Group>
+            )}
+          </>
+        )}
+
+        {/* ---------------- Davomat ---------------- */}
+        {tab === "attendance" &&
+          (attendanceQuery.isLoading ? (
+            <SkeletonRows rows={4} avatar={false} />
+          ) : attendanceQuery.isError ? (
+            <ErrorState message={(attendanceQuery.error as Error).message} onRetry={() => attendanceQuery.refetch()} retrying={attendanceQuery.isFetching} />
+          ) : (
+            <>
+              <StatStrip tone="white">
+                <StatCell label={tr("Kelgan kunlar")} value={stats?.present ?? 0} color={IOS.green} />
+                <StatCell label={tr("Kelmagan kunlar")} value={stats?.absent ?? 0} />
+                <StatCell label={tr("Sababli")} value={stats?.excusedAbsent ?? 0} color={stats?.excusedAbsent ? IOS.orange : undefined} />
+                <StatCell label={tr("Sababsiz")} value={stats?.unexcusedAbsent ?? 0} color={stats?.unexcusedAbsent ? IOS.red : undefined} />
+              </StatStrip>
+              {attendanceQuery.data && attendanceQuery.data.records.length > 0 && (
+                <ChildAttendanceCalendar slug={slug} childId={childId} year={attendanceQuery.data.year} records={attendanceQuery.data.records} canEditNote={canWriteAttendance} />
+              )}
+              <ExpandableGroup
+                title={tr("Kelmagan kunlar")}
+                empty={<EmptyState icon={Check} title="Bu yil hali kelmagan kun yo'q" />}
+                items={absences.map((a) => (
+                  <Row
+                    key={a.date}
+                    title={dayLabel(a.date, tr)}
+                    subtitle={a.note ? tr(a.note) : tr("Sabab yozilmagan")}
+                    value={<Pill color={a.note ? IOS.orange : IOS.red}>{a.note ? tr("Sababli") : tr("Sababsiz")}</Pill>}
+                  />
+                ))}
+              />
+            </>
+          ))}
+
+        {/* ---------------- Sog'liq ---------------- */}
+        {tab === "health" && (
+          <>
+            <Group
+              title={tr("Sog'liq profili")}
+              action={canWrite ? <button type="button" className="text-[var(--color-primary)] active:opacity-50" onClick={() => setHealthOpen(true)}>{health ? tr("Tahrirlash") : tr("To'ldirish")}</button> : undefined}
+              bare={healthQuery.isLoading || healthQuery.isError}
+            >
+              {healthQuery.isLoading ? (
+                <SkeletonRows rows={3} avatar={false} />
+              ) : healthQuery.isError ? (
+                <ErrorState message={(healthQuery.error as Error).message} onRetry={() => healthQuery.refetch()} />
+              ) : (
+                <>
+                  <Row leading={<IosIcon icon={HeartPulse} tint="red" size={30} />} title={tr("Qon guruhi")} value={health?.bloodType ? BLOOD_TYPE_LABEL[health.bloodType] : tr("Kiritilmagan")} />
+                  <InfoRow icon={TriangleAlert} tint={health?.allergies ? "red" : "gray"} title={tr("Allergiyalar")} text={health?.allergies} danger />
+                  <InfoRow icon={HeartPulse} tint="orange" title={tr("Surunkali kasalliklar")} text={health?.chronicConditions} />
+                  <InfoRow icon={FileText} tint="gray" title={tr("Qo'shimcha izoh")} text={health?.notes} />
+                </>
+              )}
+            </Group>
+
+            <ExpandableGroup
+              title={tr("Emlashlar")}
+              action={canWrite ? <button type="button" className="text-[var(--color-primary)] active:opacity-50" onClick={() => setVaccinationOpen(true)}>{tr("Qo'shish")}</button> : undefined}
+              loading={vaccinationsQuery.isLoading}
+              footer={canWrite && (vaccinationsQuery.data ?? []).some((v) => v.status === "SCHEDULED") ? tr("Rejalashtirilgan emlashni bosing — bajarildi yoki o'tkazib yuborildi deb belgilang.") : undefined}
+              empty={<EmptyState icon={Syringe} title="Hali emlash yozuvi yo'q" hint={canWrite ? "«Qo'shish» orqali rejalashtiring" : undefined} />}
+              items={(vaccinationsQuery.data ?? []).map((v) => {
+                const overdue = isVaccinationOverdue(v);
+                const meta = overdue ? { label: "Muddati o'tgan", color: IOS.red } : VACCINATION[v.status];
+                return (
+                  <Row
+                    key={v.id}
+                    onClick={canWrite && v.status === "SCHEDULED" ? () => setUpdatingVaccination(v) : undefined}
+                    leading={<IosIcon icon={Syringe} tint={overdue ? "red" : v.status === "DONE" ? "green" : "orange"} size={30} />}
+                    title={tr(v.name)}
+                    subtitle={[v.doneDate ? tr("bajarildi {0}", formatDate(v.doneDate)) : tr("reja {0}", formatDate(v.scheduledDate)), v.note].filter(Boolean).join(" · ")}
+                    value={<Pill color={meta.color}>{tr(meta.label)}</Pill>}
+                  />
+                );
+              })}
+            />
+
+            <ExpandableGroup
+              title={tr("Dori-darmon jurnali")}
+              action={canWrite ? <button type="button" className="text-[var(--color-primary)] active:opacity-50" onClick={() => setMedicationOpen(true)}>{tr("Qo'shish")}</button> : undefined}
+              loading={medicationsQuery.isLoading}
+              empty={<EmptyState icon={PillIcon} title="Hali dori-darmon yozuvi yo'q" />}
+              items={(medicationsQuery.data ?? []).map((m) => (
+                <Row
+                  key={m.id}
+                  leading={<IosIcon icon={PillIcon} tint="purple" size={30} />}
+                  title={`${tr(m.medicationName)} · ${tr(m.dose)}`}
+                  subtitle={[formatDateTime(m.givenAt), m.note].filter(Boolean).join(" · ")}
+                  value={<Pill color={m.parentAuthorized ? IOS.green : IOS.red}>{m.parentAuthorized ? tr("Ruxsat bor") : tr("Ruxsatsiz")}</Pill>}
+                />
+              ))}
+            />
+          </>
+        )}
+
+        {/* ---------------- Rivojlanish ---------------- */}
+        {tab === "development" && (
+          <>
+            <Group
+              title={latest ? tr("Rivojlanish · {0}", latest.period) : tr("Rivojlanish")}
+              action={canWrite ? <button type="button" className="text-[var(--color-primary)] active:opacity-50" onClick={() => setAssessOpen(true)}>{latest ? tr("Tahrirlash") : tr("Baholash")}</button> : undefined}
+              footer={latest?.note ? tr(latest.note) : !latest ? tr("Hali baholanmagan") : undefined}
+              bare={developmentQuery.isLoading}
+            >
+              {developmentQuery.isLoading ? (
+                <SkeletonRows rows={4} avatar={false} />
+              ) : (
+                (
+                  [
+                    ["Nutq", latest?.speechRating],
+                    ["Motorika", latest?.motorRating],
+                    ["Ijtimoiy ko'nikma", latest?.socialRating],
+                    ["Bilim / idrok", latest?.cognitiveRating],
+                  ] as const
+                ).map(([label, value]) => (
+                  <Row key={label} leading={<IosIcon icon={Sparkles} tint={value ? (value === "BELOW_EXPECTED" ? "red" : value === "ON_TRACK" ? "green" : "blue") : "gray"} size={30} />} title={tr(label)} value={value ? <Pill color={RATING[value].color}>{tr(RATING[value].label)}</Pill> : "—"} />
+                ))
+              )}
+            </Group>
+
+            <ExpandableGroup
+              title={tr("Kundalik hisobotlar")}
+              loading={reportsQuery.isLoading}
+              empty={<EmptyState icon={Baby} title="Hali kundalik hisobot yo'q" hint="Tarbiyachi kunlik hisobot kiritgach, shu yerda ko'rinadi" />}
+              items={(reportsQuery.data ?? []).map((r) => (
+                <Row
+                  key={r.id}
+                  onClick={() => setReport(r)}
+                  title={dayLabel(r.date, tr)}
+                  subtitle={[
+                    r.eatingQuality ? `${tr("ovqat")}: ${tr(EATING[r.eatingQuality])}` : null,
+                    r.sleepMinutes != null ? `${tr("uyqu")}: ${r.sleepMinutes} ${tr("daq")}` : null,
+                    r.mood ? `${tr("kayfiyat")}: ${tr(MOOD[r.mood])}` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ") || tr("Izohlar")}
+                />
+              ))}
+            />
+          </>
+        )}
+      </div>
+
+      {/* ---------------- Varaqlar ---------------- */}
+      {child && canWrite && (
+        <PhotoSheet open={photoOpen} onClose={() => setPhotoOpen(false)} slug={slug} child={child} />
+      )}
+      {child && canWrite && <DocsSheet open={docsOpen} onClose={() => setDocsOpen(false)} childId={childId} />}
+
+      <GuardianSheet
+        link={guardianSheet}
+        onClose={() => setGuardianSheet(null)}
+        canWrite={canWrite}
+        isCabinet={!!guardianSheet && cabinetHolder?.id === guardianSheet.id}
+        slug={slug}
+        childId={childId}
+        onEdit={(link) => {
+          setGuardianSheet(null);
+          setEditingLink(link);
+        }}
+      />
+
+      <IosSheet open={!!report} onClose={() => setReport(null)} title={report ? dayLabel(report.date, tr) : ""} cancelLabel="Yopish">
+        {report && (
+          <SheetSection>
+            <SheetRow label={tr("Ovqatlanishi")}>{report.eatingQuality ? tr(EATING[report.eatingQuality]) : "—"}</SheetRow>
+            <SheetRow label={tr("Uyqu")}>{report.sleepMinutes != null ? `${report.sleepMinutes} ${tr("daq")}` : "—"}</SheetRow>
+            <SheetRow label={tr("Kayfiyati")}>{report.mood ? tr(MOOD[report.mood]) : "—"}</SheetRow>
+            <SheetRow label={tr("Tualet")}>{report.toiletNotes ? tr(report.toiletNotes) : "—"}</SheetRow>
+            <SheetRow label={tr("Faoliyat")}>{report.activityNotes ? tr(report.activityNotes) : "—"}</SheetRow>
+          </SheetSection>
+        )}
+      </IosSheet>
+
+      {canWrite && editChildOpen && child && <EditChildModal open={editChildOpen} onClose={() => setEditChildOpen(false)} slug={slug} child={child} />}
+      {canWrite && assessOpen && <EditDevelopmentModal open={assessOpen} onClose={() => setAssessOpen(false)} slug={slug} childId={childId} existing={latest} />}
+      {canWrite && healthOpen && <EditHealthProfileModal open={healthOpen} onClose={() => setHealthOpen(false)} slug={slug} childId={childId} existing={health} />}
+      {canWrite && vaccinationOpen && <AddVaccinationModal open={vaccinationOpen} onClose={() => setVaccinationOpen(false)} slug={slug} childId={childId} />}
+      {canWrite && updatingVaccination && (
+        <UpdateVaccinationModal open={!!updatingVaccination} onClose={() => setUpdatingVaccination(null)} slug={slug} childId={childId} vaccination={updatingVaccination} />
+      )}
+      {canWrite && medicationOpen && <AddMedicationModal open={medicationOpen} onClose={() => setMedicationOpen(false)} slug={slug} childId={childId} />}
+      {canWrite && guardianOpen && <AddGuardianModal open={guardianOpen} onClose={() => setGuardianOpen(false)} slug={slug} childId={childId} />}
+      {canWrite && cabinetOpen && child && (
+        <ParentCabinetModal open={cabinetOpen} onClose={() => setCabinetOpen(false)} slug={slug} childId={childId} childName={child.fullName} links={guardians} />
+      )}
+      {canWrite && editingLink && <EditGuardianLinkModal open={!!editingLink} onClose={() => setEditingLink(null)} slug={slug} childId={childId} link={editingLink} />}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+/** Sarlavhadagi tezkor amal: rangli doira va nom (iOS "Kontaktlar" uslubi) */
+function QuickAction({ icon: Icon, label, color, onClick, href }: { icon: ComponentType<{ className?: string; strokeWidth?: number }>; label: string; color: string; onClick?: () => void; href?: string }) {
+  const disabled = !onClick && !href;
+  const body = (
+    <>
+      <span className="flex h-11 w-11 items-center justify-center rounded-full" style={{ backgroundColor: disabled ? "#767680" + "1f" : `${color}1f`, color: disabled ? "#c7c7cc" : color }}>
+        <Icon className="h-5 w-5" strokeWidth={2.2} />
+      </span>
+      <span className={clsx("text-[12px] font-medium", disabled ? "text-[#c7c7cc]" : "text-[var(--color-text)]")}>{label}</span>
+    </>
+  );
+  const cls = "flex flex-col items-center gap-1.5 rounded-[14px] py-2 transition-transform active:scale-95";
+  if (href) {
+    return href.startsWith("tel:") ? (
+      <a href={href} className={cls}>
+        {body}
+      </a>
+    ) : (
+      <Link href={href} className={cls}>
+        {body}
+      </Link>
+    );
+  }
+  return (
+    <button type="button" onClick={onClick} disabled={disabled} className={cls}>
+      {body}
+    </button>
+  );
+}
+
+/** ID kapsulasi — bosilsa nusxalanadi */
+function CopyChip({ value }: { value: string }) {
+  const tr = useTr();
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(value);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        } catch {
+          // brauzer ruxsat bermasa — jim
+        }
+      }}
+      className="inline-flex h-6 items-center gap-1 rounded-full bg-[#767680]/[0.12] px-2.5 font-mono text-[12.5px] font-semibold tabular-nums text-[var(--color-text)] active:scale-95"
+      aria-label={tr("ID nusxalash")}
+    >
+      {value}
+      {copied ? <Check className="h-3 w-3 text-[#34c759]" strokeWidth={3} /> : <Copy className="h-3 w-3 text-[#8e8e93]" strokeWidth={2.4} />}
+    </button>
+  );
+}
+
+function CallButton({ phone, name }: { phone: string; name: string }) {
+  const tr = useTr();
+  return (
+    <a
+      href={`tel:${phone}`}
+      onClick={(e) => e.stopPropagation()}
+      aria-label={tr("{0} ga qo'ng'iroq: {1}", name, phone)}
+      className="flex h-9 w-9 items-center justify-center rounded-full bg-[#34c759]/[0.14] text-[#34c759] transition-transform active:scale-90"
+    >
+      <Phone className="h-[17px] w-[17px]" strokeWidth={2.2} />
+    </a>
+  );
+}
+
+/** Matnli ma'lumot qatori (bo'sh bo'lsa "Kiritilmagan"), uzun matn qatorga o'raladi */
+function InfoRow({ icon, tint, title, text, danger }: { icon: AnyIcon; tint: "red" | "orange" | "gray"; title: string; text?: string | null; danger?: boolean }) {
+  const tr = useTr();
+  return (
+    <div className="group/row relative flex min-h-[52px] items-start gap-3 px-4 py-2.5">
+      <IosIcon icon={icon} tint={tint} size={30} />
+      <div className="min-w-0 flex-1">
+        <p className="text-[15px] text-[var(--color-text)]">{title}</p>
+        <p className={clsx("whitespace-pre-wrap break-words text-[13px]", text ? (danger ? "font-medium text-[#ff3b30]" : "text-[#6d6d72]") : "text-[#8e8e93]")}>{text ? tr(text) : tr("Kiritilmagan")}</p>
+      </div>
+      <span className={ROW_SEPARATOR} style={{ left: 58 }} aria-hidden="true" />
+    </div>
+  );
+}
+
+/** Uzun ro'yxat: dastlab 8 ta, qolgani "Hammasini ko'rsatish" bilan */
+function ExpandableGroup({ title, action, footer, items, empty, loading }: { title: ReactNode; action?: ReactNode; footer?: ReactNode; items: ReactNode[]; empty: ReactNode; loading?: boolean }) {
+  const tr = useTr();
+  const [all, setAll] = useState(false);
+  const LIMIT = 8;
+  const shown = all ? items : items.slice(0, LIMIT);
+  return (
+    <Group title={title} action={action} footer={items.length ? footer : undefined} bare={loading || items.length === 0}>
+      {loading ? (
+        <SkeletonRows rows={3} avatar={false} />
+      ) : items.length === 0 ? (
+        empty
+      ) : (
+        <>
+          {shown}
+          {items.length > LIMIT && (
+            <button type="button" onClick={() => setAll((v) => !v)} className={clsx("group/row relative flex h-12 w-full items-center justify-center text-[15px] font-medium text-[var(--color-primary)]", ROW_PRESS)}>
+              {all ? tr("Kamroq ko'rsatish") : tr("Hammasini ko'rsatish ({0})", items.length)}
+              <span className={ROW_SEPARATOR} aria-hidden="true" />
+            </button>
+          )}
+        </>
+      )}
+    </Group>
+  );
+}
+
+/** Surat varag'i: yuz tekshiruvi va kesish brauzerda, keyin saqlanadi; o'chirish */
+function PhotoSheet({ open, onClose, slug, child }: { open: boolean; onClose: () => void; slug: string; child: Child }) {
+  const tr = useTr();
+  const queryClient = useQueryClient();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [checking, setChecking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setError(null);
+      setConfirmRemove(false);
+    }
+  }, [open]);
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ["child", slug, child.id] });
+    queryClient.invalidateQueries({ queryKey: ["children", slug] });
+  };
+  const upload = useMutation({
+    mutationFn: (image: string) => api.put(`/app/children/${child.id}/avatar`, { image }),
     onSuccess: () => {
-      setPhotoError(null);
-      queryClient.invalidateQueries({ queryKey: ["child", slug, childId] });
-      queryClient.invalidateQueries({ queryKey: ["children", slug] });
+      invalidate();
+      onClose();
     },
-    onError: (err) => setPhotoError(err instanceof ApiError ? err.message : tr("Suratni saqlab bo'lmadi")),
+    onError: (err) => setError(err instanceof ApiError ? err.message : tr("Suratni saqlab bo'lmadi")),
+  });
+  const remove = useMutation({
+    mutationFn: () => api.delete(`/app/children/${child.id}/avatar`),
+    onSuccess: () => {
+      invalidate();
+      onClose();
+    },
+    onError: (err) => setError(err instanceof ApiError ? err.message : tr("Suratni o'chirib bo'lmadi")),
   });
 
-  const removePhotoMutation = useMutation({
-    mutationFn: () => api.delete(`/app/children/${childId}/avatar`),
-    onSuccess: () => {
-      setPhotoError(null);
-      queryClient.invalidateQueries({ queryKey: ["child", slug, childId] });
-      queryClient.invalidateQueries({ queryKey: ["children", slug] });
-    },
-    onError: (err) => setPhotoError(err instanceof ApiError ? err.message : tr("Suratni o'chirib bo'lmadi")),
-  });
-
-  const handlePhotoPick = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const pick = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    // Bir xil faylni qayta tanlash ham hodisa bersin
     event.target.value = "";
     if (!file) return;
-    setPhotoError(null);
-    setPhotoChecking(true);
+    setError(null);
+    setChecking(true);
     try {
       // Yuz tekshiruvi va kesish shu yerda — natija tayyor bo'lsagina yuboriladi
       const result = await prepareChildPhoto(file);
       if (!result.ok) {
-        setPhotoError(result.reason);
+        setError(result.reason);
         return;
       }
-      photoMutation.mutate(result.image);
+      upload.mutate(result.image);
     } finally {
-      setPhotoChecking(false);
+      setChecking(false);
     }
   };
-
-  if (childQuery.isLoading) return <LoadingState />;
-  if (childQuery.isError) return <ErrorState message={tr((childQuery.error as Error).message)} />;
-  const child = childQuery.data;
-  if (!child) return null;
-
-  const latestAssessment = developmentQuery.data?.[0] ?? null;
-  const health = healthQuery.data ?? null;
+  const busy = checking || upload.isPending || remove.isPending;
 
   return (
-    <div className="space-y-5">
-      <Link
-        href={childrenHref}
-        className="group inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
-      >
-        <ArrowLeftIcon className="h-4 w-4 transition-transform group-hover:-translate-x-0.5 motion-reduce:transition-none" />
-        {tr("Bolalar")}
-      </Link>
-
-      {/* Bolaning asosiy ma'lumotlari — ilgari sarlavha ostidagi bitta kulrang
-          qatorda edi va o'qilmasdi. Endi har bir fakt alohida katakda. */}
-      <Card className="overflow-hidden">
-        <div className="flex flex-wrap items-start gap-4 px-5 py-5 sm:px-6">
-          {/* Suratni almashtirish uchun rasmning o'ziga bosiladi */}
-          <div className="group relative shrink-0">
-            <ChildPhoto child={child} size={72} fallback={initials(child.fullName)} />
-            {canWrite && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => photoInputRef.current?.click()}
-                  disabled={photoChecking || photoMutation.isPending}
-                  aria-label={tr("Bolaning suratini almashtirish")}
-                  title={tr("Suratni almashtirish")}
-                  className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-full bg-black/45 text-white opacity-0 transition-opacity duration-[var(--dur-fast)] hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none disabled:cursor-wait disabled:opacity-100 motion-reduce:transition-none"
-                >
-                  {photoChecking || photoMutation.isPending ? (
-                    <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  ) : (
-                    <PencilIcon className="h-5 w-5" />
-                  )}
-                </button>
-                <input
-                  ref={photoInputRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  className="hidden"
-                  onChange={handlePhotoPick}
-                />
-              </>
+    <IosSheet
+      open={open}
+      onClose={() => !busy && onClose()}
+      title={tr("Surat")}
+      footer={
+        confirmRemove ? (
+          <div className="space-y-2.5">
+            <button type="button" disabled={busy} onClick={() => remove.mutate()} className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#ff3b30] text-[16px] font-semibold text-white active:scale-[0.96] disabled:opacity-60">
+              {remove.isPending ? <Spinner className="h-5 w-5 text-white" /> : <Trash2 className="h-[18px] w-[18px]" strokeWidth={2.2} />}
+              {tr("O'chirish")}
+            </button>
+            <SheetSecondaryButton onClick={() => setConfirmRemove(false)}>{tr("Qoldirish")}</SheetSecondaryButton>
+          </div>
+        ) : (
+          <div className="space-y-2.5">
+            <SheetPrimaryButton loading={checking || upload.isPending} onClick={() => inputRef.current?.click()}>
+              <Camera className="h-[18px] w-[18px]" strokeWidth={2.2} />
+              {child.avatarUpdatedAt ? tr("Suratni almashtirish") : tr("Surat qo'yish")}
+            </SheetPrimaryButton>
+            {child.avatarUpdatedAt && (
+              <SheetSecondaryButton danger onClick={() => setConfirmRemove(true)}>
+                {tr("Suratni o'chirish")}
+              </SheetSecondaryButton>
             )}
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="text-[24px] font-semibold leading-tight tracking-[var(--tracking-title)] text-[var(--color-text)]">
-                {tr(child.fullName)}
-              </h1>
-              <Badge tone={child.status === "ACTIVE" ? "success" : child.status === "QUARANTINED" ? "danger" : "neutral"}>
-                {child.status === "ACTIVE" ? "Faol" : child.status === "QUARANTINED" ? "Karantinda" : "Nofaol"}
-              </Badge>
-              {canWrite && (
-                <Button size="sm" variant="outline" onClick={() => setEditChildOpen(true)}>
-                  {tr("Tahrirlash")}
-                </Button>
-              )}
-              {canWrite && (
-                <>
-                  {(["contract", "certificate"] as const).map((kind) => (
-                    <Button
-                      key={kind}
-                      size="sm"
-                      variant="outline"
-                      loading={docLoading === kind}
-                      onClick={async () => {
-                        setDocLoading(kind);
-                        setDocError(null);
-                        try {
-                          await downloadCsv(`/app/exports/children/${childId}/${kind}-pdf`, `${kind === "contract" ? "shartnoma" : "malumotnoma"}-${childId}.pdf`);
-                        } catch {
-                          setDocError(tr("Hujjatni yuklab bo'lmadi — qayta urinib ko'ring"));
-                        } finally {
-                          setDocLoading(null);
-                        }
-                      }}
-                    >
-                      {kind === "contract" ? "Shartnoma (PDF)" : tr("Ma'lumotnoma (PDF)")}
-                    </Button>
-                  ))}
-                  {docError && <span className="text-[12.5px] text-[var(--color-danger)]">{tr(docError)}</span>}
-                </>
-              )}
-            </div>
-            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-              <span className="rounded-full bg-[var(--color-surface-sunken)] px-2.5 py-1 text-[12px] font-semibold tabular-nums text-[var(--color-text-muted)]">
-                {formatChildId(child.publicId)}
+        )
+      }
+    >
+      <div className="flex flex-col items-center gap-3 py-2 text-center">
+        <ChildPhoto child={child} size={120} fallback={initials(child.fullName)} />
+        <p className="max-w-[300px] text-[13px] leading-snug text-[#8e8e93]">
+          {checking ? tr("Surat tekshirilmoqda…") : confirmRemove ? tr("Surat o'chiriladi, o'rniga bosh harflar ko'rinadi.") : tr("Yuzi ko'rinib turgan surat, 3 MB gacha. Yuz avtomatik topiladi va kesiladi.")}
+        </p>
+        {error && (
+          <p role="alert" className="rounded-[12px] bg-[#ff3b30]/[0.1] px-3 py-2 text-[13px] text-[#ff3b30]">
+            {tr(error)}
+          </p>
+        )}
+      </div>
+      <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={pick} />
+    </IosSheet>
+  );
+}
+
+/** Hujjatlar: shartnoma va ma'lumotnoma (PDF) */
+function DocsSheet({ open, onClose, childId }: { open: boolean; onClose: () => void; childId: string }) {
+  const tr = useTr();
+  const [loading, setLoading] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const docs = [
+    { kind: "contract", title: "Shartnoma", hint: "Ota-ona bilan tuziladigan shartnoma", file: "shartnoma" },
+    { kind: "certificate", title: "Ma'lumotnoma", hint: "Bog'chaga qatnashini tasdiqlovchi ma'lumotnoma", file: "malumotnoma" },
+  ];
+  const download = async (kind: string, file: string) => {
+    setLoading(kind);
+    setError(null);
+    try {
+      await downloadCsv(`/app/exports/children/${childId}/${kind}-pdf`, `${file}-${childId}.pdf`);
+    } catch {
+      setError(tr("Hujjatni yuklab bo'lmadi — qayta urinib ko'ring"));
+    } finally {
+      setLoading(null);
+    }
+  };
+  return (
+    <IosSheet open={open} onClose={onClose} title={tr("Hujjatlar")} cancelLabel="Yopish">
+      <SheetSection footer={tr("PDF fayl yuklab olinadi — chop etish yoki ota-onaga yuborish mumkin.")}>
+        {docs.map((d) => (
+          <div key={d.kind} className="group/row relative">
+            <button type="button" disabled={!!loading} onClick={() => download(d.kind, d.file)} className={clsx("flex min-h-[60px] w-full items-center gap-3 px-4 py-2 text-left", ROW_PRESS)}>
+              <IosIcon icon={FileText} tint={d.kind === "contract" ? "blue" : "green"} size={36} />
+              <span className="min-w-0 flex-1">
+                <span className="block text-[15px] font-medium text-[var(--color-text)]">{tr(d.title)} (PDF)</span>
+                <span className="block truncate text-[12.5px] text-[#8e8e93]">{tr(d.hint)}</span>
               </span>
-              <CopyButton value={formatChildId(child.publicId)} label={tr("ID nusxalash")} />
-              {canWrite && (
-                <>
+              {loading === d.kind ? <Spinner className="h-5 w-5 text-[#8e8e93]" /> : <span className="text-[14px] font-medium text-[var(--color-primary)]">{tr("Yuklash")}</span>}
+            </button>
+            <span className={ROW_SEPARATOR} style={{ left: 64 }} aria-hidden="true" />
+          </div>
+        ))}
+      </SheetSection>
+      {error && <p className="px-4 text-[13px] text-[#ff3b30]">{error}</p>}
+    </IosSheet>
+  );
+}
+
+/**
+ * Ota-ona varag'i: qo'ng'iroq va nusxalash, huquqlar (asosiy, olib ketadi,
+ * moliya, bildirishnoma), tahrirlash va bog'lanishni o'chirish (ikkinchi
+ * bosqich — sheet ichida tasdiqlash).
+ */
+function GuardianSheet({
+  link,
+  onClose,
+  canWrite,
+  isCabinet,
+  slug,
+  childId,
+  onEdit,
+}: {
+  link: ChildGuardian | null;
+  onClose: () => void;
+  canWrite: boolean;
+  isCabinet: boolean;
+  slug: string;
+  childId: string;
+  onEdit: (link: ChildGuardian) => void;
+}) {
+  const tr = useTr();
+  const queryClient = useQueryClient();
+  const [confirm, setConfirm] = useState(false);
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    setConfirm(false);
+    setCopied(false);
+  }, [link]);
+
+  const remove = useMutation({
+    mutationFn: (id: string) => api.delete(`/app/child-guardians/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["child-guardians", slug, childId] });
+      queryClient.invalidateQueries({ queryKey: ["children", slug] });
+      onClose();
+    },
+  });
+
+  const rights = link
+    ? [
+        { on: link.isPrimary, label: "Asosiy aloqa", hint: "Birinchi navbatda shu raqamga qo'ng'iroq qilinadi" },
+        { on: link.canPickup, label: "Olib keta oladi", hint: "Bolani bog'chadan olib ketishga ruxsat" },
+        { on: link.canViewFinance, label: "Moliyani ko'radi", hint: "Kabinetda to'lov va qarzni ko'radi" },
+        { on: link.canReceiveNotifications, label: "Bildirishnoma oladi", hint: "Kelmadi, to'lov eslatmasi va boshqa xabarlar" },
+      ]
+    : [];
+
+  return (
+    <IosSheet
+      open={!!link}
+      onClose={() => !remove.isPending && onClose()}
+      title={confirm ? tr("Bog'lanishni o'chirish") : tr("Ota-ona")}
+      cancelLabel={confirm ? "Orqaga" : "Yopish"}
+      footer={
+        link && canWrite ? (
+          confirm ? (
+            <div className="space-y-2.5">
+              <button type="button" disabled={remove.isPending} onClick={() => remove.mutate(link.id)} className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#ff3b30] text-[16px] font-semibold text-white active:scale-[0.96] disabled:opacity-60">
+                {remove.isPending ? <Spinner className="h-5 w-5 text-white" /> : <Trash2 className="h-[18px] w-[18px]" strokeWidth={2.2} />}
+                {tr("O'chirish")}
+              </button>
+              <SheetSecondaryButton onClick={() => setConfirm(false)}>{tr("Qoldirish")}</SheetSecondaryButton>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              <SheetPrimaryButton onClick={() => onEdit(link)}>
+                <Pencil className="h-[18px] w-[18px]" strokeWidth={2.2} />
+                {tr("Huquqlarni tahrirlash")}
+              </SheetPrimaryButton>
+              <SheetSecondaryButton danger onClick={() => setConfirm(true)}>
+                {tr("Bog'lanishni o'chirish")}
+              </SheetSecondaryButton>
+            </div>
+          )
+        ) : undefined
+      }
+    >
+      {link && (
+        <>
+          <div className="flex flex-col items-center gap-2 pt-1 text-center">
+            <IosAvatar name={link.guardian.fullName} size={64} />
+            <p className="text-[18px] font-semibold text-[var(--color-text)]">{tr(link.guardian.fullName)}</p>
+            <div className="flex flex-wrap justify-center gap-1.5">
+              <Pill>{tr(RELATION[link.relation])}</Pill>
+              {isCabinet && <Pill color={IOS.green}>{tr("Kabinet logini")}</Pill>}
+            </div>
+          </div>
+
+          {confirm ? (
+            <p className="flex items-start gap-3 rounded-[16px] bg-[#ff3b30]/[0.1] px-4 py-3.5 text-[14px] leading-snug text-[var(--color-text)]">
+              <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-[#ff3b30]" strokeWidth={2.2} />
+              {tr("Shu bola bilan bog'lanish o'chiriladi. Ota-onaning o'zi tizimda qoladi — boshqa farzandlari bilan aloqasi saqlanadi.")}
+            </p>
+          ) : (
+            <>
+              <SheetSection>
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <span className="min-w-0 flex-1 truncate text-[20px] font-semibold tabular-nums text-[var(--color-text)]">{formatPhone(link.guardian.phone)}</span>
                   <button
                     type="button"
-                    onClick={() => photoInputRef.current?.click()}
-                    disabled={photoChecking || photoMutation.isPending}
-                    className="cursor-pointer text-[12.5px] font-medium text-[var(--color-primary)] hover:underline disabled:opacity-60"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(link.guardian.phone);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 1500);
+                      } catch {
+                        // ruxsat yo'q — jim
+                      }
+                    }}
+                    className="flex h-10 w-10 items-center justify-center rounded-full bg-[#767680]/[0.12] text-[#8e8e93] active:scale-90"
+                    aria-label={tr("Telefon raqamini nusxalash")}
                   >
-                    {photoChecking ? "Tekshirilmoqda..." : child.avatarUpdatedAt ? "Suratni almashtirish" : tr("Surat qo'yish")}
+                    {copied ? <Check className="h-[18px] w-[18px] text-[#34c759]" strokeWidth={3} /> : <Copy className="h-[18px] w-[18px]" strokeWidth={2.2} />}
                   </button>
-                  {child.avatarUpdatedAt && (
-                    <>
-                      <span className="text-[12.5px] text-[var(--color-text-muted)]">·</span>
-                      <button
-                        type="button"
-                        onClick={() => removePhotoMutation.mutate()}
-                        disabled={removePhotoMutation.isPending}
-                        className="cursor-pointer text-[12.5px] font-medium text-[var(--color-danger)] hover:underline disabled:opacity-60"
-                      >
-                        {tr("O'chirish")}
-                      </button>
-                    </>
-                  )}
-                </>
-              )}
-            </div>
-            {photoError && (
-              <p role="alert" className="mt-1.5 max-w-[420px] text-[12.5px] text-[var(--color-danger)]">
-                {tr(photoError)}
-              </p>
-            )}
-            {canWrite && !photoError && !child.avatarUpdatedAt && (
-              <p className="mt-1.5 text-[12px] text-[var(--color-text-muted)]">
-                {tr("Yuzi ko'rinib turgan surat, 3 MB gacha")}
-              </p>
-            )}
-          </div>
-        </div>
-
-        <dl className="grid grid-cols-2 divide-x divide-y divide-[var(--color-separator)] border-t border-[var(--color-separator)] sm:grid-cols-4 sm:divide-y-0">
-          <Fact label={tr("Filial")} value={child.branch?.name ?? "—"} />
-          <Fact label={tr("Guruh")} value={child.group?.name ?? "Guruhsiz"} muted={!child.group} />
-          <Fact label={tr("Jinsi")} value={formatGender(child.gender)} muted={!child.gender} />
-          <Fact
-            label={tr("Tug'ilgan sana")}
-            value={child.birthDate ? formatDate(child.birthDate) : "—"}
-            hint={child.birthDate ? formatAge(child.birthDate) : undefined}
-            numeric
-          />
-        </dl>
-      </Card>
-
-      {/* Davomat — ochilib boshqa sahifaga o'tmaydi, bola profilida darhol ko'rinadi */}
-      <Card className="overflow-hidden">
-        <CardHeader className="flex flex-wrap items-center justify-between gap-3">
-          <CardTitle>{tr("Davomat (")}{attendanceHistoryQuery.data?.year ?? new Date().getFullYear()})</CardTitle>
-          {attendanceHistoryQuery.data?.stats.attendanceRate != null && (
-            <Badge
-              tone={
-                attendanceHistoryQuery.data.stats.attendanceRate >= 80
-                  ? "success"
-                  : attendanceHistoryQuery.data.stats.attendanceRate >= 50
-                    ? "warning"
-                    : "danger"
-              }
-            >
-              {tr("Davomat:")}{" "}{tr(attendanceHistoryQuery.data.stats.attendanceRate)}%
-            </Badge>
-          )}
-        </CardHeader>
-        {attendanceHistoryQuery.isLoading ? (
-          <CardBody>
-            <LoadingState rows={2} />
-          </CardBody>
-        ) : attendanceHistoryQuery.isError ? (
-          <CardBody>
-            <ErrorState message={tr((attendanceHistoryQuery.error as Error).message)} />
-          </CardBody>
-        ) : (
-          <>
-            <CardBody className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
-                <p className="text-[12.5px] text-[var(--color-text-muted)]">{tr("Kelgan kunlar")}</p>
-                <p className="mt-1 text-[18px] font-semibold tabular-nums text-[var(--color-text)]">
-                  {attendanceHistoryQuery.data?.stats.present ?? 0}
-                </p>
-              </div>
-              <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
-                <p className="text-[12.5px] text-[var(--color-text-muted)]">{tr("Kelmagan kunlar")}</p>
-                <p className="mt-1 text-[18px] font-semibold tabular-nums text-[var(--color-text)]">
-                  {attendanceHistoryQuery.data?.stats.absent ?? 0}
-                </p>
-              </div>
-              <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
-                <p className="text-[12.5px] text-[var(--color-text-muted)]">{tr("Sababli")}</p>
-                <p className="mt-1 text-[18px] font-semibold tabular-nums text-[var(--color-warning)]">
-                  {attendanceHistoryQuery.data?.stats.excusedAbsent ?? 0}
-                </p>
-              </div>
-              <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
-                <p className="text-[12.5px] text-[var(--color-text-muted)]">{tr("Sababsiz")}</p>
-                <p className="mt-1 text-[18px] font-semibold tabular-nums text-[var(--color-danger)]">
-                  {attendanceHistoryQuery.data?.stats.unexcusedAbsent ?? 0}
-                </p>
-              </div>
-            </CardBody>
-
-            {attendanceHistoryQuery.data && attendanceHistoryQuery.data.records.length > 0 && (
-              <ChildAttendanceCalendar
-                slug={slug}
-                childId={childId}
-                year={attendanceHistoryQuery.data.year}
-                records={attendanceHistoryQuery.data.records}
-                canEditNote={canWriteAttendance}
-              />
-            )}
-
-            <CardBody className="border-t border-[var(--color-separator)] p-0">
-              {attendanceAbsences.length === 0 ? (
-                <EmptyState title={tr("Bu yil hali kelmagan kun yo'q")} icon={<CalendarIcon className="h-[26px] w-[26px]" />} />
-              ) : (
-                <DataTable>
-                  <THead>
-                    <tr>
-                      <Th>{tr("Sana")}</Th>
-                      <Th>{tr("Holati")}</Th>
-                      <Th>{tr("Sababi")}</Th>
-                    </tr>
-                  </THead>
-                  <TBody>
-                    {attendanceAbsences.map((a) => (
-                      <Tr key={a.date}>
-                        <Td className="font-medium tabular-nums">{formatDate(a.date)}</Td>
-                        <Td>
-                          <Badge tone={a.note ? "warning" : "danger"}>{a.note ? "Sababli" : "Sababsiz"}</Badge>
-                        </Td>
-                        <Td className="text-[var(--color-text-muted)]">{a.note || "—"}</Td>
-                      </Tr>
-                    ))}
-                  </TBody>
-                </DataTable>
-              )}
-            </CardBody>
-          </>
-        )}
-      </Card>
-
-      {/* Moliyachiga ota-ona o'rniga shu bolaning kassasi ko'rinadi */}
-      {showCash && <ChildCashCard slug={slug} childId={childId} childName={child.fullName} />}
-      {/* Bog'lanish uchun ota-ona shu yerda — ro'yxatning pastida emas */}
-      {!showCash && <Card className="overflow-hidden">
-        <div className="hairline flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-separator)] px-5 py-4 sm:px-6">
-          <div>
-            <h2 className="text-[15px] font-semibold tracking-[var(--tracking-headline)] text-[var(--color-text)]">
-              {tr("Bog'langan ota-ona")}
-            </h2>
-            <p className="text-[12.5px] text-[var(--color-text-muted)]">{tr("Telefon raqamini bosib nusxalang")}</p>
-          </div>
-          {canWrite && guardiansQuery.isSuccess && guardiansQuery.data.length === 0 && (
-            <Button size="sm" variant="outline" onClick={() => setGuardianOpen(true)}>
-              {tr("+ Ota-ona qo'shish")}
-            </Button>
-          )}
-        </div>
-        {guardiansQuery.isLoading ? (
-          <div className="px-5 py-5 sm:px-6">
-            <LoadingState rows={2} />
-          </div>
-        ) : guardiansQuery.isError ? (
-          <div className="px-5 py-5 sm:px-6">
-            <ErrorState message={tr((guardiansQuery.error as Error).message)} />
-          </div>
-        ) : !guardiansQuery.data || guardiansQuery.data.length === 0 ? (
-          <div className="px-5 py-5 sm:px-6">
-            <EmptyState
-              title={tr("Hali ota-ona biriktirilmagan")}
-              description={canWrite ? tr("Bola bilan bog'lanish uchun ota-ona qo'shing") : undefined}
-              icon={<GroupIcon className="h-[26px] w-[26px]" />}
-            />
-          </div>
-        ) : (
-          <ul className="divide-y divide-[var(--color-separator)]">
-            {guardiansQuery.data.map((link) => (
-              <li key={link.id} className="flex flex-wrap items-center gap-3 px-5 py-3.5 sm:px-6">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)]/10 text-[12px] font-semibold text-[var(--color-primary)]">
-                  {initials(link.guardian.fullName)}
-                </span>
-                <div className="min-w-0 flex-1 basis-[10rem]">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <p className="truncate text-[15px] font-medium text-[var(--color-text)]">
-                      {tr(link.guardian.fullName)}
-                    </p>
-                    {link.isPrimary && <Badge tone="primary">{tr("Asosiy")}</Badge>}
-                    {/* Kabinet bolaga bitta — bu raqam login ekanini bildiradi */}
-                    {link.guardian.hasCabinet && <Badge tone="success">{tr("Kabinet logini")}</Badge>}
-                  </div>
-                  <p className="text-[12.5px] text-[var(--color-text-muted)]">
-                    {tr(GUARDIAN_RELATION_LABEL[link.relation])}
-                    {link.canPickup && " · olib ketadi"}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1 max-sm:ml-[52px]">
-                  <a
-                    href={`tel:${link.guardian.phone}`}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-surface-sunken)] px-3 py-1.5 text-[14px] font-medium tabular-nums text-[var(--color-text)] transition-colors hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)]"
-                  >
-                    <PhoneIcon className="h-3.5 w-3.5" />
-                    {formatPhone(link.guardian.phone)}
+                  <a href={`tel:${link.guardian.phone}`} className="flex h-10 items-center gap-1.5 rounded-full bg-[#34c759] px-4 text-[15px] font-semibold text-white active:scale-95">
+                    <Phone className="h-4 w-4" strokeWidth={2.4} />
+                    {tr("Qo'ng'iroq")}
                   </a>
-                  <CopyButton value={link.guardian.phone} label={tr("Telefon raqamini nusxalash")} />
                 </div>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {/* Bitta bolaga — bitta kabinet: ota ham, ona ham shu login bilan kiradi */}
-        {canWrite && guardiansQuery.data && guardiansQuery.data.length > 0 && (
-          <div className="hairline flex flex-wrap items-center gap-3 border-t border-[var(--color-separator)] bg-[var(--color-surface-sunken)]/60 px-5 py-3.5 sm:px-6">
-            <span
-              className={clsx(
-                "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
-                cabinetHolder
-                  ? "bg-[var(--color-success-bg)] text-[var(--color-success)]"
-                  : "bg-[var(--color-primary)]/10 text-[var(--color-primary)]",
-              )}
-            >
-              <KeyIcon className="h-[17px] w-[17px]" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[14px] font-medium text-[var(--color-text)]">
-                {cabinetHolder ? "Kabinet ochiq" : "Kabinet ochilmagan"}
-              </p>
-              <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">
-                {cabinetHolder
-                  ? tr("Login: {0} · ota-ona ikkalasi shu kabinetdan foydalanadi", formatPhone(cabinetHolder.guardian.phone))
-                  : tr("Ota-ona davomat, ovqat va mashg'ulotlarni ko'rishi uchun kabinet oching")}
-              </p>
-            </div>
-            <Button size="sm" variant={cabinetHolder ? "outline" : "primary"} onClick={() => setCabinetOpen(true)}>
-              {cabinetHolder ? "Boshqarish" : "Kabinet ochish"}
-            </Button>
-          </div>
-        )}
-      </Card>}
-
-      {!canWrite && <ViewOnlyNote role={user?.role} />}
-
-      {canReadMoney && (
-        <Card className="overflow-hidden">
-          <CardHeader className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle>{tr("Moliya")}</CardTitle>
-            <Link href={financeHref} className="text-[13px] font-medium text-[var(--color-primary)] hover:underline">
-              {tr("To'liq tarix →")}
-            </Link>
-          </CardHeader>
-          <CardBody className="p-0">
-            {ledgerQuery.isLoading ? (
-              <div className="px-5 py-5 sm:px-6">
-                <LoadingState rows={2} />
-              </div>
-            ) : ledgerQuery.isError ? (
-              <div className="px-5 py-5 sm:px-6">
-                <ErrorState message={tr((ledgerQuery.error as Error).message)} />
-              </div>
-            ) : !ledgerQuery.data || ledgerQuery.data.length === 0 ? (
-              <div className="px-5 py-5 sm:px-6">
-                <EmptyState title={tr("Moliyaviy yozuv yo'q")} icon={<WalletIcon className="h-[26px] w-[26px]" />} />
-              </div>
-            ) : (
-              <>
-                <div className="border-b border-[var(--color-separator)] px-5 py-3.5 sm:px-6">
-                  <p className="text-[12px] font-medium text-[var(--color-text-muted)]">{tr("Joriy qarzdorlik")}</p>
-                  {(() => {
-                    const balance = ledgerQuery.data.reduce((sum, e) => sum + Number(e.amount), 0);
-                    return (
-                      <p
-                        className={clsx(
-                          "mt-1 text-[20px] font-semibold tabular-nums",
-                          balance > 0 ? "text-[var(--color-danger)]" : "text-[var(--color-success)]",
-                        )}
-                      >
-                        {formatMoney(balance)}
-                      </p>
-                    );
-                  })()}
-                </div>
-                <ul className="divide-y divide-[var(--color-separator)]">
-                  {ledgerQuery.data.slice(0, 3).map((entry) => (
-                    <li key={entry.id} className="flex items-center justify-between gap-3 px-5 py-2.5 sm:px-6">
-                      <div className="min-w-0">
-                        <p className="text-[13.5px] font-medium text-[var(--color-text)]">
-                          {LEDGER_TYPE_LABEL[entry.type] ?? entry.type}
-                        </p>
-                        <p className="text-[12px] text-[var(--color-text-muted)]">{formatDateTime(entry.createdAt)}</p>
-                      </div>
-                      <span
-                        className={clsx(
-                          "shrink-0 text-[13.5px] font-medium tabular-nums",
-                          Number(entry.amount) < 0 ? "text-[var(--color-success)]" : "text-[var(--color-text)]",
-                        )}
-                      >
-                        {Number(entry.amount) > 0 ? "+" : ""}
-                        {formatMoney(entry.amount)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-          </CardBody>
-        </Card>
-      )}
-
-      <Card>
-        <CardHeader className="flex flex-wrap items-center justify-between gap-3">
-          <CardTitle>{tr("Rivojlanish (")}{latestAssessment?.period ?? tr("hali baholanmagan")})</CardTitle>
-          {canWrite && (
-            <Button size="sm" variant="outline" onClick={() => setAssessOpen(true)}>
-              {latestAssessment ? "Tahrirlash" : "Baholash"}
-            </Button>
-          )}
-        </CardHeader>
-        <CardBody className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <RatingBadge label={tr("Nutq")} value={latestAssessment?.speechRating ?? null} />
-          <RatingBadge label={tr("Motorika")} value={latestAssessment?.motorRating ?? null} />
-          <RatingBadge label={tr("Ijtimoiy ko'nikma")} value={latestAssessment?.socialRating ?? null} />
-          <RatingBadge label={tr("Bilim / idrok")} value={latestAssessment?.cognitiveRating ?? null} />
-        </CardBody>
-        {latestAssessment?.note && (
-          <CardBody className="pt-0 text-[14px] text-[var(--color-text-muted)]">{tr(latestAssessment.note)}</CardBody>
-        )}
-      </Card>
-
-      <Card className="overflow-hidden">
-        <CardHeader>
-          <CardTitle>{tr("Kundalik hisobotlar tarixi")}</CardTitle>
-        </CardHeader>
-        <CardBody className="p-0">
-          {reportsQuery.isLoading ? (
-            <div className="px-5 py-5 sm:px-6">
-              <LoadingState rows={4} />
-            </div>
-          ) : reportsQuery.isError ? (
-            <div className="px-5 py-5 sm:px-6">
-              <ErrorState message={tr((reportsQuery.error as Error).message)} />
-            </div>
-          ) : !reportsQuery.data || reportsQuery.data.length === 0 ? (
-            <EmptyState
-              title={tr("Hali kundalik hisobot yo'q")}
-              description={tr("Tarbiyachi kunlik hisobot kiritgach, shu yerda ko'rinadi")}
-              icon={<CalendarIcon className="h-[26px] w-[26px]" />}
-            />
-          ) : (
-            <DataTable>
-              <THead>
-                <tr>
-                  <Th>{tr("Sana")}</Th>
-                  <Th>{tr("Ovqatlanishi")}</Th>
-                  <Th numeric>{tr("Uyqu")}</Th>
-                  <Th>{tr("Kayfiyati")}</Th>
-                  <Th>{tr("Tualet")}</Th>
-                  <Th>{tr("Faoliyat")}</Th>
-                </tr>
-              </THead>
-              <TBody>
-                {reportsQuery.data.map((r) => (
-                  <Tr key={r.id}>
-                    <Td className="font-medium tabular-nums">{formatDate(r.date)}</Td>
-                    <Td className="text-[var(--color-text-muted)]">
-                      {r.eatingQuality ? EATING_LABEL[r.eatingQuality] : "—"}
-                    </Td>
-                    <Td numeric className="text-[var(--color-text-muted)]">
-                      {r.sleepMinutes != null ? `${r.sleepMinutes} daq` : "—"}
-                    </Td>
-                    <Td className="text-[var(--color-text-muted)]">{r.mood ? MOOD_LABEL[r.mood] : "—"}</Td>
-                    <Td className="text-[var(--color-text-muted)]">{r.toiletNotes || "—"}</Td>
-                    <Td className="text-[var(--color-text-muted)]">{r.activityNotes || "—"}</Td>
-                  </Tr>
+              </SheetSection>
+              <SheetSection title={tr("Huquqlar")}>
+                {rights.map((r) => (
+                  <div key={r.label} className="group/row relative flex min-h-[52px] items-center gap-3 px-4 py-2">
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[15px] text-[var(--color-text)]">{tr(r.label)}</span>
+                      <span className="block truncate text-[12.5px] text-[#8e8e93]">{tr(r.hint)}</span>
+                    </span>
+                    <span className={clsx("flex h-6 w-6 shrink-0 items-center justify-center rounded-full", r.on ? "bg-[#34c759] text-white" : "bg-[#767680]/[0.12] text-[#c7c7cc]")}>
+                      {r.on ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : <Plus className="h-3.5 w-3.5 rotate-45" strokeWidth={3} />}
+                    </span>
+                    <span className={ROW_SEPARATOR} aria-hidden="true" />
+                  </div>
                 ))}
-              </TBody>
-            </DataTable>
+              </SheetSection>
+            </>
           )}
-        </CardBody>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-wrap items-center justify-between gap-3">
-          <CardTitle>{tr("Sog'liq profili")}</CardTitle>
-          {canWrite && (
-            <Button size="sm" variant="outline" onClick={() => setHealthOpen(true)}>
-              {health ? "Tahrirlash" : tr("To'ldirish")}
-            </Button>
-          )}
-        </CardHeader>
-        <CardBody>
-          {healthQuery.isLoading ? (
-            <LoadingState rows={2} />
-          ) : healthQuery.isError ? (
-            <ErrorState message={tr((healthQuery.error as Error).message)} />
-          ) : (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
-                <p className="text-[12.5px] text-[var(--color-text-muted)]">{tr("Qon guruhi")}</p>
-                <p className="mt-1 text-[14px] font-medium text-[var(--color-text)]">
-                  {health?.bloodType ? BLOOD_TYPE_LABEL[health.bloodType] : tr("Hali kiritilmagan")}
-                </p>
-              </div>
-              <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
-                <p className="text-[12.5px] text-[var(--color-text-muted)]">{tr("Allergiyalar")}</p>
-                <p className="mt-1 text-[14px] font-medium text-[var(--color-text)]">{health?.allergies || tr("Hali kiritilmagan")}</p>
-              </div>
-              <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
-                <p className="text-[12.5px] text-[var(--color-text-muted)]">{tr("Surunkali kasalliklar")}</p>
-                <p className="mt-1 text-[14px] font-medium text-[var(--color-text)]">{health?.chronicConditions || tr("Hali kiritilmagan")}</p>
-              </div>
-              <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
-                <p className="text-[12.5px] text-[var(--color-text-muted)]">{tr("Qo'shimcha izoh")}</p>
-                <p className="mt-1 text-[14px] font-medium text-[var(--color-text)]">{health?.notes || tr("Hali kiritilmagan")}</p>
-              </div>
-            </div>
-          )}
-        </CardBody>
-      </Card>
-
-      <Card className="overflow-hidden">
-        <CardHeader className="flex flex-wrap items-center justify-between gap-3">
-          <CardTitle>{tr("Vaksinatsiyalar")}</CardTitle>
-          {canWrite && (
-            <Button size="sm" variant="outline" onClick={() => setVaccinationOpen(true)}>
-              {tr("+ Yangi vaksinatsiya")}
-            </Button>
-          )}
-        </CardHeader>
-        <CardBody className="p-0">
-          {vaccinationsQuery.isLoading ? (
-            <div className="px-5 py-5 sm:px-6">
-              <LoadingState rows={3} />
-            </div>
-          ) : vaccinationsQuery.isError ? (
-            <div className="px-5 py-5 sm:px-6">
-              <ErrorState message={tr((vaccinationsQuery.error as Error).message)} />
-            </div>
-          ) : !vaccinationsQuery.data || vaccinationsQuery.data.length === 0 ? (
-            <EmptyState
-              title={tr("Hali vaksinatsiya yo'q")}
-              description={canWrite ? tr("Yangi vaksinatsiya qo'shish uchun tugmani bosing") : undefined}
-              icon={<ChecklistIcon className="h-[26px] w-[26px]" />}
-            />
-          ) : (
-            <DataTable>
-              <THead>
-                <tr>
-                  <Th>{tr("Nomi")}</Th>
-                  <Th>{tr("Rejalashtirilgan sana")}</Th>
-                  <Th>{tr("Holati")}</Th>
-                  <Th>{tr("Bajarilgan sana")}</Th>
-                  <Th>{tr("Izoh")}</Th>
-                  {canWrite && <Th />}
-                </tr>
-              </THead>
-              <TBody>
-                {vaccinationsQuery.data.map((v) => (
-                  <Tr key={v.id}>
-                    <Td className="font-medium">{tr(v.name)}</Td>
-                    <Td className="tabular-nums text-[var(--color-text-muted)]">{formatDate(v.scheduledDate)}</Td>
-                    <Td>
-                      {isVaccinationOverdue(v) ? (
-                        <Badge tone="danger">{tr("Muddati o'tgan")}</Badge>
-                      ) : (
-                        <Badge tone={VACCINATION_STATUS_TONE[v.status]}>{tr(VACCINATION_STATUS_LABEL[v.status])}</Badge>
-                      )}
-                    </Td>
-                    <Td className="tabular-nums text-[var(--color-text-muted)]">{v.doneDate ? formatDate(v.doneDate) : "—"}</Td>
-                    <Td className="text-[var(--color-text-muted)]">{v.note || "—"}</Td>
-                    {canWrite && (
-                      <Td className="text-right">
-                        {v.status === "SCHEDULED" && (
-                          <Button size="sm" variant="ghost" onClick={() => setUpdatingVaccination(v)}>
-                            {tr("Yangilash")}
-                          </Button>
-                        )}
-                      </Td>
-                    )}
-                  </Tr>
-                ))}
-              </TBody>
-            </DataTable>
-          )}
-        </CardBody>
-      </Card>
-
-      <Card className="overflow-hidden">
-        <CardHeader className="flex flex-wrap items-center justify-between gap-3">
-          <CardTitle>{tr("Dori-darmon jurnali")}</CardTitle>
-          {canWrite && (
-            <Button size="sm" variant="outline" onClick={() => setMedicationOpen(true)}>
-              {tr("+ Yangi yozuv")}
-            </Button>
-          )}
-        </CardHeader>
-        <CardBody className="p-0">
-          {medicationsQuery.isLoading ? (
-            <div className="px-5 py-5 sm:px-6">
-              <LoadingState rows={3} />
-            </div>
-          ) : medicationsQuery.isError ? (
-            <div className="px-5 py-5 sm:px-6">
-              <ErrorState message={tr((medicationsQuery.error as Error).message)} />
-            </div>
-          ) : !medicationsQuery.data || medicationsQuery.data.length === 0 ? (
-            <EmptyState
-              title={tr("Hali dori-darmon yozuvi yo'q")}
-              description={canWrite ? tr("Yangi yozuv qo'shish uchun tugmani bosing") : undefined}
-              icon={<NoteIcon className="h-[26px] w-[26px]" />}
-            />
-          ) : (
-            <DataTable>
-              <THead>
-                <tr>
-                  <Th>{tr("Dori nomi")}</Th>
-                  <Th>{tr("Doza")}</Th>
-                  <Th>{tr("Berilgan vaqti")}</Th>
-                  <Th>{tr("Ota-ona ruxsati")}</Th>
-                  <Th>{tr("Izoh")}</Th>
-                </tr>
-              </THead>
-              <TBody>
-                {medicationsQuery.data.map((m) => (
-                  <Tr key={m.id}>
-                    <Td className="font-medium">{tr(m.medicationName)}</Td>
-                    <Td className="tabular-nums text-[var(--color-text-muted)]">{tr(m.dose)}</Td>
-                    <Td className="tabular-nums text-[var(--color-text-muted)]">{formatDateTime(m.givenAt)}</Td>
-                    <Td>
-                      <Badge tone={m.parentAuthorized ? "success" : "danger"}>
-                        {m.parentAuthorized ? "Ha" : tr("Yo'q")}
-                      </Badge>
-                    </Td>
-                    <Td className="text-[var(--color-text-muted)]">{m.note || "—"}</Td>
-                  </Tr>
-                ))}
-              </TBody>
-            </DataTable>
-          )}
-        </CardBody>
-      </Card>
-
-      <Card className="overflow-hidden">
-        <CardHeader className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <CardTitle>{tr("Ota-ona huquqlari")}</CardTitle>
-            <p className="text-[12.5px] text-[var(--color-text-muted)]">
-              {tr("Kim olib keta oladi, kim moliyani ko'radi, kimga bildirishnoma boradi")}
-            </p>
-          </div>
-        </CardHeader>
-        <CardBody className="p-0">
-          {guardiansQuery.isLoading ? (
-            <div className="px-5 py-5 sm:px-6">
-              <LoadingState rows={2} />
-            </div>
-          ) : guardiansQuery.isError ? (
-            <div className="px-5 py-5 sm:px-6">
-              <ErrorState message={tr((guardiansQuery.error as Error).message)} />
-            </div>
-          ) : !guardiansQuery.data || guardiansQuery.data.length === 0 ? (
-            <div className="px-5 py-5 sm:px-6">
-              <EmptyState title={tr("Hali ota-ona biriktirilmagan")} icon={<GroupIcon className="h-[26px] w-[26px]" />} />
-            </div>
-          ) : (
-            <DataTable>
-              <THead>
-                <tr>
-                  <Th>{tr("Ism")}</Th>
-                  <Th>{tr("Telefon")}</Th>
-                  <Th>{tr("Qarindoshlik")}</Th>
-                  <Th>{tr("Belgilar")}</Th>
-                  {canWrite && <Th />}
-                </tr>
-              </THead>
-              <TBody>
-                {guardiansQuery.data.map((link) => (
-                  <Tr key={link.id}>
-                    <Td className="font-medium">{tr(link.guardian.fullName)}</Td>
-                    <Td nowrap>
-                      <span className="inline-flex items-center gap-1">
-                        <a
-                          href={`tel:${link.guardian.phone}`}
-                          className="tabular-nums text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-primary)]"
-                        >
-                          {formatPhone(link.guardian.phone)}
-                        </a>
-                        <CopyButton value={link.guardian.phone} label={tr("Telefon raqamini nusxalash")} />
-                      </span>
-                    </Td>
-                    <Td className="text-[var(--color-text-muted)]">{tr(GUARDIAN_RELATION_LABEL[link.relation])}</Td>
-                    <Td>
-                      <div className="flex flex-wrap gap-1.5">
-                        {link.isPrimary && <Badge tone="primary">{tr("Asosiy")}</Badge>}
-                        {link.canPickup && <Badge tone="success">{tr("Olib ketadi")}</Badge>}
-                        {link.canViewFinance && <Badge tone="neutral">{tr("Moliya")}</Badge>}
-                        {link.canReceiveNotifications && <Badge tone="neutral">{tr("Bildirishnoma")}</Badge>}
-                      </div>
-                    </Td>
-                    {canWrite && (
-                      <Td className="text-right">
-                        <div className="flex justify-end gap-1.5">
-                          <Button size="sm" variant="ghost" onClick={() => setEditingLink(link)}>
-                            {tr("Tahrirlash")}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]"
-                            onClick={() => setDeletingLink(link)}
-                          >
-                            {tr("O'chirish")}
-                          </Button>
-                        </div>
-                      </Td>
-                    )}
-                  </Tr>
-                ))}
-              </TBody>
-            </DataTable>
-          )}
-        </CardBody>
-      </Card>
-
-      {canWrite && editChildOpen && (
-        <EditChildModal open={editChildOpen} onClose={() => setEditChildOpen(false)} slug={slug} child={child} />
+          {remove.isError && <p className="px-4 text-[13px] text-[#ff3b30]">{remove.error instanceof ApiError ? tr(remove.error.message) : tr("O'chirib bo'lmadi")}</p>}
+        </>
       )}
-
-      {canWrite && assessOpen && (
-        <EditDevelopmentModal
-          open={assessOpen}
-          onClose={() => setAssessOpen(false)}
-          slug={slug}
-          childId={childId}
-          existing={latestAssessment}
-        />
-      )}
-
-      {canWrite && healthOpen && (
-        <EditHealthProfileModal open={healthOpen} onClose={() => setHealthOpen(false)} slug={slug} childId={childId} existing={health} />
-      )}
-
-      {canWrite && vaccinationOpen && (
-        <AddVaccinationModal open={vaccinationOpen} onClose={() => setVaccinationOpen(false)} slug={slug} childId={childId} />
-      )}
-
-      {canWrite && updatingVaccination && (
-        <UpdateVaccinationModal
-          open={!!updatingVaccination}
-          onClose={() => setUpdatingVaccination(null)}
-          slug={slug}
-          childId={childId}
-          vaccination={updatingVaccination}
-        />
-      )}
-
-      {canWrite && medicationOpen && (
-        <AddMedicationModal open={medicationOpen} onClose={() => setMedicationOpen(false)} slug={slug} childId={childId} />
-      )}
-
-      {canWrite && guardianOpen && (
-        <AddGuardianModal open={guardianOpen} onClose={() => setGuardianOpen(false)} slug={slug} childId={childId} />
-      )}
-
-      {canWrite && cabinetOpen && (
-        <ParentCabinetModal
-          open={cabinetOpen}
-          onClose={() => setCabinetOpen(false)}
-          slug={slug}
-          childId={childId}
-          childName={child.fullName}
-          links={guardiansQuery.data ?? []}
-        />
-      )}
-
-      {canWrite && editingLink && (
-        <EditGuardianLinkModal
-          open={!!editingLink}
-          onClose={() => setEditingLink(null)}
-          slug={slug}
-          childId={childId}
-          link={editingLink}
-        />
-      )}
-
-      <ConfirmDialog
-        open={!!deletingLink}
-        onClose={() => setDeletingLink(null)}
-        title={tr("Ota-ona bog'lanishini o'chirish")}
-        confirmLabel={tr("O'chirish")}
-        tone="danger"
-        loading={removeGuardianLinkMutation.isPending}
-        description={
-          <>
-            <b className="text-[var(--color-text)]">{tr(deletingLink?.guardian.fullName)}</b> {tr("bu bola bilan bog'lanishi butunlay o'chiriladi. O'zi (vasiy sifatida) tizimda qoladi, faqat shu bola bilan aloqasi uziladi.")}
-          </>
-        }
-        onConfirm={() => deletingLink && removeGuardianLinkMutation.mutate(deletingLink.id)}
-      />
-    </div>
+    </IosSheet>
   );
 }

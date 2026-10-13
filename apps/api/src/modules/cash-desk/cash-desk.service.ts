@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { monthlyFeeOf } from "../billing/monthly-fee";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantAuthenticatedUser, TenantScope, requireMoneyScope, toTenantScope } from "../iam/tenant-auth.types";
 import { AuditLogService } from "../audit-log/audit-log.service";
@@ -575,7 +576,10 @@ export class CashDeskService {
   async groups(scope: TenantScope, period: string) {
     const branchId = requireMoneyScope(scope);
     const rows = await this.childPaymentRows(branchId, period);
-    const groups = await this.prisma.group.findMany({ where: { branchId, status: "ACTIVE" }, select: { id: true, name: true }, orderBy: { name: "asc" } });
+    const [groups, branch] = await Promise.all([
+      this.prisma.group.findMany({ where: { branchId, status: "ACTIVE" }, select: { id: true, name: true, monthlyFee: true }, orderBy: { name: "asc" } }),
+      this.prisma.branch.findUniqueOrThrow({ where: { id: branchId }, select: { defaultTuitionAmount: true } }),
+    ]);
     const empty = () => ({ total: 0, paid: 0, partial: 0, overdue: 0, none: 0, billed: 0, collected: 0 });
     const byGroup = new Map<string, ReturnType<typeof empty>>(groups.map((g) => [g.id, empty()]));
     const noGroup = empty();
@@ -589,8 +593,8 @@ export class CashDeskService {
       else if (r.state === "OVERDUE") bucket.overdue += 1;
       else bucket.none += 1;
     }
-    const out = groups.map((g) => ({ groupId: g.id as string, name: g.name, ...byGroup.get(g.id)! }));
-    if (noGroup.total > 0) out.push({ groupId: "none", name: "Guruhsiz", ...noGroup });
+    const out = groups.map((g) => ({ groupId: g.id as string, name: g.name, monthlyFee: monthlyFeeOf(g, branch) || null, ...byGroup.get(g.id)! }));
+    if (noGroup.total > 0) out.push({ groupId: "none", name: "Guruhsiz", monthlyFee: monthlyFeeOf(null, branch) || null, ...noGroup });
     return { period, groups: out };
   }
 
@@ -654,12 +658,16 @@ export class CashDeskService {
     if (!MONTH_RE.test(period ?? "")) {
       throw new BadRequestException("Davr noto'g'ri (YYYY-MM)");
     }
-    const [children, invoices] = await Promise.all([
-      this.prisma.child.findMany({ where: { branchId, status: { not: "INACTIVE" } }, select: { id: true, fullName: true, groupId: true } }),
+    const [children, invoices, branch] = await Promise.all([
+      this.prisma.child.findMany({
+        where: { branchId, status: { not: "INACTIVE" } },
+        select: { id: true, fullName: true, groupId: true, group: { select: { monthlyFee: true } } },
+      }),
       this.prisma.invoice.findMany({
         where: { branchId, period, status: { not: "CANCELLED" } },
         select: { childId: true, amount: true, discountAmount: true, paidAmount: true, dueDate: true },
       }),
+      this.prisma.branch.findUniqueOrThrow({ where: { id: branchId }, select: { defaultTuitionAmount: true } }),
     ]);
     const now = Date.now();
     const byChild = new Map<string, { billed: number; paid: number; overdue: boolean; dueDate: Date | null }>();
@@ -689,6 +697,8 @@ export class CashDeskService {
         paid: inv?.paid ?? 0,
         remaining: inv ? Math.max(inv.billed - inv.paid, 0) : 0,
         dueDate: inv?.dueDate ?? null,
+        /** Oylik narx (guruh narxi, bo'lmasa filial narxi) — hisob-faktura hali yo'q bo'lsa shu kutiladi */
+        monthlyFee: monthlyFeeOf(c.group, branch) || null,
       };
     });
   }

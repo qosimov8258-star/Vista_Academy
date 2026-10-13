@@ -54,7 +54,7 @@ export class GroupsService {
     let created;
     try {
       created = await this.prisma.group.create({
-        data: { branchId, name: dto.name, capacity: dto.capacity },
+        data: { branchId, name: dto.name, capacity: dto.capacity, monthlyFee: dto.monthlyFee ?? undefined },
       });
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
@@ -67,7 +67,7 @@ export class GroupsService {
       entityType: "Group",
       entityId: created.id,
       branchId,
-      summary: `"${created.name}" guruhi yaratildi (sig'im ${created.capacity})`,
+      summary: `"${created.name}" guruhi yaratildi (sig'im ${created.capacity}${created.monthlyFee ? `, oylik to'lov ${formatFee(created.monthlyFee)}` : ""})`,
     });
     return created;
   }
@@ -79,7 +79,7 @@ export class GroupsService {
       branchId: scope.branchId ?? query.branchId,
       ...(teacherGroupIds === null ? {} : { id: { in: teacherGroupIds } }),
     };
-    return this.prisma.group.findMany({
+    const groups = await this.prisma.group.findMany({
       where,
       include: {
         _count: ACTIVE_CHILDREN_COUNT_SELECT,
@@ -88,14 +88,17 @@ export class GroupsService {
       },
       orderBy: { createdAt: "desc" },
     });
+    // Narx — moliya ma'lumoti: o'qituvchi va oshpazga ko'rsatilmaydi
+    return hidesMoney(scope) ? groups.map((g) => ({ ...g, monthlyFee: null })) : groups;
   }
 
   async findOne(scope: TenantScope, id: string) {
     await this.assertAccess(scope, id);
-    return this.prisma.group.findUniqueOrThrow({
+    const group = await this.prisma.group.findUniqueOrThrow({
       where: { id },
       include: { _count: ACTIVE_CHILDREN_COUNT_SELECT },
     });
+    return hidesMoney(scope) ? { ...group, monthlyFee: null } : group;
   }
 
   async update(caller: TenantAuthenticatedUser, id: string, dto: UpdateGroupDto) {
@@ -118,7 +121,7 @@ export class GroupsService {
     try {
       updated = await this.prisma.group.update({
         where: { id },
-        data: { name: dto.name, capacity: dto.capacity, status: dto.status },
+        data: { name: dto.name, capacity: dto.capacity, status: dto.status, monthlyFee: dto.monthlyFee },
         include: { _count: ACTIVE_CHILDREN_COUNT_SELECT },
       });
     } catch (err) {
@@ -132,7 +135,13 @@ export class GroupsService {
       entityType: "Group",
       entityId: id,
       branchId: group.branchId,
-      summary: `"${updated.name}" guruhi tahrirlandi`,
+      summary: `"${updated.name}" guruhi tahrirlandi${
+        dto.monthlyFee !== undefined && String(dto.monthlyFee ?? "") !== String(group.monthlyFee ?? "")
+          ? dto.monthlyFee === null
+            ? " · oylik to'lov olib tashlandi (filial narxi)"
+            : ` · oylik to'lov ${formatFee(dto.monthlyFee)}`
+          : ""
+      }`,
     });
     return updated;
   }
@@ -159,7 +168,14 @@ export class GroupsService {
 
     const active = children.filter((child) => child.status === "ACTIVE");
     return {
-      group: { id: group.id, name: group.name, capacity: group.capacity, status: group.status, createdAt: group.createdAt },
+      group: {
+        id: group.id,
+        name: group.name,
+        capacity: group.capacity,
+        status: group.status,
+        createdAt: group.createdAt,
+        monthlyFee: hidesMoney(scope) ? null : group.monthlyFee,
+      },
       branch,
       teachers: teacherLinks.map((link) => link.employee),
       children: {
@@ -369,4 +385,13 @@ export class GroupsService {
       },
     });
   }
+}
+
+/** O'qituvchi va oshpaz moliyaga kirmaydi — guruh narxi ham ularga ko'rinmaydi */
+function hidesMoney(scope: TenantScope) {
+  return scope.role === "TEACHER" || scope.role === "CHEF";
+}
+
+function formatFee(value: Prisma.Decimal | number) {
+  return `${String(Math.round(Number(value))).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} so'm`;
 }

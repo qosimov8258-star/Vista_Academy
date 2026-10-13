@@ -4,11 +4,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useState } from "react";
+import { TriangleAlert } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
-import { Modal } from "@/components/ui/modal";
-import { Input, Textarea } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { IosSheet, SheetPrimaryButton, SheetSection } from "@/components/ios/sheet";
+import { FieldRow, IosSwitch, TextInput } from "@/components/ios/form";
+import { IOS, ROW_SEPARATOR } from "@/components/ios/tokens";
 import { useTr } from "@/i18n/tr";
 
 const schema = z.object({
@@ -28,6 +29,9 @@ function nowForInput(): string {
   return local.toISOString().slice(0, 16);
 }
 
+const DATE_INPUT = "min-h-[44px] cursor-pointer text-right [&::-webkit-date-and-time-value]:text-right";
+const TEXTAREA = "block w-full resize-none bg-transparent text-[15px] leading-snug text-[var(--color-text)] outline-none placeholder:text-[#c4c4c6]";
+
 export function AddMedicationModal({
   open,
   onClose,
@@ -42,11 +46,14 @@ export function AddMedicationModal({
   const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
+  const formId = useId();
+  const ids = { name: useId(), dose: useId(), givenAt: useId(), parent: useId(), note: useId() };
 
   const {
     register,
     handleSubmit,
     watch,
+    setValue,
     reset,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
@@ -55,6 +62,8 @@ export function AddMedicationModal({
   });
 
   const parentAuthorized = watch("parentAuthorized");
+  // Majburiy maydonlar to'lmaguncha asosiy tugma xira
+  const incomplete = (watch("medicationName") ?? "").length < 2 || !watch("dose") || !watch("givenAt");
 
   const mutation = useMutation({
     mutationFn: (values: FormValues) =>
@@ -75,39 +84,67 @@ export function AddMedicationModal({
     },
   });
 
+  const busy = isSubmitting || mutation.isPending;
+
   return (
-    <Modal open={open} onClose={onClose} title={tr("Yangi dori-darmon yozuvi")}>
-      <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
+    <IosSheet
+      open={open}
+      onClose={() => !busy && onClose()}
+      title={tr("Yangi dori-darmon yozuvi")}
+      footer={
+        <SheetPrimaryButton type="submit" form={formId} loading={busy} dim={incomplete}>
+          {tr("Qo'shish")}
+        </SheetPrimaryButton>
+      }
+    >
+      <form id={formId} className="space-y-6" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
+        <SheetSection>
+          <FieldRow label={tr("Dori nomi")} htmlFor={ids.name} error={errors.medicationName?.message}>
+            <TextInput id={ids.name} placeholder={tr("Paratsetamol")} autoComplete="off" className="min-h-[44px] text-right" {...register("medicationName")} />
+          </FieldRow>
+          <FieldRow label={tr("Doza")} htmlFor={ids.dose} error={errors.dose?.message}>
+            <TextInput id={ids.dose} placeholder="5 ml" autoComplete="off" className="min-h-[44px] text-right" {...register("dose")} />
+          </FieldRow>
+          <FieldRow label={tr("Berilgan sana/vaqt")} htmlFor={ids.givenAt} error={errors.givenAt?.message}>
+            <TextInput id={ids.givenAt} type="datetime-local" className={DATE_INPUT} {...register("givenAt")} />
+          </FieldRow>
+        </SheetSection>
+
+        <section>
+          <SheetSection>
+            <div className="group/row relative flex min-h-[52px] items-center gap-3 px-4">
+              <label htmlFor={ids.parent} className="min-w-0 flex-1 py-3 text-[15px] leading-snug text-[var(--color-text)]">
+                {tr("Ota-ona rasman ruxsat bergan")}
+              </label>
+              <IosSwitch
+                id={ids.parent}
+                checked={!!parentAuthorized}
+                onChange={(checked) => setValue("parentAuthorized", checked, { shouldDirty: true })}
+                label={tr("Ota-ona rasman ruxsat bergan")}
+              />
+              <span className={ROW_SEPARATOR} aria-hidden="true" />
+            </div>
+          </SheetSection>
+          {!parentAuthorized && (
+            <div className="mt-2 flex items-start gap-2.5 rounded-[14px] px-4 py-3 text-[13px] leading-snug text-[var(--color-text)]" style={{ backgroundColor: `${IOS.orange}1f` }}>
+              <TriangleAlert className="mt-px h-4 w-4 shrink-0" style={{ color: IOS.orange }} strokeWidth={2} aria-hidden="true" />
+              <span>{tr("Diqqat: ota-ona ruxsati belgilanmagan. Baribir saqlashingiz mumkin, lekin bu xavfsizlik nuqtai nazaridan muhim maydon.")}</span>
+            </div>
+          )}
+        </section>
+
+        <SheetSection>
+          <FieldRow label={tr("Izoh")} htmlFor={ids.note} stacked>
+            <textarea id={ids.note} rows={2} placeholder={tr("Ixtiyoriy")} className={TEXTAREA} {...register("note")} />
+          </FieldRow>
+        </SheetSection>
+
         {serverError && (
-          <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
+          <p role="alert" className="px-4 text-[13px] text-[#ff3b30]">
             {tr(serverError)}
-          </div>
+          </p>
         )}
-        <Input label={tr("Dori nomi")} placeholder={tr("Paratsetamol")} error={errors.medicationName?.message} {...register("medicationName")} />
-        <Input label={tr("Doza")} placeholder="5 ml" error={errors.dose?.message} {...register("dose")} />
-        <Input label={tr("Berilgan sana/vaqt")} type="datetime-local" error={errors.givenAt?.message} {...register("givenAt")} />
-
-        <label className="flex items-center gap-2 text-sm text-[var(--color-text)]">
-          <input type="checkbox" className="h-4 w-4 rounded border-[var(--color-border)]" {...register("parentAuthorized")} />
-          {tr("Ota-ona rasman ruxsat bergan")}
-        </label>
-        {!parentAuthorized && (
-          <div className="rounded-lg bg-[var(--color-warning-bg)] px-3 py-2 text-sm text-[var(--color-warning)]">
-            {tr("Diqqat: ota-ona ruxsati belgilanmagan. Baribir saqlashingiz mumkin, lekin bu xavfsizlik nuqtai nazaridan muhim maydon.")}
-          </div>
-        )}
-
-        <Textarea label={tr("Izoh (ixtiyoriy)")} rows={2} {...register("note")} />
-
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="outline" onClick={onClose}>
-            {tr("Bekor qilish")}
-          </Button>
-          <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            {tr("Qo'shish")}
-          </Button>
-        </div>
       </form>
-    </Modal>
+    </IosSheet>
   );
 }

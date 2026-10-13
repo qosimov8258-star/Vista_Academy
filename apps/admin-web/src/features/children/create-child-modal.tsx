@@ -5,14 +5,18 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useMemo, useRef, useState } from "react";
+import clsx from "clsx";
 import { api, ApiError } from "@/lib/api";
 import type { CreateChildResult, ChildCredentials, Group } from "@/lib/types";
 import { PasswordChecklist, getPasswordRules } from "@/components/ui/password-checklist";
 import { CredentialRow } from "@/components/ui/credential-row";
-import { CameraIcon, CheckIcon } from "@/components/ios/icons";
+import { CameraIcon, CheckIcon, ChevronRightIcon, GroupIcon } from "@/components/ios/icons";
 import { Toast, type ToastState } from "@/components/ui/toast";
-import { IosSheet, SheetPrimaryButton } from "@/components/ios/sheet";
-import { DobPicker, FieldRow, FormSection, IosSwitch, MoneyInput, PasswordInput, Segmented, SelectInput, TextInput } from "@/components/ios/form";
+import { IosSheet, SheetPrimaryButton, SheetSection } from "@/components/ios/sheet";
+import { DobPicker, FieldRow, FormSection, IosSwitch, MoneyInput, PasswordInput, Segmented, TextInput } from "@/components/ios/form";
+import { ROW_PRESS, ROW_SEPARATOR } from "@/components/ios/tokens";
+import { SkeletonRows } from "@/components/ios/states";
+import { GroupTile } from "@/features/groups/group-sheets";
 import { Spinner } from "@/components/ios/spinner";
 import { prepareChildPhoto } from "@/lib/child-photo";
 import { initials } from "@/components/ui/avatar";
@@ -302,7 +306,7 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
             type="button"
             onClick={() => photoInputRef.current?.click()}
             disabled={photoChecking}
-            className="rounded-full px-3 py-1 text-[15px] text-[var(--color-primary)] transition-opacity active:opacity-50 disabled:opacity-50"
+            className="min-h-[44px] rounded-full px-3 text-[15px] text-[var(--color-primary)] transition-opacity active:opacity-50 disabled:opacity-50"
           >
             {photoChecking ? tr("Tekshirilmoqda...") : photoImage ? tr("Rasmni almashtirish") : tr("Surat qo'yish (ixtiyoriy)")}
           </button>
@@ -340,18 +344,26 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
             />
           </FieldRow>
           <FieldRow label={activeGroups.length > 0 ? tr("Guruh") : tr("Guruh (ixtiyoriy)")} htmlFor={`${formId}-g`} error={err("groupId")}>
-            <SelectInput id={`${formId}-g`} {...register("groupId")}>
-              <option value="" disabled={activeGroups.length > 0}>
-                {activeGroups.length > 0 ? tr("Tanlang") : tr("Tanlanmagan")}
-              </option>
-              {activeGroups.map((group) => (
-                <option key={group.id} value={group.id}>
-                  {tr(group.name)} ({group._count?.children ?? 0}/{group.capacity})
-                </option>
-              ))}
-            </SelectInput>
+            <Controller
+              control={control}
+              name="groupId"
+              render={({ field }) => (
+                <ChildGroupPicker
+                  id={`${formId}-g`}
+                  title={tr("Guruh")}
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  groups={activeGroups}
+                  loading={!groups}
+                  placeholder={activeGroups.length > 0 ? tr("Tanlang") : tr("Tanlanmagan")}
+                  // Faol guruh bo'lsa — guruh majburiy, "tanlanmagan" varianti yo'q
+                  emptyOption={activeGroups.length > 0 ? undefined : tr("Tanlanmagan")}
+                />
+              )}
+            />
           </FieldRow>
-          <FieldRow label={tr("Tug'ilgan sana")} error={err("birthDate")}>
+          {/* Uch kapsula (kun/oy/yil) telefonda yorliq yoniga sig'maydi — yorliq tepada */}
+          <FieldRow stacked label={tr("Tug'ilgan sana")} error={err("birthDate")}>
             <Controller control={control} name="birthDate" render={({ field }) => <DobPicker value={field.value ?? ""} onChange={field.onChange} />} />
           </FieldRow>
         </FormSection>
@@ -360,13 +372,25 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
           <FieldRow label={tr("Ism familiya")} htmlFor={`${formId}-gn`} error={err("guardianFullName")}>
             <TextInput id={`${formId}-gn`} placeholder={tr("Umaraliyeva Aziza")} autoComplete="off" {...register("guardianFullName")} />
           </FieldRow>
-          <FieldRow label={tr("Kim bo'ladi")} htmlFor={`${formId}-gr`}>
-            <SelectInput id={`${formId}-gr`} {...register("guardianRelation")}>
-              <option value="MOTHER">{tr("Onasi")}</option>
-              <option value="FATHER">{tr("Otasi")}</option>
-              <option value="GRANDPARENT">{tr("Buvi/bobo")}</option>
-              <option value="OTHER">{tr("Boshqa")}</option>
-            </SelectInput>
+          {/* 4 variant — segment; telefonda to'liq kenglikda sig'ishi uchun yorliq tepada */}
+          <FieldRow stacked label={tr("Kim bo'ladi")} error={err("guardianRelation")}>
+            <Controller
+              control={control}
+              name="guardianRelation"
+              render={({ field }) => (
+                <Segmented
+                  label={tr("Kim bo'ladi")}
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={[
+                    { value: "MOTHER", label: tr("Onasi") },
+                    { value: "FATHER", label: tr("Otasi") },
+                    { value: "GRANDPARENT", label: tr("Buvi/bobo") },
+                    { value: "OTHER", label: tr("Boshqa") },
+                  ]}
+                />
+              )}
+            />
           </FieldRow>
           <FieldRow label={tr("Telefon")} htmlFor={`${formId}-gp`} error={err("guardianPhone")}>
             <TextInput
@@ -426,5 +450,123 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
       </form>
       <Toast toast={toast} onDismiss={() => setToast(null)} />
     </IosSheet>
+  );
+}
+
+/**
+ * Guruh tanlagichi (native `<select>` o'rniga): qatorda tanlangan guruh nomi
+ * va «›»; bosilsa ichki varaqda guruhlar ro'yxati ochiladi, tanlangani ✓
+ * bilan, tanlangach varaq o'zi yopiladi. Bola qo'shish va tahrirlashda umumiy.
+ */
+export function ChildGroupPicker({
+  id,
+  title,
+  value,
+  onChange,
+  groups,
+  loading = false,
+  placeholder,
+  emptyOption,
+  inactiveIds,
+}: {
+  id?: string;
+  title: string;
+  value: string;
+  onChange: (value: string) => void;
+  groups: Group[];
+  loading?: boolean;
+  /** Hech narsa tanlanmaganda qatorda ko'rinadigan matn */
+  placeholder: string;
+  /** Berilsa — ro'yxat boshida "guruhsiz" varianti (qiymati bo'sh satr) */
+  emptyOption?: string;
+  /** Nofaol deb belgilanadigan guruhlar (masalan bolaning hozirgi nofaol guruhi) */
+  inactiveIds?: string[];
+}) {
+  const tr = useTr();
+  const [open, setOpen] = useState(false);
+  const selected = groups.find((group) => group.id === value);
+  const pick = (next: string) => {
+    if (next !== value) onChange(next);
+    setOpen(false);
+  };
+
+  const row = (key: string, active: boolean, onClick: () => void, tile: React.ReactNode, name: string, hint?: React.ReactNode) => (
+    <div key={key} className="group/row relative">
+      <button
+        type="button"
+        role="radio"
+        aria-checked={active}
+        onClick={onClick}
+        className={clsx("flex min-h-[52px] w-full items-center gap-3 px-4 py-2 text-left", ROW_PRESS)}
+      >
+        {tile}
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[15px] text-[var(--color-text)]">{name}</span>
+          {hint && <span className="block truncate text-[13px] tabular-nums text-[#8e8e93]">{hint}</span>}
+        </span>
+        {active && <CheckIcon className="h-5 w-5 shrink-0 text-[var(--color-primary)]" strokeWidth={2.6} />}
+      </button>
+      <span className={ROW_SEPARATOR} style={{ left: 58 }} aria-hidden="true" />
+    </div>
+  );
+
+  return (
+    <>
+      <button
+        id={id}
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-haspopup="dialog"
+        className="flex min-h-[44px] w-full items-center justify-end gap-1.5 text-right transition-opacity active:opacity-50"
+      >
+        {loading && value && !selected ? (
+          // Guruhlar hali yuklanmoqda — "Guruhsiz" deb aldamaslik uchun skelet
+          <span aria-hidden="true" className="h-3.5 w-24 animate-pulse rounded-full bg-[#767680]/[0.12]" />
+        ) : (
+          <span className={clsx("min-w-0 truncate text-[15px]", selected ? "text-[var(--color-text)]" : "text-[#8e8e93]")}>
+            {selected ? tr(selected.name) : placeholder}
+          </span>
+        )}
+        <ChevronRightIcon className="h-4 w-4 shrink-0 text-[#c4c4c6]" strokeWidth={2.4} />
+      </button>
+
+      <IosSheet open={open} onClose={() => setOpen(false)} title={title} cancelLabel="Orqaga">
+        {loading ? (
+          <SkeletonRows rows={3} />
+        ) : (
+          <SheetSection footer={groups.length === 0 && !emptyOption ? tr("Guruh yo'q") : undefined}>
+            <div role="radiogroup" aria-label={title}>
+              {emptyOption &&
+                row(
+                  "none",
+                  value === "",
+                  () => pick(""),
+                  <span aria-hidden="true" className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[8px] bg-[#8e8e93] text-white">
+                    <GroupIcon className="h-[15px] w-[15px]" />
+                  </span>,
+                  emptyOption,
+                )}
+              {groups.map((group) => {
+                const count = group._count?.children ?? 0;
+                const inactive = inactiveIds?.includes(group.id);
+                return row(
+                  group.id,
+                  group.id === value,
+                  () => pick(group.id),
+                  <GroupTile name={group.name} size={30} />,
+                  tr(group.name),
+                  <>
+                    <span className={clsx(count >= group.capacity && "text-[#ff9500]")}>
+                      {count}/{group.capacity}
+                    </span>
+                    {inactive && ` · ${tr("nofaol")}`}
+                  </>,
+                );
+              })}
+            </div>
+          </SheetSection>
+        )}
+      </IosSheet>
+    </>
   );
 }
