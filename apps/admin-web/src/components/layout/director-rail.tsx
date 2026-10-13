@@ -9,7 +9,10 @@ import { useTranslations } from "next-intl";
 import type { TenantAuthenticatedUser } from "@/lib/types";
 import { ROLE_LABEL } from "@/lib/permissions";
 import { Avatar, initials } from "@/components/ui/avatar";
-import { ArrowLeftIcon, ChevronRightIcon, CloseIcon, LogoutIcon } from "@/components/ui/icons";
+import { ArrowLeft, ChevronRight, X } from "lucide-react";
+import { ArrowLeftIcon, ChevronRightIcon, LogoutIcon } from "@/components/ui/icons";
+import { GROUP_BLOCK, SECTION_TITLE } from "@/components/ios/tokens";
+import { IOS_TINT, type IosTint } from "@/features/director/ios-icon";
 import { isSection, type NavEntry, type NavIcon, type NavLeaf, type NavSection } from "./nav-types";
 import styles from "./director-rail.module.css";
 import { useTr } from "@/i18n/tr";
@@ -548,10 +551,28 @@ export interface DirectorMenuContentProps {
   logoutLabel: string;
 }
 
+/** Har bo'limning o'z iOS rangi — plitkalar shu rangda (bo'limsiz havolalar — tizim rangida) */
+const SECTION_TINT: Record<string, IosTint> = {
+  "bugungi-ishlar": "blue",
+  qabul: "orange",
+  xodimlar: "indigo",
+  kundalik: "teal",
+  "face-id": "purple",
+  coin: "orange",
+  foydali: "green",
+  moliya: "emerald",
+  lending: "pink",
+  filiallar: "blue",
+  guruhlarim: "orange",
+  oqituvchilar: "indigo",
+  darsliklar: "teal",
+};
+
 /**
- * Barcha bo'limlar ro'yxati: tepada bog'cha va foydalanuvchi, keyin
- * guruhlangan havolalar, pastda Sozlamalar va Chiqish. Kompyuterda yon
- * panel, telefonda pastdan chiquvchi oyna ichida — ikkalasida bir xil.
+ * Barcha bo'limlar — iOS uslubida (telefondagi pastki paneldagi "Menyu"
+ * varag'i): tepada bog'cha va foydalanuvchi, bo'limsiz havolalar Sozlamalar
+ * ilovasidagidek qatorlar, har bo'lim oq kartada ilovalar ekranidagidek rangli
+ * plitkalar to'ri, pastda Sozlamalar va Chiqish kapsulalari.
  */
 export function DirectorMenuContent({
   slug,
@@ -568,8 +589,48 @@ export function DirectorMenuContent({
   const tr = useTr();
   const orgName = user?.organizationName ?? "";
 
-  // Barcha bo'limlar bir ekranga sig'sin deb — ikonkali kataklar to'ri (ilovalar ekrani kabi)
-  const tile = (item: NavLeaf) => {
+  const badgeOf = (item: NavLeaf) =>
+    item.badge != null && item.badge > 0 ? (
+      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#ff3b30] px-1.5 text-[12px] font-semibold tabular-nums text-white">
+        {item.badge > 99 ? "99+" : item.badge}
+      </span>
+    ) : null;
+
+  // Bo'lim ichidagi havola — ilovalar ekranidagidek: rangli plitka, ostida nom
+  const tile = (item: NavLeaf, tint: IosTint) => {
+    const active = isActive(item);
+    const Icon = item.icon;
+    const color = IOS_TINT[tint];
+    const badge = badgeOf(item);
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        onClick={onClose}
+        aria-current={active ? "page" : undefined}
+        className="flex min-w-0 flex-col items-center gap-1.5 rounded-[14px] px-0.5 py-1.5 text-center transition-transform active:scale-[0.94]"
+      >
+        <span className="relative">
+          <span
+            className="flex h-[52px] w-[52px] items-center justify-center rounded-[14px] text-white"
+            style={{ backgroundColor: color, boxShadow: active ? `0 0 0 2px #fff, 0 0 0 4px ${color}` : undefined }}
+          >
+            <Icon filled={active} className="h-[26px] w-[26px]" />
+          </span>
+          {badge && <span className="absolute -right-2 -top-1.5">{badge}</span>}
+        </span>
+        <span
+          className={clsx("line-clamp-2 w-full text-[11.5px] leading-[1.2]", active ? "font-semibold" : "font-medium text-[var(--color-text)]")}
+          style={active ? { color } : undefined}
+        >
+          {tr(item.label)}
+        </span>
+      </Link>
+    );
+  };
+
+  // Bo'limsiz havola — Sozlamalar ilovasidagidek qator: 30px plitka, nom, ›
+  const row = (item: NavLeaf, index: number) => {
     const active = isActive(item);
     const Icon = item.icon;
     return (
@@ -578,104 +639,98 @@ export function DirectorMenuContent({
         href={item.href}
         onClick={onClose}
         aria-current={active ? "page" : undefined}
-        className={clsx(
-          "relative flex min-h-[88px] flex-col items-center justify-center gap-1.5 rounded-[20px] px-1.5 py-2.5 text-center transition-all active:scale-[0.96]",
-          active
-            ? "bg-[linear-gradient(145deg,var(--accent-rail)_0%,var(--accent-rail-2)_100%)] text-white shadow-[0_10px_22px_-12px_color-mix(in_srgb,var(--accent-rail)_80%,transparent)]"
-            : "bg-[var(--accent-soft)]/70 text-[var(--color-text)]",
-        )}
+        className={clsx("flex min-h-[48px] items-center gap-3 pl-4 transition-colors active:bg-black/[0.05]", active && "bg-[var(--color-primary)]/[0.06]")}
       >
-        <span
-          className={clsx(
-            "flex h-10 w-10 items-center justify-center rounded-[14px]",
-            active ? "bg-white/10 text-[var(--accent-light)]" : "bg-white text-[var(--accent-soft-icon)] shadow-[var(--shadow-xs)]",
-          )}
-        >
-          <Icon filled={active} className="h-[22px] w-[22px]" />
+        <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[8px] bg-[var(--color-primary)] text-white" aria-hidden="true">
+          <Icon filled={active} className="h-[17px] w-[17px]" />
         </span>
-        <span className="line-clamp-2 w-full text-[12px] font-semibold leading-tight">{tr(item.label)}</span>
-        {item.badge != null && item.badge > 0 && (
-          <span className="absolute right-2 top-2 rounded-full bg-[var(--accent-bright)] px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-[var(--accent-rail)]">{tr(item.badge)}</span>
-        )}
+        <span className={clsx("flex min-h-[48px] min-w-0 flex-1 items-center gap-2 pr-3", index > 0 && "border-t border-black/[0.08]")}>
+          <span className={clsx("min-w-0 flex-1 truncate text-[16px]", active ? "font-semibold text-[var(--color-primary)]" : "text-[var(--color-text)]")}>{tr(item.label)}</span>
+          {badgeOf(item)}
+          <ChevronRight className="h-[18px] w-[18px] shrink-0 text-[#c4c4c7]" strokeWidth={2.4} aria-hidden="true" />
+        </span>
       </Link>
     );
   };
 
-  // Ketma-ket oddiy havolalar bitta guruhga, har bo'lim o'z sarlavhasi bilan
-  const groups: { title: string | null; items: NavLeaf[] }[] = [];
+  // Ketma-ket oddiy havolalar bitta guruhga, har bo'lim o'z sarlavhasi va rangi bilan
+  const groups: { id: string | null; title: string | null; items: NavLeaf[] }[] = [];
   for (const entry of entries) {
-    if (isSection(entry)) groups.push({ title: entry.label, items: entry.items });
+    if (isSection(entry)) groups.push({ id: entry.id, title: entry.label, items: entry.items });
     else if (groups.length > 0 && groups[groups.length - 1].title === null) groups[groups.length - 1].items.push(entry);
-    else groups.push({ title: null, items: [entry] });
+    else groups.push({ id: null, title: null, items: [entry] });
   }
 
   return (
     <>
-      {/* Tepa qism: to'q yashil kartochka — bog'cha va foydalanuvchi, panel bilan bir xil rangda */}
-      <div className="relative shrink-0 overflow-hidden bg-[linear-gradient(150deg,var(--accent-rail)_0%,var(--accent-rail-2)_100%)] px-5 pb-5 pt-5">
-        <div className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-[var(--accent-bright)]/15 blur-2xl" aria-hidden="true" />
-        <div className="relative flex items-center gap-3">
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/10 text-[18px] font-extrabold text-[var(--accent-light)] ring-1 ring-white/15">
-            {orgName ? initials(orgName) : ""}
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[17px] font-bold tracking-[-0.01em] text-white">{tr(orgName)}</p>
-            <p className="truncate text-[12.5px] text-[var(--accent-pale)]/75">
-              {user ? `${user.fullName} · ${tr(ROLE_LABEL[user.role])}` : ""}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={tr("Yopish")}
-            className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-white/10 text-white/80 transition-colors active:bg-white/20"
-          >
-            <CloseIcon className="h-5 w-5" />
-          </button>
+      {/* Tepa qism: bog'cha va foydalanuvchi (Apple ID kartasidagidek), o'ngda yopish */}
+      <div className="flex shrink-0 items-center gap-3 px-5 pb-3 pt-3">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)] text-[17px] font-semibold text-white" aria-hidden="true">
+          {orgName ? initials(orgName) : ""}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[20px] font-bold leading-tight text-[var(--color-text)]">{tr(orgName)}</p>
+          <p className="truncate text-[13px] text-[#8e8e93]">{user ? `${user.fullName} · ${tr(ROLE_LABEL[user.role])}` : ""}</p>
         </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={tr("Yopish")}
+          className="flex h-[30px] w-[30px] shrink-0 cursor-pointer items-center justify-center rounded-full bg-[#767680]/[0.12] text-[#8e8e93] transition-opacity active:opacity-60"
+        >
+          <X className="h-[17px] w-[17px]" strokeWidth={2.6} />
+        </button>
       </div>
 
-      {branchName && (
-        <Link
-          href={`/${slug}/branches`}
-          onClick={onClose}
-          className="group mx-4 mt-3 flex shrink-0 items-center gap-2.5 rounded-[16px] bg-[var(--accent-soft)] px-3.5 py-2.5 transition-colors hover:bg-[var(--accent-soft-icon)]/12"
-        >
-          <ArrowLeftIcon className="h-4 w-4 shrink-0 text-[var(--accent-soft-icon)] transition-transform group-hover:-translate-x-0.5" />
-          <span className="min-w-0 flex-1">
-            <span className="block text-[11.5px] font-semibold text-[var(--accent-soft-icon)]/80">{tr("Filiallarga qaytish")}</span>
-            <span className="block truncate text-[14px] font-bold text-[var(--accent-soft-ink)]">{tr(branchName)}</span>
-          </span>
-        </Link>
-      )}
+      <nav className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 pb-4 pt-2" aria-label={tr("Bo'limlar")}>
+        {branchName && (
+          <Link
+            href={`/${slug}/branches`}
+            onClick={onClose}
+            className="flex min-h-[56px] items-center gap-3 rounded-[18px] bg-white pl-4 pr-3 transition-colors active:bg-[#e5e5ea]"
+          >
+            <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[8px] bg-[#8e8e93] text-white" aria-hidden="true">
+              <ArrowLeft className="h-[17px] w-[17px]" strokeWidth={2.4} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[13px] text-[#8e8e93]">{tr("Filiallarga qaytish")}</span>
+              <span className="block truncate text-[16px] font-medium text-[var(--color-text)]">{tr(branchName)}</span>
+            </span>
+            <ChevronRight className="h-[18px] w-[18px] shrink-0 text-[#c4c4c7]" strokeWidth={2.4} aria-hidden="true" />
+          </Link>
+        )}
 
-      <nav className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 pb-3 pt-4" aria-label={tr("Bo'limlar")}>
         {groups.map((group, gi) => (
-          <div key={group.title ?? `g${gi}`}>
-            {group.title && (
-              <p className="px-1 pb-2 text-[11.5px] font-bold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">{tr(group.title)}</p>
+          <section key={group.id ?? `g${gi}`}>
+            {group.title && <p className={SECTION_TITLE}>{tr(group.title)}</p>}
+            {group.title ? (
+              <div className={clsx(GROUP_BLOCK, "grid grid-cols-4 gap-x-1 gap-y-2 px-2 py-3")}>
+                {group.items.map((item) => tile(item, SECTION_TINT[group.id ?? ""] ?? "accent"))}
+              </div>
+            ) : (
+              <div className={GROUP_BLOCK}>{group.items.map(row)}</div>
             )}
-            <div className="grid grid-cols-3 gap-2.5">{group.items.map(tile)}</div>
-          </div>
+          </section>
         ))}
       </nav>
 
-      <div className="grid shrink-0 grid-cols-2 gap-2.5 border-t border-[var(--color-separator)] bg-[var(--color-surface-sunken)]/60 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <div className="grid shrink-0 grid-cols-2 gap-2.5 border-t border-black/[0.08] bg-[#f2f2f7] px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <Link
           href={settingsItem.href}
           onClick={onClose}
-          className="flex h-12 items-center justify-center gap-2 rounded-[16px] bg-white text-[14px] font-semibold text-[var(--color-text)] shadow-[var(--shadow-card)] active:scale-[0.98]"
+          aria-current={isActive(settingsItem) ? "page" : undefined}
+          className="flex h-12 items-center justify-center gap-2 rounded-full bg-white text-[15px] font-semibold text-[var(--color-text)] transition-opacity active:opacity-60"
         >
-          <settingsItem.icon className="h-[18px] w-[18px] text-[var(--accent-soft-icon)]" />
+          <settingsItem.icon className="h-[19px] w-[19px] text-[#8e8e93]" />
           {tr(settingsItem.label)}
         </Link>
         <button
           type="button"
           onClick={onLogout}
           disabled={loggingOut}
-          className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded-[16px] bg-[var(--color-danger-bg)] text-[14px] font-semibold text-[var(--color-danger)] active:scale-[0.98] disabled:opacity-60"
+          className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded-full bg-[#ff3b30]/[0.12] text-[15px] font-semibold text-[#ff3b30] transition-opacity active:opacity-60 disabled:opacity-50"
         >
-          <LogoutIcon className="h-[18px] w-[18px]" />
+          <LogoutIcon className="h-[19px] w-[19px]" />
           {tr(logoutLabel)}
         </button>
       </div>

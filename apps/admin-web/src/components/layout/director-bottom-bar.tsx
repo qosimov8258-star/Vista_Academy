@@ -252,14 +252,14 @@ export function DirectorBottomBar({
         sheet &&
         createPortal(
           <div className="fixed inset-0 z-[65] md:hidden" role="dialog" aria-modal="true" aria-label={sheet.kind === "menu" ? tr("Barcha bo'limlar") : sheet.section.label}>
-            <div className={clsx(styles.scrim, "absolute inset-0 bg-[var(--accent-rail)]/35 backdrop-blur-[2px]")} onClick={() => setSheet(null)} aria-hidden="true" />
+            <div className={clsx(styles.scrim, "absolute inset-0 bg-black/40 backdrop-blur-[3px]")} onClick={() => setSheet(null)} aria-hidden="true" />
             <div
               className={clsx(
                 styles.sheet,
-                "absolute inset-x-0 bottom-0 flex max-h-[86dvh] flex-col overflow-hidden rounded-t-[28px] bg-white shadow-[0_-24px_48px_-20px_color-mix(in_srgb,var(--accent-rail)_35%,transparent)]",
+                "absolute inset-x-0 bottom-0 flex max-h-[90dvh] flex-col overflow-hidden rounded-t-[38px] bg-[#f2f2f7] shadow-[0_-20px_60px_-20px_rgba(0,0,0,0.35)]",
               )}
             >
-              <div className="mx-auto mt-2.5 h-1.5 w-10 shrink-0 rounded-full bg-black/15" aria-hidden="true" />
+              <div className="mx-auto mt-2 h-[5px] w-9 shrink-0 rounded-full bg-[#3c3c43]/30" aria-hidden="true" />
               {sheet.kind === "menu" ? (
                 <DirectorMenuContent
                   slug={slug}
