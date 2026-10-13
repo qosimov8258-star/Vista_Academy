@@ -132,7 +132,7 @@ export function MoneyInput({
   );
 }
 
-/** iOS segmenti: kulrang yo'lak ichida oq "tabletka" suriladi */
+/** iOS segmenti: oval kulrang yo'lak ichida oq oval "tabletka" suriladi */
 export function Segmented<T extends string>({
   value,
   onChange,
@@ -148,12 +148,12 @@ export function Segmented<T extends string>({
 }) {
   const index = options.findIndex((option) => option.value === value);
   return (
-    <div role="radiogroup" aria-label={label} className="relative grid rounded-[10px] bg-[#767680]/[0.12] p-[2px]" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
+    <div role="radiogroup" aria-label={label} className="relative grid rounded-full bg-[#767680]/[0.12] p-[3px]" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
       {index >= 0 && (
         <span
           aria-hidden="true"
-          className={clsx(styles.thumb, "absolute bottom-[2px] top-[2px] rounded-[8px] bg-white shadow-[0_3px_8px_rgba(0,0,0,0.12),0_3px_1px_rgba(0,0,0,0.04)]")}
-          style={{ left: 2, width: `calc((100% - 4px) / ${options.length})`, transform: `translateX(${index * 100}%)` }}
+          className={clsx(styles.thumb, "absolute bottom-[3px] top-[3px] rounded-full bg-white shadow-[0_3px_8px_rgba(0,0,0,0.12),0_3px_1px_rgba(0,0,0,0.04)]")}
+          style={{ left: 3, width: `calc((100% - 6px) / ${options.length})`, transform: `translateX(${index * 100}%)` }}
         />
       )}
       {options.map((option) => (
@@ -164,7 +164,7 @@ export function Segmented<T extends string>({
           aria-checked={option.value === value}
           onClick={() => onChange(option.value)}
           className={clsx(
-            "relative z-[1] truncate rounded-[8px] px-2 font-medium text-[var(--color-text)] transition-opacity active:opacity-60",
+            "relative z-[1] truncate rounded-full px-3 font-medium text-[var(--color-text)] transition-opacity active:opacity-60",
             size === "sm" ? "h-7 text-[12.5px]" : "h-8 text-[13px]",
             option.value === value && "font-semibold",
           )}
