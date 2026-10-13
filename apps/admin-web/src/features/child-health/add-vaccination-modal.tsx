@@ -4,11 +4,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { api, ApiError } from "@/lib/api";
-import { Modal } from "@/components/ui/modal";
-import { Input, Textarea } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { IosSheet, SheetPrimaryButton, SheetSection } from "@/components/ios/sheet";
+import { FieldRow, TextInput } from "@/components/ios/form";
 import { useTr } from "@/i18n/tr";
 
 const schema = z.object({
@@ -18,6 +17,10 @@ const schema = z.object({
 });
 
 type FormValues = z.infer<typeof schema>;
+
+/** Sana maydoni qator ichida — ramkasiz, qiymat o'ngda */
+const DATE_INPUT = "min-h-[44px] cursor-pointer text-right [&::-webkit-date-and-time-value]:text-right";
+const TEXTAREA = "block w-full resize-none bg-transparent text-[15px] leading-snug text-[var(--color-text)] outline-none placeholder:text-[#c4c4c6]";
 
 export function AddVaccinationModal({
   open,
@@ -33,13 +36,21 @@ export function AddVaccinationModal({
   const tr = useTr();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
+  const formId = useId();
+  const ids = { name: useId(), date: useId(), note: useId() };
 
   const {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
+
+  // Majburiy maydonlar to'lmaguncha asosiy tugma xira
+  const name = watch("name") ?? "";
+  const scheduledDate = watch("scheduledDate") ?? "";
+  const incomplete = name.trim().length < 2 || !scheduledDate;
 
   const mutation = useMutation({
     mutationFn: (values: FormValues) =>
@@ -58,32 +69,47 @@ export function AddVaccinationModal({
     },
   });
 
-  return (
-    <Modal open={open} onClose={onClose} title={tr("Yangi vaksinatsiya")}>
-      <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
-        {serverError && (
-          <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {tr(serverError)}
-          </div>
-        )}
-        <Input
-          label={tr("Vaksina nomi")}
-          placeholder={tr("DPT (Difteriya, ko'k yo'tal, qoqshol)")}
-          error={errors.name?.message}
-          {...register("name")}
-        />
-        <Input label={tr("Rejalashtirilgan sana")} type="date" error={errors.scheduledDate?.message} {...register("scheduledDate")} />
-        <Textarea label={tr("Izoh (ixtiyoriy)")} rows={2} {...register("note")} />
+  const busy = isSubmitting || mutation.isPending;
 
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="outline" onClick={onClose}>
-            {tr("Bekor qilish")}
-          </Button>
-          <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            {tr("Qo'shish")}
-          </Button>
-        </div>
+  return (
+    <IosSheet
+      open={open}
+      onClose={() => !busy && onClose()}
+      title={tr("Yangi vaksinatsiya")}
+      footer={
+        <SheetPrimaryButton type="submit" form={formId} loading={busy} dim={incomplete}>
+          {tr("Qo'shish")}
+        </SheetPrimaryButton>
+      }
+    >
+      <form id={formId} className="space-y-6" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
+        <SheetSection>
+          <FieldRow label={tr("Vaksina nomi")} htmlFor={ids.name} error={errors.name?.message}>
+            <TextInput
+              id={ids.name}
+              placeholder={tr("DPT (Difteriya, ko'k yo'tal, qoqshol)")}
+              autoComplete="off"
+              className="min-h-[44px] text-right"
+              {...register("name")}
+            />
+          </FieldRow>
+          <FieldRow label={tr("Rejalashtirilgan sana")} htmlFor={ids.date} error={errors.scheduledDate?.message}>
+            <TextInput id={ids.date} type="date" className={DATE_INPUT} {...register("scheduledDate")} />
+          </FieldRow>
+        </SheetSection>
+
+        <SheetSection>
+          <FieldRow label={tr("Izoh")} htmlFor={ids.note} stacked>
+            <textarea id={ids.note} rows={2} placeholder={tr("Ixtiyoriy")} className={TEXTAREA} {...register("note")} />
+          </FieldRow>
+        </SheetSection>
+
+        {serverError && (
+          <p role="alert" className="px-4 text-[13px] text-[#ff3b30]">
+            {tr(serverError)}
+          </p>
+        )}
       </form>
-    </Modal>
+    </IosSheet>
   );
 }

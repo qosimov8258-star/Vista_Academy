@@ -1,16 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
+import { Check, Copy, KeyRound, LockKeyhole, TriangleAlert, UsersRound } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import type { ChildGuardian, GuardianCabinetCredentials } from "@/lib/types";
-import { Modal } from "@/components/ui/modal";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { CopyButton } from "@/components/ui/copy-button";
 import { formatDateTime, formatPhone } from "@/lib/format";
-import { AlertIcon, CheckIcon, GroupIcon } from "@/components/ui/icons";
+import { IosAvatar, Pill } from "@/components/ios/pill";
+import { IosSheet, SheetPrimaryButton, SheetSecondaryButton, SheetSection } from "@/components/ios/sheet";
+import { Spinner } from "@/components/ios/spinner";
+import { IOS, ROW_PRESS, ROW_SEPARATOR } from "@/components/ios/tokens";
 import { useTr } from "@/i18n/tr";
 
 const RELATION_LABEL: Record<string, string> = {
@@ -28,6 +28,9 @@ const RELATION_LABEL: Record<string, string> = {
  *
  * Parol server tomonda yaratiladi va faqat bir marta ko'rsatiladi — bazada
  * xesh saqlanadi. Shuning uchun "ko'rish" emas, "yangilash" bor.
+ *
+ * Xavfli amallar (yangi parol, kabinetni yopish) — varaq ichidagi ikkinchi
+ * bosqichda tasdiqlanadi.
  */
 export function ParentCabinetModal({
   open,
@@ -49,6 +52,7 @@ export function ParentCabinetModal({
   const [credentials, setCredentials] = useState<GuardianCabinetCredentials | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmingReset, setConfirmingReset] = useState(false);
+  const [confirmingClose, setConfirmingClose] = useState(false);
   // Amal tugagach ro'yxat yangilanadi va kabinet egasi paydo bo'ladi, shuning
   // uchun "ochildi"mi yoki "yangilandi"mi — buni so'rov ketishidan oldin belgilaymiz.
   const [issuedAsReset, setIssuedAsReset] = useState(false);
@@ -77,236 +81,380 @@ export function ParentCabinetModal({
     onSuccess: () => {
       setError(null);
       setCredentials(null);
+      setConfirmingClose(false);
       queryClient.invalidateQueries({ queryKey: ["child-guardians", slug, childId] });
       onClose();
     },
     onError: (err) => setError(err instanceof ApiError ? err.message : tr("Kabinetni yopib bo'lmadi")),
   });
 
+  const pending = openMutation.isPending || closeMutation.isPending;
+
   const handleClose = () => {
     setCredentials(null);
     setError(null);
     setConfirmingReset(false);
+    setConfirmingClose(false);
     setIssuedAsReset(false);
     onClose();
+  };
+
+  const backToMain = () => {
+    setError(null);
+    setConfirmingReset(false);
+    setConfirmingClose(false);
   };
 
   const cabinetUrl =
     typeof window !== "undefined" ? `${window.location.origin}/ota-ona/${slug}` : `/ota-ona/${slug}`;
 
-  return (
-    <Modal open={open} onClose={handleClose} title={tr("Ota-ona kabineti")}>
-      <div className="space-y-4">
-        {error && (
-          <div
-            role="alert"
-            className="rounded-[var(--radius-md)] bg-[var(--color-danger-bg)] px-3.5 py-2.5 text-[14px] leading-relaxed text-[var(--color-danger)]"
-          >
-            {tr(error)}
-          </div>
-        )}
+  const errorNote = error && (
+    <p role="alert" className="rounded-[14px] bg-[#ff3b30]/[0.1] px-4 py-2.5 text-[13px] leading-snug text-[#ff3b30]">
+      {tr(error)}
+    </p>
+  );
 
-        <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-3">
-          <p className="text-[13px] text-[var(--color-text-muted)]">{tr("Bola")}</p>
-          <p className="text-[15px] font-medium text-[var(--color-text)]">{tr(childName)}</p>
+  const childRow = (
+    <SheetSection>
+      <div className="flex min-h-[60px] items-center gap-3 px-4 py-2.5">
+        <IosAvatar name={childName} size={40} />
+        <span className="min-w-0 flex-1">
+          <span className="block text-[13px] text-[#8e8e93]">{tr("Bola")}</span>
+          <span className="block truncate text-[15px] font-medium text-[var(--color-text)]">{tr(childName)}</span>
+        </span>
+      </div>
+    </SheetSection>
+  );
+
+  // ---- Tasdiqlash bosqichlari (yangi parol / kabinetni yopish) ----
+  const confirming = !credentials && holder && (confirmingReset || confirmingClose);
+  if (confirming) {
+    const isReset = confirmingReset;
+    const mutation = isReset ? openMutation : closeMutation;
+    return (
+      <IosSheet
+        open={open}
+        onClose={() => !pending && backToMain()}
+        title={isReset ? tr("Yangi parol yaratish") : tr("Kabinetni yopish")}
+        cancelLabel="Orqaga"
+        footer={
+          <div className="space-y-2.5">
+            <button
+              type="button"
+              disabled={mutation.isPending}
+              onClick={() => mutation.mutate()}
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#ff3b30] text-[16px] font-semibold text-white transition-transform active:scale-[0.96] disabled:opacity-60"
+            >
+              {mutation.isPending ? (
+                <Spinner className="h-5 w-5 text-white" />
+              ) : isReset ? (
+                <KeyRound className="h-[18px] w-[18px]" strokeWidth={2.4} />
+              ) : (
+                <LockKeyhole className="h-[18px] w-[18px]" strokeWidth={2.4} />
+              )}
+              {isReset ? tr("Ha, yangilansin") : tr("Kabinetni yopish")}
+            </button>
+            <SheetSecondaryButton onClick={backToMain}>{tr("Qoldirish")}</SheetSecondaryButton>
+          </div>
+        }
+      >
+        <div className="flex flex-col items-center gap-1.5 pt-1 text-center">
+          <IosAvatar name={holder.guardian.fullName} size={64} />
+          <p className="max-w-full truncate text-[17px] font-semibold text-[var(--color-text)]">{tr(holder.guardian.fullName)}</p>
+          <p className="text-[13px] tabular-nums text-[#8e8e93]">{formatPhone(holder.guardian.phone)}</p>
+        </div>
+        <div className="flex items-start gap-3 rounded-[16px] bg-[#ff3b30]/[0.1] px-4 py-3.5" role="alert">
+          <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-[#ff3b30]" strokeWidth={2.2} />
+          <p className="min-w-0 text-[14px] leading-snug text-[var(--color-text)]">
+            {isReset
+              ? tr("Yangi parol yaratilsa, eski parol darhol ishlamay qoladi va ota-ona tizimdan chiqariladi. Davom etamizmi?")
+              : tr("Kabinet yopilsa, ota-ona tizimga kira olmaydi. Keyin qayta ochish mumkin — yangi parol bilan.")}
+          </p>
+        </div>
+        {errorNote}
+      </IosSheet>
+    );
+  }
+
+  // ---- Yangi parol chiqdi: bir marta ko'rsatiladi ----
+  if (credentials) {
+    return (
+      <IosSheet
+        open={open}
+        onClose={handleClose}
+        title={tr("Ota-ona kabineti")}
+        cancelLabel="Yopish"
+        footer={<SheetPrimaryButton onClick={handleClose}>{tr("Yopish")}</SheetPrimaryButton>}
+      >
+        <div className="flex flex-col items-center gap-2 pt-1 text-center">
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#34c759]/[0.14] text-[#34c759]">
+            <Check className="h-7 w-7" strokeWidth={2.6} />
+          </span>
+          <p className="text-[20px] font-bold text-[var(--color-text)]">{issuedAsReset ? tr("Yangi parol tayyor") : tr("Kabinet ochildi")}</p>
+          <p className="max-w-[340px] text-[13px] leading-snug text-[#8e8e93]">
+            {tr("Bu parol boshqa ko'rsatilmaydi — hoziroq ota-onaga yetkazing.")}
+            {issuedAsReset && ` ${tr("Eski parol shu daqiqadan ishlamaydi.")}`}
+          </p>
         </div>
 
-        {credentials ? (
-          /* ---- Yangi parol chiqdi: bir marta ko'rsatiladi ---- */
-          <>
-            <div className="rounded-[var(--radius-md)] bg-[var(--color-success-bg)] px-4 py-3.5">
-              <p className="flex items-center gap-1.5 text-[14px] font-semibold text-[var(--color-success)]">
-                <CheckIcon className="h-4 w-4" />
-                {issuedAsReset ? tr("Yangi parol tayyor") : "Kabinet ochildi"}
-              </p>
-              <p className="mt-1 text-[13px] leading-relaxed text-[var(--color-success)]/85">
-                {tr("Bu parol boshqa ko'rsatilmaydi — hoziroq ota-onaga yetkazing.")}
-                {issuedAsReset && " Eski parol shu daqiqadan ishlamaydi."}
-              </p>
-            </div>
+        <SheetSection title={tr("Kirish ma'lumotlari")}>
+          <CopyRow label="Login (telefon)" value={credentials.login} shown={formatPhone(credentials.login)} mono />
+          <CopyRow label="Parol" value={credentials.password} mono big />
+          <CopyRow label="Havola" value={cabinetUrl} />
+        </SheetSection>
 
-            <Field label={tr("Havola")} value={cabinetUrl} />
-            <Field label={tr("Login (telefon)")} value={credentials.login} mono />
-            <Field label={tr("Parol")} value={credentials.password} mono />
+        <CopyAllButton
+          text={`${tr("Havola")}: ${cabinetUrl}\n${tr("Login (telefon)")}: ${credentials.login}\n${tr("Parol")}: ${credentials.password}`}
+        />
 
-            <div className="rounded-[var(--radius-md)] bg-[var(--color-warning-bg)] px-3.5 py-3">
-              <p className="flex items-start gap-2 text-[13px] leading-relaxed text-[var(--color-warning)]">
-                <AlertIcon className="mt-px h-4 w-4 shrink-0" />
-                {tr("Ota va ona shu bitta login bilan kiradi. Parol unutilsa qayta ko'rsatib bo'lmaydi — faqat yangisini yaratasiz.")}
-              </p>
-            </div>
+        <p className="flex items-start gap-2.5 rounded-[14px] bg-[#ff9500]/[0.12] px-4 py-3 text-[13px] leading-snug text-[var(--color-text)]">
+          <TriangleAlert className="mt-px h-4 w-4 shrink-0 text-[#ff9500]" strokeWidth={2.4} />
+          {tr("Ota va ona shu bitta login bilan kiradi. Parol unutilsa qayta ko'rsatib bo'lmaydi — faqat yangisini yaratasiz.")}
+        </p>
+        {errorNote}
+      </IosSheet>
+    );
+  }
 
-            <div className="flex justify-end pt-1">
-              <Button type="button" onClick={handleClose}>
-                {tr("Yopish")}
-              </Button>
-            </div>
-          </>
-        ) : holder ? (
-          /* ---- Kabinet ochiq: boshqaruv ---- */
-          <>
-            <div className="rounded-[var(--radius-md)] border border-[var(--color-success)]/30 bg-[var(--color-success-bg)] px-4 py-3.5">
-              <p className="flex items-center gap-1.5 text-[14px] font-semibold text-[var(--color-success)]">
-                <CheckIcon className="h-4 w-4" />
-                {tr("Kabinet ochiq")}
-              </p>
-              <p className="mt-1 text-[13px] leading-relaxed text-[var(--color-success)]/85">
-                {tr("Ota va ona shu bitta login bilan kiradi.")}
-              </p>
-            </div>
+  // ---- Kabinet ochiq: boshqaruv ----
+  if (holder) {
+    return (
+      <IosSheet
+        open={open}
+        onClose={() => !pending && handleClose()}
+        title={tr("Ota-ona kabineti")}
+        cancelLabel="Yopish"
+        footer={
+          <div className="space-y-2.5">
+            <SheetPrimaryButton
+              onClick={() => {
+                setError(null);
+                setConfirmingReset(true);
+              }}
+            >
+              <KeyRound className="h-[18px] w-[18px]" strokeWidth={2.4} />
+              {tr("Yangi parol yaratish")}
+            </SheetPrimaryButton>
+            <SheetSecondaryButton
+              danger
+              onClick={() => {
+                setError(null);
+                setConfirmingClose(true);
+              }}
+            >
+              {tr("Kabinetni yopish")}
+            </SheetSecondaryButton>
+          </div>
+        }
+      >
+        {errorNote}
+        {childRow}
 
-            <Field label={tr("Havola")} value={cabinetUrl} />
-            <Field label={tr("Login (telefon)")} value={holder.guardian.phone} mono />
+        <div className="flex items-start gap-3 rounded-[16px] bg-[#34c759]/[0.1] px-4 py-3">
+          <Check className="mt-0.5 h-5 w-5 shrink-0 text-[#34c759]" strokeWidth={2.6} />
+          <div className="min-w-0">
+            <p className="text-[15px] font-semibold text-[var(--color-text)]">{tr("Kabinet ochiq")}</p>
+            <p className="mt-0.5 text-[13px] leading-snug text-[#8e8e93]">{tr("Ota va ona shu bitta login bilan kiradi.")}</p>
+          </div>
+        </div>
 
-            <dl className="grid grid-cols-2 gap-3">
-              <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-2.5">
-                <dt className="text-[12.5px] text-[var(--color-text-muted)]">{tr("Kimning raqami")}</dt>
-                <dd className="truncate text-[14px] font-medium text-[var(--color-text)]">
-                  {tr(holder.guardian.fullName)}
-                </dd>
-              </div>
-              <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-3.5 py-2.5">
-                <dt className="text-[12.5px] text-[var(--color-text-muted)]">{tr("Oxirgi kirish")}</dt>
-                <dd className="text-[14px] font-medium text-[var(--color-text)]">
-                  {holder.guardian.lastLoginAt ? formatDateTime(holder.guardian.lastLoginAt) : tr("Hali kirmagan")}
-                </dd>
-              </div>
-            </dl>
+        <SheetSection
+          title={tr("Kirish ma'lumotlari")}
+          footer={tr("Parolni qayta ko'rsatib bo'lmaydi — u bazada xeshlangan holda saqlanadi. Ota-ona parolni unutgan bo'lsa, yangisini yaratib bering.")}
+        >
+          <CopyRow label="Login (telefon)" value={holder.guardian.phone} shown={formatPhone(holder.guardian.phone)} mono />
+          <CopyRow label="Havola" value={cabinetUrl} />
+        </SheetSection>
 
-            {confirmingReset ? (
-              <div className="rounded-[var(--radius-md)] bg-[var(--color-warning-bg)] px-3.5 py-3">
-                <p className="flex items-start gap-2 text-[13px] leading-relaxed text-[var(--color-warning)]">
-                  <AlertIcon className="mt-px h-4 w-4 shrink-0" />
-                  {tr("Yangi parol yaratilsa, eski parol darhol ishlamay qoladi va ota-ona tizimdan chiqariladi. Davom etamizmi?")}
-                </p>
-                <div className="mt-3 flex flex-wrap justify-end gap-2">
-                  <Button type="button" size="sm" variant="outline" onClick={() => setConfirmingReset(false)}>
-                    {tr("Yo'q")}
-                  </Button>
-                  <Button type="button" size="sm" loading={openMutation.isPending} onClick={() => openMutation.mutate()}>
-                    {tr("Ha, yangilansin")}
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <p className="text-[13.5px] leading-relaxed text-[var(--color-text-muted)]">
-                {tr("Parolni qayta ko'rsatib bo'lmaydi — u bazada xeshlangan holda saqlanadi. Ota-ona parolni unutgan bo'lsa, yangisini yaratib bering.")}
-              </p>
-            )}
+        <SheetSection>
+          <InfoRow label={tr("Kimning raqami")} value={tr(holder.guardian.fullName)} />
+          <InfoRow
+            label={tr("Oxirgi kirish")}
+            value={holder.guardian.lastLoginAt ? formatDateTime(holder.guardian.lastLoginAt) : tr("Hali kirmagan")}
+          />
+        </SheetSection>
+      </IosSheet>
+    );
+  }
 
-            {!confirmingReset && (
-              <div className="flex flex-wrap justify-end gap-2 pt-1">
-                <Button
-                  type="button"
-                  variant="dangerSoft"
-                  loading={closeMutation.isPending}
-                  onClick={() => closeMutation.mutate()}
-                >
-                  {tr("Kabinetni yopish")}
-                </Button>
-                <Button type="button" variant="outline" onClick={handleClose}>
-                  {tr("Yopish")}
-                </Button>
-                <Button type="button" onClick={() => setConfirmingReset(true)}>
-                  {tr("Yangi parol yaratish")}
-                </Button>
-              </div>
-            )}
-          </>
-        ) : links.length === 0 ? (
-          /* ---- Ota-ona biriktirilmagan ---- */
-          <>
-            <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] px-4 py-6 text-center">
-              <GroupIcon className="mx-auto h-6 w-6 text-[var(--color-text-muted)]" />
-              <p className="mt-2 text-[14px] text-[var(--color-text-muted)]">
-                {tr("Avval bolaga ota-ona biriktiring — kabinet logini uning telefon raqami bo'ladi.")}
-              </p>
-            </div>
-            <div className="flex justify-end">
-              <Button type="button" variant="outline" onClick={handleClose}>
-                {tr("Yopish")}
-              </Button>
-            </div>
-          </>
-        ) : (
-          /* ---- Kabinet ochish ---- */
-          <>
-            <p className="text-[14.5px] leading-relaxed text-[var(--color-text-muted)]">
-              {tr("Bolaga bitta kabinet ochiladi — ota ham, ona ham shu login bilan kirib, davomat, ovqat va mashg'ulotlarni ko'radi. Login sifatida qaysi raqam ishlatilsin?")}
-            </p>
+  // ---- Ota-ona biriktirilmagan ----
+  if (links.length === 0) {
+    return (
+      <IosSheet open={open} onClose={handleClose} title={tr("Ota-ona kabineti")} cancelLabel="Yopish">
+        {childRow}
+        <div className="flex flex-col items-center rounded-[18px] bg-white px-6 py-9 text-center">
+          <span className="flex h-12 w-12 items-center justify-center rounded-[12px] bg-[#8e8e93] text-white">
+            <UsersRound className="h-6 w-6" strokeWidth={2} />
+          </span>
+          <p className="mt-3 max-w-[300px] text-[14px] leading-snug text-[#8e8e93]">
+            {tr("Avval bolaga ota-ona biriktiring — kabinet logini uning telefon raqami bo'ladi.")}
+          </p>
+        </div>
+      </IosSheet>
+    );
+  }
 
-            <ul className="space-y-2">
-              {links.map((link) => {
-                const isPicked = link.guardianId === picked;
-                return (
-                  <li key={link.id}>
-                    <button
-                      type="button"
-                      onClick={() => setPickedId(link.guardianId)}
-                      aria-pressed={isPicked}
-                      className={clsx(
-                        "flex w-full cursor-pointer items-center gap-3 rounded-[var(--radius-md)] border px-3.5 py-3 text-left transition-colors",
-                        isPicked
-                          ? "border-[var(--color-primary)] bg-[var(--color-primary)]/[0.06]"
-                          : "border-[var(--color-border-hair)] hover:bg-[var(--color-surface-sunken)]",
-                      )}
-                    >
-                      <span
-                        className={clsx(
-                          "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-2 transition-colors",
-                          isPicked ? "border-[var(--color-primary)]" : "border-[var(--color-border)]",
-                        )}
-                      >
-                        {isPicked && <span className="h-2 w-2 rounded-full bg-[var(--color-primary)]" />}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="flex flex-wrap items-center gap-1.5">
-                          <span className="truncate text-[15px] font-medium text-[var(--color-text)]">
-                            {tr(link.guardian.fullName)}
-                          </span>
-                          {link.isPrimary && <Badge tone="primary">{tr("Asosiy")}</Badge>}
-                        </span>
-                        <span className="mt-0.5 block text-[13px] tabular-nums text-[var(--color-text-muted)]">
-                          {formatPhone(link.guardian.phone)} · {RELATION_LABEL[link.relation] ?? link.relation}
-                        </span>
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+  // ---- Kabinet ochish ----
+  return (
+    <IosSheet
+      open={open}
+      onClose={() => !pending && handleClose()}
+      title={tr("Ota-ona kabineti")}
+      footer={
+        <SheetPrimaryButton dim={!targetId} loading={openMutation.isPending} onClick={() => targetId && openMutation.mutate()}>
+          {tr("Kabinet ochish")}
+        </SheetPrimaryButton>
+      }
+    >
+      {errorNote}
+      {childRow}
 
-            <div className="flex flex-wrap justify-end gap-2 pt-1">
-              <Button type="button" variant="outline" onClick={handleClose}>
-                {tr("Bekor qilish")}
-              </Button>
-              <Button
-                type="button"
-                disabled={!targetId}
-                loading={openMutation.isPending}
-                onClick={() => openMutation.mutate()}
-              >
-                {tr("Kabinet ochish")}
-              </Button>
-            </div>
-          </>
+      <SheetSection
+        title={tr("Login (telefon)")}
+        footer={tr(
+          "Bolaga bitta kabinet ochiladi — ota ham, ona ham shu login bilan kirib, davomat, ovqat va mashg'ulotlarni ko'radi. Login sifatida qaysi raqam ishlatilsin?",
         )}
-      </div>
-    </Modal>
+      >
+        <div role="radiogroup" aria-label={tr("Login (telefon)")}>
+          {links.map((link) => {
+            const isPicked = link.guardianId === picked;
+            return (
+              <div key={link.id} className="group/row relative">
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={isPicked}
+                  onClick={() => setPickedId(link.guardianId)}
+                  className={clsx("flex min-h-[64px] w-full items-center gap-3 px-4 py-2.5 text-left", ROW_PRESS)}
+                >
+                  <IosAvatar name={link.guardian.fullName} size={44} />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <span className="truncate text-[15px] font-medium text-[var(--color-text)]">{tr(link.guardian.fullName)}</span>
+                      {link.isPrimary && <Pill color={IOS.blue}>{tr("Asosiy")}</Pill>}
+                    </span>
+                    <span className="mt-0.5 block truncate text-[13px] tabular-nums text-[#8e8e93]">
+                      {formatPhone(link.guardian.phone)} · {tr(RELATION_LABEL[link.relation] ?? link.relation)}
+                    </span>
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className={clsx(
+                      "flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors",
+                      isPicked ? "bg-[var(--color-primary)] text-white" : "ring-[1.5px] ring-inset ring-[#c7c7cc]",
+                    )}
+                  >
+                    {isPicked && <Check className="h-4 w-4" strokeWidth={3} />}
+                  </span>
+                </button>
+                <span className={ROW_SEPARATOR} style={{ left: 72 }} aria-hidden="true" />
+              </div>
+            );
+          })}
+        </div>
+      </SheetSection>
+    </IosSheet>
   );
 }
 
-function Field({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+/**
+ * Buferga nusxalash: avval `navigator.clipboard`, u ishlamasa (masalan panel
+ * http://192.168.x.x orqali ochilganda) — eski `execCommand("copy")`.
+ */
+function useCopy() {
+  const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
+  const timer = useRef<number | null>(null);
+  useEffect(
+    () => () => {
+      if (timer.current) window.clearTimeout(timer.current);
+    },
+    [],
+  );
+  const copy = async (value: string) => {
+    let ok = false;
+    try {
+      await navigator.clipboard.writeText(value);
+      ok = true;
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = value;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.top = "0";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        ok = document.execCommand("copy");
+      } catch {
+        ok = false;
+      }
+      document.body.removeChild(textarea);
+    }
+    setState(ok ? "copied" : "failed");
+    if (timer.current) window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => setState("idle"), 1600);
+  };
+  return { state, copy };
+}
+
+/** Nusxalanadigan qator: tepada kulrang yorliq, ostida qiymat, o'ngda 44px tugma */
+function CopyRow({ label, value, shown, mono, big }: { label: string; value: string; shown?: string; mono?: boolean; big?: boolean }) {
   const tr = useTr();
+  const { state, copy } = useCopy();
   return (
-    <div>
-      <p className="mb-1.5 text-[13px] font-medium text-[var(--color-text)]">{tr(label)}</p>
-      <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface-sunken)] px-3.5 py-2.5">
-        <span className={`min-w-0 flex-1 break-all text-[15px] text-[var(--color-text)] ${mono ? "font-mono" : ""}`}>
-          {tr(value)}
-        </span>
-        <CopyButton value={value} label={`${label} nusxalash`} />
+    <div className="group/row relative flex min-h-[60px] items-center gap-3 py-2 pl-4 pr-2">
+      <div className="min-w-0 flex-1">
+        <p className="text-[13px] text-[#8e8e93]">{tr(label)}</p>
+        <p
+          className={clsx(
+            "break-all text-[var(--color-text)]",
+            mono && "font-mono tabular-nums",
+            big ? "text-[22px] font-semibold tracking-wide" : "text-[15px]",
+          )}
+        >
+          {shown ?? value}
+        </p>
       </div>
+      <button
+        type="button"
+        onClick={() => copy(value)}
+        aria-label={tr("{0} nusxalash", tr(label))}
+        title={state === "copied" ? tr("Nusxalandi") : state === "failed" ? tr("Nusxalab bo'lmadi") : tr("Nusxalash")}
+        className={clsx(
+          "flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-[transform,background-color] active:scale-[0.92]",
+          state === "copied"
+            ? "bg-[#34c759]/[0.14] text-[#34c759]"
+            : state === "failed"
+              ? "bg-[#ff3b30]/[0.12] text-[#ff3b30]"
+              : "bg-[var(--color-primary)]/[0.1] text-[var(--color-primary)]",
+        )}
+      >
+        {state === "copied" ? <Check className="h-[18px] w-[18px]" strokeWidth={2.6} /> : <Copy className="h-[18px] w-[18px]" strokeWidth={2.2} />}
+      </button>
+      <span className={ROW_SEPARATOR} aria-hidden="true" />
+    </div>
+  );
+}
+
+/** Havola, login va parolni bitta matn qilib nusxalash — ota-onaga yuborish uchun */
+function CopyAllButton({ text }: { text: string }) {
+  const tr = useTr();
+  const { state, copy } = useCopy();
+  return (
+    <SheetSecondaryButton onClick={() => copy(text)} danger={state === "failed"}>
+      {state === "copied" ? <Check className="h-[18px] w-[18px]" strokeWidth={2.6} /> : <Copy className="h-[18px] w-[18px]" strokeWidth={2.2} />}
+      {state === "copied" ? tr("Nusxalandi") : state === "failed" ? tr("Nusxalab bo'lmadi") : tr("Hammasini nusxalash")}
+    </SheetSecondaryButton>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="group/row relative flex min-h-[48px] items-center gap-3 px-4">
+      <span className="shrink-0 py-3 text-[15px] text-[var(--color-text)]">{label}</span>
+      <span className="min-w-0 flex-1 truncate py-3 text-right text-[15px] tabular-nums text-[#8e8e93]">{value}</span>
+      <span className={ROW_SEPARATOR} aria-hidden="true" />
     </div>
   );
 }

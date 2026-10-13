@@ -4,12 +4,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useState } from "react";
+import clsx from "clsx";
 import { api, ApiError } from "@/lib/api";
 import type { DevelopmentAssessment } from "@/lib/types";
-import { Modal } from "@/components/ui/modal";
-import { Select, Textarea } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { IosSheet, SheetPrimaryButton, SheetRow, SheetSection } from "@/components/ios/sheet";
+import { FieldRow } from "@/components/ios/form";
+import { IOS, ROW_SEPARATOR } from "@/components/ios/tokens";
 import { useTr } from "@/i18n/tr";
 
 const ratingField = z.enum(["BELOW_EXPECTED", "ON_TRACK", "ABOVE_EXPECTED", ""]).optional();
@@ -23,6 +24,25 @@ const schema = z.object({
 });
 
 type FormValues = z.infer<typeof schema>;
+type RatingKey = "speechRating" | "motorRating" | "socialRating" | "cognitiveRating";
+type Rating = Exclude<FormValues[RatingKey], "" | undefined>;
+
+/** Baholanadigan sohalar — avvalgi tartibda */
+const AREAS: { key: RatingKey; label: string }[] = [
+  { key: "speechRating", label: "Nutq" },
+  { key: "motorRating", label: "Motorika" },
+  { key: "socialRating", label: "Ijtimoiy ko'nikma" },
+  { key: "cognitiveRating", label: "Bilim / idrok" },
+];
+
+/** Baho plitkalari — sahifadagi yorliqlar bilan bir xil rang */
+const RATINGS: { value: Rating; label: string; color: string }[] = [
+  { value: "BELOW_EXPECTED", label: "Kutilganidan past", color: IOS.red },
+  { value: "ON_TRACK", label: "Yoshiga mos", color: IOS.green },
+  { value: "ABOVE_EXPECTED", label: "Kutilganidan yuqori", color: IOS.blue },
+];
+
+const TEXTAREA = "block w-full resize-none bg-transparent text-[15px] leading-snug text-[var(--color-text)] outline-none placeholder:text-[#c4c4c6]";
 
 function currentPeriod(): string {
   const now = new Date();
@@ -46,10 +66,14 @@ export function EditDevelopmentModal({
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
   const period = existing?.period ?? currentPeriod();
+  const formId = useId();
+  const noteId = useId();
 
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -82,51 +106,77 @@ export function EditDevelopmentModal({
     },
   });
 
-  return (
-    <Modal open={open} onClose={onClose} title={`Rivojlanishni baholash — ${period}`}>
-      <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
-        {serverError && (
-          <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {tr(serverError)}
-          </div>
-        )}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Select label={tr("Nutq")} defaultValue="" {...register("speechRating")}>
-            <option value="">{tr("Baholanmagan")}</option>
-            <option value="BELOW_EXPECTED">{tr("Kutilganidan past")}</option>
-            <option value="ON_TRACK">{tr("Yoshiga mos")}</option>
-            <option value="ABOVE_EXPECTED">{tr("Kutilganidan yuqori")}</option>
-          </Select>
-          <Select label={tr("Motorika")} defaultValue="" {...register("motorRating")}>
-            <option value="">{tr("Baholanmagan")}</option>
-            <option value="BELOW_EXPECTED">{tr("Kutilganidan past")}</option>
-            <option value="ON_TRACK">{tr("Yoshiga mos")}</option>
-            <option value="ABOVE_EXPECTED">{tr("Kutilganidan yuqori")}</option>
-          </Select>
-          <Select label={tr("Ijtimoiy ko'nikma")} defaultValue="" {...register("socialRating")}>
-            <option value="">{tr("Baholanmagan")}</option>
-            <option value="BELOW_EXPECTED">{tr("Kutilganidan past")}</option>
-            <option value="ON_TRACK">{tr("Yoshiga mos")}</option>
-            <option value="ABOVE_EXPECTED">{tr("Kutilganidan yuqori")}</option>
-          </Select>
-          <Select label={tr("Bilim / idrok")} defaultValue="" {...register("cognitiveRating")}>
-            <option value="">{tr("Baholanmagan")}</option>
-            <option value="BELOW_EXPECTED">{tr("Kutilganidan past")}</option>
-            <option value="ON_TRACK">{tr("Yoshiga mos")}</option>
-            <option value="ABOVE_EXPECTED">{tr("Kutilganidan yuqori")}</option>
-          </Select>
-        </div>
-        <Textarea label={tr("Izoh (ixtiyoriy)")} rows={3} {...register("note")} />
+  const busy = isSubmitting || mutation.isPending;
 
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="outline" onClick={onClose}>
-            {tr("Bekor qilish")}
-          </Button>
-          <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            {tr("Saqlash")}
-          </Button>
-        </div>
+  return (
+    <IosSheet
+      open={open}
+      onClose={() => !busy && onClose()}
+      title={tr("Rivojlanishni baholash")}
+      footer={
+        <SheetPrimaryButton type="submit" form={formId} loading={busy}>
+          {tr("Saqlash")}
+        </SheetPrimaryButton>
+      }
+    >
+      <form id={formId} className="space-y-6" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
+        <SheetSection>
+          <SheetRow label={tr("Davr")}>
+            <span className="tabular-nums text-[var(--color-text)]">{period}</span>
+          </SheetRow>
+        </SheetSection>
+
+        <SheetSection footer={tr("Tanlangan bahoni qayta bossangiz, «Baholanmagan» bo'ladi.")}>
+          {AREAS.map((area) => {
+            const value = watch(area.key);
+            const current = RATINGS.find((r) => r.value === value);
+            return (
+              <div key={area.key} className="group/row relative px-4 pb-3 pt-3">
+                <div className="mb-2.5 flex min-h-[24px] items-center justify-between gap-3">
+                  <span className="min-w-0 truncate text-[15px] text-[var(--color-text)]">{tr(area.label)}</span>
+                  <span className="shrink-0 text-[13px]" style={{ color: current ? current.color : IOS.gray }}>
+                    {tr(current ? current.label : "Baholanmagan")}
+                  </span>
+                </div>
+                <div role="radiogroup" aria-label={tr(area.label)} className="grid grid-cols-3 gap-2">
+                  {RATINGS.map((rating) => {
+                    const active = value === rating.value;
+                    return (
+                      <button
+                        key={rating.value}
+                        type="button"
+                        role="radio"
+                        aria-checked={active}
+                        onClick={() => setValue(area.key, active ? "" : rating.value, { shouldDirty: true })}
+                        className={clsx(
+                          "flex min-h-[48px] min-w-0 items-center justify-center rounded-[12px] px-1.5 py-1.5 text-center transition-transform active:scale-[0.96]",
+                          active ? "ring-2 ring-inset ring-current" : "bg-[#767680]/[0.12] text-[var(--color-text)]",
+                        )}
+                        style={active ? { backgroundColor: `${rating.color}1f`, color: rating.color } : undefined}
+                      >
+                        <span className={clsx("line-clamp-2 text-[13px] leading-tight", active && "font-semibold")}>{tr(rating.label)}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <span className={ROW_SEPARATOR} aria-hidden="true" />
+              </div>
+            );
+          })}
+        </SheetSection>
+
+        <SheetSection>
+          <FieldRow label={tr("Izoh")} htmlFor={noteId} stacked>
+            <textarea id={noteId} rows={3} placeholder={tr("Ixtiyoriy")} className={TEXTAREA} {...register("note")} />
+          </FieldRow>
+        </SheetSection>
+
+        {serverError && (
+          <p role="alert" className="px-4 text-[13px] text-[#ff3b30]">
+            {tr(serverError)}
+          </p>
+        )}
       </form>
-    </Modal>
+    </IosSheet>
   );
 }

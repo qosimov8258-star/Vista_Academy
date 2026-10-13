@@ -47,16 +47,16 @@
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: minmax(0, 1fr);
-  padding: 2px;
-  border-radius: 10px;
+  padding: 3px;
+  border-radius: 999px;
   background: rgba(118, 118, 128, 0.12);
 }
 .segmentThumb {
   position: absolute;
-  top: 2px;
-  bottom: 2px;
-  left: 2px;
-  border-radius: 8px;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  border-radius: 999px;
   background: #fff;
   box-shadow:
     0 3px 8px rgba(0, 0, 0, 0.12),
@@ -67,8 +67,8 @@
   position: relative;
   z-index: 1;
   min-width: 0;
-  padding: 6px 4px;
-  border-radius: 8px;
+  padding: 6px 8px;
+  border-radius: 999px;
   font-size: 13px;
   font-weight: 500;
   line-height: 1.25;

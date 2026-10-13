@@ -20,7 +20,7 @@ export function LendingTabs({ base }: { base: string }) {
   ];
 
   return (
-    <div role="tablist" className="flex w-fit gap-1 rounded-[var(--radius-lg)] bg-[var(--color-surface-sunken)] p-1">
+    <div role="tablist" className="flex w-fit gap-1 rounded-full bg-[var(--color-surface-sunken)] p-1">
       {tabs.map((tab) => {
         const active = pathname.startsWith(tab.href);
         return (
@@ -30,7 +30,7 @@ export function LendingTabs({ base }: { base: string }) {
             role="tab"
             aria-selected={active}
             className={clsx(
-              "rounded-[var(--radius-md)] px-4 py-2 text-[14px] font-medium transition-colors",
+              "rounded-full px-4 py-2 text-[14px] font-medium transition-colors",
               active
                 ? "bg-[var(--color-surface)] text-[var(--color-text)] shadow-[var(--shadow-xs)]"
                 : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]",

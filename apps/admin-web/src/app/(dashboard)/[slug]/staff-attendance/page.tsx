@@ -174,7 +174,7 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
       </div>
 
       {/* Ikki bo'lim: kunlik belgilash va xodimlar ro'yxati + oylik jamlanma. */}
-      <div role="tablist" className="flex w-fit gap-1 rounded-[var(--radius-lg)] bg-[var(--color-surface-sunken)] p-1">
+      <div role="tablist" className="flex w-fit gap-1 rounded-full bg-[var(--color-surface-sunken)] p-1">
         {(
           [
             ["davomat", "Davomat"],
@@ -187,7 +187,7 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
             role="tab"
             aria-selected={tab === key}
             onClick={() => setTab(key)}
-            className={`cursor-pointer rounded-[var(--radius-md)] px-4 py-2 text-[14px] font-medium transition-colors ${
+            className={`cursor-pointer rounded-full px-4 py-2 text-[14px] font-medium transition-colors ${
               tab === key
                 ? "bg-[var(--color-surface)] text-[var(--color-text)] shadow-[var(--shadow-xs)]"
                 : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"

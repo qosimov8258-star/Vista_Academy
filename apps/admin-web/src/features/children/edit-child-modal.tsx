@@ -4,12 +4,13 @@ import { Controller, useForm, type FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { Child, Group } from "@/lib/types";
 import { Toast, type ToastState } from "@/components/ui/toast";
 import { IosSheet, SheetPrimaryButton } from "@/components/ios/sheet";
-import { DobPicker, FieldRow, FormSection, Segmented, SelectInput, TextInput } from "@/components/ios/form";
+import { DobPicker, FieldRow, FormSection, Segmented, TextInput } from "@/components/ios/form";
+import { ChildGroupPicker } from "@/features/children/create-child-modal";
 import { useTr } from "@/i18n/tr";
 
 const schema = z.object({
@@ -55,6 +56,13 @@ export function EditChildModal({
     queryFn: () => api.get<Group[]>("/app/groups"),
     enabled: open,
   });
+  // Bolaning joriy guruhi nofaol bo'lsa ham ro'yxatda ko'rinib tursin — aks
+  // holda tanlov shu guruh emasdek ko'rinardi. Boshqa nofaol guruhga o'tkazib bo'lmaydi.
+  const groupOptions = useMemo(
+    () => groups?.filter((group) => group.status === "ACTIVE" || group.id === child.groupId) ?? [],
+    [groups, child.groupId],
+  );
+  const inactiveIds = useMemo(() => groupOptions.filter((group) => group.status !== "ACTIVE").map((group) => group.id), [groupOptions]);
 
   const {
     register,
@@ -153,7 +161,8 @@ export function EditChildModal({
               )}
             />
           </FieldRow>
-          <FieldRow label={tr("Tug'ilgan sana")} error={err("birthDate")}>
+          {/* Uch kapsula (kun/oy/yil) telefonda yorliq yoniga sig'maydi — yorliq tepada */}
+          <FieldRow stacked label={tr("Tug'ilgan sana")} error={err("birthDate")}>
             <Controller control={control} name="birthDate" render={({ field }) => <DobPicker value={field.value ?? ""} onChange={field.onChange} />} />
           </FieldRow>
         </FormSection>
@@ -162,20 +171,24 @@ export function EditChildModal({
           title={tr("Bog'chada")}
           footer={quarantined ? tr("Karantindagi bolaning holatini avval karantinni yopib o'zgartiring") : undefined}
         >
-          <FieldRow label={tr("Guruh")} htmlFor={`${formId}-g`}>
-            <SelectInput id={`${formId}-g`} {...register("groupId")}>
-              <option value="">{tr("Guruhsiz")}</option>
-              {/* Bolaning joriy guruhi nofaol bo'lsa ham ro'yxatda ko'rinib
-                  tursin — aks holda tanlov shu guruh emasdek ko'rinardi.
-                  Boshqa nofaol guruhga o'tkazib bo'lmaydi. */}
-              {groups
-                ?.filter((group) => group.status === "ACTIVE" || group.id === child.groupId)
-                .map((group) => (
-                  <option key={group.id} value={group.id}>
-                    {tr(group.name)}
-                  </option>
-                ))}
-            </SelectInput>
+          <FieldRow label={tr("Guruh")} htmlFor={`${formId}-g`} error={err("groupId")}>
+            <Controller
+              control={control}
+              name="groupId"
+              render={({ field }) => (
+                <ChildGroupPicker
+                  id={`${formId}-g`}
+                  title={tr("Guruh")}
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  groups={groupOptions}
+                  inactiveIds={inactiveIds}
+                  loading={!groups}
+                  placeholder={tr("Guruhsiz")}
+                  emptyOption={tr("Guruhsiz")}
+                />
+              )}
+            />
           </FieldRow>
           <FieldRow label={tr("Holati")} error={err("status")}>
             {quarantined ? (

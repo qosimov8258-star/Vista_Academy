@@ -202,7 +202,7 @@ export function Segmented<T extends string>({
     <div role="radiogroup" aria-label={tr(label)} className={clsx(styles.segmented, className)}>
       <span
         className={styles.segmentThumb}
-        style={{ width: `calc((100% - 4px) / ${options.length})`, transform: `translateX(${index * 100}%)` }}
+        style={{ width: `calc((100% - 6px) / ${options.length})`, transform: `translateX(${index * 100}%)` }}
         aria-hidden="true"
       />
       {options.map((option) => {
