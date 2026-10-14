@@ -40,6 +40,34 @@ export interface Plan {
   createdAt: string;
 }
 
+export interface FeatureDefinition {
+  key: string;
+  label: string;
+  group: string;
+  description: string;
+  /** Ichki funksiya bo'lsa — asosiy bo'lim kaliti (u o'chsa, bu ham o'chadi). */
+  parent: string | null;
+}
+
+export interface FeaturePanel {
+  key: string;
+  label: string;
+}
+
+export interface OrganizationFeatures {
+  /** null — butun bog'cha; aks holda panel kaliti (masalan "TEACHER"). */
+  panel: string | null;
+  planName: string | null;
+  /** Tarifdagi qiymatlar (kalit yo'q bo'lsa — yoqilgan). */
+  planFeatures: Record<string, boolean>;
+  /** Panel sozlamasiz holat (bog'cha va tarif bo'yicha) — panelda "Umumiy" tanlanganda shu amal qiladi. */
+  base: Record<string, boolean>;
+  /** Faqat shu daraja (bog'cha yoki panel) uchun qo'lda berilgan qiymatlar. */
+  overrides: Record<string, boolean>;
+  /** Yakuniy holat: bog'cha → tarif → yoqilgan. */
+  effective: Record<string, boolean>;
+}
+
 export interface Subscription {
   id: string;
   organizationId: string;

@@ -92,6 +92,8 @@ export class ParentAuthService {
       organizationName: organization.name,
       fullName: guardian.fullName,
       phone: guardian.phone,
+      // Haqiqiy qiymatni ParentJwtStrategy har so'rovda hisoblaydi
+      disabledFeatures: [],
     };
   }
 
@@ -148,6 +150,7 @@ export class ParentAuthService {
       organizationName: existing.guardian.organization.name,
       fullName: existing.guardian.fullName,
       phone: existing.guardian.phone,
+      disabledFeatures: [],
     };
     const issued = await this.issueTokens(parent, meta);
     await this.prisma.guardianRefreshToken.update({

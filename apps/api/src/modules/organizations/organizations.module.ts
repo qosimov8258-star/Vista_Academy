@@ -4,12 +4,14 @@ import { OrganizationsController } from "./organizations.controller";
 import { TenantOrganizationsController } from "./tenant-organizations.controller";
 import { PublicOrganizationsController } from "./public-organizations.controller";
 import { OrganizationsService } from "./organizations.service";
+import { FeaturesController } from "./features.controller";
+import { OrganizationFeaturesService } from "./organization-features.service";
 import { OrganizationLifecycleService } from "./organization-lifecycle.service";
 
 @Module({
   imports: [JwtModule.register({})],
-  controllers: [OrganizationsController, TenantOrganizationsController, PublicOrganizationsController],
-  providers: [OrganizationsService, OrganizationLifecycleService],
+  controllers: [OrganizationsController, TenantOrganizationsController, PublicOrganizationsController, FeaturesController],
+  providers: [OrganizationsService, OrganizationLifecycleService, OrganizationFeaturesService],
   exports: [OrganizationsService],
 })
 export class OrganizationsModule {}

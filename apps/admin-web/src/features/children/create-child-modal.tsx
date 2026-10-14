@@ -22,17 +22,18 @@ import { prepareChildPhoto } from "@/lib/child-photo";
 import { initials } from "@/components/ui/avatar";
 import { validateUzbekPhone } from "@/lib/phone";
 import { useTr } from "@/i18n/tr";
+import { useFeatureEnabled } from "@/lib/use-auth";
 
 // `hasGroups` mavjud faol guruhlar borligiga qarab qayta quriladi: guruhlar
 // bo'lsa birini tanlash shart, hech qanday faol guruh bo'lmasa (masalan
 // filial hali guruh yaratmagan) bola guruhsiz ham qo'shiladi.
-function buildSchema(hasGroups: boolean) {
+function buildSchema(hasGroups: boolean, genderRequired: boolean) {
   return z
     .object({
       groupId: hasGroups ? z.string().min(1, "Guruhni tanlang") : z.string().optional(),
       lastName: z.string().min(2, "Familiya kamida 2 belgi"),
       firstName: z.string().min(2, "Ism kamida 2 belgi"),
-      gender: z.enum(["MALE", "FEMALE"], { message: "Jinsini tanlang" }),
+      gender: genderRequired ? z.enum(["MALE", "FEMALE"], { message: "Jinsini tanlang" }) : z.enum(["MALE", "FEMALE"]).optional(),
       birthDate: z.string().optional(),
       guardianFullName: z.string().min(2, "Ota-ona ismi kamida 2 belgi"),
       guardianRelation: z.enum(["MOTHER", "FATHER", "GRANDPARENT", "OTHER"]),
@@ -105,6 +106,12 @@ const FIELD_ORDER: (keyof FormValues)[] = [
  */
 export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClose: () => void; slug: string }) {
   const tr = useTr();
+  const featureOn = useFeatureEnabled();
+  // Platforma o'chirgan forma maydonlari yashiriladi (API ham ularni qabul qilmaydi)
+  const showPhoto = featureOn("childAvatar");
+  const showGender = featureOn("childFieldGender");
+  const showBirthDate = featureOn("childFieldBirthDate");
+  const showGuardianPassword = featureOn("childFieldGuardianPassword");
   const formId = useId();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -121,7 +128,7 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
     enabled: open,
   });
   const activeGroups = useMemo(() => groups?.filter((group) => group.status === "ACTIVE") ?? [], [groups]);
-  const schema = useMemo(() => buildSchema(activeGroups.length > 0), [activeGroups.length]);
+  const schema = useMemo(() => buildSchema(activeGroups.length > 0, showGender), [activeGroups.length, showGender]);
 
   const {
     register,
@@ -168,16 +175,16 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
         groupId: values.groupId || undefined,
         lastName: values.lastName,
         firstName: values.firstName,
-        gender: values.gender,
-        birthDate: values.birthDate || undefined,
+        gender: showGender ? values.gender : undefined,
+        birthDate: showBirthDate ? values.birthDate || undefined : undefined,
         guardianFullName: values.guardianFullName,
         guardianRelation: values.guardianRelation,
         guardianPhone: values.guardianPhone,
-        guardianPassword: values.guardianPassword || undefined,
+        guardianPassword: showGuardianPassword ? values.guardianPassword || undefined : undefined,
       });
       // Surat bola yaratilgandan keyin alohida so'rov bilan yuklanadi; shu so'rov
       // muvaffaqiyatsiz bo'lsa ham bola yozuvi allaqachon yaratilgan hisoblanadi.
-      if (photoImage) {
+      if (photoImage && showPhoto) {
         await api.put(`/app/children/${result.id}/avatar`, { image: photoImage }).catch(() => {});
       }
       // Birinchi hisob-faktura: bola allaqachon yaratilgan, shuning uchun xato bo'lsa
@@ -280,6 +287,7 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
         )}
 
         {/* Surat */}
+        {showPhoto && (
         <div className="flex flex-col items-center gap-2 pt-1">
           <button
             type="button"
@@ -317,6 +325,7 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
             </p>
           )}
         </div>
+        )}
 
         {/* Familiya oldinda: ro'yxatlar va hujjatlar "Familiya Ism" tartibida */}
         <FormSection title={tr("Bola")} footer={tr("Saqlanganda bolaga qisqa ID beriladi (masalan id14732)")}>
@@ -326,6 +335,7 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
           <FieldRow label={tr("Ism")} htmlFor={`${formId}-fn`} error={err("firstName")}>
             <TextInput id={`${formId}-fn`} placeholder={tr("Usmon")} autoComplete="off" {...register("firstName")} />
           </FieldRow>
+          {showGender && (
           <FieldRow label={tr("Jinsi")} error={err("gender")}>
             <Controller
               control={control}
@@ -343,6 +353,7 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
               )}
             />
           </FieldRow>
+          )}
           <FieldRow label={activeGroups.length > 0 ? tr("Guruh") : tr("Guruh (ixtiyoriy)")} htmlFor={`${formId}-g`} error={err("groupId")}>
             <Controller
               control={control}
@@ -363,9 +374,11 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
             />
           </FieldRow>
           {/* Uch kapsula (kun/oy/yil) telefonda yorliq yoniga sig'maydi — yorliq tepada */}
+          {showBirthDate && (
           <FieldRow stacked label={tr("Tug'ilgan sana")} error={err("birthDate")}>
             <Controller control={control} name="birthDate" render={({ field }) => <DobPicker value={field.value ?? ""} onChange={field.onChange} />} />
           </FieldRow>
+          )}
         </FormSection>
 
         <FormSection title={tr("Aloqa uchun ota-ona")} footer={tr("Xuddi shu raqam bilan yana bola qo'shilsa, ikkalasi bir ota-onaga bog'lanadi")}>
@@ -406,6 +419,7 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
           </FieldRow>
         </FormSection>
 
+        {showGuardianPassword && (
         <FormSection title={tr("Ota-ona kabineti paroli")} footer={tr("Bo'sh qoldirilsa avtomatik beriladi va saqlangach ko'rsatiladi")}>
           <FieldRow label={tr("Parol")} htmlFor={`${formId}-pw`} error={err("guardianPassword")}>
             <PasswordInput id={`${formId}-pw`} placeholder={tr("Ixtiyoriy")} autoComplete="new-password" {...register("guardianPassword")} />
@@ -419,6 +433,7 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
             </div>
           )}
         </FormSection>
+        )}
 
         <FormSection title={tr("To'lov")} footer={tr("Joriy oy uchun to'lov summasi va muddatini kiriting.")}>
           <FieldRow label={<span className="block leading-snug">{tr("Birinchi hisob-faktura")}</span>} htmlFor={`${formId}-inv`}>

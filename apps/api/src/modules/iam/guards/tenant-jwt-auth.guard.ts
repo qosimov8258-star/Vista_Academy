@@ -1,6 +1,7 @@
 import { ExecutionContext, ForbiddenException, Injectable } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { AuthGuard } from "@nestjs/passport";
+import { blockedFeatureForRequest, blockedFieldForRequest } from "../../../common/features/feature-catalog";
 import { ALLOW_CHEF_KEY } from "../decorators/allow-chef.decorator";
 import { DENY_CALL_OPERATOR_KEY } from "../decorators/deny-call-operator.decorator";
 import type { TenantAuthenticatedUser } from "../tenant-auth.types";
@@ -19,7 +20,21 @@ export class TenantJwtAuthGuard extends AuthGuard("tenant-jwt") {
     // belgilangan yo'llar ochiq. Boshqa rollarning tekshiruvlari "bu rolga
     // mumkin emas" ko'rinishida yozilgan — yangi rol ularni sezmay o'tib
     // ketmasligi uchun oshpaz shu yerning o'zida to'xtatiladi.
-    const user = context.switchToHttp().getRequest<{ user?: TenantAuthenticatedUser }>().user;
+    const request = context.switchToHttp().getRequest<{ user?: TenantAuthenticatedUser; originalUrl?: string; url: string; method: string; body?: unknown }>();
+    const user = request.user;
+    // Platforma o'chirgan funksiya — tarif yoki bog'cha sozlamasi bo'yicha
+    if (user?.disabledFeatures.length) {
+      const feature = blockedFeatureForRequest(request.originalUrl ?? request.url, request.method, user.disabledFeatures);
+      if (feature) {
+        throw new ForbiddenException(`"${feature.label}" funksiyasi sizning panelingiz uchun yoqilmagan — platforma administratoriga murojaat qiling`);
+      }
+    }
+    if (user?.disabledFeatures.length) {
+      const blocked = blockedFieldForRequest(request.originalUrl ?? request.url, request.method, request.body, user.disabledFeatures);
+      if (blocked) {
+        throw new ForbiddenException(`"${blocked.feature.label}" o'chirilgan — "${blocked.field}" maydonini yuborib bo'lmaydi`);
+      }
+    }
     if (user?.role === "CHEF") {
       const allowed = this.reflector.getAllAndOverride<boolean>(ALLOW_CHEF_KEY, [
         context.getHandler(),

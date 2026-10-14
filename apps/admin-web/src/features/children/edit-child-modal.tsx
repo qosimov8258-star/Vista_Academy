@@ -12,6 +12,7 @@ import { IosSheet, SheetPrimaryButton } from "@/components/ios/sheet";
 import { DobPicker, FieldRow, FormSection, Segmented, TextInput } from "@/components/ios/form";
 import { ChildGroupPicker } from "@/features/children/create-child-modal";
 import { useTr } from "@/i18n/tr";
+import { useFeatureEnabled } from "@/lib/use-auth";
 
 const schema = z.object({
   groupId: z.string().optional(),
@@ -45,6 +46,9 @@ export function EditChildModal({
   onSaved?: () => void;
 }) {
   const tr = useTr();
+  const featureOn = useFeatureEnabled();
+  const showGender = featureOn("childFieldGender");
+  const showBirthDate = featureOn("childFieldBirthDate");
   const formId = useId();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -90,9 +94,11 @@ export function EditChildModal({
     mutationFn: (values: FormValues) =>
       api.patch<Child>(`/app/children/${child.id}`, {
         ...values,
+        // Platforma o'chirgan maydonlar yuborilmaydi (o'zgarmagan bo'lsa ham API rad etadi)
+        gender: showGender ? values.gender : undefined,
+        birthDate: showBirthDate ? values.birthDate || undefined : undefined,
         status: quarantined ? undefined : values.status,
         groupId: values.groupId || null,
-        birthDate: values.birthDate || undefined,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["child", slug, child.id] });
@@ -144,6 +150,7 @@ export function EditChildModal({
           <FieldRow label={tr("Ism")} htmlFor={`${formId}-fn`} error={err("firstName")}>
             <TextInput id={`${formId}-fn`} autoComplete="off" {...register("firstName")} />
           </FieldRow>
+          {showGender && (
           <FieldRow label={tr("Jinsi")} error={err("gender")}>
             <Controller
               control={control}
@@ -161,10 +168,13 @@ export function EditChildModal({
               )}
             />
           </FieldRow>
+          )}
           {/* Uch kapsula (kun/oy/yil) telefonda yorliq yoniga sig'maydi — yorliq tepada */}
+          {showBirthDate && (
           <FieldRow stacked label={tr("Tug'ilgan sana")} error={err("birthDate")}>
             <Controller control={control} name="birthDate" render={({ field }) => <DobPicker value={field.value ?? ""} onChange={field.onChange} />} />
           </FieldRow>
+          )}
         </FormSection>
 
         <FormSection

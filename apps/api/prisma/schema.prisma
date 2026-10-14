@@ -113,6 +113,12 @@ model Organization {
   archivedAt    DateTime?          @map("archived_at")
   /// Platforma operatorining ichki izohi (bog'chaga ko'rinmaydi).
   notes         String?
+  /// Funksiyalarni bog'cha darajasida qo'lda yoqish/o'chirish: {"crm": false}.
+  /// Kalit yo'q bo'lsa tarifdagi qiymat amal qiladi (qarang: common/features).
+  featureOverrides Json            @default("{}") @map("feature_overrides")
+  /// Xuddi shunday, lekin alohida panel (rol) uchun: {"TEACHER": {"crm": false}}.
+  /// Panel sozlamasi bog'cha sozlamasidan ustun turadi.
+  panelFeatureOverrides Json       @default("{}") @map("panel_feature_overrides")
   createdAt     DateTime           @default(now()) @map("created_at")
   updatedAt     DateTime           @updatedAt @map("updated_at")
 

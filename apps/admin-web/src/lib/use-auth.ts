@@ -17,3 +17,13 @@ export function useAuth() {
     isError: query.isError,
   };
 }
+
+/**
+ * Platforma shu panel uchun funksiyani o'chirganmi. `me` hali yuklanmagan
+ * bo'lsa hammasi yoqilgan hisoblanadi (API baribir to'sadi).
+ */
+export function useFeatureEnabled() {
+  const { user } = useAuth();
+  const disabled = user?.disabledFeatures ?? [];
+  return (key: string) => !disabled.includes(key);
+}
