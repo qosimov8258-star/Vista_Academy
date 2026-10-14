@@ -4,7 +4,8 @@ import { ExtractJwt, Strategy } from "passport-jwt";
 import type { Request } from "express";
 import { PrismaService } from "../../../database/prisma.service";
 import { requireTenantAccessSecret } from "../tenant-auth.service";
-import { ORGANIZATION_WITH_SUBSCRIPTION_STATUS, isOrganizationSuspended, organizationBlockedMessage } from "../organization-access";
+import { ORGANIZATION_WITH_SUBSCRIPTION_FEATURES, isOrganizationSuspended, organizationBlockedMessage } from "../organization-access";
+import { disabledFeatureKeys } from "../../../common/features/feature-catalog";
 import { TenantAccessTokenPayload, TenantAuthenticatedUser } from "../tenant-auth.types";
 
 function extractFromCookie(req: Request): string | null {
@@ -35,7 +36,7 @@ export class TenantJwtStrategy extends PassportStrategy(Strategy, "tenant-jwt") 
     }
     const tenantUser = await this.prisma.tenantUser.findUnique({
       where: { id: payload.sub },
-      include: { organization: { include: ORGANIZATION_WITH_SUBSCRIPTION_STATUS }, branch: true, employee: true },
+      include: { organization: { include: ORGANIZATION_WITH_SUBSCRIPTION_FEATURES }, branch: true, employee: true },
     });
     if (
       !tenantUser ||
@@ -66,6 +67,12 @@ export class TenantJwtStrategy extends PassportStrategy(Strategy, "tenant-jwt") 
       subjects: tenantUser.employee?.subjects ?? [],
       topicsManagedByAdmin: tenantUser.employee?.topicsManagedByAdmin ?? false,
       impersonatedBy: payload.impersonatedBy ?? null,
+      disabledFeatures: disabledFeatureKeys(
+        tenantUser.organization.subscription?.plan.features,
+        tenantUser.organization.featureOverrides,
+        tenantUser.role,
+        tenantUser.organization.panelFeatureOverrides,
+      ),
     };
   }
 }

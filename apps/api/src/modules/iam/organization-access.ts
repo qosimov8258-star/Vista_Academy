@@ -21,6 +21,11 @@ export function isOrganizationSuspended(
 /** Tashkilot bilan birga obuna holatini olish uchun Prisma include. */
 export const ORGANIZATION_WITH_SUBSCRIPTION_STATUS = { subscription: { select: { status: true } } } as const;
 
+/** Yuqoridagiga qo'shimcha: tarifdagi funksiyalar — yoqilgan funksiyalarni hisoblash uchun. */
+export const ORGANIZATION_WITH_SUBSCRIPTION_FEATURES = {
+  subscription: { select: { status: true, plan: { select: { features: true } } } },
+} as const;
+
 /**
  * Kirishda ko'rsatiladigan xabar: operator to'xtatish sababini yozgan
  * bo'lsa, bog'cha xodimi nima uchun yopilganini ko'radi.

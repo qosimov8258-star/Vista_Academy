@@ -1,8 +1,19 @@
 import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
+import { FEATURE_KEYS } from "../../common/features/feature-catalog";
 import { PrismaService } from "../../database/prisma.service";
 import { CreatePlanDto } from "./dto/create-plan.dto";
 import { UpdatePlanDto } from "./dto/update-plan.dto";
+
+/** Faqat katalogdagi kalitlar va boolean qiymatlar saqlanadi. */
+function sanitizeFeatures(features: Record<string, boolean> | undefined): Record<string, boolean> | undefined {
+  if (!features) return undefined;
+  const out: Record<string, boolean> = {};
+  for (const key of FEATURE_KEYS) {
+    if (typeof features[key] === "boolean") out[key] = features[key];
+  }
+  return out;
+}
 
 @Injectable()
 export class PlansService {
@@ -23,7 +34,7 @@ export class PlansService {
         maxChildren: dto.maxChildren,
         maxEmployees: dto.maxEmployees,
         maxStorageGb: dto.maxStorageGb,
-        features: dto.features ?? {},
+        features: sanitizeFeatures(dto.features) ?? {},
       },
     });
   }
@@ -42,11 +53,12 @@ export class PlansService {
 
   async update(id: string, dto: UpdatePlanDto) {
     await this.findOne(id);
-    const { priceMonthly, ...rest } = dto;
+    const { priceMonthly, features, ...rest } = dto;
     return this.prisma.plan.update({
       where: { id },
       data: {
         ...rest,
+        ...(features !== undefined ? { features: sanitizeFeatures(features) } : {}),
         ...(priceMonthly !== undefined ? { priceMonthly: new Prisma.Decimal(priceMonthly) } : {}),
       },
     });

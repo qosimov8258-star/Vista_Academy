@@ -18,9 +18,11 @@ export class CreateChildDto {
   @MinLength(2)
   firstName!: string;
 
-  @ApiProperty({ enum: Gender, example: Gender.MALE })
+  // Platforma "Bola formasi: jinsi" funksiyasini o'chirgan bog'chalarda maydon yuborilmaydi
+  @ApiPropertyOptional({ enum: Gender, example: Gender.MALE })
+  @IsOptional()
   @IsEnum(Gender)
-  gender!: Gender;
+  gender?: Gender;
 
   @ApiPropertyOptional({ example: "2021-05-14" })
   @IsOptional()

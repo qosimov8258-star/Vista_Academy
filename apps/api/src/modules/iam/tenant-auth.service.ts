@@ -227,6 +227,8 @@ export class TenantAuthService {
       position: tenantUser.employee?.position ?? null,
       subjects: tenantUser.employee?.subjects ?? [],
       topicsManagedByAdmin: tenantUser.employee?.topicsManagedByAdmin ?? false,
+      // Haqiqiy qiymatni TenantJwtStrategy har so'rovda hisoblaydi (/auth/me shundan oladi)
+      disabledFeatures: [],
     };
   }
 }

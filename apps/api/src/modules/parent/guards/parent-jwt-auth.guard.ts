@@ -1,5 +1,7 @@
-import { Injectable } from "@nestjs/common";
+import { ExecutionContext, ForbiddenException, Injectable } from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
+import { blockedFeatureForRequest } from "../../../common/features/feature-catalog";
+import type { AuthenticatedParent } from "../parent-auth.types";
 
 /**
  * Faqat ota-ona tokenini qabul qiladi.
@@ -13,5 +15,20 @@ import { AuthGuard } from "@nestjs/passport";
 export class ParentJwtAuthGuard extends AuthGuard("parent-jwt") {
   constructor() {
     super();
+  }
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    if (!(await super.canActivate(context))) {
+      return false;
+    }
+    // Platforma o'chirgan funksiya (masalan "Ota-ona kabineti", "Kundalik")
+    const request = context.switchToHttp().getRequest<{ user?: AuthenticatedParent; originalUrl?: string; url: string; method: string }>();
+    if (request.user?.disabledFeatures.length) {
+      const feature = blockedFeatureForRequest(request.originalUrl ?? request.url, request.method, request.user.disabledFeatures);
+      if (feature) {
+        throw new ForbiddenException(`"${feature.label}" funksiyasi bu bog'cha uchun yoqilmagan`);
+      }
+    }
+    return true;
   }
 }

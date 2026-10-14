@@ -24,6 +24,8 @@ export interface TenantAuthenticatedUser {
   topicsManagedByAdmin: boolean;
   /** Platforma operatori "Bog'chaga kirish" bilan kirgan bo'lsa — operator ismi (panelda banner, audit). */
   impersonatedBy?: string | null;
+  /** Platforma tarif/bog'cha sozlamasi bilan o'chirilgan funksiya kalitlari (qarang: common/features). */
+  disabledFeatures: string[];
 }
 
 export interface TenantAccessTokenPayload {

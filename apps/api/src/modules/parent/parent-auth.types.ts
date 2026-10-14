@@ -18,4 +18,6 @@ export interface AuthenticatedParent {
   organizationName: string;
   fullName: string;
   phone: string;
+  /** Platforma o'chirgan funksiya kalitlari (qarang: common/features). */
+  disabledFeatures: string[];
 }
