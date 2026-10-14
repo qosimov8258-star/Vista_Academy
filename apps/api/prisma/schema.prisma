@@ -125,6 +125,7 @@ model Organization {
   positions                 Position[]
   subjects                  Subject[]
   invoices                  Invoice[]
+  childDiscounts            ChildDiscount[]
   payments                  Payment[]
   ledgerEntries             LedgerEntry[]
   coinTransactions          CoinTransaction[]
@@ -300,6 +301,7 @@ model Branch {
   employees                 Employee[]
   attendances               Attendance[]
   invoices                  Invoice[]
+  childDiscounts            ChildDiscount[]
   payments                  Payment[]
   ledgerEntries             LedgerEntry[]
   coinTransactions          CoinTransaction[]
@@ -436,6 +438,7 @@ model Child {
   group                     Group?                    @relation(fields: [groupId], references: [id], onDelete: SetNull)
   attendances               Attendance[]
   invoices                  Invoice[]
+  childDiscounts            ChildDiscount[]
   payments                  Payment[]
   ledgerEntries             LedgerEntry[]
   coinTransactions          CoinTransaction[]
@@ -1172,6 +1175,62 @@ model Invoice {
   @@index([organizationId, branchId, status])
   @@index([childId])
   @@map("invoices")
+}
+
+// ---------------------------------------------------------------------------
+// Chegirma qoidasi (Sabot ERP'dagi "chegirmalar"dan moslashtirilgan) — bola
+// uchun oylik to'lovga qo'llanadigan qoida. Hisob-faktura yaratilganda
+// (bittalab, ommaviy yoki oldindan to'lovda) shu qoidadan `discountAmount`
+// hisoblanadi; qoida o'zgarsa, o'sha oylarning to'lanmagan hisob-
+// fakturalari moslanadi. To'langan oylar o'zgarmaydi.
+//
+// Bir oyda bitta qoida ishlaydi: bir oylik qoida doimiysini bosib ketadi,
+// bir xil turdagi qoidalardan eng yangisi olinadi.
+// ---------------------------------------------------------------------------
+
+enum DiscountType {
+  /// `value` — foiz (0–100)
+  PERCENTAGE
+  /// `value` — ayiriladigan summa
+  FIXED_AMOUNT
+  /// `value` — bola to'laydigan yakuniy oylik narx
+  FINAL_AMOUNT
+}
+
+enum DiscountScope {
+  /// Faqat `startPeriod` oyi uchun
+  ONE_MONTH
+  /// `startPeriod` oyidan boshlab, to'xtatilguncha (`endPeriod` oyidan amal qilmaydi)
+  PERMANENT
+}
+
+model ChildDiscount {
+  id              String        @id @default(uuid())
+  organizationId  String        @map("organization_id")
+  branchId        String        @map("branch_id")
+  childId         String        @map("child_id")
+  type            DiscountType
+  scope           DiscountScope
+  value           Decimal       @db.Decimal(12, 2)
+  /// YYYY-MM. Bir oylik — shu oy; doimiy — qaysi oydan boshlab
+  startPeriod     String        @map("start_period")
+  /// YYYY-MM, faqat doimiy qoidada: to'xtatilgan oy (shu oydan boshlab amal qilmaydi)
+  endPeriod       String?       @map("end_period")
+  reason          String?
+  isActive        Boolean       @default(true) @map("is_active")
+  createdByName   String        @map("created_by_name")
+  createdByUserId String?       @map("created_by_user_id")
+  endedAt         DateTime?     @map("ended_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  child        Child        @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@index([childId, isActive])
+  @@index([branchId, isActive])
+  @@map("child_discounts")
 }
 
 // ---------------------------------------------------------------------------
