@@ -6,6 +6,7 @@ import clsx from "clsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Baby,
+  BadgePercent,
   Camera,
   Check,
   ChevronLeft,
@@ -60,6 +61,7 @@ import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { IosIcon, type AnyIcon } from "@/features/director/ios-icon";
 import { ChildCashCard } from "@/features/cash/child-cash-card";
 import { groupDigits } from "@/features/payments/shared";
+import { ruleLabel, scopeLabel, type DiscountChildHistory } from "@/features/discounts/shared";
 import { EditDevelopmentModal } from "@/features/development/edit-development-modal";
 import { EditHealthProfileModal, BLOOD_TYPE_LABEL } from "@/features/child-health/edit-health-profile-modal";
 import { AddVaccinationModal } from "@/features/child-health/add-vaccination-modal";
@@ -125,6 +127,9 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
   const { branchSlug } = useBranchContext(slug);
   const childrenHref = branchSlug ? `/${slug}/${branchSlug}/children` : `/${slug}/children`;
   const financeHref = branchSlug ? `/${slug}/${branchSlug}/finance/${childId}` : `/${slug}/finance/${childId}`;
+  const discountsHref = `${branchSlug ? `/${slug}/${branchSlug}` : `/${slug}`}/discounts?child=${childId}`;
+  // Chegirmalar bo'limini oshpaz ham ko'rmaydi (API ham rad etadi)
+  const canReadDiscounts = canReadMoney && user?.role !== "CHEF";
 
   const [tab, setTab] = useState<Tab>("overview");
   const [editChildOpen, setEditChildOpen] = useState(false);
@@ -169,6 +174,11 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
     queryKey: ["ledger", slug, childId],
     queryFn: () => api.get<LedgerEntry[]>(`/app/children/${childId}/ledger`),
     enabled: canReadMoney,
+  });
+  const discountQuery = useQuery({
+    queryKey: ["child-discount", slug, childId],
+    queryFn: () => api.get<DiscountChildHistory>(`/app/discounts/child/${childId}`),
+    enabled: canReadDiscounts,
   });
 
   const child = childQuery.data;
@@ -356,6 +366,34 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
                 <Row title={tr("Jinsi")} value={tr(formatGender(child.gender))} />
                 <Row title={tr("Tug'ilgan sana")} value={child.birthDate ? `${formatDate(child.birthDate)} · ${tr(formatAge(child.birthDate))}` : "—"} />
                 <Row title={tr("ID")} value={<span className="font-mono">{formatChildId(child.publicId)}</span>} />
+              </Group>
+            )}
+
+            {canReadDiscounts && !discountQuery.isError && (
+              <Group title={tr("Chegirma")} bare={discountQuery.isLoading}>
+                {discountQuery.isLoading ? (
+                  <SkeletonRows rows={1} avatar={false} />
+                ) : (
+                  (() => {
+                    const current = discountQuery.data?.current ?? null;
+                    const rule = current?.rule?.isActive ? current.rule : null;
+                    return (
+                      <Row
+                        href={discountsHref}
+                        leading={<IosIcon icon={BadgePercent} tint={rule ? "pink" : "gray"} size={30} />}
+                        title={rule ? `${ruleLabel(rule, tr)} · ${tr(scopeLabel(rule.scope))}` : tr("Chegirma yo'q")}
+                        subtitle={rule ? (rule.reason ?? undefined) : tr("Bosing — chegirma berish yoki o'zgartirish")}
+                        value={
+                          current && current.discount > 0 ? (
+                            <span className="tabular-nums">
+                              {groupDigits(current.net)} {tr("so'm")}
+                            </span>
+                          ) : undefined
+                        }
+                      />
+                    );
+                  })()
+                )}
               </Group>
             )}
 

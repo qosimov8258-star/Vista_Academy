@@ -319,6 +319,7 @@ function ChildRow({ child: c, withGroup = false, onClick }: { child: PeriodChild
     withGroup ? (c.groupName ? tr(c.groupName) : tr("Guruhsiz")) : null,
     // NONE holatida eski qarz o'ngda ko'rinadi — ikki marta yozilmasin
     c.state !== "NONE" && older > 0.5 ? `${tr("eski qarz")} ${groupDigits(older)}` : null,
+    c.feeDiscount && c.feeDiscount > 0 ? `${tr("chegirma")} −${groupDigits(c.feeDiscount)}` : null,
   ]
     .filter(Boolean)
     .join(" · ");

@@ -62,8 +62,12 @@ export interface PeriodChild {
   remaining: number;
   /** Barcha oylar bo'yicha ochiq qarz */
   totalDebt: number;
-  /** Oylik narx (guruh narxi, bo'lmasa filial narxi) */
+  /** Shu oy to'lanadigan summa: oylik narx (guruh narxi, bo'lmasa filial narxi) chegirma ayirilgan holda */
   monthlyFee: number | null;
+  /** Chegirmasiz oylik narx */
+  grossFee?: number | null;
+  /** Shu oydagi chegirma (chegirma qoidasidan) */
+  feeDiscount?: number;
 }
 
 export interface PeriodGroup {

@@ -313,6 +313,11 @@ export function PaymentSheet({
                   {groupDigits(inv.remaining)} {tr("so'm")}
                 </span>
                 {Number(inv.paidAmount) > 0 && <span className="block text-[12px]">{tr("qisman to'langan")}</span>}
+                {Number(inv.discountAmount) > 0 && (
+                  <span className="block text-[12px]">
+                    {tr("chegirma")} −{groupDigits(Number(inv.discountAmount))}
+                  </span>
+                )}
               </SheetRow>
             ))}
           </SheetSection>
