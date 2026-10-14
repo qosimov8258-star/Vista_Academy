@@ -29,6 +29,8 @@ export interface TenantAuthenticatedUser {
   topicsManagedByAdmin: boolean;
   /** Platforma operatori "Bog'chaga kirish" bilan kirgan bo'lsa — operator ismi. */
   impersonatedBy?: string | null;
+  /** Platforma shu panel uchun o'chirgan funksiyalar kalitlari (formadagi maydonlar ham shu yerda). */
+  disabledFeatures?: string[];
 }
 
 export type OrganizationStatus = "ACTIVE" | "SUSPENDED" | "ARCHIVED";
