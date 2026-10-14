@@ -2435,5 +2435,6 @@
  "chegirma": "discount",
  "Chegirma yo'q": "No discount",
  "Bosing — chegirma berish yoki o'zgartirish": "Tap to give or change a discount",
- "Narx": "Price"
+ "Narx": "Price",
+ "Excel: «Umumiy» varaq va har guruh alohida varaqda (pastdagi tablardan tanlanadi) — oylik to'lov, naqd, Click, terminal, o'tkazma, qarz va holat; oxirida batafsil ro'yxat. PDF: jami, usullar, guruhlar va kunlar bo'yicha.": "Excel: a “Summary” sheet plus a separate sheet for each group (pick them from the tabs at the bottom) — monthly fee, cash, Click, terminal, transfer, debt and status; a detailed list at the end. PDF: totals, by payment method, group and day."
 }
