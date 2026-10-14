@@ -1,5 +1,7 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { monthlyFeeOf } from "../billing/monthly-fee";
+import { discountFor } from "../discounts/discount-rules";
+import { discountRuleSelect } from "../discounts/discount-invoices";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantAuthenticatedUser, TenantScope, requireMoneyScope, toTenantScope } from "../iam/tenant-auth.types";
 import { AuditLogService } from "../audit-log/audit-log.service";
@@ -661,7 +663,13 @@ export class CashDeskService {
     const [children, invoices, branch] = await Promise.all([
       this.prisma.child.findMany({
         where: { branchId, status: { not: "INACTIVE" } },
-        select: { id: true, fullName: true, groupId: true, group: { select: { monthlyFee: true } } },
+        select: {
+          id: true,
+          fullName: true,
+          groupId: true,
+          group: { select: { monthlyFee: true } },
+          childDiscounts: { select: discountRuleSelect },
+        },
       }),
       this.prisma.invoice.findMany({
         where: { branchId, period, status: { not: "CANCELLED" } },
@@ -670,19 +678,22 @@ export class CashDeskService {
       this.prisma.branch.findUniqueOrThrow({ where: { id: branchId }, select: { defaultTuitionAmount: true } }),
     ]);
     const now = Date.now();
-    const byChild = new Map<string, { billed: number; paid: number; overdue: boolean; dueDate: Date | null }>();
+    const byChild = new Map<string, { billed: number; paid: number; discount: number; overdue: boolean; dueDate: Date | null }>();
     for (const inv of invoices) {
       const billed = Number(inv.amount) - Number(inv.discountAmount);
       const paid = Number(inv.paidAmount);
-      const row = byChild.get(inv.childId) ?? { billed: 0, paid: 0, overdue: false, dueDate: null };
+      const row = byChild.get(inv.childId) ?? { billed: 0, paid: 0, discount: 0, overdue: false, dueDate: null };
       row.billed += billed;
       row.paid += paid;
+      row.discount += Number(inv.discountAmount);
       if (billed - paid > 0.005 && inv.dueDate.getTime() < now) row.overdue = true;
       if (!row.dueDate || inv.dueDate < row.dueDate) row.dueDate = inv.dueDate;
       byChild.set(inv.childId, row);
     }
     return children.map((c) => {
       const inv = byChild.get(c.id);
+      const fee = monthlyFeeOf(c.group, branch);
+      const discount = discountFor(c.childDiscounts, period, fee);
       let state: "NONE" | "PAID" | "PARTIAL" | "OVERDUE" = "NONE";
       if (inv) {
         const remaining = inv.billed - inv.paid;
@@ -697,8 +708,15 @@ export class CashDeskService {
         paid: inv?.paid ?? 0,
         remaining: inv ? Math.max(inv.billed - inv.paid, 0) : 0,
         dueDate: inv?.dueDate ?? null,
-        /** Oylik narx (guruh narxi, bo'lmasa filial narxi) — hisob-faktura hali yo'q bo'lsa shu kutiladi */
-        monthlyFee: monthlyFeeOf(c.group, branch) || null,
+        /**
+         * Shu oy to'lanadigan summa: oylik narx (guruh narxi, bo'lmasa filial
+         * narxi) chegirma qoidasi ayirilgan holda — hisob-faktura hali yo'q
+         * bo'lsa shu kutiladi.
+         */
+        monthlyFee: fee - discount || null,
+        /** Chegirmasiz oylik narx va shu oydagi chegirma (hisob-faktura bo'lsa — undagi, bo'lmasa qoidadan) */
+        grossFee: fee || null,
+        feeDiscount: inv ? inv.discount : discount,
       };
     });
   }

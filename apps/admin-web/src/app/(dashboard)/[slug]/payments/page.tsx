@@ -295,7 +295,7 @@ export default function PaymentsPage({ params }: { params: Promise<{ slug: strin
         endpoint="/app/cash/payments-report"
         filePrefix="tolovlar-hisoboti"
         allHint="Boshidan bugungacha barcha to'lovlar"
-        contents="Hisobotda: jami summa va to'lovlar soni, usullar, guruhlar va kunlar bo'yicha, batafsil ro'yxat va bekor qilingan to'lovlar."
+        contents="Excel: «Umumiy» varaq va har guruh alohida varaqda (pastdagi tablardan tanlanadi) — oylik to'lov, naqd, Click, terminal, o'tkazma, qarz va holat; oxirida batafsil ro'yxat. PDF: jami, usullar, guruhlar va kunlar bo'yicha."
       />
       <PaymentSheet
         slug={slug}
@@ -319,6 +319,7 @@ function ChildRow({ child: c, withGroup = false, onClick }: { child: PeriodChild
     withGroup ? (c.groupName ? tr(c.groupName) : tr("Guruhsiz")) : null,
     // NONE holatida eski qarz o'ngda ko'rinadi — ikki marta yozilmasin
     c.state !== "NONE" && older > 0.5 ? `${tr("eski qarz")} ${groupDigits(older)}` : null,
+    c.feeDiscount && c.feeDiscount > 0 ? `${tr("chegirma")} −${groupDigits(c.feeDiscount)}` : null,
   ]
     .filter(Boolean)
     .join(" · ");

@@ -13,6 +13,8 @@ import { NotificationsService } from "../notifications/notifications.service";
 import { CreateInvoiceDto } from "./dto/create-invoice.dto";
 import { BulkCreateInvoiceDto } from "./dto/bulk-create-invoice.dto";
 import { monthlyFeeOf } from "./monthly-fee";
+import { discountFor } from "../discounts/discount-rules";
+import { discountRuleSelect } from "../discounts/discount-invoices";
 import { InvoiceQueryDto } from "./dto/invoice-query.dto";
 import { RecordPaymentDto } from "./dto/record-payment.dto";
 import { PaymentQueryDto } from "./dto/payment-query.dto";
@@ -80,7 +82,11 @@ export class BillingService {
       throw new ForbiddenException("Bu bolaga kirish huquqingiz yo'q");
     }
 
-    const discountAmount = dto.discountAmount ?? 0;
+    // Chegirma qo'lda berilmasa — bolaning shu oydagi chegirma qoidasidan
+    const fromRule = dto.discountAmount === undefined;
+    const discountAmount = fromRule
+      ? discountFor(await this.prisma.childDiscount.findMany({ where: { childId: child.id }, select: discountRuleSelect }), dto.period, dto.amount)
+      : dto.discountAmount!;
     if (discountAmount > dto.amount) {
       throw new BadRequestException("Chegirma summadan katta bo'lishi mumkin emas");
     }
@@ -123,7 +129,7 @@ export class BillingService {
             type: "DISCOUNT",
             amount: -discountAmount,
             invoiceId: invoice.id,
-            note: "Chegirma",
+            note: fromRule ? `Chegirma — ${dto.period}` : "Chegirma",
           },
         });
       }
@@ -413,7 +419,12 @@ export class BillingService {
 
     // Oy to'lovi bolaning oylik narxidan (guruh narxi, bo'lmasa filial narxi)
     // kam bo'lmaydi — qisman oldindan to'langan oyning qolgani qarz bo'lib ko'rinsin.
-    const advanceAmount = advancePeriod ? Math.max(amount, monthlyFeeOf(child.group, branch)) : 0;
+    // Shu oy uchun chegirma qoidasi bo'lsa — hisob-fakturaga chegirma bilan yoziladi.
+    const advanceFee = advancePeriod ? monthlyFeeOf(child.group, branch) : 0;
+    const advanceDiscount = advancePeriod
+      ? discountFor(await this.prisma.childDiscount.findMany({ where: { childId: child.id }, select: discountRuleSelect }), advancePeriod, advanceFee)
+      : 0;
+    const advanceAmount = advancePeriod ? Math.max(amount + advanceDiscount, advanceFee) : 0;
 
     try {
       const result = await this.prisma.$transaction(async (tx) => {
@@ -426,6 +437,7 @@ export class BillingService {
               branchId,
               childId: child.id,
               amount: invoiceAmount,
+              discountAmount: advanceDiscount,
               currency: branch.currency,
               period: advancePeriod,
               dueDate: todayTashkentDate(),
@@ -442,6 +454,19 @@ export class BillingService {
               note: `Hisob-faktura — ${advancePeriod} (oldindan to'lov)`,
             },
           });
+          if (advanceDiscount > 0) {
+            await tx.ledgerEntry.create({
+              data: {
+                organizationId: scope.organizationId,
+                branchId,
+                childId: child.id,
+                type: "DISCOUNT",
+                amount: -advanceDiscount,
+                invoiceId: invoice.id,
+                note: `Chegirma — ${advancePeriod}`,
+              },
+            });
+          }
           targets.push(invoice);
         }
 
@@ -514,7 +539,7 @@ export class BillingService {
         payment: { ...payment, hasReceiptImage: receipt !== null },
         allocations: result.allocations,
         advancePeriod,
-        remainingDebt: advancePeriod ? Math.max(0, advanceAmount - amount) : remainingDebt,
+        remainingDebt: advancePeriod ? Math.max(0, advanceAmount - advanceDiscount - amount) : remainingDebt,
       };
     } catch (error) {
       if (receipt?.key) {

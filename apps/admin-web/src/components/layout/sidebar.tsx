@@ -21,6 +21,13 @@ import { Avatar, initials } from "@/components/ui/avatar";
 import { isSection, type NavEntry, type NavLeaf, type NavSection } from "./nav-types";
 import { DirectorRail } from "./director-rail";
 import { DirectorBottomBar } from "./director-bottom-bar";
+import { BadgePercent } from "lucide-react";
+import type { IconProps } from "@/components/ui/icons";
+
+/** Chegirmalar belgisi — umumiy ikonkalar to'plamida foiz belgisi yo'q, lucide'dan */
+function PercentIcon({ className }: IconProps) {
+  return <BadgePercent className={className} strokeWidth={1.8} aria-hidden="true" />;
+}
 import {
   AuditIcon,
   CloseIcon,
@@ -332,6 +339,7 @@ export function Sidebar({ slug }: { slug: string }) {
     { href: `/${slug}`, label: "Bosh sahifa", icon: HomeIcon, show: true, exact: true },
     { href: `/${slug}/payments`, label: tr("To'lovlar"), icon: WalletIcon, show: true },
     { href: `/${slug}/expenses`, label: tr("Xarajatlar"), icon: CoinIcon, show: true },
+    { href: `/${slug}/discounts`, label: tr("Chegirmalar"), icon: PercentIcon, show: true },
     { href: `/${slug}/finance`, label: tr("Hisob-fakturalar"), icon: NoteIcon, show: true },
     { href: `/${slug}/group-payments`, label: tr("Guruhlar bo'yicha to'lov"), icon: GroupIcon, show: true },
     { href: `/${slug}/cash-report`, label: "Oylik hisobot", icon: ChartIcon, show: true },
@@ -488,6 +496,7 @@ export function Sidebar({ slug }: { slug: string }) {
       icon: MoneyIcon,
       items: [
         { href: `${base}/finance`, label: t("nav.finance"), icon: MoneyIcon, show: !isManager && !isBranchAdmin },
+        { href: `${base}/discounts`, label: tr("Chegirmalar"), icon: PercentIcon, show: true },
         // Qarzdorlarga qo'ng'iroq qilib eslatish administratorning ishi.
         // Filial ichidagi Super Admin uchun bu sahifaning filial nusxasi yo'q (404 edi).
         { href: `${base}/debtors`, label: "Qarzdorlar", icon: PhoneIcon, show: !isBranchAdmin && !inBranchContext },
@@ -524,6 +533,7 @@ export function Sidebar({ slug }: { slug: string }) {
     // Xarajatlar sahifasida; kunning kassa holati bosh sahifadagi kartada.
     { href: `/${slug}/payments`, label: tr("To'lovlar"), icon: WalletIcon, show: true },
     { href: `/${slug}/expenses`, label: tr("Xarajatlar"), icon: CoinIcon, show: true },
+    { href: `/${slug}/discounts`, label: tr("Chegirmalar"), icon: PercentIcon, show: true },
     { href: `/${slug}/audit-logs`, label: "Audit", icon: AuditIcon, show: true },
   ];
 
@@ -1053,6 +1063,7 @@ export function Sidebar({ slug }: { slug: string }) {
             ? [
                 { href: `/${slug}/payments`, label: tr("To'lovlar"), icon: WalletIcon, show: true },
                 { href: `/${slug}/expenses`, label: tr("Xarajatlar"), icon: CoinIcon, show: true },
+                { href: `/${slug}/discounts`, label: tr("Chegirmalar"), icon: PercentIcon, show: true },
                 { href: `/${slug}/audit-logs`, label: "Audit", icon: AuditIcon, show: true },
                 financeFiliallarEntry,
               ]

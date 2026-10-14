@@ -27,7 +27,21 @@ import {
   type ReportTheme,
 } from "./report-kit";
 
+import { addGroupSheets, stateOf, type GroupChildRow, type GroupsWorkbookInput } from "./payments-groups-excel";
+
 export type { ReportFormat, ReportKind } from "./report-kit";
+
+/** To'lov usuli → guruh varag'idagi ustun (bog'chaning jadvalidagi kabi) */
+const METHOD_COLUMN: Record<string, string> = {
+  CASH: "Naqd",
+  CLICK: "Click",
+  CARD: "Terminal (karta)",
+  BANKOMAT: "Terminal (karta)",
+  BANK_TRANSFER: "O'tkazma",
+};
+const BASE_COLUMNS = ["Naqd", "Click", "Terminal (karta)", "O'tkazma"];
+const columnOf = (method: string) => METHOD_COLUMN[method] ?? "Boshqa";
+const ddmmyyyy = (d: Date) => dayOf(d).split("-").reverse().join(".");
 
 const THEME: ReportTheme = { accent: "#1f7a4d", light: "#eaf6ef" };
 
@@ -60,6 +74,7 @@ interface ReportData extends ReportHead {
   byGroup: { group: string; count: number; children: number; total: number }[];
   byDay: { day: string; count: number; total: number; methods: Record<string, number> }[];
   dayMethods: string[];
+  groups: GroupsWorkbookInput;
 }
 
 /**
@@ -170,10 +185,97 @@ export class PaymentsReportService {
       byGroup,
       byDay,
       dayMethods: METHOD_ORDER.filter((m) => byMethod.some((x) => x.method === m)),
+      groups: format === "xlsx" ? await this.groupsData(branchId, kind, from, to, range, branch.organization.name, periodLabel) : (undefined as never),
     };
 
     const buffer = format === "xlsx" ? await this.excel(data) : await this.pdf(data);
     return reportFile(buffer, "tolovlar-hisoboti", stampOf(kind, from, to), format);
+  }
+
+  /**
+   * Guruh varaqlari uchun: har bola — shu davr uchun to'lanishi kerak
+   * (hisob-faktura, chegirma ayirilgan), usullar bo'yicha to'langani,
+   * to'lov sanalari. Oylik/to'liq hisobotda to'lov shu oy(lar)ning
+   * hisob-fakturasiga taqsimlangan summa; kun/hafta hisobotida — shu
+   * kunlarda qabul qilingan to'lovlar, qarz va holat esa oy bo'yicha.
+   */
+  private async groupsData(
+    branchId: string,
+    kind: ReportKind,
+    from: string | undefined,
+    to: string | undefined,
+    range: { gte: Date; lt: Date } | undefined,
+    organization: string,
+    periodLabel: string,
+  ): Promise<GroupsWorkbookInput> {
+    const byRange = kind === "day" || kind === "week";
+    const periods = kind === "all" ? undefined : [...new Set([from!.slice(0, 7), to!.slice(0, 7)])];
+    const invoiceWhere = { status: { not: "CANCELLED" as const }, ...(periods ? { period: { in: periods } } : {}) };
+    const children = await this.prisma.child.findMany({
+      where: {
+        branchId,
+        OR: [
+          { status: "ACTIVE" },
+          { invoices: { some: invoiceWhere } },
+          ...(range ? [{ payments: { some: { status: "COMPLETED" as const, createdAt: range } } }] : []),
+        ],
+      },
+      orderBy: { fullName: "asc" },
+      select: {
+        fullName: true,
+        group: { select: { name: true } },
+        invoices: {
+          where: invoiceWhere,
+          select: {
+            amount: true,
+            discountAmount: true,
+            allocations: { select: { amount: true, payment: { select: { status: true, method: true, createdAt: true } } } },
+          },
+        },
+        payments: {
+          where: { status: "COMPLETED", ...(range ? { createdAt: range } : {}) },
+          select: { amount: true, method: true, createdAt: true },
+        },
+      },
+    });
+
+    let other = false;
+    const groups = new Map<string, GroupChildRow[]>();
+    for (const c of children) {
+      const fee = c.invoices.length ? c.invoices.reduce((s, i) => s + Number(i.amount) - Number(i.discountAmount), 0) : null;
+      const allocations = c.invoices.flatMap((i) => i.allocations).filter((a) => a.payment.status === "COMPLETED");
+      const paidToward = allocations.reduce((s, a) => s + Number(a.amount), 0);
+      const paid: Record<string, number> = {};
+      const dates = new Set<string>();
+      const add = (method: string, amount: number, at: Date) => {
+        const column = columnOf(method);
+        if (column === "Boshqa") other = true;
+        paid[column] = (paid[column] ?? 0) + amount;
+        dates.add(dayOf(at));
+      };
+      if (byRange) for (const p of c.payments) add(p.method, Number(p.amount), p.createdAt);
+      else for (const a of allocations) add(a.payment.method, Number(a.amount), a.payment.createdAt);
+      const row: GroupChildRow = {
+        name: c.fullName,
+        fee,
+        paid,
+        dates: [...dates].sort().map((d) => d.split("-").reverse().join(".")),
+        ...(byRange ? { debt: fee === null ? null : Math.max(fee - paidToward, 0), state: stateOf(fee, paidToward) } : {}),
+      };
+      const g = c.group?.name ?? "Guruhsiz";
+      groups.set(g, [...(groups.get(g) ?? []), row]);
+    }
+
+    return {
+      periodLabel: kind === "month" ? periodName(from!.slice(0, 7)) : periodLabel,
+      byFormula: !byRange,
+      note: byRange ? "Ustunlarda — shu kunlarda qabul qilingan to'lovlar; oylik to'lov, qarz va holat — oy bo'yicha (hozirgi holat)." : undefined,
+      methodColumns: other ? [...BASE_COLUMNS, "Boshqa"] : BASE_COLUMNS,
+      groups: [...groups.entries()]
+        .sort(([a], [b]) => (a === "Guruhsiz" ? 1 : b === "Guruhsiz" ? -1 : a.localeCompare(b)))
+        .map(([name, rows]) => ({ name, children: rows })),
+      source: `Manba: ${organization} tizimi (To'lovlar bo'limi), ${ddmmyyyy(new Date())} holatiga.`,
+    };
   }
 
   // ------------------------------------------------------------------ Excel
@@ -182,65 +284,10 @@ export class PaymentsReportService {
     const wb = new ExcelJS.Workbook();
     wb.creator = d.generatedBy;
     wb.created = new Date();
-    const { head, totalRow, titleBlock, section, info, zebra } = excelKit(d, THEME);
+    const { head, totalRow, titleBlock, zebra } = excelKit(d, THEME);
 
-    // 1. Umumiy
-    const ws = wb.addWorksheet("Umumiy", { views: [{ showGridLines: false }] });
-    ws.columns = [{ width: 30 }, { width: 16 }, { width: 14 }, { width: 22 }, { width: 12 }];
-    titleBlock(ws, "To'lovlar hisoboti", 5);
-    info(
-      ws,
-      [
-        ["Davr", d.periodLabel],
-        ["Hisobot tuzildi", `${d.generatedAt} (${d.generatedBy})`],
-        ["Jami qabul qilindi", d.total],
-        ["To'lovlar soni", d.completed.length],
-        ["To'lagan bolalar", d.childrenCount],
-        ["O'rtacha to'lov", d.completed.length ? Math.round(d.total / d.completed.length) : 0],
-        ["Bekor qilingan to'lovlar", d.cancelled.length ? `${d.cancelled.length} ta · ${sum(d.cancelledTotal)} so'm` : "yo'q"],
-      ],
-      ["Jami qabul qilindi", "O'rtacha to'lov"],
-      "Jami qabul qilindi",
-      5,
-    );
-    ws.addRow([]);
-    section(ws, "TO'LOV USULLARI");
-    head(ws.addRow(["Usul", "Soni", "Ulushi", "Summa"]));
-    for (const m of d.byMethod) {
-      const r = ws.addRow([METHOD_UZ[m.method], m.count, d.total ? m.total / d.total : 0, m.total]);
-      r.getCell(3).numFmt = "0.0%";
-      r.getCell(4).numFmt = MONEY;
-    }
-    const mt = ws.addRow(["Jami", d.completed.length, d.total ? 1 : 0, d.total]);
-    mt.getCell(3).numFmt = "0.0%";
-    mt.getCell(4).numFmt = MONEY;
-    totalRow(mt);
-    ws.addRow([]);
-    section(ws, "GURUHLAR BO'YICHA");
-    head(ws.addRow(["Guruh", "To'lovlar soni", "Bolalar soni", "Summa", "Ulushi"]));
-    for (const g of d.byGroup) {
-      const r = ws.addRow([g.group, g.count, g.children, g.total, d.total ? g.total / d.total : 0]);
-      r.getCell(4).numFmt = MONEY;
-      r.getCell(5).numFmt = "0.0%";
-    }
-    const gt = ws.addRow(["Jami", d.completed.length, d.childrenCount, d.total, d.total ? 1 : 0]);
-    gt.getCell(4).numFmt = MONEY;
-    gt.getCell(5).numFmt = "0.0%";
-    totalRow(gt);
-
-    // 2. Kunlar
-    const wd = wb.addWorksheet("Kunlar bo'yicha", { views: [{ state: "frozen", ySplit: 4, showGridLines: false }] });
-    const dcols = ["Sana", "Hafta kuni", "Soni", ...d.dayMethods.map((m) => METHOD_UZ[m]), "Jami"];
-    wd.columns = dcols.map((_, i) => ({ width: i === 0 ? 16 : i === 1 ? 13 : i === 2 ? 8 : 16 }));
-    titleBlock(wd, "Kunlar bo'yicha", dcols.length);
-    head(wd.addRow(dcols));
-    for (const day of d.byDay) {
-      const r = wd.addRow([dayLabel(day.day), weekday(day.day), day.count, ...d.dayMethods.map((m) => day.methods[m] ?? 0), day.total]);
-      for (let i = 4; i <= dcols.length; i++) r.getCell(i).numFmt = MONEY;
-    }
-    const dt = wd.addRow(["Jami", "", d.completed.length, ...d.dayMethods.map((m) => d.byMethod.find((x) => x.method === m)?.total ?? 0), d.total]);
-    for (let i = 4; i <= dcols.length; i++) dt.getCell(i).numFmt = MONEY;
-    totalRow(dt);
+    // 1. Umumiy + har guruh alohida varaqda (bog'chaning jadvalidagi ko'rinish)
+    addGroupSheets(wb, d.groups, ["To'lovlar", "Bekor qilingan"]);
 
     // 3. To'lovlar (batafsil)
     const wp = wb.addWorksheet("To'lovlar", { views: [{ state: "frozen", ySplit: 4 }] });
