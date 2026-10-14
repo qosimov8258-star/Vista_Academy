@@ -27,6 +27,7 @@ import {
   LogoutIcon,
   RefreshIcon,
   SearchIcon,
+  ShieldIcon,
   UserIcon,
   WalletIcon,
 } from "@/components/ui/icons";
@@ -74,6 +75,7 @@ const NAV_SECTIONS: NavSection[] = [
       },
       { href: "/billing", label: "Moliya", icon: WalletIcon },
       { href: "/plans", label: "Tarif rejalar", icon: CardIcon },
+      { href: "/funksiyalar", label: "Funksiyalar", icon: ShieldIcon },
     ],
   },
   {

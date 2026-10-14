@@ -10,6 +10,7 @@ import type { Plan } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { PlanFeaturesField } from "@/features/feature-flags/plan-features-field";
 
 const schema = z.object({
   name: z.string().min(2, "Nomi kamida 2 belgi"),
@@ -36,6 +37,7 @@ export function PlanFormModal({
 }) {
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [features, setFeatures] = useState<Record<string, boolean>>({});
   const isEdit = Boolean(plan);
 
   const {
@@ -60,13 +62,16 @@ export function PlanFormModal({
             }
           : { name: "", code: "", priceMonthly: 0, maxBranches: 1, maxChildren: 50, maxEmployees: 10, maxStorageGb: 5 },
       );
+      setFeatures(plan?.features ?? {});
       setServerError(null);
     }
   }, [open, plan, reset]);
 
   const mutation = useMutation({
     mutationFn: (values: FormValues) =>
-      isEdit ? api.patch<Plan>(`/platform/plans/${plan!.id}`, values) : api.post<Plan>("/platform/plans", values),
+      isEdit
+        ? api.patch<Plan>(`/platform/plans/${plan!.id}`, { ...values, features })
+        : api.post<Plan>("/platform/plans", { ...values, features }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["plans"] });
       onClose();
@@ -108,6 +113,7 @@ export function PlanFormModal({
           <Input label="Max xodim" type="number" error={errors.maxEmployees?.message} {...register("maxEmployees")} />
           <Input label="Storage (GB)" type="number" error={errors.maxStorageGb?.message} {...register("maxStorageGb")} />
         </div>
+        <PlanFeaturesField value={features} onChange={setFeatures} />
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
             Bekor qilish
