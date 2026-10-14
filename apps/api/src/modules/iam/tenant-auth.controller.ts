@@ -119,11 +119,17 @@ function requestMeta(req: Request) {
 
 function setAuthCookies(res: Response, tokens: IssuedTenantTokens) {
   const secure = process.env.COOKIE_SECURE === "true";
+  // Cookie refresh token bilan bir xil yashaydi, JWT'ning o'zi esa 15 daqiqa.
+  // Panelning proxy'si (admin-web/src/proxy.ts) sahifani ochishdan oldin shu
+  // cookie bor-yo'qligiga qaraydi: cookie 15 daqiqada o'chganda, refresh
+  // token hali 30 kun amal qilsa ham, keyingi sahifaga o'tishda login'ga
+  // otib yuborardi. Muddati o'tgan JWT bilan API baribir 401 qaytaradi va
+  // panel tokenni o'zi yangilaydi — himoya o'zgarmaydi.
   res.cookie(ACCESS_COOKIE, tokens.accessToken, {
     httpOnly: true,
     secure,
     sameSite: "lax",
-    maxAge: tokens.accessTokenTtlMs,
+    maxAge: tokens.refreshTokenTtlMs,
     path: "/",
   });
   res.cookie(REFRESH_COOKIE, tokens.refreshToken, {
