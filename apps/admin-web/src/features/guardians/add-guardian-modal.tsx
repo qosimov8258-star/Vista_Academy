@@ -144,7 +144,7 @@ export function AddGuardianModal({
       relation: "OTHER",
       isPrimary: false,
       canPickup: true,
-      canViewFinance: false,
+      canViewFinance: true,
       canReceiveNotifications: true,
     },
   });
