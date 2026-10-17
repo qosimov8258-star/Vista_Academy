@@ -193,7 +193,7 @@ export function TeacherHome({ slug }: { slug: string }) {
                   </span>
                 }
                 title={lesson.subject || "Dars"}
-                subtitle={`${lesson.group.name} guruhi`}
+                subtitle={`${lesson.group.name} guruhi${lesson.room ? ` · ${lesson.room.name}` : ""}`}
                 trailing={
                   isToday ? (
                     <span className="shrink-0 rounded-full bg-[var(--color-primary)] px-2.5 py-1 text-[12px] font-semibold text-white">{tr("Bugun")}</span>
