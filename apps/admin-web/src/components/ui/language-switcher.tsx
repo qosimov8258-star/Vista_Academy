@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import clsx from "clsx";
 import { locales, localeCookieName, type Locale } from "@/i18n/config";
@@ -21,7 +20,6 @@ export function LanguageSwitcher({
   const tr = useTr();
   const locale = useLocale() as Locale;
   const t = useTranslations("common");
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const ref = useRef<HTMLDivElement>(null);
@@ -39,7 +37,10 @@ export function LanguageSwitcher({
     setOpen(false);
     if (next === locale) return;
     document.cookie = `${localeCookieName}=${next}; path=/; max-age=31536000`;
-    startTransition(() => router.refresh());
+    // router.refresh() yetarli emas: DomTranslator ba'zi matn tugunlarini React'dan
+    // tashqarida almashtirgan, React esa ularni "o'zgarmagan" deb o'tkazib yuboradi —
+    // shuning uchun eski til qolib ketardi. To'liq qayta yuklash toza holat beradi.
+    startTransition(() => window.location.reload());
   };
 
   return (

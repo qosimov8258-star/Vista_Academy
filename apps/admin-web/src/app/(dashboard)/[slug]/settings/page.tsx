@@ -296,7 +296,7 @@ export default function SettingsPage({ params }: { params: Promise<{ slug: strin
                 disabled={avatarBusy}
                 className="h-9 cursor-pointer rounded-full bg-[var(--color-primary)]/10 px-4 text-[14px] font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)]/15 disabled:opacity-60"
               >
-                {user.avatarUpdatedAt ? "Rasmni almashtirish" : tr("Rasm qo'yish")}
+                {tr(user.avatarUpdatedAt ? "Rasmni almashtirish" : "Rasm qo'yish")}
               </button>
               {user.avatarUpdatedAt && (
                 <button
