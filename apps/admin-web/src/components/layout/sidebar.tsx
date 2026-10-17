@@ -490,6 +490,10 @@ export function Sidebar({ slug }: { slug: string }) {
         { href: `${base}/useful/tales`, label: t("nav.tales"), icon: BookIcon, show: showUseful },
       ],
     },
+    // Filial adminida «Moliya va aloqa» ichida faqat bildirishnomalar qoladi
+    // (hisob-faktura, chegirma, qarzdorlar, eslatmalar — boshqa rollarda) —
+    // bitta bandli guruh o'rniga to'g'ridan-to'g'ri bo'lim.
+    { href: `${base}/notifications`, label: t("nav.notifications"), icon: BellIcon, show: isBranchAdmin },
     {
       id: "moliya",
       label: t("nav.financeAndContact"),
@@ -502,7 +506,7 @@ export function Sidebar({ slug }: { slug: string }) {
         // Qarzdorlarga qo'ng'iroq qilib eslatish administratorning ishi.
         // Filial ichidagi Super Admin uchun bu sahifaning filial nusxasi yo'q (404 edi).
         { href: `${base}/debtors`, label: "Qarzdorlar", icon: PhoneIcon, show: !isBranchAdmin && !inBranchContext },
-        { href: `${base}/notifications`, label: t("nav.notifications"), icon: BellIcon, show: true },
+        { href: `${base}/notifications`, label: t("nav.notifications"), icon: BellIcon, show: !isBranchAdmin },
         // Avtomatik to'lov eslatmasi sozlamalari — ota-ona kabinetidagi kartani boshqaradi
         { href: `${base}/reminders`, label: t("nav.reminders"), icon: ClockIcon, show: !isBranchAdmin },
         // Branch/user management stay a network-wide (root-level) concern, never
