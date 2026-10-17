@@ -1,24 +1,31 @@
 "use client";
 
 import { use, useEffect, useRef, useState } from "react";
+import clsx from "clsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Lock, UserCheck } from "lucide-react";
 import { api } from "@/lib/api";
 import type { Organization, StaffAttendanceDay, StaffAttendanceStatus, StaffAttendanceSummary } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
-import { Card, CardHeader, CardBody, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Select } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { DataTable, THead, TBody, Tr, Th, Td } from "@/components/ui/table";
-import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { canWriteOperational } from "@/lib/permissions";
 import { formatPositionLabel } from "@/lib/employee-position";
-import { LockIcon } from "@/components/ui/icons";
-import { EmployeeHistoryModal } from "@/features/staff-attendance/employee-history-modal";
+import { DayStepper, PeriodStepper } from "@/components/ios/day-stepper";
+import { IosSwitch, Segmented } from "@/components/ios/form";
+import { Group as IosGroup, ListRow } from "@/components/ios/group";
+import { PageHeaderCard } from "@/components/ios/page-card";
+import { IosAvatar, Pill } from "@/components/ios/pill";
+import { SheetPrimaryButton } from "@/components/ios/sheet";
+import { StatCell, StatStrip } from "@/components/ios/stat-strip";
+import { EmptyState, ErrorState, SkeletonRows } from "@/components/ios/states";
+import { GROUP_BLOCK, IOS, ROW_SEPARATOR } from "@/components/ios/tokens";
+import { OptionPicker } from "@/features/lessons/option-picker";
+import { periodLabel, shiftPeriod } from "@/features/payments/shared";
+import { EmployeeHistoryModal, STAFF_STATUS_COLOR, STAFF_STATUS_LABEL } from "@/features/staff-attendance/employee-history-modal";
 import { useTr } from "@/i18n/tr";
+
+type Tab = "davomat" | "royxat";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 // Ko'pchilik xodim har kuni shu vaqt oralig'ida ishlaydi — har birini qo'lda
@@ -46,7 +53,7 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
   // in an effect (client-only) avoids a hydration mismatch on the date input.
   const [date, setDate] = useState("");
   const [period, setPeriod] = useState("");
-  const [tab, setTab] = useState<"davomat" | "royxat">("davomat");
+  const [tab, setTab] = useState<Tab>("davomat");
   const { user } = useAuth();
   const canWrite = canWriteOperational(user?.role);
 
@@ -166,255 +173,219 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
   const locked = attendanceQuery.data?.locked ?? false;
   const editable = canWrite && !locked;
 
+  const today = todayDateString();
+  const employees = attendanceQuery.data?.employees ?? [];
+  const presentCount = employees.filter((e) => (editable ? statusFor(e.employeeId) : e.status) === "PRESENT").length;
+  const absentCount = employees.length - presentCount;
+  const setTime = (employeeId: string, employee: { checkInTime: string | null; checkOutTime: string | null }, key: "checkInTime" | "checkOutTime", value: string) =>
+    setTimes((t) => ({ ...t, [employeeId]: { ...timeFor(employeeId, employee), [key]: value } }));
+  const rateColor = (rate: number) => (rate >= 80 ? IOS.green : rate >= 50 ? IOS.orange : IOS.red);
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">{tr("Xodimlar davomati")}</h1>
-        <p className="text-[14px] text-[var(--color-text-muted)]">{tr("Tarbiyachi va boshqa xodimlarning kunlik davomati")}</p>
-      </div>
+    // Telefonda chetlar 16px (asosiy konteyner 24px beradi)
+    <div className="-mx-2 md:mx-0">
+      <div className="mx-auto w-full max-w-4xl space-y-5 pb-2">
+        <PageHeaderCard
+          icon={UserCheck}
+          tint="teal"
+          title={tr("Xodimlar davomati")}
+          subtitle={tr("Tarbiyachi va boshqa xodimlarning kunlik davomati")}
+        />
 
-      {/* Ikki bo'lim: kunlik belgilash va xodimlar ro'yxati + oylik jamlanma. */}
-      <div role="tablist" className="flex w-fit gap-1 rounded-full bg-[var(--color-surface-sunken)] p-1">
-        {(
-          [
-            ["davomat", "Davomat"],
-            ["royxat", tr("Xodimlar ro'yxati")],
-          ] as const
-        ).map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            role="tab"
-            aria-selected={tab === key}
-            onClick={() => setTab(key)}
-            className={`cursor-pointer rounded-full px-4 py-2 text-[14px] font-medium transition-colors ${
-              tab === key
-                ? "bg-[var(--color-surface)] text-[var(--color-text)] shadow-[var(--shadow-xs)]"
-                : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-            }`}
-          >
-            {tr(label)}
-          </button>
-        ))}
-      </div>
+        {/* Ikki bo'lim: kunlik belgilash va xodimlar ro'yxati + oylik jamlanma. */}
+        <div className="max-w-sm">
+          <Segmented<Tab>
+            value={tab}
+            onChange={setTab}
+            label={tr("Bo'lim")}
+            options={[
+              { value: "davomat", label: tr("Davomat") },
+              { value: "royxat", label: tr("Xodimlar ro'yxati") },
+            ]}
+          />
+        </div>
 
-      {tab === "davomat" && (
-        <>
-          <Card className="flex flex-col gap-3 p-4 sm:flex-row">
-            {!forcedBranchId && branches.length > 1 && (
-              <Select label={tr("Filial")} value={branchId} onChange={(e) => setBranchId(e.target.value)} className="sm:max-w-xs">
-                {branches.map((branch) => (
-                  <option key={branch.id} value={branch.id}>
-                    {tr(branch.name)}
-                  </option>
-                ))}
-              </Select>
+        {!forcedBranchId && branches.length > 1 && (
+          <OptionPicker
+            variant="pill"
+            title={tr("Filial")}
+            value={branchId}
+            onChange={setBranchId}
+            placeholder={tr("Filial")}
+            options={branches.map((branch) => ({ id: branch.id, label: tr(branch.name) }))}
+          />
+        )}
+
+        {tab === "davomat" && (
+          <>
+            {date && <DayStepper value={date} onChange={setDate} today={today} />}
+
+            {!canWrite && <ViewOnlyNote role={user?.role} />}
+
+            {canWrite && locked && (
+              <div className="flex items-start gap-3 rounded-[18px] bg-[#ff9500]/[0.12] px-4 py-3 text-[13.5px] leading-snug text-[#c93400]">
+                <Lock className="mt-0.5 h-[17px] w-[17px] shrink-0" strokeWidth={2.2} />
+                <span>
+                  {tr("Bu kun uchun davomat saqlangan va qulflangan")}
+                  {attendanceQuery.data?.lockedByName ? ` — ${attendanceQuery.data.lockedByName}` : ""}
+                  {tr(". Endi o'zgartirib bo'lmaydi.")}
+                </span>
+              </div>
             )}
-            <div className="block">
-              <span className="mb-2 block text-[13px] font-medium text-[var(--color-text)]">{tr("Sana")}</span>
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="h-11 w-full rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-3.5 text-[15px] text-[var(--color-text)] outline-none transition-[border-color,box-shadow] duration-[var(--dur-fast)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/[0.12] sm:w-auto"
-              />
-            </div>
-          </Card>
 
-          {!canWrite && <ViewOnlyNote role={user?.role} />}
-
-          {canWrite && locked && (
-            <div className="flex items-center gap-2.5 rounded-[var(--radius-lg)] border border-[var(--color-warning)]/30 bg-[var(--color-warning-bg)] px-4 py-3 text-[13.5px] text-[var(--color-warning)]">
-              <LockIcon className="h-4 w-4 shrink-0" />
-              <span>
-                {tr("Bu kun uchun davomat saqlangan va qulflangan")}
-                {attendanceQuery.data?.lockedByName ? ` — ${attendanceQuery.data.lockedByName}` : ""}{tr(". Endi o'zgartirib bo'lmaydi.")}
-              </span>
-            </div>
-          )}
-
-          {!date ? (
-            <LoadingState />
-          ) : !branchId ? (
-            <EmptyState title={tr("Filial mavjud emas")} />
-          ) : attendanceQuery.isLoading ? (
-            <LoadingState />
-          ) : attendanceQuery.isError ? (
-            <ErrorState message={tr((attendanceQuery.error as Error).message)} />
-          ) : !attendanceQuery.data || attendanceQuery.data.employees.length === 0 ? (
-            <EmptyState title={tr("Bu filialda faol xodim yo'q")} />
-          ) : (
-            <Card className="overflow-hidden">
-              <ul className="divide-y divide-[var(--color-separator)]">
-                {attendanceQuery.data.employees.map((employee) => (
-                  <li key={employee.employeeId} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
-                    <div>
-                      <p className="text-sm font-medium text-[var(--color-text)]">{tr(employee.fullName)}</p>
-                      <p className="text-xs text-[var(--color-text-muted)]">{tr(employee.position)}</p>
-                    </div>
-                    {editable ? (
-                      <div className="flex flex-wrap items-center justify-end gap-3">
-                        {statusFor(employee.employeeId) === "PRESENT" && (
-                          <>
-                            <input
-                              type="time"
-                              aria-label={tr("Kelgan vaqti")}
-                              value={timeFor(employee.employeeId, employee).checkInTime}
-                              onChange={(e) =>
-                                setTimes((t) => ({
-                                  ...t,
-                                  [employee.employeeId]: { ...timeFor(employee.employeeId, employee), checkInTime: e.target.value },
-                                }))
-                              }
-                              className="h-9 w-[124px] sm:h-8 sm:w-[124px] rounded-[var(--radius-sm)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-2 text-[12.5px] text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
-                            />
-                            <input
-                              type="time"
-                              aria-label={tr("Ketgan vaqti")}
-                              value={timeFor(employee.employeeId, employee).checkOutTime}
-                              onChange={(e) =>
-                                setTimes((t) => ({
-                                  ...t,
-                                  [employee.employeeId]: { ...timeFor(employee.employeeId, employee), checkOutTime: e.target.value },
-                                }))
-                              }
-                              className="h-9 w-[124px] sm:h-8 sm:w-[124px] rounded-[var(--radius-sm)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-2 text-[12.5px] text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
-                            />
-                          </>
-                        )}
-                        <div className="flex items-center gap-2.5">
-                          <span
-                            className={
-                              statusFor(employee.employeeId) === "PRESENT"
-                                ? "text-[13px] font-medium text-[var(--color-success)]"
-                                : "text-[13px] font-medium text-[var(--color-text-muted)]"
-                            }
-                          >
-                            {statusFor(employee.employeeId) === "PRESENT" ? "Keldi" : "Kelmadi"}
+            {!date || (!branchId && orgQuery.isLoading) ? (
+              <SkeletonRows rows={6} />
+            ) : !branchId ? (
+              <EmptyState icon={UserCheck} title="Filial mavjud emas" />
+            ) : attendanceQuery.isLoading ? (
+              <SkeletonRows rows={6} />
+            ) : attendanceQuery.isError ? (
+              <ErrorState message={(attendanceQuery.error as Error).message} onRetry={() => attendanceQuery.refetch()} retrying={attendanceQuery.isFetching} />
+            ) : employees.length === 0 ? (
+              <EmptyState icon={UserCheck} title="Bu filialda faol xodim yo'q" />
+            ) : (
+              <IosGroup
+                title={
+                  <>
+                    {tr("Xodimlar")}
+                    <span className="font-normal normal-case tracking-normal">
+                      · {tr("keldi {0}", presentCount)} · {tr("kelmadi {0}", absentCount)}
+                    </span>
+                  </>
+                }
+                refreshing={attendanceQuery.isFetching && !attendanceQuery.isLoading}
+                footer={editable ? tr("Hamma «Keldi» bo'lib turadi — faqat kelmaganlarni o'chiring. Saqlangach kun qulflanadi va o'zgartirib bo'lmaydi.") : undefined}
+                bare
+              >
+                <div className={GROUP_BLOCK}>
+                  {employees.map((employee) => {
+                    const status = editable ? statusFor(employee.employeeId) : employee.status;
+                    const present = status === "PRESENT";
+                    const t = timeFor(employee.employeeId, employee);
+                    return (
+                      <div key={employee.employeeId} className="group/row relative px-4 py-2.5">
+                        <div className="flex min-h-[44px] items-center gap-3">
+                          <IosAvatar name={employee.fullName} size={40} />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-[15.5px] font-medium text-[var(--color-text)]">{tr(employee.fullName)}</span>
+                            <span className="block truncate text-[13px] text-[#8e8e93]">{tr(employee.position)}</span>
                           </span>
-                          <Switch
-                            checked={statusFor(employee.employeeId) === "PRESENT"}
-                            onChange={() =>
-                              setLocalStatuses((s) => ({
-                                ...s,
-                                [employee.employeeId]: statusFor(employee.employeeId) === "PRESENT" ? "ABSENT" : "PRESENT",
-                              }))
-                            }
-                            aria-label={`${employee.fullName} — davomat`}
-                          />
+                          {editable ? (
+                            <span className="flex shrink-0 items-center gap-2.5">
+                              <span className={clsx("text-[13px] font-medium", present ? "text-[#34c759]" : "text-[#8e8e93]")}>{tr(present ? "Keldi" : "Kelmadi")}</span>
+                              <IosSwitch
+                                checked={present}
+                                onChange={() => setLocalStatuses((s) => ({ ...s, [employee.employeeId]: present ? "ABSENT" : "PRESENT" }))}
+                                label={`${employee.fullName} — ${tr("davomat")}`}
+                              />
+                            </span>
+                          ) : (
+                            <span className="flex shrink-0 items-center gap-2">
+                              {(employee.checkInTime || employee.checkOutTime) && (
+                                <span className="text-[13px] tabular-nums text-[#8e8e93] max-sm:hidden">
+                                  {employee.checkInTime ?? "—"}–{employee.checkOutTime ?? "—"}
+                                </span>
+                              )}
+                              <Pill color={employee.status ? STAFF_STATUS_COLOR[employee.status] : IOS.gray}>
+                                {tr(employee.status ? STAFF_STATUS_LABEL[employee.status] : "Belgilanmagan")}
+                              </Pill>
+                            </span>
+                          )}
                         </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        {(employee.checkInTime || employee.checkOutTime) && (
-                          <span className="text-xs tabular-nums text-[var(--color-text-muted)]">
-                            {employee.checkInTime ?? "—"}–{employee.checkOutTime ?? "—"}
-                          </span>
+                        {editable && present && (
+                          // Kelgan va ketgan vaqti — standart 07:30–18:00, faqat istisnolar o'zgartiriladi
+                          <div className="mt-1.5 flex flex-wrap items-center gap-2 pl-[52px]">
+                            <TimePill label={tr("Kelgan vaqti")} value={t.checkInTime} onChange={(v) => setTime(employee.employeeId, employee, "checkInTime", v)} />
+                            <span className="text-[#c7c7cc]">–</span>
+                            <TimePill label={tr("Ketgan vaqti")} value={t.checkOutTime} onChange={(v) => setTime(employee.employeeId, employee, "checkOutTime", v)} />
+                          </div>
                         )}
-                        <Badge tone={employee.status === "PRESENT" ? "success" : employee.status ? "danger" : "neutral"}>
-                          {employee.status === "PRESENT" ? "Keldi" : employee.status ? "Kelmadi" : "Belgilanmagan"}
-                        </Badge>
+                        <span className={ROW_SEPARATOR} style={{ left: 68 }} aria-hidden="true" />
                       </div>
-                    )}
-                  </li>
-                ))}
-              </ul>
-              {editable && (
-                <div className="hairline flex items-center justify-between gap-3 border-t border-[var(--color-separator)] px-5 py-3.5 sm:px-6">
-                  {saveMutation.isError && (
-                    <span className="text-[13px] text-[var(--color-danger)]">{tr("Saqlashda xatolik yuz berdi")}</span>
-                  )}
-                  <Button className="ml-auto" loading={saveMutation.isPending} onClick={() => saveMutation.mutate()}>
-                    {tr("Saqlash")}
-                  </Button>
+                    );
+                  })}
+                </div>
+              </IosGroup>
+            )}
+
+            {editable && employees.length > 0 && (
+              <div className="space-y-2">
+                {saveMutation.isError && <p className="px-1 text-[13px] text-[#ff3b30]">{tr("Saqlashda xatolik yuz berdi")}</p>}
+                <SheetPrimaryButton loading={saveMutation.isPending} onClick={() => saveMutation.mutate()}>
+                  {tr("Saqlash")}
+                </SheetPrimaryButton>
+              </div>
+            )}
+          </>
+        )}
+
+        {tab === "royxat" && (
+          <>
+            {period && (
+              <PeriodStepper
+                onPrev={() => setPeriod((p) => shiftPeriod(p, -1))}
+                onNext={() => setPeriod((p) => shiftPeriod(p, 1))}
+                prevLabel={tr("Oldingi oy")}
+                nextLabel={tr("Keyingi oy")}
+                reset={period !== currentPeriodString() ? { label: tr("Shu oy"), onClick: () => setPeriod(currentPeriodString()) } : undefined}
+              >
+                {periodLabel(period, tr)}
+              </PeriodStepper>
+            )}
+
+            {summaryQuery.data && summaryQuery.data.employees.length > 0 && (
+              <StatStrip tone="white">
+                <StatCell label={tr("Keldi")} value={summaryQuery.data.totals.present} color={IOS.green} />
+                <StatCell label={tr("Kelmadi")} value={summaryQuery.data.totals.absent} color={IOS.red} />
+                <StatCell label={tr("Kech qoldi")} value={summaryQuery.data.totals.late} color={IOS.orange} />
+                <StatCell label={tr("Kasal / ta'til")} value={summaryQuery.data.totals.sick + summaryQuery.data.totals.onLeave} />
+              </StatStrip>
+            )}
+
+            <IosGroup
+              title={tr("Xodimlar ro'yxati")}
+              refreshing={summaryQuery.isFetching && !summaryQuery.isLoading}
+              footer={summaryQuery.data?.employees.length ? tr("Xodimni bosib, oylik tarixini ko'ring") : undefined}
+              bare
+            >
+              {!period || summaryQuery.isLoading ? (
+                <SkeletonRows rows={5} />
+              ) : summaryQuery.isError ? (
+                <ErrorState message={(summaryQuery.error as Error).message} onRetry={() => summaryQuery.refetch()} retrying={summaryQuery.isFetching} />
+              ) : !summaryQuery.data || summaryQuery.data.employees.length === 0 ? (
+                <EmptyState icon={UserCheck} title="Bu oy uchun ma'lumot yo'q" />
+              ) : (
+                <div className={GROUP_BLOCK}>
+                  {summaryQuery.data.employees.map((employee) => {
+                    // Kech qoldi, kasal va ta'til — barchasi "Kelmadi" qatoriga qo'shib ko'rsatiladi
+                    const missed = employee.absent + employee.late + employee.sick + employee.onLeave;
+                    return (
+                      <ListRow
+                        key={employee.employeeId}
+                        onClick={() => {
+                          setHistoryEmployeeId(employee.employeeId);
+                          setHistoryPeriod(period);
+                        }}
+                        avatar={<IosAvatar name={employee.fullName} size={44} />}
+                        title={tr(employee.fullName)}
+                        subtitle={`${tr(formatPositionLabel(employee.position, employee.subjects))}${employee.groups.length > 0 ? ` · ${employee.groups.join(", ")}` : ""}`}
+                        meta={
+                          <span className="flex flex-col items-end gap-1">
+                            {employee.rate === null ? <Pill color={IOS.gray}>—</Pill> : <Pill color={rateColor(employee.rate)}>{employee.rate}%</Pill>}
+                            <span className="whitespace-nowrap text-[12px] tabular-nums text-[#8e8e93]">
+                              {tr("keldi {0}", employee.present)} · {tr("kelmadi {0}", missed)}
+                            </span>
+                          </span>
+                        }
+                      />
+                    );
+                  })}
                 </div>
               )}
-            </Card>
-          )}
-        </>
-      )}
-
-      {tab === "royxat" && (
-        <Card className="overflow-hidden">
-          <CardHeader className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle>{tr("Xodimlar ro'yxati —")}{" "}{tr(period)}</CardTitle>
-            <input
-              type="month"
-              value={period}
-              onChange={(e) => setPeriod(e.target.value)}
-              className="h-9 rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-3 text-[13px] text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
-            />
-          </CardHeader>
-          <CardBody className="p-0">
-            {!period || summaryQuery.isLoading ? (
-              <div className="px-5 py-5 sm:px-6">
-                <LoadingState rows={3} />
-              </div>
-            ) : summaryQuery.isError ? (
-              <div className="px-5 py-5 sm:px-6">
-                <ErrorState message={tr((summaryQuery.error as Error).message)} />
-              </div>
-            ) : !summaryQuery.data || summaryQuery.data.employees.length === 0 ? (
-              <EmptyState title={tr("Bu oy uchun ma'lumot yo'q")} />
-            ) : (
-              <DataTable compact>
-                <THead>
-                  <tr>
-                    <Th>{tr("Xodim")}</Th>
-                    <Th numeric>{tr("Keldi")}</Th>
-                    <Th numeric>{tr("Kelmadi")}</Th>
-                    {/* Mobilda torlik qilib "Foiz" tashqariga chiqib ketardi — u yerda
-                        foiz xodim ismi ostida (badge sifatida) ko'rsatiladi. */}
-                    <Th numeric className="hidden md:table-cell">{tr("Foiz")}</Th>
-                  </tr>
-                </THead>
-                <TBody>
-                  {summaryQuery.data.employees.map((employee) => (
-                    <Tr
-                      key={employee.employeeId}
-                      onClick={() => {
-                        setHistoryEmployeeId(employee.employeeId);
-                        setHistoryPeriod(period);
-                      }}
-                      className="cursor-pointer"
-                    >
-                      <Td className="font-medium">
-                        {tr(employee.fullName)}
-                        <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[12px] font-normal text-[var(--color-text-muted)]">
-                          {tr(formatPositionLabel(employee.position, employee.subjects))}
-                          {employee.groups.length > 0 ? ` · ${employee.groups.join(", ")}` : ""}
-                          {employee.rate !== null && (
-                            <Badge
-                              tone={employee.rate >= 80 ? "success" : employee.rate >= 50 ? "warning" : "danger"}
-                              className="md:hidden"
-                            >
-                              {tr(employee.rate)}%
-                            </Badge>
-                          )}
-                        </span>
-                      </Td>
-                      <Td numeric className="text-[var(--color-text-muted)]">{tr(employee.present)}</Td>
-                      {/* Kech qoldi, kasal va ta'til — barchasi "Kelmadi" qatoriga qo'shib ko'rsatiladi */}
-                      <Td numeric className="text-[var(--color-text-muted)]">
-                        {employee.absent + employee.late + employee.sick + employee.onLeave}
-                      </Td>
-                      <Td numeric className="hidden md:table-cell">
-                        {employee.rate === null ? (
-                          "—"
-                        ) : (
-                          <Badge tone={employee.rate >= 80 ? "success" : employee.rate >= 50 ? "warning" : "danger"}>
-                            {tr(employee.rate)}%
-                          </Badge>
-                        )}
-                      </Td>
-                    </Tr>
-                  ))}
-                </TBody>
-              </DataTable>
-            )}
-          </CardBody>
-        </Card>
-      )}
+            </IosGroup>
+          </>
+        )}
+      </div>
 
       <EmployeeHistoryModal
         open={!!historyEmployeeId}
@@ -426,5 +397,22 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
         onPeriodChange={setHistoryPeriod}
       />
     </div>
+  );
+}
+
+/** Kelgan/ketgan vaqti — kulrang kapsula ichidagi vaqt maydoni */
+function TimePill({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return (
+    <label className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[#767680]/[0.12] pl-3 pr-2 text-[12.5px] text-[#8e8e93]">
+      {/* Telefonda joy tor — ikkala vaqt bir qatorga sig'ishi uchun yozuv yashiriladi (aria-label qoladi) */}
+      <span className="max-sm:hidden">{label}</span>
+      <input
+        type="time"
+        aria-label={label}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="bg-transparent text-[14px] font-medium tabular-nums text-[var(--color-text)] outline-none"
+      />
+    </label>
   );
 }

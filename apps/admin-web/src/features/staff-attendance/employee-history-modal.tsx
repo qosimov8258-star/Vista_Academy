@@ -3,21 +3,23 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { StaffAttendanceHistory } from "@/lib/types";
-import { Modal } from "@/components/ui/modal";
-import { Badge } from "@/components/ui/badge";
-import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
+import { PeriodStepper, dayMonthLabel, WEEKDAYS } from "@/components/ios/day-stepper";
+import { IosAvatar, Pill } from "@/components/ios/pill";
+import { IosSheet, SheetSection } from "@/components/ios/sheet";
+import { EmptyState, ErrorState, SkeletonRows } from "@/components/ios/states";
+import { CalendarIcon } from "@/components/ios/icons";
+import { IOS, ROW_SEPARATOR } from "@/components/ios/tokens";
+import { periodLabel, shiftPeriod } from "@/features/payments/shared";
 import { formatPositionLabel } from "@/lib/employee-position";
-import { formatDate } from "@/lib/format";
-import { initials } from "@/components/ui/avatar";
 import { useTr } from "@/i18n/tr";
 
-const STATUS_LABEL = { PRESENT: "Keldi", ABSENT: "Kelmadi", LATE: "Kech qoldi", SICK: "Kasal", ON_LEAVE: "Ta'til" } as const;
-const STATUS_TONE = {
-  PRESENT: "success",
-  ABSENT: "danger",
-  LATE: "warning",
-  SICK: "warning",
-  ON_LEAVE: "neutral",
+export const STAFF_STATUS_LABEL = { PRESENT: "Keldi", ABSENT: "Kelmadi", LATE: "Kech qoldi", SICK: "Kasal", ON_LEAVE: "Ta'til" } as const;
+export const STAFF_STATUS_COLOR = {
+  PRESENT: IOS.green,
+  ABSENT: IOS.red,
+  LATE: IOS.orange,
+  SICK: IOS.orange,
+  ON_LEAVE: IOS.gray,
 } as const;
 
 /**
@@ -50,6 +52,7 @@ export function EmployeeHistoryModal({
         `/app/staff-attendance/history?employeeId=${employeeId}&branchId=${branchId}&period=${period}`,
       ),
     enabled: open && !!employeeId && !!branchId && !!period,
+    placeholderData: (prev) => prev,
   });
 
   const data = historyQuery.data;
@@ -66,64 +69,71 @@ export function EmployeeHistoryModal({
   const missed = (counts.ABSENT ?? 0) + (counts.LATE ?? 0) + (counts.SICK ?? 0) + (counts.ON_LEAVE ?? 0);
 
   return (
-    <Modal open={open} onClose={onClose} title={tr("Xodim tarixi")} widthClassName="max-w-lg">
+    <IosSheet open={open} onClose={onClose} title={tr("Xodim tarixi")} cancelLabel="Yopish">
       {!data && historyQuery.isLoading ? (
-        <LoadingState rows={4} />
+        <SkeletonRows rows={5} avatar={false} />
       ) : historyQuery.isError ? (
-        <ErrorState message={tr((historyQuery.error as Error).message)} />
+        <ErrorState message={(historyQuery.error as Error).message} onRetry={() => historyQuery.refetch()} retrying={historyQuery.isFetching} />
       ) : !data ? null : (
-        <div className="space-y-5">
-          <div className="flex items-center gap-3">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)]/10 text-[16px] font-semibold text-[var(--color-primary)] ring-1 ring-inset ring-[rgba(16,24,40,0.06)]">
-              {initials(data.employee.fullName)}
-            </span>
-            <div className="min-w-0">
-              <p className="truncate text-[16px] font-semibold text-[var(--color-text)]">{tr(data.employee.fullName)}</p>
-              <p className="text-[13px] text-[var(--color-text-muted)]">
-                {tr(formatPositionLabel(data.employee.position, data.employee.subjects))}
-                {data.employee.groups.length > 0 ? ` · ${data.employee.groups.join(", ")}` : ""}
-              </p>
-            </div>
+        <>
+          <div className="flex flex-col items-center gap-1.5 text-center">
+            <IosAvatar name={data.employee.fullName} size={64} />
+            <p className="mt-1 text-[17px] font-semibold text-[var(--color-text)]">{tr(data.employee.fullName)}</p>
+            <p className="text-[13px] text-[#8e8e93]">
+              {tr(formatPositionLabel(data.employee.position, data.employee.subjects))}
+              {data.employee.groups.length > 0 ? ` · ${data.employee.groups.join(", ")}` : ""}
+            </p>
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex gap-2">
-              <Badge tone="success">{tr("Keldi:")}{" "}{tr(present)}</Badge>
-              <Badge tone="danger">{tr("Kelmadi:")}{" "}{tr(missed)}</Badge>
+            <PeriodStepper
+              onPrev={() => onPeriodChange(shiftPeriod(period, -1))}
+              onNext={() => onPeriodChange(shiftPeriod(period, 1))}
+              prevLabel={tr("Oldingi oy")}
+              nextLabel={tr("Keyingi oy")}
+            >
+              {periodLabel(period, tr)}
+            </PeriodStepper>
+            <div className="flex gap-1.5">
+              <Pill color={IOS.green}>
+                {tr("Keldi:")} {present}
+              </Pill>
+              <Pill color={IOS.red}>
+                {tr("Kelmadi:")} {missed}
+              </Pill>
             </div>
-            <input
-              type="month"
-              value={period}
-              onChange={(e) => onPeriodChange(e.target.value)}
-              className="h-9 rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-3 text-[13px] text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
-            />
           </div>
 
           {data.days.length === 0 ? (
-            <EmptyState title={tr("Bu oy uchun davomat belgilanmagan")} />
+            <EmptyState icon={CalendarIcon} title="Bu oy uchun davomat belgilanmagan" />
           ) : (
-            <ul className="max-h-[45vh] space-y-1.5 overflow-y-auto scrollbar-thin">
-              {data.days.map((day) => (
-                <li
-                  key={day.date}
-                  className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--color-border-hair)] px-3.5 py-2.5"
-                >
-                  <div className="min-w-0">
-                    <p className="text-[13.5px] font-medium text-[var(--color-text)]">{formatDate(day.date)}</p>
-                    {(day.checkInTime || day.checkOutTime) && (
-                      <p className="text-[12px] text-[var(--color-text-muted)]">
-                        {day.checkInTime ?? "—"} – {day.checkOutTime ?? "—"}
-                      </p>
-                    )}
-                    {day.note && <p className="text-[12px] text-[var(--color-text-muted)]">{tr(day.note)}</p>}
+            <SheetSection>
+              {data.days.map((day) => {
+                const d = new Date(`${day.date}T00:00:00Z`);
+                return (
+                  <div key={day.date} className="group/row relative flex min-h-[52px] items-center gap-3 px-4 py-2.5">
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[15px] text-[var(--color-text)]">
+                        {dayMonthLabel(day.date, tr)}
+                        <span className="text-[#8e8e93]"> · {tr(WEEKDAYS[d.getUTCDay()])}</span>
+                      </span>
+                      {(day.checkInTime || day.checkOutTime || day.note) && (
+                        <span className="block truncate text-[13px] tabular-nums text-[#8e8e93]">
+                          {[day.checkInTime || day.checkOutTime ? `${day.checkInTime ?? "—"} – ${day.checkOutTime ?? "—"}` : null, day.note ? tr(day.note) : null]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
+                      )}
+                    </span>
+                    <Pill color={STAFF_STATUS_COLOR[day.status]}>{tr(STAFF_STATUS_LABEL[day.status])}</Pill>
+                    <span className={ROW_SEPARATOR} aria-hidden="true" />
                   </div>
-                  <Badge tone={STATUS_TONE[day.status]}>{tr(STATUS_LABEL[day.status])}</Badge>
-                </li>
-              ))}
-            </ul>
+                );
+              })}
+            </SheetSection>
           )}
-        </div>
+        </>
       )}
-    </Modal>
+    </IosSheet>
   );
 }
