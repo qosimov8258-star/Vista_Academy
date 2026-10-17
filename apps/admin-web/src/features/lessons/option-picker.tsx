@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import clsx from "clsx";
 import { ChevronsUpDown } from "@/components/ios/form";
+import { SearchPill } from "@/components/ios/filters";
 import { CheckIcon, ChevronRightIcon } from "@/components/ios/icons";
 import { IosSheet, SheetSection } from "@/components/ios/sheet";
 import { SkeletonRows } from "@/components/ios/states";
@@ -53,11 +54,17 @@ export function OptionPicker({
 }) {
   const tr = useTr();
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const selected = options.find((option) => option.id === value);
+  // Ro'yxat uzun bo'lsa (masalan bolalar) — qidiruv
+  const searchable = options.length > 12;
+  const needle = query.trim().toLowerCase();
+  const shown = needle ? options.filter((option) => `${option.label} ${option.hint ?? ""}`.toLowerCase().includes(needle)) : options;
   const label = selected ? selected.label : placeholder;
   const pick = (next: string) => {
     if (next !== value) onChange(next);
     setOpen(false);
+    setQuery("");
   };
 
   const row = (key: string, option: { label: string; hint?: string; leading?: ReactNode; disabled?: boolean }, active: boolean, onClick: () => void) => (
@@ -114,12 +121,15 @@ export function OptionPicker({
         {loading ? (
           <SkeletonRows rows={4} avatar={false} />
         ) : (
-          <SheetSection footer={options.length === 0 && emptyHint ? tr(emptyHint) : undefined}>
-            <div role="radiogroup" aria-label={title}>
-              {emptyOption && row("__empty__", { label: emptyOption }, value === "", () => pick(""))}
-              {options.map((option) => row(option.id, option, option.id === value, () => pick(option.id)))}
-            </div>
-          </SheetSection>
+          <>
+            {searchable && <SearchPill value={query} onChange={setQuery} placeholder={tr("Qidirish")} />}
+            <SheetSection footer={options.length === 0 && emptyHint ? tr(emptyHint) : shown.length === 0 ? tr("Hech narsa topilmadi") : undefined}>
+              <div role="radiogroup" aria-label={title}>
+                {emptyOption && !needle && row("__empty__", { label: emptyOption }, value === "", () => pick(""))}
+                {shown.map((option) => row(option.id, option, option.id === value, () => pick(option.id)))}
+              </div>
+            </SheetSection>
+          </>
         )}
       </IosSheet>
     </>
