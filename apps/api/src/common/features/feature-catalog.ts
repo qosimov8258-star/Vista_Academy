@@ -71,7 +71,7 @@ export const FEATURE_CATALOG: readonly FeatureDefinition[] = [
 
   // Kundalik ish
   { key: "nutrition", label: "Ovqatlanish", group: "Kundalik ish", description: "Menyu va taomlar", paths: [/^menu(\/|$)/, /^dishes(\/|$)/] },
-  { key: "lessons", label: "Qo'shimcha darslar", group: "Kundalik ish", description: "Dars jadvali, mavzu, davomat, baholar, fanlar", paths: [/^lesson-/, /^subjects(\/|$)/, /^children\/[^/]+\/lesson-grades/] },
+  { key: "lessons", label: "Qo'shimcha darslar", group: "Kundalik ish", description: "Dars jadvali, xonalar, mavzu, davomat, baholar, fanlar", paths: [/^lesson-/, /^rooms(\/|$)/, /^subjects(\/|$)/, /^children\/[^/]+\/lesson-grades/] },
   { key: "useful", label: "Foydali bo'lim", group: "Kundalik ish", description: "She'r, maqol va ertaklar", paths: [/^useful(\/|$)/, /^parent\/useful/] },
   { key: "diary", label: "Kundalik (diary)", group: "Kundalik ish", description: "Bola kundaligi", paths: [/^diary(\/|$)/, /^parent\/diary/] },
   { key: "notifications", label: "Bildirishnomalar", group: "Kundalik ish", description: "Ota-onalarga xabar yuborish", paths: [/^notifications(\/|$)/, /^parent\/push/] },

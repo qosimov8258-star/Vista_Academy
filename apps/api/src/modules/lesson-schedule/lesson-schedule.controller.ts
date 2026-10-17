@@ -5,7 +5,7 @@ import { TenantJwtAuthGuard } from "../iam/guards/tenant-jwt-auth.guard";
 import { CurrentTenantUser } from "../iam/decorators/current-tenant-user.decorator";
 import { TenantAuthenticatedUser, toTenantScope } from "../iam/tenant-auth.types";
 import { LessonScheduleService } from "./lesson-schedule.service";
-import { CreateLessonScheduleDto } from "./dto/create-lesson-schedule.dto";
+import { CheckLessonScheduleDto, CreateLessonScheduleDto } from "./dto/create-lesson-schedule.dto";
 import { UpdateLessonScheduleDto } from "./dto/update-lesson-schedule.dto";
 import { LessonScheduleQueryDto } from "./dto/lesson-schedule-query.dto";
 
@@ -20,6 +20,12 @@ export class LessonScheduleController {
   @Get()
   findAll(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query() query: LessonScheduleQueryDto) {
     return this.lessonScheduleService.findAll(toTenantScope(user), query);
+  }
+
+  /** Saqlashdan oldin to'qnashuvlarni ko'rish (xona, o'qituvchi, guruh, xona sig'imi) */
+  @Post("check")
+  check(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: CheckLessonScheduleDto) {
+    return this.lessonScheduleService.check(toTenantScope(user), dto);
   }
 
   @Post()

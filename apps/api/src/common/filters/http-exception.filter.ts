@@ -55,7 +55,13 @@ function normalize(
     return {
       code: (anyBody.code as string) ?? (anyBody.error as string) ?? "ERROR",
       message,
-      details: Array.isArray(anyBody.message) ? { fields: anyBody.message } : {},
+      // Validatsiya xatolari — maydonlar ro'yxati; servis o'zi `details` bergan bo'lsa
+      // (masalan dars jadvali to'qnashuvlari) — o'zgarishsiz mijozga uzatiladi.
+      details: Array.isArray(anyBody.message)
+        ? { fields: anyBody.message }
+        : anyBody.details && typeof anyBody.details === "object"
+          ? anyBody.details
+          : {},
     };
   }
   if (typeof body === "string") {

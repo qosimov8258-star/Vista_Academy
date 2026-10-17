@@ -37,7 +37,7 @@ export class LessonAttendanceService {
 
     const lessons = await this.prisma.lessonSchedule.findMany({
       where: { branchId, employeeId: employee.id, weekday: weekdayOf(date) },
-      include: { group: { select: { id: true, name: true } } },
+      include: { group: { select: { id: true, name: true } }, room: { select: { name: true } } },
       orderBy: { startTime: "asc" },
     });
 
@@ -47,6 +47,8 @@ export class LessonAttendanceService {
         scheduleId: lesson.id,
         groupId: lesson.groupId,
         groupName: lesson.group.name,
+        // Dars qaysi xonada (xona tanlanmagan bo'lsa null)
+        roomName: lesson.room?.name ?? null,
         subject: lesson.subject,
         startTime: lesson.startTime,
         endTime: lesson.endTime,

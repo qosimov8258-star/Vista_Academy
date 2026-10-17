@@ -11,4 +11,14 @@ export class LessonScheduleQueryDto {
   @IsOptional()
   @IsString()
   branchId?: string;
+
+  @ApiPropertyOptional({ description: "Xona jadvali" })
+  @IsOptional()
+  @IsString()
+  roomId?: string;
+
+  @ApiPropertyOptional({ description: "O'qituvchi jadvali" })
+  @IsOptional()
+  @IsString()
+  employeeId?: string;
 }

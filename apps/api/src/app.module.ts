@@ -34,6 +34,7 @@ import { ChildRemindersModule } from "./modules/child-reminders/child-reminders.
 import { AuditLogModule } from "./modules/audit-log/audit-log.module";
 import { DailyReportsModule } from "./modules/daily-reports/daily-reports.module";
 import { LessonScheduleModule } from "./modules/lesson-schedule/lesson-schedule.module";
+import { RoomsModule } from "./modules/rooms/rooms.module";
 import { EmployeeNotificationsModule } from "./modules/employee-notifications/employee-notifications.module";
 import { LessonTopicsModule } from "./modules/lesson-topics/lesson-topics.module";
 import { LessonGradesModule } from "./modules/lesson-grades/lesson-grades.module";
@@ -91,6 +92,7 @@ import { FaceIdModule } from "./modules/face-id/face-id.module";
     AuditLogModule,
     DailyReportsModule,
     LessonScheduleModule,
+    RoomsModule,
     EmployeeNotificationsModule,
     LessonTopicsModule,
     LessonGradesModule,

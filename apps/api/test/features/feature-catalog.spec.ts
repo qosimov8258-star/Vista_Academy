@@ -86,4 +86,12 @@ describe("feature-catalog", () => {
     expect(keysOf("/api/v1/app/children")).toEqual([]);
     expect(keysOf("/api/v1/platform/plans")).toEqual([]);
   });
+
+  it("xonalar «Qo'shimcha darslar» bilan birga yopiladi", () => {
+    const off = ["lessons"];
+    expect(blockedFeatureForRequest("/api/v1/app/rooms", "GET", off)?.key).toBe("lessons");
+    expect(blockedFeatureForRequest("/api/v1/app/rooms/r1", "PATCH", off)?.key).toBe("lessons");
+    expect(blockedFeatureForRequest("/api/v1/app/lesson-schedules/check", "POST", off)?.key).toBe("lessons");
+    expect(blockedFeatureForRequest("/api/v1/app/rooms", "GET", [])).toBeNull();
+  });
 });
