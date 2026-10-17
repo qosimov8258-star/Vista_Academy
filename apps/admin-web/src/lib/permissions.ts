@@ -44,6 +44,14 @@ export function canWriteMoney(role: TenantUserRole | undefined): boolean {
 }
 
 /**
+ * Chegirma berish/o'zgartirish — faqat moliyachi (API: requireFinanceScope).
+ * Filial admini va administrator chegirmani ko'radi, lekin bermaydi.
+ */
+export function canWriteDiscounts(role: TenantUserRole | undefined): boolean {
+  return role === "FINANCE";
+}
+
+/**
  * Operatsion bo'limlarda (bolalar, guruhlar, xodimlar, CRM, ovqatlanish,
  * bildirishnomalar, xodimlar davomati) yozish huquqi.
  * Moliyachi va o'qituvchi bu yerda faqat ko'radi.

@@ -496,7 +496,9 @@ export function Sidebar({ slug }: { slug: string }) {
       icon: MoneyIcon,
       items: [
         { href: `${base}/finance`, label: t("nav.finance"), icon: MoneyIcon, show: !isManager && !isBranchAdmin },
-        { href: `${base}/discounts`, label: tr("Chegirmalar"), icon: PercentIcon, show: true },
+        // Chegirmani moliyachi beradi (o'z menyusida). Filial admini va
+        // administratorda yo'q; Super Admin filial ichida faqat ko'radi.
+        { href: `${base}/discounts`, label: tr("Chegirmalar"), icon: PercentIcon, show: !isManager && !isBranchAdmin },
         // Qarzdorlarga qo'ng'iroq qilib eslatish administratorning ishi.
         // Filial ichidagi Super Admin uchun bu sahifaning filial nusxasi yo'q (404 edi).
         { href: `${base}/debtors`, label: "Qarzdorlar", icon: PhoneIcon, show: !isBranchAdmin && !inBranchContext },

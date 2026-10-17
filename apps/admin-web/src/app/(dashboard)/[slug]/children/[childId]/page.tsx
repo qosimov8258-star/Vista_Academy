@@ -43,7 +43,7 @@ import { downloadCsv } from "@/lib/download";
 import { prepareChildPhoto } from "@/lib/child-photo";
 import { formatAge, formatChildId, formatDate, formatDateTime, formatGender, formatPhone } from "@/lib/format";
 import { isCashierPosition } from "@/lib/employee-position";
-import { canWriteOperational, canWriteTeaching } from "@/lib/permissions";
+import { canWriteOperational, canWriteTeaching, canWriteDiscounts } from "@/lib/permissions";
 import { WEEKDAYS, dayMonthLabel } from "@/components/ios/day-stepper";
 import { Segmented } from "@/components/ios/form";
 import { Group, ListRow, Row } from "@/components/ios/group";
@@ -130,6 +130,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
   const discountsHref = `${branchSlug ? `/${slug}/${branchSlug}` : `/${slug}`}/discounts?child=${childId}`;
   // Chegirmalar bo'limini oshpaz ham ko'rmaydi (API ham rad etadi)
   const canReadDiscounts = canReadMoney && user?.role !== "CHEF";
+  const canGiveDiscount = canWriteDiscounts(user?.role);
 
   const [tab, setTab] = useState<Tab>("overview");
   const [editChildOpen, setEditChildOpen] = useState(false);
@@ -379,10 +380,11 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
                     const rule = current?.rule?.isActive ? current.rule : null;
                     return (
                       <Row
-                        href={discountsHref}
+                        // Chegirmani moliyachi beradi — boshqalarga qator faqat ma'lumot
+                        href={canGiveDiscount ? discountsHref : undefined}
                         leading={<IosIcon icon={BadgePercent} tint={rule ? "pink" : "gray"} size={30} />}
                         title={rule ? `${ruleLabel(rule, tr)} · ${tr(scopeLabel(rule.scope))}` : tr("Chegirma yo'q")}
-                        subtitle={rule ? (rule.reason ?? undefined) : tr("Bosing — chegirma berish yoki o'zgartirish")}
+                        subtitle={rule ? (rule.reason ?? undefined) : canGiveDiscount ? tr("Bosing — chegirma berish yoki o'zgartirish") : tr("Chegirmani moliyachi beradi")}
                         value={
                           current && current.discount > 0 ? (
                             <span className="tabular-nums">

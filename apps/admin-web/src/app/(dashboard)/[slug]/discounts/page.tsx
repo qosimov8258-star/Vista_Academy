@@ -7,7 +7,7 @@ import { BadgePercent, ChevronRight, Plus, UsersRound, X } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/use-auth";
 import { useBranchContext } from "@/lib/use-branch-context";
-import { canWriteMoney } from "@/lib/permissions";
+import { canWriteDiscounts } from "@/lib/permissions";
 import { IosButton } from "@/components/ios/button";
 import { PeriodStepper } from "@/components/ios/day-stepper";
 import { SearchPill } from "@/components/ios/filters";
@@ -42,7 +42,8 @@ export default function DiscountsPage({ params }: { params: Promise<{ slug: stri
   const { slug } = use(params);
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const canWrite = canWriteMoney(user?.role);
+  // Chegirmani faqat moliyachi beradi — boshqalar (Super Admin filialda) faqat ko'radi
+  const canWrite = canWriteDiscounts(user?.role);
   const { branchId } = useBranchContext(slug);
 
   const [thisMonth, setThisMonth] = useState("");
