@@ -332,6 +332,7 @@ model Branch {
   notificationLogs          NotificationLog[]
   auditLogs                 AuditLog[]
   lessonSchedules           LessonSchedule[]
+  rooms                     Room[]
   employeeNotifications     EmployeeNotification[]
   lessonTopics              LessonTopic[]
   lessonGrades              LessonGrade[]
@@ -890,11 +891,36 @@ enum Weekday {
   SUNDAY
 }
 
+/**
+ * Xona (kabinet) — filialdagi dars o'tiladigan joy. Bir xonada bir nechta
+ * guruh navbat bilan dars o'tadi; bir vaqtda bitta xonada ikkita dars
+ * bo'lsa — to'qnashuv (dars jadvalida ogohlantiriladi).
+ */
+model Room {
+  id        String   @id @default(uuid())
+  branchId  String   @map("branch_id")
+  name      String
+  // Necha bola sig'adi (null — chegarasiz); guruh kattaroq bo'lsa ogohlantiriladi
+  capacity  Int?
+  // Ishlatilmayotgan xona tanlov ro'yxatida chiqmaydi, eski darslari saqlanadi
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  branch          Branch           @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  lessonSchedules LessonSchedule[]
+
+  @@unique([branchId, name])
+  @@map("rooms")
+}
+
 model LessonSchedule {
   id         String   @id @default(uuid())
   branchId   String   @map("branch_id")
   groupId    String   @map("group_id")
   employeeId String   @map("employee_id")
+  // Ixtiyoriy: xona o'chirilsa dars xonasiz qoladi
+  roomId     String?  @map("room_id")
   subject    String?
   weekday    Weekday
   startTime  String   @map("start_time")
@@ -905,10 +931,12 @@ model LessonSchedule {
   branch   Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
   group    Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
   employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  room     Room?    @relation(fields: [roomId], references: [id], onDelete: SetNull)
 
   @@index([branchId])
   @@index([groupId, weekday])
   @@index([employeeId])
+  @@index([roomId, weekday])
   @@map("lesson_schedules")
 }
 
