@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useEffect, useId, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
 import type { Employee, Shift } from "@/lib/types";
-import { Modal } from "@/components/ui/modal";
-import { Input, Select } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { FieldRow, FormSection, TextInput } from "@/components/ios/form";
+import { IosSheet, SheetPrimaryButton } from "@/components/ios/sheet";
+import { EmployeePicker } from "@/features/hr/employee-picker";
 import { useTr } from "@/i18n/tr";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
@@ -29,10 +29,11 @@ type FormValues = z.infer<typeof schema>;
 
 export function LogShiftModal({ open, onClose, slug }: { open: boolean; onClose: () => void; slug: string }) {
   const tr = useTr();
+  const formId = useId();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
 
-  const { data: employees } = useQuery({
+  const { data: employees, isLoading: employeesLoading } = useQuery({
     // Ishdan bo'shagan xodim uchun smena qayd etilmasin.
     queryKey: ["employees", slug, "active"],
     queryFn: () => api.get<Employee[]>("/app/employees?isActive=true"),
@@ -40,6 +41,7 @@ export function LogShiftModal({ open, onClose, slug }: { open: boolean; onClose:
   });
 
   const {
+    control,
     register,
     handleSubmit,
     reset,
@@ -69,40 +71,57 @@ export function LogShiftModal({ open, onClose, slug }: { open: boolean; onClose:
       setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
     },
   });
+  const busy = isSubmitting || mutation.isPending;
 
   return (
-    <Modal open={open} onClose={onClose} title={tr("Smena qo'shish")}>
-      <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
+    <IosSheet
+      open={open}
+      onClose={() => !busy && onClose()}
+      title={tr("Smena qo'shish")}
+      footer={
+        <SheetPrimaryButton type="submit" form={formId} loading={busy}>
+          {tr("Saqlash")}
+        </SheetPrimaryButton>
+      }
+    >
+      <form id={formId} className="space-y-6" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         {serverError && (
-          <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
+          <p role="alert" className="rounded-[14px] bg-[#ff3b30]/[0.1] px-4 py-2.5 text-[13px] leading-snug text-[#ff3b30]">
             {tr(serverError)}
-          </div>
+          </p>
         )}
-        <Select label={tr("Xodim")} defaultValue="" error={errors.employeeId?.message} {...register("employeeId")}>
-          <option value="" disabled>
-            {tr("Tanlang")}
-          </option>
-          {employees?.map((employee) => (
-            <option key={employee.id} value={employee.id}>
-              {tr(employee.fullName)}
-            </option>
-          ))}
-        </Select>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input label={tr("Sana")} type="date" error={errors.date?.message} {...register("date")} />
-          <Input label={tr("Ish soatlari")} type="number" step="0.5" placeholder="8" error={errors.hours?.message} {...register("hours")} />
-        </div>
-        <Input label={tr("Izoh (ixtiyoriy)")} {...register("note")} />
-
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="outline" onClick={onClose}>
-            {tr("Bekor qilish")}
-          </Button>
-          <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            {tr("Saqlash")}
-          </Button>
-        </div>
+        <FormSection>
+          <FieldRow label={tr("Xodim")} error={errors.employeeId?.message}>
+            <Controller
+              control={control}
+              name="employeeId"
+              render={({ field }) => (
+                <EmployeePicker
+                  title={tr("Xodim")}
+                  value={field.value}
+                  onChange={field.onChange}
+                  employees={employees ?? []}
+                  loading={employeesLoading}
+                  placeholder={tr("Tanlang")}
+                />
+              )}
+            />
+          </FieldRow>
+          <FieldRow label={tr("Sana")} htmlFor={`${formId}-date`} error={errors.date?.message}>
+            <div className="flex justify-end">
+              <TextInput id={`${formId}-date`} type="date" className="!w-auto text-right tabular-nums" {...register("date")} />
+            </div>
+          </FieldRow>
+          <FieldRow label={tr("Ish soatlari")} htmlFor={`${formId}-hours`} error={errors.hours?.message}>
+            <TextInput id={`${formId}-hours`} type="number" inputMode="decimal" step="0.5" placeholder="8" className="text-right tabular-nums" {...register("hours")} />
+          </FieldRow>
+        </FormSection>
+        <FormSection>
+          <FieldRow label={tr("Izoh")} htmlFor={`${formId}-note`}>
+            <TextInput id={`${formId}-note`} placeholder={tr("Ixtiyoriy")} className="text-right" {...register("note")} />
+          </FieldRow>
+        </FormSection>
       </form>
-    </Modal>
+    </IosSheet>
   );
 }
