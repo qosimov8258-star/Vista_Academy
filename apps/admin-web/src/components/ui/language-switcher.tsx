@@ -7,6 +7,17 @@ import { locales, localeCookieName, type Locale } from "@/i18n/config";
 import { GlobeIcon, ChevronDownIcon } from "@/components/ui/icons";
 import { useTr } from "@/i18n/tr";
 
+/**
+ * Tilni almashtiradi: cookie yoziladi va sahifa to'liq qayta yuklanadi.
+ * router.refresh() yetarli emas: DomTranslator ba'zi matn tugunlarini React'dan
+ * tashqarida almashtirgan, React esa ularni "o'zgarmagan" deb o'tkazib yuboradi —
+ * shuning uchun eski til qolib ketardi. To'liq qayta yuklash toza holat beradi.
+ */
+export function applyLocale(next: Locale) {
+  document.cookie = `${localeCookieName}=${next}; path=/; max-age=31536000`;
+  window.location.reload();
+}
+
 export function LanguageSwitcher({
   collapsed = false,
   dropUp = false,
@@ -36,11 +47,7 @@ export function LanguageSwitcher({
   const changeLocale = (next: Locale) => {
     setOpen(false);
     if (next === locale) return;
-    document.cookie = `${localeCookieName}=${next}; path=/; max-age=31536000`;
-    // router.refresh() yetarli emas: DomTranslator ba'zi matn tugunlarini React'dan
-    // tashqarida almashtirgan, React esa ularni "o'zgarmagan" deb o'tkazib yuboradi —
-    // shuning uchun eski til qolib ketardi. To'liq qayta yuklash toza holat beradi.
-    startTransition(() => window.location.reload());
+    startTransition(() => applyLocale(next));
   };
 
   return (

@@ -1,9 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import clsx from "clsx";
+import { useLocale, useTranslations } from "next-intl";
 import { CheckIcon, GlobeIcon } from "@/components/ios/icons";
 import { Palette as PaletteIcon } from "lucide-react";
-import { LanguageSwitcher } from "@/components/ui/language-switcher";
+import { IosSheet, SheetSection } from "@/components/ios/sheet";
+import { ROW_PRESS, ROW_SEPARATOR } from "@/components/ios/tokens";
+import { applyLocale } from "@/components/ui/language-switcher";
+import { locales, type Locale } from "@/i18n/config";
 import { THEMES, useTheme } from "@/lib/theme";
 import { RowIcon, SettingsGroup, SettingsRow, usePlainSettingsIcons } from "./settings-ui";
 import { useTr } from "@/i18n/tr";
@@ -78,7 +83,60 @@ export function ThemePickerCard() {
           })}
         </div>
       </div>
-      <SettingsRow icon={GlobeIcon} label={tr("Til")} trailing={<LanguageSwitcher />} />
+      <LanguageRow />
     </SettingsGroup>
+  );
+}
+
+/**
+ * Til qatori: bosilsa pastdan tillar ro'yxati ochiladi (tanlangani ✓ bilan).
+ * Avval qator ichida ochiladigan menyu edi — u kartaning `overflow-hidden`
+ * chegarasida kesilib, tarbiyachi telefonda tilni tanlay olmasdi.
+ */
+function LanguageRow() {
+  const tr = useTr();
+  const t = useTranslations("common");
+  const locale = useLocale() as Locale;
+  const [open, setOpen] = useState(false);
+  const [switching, setSwitching] = useState<Locale | null>(null);
+
+  const choose = (next: Locale) => {
+    if (next === locale) {
+      setOpen(false);
+      return;
+    }
+    setSwitching(next);
+    applyLocale(next);
+  };
+
+  return (
+    <>
+      <SettingsRow icon={GlobeIcon} label={tr("Til")} value={t(`languages.${locale}`)} onClick={() => setOpen(true)} />
+      <IosSheet open={open} onClose={() => !switching && setOpen(false)} title={tr("Til")} cancelLabel="Orqaga">
+        <SheetSection>
+          <div role="radiogroup" aria-label={tr("Til")}>
+            {locales.map((code) => {
+              const active = code === (switching ?? locale);
+              return (
+                <div key={code} className="group/row relative">
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    disabled={!!switching}
+                    onClick={() => choose(code)}
+                    className={clsx("flex min-h-[52px] w-full items-center gap-3 px-4 py-2 text-left disabled:opacity-60", ROW_PRESS)}
+                  >
+                    <span className="min-w-0 flex-1 truncate text-[16px] text-[var(--color-text)]">{t(`languages.${code}`)}</span>
+                    {active && <CheckIcon className="h-5 w-5 shrink-0 text-[var(--color-primary)]" strokeWidth={2.6} />}
+                  </button>
+                  <span className={ROW_SEPARATOR} aria-hidden="true" />
+                </div>
+              );
+            })}
+          </div>
+        </SheetSection>
+      </IosSheet>
+    </>
   );
 }
