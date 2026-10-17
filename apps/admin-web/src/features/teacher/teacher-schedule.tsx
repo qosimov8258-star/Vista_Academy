@@ -104,7 +104,7 @@ export function TeacherSchedule({ slug }: { slug: string }) {
                 </span>
               }
               title={lesson.subject || "Dars"}
-              subtitle={`${lesson.group.name} · ${lesson.employee.fullName}`}
+              subtitle={[lesson.group.name, lesson.employee.fullName, lesson.room?.name].filter(Boolean).join(" · ")}
             />
           ))
         )}

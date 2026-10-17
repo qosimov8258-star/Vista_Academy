@@ -1138,11 +1138,35 @@ export interface ParentPurchaseResult {
 
 export type Weekday = "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY" | "SUNDAY";
 
+/** Xona (kabinet) — filialdagi dars o'tiladigan joy */
+export interface Room {
+  id: string;
+  branchId: string;
+  name: string;
+  /** Necha bola sig'adi; null — chegarasiz */
+  capacity: number | null;
+  isActive: boolean;
+  /** Shu xonadagi darslar soni */
+  lessonCount: number;
+}
+
+/** Dars jadvali to'qnashuvi (server: lesson-schedule/schedule-conflicts.ts) */
+export interface ScheduleConflict {
+  kind: "ROOM" | "TEACHER" | "GROUP" | "CAPACITY";
+  weekday: Weekday | null;
+  message: string;
+  scheduleId?: string;
+  startTime?: string;
+  endTime?: string;
+}
+
 export interface LessonSchedule {
   id: string;
   branchId: string;
   groupId: string;
   employeeId: string;
+  /** Xona tanlanmagan bo'lsa null */
+  roomId: string | null;
   subject: string | null;
   weekday: Weekday;
   startTime: string;
@@ -1151,6 +1175,7 @@ export interface LessonSchedule {
   updatedAt: string;
   group: { id: string; name: string };
   employee: { id: string; fullName: string };
+  room: { id: string; name: string } | null;
 }
 
 export interface EmployeeNotification {

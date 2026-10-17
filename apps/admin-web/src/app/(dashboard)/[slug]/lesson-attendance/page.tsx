@@ -27,6 +27,8 @@ interface MyLesson {
   scheduleId: string;
   groupId: string;
   groupName: string;
+  /** Dars qaysi xonada (xona tanlanmagan bo'lsa null) */
+  roomName: string | null;
   subject: string | null;
   startTime: string;
   endTime: string;
@@ -196,7 +198,7 @@ export default function LessonAttendancePage({ params }: { params: Promise<{ slu
                     </span>
                   }
                   title={lesson.subject || "Dars"}
-                  subtitle={tr(lesson.groupName)}
+                  subtitle={[tr(lesson.groupName), lesson.roomName ? tr(lesson.roomName) : null].filter(Boolean).join(" · ")}
                   trailing={active ? <CheckIcon className="h-5 w-5 shrink-0 text-[var(--color-primary)]" strokeWidth={2.6} /> : undefined}
                 />
               );
