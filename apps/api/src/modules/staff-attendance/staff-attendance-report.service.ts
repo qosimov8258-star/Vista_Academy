@@ -111,7 +111,7 @@ export class StaffAttendanceReportService {
     const dateRange = kind === "all" ? undefined : { gte: new Date(`${from}T00:00:00.000Z`), lte: new Date(`${to}T00:00:00.000Z`) };
     const records = await this.prisma.employeeAttendance.findMany({
       where: { branchId, ...(dateRange ? { date: dateRange } : {}) },
-      orderBy: [{ date: "asc" }],
+      orderBy: [{ date: "asc" }, { employee: { fullName: "asc" } }],
       select: {
         date: true,
         status: true,
