@@ -41,6 +41,8 @@ export function ReportSheet({
   filePrefix,
   allHint,
   contents,
+  formats = ["xlsx", "pdf"],
+  params,
 }: {
   open: boolean;
   onClose: () => void;
@@ -53,6 +55,10 @@ export function ReportSheet({
   allHint: string;
   /** Hisobotda nima borligi haqida izoh (tarjima kaliti) */
   contents: string;
+  /** Qaysi fayl turlari bor — bittasi bo'lsa tanlov ko'rsatilmaydi */
+  formats?: Format[];
+  /** So'rovga qo'shimcha parametrlar (masalan `branchId`) */
+  params?: Record<string, string>;
 }) {
   const tr = useTr();
   const [today, setToday] = useState("");
@@ -60,7 +66,7 @@ export function ReportSheet({
   const [day, setDay] = useState("");
   const [week, setWeek] = useState("");
   const [month, setMonth] = useState("");
-  const [format, setFormat] = useState<Format>("xlsx");
+  const [format, setFormat] = useState<Format>(formats[0]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -91,7 +97,7 @@ export function ReportSheet({
     setBusy(true);
     setError(null);
     try {
-      const q = new URLSearchParams({ kind, format, ...(range.from ? { from: range.from, to: range.to! } : {}) });
+      const q = new URLSearchParams({ kind, format, ...(range.from ? { from: range.from, to: range.to! } : {}), ...params });
       await downloadCsv(`${endpoint}?${q}`, `${filePrefix}-${range.stamp}.${format}`);
       onClose();
     } catch {
@@ -159,8 +165,8 @@ export function ReportSheet({
       </section>
 
       <section>
-        <h3 className={SECTION_TITLE}>{tr("Fayl turi")}</h3>
-        <div role="radiogroup" aria-label={tr("Fayl turi")} className="grid grid-cols-2 gap-3">
+        {formats.length > 1 && <h3 className={SECTION_TITLE}>{tr("Fayl turi")}</h3>}
+        <div role="radiogroup" aria-label={tr("Fayl turi")} className={clsx("grid grid-cols-2 gap-3", formats.length < 2 && "hidden")}>
           {(
             [
               { value: "xlsx", title: "Excel", hint: "Jadval: filtr va hisob-kitob uchun", icon: FileSpreadsheet, color: "#34c759" },

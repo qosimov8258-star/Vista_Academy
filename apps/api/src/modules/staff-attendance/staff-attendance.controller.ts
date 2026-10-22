@@ -1,10 +1,13 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Post, Query, Res, UseGuards } from "@nestjs/common";
+import type { Response } from "express";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { Public } from "../../common/decorators/public.decorator";
 import { TenantJwtAuthGuard } from "../iam/guards/tenant-jwt-auth.guard";
 import { CurrentTenantUser } from "../iam/decorators/current-tenant-user.decorator";
 import { TenantAuthenticatedUser, toTenantScope } from "../iam/tenant-auth.types";
 import { StaffAttendanceService } from "./staff-attendance.service";
+import { StaffAttendanceReportService } from "./staff-attendance-report.service";
+import type { ReportKind } from "../cash-desk/report-kit";
 import { MarkStaffAttendanceDto } from "./dto/mark-staff-attendance.dto";
 import { StaffAttendanceQueryDto } from "./dto/staff-attendance-query.dto";
 import { StaffAttendanceSummaryQueryDto } from "./dto/staff-attendance-summary-query.dto";
@@ -17,7 +20,27 @@ import { StaffAttendanceHistoryQueryDto } from "./dto/staff-attendance-history-q
 @UseGuards(TenantJwtAuthGuard)
 @Controller("app/staff-attendance")
 export class StaffAttendanceController {
-  constructor(private readonly staffAttendanceService: StaffAttendanceService) {}
+  constructor(
+    private readonly staffAttendanceService: StaffAttendanceService,
+    private readonly report: StaffAttendanceReportService,
+  ) {}
+
+  /** Davomat hisoboti (Excel): kun, hafta, oy yoki to'liq davr — kirish/chiqish vaqtlari, tabel, Face ID voqealari */
+  @Get("report")
+  async reportFile(
+    @CurrentTenantUser() user: TenantAuthenticatedUser,
+    @Query("kind") kind: ReportKind,
+    @Query("from") from: string | undefined,
+    @Query("to") to: string | undefined,
+    @Query("branchId") branchId: string | undefined,
+    @Res() res: Response,
+  ) {
+    const file = await this.report.build(user, kind, from, to, branchId);
+    res.setHeader("Content-Type", file.contentType);
+    res.setHeader("Content-Disposition", `attachment; filename="${file.filename}"`);
+    res.setHeader("Cache-Control", "no-store");
+    res.send(file.buffer);
+  }
 
   @Get()
   findByBranchAndDate(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query() query: StaffAttendanceQueryDto) {
