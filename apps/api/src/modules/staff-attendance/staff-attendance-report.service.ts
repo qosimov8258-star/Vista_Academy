@@ -204,7 +204,18 @@ export class StaffAttendanceReportService {
     const wb = new ExcelJS.Workbook();
     wb.creator = d.generatedBy;
     wb.created = new Date();
-    const { head, totalRow, titleBlock, section, info, zebra } = excelKit(d, THEME);
+    const { head, totalRow, titleBlock, section, zebra } = excelKit(d, THEME);
+    /** "nom — qiymat" qatorlari: 1-ustun tor (№), shuning uchun nom A:B, qiymat C dan oxirigacha */
+    const info = (sheet: ExcelJS.Worksheet, items: [string, string][], big: string, mergeTo: number) => {
+      for (const [k, v] of items) {
+        const r = sheet.addRow([k, "", v]);
+        sheet.mergeCells(r.number, 1, r.number, 2);
+        sheet.mergeCells(r.number, 3, r.number, mergeTo);
+        r.getCell(1).font = { color: { argb: "FF6D6D72" } };
+        r.getCell(3).font = { bold: true, size: k === big ? 14 : 11 };
+        r.getCell(3).alignment = { horizontal: "left" };
+      }
+    };
     const came = rows.filter((r) => r.status === "PRESENT" || r.status === "LATE");
     const sumOf = (k: keyof Pick<EmployeeTotals, "present" | "late" | "absent" | "sick" | "onLeave" | "worked" | "faceIdDays">) =>
       totals.reduce((s, t) => s + t[k], 0);
@@ -227,7 +238,6 @@ export class StaffAttendanceReportService {
         ["Jami ishlangan vaqt", `${hhmm(sumOf("worked"))} soat`],
         ["Tuzildi", `${d.generatedAt} · ${d.generatedBy}`],
       ],
-      [],
       "Kelgan kunlar (jami)",
       cols.length,
     );
