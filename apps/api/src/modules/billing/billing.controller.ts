@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { Public } from "../../common/decorators/public.decorator";
 import { TenantJwtAuthGuard } from "../iam/guards/tenant-jwt-auth.guard";
@@ -12,6 +12,7 @@ import { RecordPaymentDto } from "./dto/record-payment.dto";
 import { PaymentQueryDto } from "./dto/payment-query.dto";
 import { FinanceChildrenQueryDto, FinanceSummaryQueryDto } from "./dto/finance-query.dto";
 import { AcceptPaymentDto, RefundPaymentDto } from "./dto/accept-payment.dto";
+import { CancelInvoiceDto, UpdateInvoiceDto } from "./dto/update-invoice.dto";
 
 @ApiBearerAuth()
 @ApiTags("Tenant Billing")
@@ -41,6 +42,18 @@ export class BillingController {
   @Post("invoices")
   create(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: CreateInvoiceDto) {
     return this.billingService.create(user, dto);
+  }
+
+  /** Hisob-fakturani tuzatish (summa, chegirma, muddat) — faqat moliyachi, sabab bilan. */
+  @Patch("invoices/:id")
+  update(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id", ParseUUIDPipe) id: string, @Body() dto: UpdateInvoiceDto) {
+    return this.billingService.update(user, id, dto);
+  }
+
+  /** Hisob-fakturani bekor qilish — faqat moliyachi, to'lov tushmagan bo'lsa. */
+  @Post("invoices/:id/cancel")
+  cancel(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id", ParseUUIDPipe) id: string, @Body() dto: CancelInvoiceDto) {
+    return this.billingService.cancel(user, id, dto);
   }
 
   /** Guruh yoki butun filial bo'yicha bir xil summada ommaviy hisob-faktura. */

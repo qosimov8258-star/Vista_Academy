@@ -20,6 +20,7 @@ import { RecordPaymentDto } from "./dto/record-payment.dto";
 import { PaymentQueryDto } from "./dto/payment-query.dto";
 import { FinanceChildrenQueryDto, FinanceSummaryQueryDto } from "./dto/finance-query.dto";
 import { AcceptPaymentDto, RefundPaymentDto } from "./dto/accept-payment.dto";
+import { CancelInvoiceDto, UpdateInvoiceDto } from "./dto/update-invoice.dto";
 import { R2Service } from "../storage/r2.service";
 import { R2_CATEGORY } from "../storage/r2.constants";
 
@@ -90,6 +91,15 @@ export class BillingService {
     if (discountAmount > dto.amount) {
       throw new BadRequestException("Chegirma summadan katta bo'lishi mumkin emas");
     }
+    // Bir bolaga bir oy uchun bitta hisob-faktura — ikkinchisi bolani ikki
+    // baravar qarzdor qilib qo'yadi. Xato bo'lsa, borini moliyachi tuzatadi.
+    const sameMonth = await this.prisma.invoice.findFirst({
+      where: { childId: child.id, period: dto.period, status: { not: InvoiceStatus.CANCELLED } },
+      select: { id: true },
+    });
+    if (sameMonth) {
+      throw new BadRequestException(`${dto.period} oyi uchun bu bolaga hisob-faktura allaqachon yozilgan — kerak bo'lsa, borini moliyachi tuzatadi`);
+    }
 
     return this.prisma.$transaction(async (tx) => {
       const invoice = await tx.invoice.create({
@@ -145,6 +155,141 @@ export class BillingService {
       });
       return invoice;
     });
+  }
+
+  /**
+   * Hisob-fakturani tuzatish — faqat moliyachi. Summa, chegirma va muddat
+   * o'zgaradi (sabab majburiy); to'lanishi kerak bo'lgan summa to'langan
+   * qismdan kam bo'lmaydi. Holat to'lovga qarab qayta hisoblanadi, farq
+   * bola tarixiga ADJUSTMENT / DISCOUNT bo'lib tushadi, amallar jurnalida
+   * eski va yangi qiymatlar qoladi. Bekor qilingan hisob-faktura o'zgarmaydi.
+   */
+  async update(caller: TenantAuthenticatedUser, invoiceId: string, dto: UpdateInvoiceDto) {
+    const scope = toTenantScope(caller);
+    const branchId = requireFinanceOnly(scope);
+    const reason = dto.reason.trim();
+    if (reason.length < 3) throw new BadRequestException("O'zgartirish sababini yozing (kamida 3 harf)");
+    const invoice = await this.prisma.invoice.findFirst({
+      where: { id: invoiceId, organizationId: scope.organizationId },
+      include: { child: { select: { fullName: true } } },
+    });
+    if (!invoice) throw new NotFoundException("Hisob-faktura topilmadi");
+    if (invoice.branchId !== branchId) throw new ForbiddenException("Bu hisob-fakturaga kirish huquqingiz yo'q");
+    if (invoice.status === InvoiceStatus.CANCELLED) throw new BadRequestException("Bekor qilingan hisob-fakturani o'zgartirib bo'lmaydi");
+
+    const oldAmount = Number(invoice.amount);
+    const oldDiscount = Number(invoice.discountAmount);
+    const paid = Number(invoice.paidAmount);
+    const amount = dto.amount ?? oldAmount;
+    const discount = dto.discountAmount ?? oldDiscount;
+    const dueDate = dto.dueDate ? new Date(dto.dueDate) : invoice.dueDate;
+    if (discount > amount + EPSILON) throw new BadRequestException("Chegirma summadan katta bo'lishi mumkin emas");
+    const net = amount - discount;
+    if (net < paid - EPSILON) {
+      throw new BadRequestException(`To'lanishi kerak bo'lgan summa to'langan ${formatSum(paid)} so'mdan kam bo'lmaydi — avval ortiqcha to'lovni bekor qiling`);
+    }
+    const amountChanged = Math.abs(amount - oldAmount) >= EPSILON;
+    const discountChanged = Math.abs(discount - oldDiscount) >= EPSILON;
+    const dueChanged = dueDate.getTime() !== invoice.dueDate.getTime();
+    if (!amountChanged && !discountChanged && !dueChanged) throw new BadRequestException("Hech narsa o'zgarmadi");
+
+    const status = paid >= net - EPSILON ? InvoiceStatus.PAID : paid > EPSILON ? InvoiceStatus.PARTIALLY_PAID : InvoiceStatus.PENDING;
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.invoice.update({
+        where: { id: invoice.id },
+        data: { amount, discountAmount: discount, dueDate, status, paidAt: status === InvoiceStatus.PAID ? (invoice.paidAt ?? new Date()) : null },
+      });
+      if (amountChanged) {
+        await tx.ledgerEntry.create({
+          data: {
+            organizationId: scope.organizationId,
+            branchId,
+            childId: invoice.childId,
+            type: "ADJUSTMENT",
+            amount: amount - oldAmount,
+            invoiceId: invoice.id,
+            note: `Tuzatish — ${invoice.period}: ${formatSum(oldAmount)} → ${formatSum(amount)}. Sabab: ${reason}`,
+          },
+        });
+      }
+      if (discountChanged) {
+        await tx.ledgerEntry.create({
+          data: {
+            organizationId: scope.organizationId,
+            branchId,
+            childId: invoice.childId,
+            type: "DISCOUNT",
+            amount: -(discount - oldDiscount),
+            invoiceId: invoice.id,
+            note: `Chegirma tuzatildi — ${invoice.period}: ${formatSum(oldDiscount)} → ${formatSum(discount)}. Sabab: ${reason}`,
+          },
+        });
+      }
+      return result;
+    });
+
+    const changes = [
+      amountChanged ? `summa ${formatSum(oldAmount)} → ${formatSum(amount)}` : null,
+      discountChanged ? `chegirma ${formatSum(oldDiscount)} → ${formatSum(discount)}` : null,
+      dueChanged ? `muddat ${invoice.dueDate.toISOString().slice(0, 10)} → ${dueDate.toISOString().slice(0, 10)}` : null,
+    ].filter(Boolean);
+    await this.auditLog.logFromUser(caller, {
+      action: "invoice.update",
+      entityType: "Invoice",
+      entityId: invoice.id,
+      branchId,
+      summary: `${invoice.child.fullName}: ${invoice.period} hisob-fakturasi o'zgartirildi (${changes.join(", ")}). Sabab: ${reason}`,
+    });
+    return updated;
+  }
+
+  /**
+   * Hisob-fakturani bekor qilish — faqat moliyachi va faqat to'lov tushmagan
+   * bo'lsa (to'lov bo'lsa, avval u bekor qilinadi). O'chirilmaydi: holati
+   * CANCELLED bo'lib tarixda qoladi, qarz esa ADJUSTMENT bilan yopiladi.
+   */
+  async cancel(caller: TenantAuthenticatedUser, invoiceId: string, dto: CancelInvoiceDto) {
+    const scope = toTenantScope(caller);
+    const branchId = requireFinanceOnly(scope);
+    const reason = dto.reason.trim();
+    if (reason.length < 3) throw new BadRequestException("Bekor qilish sababini yozing (kamida 3 harf)");
+    const invoice = await this.prisma.invoice.findFirst({
+      where: { id: invoiceId, organizationId: scope.organizationId },
+      include: { child: { select: { fullName: true } } },
+    });
+    if (!invoice) throw new NotFoundException("Hisob-faktura topilmadi");
+    if (invoice.branchId !== branchId) throw new ForbiddenException("Bu hisob-fakturaga kirish huquqingiz yo'q");
+    if (invoice.status === InvoiceStatus.CANCELLED) throw new BadRequestException("Hisob-faktura allaqachon bekor qilingan");
+    if (Number(invoice.paidAmount) > EPSILON) {
+      throw new BadRequestException("Bu hisob-fakturaga to'lov tushgan — avval to'lovni bekor qiling, keyin hisob-fakturani");
+    }
+
+    const net = Number(invoice.amount) - Number(invoice.discountAmount);
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.invoice.update({ where: { id: invoice.id }, data: { status: InvoiceStatus.CANCELLED, paidAt: null } });
+      if (net > EPSILON) {
+        await tx.ledgerEntry.create({
+          data: {
+            organizationId: scope.organizationId,
+            branchId,
+            childId: invoice.childId,
+            type: "ADJUSTMENT",
+            amount: -net,
+            invoiceId: invoice.id,
+            note: `Hisob-faktura bekor qilindi — ${invoice.period}. Sabab: ${reason}`,
+          },
+        });
+      }
+      return result;
+    });
+    await this.auditLog.logFromUser(caller, {
+      action: "invoice.cancel",
+      entityType: "Invoice",
+      entityId: invoice.id,
+      branchId,
+      summary: `${invoice.child.fullName}: ${invoice.period} hisob-fakturasi (${formatSum(net)} so'm) bekor qilindi. Sabab: ${reason}`,
+    });
+    return updated;
   }
 
   /**
@@ -885,7 +1030,7 @@ export class BillingService {
 
     const [invoices, branches, groups, collectedThisPeriod, byMethodGrouped, periodPayments] = await Promise.all([
       this.prisma.invoice.findMany({
-        where: { organizationId: scope.organizationId, branchId, period },
+        where: { organizationId: scope.organizationId, branchId, period, status: { not: InvoiceStatus.CANCELLED } },
         select: {
           amount: true,
           discountAmount: true,
@@ -1031,6 +1176,7 @@ export class BillingService {
         organizationId: scope.organizationId,
         branchId,
         period,
+        status: { not: InvoiceStatus.CANCELLED },
         ...(query.groupId ? { child: { groupId: query.groupId } } : {}),
       },
       select: {
@@ -1281,6 +1427,19 @@ function previousMonthRange(): { start: Date; end: Date } {
   const start = new Date(Date.UTC(year, month - 2, 1) - offsetMs);
   const end = new Date(Date.UTC(year, month - 1, 1) - offsetMs);
   return { start, end };
+}
+
+/**
+ * Hisob-fakturani o'zgartirish va bekor qilish — faqat moliyachi (chegirma
+ * kabi: pul hujjatini bitta mas'ul kishi tuzatadi). Filial admini va
+ * administrator to'lov qabul qiladi, lekin hisob-fakturaga tegmaydi.
+ */
+function requireFinanceOnly(scope: TenantScope): string {
+  const branchId = requireMoneyScope(scope);
+  if (scope.role !== "FINANCE") {
+    throw new ForbiddenException("Hisob-fakturani faqat moliyachi o'zgartiradi");
+  }
+  return branchId;
 }
 
 function formatSum(value: number): string {
