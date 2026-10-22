@@ -1,6 +1,6 @@
 import { beforeEach, describe, it } from "node:test";
 import { expect } from "../helpers/expect";
-import { computeDailyAttendance, localDateKey, localTimeHHMM, utcWindowAround } from "../../src/modules/face-id/face-id-attendance";
+import { computeDailyAttendance, directionFromRaw, localDateKey, localTimeHHMM, utcWindowAround } from "../../src/modules/face-id/face-id-attendance";
 
 const TZ = "Asia/Tashkent";
 /** Toshkent vaqti (+05:00) bo'yicha Date */
@@ -34,6 +34,53 @@ describe("face-id davomat hisobi", () => {
 
   it("filial ochilish vaqti belgilanmagan bo'lsa kechikish yo'q", () => {
     expect(computeDailyAttendance([at("11:00")], { ...base, openTime: null })?.late).toBe(false);
+  });
+
+  describe("terminal yo'nalish bersa (KIRISH/CHIQISH bitta terminalda)", () => {
+    const kir = (hhmm: string) => ({ time: at(hhmm), direction: "in" as const });
+    const chiq = (hhmm: string) => ({ time: at(hhmm), direction: "out" as const });
+
+    it("birinchi kirish — kelgan, oxirgi chiqish — ketgan", () => {
+      expect(computeDailyAttendance([chiq("17:45"), kir("07:50"), kir("08:30")], base)).toEqual({ checkInTime: "07:50", checkOutTime: "17:45", late: false });
+    });
+
+    it("faqat kirish — hali ketmagan (oralig'i katta bo'lsa ham)", () => {
+      expect(computeDailyAttendance([kir("07:50"), kir("12:00")], base)?.checkOutTime).toBeNull();
+    });
+
+    it("kirishdan tez orada chiqish tanlansa ham ketgan deb yoziladi (30 daqiqa qoidasi yo'q)", () => {
+      expect(computeDailyAttendance([kir("07:50"), chiq("08:05")], base)?.checkOutTime).toBe("08:05");
+    });
+
+    it("ertalab adashib bosilgan chiqish e'tiborsiz", () => {
+      expect(computeDailyAttendance([chiq("07:48"), kir("07:50")], base)).toEqual({ checkInTime: "07:50", checkOutTime: null, late: false });
+    });
+
+    it("kirish tanlanmagan bo'lsa — kelgani birinchi voqea", () => {
+      expect(computeDailyAttendance([chiq("08:20"), chiq("17:30")], base)).toEqual({ checkInTime: "08:20", checkOutTime: "17:30", late: true });
+    });
+
+    it("chiqib, yana kirgan bo'lsa — hali ketmagan; oxirida chiqsa — o'sha vaqt", () => {
+      expect(computeDailyAttendance([kir("07:50"), chiq("13:00"), kir("14:00")], base)?.checkOutTime).toBeNull();
+      expect(computeDailyAttendance([kir("07:50"), chiq("13:00"), kir("14:00"), chiq("18:10")], base)?.checkOutTime).toBe("18:10");
+    });
+
+    it("kechikish birinchi kirish bo'yicha", () => {
+      expect(computeDailyAttendance([kir("08:25"), chiq("17:00")], base)?.late).toBe(true);
+    });
+
+    it("yo'nalishsiz voqealar bilan aralash — yo'nalishlilar hal qiladi", () => {
+      expect(computeDailyAttendance([{ time: at("07:40") }, kir("07:55"), chiq("17:00")], base)).toEqual({ checkInTime: "07:55", checkOutTime: "17:00", late: false });
+    });
+  });
+
+  it("Hikvision attendanceStatus → yo'nalish", () => {
+    expect(directionFromRaw({ attendanceStatus: "checkIn", label: "KIRISH" })).toBe("in");
+    expect(directionFromRaw({ attendanceStatus: "checkOut", label: "CHIQISH" })).toBe("out");
+    expect(directionFromRaw({ attendanceStatus: "breakOut" })).toBe("out");
+    expect(directionFromRaw({ attendanceStatus: "undefined" })).toBeNull();
+    expect(directionFromRaw({})).toBeNull();
+    expect(directionFromRaw(null)).toBeNull();
   });
 
   it("kun chegarasi Toshkent vaqti bo'yicha (UTC emas)", () => {
