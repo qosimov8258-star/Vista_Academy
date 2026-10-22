@@ -91,9 +91,10 @@ async function request<T>(path: string, options: RequestInit = {}, retry = true)
   return body.data as T;
 }
 
-async function upload<T>(path: string, file: File, retry = true): Promise<T> {
+async function upload<T>(path: string, file: File, retry = true, fields?: Record<string, string>): Promise<T> {
   const formData = new FormData();
   formData.append("file", file);
+  for (const [key, value] of Object.entries(fields ?? {})) formData.append(key, value);
   const accessToken = getTenantAccessToken();
 
   // Content-Type ni qo'lda qo'ymaymiz — brauzer multipart boundary'ni o'zi qo'shadi.
@@ -107,7 +108,7 @@ async function upload<T>(path: string, file: File, retry = true): Promise<T> {
   if (res.status === 401 && retry) {
     const refreshed = await tryRefresh();
     if (refreshed) {
-      return upload<T>(path, file, false);
+      return upload<T>(path, file, false, fields);
     }
   }
 
@@ -134,7 +135,8 @@ export const api = {
   put: <T>(path: string, data?: unknown) =>
     request<T>(path, { method: "PUT", body: data !== undefined ? JSON.stringify(data) : undefined }),
   delete: <T>(path: string, init?: RequestInit) => request<T>(path, { method: "DELETE", ...init }),
-  upload: <T>(path: string, file: File) => upload<T>(path, file),
+  /** `fields` — fayl bilan birga yuboriladigan oddiy maydonlar (multipart) */
+  upload: <T>(path: string, file: File, fields?: Record<string, string>) => upload<T>(path, file, true, fields),
 };
 
 /** Backend faqat "/uploads/..." kabi nisbiy yo'l qaytaradi — to'liq manzilga aylantiradi. */

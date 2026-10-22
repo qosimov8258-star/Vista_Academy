@@ -2,7 +2,7 @@
 
 import { use, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, Lock, UserCheck, Wand2 } from "lucide-react";
+import { Download, Lock, Paperclip, UserCheck, Wand2 } from "lucide-react";
 import { api } from "@/lib/api";
 import type { Organization, StaffAttendanceDay, StaffAttendanceEmployee, StaffAttendanceSummary } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
@@ -104,6 +104,8 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
   // tarixi (kelgan/kelmagan kunlari) alohida oynada ochiladi.
   const [historyEmployeeId, setHistoryEmployeeId] = useState<string | null>(null);
   const [historyPeriod, setHistoryPeriod] = useState("");
+  // Kun oynasidan "Hujjat biriktirish" — tarix shu kun belgilangan holda ochiladi
+  const [historyPreselect, setHistoryPreselect] = useState<string | null>(null);
 
   // Hali saqlanmagan o'zgarishlar (xodim → holat va vaqtlar). Ko'rsatilgani —
   // qoralama bo'lsa o'sha, bo'lmasa bazadagi yozuv (terminal yoki qo'lda
@@ -359,9 +361,14 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
                               present ? (
                                 <InOutTimes checkIn={eff.checkInTime} checkOut={eff.checkOutTime} late={eff.status === "LATE"} />
                               ) : (
-                                <Pill color={eff.status ? STAFF_STATUS_COLOR[eff.status] : IOS.gray}>
-                                  {tr(eff.status ? STAFF_STATUS_LABEL[eff.status] : "Belgilanmagan")}
-                                </Pill>
+                                <span className="flex items-center gap-1.5">
+                                  {employee.documents.length > 0 && (
+                                    <Paperclip className="h-[15px] w-[15px] text-[#007aff]" strokeWidth={2.2} aria-label={tr("Hujjat bor")} />
+                                  )}
+                                  <Pill color={eff.status ? STAFF_STATUS_COLOR[eff.status] : IOS.gray}>
+                                    {tr(eff.status ? STAFF_STATUS_LABEL[eff.status] : "Belgilanmagan")}
+                                  </Pill>
+                                </span>
                               )
                             }
                           />
@@ -431,6 +438,7 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
                       <ListRow
                         key={employee.employeeId}
                         onClick={() => {
+                          setHistoryPreselect(null);
                           setHistoryEmployeeId(employee.employeeId);
                           setHistoryPeriod(period);
                         }}
@@ -472,6 +480,18 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
         value={editing ? effectiveOf(editing) : { status: null, checkInTime: null, checkOutTime: null }}
         editable={editable}
         onApply={(draft) => editing && setDrafts((d) => ({ ...d, [editing.employeeId]: draft }))}
+        documents={editing?.documents}
+        onAttach={
+          canWrite && editing?.status && !isPresentStatus(editing.status)
+            ? () => {
+                const id = editing.employeeId;
+                setEditingId(null);
+                setHistoryPreselect(date);
+                setHistoryPeriod(date.slice(0, 7));
+                setHistoryEmployeeId(id);
+              }
+            : undefined
+        }
       />
 
       {/* Saqlash qaytarib bo'lmaydi (kun qulflanadi) — ikkinchi bosqichda tasdiqlanadi */}
@@ -521,6 +541,8 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
         branchId={branchId}
         period={historyPeriod}
         onPeriodChange={setHistoryPeriod}
+        canWrite={canWrite}
+        preselect={historyPreselect}
       />
     </div>
   );

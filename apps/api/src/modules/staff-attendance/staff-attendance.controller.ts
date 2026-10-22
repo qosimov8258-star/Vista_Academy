@@ -1,4 +1,6 @@
-import { Body, Controller, Get, Post, Query, Res, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, Query, Res, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
+import { memoryStorage } from "multer";
 import type { Response } from "express";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { Public } from "../../common/decorators/public.decorator";
@@ -7,6 +9,7 @@ import { CurrentTenantUser } from "../iam/decorators/current-tenant-user.decorat
 import { TenantAuthenticatedUser, toTenantScope } from "../iam/tenant-auth.types";
 import { StaffAttendanceService } from "./staff-attendance.service";
 import { StaffAttendanceReportService } from "./staff-attendance-report.service";
+import { DOCUMENT_MAX_SIZE, StaffAbsenceDocumentsService } from "./staff-absence-documents.service";
 import type { ReportKind } from "../cash-desk/report-kit";
 import { MarkStaffAttendanceDto } from "./dto/mark-staff-attendance.dto";
 import { StaffAttendanceQueryDto } from "./dto/staff-attendance-query.dto";
@@ -23,7 +26,41 @@ export class StaffAttendanceController {
   constructor(
     private readonly staffAttendanceService: StaffAttendanceService,
     private readonly report: StaffAttendanceReportService,
+    private readonly documents: StaffAbsenceDocumentsService,
   ) {}
+
+  /** Kelmagan kun(lar) uchun hujjat yuklash: multipart `file` + employeeId, dates (vergul bilan), kind, note */
+  @Post("documents")
+  @UseInterceptors(FileInterceptor("file", { storage: memoryStorage(), limits: { fileSize: DOCUMENT_MAX_SIZE } }))
+  uploadDocument(
+    @CurrentTenantUser() user: TenantAuthenticatedUser,
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @Body() body: { employeeId?: string; dates?: string; kind?: string; note?: string },
+  ) {
+    return this.documents.upload(user, file, body);
+  }
+
+  /** Hujjatlar: xodimning oyi (`employeeId` + `period`) yoki filialning bir kuni (`date`) */
+  @Get("documents")
+  listDocuments(
+    @CurrentTenantUser() user: TenantAuthenticatedUser,
+    @Query("employeeId") employeeId?: string,
+    @Query("period") period?: string,
+    @Query("date") date?: string,
+    @Query("branchId") branchId?: string,
+  ) {
+    return this.documents.list(user, { employeeId, period, date, branchId });
+  }
+
+  @Get("documents/:id/file")
+  documentFile(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id", ParseUUIDPipe) id: string, @Res() res: Response) {
+    return this.documents.sendFile(user, id, res);
+  }
+
+  @Delete("documents/:id")
+  deleteDocument(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id", ParseUUIDPipe) id: string) {
+    return this.documents.remove(user, id);
+  }
 
   /** Davomat hisoboti (Excel): kun, hafta, oy yoki to'liq davr — kirish/chiqish vaqtlari, tabel, Face ID voqealari */
   @Get("report")

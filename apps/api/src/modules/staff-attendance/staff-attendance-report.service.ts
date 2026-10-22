@@ -35,6 +35,7 @@ const STATUS_FILL: Record<string, string> = {
   ON_LEAVE: "FFEDEDED",
 };
 const FACE_ID_NOTE = "Face ID";
+const DOCUMENT_UZ: Record<string, string> = { SICK_NOTE: "Kasallik varaqasi", LEAVE_REQUEST: "Ariza", OTHER: "Hujjat" };
 const HOURS = "[h]:mm";
 
 const toMinutes = (hhmm: string | null) => {
@@ -61,6 +62,7 @@ interface DayRow {
   worked: number | null;
   faceId: boolean;
   note: string;
+  document: string;
 }
 
 interface EmployeeTotals {
@@ -124,6 +126,13 @@ export class StaffAttendanceReportService {
     const firstDay = kind === "all" ? records[0]?.date.toISOString().slice(0, 10) : from!;
     const lastDay = kind === "all" ? records[records.length - 1]?.date.toISOString().slice(0, 10) : to!;
 
+    const documents = await this.prisma.staffAbsenceDocument.findMany({
+      where: { branchId, ...(dateRange ? { dates: { hasSome: records.map((r) => r.date) } } : {}) },
+      select: { employeeId: true, kind: true, dates: true },
+    });
+    const documentOf = new Map<string, string>();
+    for (const doc of documents) for (const day of doc.dates) documentOf.set(`${doc.employeeId}|${day.toISOString().slice(0, 10)}`, DOCUMENT_UZ[doc.kind] ?? "Hujjat");
+
     const [employees, events] = await Promise.all([
       this.prisma.employee.findMany({
         where: { branchId, OR: [{ isActive: true }, { id: { in: [...new Set(records.map((r) => r.employee.id))] } }] },
@@ -160,6 +169,7 @@ export class StaffAttendanceReportService {
         worked: a !== null && b !== null && b > a ? b - a : null,
         faceId: r.note === FACE_ID_NOTE,
         note: r.note && r.note !== FACE_ID_NOTE ? r.note : "",
+        document: documentOf.get(`${r.employee.id}|${r.date.toISOString().slice(0, 10)}`) ?? "",
       };
     });
 
@@ -307,8 +317,8 @@ export class StaffAttendanceReportService {
 
     // 3. Kirish-chiqish — har kun, har xodim
     const wd = wb.addWorksheet("Kirish-chiqish", { views: [{ state: "frozen", ySplit: 4 }] });
-    const dcols = ["№", "Sana", "Hafta kuni", "F.I.Sh.", "Lavozim", "Holat", "Kirish", "Chiqish", "Ishlagan vaqti", "Manba", "Izoh"];
-    wd.columns = [5, 16, 12, 28, 22, 12, 9, 9, 13, 10, 28].map((width) => ({ width }));
+    const dcols = ["№", "Sana", "Hafta kuni", "F.I.Sh.", "Lavozim", "Holat", "Kirish", "Chiqish", "Ishlagan vaqti", "Manba", "Hujjat", "Izoh"];
+    wd.columns = [5, 16, 12, 28, 22, 12, 9, 9, 13, 10, 18, 28].map((width) => ({ width }));
     titleBlock(wd, "Kirish va chiqish vaqtlari", dcols.length);
     head(wd.addRow(dcols));
     rows.forEach((r, i) => {
@@ -323,6 +333,7 @@ export class StaffAttendanceReportService {
         r.checkOut ?? "",
         r.worked !== null ? r.worked / 1440 : null,
         r.faceId ? "Face ID" : "Qo'lda",
+        r.document,
         r.note,
       ]);
       row.getCell(9).numFmt = HOURS;
