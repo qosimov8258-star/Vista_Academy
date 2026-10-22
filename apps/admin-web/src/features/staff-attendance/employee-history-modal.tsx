@@ -12,6 +12,7 @@ import { IOS, ROW_SEPARATOR } from "@/components/ios/tokens";
 import { periodLabel, shiftPeriod } from "@/features/payments/shared";
 import { formatPositionLabel } from "@/lib/employee-position";
 import { useTr } from "@/i18n/tr";
+import { FaceIdMark, InOutTimes, isFaceIdRecord } from "./in-out-times";
 
 export const STAFF_STATUS_LABEL = { PRESENT: "Keldi", ABSENT: "Kelmadi", LATE: "Kech qoldi", SICK: "Kasal", ON_LEAVE: "Ta'til" } as const;
 export const STAFF_STATUS_COLOR = {
@@ -117,12 +118,13 @@ export function EmployeeHistoryModal({
                         {dayMonthLabel(day.date, tr)}
                         <span className="text-[#8e8e93]"> · {tr(WEEKDAYS[d.getUTCDay()])}</span>
                       </span>
-                      {(day.checkInTime || day.checkOutTime || day.note) && (
-                        <span className="block truncate text-[13px] tabular-nums text-[#8e8e93]">
-                          {[day.checkInTime || day.checkOutTime ? `${day.checkInTime ?? "—"} – ${day.checkOutTime ?? "—"}` : null, day.note ? tr(day.note) : null]
-                            .filter(Boolean)
-                            .join(" · ")}
+                      {(day.checkInTime || day.checkOutTime) && (
+                        <span className="mt-0.5 block">
+                          <InOutTimes inline checkIn={day.checkInTime} checkOut={day.checkOutTime} late={day.status === "LATE"} />
                         </span>
+                      )}
+                      {day.note && (
+                        <span className="block truncate text-[13px] text-[#8e8e93]">{isFaceIdRecord(day.note) ? <FaceIdMark /> : tr(day.note)}</span>
                       )}
                     </span>
                     <Pill color={STAFF_STATUS_COLOR[day.status]}>{tr(STAFF_STATUS_LABEL[day.status])}</Pill>

@@ -1,38 +1,41 @@
 "use client";
 
-import { use, useEffect, useRef, useState } from "react";
-import clsx from "clsx";
+import { use, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Lock, UserCheck } from "lucide-react";
+import { Lock, UserCheck, Wand2 } from "lucide-react";
 import { api } from "@/lib/api";
-import type { Organization, StaffAttendanceDay, StaffAttendanceStatus, StaffAttendanceSummary } from "@/lib/types";
+import type { Organization, StaffAttendanceDay, StaffAttendanceEmployee, StaffAttendanceSummary } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { canWriteOperational } from "@/lib/permissions";
 import { formatPositionLabel } from "@/lib/employee-position";
 import { DayStepper, PeriodStepper } from "@/components/ios/day-stepper";
-import { IosSwitch, Segmented } from "@/components/ios/form";
+import { Segmented } from "@/components/ios/form";
 import { Group as IosGroup, ListRow } from "@/components/ios/group";
 import { PageHeaderCard } from "@/components/ios/page-card";
 import { IosAvatar, Pill } from "@/components/ios/pill";
-import { SheetPrimaryButton } from "@/components/ios/sheet";
+import { IosSheet, SheetPrimaryButton, SheetSecondaryButton } from "@/components/ios/sheet";
 import { StatCell, StatStrip } from "@/components/ios/stat-strip";
 import { EmptyState, ErrorState, SkeletonRows } from "@/components/ios/states";
-import { GROUP_BLOCK, IOS, ROW_SEPARATOR } from "@/components/ios/tokens";
+import { GROUP_BLOCK, IOS } from "@/components/ios/tokens";
 import { OptionPicker } from "@/features/lessons/option-picker";
 import { periodLabel, shiftPeriod } from "@/features/payments/shared";
+import {
+  DayEditSheet,
+  DEFAULT_CHECK_IN_TIME,
+  DEFAULT_CHECK_OUT_TIME,
+  isPresentStatus,
+  type DayDraft,
+} from "@/features/staff-attendance/day-edit-sheet";
 import { EmployeeHistoryModal, STAFF_STATUS_COLOR, STAFF_STATUS_LABEL } from "@/features/staff-attendance/employee-history-modal";
+import { FaceIdMark, InOutTimes, isFaceIdRecord } from "@/features/staff-attendance/in-out-times";
 import { useTr } from "@/i18n/tr";
 
 type Tab = "davomat" | "royxat";
+type DayFilter = "all" | "inside" | "left" | "missing";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
-// Ko'pchilik xodim har kuni shu vaqt oralig'ida ishlaydi — har birini qo'lda
-// kiritish o'rniga standart shu bilan to'ldirib qo'yiladi, faqat istisnolar
-// (kimdir erta ketsa va h.k.) qo'lda o'zgartiriladi.
-const DEFAULT_CHECK_IN_TIME = "07:30";
-const DEFAULT_CHECK_OUT_TIME = "18:00";
 
 function todayDateString(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: DEFAULT_TIMEZONE }).format(new Date());
@@ -79,10 +82,13 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
     }
   }, [forcedBranchId, branchId, branches]);
 
+  const today = todayDateString();
   const attendanceQuery = useQuery({
     queryKey: ["staff-attendance", slug, branchId, date],
     queryFn: () => api.get<StaffAttendanceDay>(`/app/staff-attendance?branchId=${branchId}&date=${date}`),
     enabled: !!branchId && !!date,
+    // Bugun Face ID terminali vaqtlarni yozib turadi — sahifa ochiq bo'lsa yangilanib tursin
+    refetchInterval: date === today ? 30_000 : false,
   });
 
   const summaryQuery = useQuery({
@@ -96,65 +102,53 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
   const [historyEmployeeId, setHistoryEmployeeId] = useState<string | null>(null);
   const [historyPeriod, setHistoryPeriod] = useState("");
 
-  const [times, setTimes] = useState<Record<string, { checkInTime: string; checkOutTime: string }>>({});
-  const timeFor = (employeeId: string, employee: { checkInTime: string | null; checkOutTime: string | null }) =>
-    times[employeeId] ?? {
-      checkInTime: employee.checkInTime ?? DEFAULT_CHECK_IN_TIME,
-      checkOutTime: employee.checkOutTime ?? DEFAULT_CHECK_OUT_TIME,
-    };
-
-  // Kelishni belgilash: sahifa ochilganda hamma "Keldi" deb ko'rsatiladi (hali
-  // saqlanmagan) — ko'pchilik kun sayin kelgani uchun shunday tezroq. Faqat
-  // kelmagan/kech qolgan kabi istisnolarni o'zgartirib, oxirida "Saqlash"
-  // bosiladi — shunda hammasi birdan yuboriladi.
-  //
-  // `attendanceQuery.data.date` bilan tekshiramiz (shunchaki obyekt
-  // referensiyasi emas) — aks holda sana oldinga-orqaga almashtirilsa (masalan
-  // A -> B -> A, keshdan darhol qaytadi) eski sananing belgilashlari yangi
-  // sanaga "sizib o'tib" saqlanib ketishi mumkin edi.
-  const [localStatuses, setLocalStatuses] = useState<Record<string, StaffAttendanceStatus>>({});
-  // Faqat filial+sana haqiqatan almashganda tozalanadi — aks holda so'rov fon
-  // rejimida qayta yuklanganda (masalan oyna qaytadan fokuslanganda) hali
-  // saqlanmagan belgilashlar jimgina o'chirib yuborilishi mumkin edi.
-  const initializedForRef = useRef<string | null>(null);
+  // Hali saqlanmagan o'zgarishlar (xodim → holat va vaqtlar). Ko'rsatilgani —
+  // qoralama bo'lsa o'sha, bo'lmasa bazadagi yozuv (terminal yoki qo'lda
+  // belgilangan). Yozuvi yo'q xodim «Belgilanmagan» — hech kim avtomatik
+  // «Keldi» deb ko'rsatilmaydi, Face ID'dagi haqiqiy holat chalkashmasin.
+  const [drafts, setDrafts] = useState<Record<string, DayDraft>>({});
+  const [filter, setFilter] = useState<DayFilter>("all");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  // Sana yoki filial almashganda qoralamalar tashlanadi — eski kunning
+  // belgilashlari yangi kunga sizib o'tmasin.
   useEffect(() => {
-    if (!attendanceQuery.data || attendanceQuery.data.date !== date) return;
-    const key = `${branchId}_${date}`;
-    if (initializedForRef.current === key) return;
-    initializedForRef.current = key;
-    setLocalStatuses(
-      Object.fromEntries(attendanceQuery.data.employees.map((e) => [e.employeeId, e.status ?? "PRESENT"])),
-    );
-    // Vaqt maydonlari ham shu sanaga xos — sana almashganda avvalgi
-    // kiritilgan (hali saqlanmagan) vaqtlar olib tashlanadi.
-    setTimes({});
-  }, [attendanceQuery.data, date, branchId]);
-  const statusFor = (employeeId: string) => localStatuses[employeeId] ?? "PRESENT";
+    setDrafts({});
+    setFilter("all");
+  }, [date, branchId]);
+
+  const recordOf = (e: StaffAttendanceEmployee): DayDraft => ({ status: e.status, checkInTime: e.checkInTime, checkOutTime: e.checkOutTime });
+  const effectiveOf = (e: StaffAttendanceEmployee): DayDraft => drafts[e.employeeId] ?? recordOf(e);
 
   // Saqlash — hamma xodimni yozib, so'ng kunni qulflaydi (backend
   // requireOperationalScope/requireBranchScope orqali ruxsatni o'zi tekshiradi
   // — buyerda qayta tekshirmaymiz). Qulflangandan keyin bu kun uchun "Saqlash"
   // butunlay yo'qoladi, chunki ish haqi shu ma'lumotga bog'liq bo'ladi.
+  // Belgilanmagan xodim «Kelmadi» bo'lib yoziladi (tasdiqlash oynasida aytiladi).
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!attendanceQuery.data) return;
       await Promise.all(
         attendanceQuery.data.employees.map((employee) => {
-          const t = timeFor(employee.employeeId, employee);
+          const eff = effectiveOf(employee);
+          const status = eff.status ?? "ABSENT";
+          const present = isPresentStatus(status);
           return api.post("/app/staff-attendance", {
             employeeId: employee.employeeId,
             date,
-            status: statusFor(employee.employeeId),
+            status,
             // Bo'sh satr backend validatsiyasidan o'tmaydi ("" - to'g'ri
             // HH:MM emas) — shuning uchun bo'sh bo'lsa umuman yubormaymiz.
-            checkInTime: t.checkInTime || undefined,
-            checkOutTime: t.checkOutTime || undefined,
+            checkInTime: (present && eff.checkInTime) || undefined,
+            checkOutTime: (present && eff.checkOutTime) || undefined,
           });
         }),
       );
       await api.post("/app/staff-attendance/lock", { branchId, date });
     },
     onSuccess: () => {
+      setConfirmOpen(false);
+      setDrafts({});
       queryClient.invalidateQueries({ queryKey: ["staff-attendance", slug, branchId, date] });
       queryClient.invalidateQueries({ queryKey: ["staff-attendance-summary", slug, branchId] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-summary", slug] });
@@ -173,12 +167,38 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
   const locked = attendanceQuery.data?.locked ?? false;
   const editable = canWrite && !locked;
 
-  const today = todayDateString();
-  const employees = attendanceQuery.data?.employees ?? [];
-  const presentCount = employees.filter((e) => (editable ? statusFor(e.employeeId) : e.status) === "PRESENT").length;
-  const absentCount = employees.length - presentCount;
-  const setTime = (employeeId: string, employee: { checkInTime: string | null; checkOutTime: string | null }, key: "checkInTime" | "checkOutTime", value: string) =>
-    setTimes((t) => ({ ...t, [employeeId]: { ...timeFor(employeeId, employee), [key]: value } }));
+  const employees = useMemo(() => attendanceQuery.data?.employees ?? [], [attendanceQuery.data]);
+  const rows = employees.map((employee) => ({ employee, eff: effectiveOf(employee) }));
+  const presentRows = rows.filter((r) => isPresentStatus(r.eff.status));
+  const counts = {
+    present: presentRows.length,
+    late: rows.filter((r) => r.eff.status === "LATE").length,
+    inside: presentRows.filter((r) => !r.eff.checkOutTime).length,
+    left: presentRows.filter((r) => !!r.eff.checkOutTime).length,
+    absent: rows.filter((r) => r.eff.status && !isPresentStatus(r.eff.status)).length,
+    unmarked: rows.filter((r) => !r.eff.status).length,
+  };
+  const isToday = date === today;
+  const visibleRows = rows.filter(({ eff }) => {
+    if (filter === "inside") return isPresentStatus(eff.status) && !eff.checkOutTime;
+    if (filter === "left") return isPresentStatus(eff.status) && !!eff.checkOutTime;
+    if (filter === "missing") return !isPresentStatus(eff.status);
+    return true;
+  });
+  const changedCount = Object.keys(drafts).length;
+  const editing = employees.find((e) => e.employeeId === editingId) ?? null;
+
+  // Terminalsiz filialda (yoki terminalga chiqmaganlar uchun) tezkor yo'l:
+  // belgilanmaganlarning hammasini standart vaqt bilan «Keldi» qilish.
+  const markUnmarkedPresent = () =>
+    setDrafts((d) => {
+      const next = { ...d };
+      for (const { employee, eff } of rows) {
+        if (!eff.status) next[employee.employeeId] = { status: "PRESENT", checkInTime: DEFAULT_CHECK_IN_TIME, checkOutTime: DEFAULT_CHECK_OUT_TIME };
+      }
+      return next;
+    });
+
   const rateColor = (rate: number) => (rate >= 80 ? IOS.green : rate >= 50 ? IOS.orange : IOS.red);
 
   return (
@@ -244,77 +264,114 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
             ) : employees.length === 0 ? (
               <EmptyState icon={UserCheck} title="Bu filialda faol xodim yo'q" />
             ) : (
-              <IosGroup
-                title={
-                  <>
-                    {tr("Xodimlar")}
-                    <span className="font-normal normal-case tracking-normal">
-                      · {tr("keldi {0}", presentCount)} · {tr("kelmadi {0}", absentCount)}
-                    </span>
-                  </>
-                }
-                refreshing={attendanceQuery.isFetching && !attendanceQuery.isLoading}
-                footer={editable ? tr("Hamma «Keldi» bo'lib turadi — faqat kelmaganlarni o'chiring. Saqlangach kun qulflanadi va o'zgartirib bo'lmaydi.") : undefined}
-                bare
-              >
-                <div className={GROUP_BLOCK}>
-                  {employees.map((employee) => {
-                    const status = editable ? statusFor(employee.employeeId) : employee.status;
-                    const present = status === "PRESENT";
-                    const t = timeFor(employee.employeeId, employee);
-                    return (
-                      <div key={employee.employeeId} className="group/row relative px-4 py-2.5">
-                        <div className="flex min-h-[44px] items-center gap-3">
-                          <IosAvatar name={employee.fullName} size={40} />
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-[15.5px] font-medium text-[var(--color-text)]">{tr(employee.fullName)}</span>
-                            <span className="block truncate text-[13px] text-[#8e8e93]">{tr(employee.position)}</span>
-                          </span>
-                          {editable ? (
-                            <span className="flex shrink-0 items-center gap-2.5">
-                              <span className={clsx("text-[13px] font-medium", present ? "text-[#34c759]" : "text-[#8e8e93]")}>{tr(present ? "Keldi" : "Kelmadi")}</span>
-                              <IosSwitch
-                                checked={present}
-                                onChange={() => setLocalStatuses((s) => ({ ...s, [employee.employeeId]: present ? "ABSENT" : "PRESENT" }))}
-                                label={`${employee.fullName} — ${tr("davomat")}`}
-                              />
-                            </span>
-                          ) : (
-                            <span className="flex shrink-0 items-center gap-2">
-                              {(employee.checkInTime || employee.checkOutTime) && (
-                                <span className="text-[13px] tabular-nums text-[#8e8e93] max-sm:hidden">
-                                  {employee.checkInTime ?? "—"}–{employee.checkOutTime ?? "—"}
-                                </span>
-                              )}
-                              <Pill color={employee.status ? STAFF_STATUS_COLOR[employee.status] : IOS.gray}>
-                                {tr(employee.status ? STAFF_STATUS_LABEL[employee.status] : "Belgilanmagan")}
-                              </Pill>
-                            </span>
-                          )}
-                        </div>
-                        {editable && present && (
-                          // Kelgan va ketgan vaqti — standart 07:30–18:00, faqat istisnolar o'zgartiriladi
-                          <div className="mt-1.5 flex flex-wrap items-center gap-2 pl-[52px]">
-                            <TimePill label={tr("Kelgan vaqti")} value={t.checkInTime} onChange={(v) => setTime(employee.employeeId, employee, "checkInTime", v)} />
-                            <span className="text-[#c7c7cc]">–</span>
-                            <TimePill label={tr("Ketgan vaqti")} value={t.checkOutTime} onChange={(v) => setTime(employee.employeeId, employee, "checkOutTime", v)} />
-                          </div>
-                        )}
-                        <span className={ROW_SEPARATOR} style={{ left: 68 }} aria-hidden="true" />
-                      </div>
-                    );
-                  })}
-                </div>
-              </IosGroup>
-            )}
+              <>
+                <StatStrip tone="white">
+                  <StatCell
+                    label={tr("Keldi")}
+                    value={counts.present}
+                    color={IOS.green}
+                    hint={counts.late > 0 ? tr("{0} tasi kech qoldi", counts.late) : `${tr("jami")} ${employees.length}`}
+                  />
+                  <StatCell label={tr(isToday ? "Ichkarida" : "Chiqishsiz")} value={counts.inside} color={IOS.orange} hint={tr(isToday ? "hali ketmagan" : "chiqish yozilmagan")} />
+                  <StatCell label={tr("Ketdi")} value={counts.left} color={IOS.blue} />
+                  <StatCell
+                    label={tr("Kelmadi")}
+                    value={counts.absent + counts.unmarked}
+                    color={IOS.red}
+                    hint={counts.unmarked > 0 ? tr("{0} tasi belgilanmagan", counts.unmarked) : undefined}
+                  />
+                </StatStrip>
 
-            {editable && employees.length > 0 && (
-              <div className="space-y-2">
-                {saveMutation.isError && <p className="px-1 text-[13px] text-[#ff3b30]">{tr("Saqlashda xatolik yuz berdi")}</p>}
-                <SheetPrimaryButton loading={saveMutation.isPending} onClick={() => saveMutation.mutate()}>
-                  {tr("Saqlash")}
-                </SheetPrimaryButton>
-              </div>
+                <Segmented<DayFilter>
+                  value={filter}
+                  onChange={setFilter}
+                  label={tr("Saralash")}
+                  options={[
+                    { value: "all", label: tr("Hammasi") },
+                    { value: "inside", label: tr(isToday ? "Ichkarida" : "Chiqishsiz") },
+                    { value: "left", label: tr("Ketdi") },
+                    { value: "missing", label: tr("Kelmadi") },
+                  ]}
+                />
+
+                <IosGroup
+                  title={
+                    <>
+                      {tr("Xodimlar")}
+                      {changedCount > 0 && (
+                        <span className="font-normal normal-case tracking-normal text-[var(--color-primary)]"> · {tr("{0} ta o'zgarish saqlanmagan", changedCount)}</span>
+                      )}
+                    </>
+                  }
+                  refreshing={attendanceQuery.isFetching && !attendanceQuery.isLoading}
+                  footer={
+                    editable
+                      ? tr("Kirish va chiqish vaqtini Face ID terminali o'zi yozadi. Xodimni bosib, holat yoki vaqtni tuzating; oxirida «Saqlash» — kun qulflanadi.")
+                      : undefined
+                  }
+                  bare
+                >
+                  {visibleRows.length === 0 ? (
+                    <div className={GROUP_BLOCK}>
+                      <EmptyState icon={UserCheck} title="Bu bo'limda xodim yo'q" />
+                    </div>
+                  ) : (
+                    <div className={GROUP_BLOCK}>
+                      {visibleRows.map(({ employee, eff }) => {
+                        const present = isPresentStatus(eff.status);
+                        const changed = !!drafts[employee.employeeId];
+                        const faceId = isFaceIdRecord(employee.note) && !changed;
+                        return (
+                          <ListRow
+                            key={employee.employeeId}
+                            onClick={() => setEditingId(employee.employeeId)}
+                            chevron={false}
+                            avatar={<IosAvatar name={employee.fullName} size={44} />}
+                            title={
+                              <>
+                                {changed && <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[var(--color-primary)] align-middle" aria-label={tr("O'zgartirilgan")} />}
+                                {tr(employee.fullName)}
+                              </>
+                            }
+                            subtitle={
+                              <>
+                                {tr(employee.position)}
+                                {faceId && (
+                                  <>
+                                    {" · "}
+                                    <FaceIdMark />
+                                  </>
+                                )}
+                              </>
+                            }
+                            meta={
+                              present ? (
+                                <InOutTimes checkIn={eff.checkInTime} checkOut={eff.checkOutTime} late={eff.status === "LATE"} />
+                              ) : (
+                                <Pill color={eff.status ? STAFF_STATUS_COLOR[eff.status] : IOS.gray}>
+                                  {tr(eff.status ? STAFF_STATUS_LABEL[eff.status] : "Belgilanmagan")}
+                                </Pill>
+                              )
+                            }
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
+                </IosGroup>
+
+                {editable && (
+                  <div className="space-y-2.5">
+                    {counts.unmarked > 0 && (
+                      <SheetSecondaryButton onClick={markUnmarkedPresent}>
+                        <Wand2 className="h-[18px] w-[18px]" strokeWidth={2.2} />
+                        {tr("Belgilanmagan {0} tasini «Keldi» qilish", counts.unmarked)}
+                      </SheetSecondaryButton>
+                    )}
+                    <SheetPrimaryButton onClick={() => setConfirmOpen(true)}>{tr("Saqlash")}</SheetPrimaryButton>
+                  </div>
+                )}
+              </>
             )}
           </>
         )}
@@ -387,6 +444,45 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
         )}
       </div>
 
+      <DayEditSheet
+        open={!!editing}
+        onClose={() => setEditingId(null)}
+        employee={
+          editing
+            ? { fullName: editing.fullName, position: editing.position, faceId: isFaceIdRecord(editing.note), recorded: recordOf(editing) }
+            : null
+        }
+        value={editing ? effectiveOf(editing) : { status: null, checkInTime: null, checkOutTime: null }}
+        editable={editable}
+        onApply={(draft) => editing && setDrafts((d) => ({ ...d, [editing.employeeId]: draft }))}
+      />
+
+      {/* Saqlash qaytarib bo'lmaydi (kun qulflanadi) — ikkinchi bosqichda tasdiqlanadi */}
+      <IosSheet
+        open={confirmOpen}
+        onClose={() => !saveMutation.isPending && setConfirmOpen(false)}
+        cancelLabel="Qaytish"
+        title={tr("Davomatni saqlash")}
+        footer={
+          <SheetPrimaryButton loading={saveMutation.isPending} onClick={() => saveMutation.mutate()}>
+            {tr("Saqlash va qulflash")}
+          </SheetPrimaryButton>
+        }
+      >
+        <div className="space-y-3 px-1 text-[15px] leading-snug text-[var(--color-text)]">
+          <p>
+            {tr("Keldi")}: <b className="tabular-nums">{counts.present}</b> · {tr("Kelmadi")}: <b className="tabular-nums">{counts.absent + counts.unmarked}</b>
+          </p>
+          {counts.unmarked > 0 && (
+            <p className="rounded-[14px] bg-[#ff3b30]/[0.08] px-4 py-3 text-[14px] text-[#d70015]">
+              {tr("{0} ta xodim belgilanmagan — ular «Kelmadi» deb saqlanadi.", counts.unmarked)}
+            </p>
+          )}
+          <p className="text-[13.5px] text-[#8e8e93]">{tr("Saqlangach kun qulflanadi va o'zgartirib bo'lmaydi — ish haqi shu davomatdan hisoblanadi.")}</p>
+          {saveMutation.isError && <p className="text-[13px] text-[#ff3b30]">{tr("Saqlashda xatolik yuz berdi")}</p>}
+        </div>
+      </IosSheet>
+
       <EmployeeHistoryModal
         open={!!historyEmployeeId}
         onClose={() => setHistoryEmployeeId(null)}
@@ -397,22 +493,5 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
         onPeriodChange={setHistoryPeriod}
       />
     </div>
-  );
-}
-
-/** Kelgan/ketgan vaqti — kulrang kapsula ichidagi vaqt maydoni */
-function TimePill({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  return (
-    <label className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[#767680]/[0.12] pl-3 pr-2 text-[12.5px] text-[#8e8e93]">
-      {/* Telefonda joy tor — ikkala vaqt bir qatorga sig'ishi uchun yozuv yashiriladi (aria-label qoladi) */}
-      <span className="max-sm:hidden">{label}</span>
-      <input
-        type="time"
-        aria-label={label}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="bg-transparent text-[14px] font-medium tabular-nums text-[var(--color-text)] outline-none"
-      />
-    </label>
   );
 }
