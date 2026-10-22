@@ -62,6 +62,11 @@ export function TextInput({ className, ...props }: ComponentProps<"input">) {
   return <input {...props} className={clsx(CONTROL, className)} />;
 }
 
+/** Ramkasiz ko'p qatorli matn (FieldRow `stacked` ichida) — react-hook-form `register` bilan ishlaydi */
+export function TextArea({ className, rows = 2, ...props }: ComponentProps<"textarea">) {
+  return <textarea rows={rows} {...props} className={clsx(CONTROL, "resize-none py-0 leading-snug", className)} />;
+}
+
 /** Parol maydoni — ko'z tugmasi bilan */
 export function PasswordInput({ className, ...props }: Omit<ComponentProps<"input">, "type">) {
   const tr = useTr();

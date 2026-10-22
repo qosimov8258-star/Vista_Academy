@@ -2,18 +2,21 @@
 
 import { use, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { CalendarDays, Download, TriangleAlert, Utensils } from "lucide-react";
 import { api } from "@/lib/api";
 import type { ChildAllergy, MenuEntry, Organization } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
-import { Card, CardHeader, CardBody, CardTitle } from "@/components/ui/card";
-import { DataTable, THead, TBody, Tr, Th, Td } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/input";
-import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
-import { formatDate } from "@/lib/format";
 import { downloadCsv } from "@/lib/download";
 import { useBranchContext } from "@/lib/use-branch-context";
+import { IosButton } from "@/components/ios/button";
+import { PeriodStepper, WEEKDAYS, dayMonthLabel } from "@/components/ios/day-stepper";
+import { Group, ListRow } from "@/components/ios/group";
+import { PageHeaderCard } from "@/components/ios/page-card";
+import { IosAvatar, Pill } from "@/components/ios/pill";
+import { EmptyState, ErrorState, SkeletonRows } from "@/components/ios/states";
+import { GROUP_BLOCK, IOS, ROW_PRESS, ROW_SEPARATOR } from "@/components/ios/tokens";
+import { OptionPicker } from "@/features/lessons/option-picker";
 import { EditMenuModal } from "@/features/nutrition/edit-menu-modal";
 import { WeeklyMenuModal } from "@/features/nutrition/weekly-menu-modal";
 import { canWriteKitchen, isChef } from "@/lib/permissions";
@@ -25,6 +28,11 @@ import { useTr } from "@/i18n/tr";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 const DAY_MS = 24 * 60 * 60 * 1000;
+const MEAL_ROWS = [
+  { key: "breakfast", label: "Nonushta" },
+  { key: "lunch", label: "Tushlik" },
+  { key: "snack", label: "Kechki ovqat / gazak" },
+] as const;
 
 function todayDateString(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: DEFAULT_TIMEZONE }).format(new Date());
@@ -60,13 +68,16 @@ function AdminNutritionPage({ slug }: { slug: string }) {
   // server-rendered pass and the client hydration pass — computing it lazily
   // in an effect (client-only) avoids a hydration mismatch on the date text below.
   const [weekStart, setWeekStart] = useState<string | null>(null);
+  const [today, setToday] = useState("");
   const [editDate, setEditDate] = useState<string | null>(null);
   const [weeklyMenuOpen, setWeeklyMenuOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
   useEffect(() => {
-    setWeekStart((current) => current ?? mondayOf(todayDateString()));
+    const t = todayDateString();
+    setToday(t);
+    setWeekStart((current) => current ?? mondayOf(t));
   }, []);
 
   const orgQuery = useQuery({
@@ -87,6 +98,7 @@ function AdminNutritionPage({ slug }: { slug: string }) {
 
   const weekEnd = weekStart ? addDays(weekStart, 6) : null;
   const days = useMemo(() => (weekStart ? Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)) : []), [weekStart]);
+  const thisWeek = today ? mondayOf(today) : null;
 
   const menuQuery = useQuery({
     queryKey: ["menu", slug, branchId, weekStart],
@@ -94,7 +106,7 @@ function AdminNutritionPage({ slug }: { slug: string }) {
     enabled: !!branchId && !!weekStart,
   });
 
-  const entryByDate = new Map((menuQuery.data ?? []).map((e) => [e.date.slice(0, 10), e]));
+  const entryByDate = useMemo(() => new Map((menuQuery.data ?? []).map((e) => [e.date.slice(0, 10), e])), [menuQuery.data]);
 
   const allergiesQuery = useQuery({
     queryKey: ["allergies", slug, branchId],
@@ -120,14 +132,10 @@ function AdminNutritionPage({ slug }: { slug: string }) {
     for (const day of days) {
       const entry = entryByDate.get(day);
       if (!entry) continue;
-      const meals: { label: string; text: string | null }[] = [
-        { label: "Nonushta", text: entry.breakfast },
-        { label: "Tushlik", text: entry.lunch },
-        { label: "Kechki ovqat / gazak", text: entry.snack },
-      ];
-      for (const meal of meals) {
-        if (!meal.text) continue;
-        const lower = meal.text.toLowerCase();
+      for (const meal of MEAL_ROWS) {
+        const text = entry[meal.key];
+        if (!text) continue;
+        const lower = text.toLowerCase();
         for (const { token, childName } of allergens) {
           if (lower.includes(token.toLowerCase())) {
             warnings.push({ date: day, mealLabel: meal.label, token, childName });
@@ -154,217 +162,195 @@ function AdminNutritionPage({ slug }: { slug: string }) {
     }
   };
 
+  const year = today ? Number(today.slice(0, 4)) : undefined;
+
   return (
-    <div className="space-y-5">
-      <div className="flex items-start justify-between gap-3 md:flex-wrap md:items-center">
-        <div className="min-w-0">
-          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
-            {tr("Ovqatlanish")}
-          </h1>
-          <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">{tr("Haftalik menyu")}</p>
-        </div>
-        {/* Mobilda ikki tugma sarlavhaning o'ng tomonida ustma-ust turadi, kompyuterda yonma-yon */}
-        <div className="flex shrink-0 flex-col items-stretch gap-2 md:flex-row md:items-center">
-          {canWrite && (
-            <Button variant="outline" disabled={!weekStart} onClick={() => setWeeklyMenuOpen(true)}>
-              {tr("Haftalik menyu")}
-            </Button>
-          )}
-          <Button variant="outline" loading={exporting} disabled={!weekStart} onClick={handleExport}>
-            {tr("Eksport (CSV)")}
-          </Button>
-        </div>
-      </div>
+    // Telefonda chetlar 16px (asosiy konteyner 24px beradi)
+    <div className="-mx-2 md:mx-0">
+      <div className="mx-auto w-full max-w-4xl space-y-5 pb-2">
+        <PageHeaderCard
+          icon={Utensils}
+          tint="orange"
+          title={tr("Ovqatlanish")}
+          subtitle={tr("Bugungi porsiya, eslatmalar va haftalik menyu")}
+          actions={
+            <>
+              <IosButton label={tr("Eksport (CSV)")} icon={Download} compact loading={exporting} disabled={!weekStart || !branchId} onClick={handleExport} />
+              {canWrite && (
+                <IosButton
+                  label={tr("Haftalik menyu")}
+                  icon={CalendarDays}
+                  variant="primary"
+                  compact
+                  disabled={!weekStart || menuQuery.isLoading}
+                  onClick={() => setWeeklyMenuOpen(true)}
+                />
+              )}
+            </>
+          }
+        />
 
-      {exportError && (
-        <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-          {tr(exportError)}
-        </div>
-      )}
+        {exportError && <p className="rounded-[18px] bg-[#ff3b30]/[0.08] px-4 py-3 text-[13.5px] text-[#d70015]">{tr(exportError)}</p>}
 
-      <Card className="flex flex-col gap-4 p-5 sm:flex-row sm:items-end">
-        <div className="grid grid-cols-2 items-center gap-2 sm:flex sm:flex-nowrap sm:justify-start">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!weekStart}
-            onClick={() => setWeekStart((w) => (w ? addDays(w, -7) : w))}
-          >
-            <span className="sm:hidden">{tr("← Oldingi")}</span>
-            <span className="hidden sm:inline">{tr("← Oldingi hafta")}</span>
-          </Button>
-          <span className="order-last col-span-2 whitespace-nowrap text-center text-[14px] tabular-nums text-[var(--color-text-muted)] sm:order-none sm:col-span-1">
-            {weekStart && weekEnd ? `${formatDate(weekStart)} — ${formatDate(weekEnd)}` : "…"}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!weekStart}
-            onClick={() => setWeekStart((w) => (w ? addDays(w, 7) : w))}
-          >
-            <span className="sm:hidden">{tr("Keyingi →")}</span>
-            <span className="hidden sm:inline">{tr("Keyingi hafta →")}</span>
-          </Button>
-        </div>
         {!forcedBranchId && branches.length > 1 && (
-          <div className="sm:ml-auto sm:max-w-xs">
-            <Select label={tr("Filial")} value={branchId} onChange={(e) => setBranchId(e.target.value)}>
-              {branches.map((branch) => (
-                <option key={branch.id} value={branch.id}>
-                  {tr(branch.name)}
-                </option>
-              ))}
-            </Select>
-          </div>
+          <OptionPicker
+            variant="pill"
+            title={tr("Filial")}
+            value={branchId}
+            onChange={setBranchId}
+            placeholder={tr("Filial")}
+            options={branches.map((branch) => ({ id: branch.id, label: tr(branch.name) }))}
+          />
         )}
-      </Card>
 
-      {!canWrite && <ViewOnlyNote role={user?.role} />}
+        {!canWrite && <ViewOnlyNote role={user?.role} />}
 
-      {branchId && <TodayChildrenCard slug={slug} branchId={branchId} today={todayDateString()} />}
-      {branchId && <TodayRemindersCard slug={slug} branchId={branchId} today={todayDateString()} />}
-      {branchId && <MenuPhotosCard slug={slug} branchId={branchId} date={todayDateString()} canWrite={false} />}
+        {/* Bugun — oshxona uchun eng kerakli raqamlar tepada */}
+        {branchId && today && <TodayChildrenCard slug={slug} branchId={branchId} today={today} />}
+        {branchId && today && <TodayRemindersCard slug={slug} branchId={branchId} today={today} />}
+        {branchId && today && <MenuPhotosCard slug={slug} branchId={branchId} date={today} canWrite={false} />}
 
-      {allergyWarnings.length > 0 && (
-        <Card className="border-[var(--color-danger)]/40 shadow-[var(--shadow-raised)]">
-          <CardHeader>
-            <CardTitle className="text-[var(--color-danger)]">
+        {weekStart && weekEnd && (
+          <PeriodStepper
+            onPrev={() => setWeekStart((w) => (w ? addDays(w, -7) : w))}
+            onNext={() => setWeekStart((w) => (w ? addDays(w, 7) : w))}
+            prevLabel={tr("Oldingi hafta")}
+            nextLabel={tr("Keyingi hafta")}
+            reset={thisWeek && weekStart !== thisWeek ? { label: tr("Shu hafta"), onClick: () => setWeekStart(thisWeek) } : undefined}
+          >
+            {dayMonthLabel(weekStart, tr, year)} — {dayMonthLabel(weekEnd, tr, year)}
+          </PeriodStepper>
+        )}
+
+        {allergyWarnings.length > 0 && (
+          <div className="rounded-[18px] bg-[#ff3b30]/[0.08] px-4 py-3.5">
+            <p className="flex items-center gap-2 text-[15px] font-semibold text-[#d70015]">
+              <TriangleAlert className="h-[18px] w-[18px] shrink-0" strokeWidth={2.2} />
               {tr("Diqqat — bu haftaning menyusida allergen bor")}
-            </CardTitle>
-          </CardHeader>
-          <CardBody className="space-y-1 text-[14px] text-[var(--color-text)]">
-            {allergyWarnings.map((w, i) => (
-              <p key={i}>
-                {formatDate(w.date)}, {tr(w.mealLabel)}: &quot;{tr(w.token)}&quot; —{" "}
-                <span className="font-medium">{tr(w.childName)}</span>{tr("da shu allergiya bor")}
-              </p>
-            ))}
-          </CardBody>
-        </Card>
-      )}
-
-      {!weekStart || !branchId ? (
-        weekStart ? <EmptyState title={tr("Filial mavjud emas")} /> : <LoadingState rows={7} />
-      ) : menuQuery.isLoading ? (
-        <LoadingState rows={7} />
-      ) : menuQuery.isError ? (
-        <ErrorState message={tr((menuQuery.error as Error).message)} />
-      ) : (
-        <>
-        {/* Mobil: har kun alohida kartochka — yonboshga surilmaydi */}
-        <div className="space-y-3 md:hidden">
-          {days.map((day) => {
-            const entry = entryByDate.get(day) ?? null;
-            const meals = [
-              { label: "Nonushta", value: entry?.breakfast },
-              { label: "Tushlik", value: entry?.lunch },
-              { label: "Kechki ovqat / gazak", value: entry?.snack },
-            ];
-            return (
-              <Card key={day}>
-                <CardBody className="space-y-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-semibold tabular-nums">{formatDate(day)}</span>
-                    {canWrite && (
-                      <Button size="sm" variant="outline" onClick={() => setEditDate(day)}>
-                        {tr("Tahrirlash")}
-                      </Button>
-                    )}
-                  </div>
-                  <dl className="space-y-2 text-[14px]">
-                    {meals.map((m) => (
-                      <div key={m.label} className="flex flex-col gap-0.5">
-                        <dt className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-text-muted)]">
-                          {tr(m.label)}
-                        </dt>
-                        <dd className="break-words text-[var(--color-text)]">{m.value || "—"}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                </CardBody>
-              </Card>
-            );
-          })}
-        </div>
-        <Card className="hidden overflow-hidden md:block">
-          <DataTable>
-            <THead>
-              <tr>
-                <Th>{tr("Sana")}</Th>
-                <Th>{tr("Nonushta")}</Th>
-                <Th>{tr("Tushlik")}</Th>
-                <Th>{tr("Kechki ovqat / gazak")}</Th>
-                {canWrite && <Th />}
-              </tr>
-            </THead>
-            <TBody>
-              {days.map((day) => {
-                const entry = entryByDate.get(day) ?? null;
-                return (
-                  <Tr key={day}>
-                    <Td className="whitespace-nowrap font-medium tabular-nums">{formatDate(day)}</Td>
-                    <Td className="text-[var(--color-text-muted)]">{entry?.breakfast || "—"}</Td>
-                    <Td className="text-[var(--color-text-muted)]">{entry?.lunch || "—"}</Td>
-                    <Td className="text-[var(--color-text-muted)]">{entry?.snack || "—"}</Td>
-                    {canWrite && (
-                      <Td className="text-right">
-                        <Button size="sm" variant="outline" onClick={() => setEditDate(day)}>
-                          {tr("Tahrirlash")}
-                        </Button>
-                      </Td>
-                    )}
-                  </Tr>
-                );
-              })}
-            </TBody>
-          </DataTable>
-        </Card>
-        </>
-      )}
-
-      {canWrite && editDate && (
-        <EditMenuModal
-          open={!!editDate}
-          onClose={() => setEditDate(null)}
-          slug={slug}
-          date={editDate}
-          entry={entryByDate.get(editDate) ?? null}
-        />
-      )}
-
-      {canWrite && weeklyMenuOpen && (
-        <WeeklyMenuModal
-          open={weeklyMenuOpen}
-          onClose={() => setWeeklyMenuOpen(false)}
-          slug={slug}
-          days={days}
-          entryByDate={entryByDate}
-        />
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{tr("Allergiyasi bor bolalar")}</CardTitle>
-        </CardHeader>
-        <CardBody className="text-[14px] text-[var(--color-text)]">
-          {allergiesQuery.isLoading ? (
-            <LoadingState rows={2} />
-          ) : allergiesQuery.isError ? (
-            <ErrorState message={tr((allergiesQuery.error as Error).message)} />
-          ) : !allergiesQuery.data?.length ? (
-            <EmptyState title={tr("Allergiyasi bor bola yo'q")} />
-          ) : (
-            <ul className="divide-y divide-[var(--color-border)]">
-              {allergiesQuery.data.map((item) => (
-                <li key={item.child.id} className="flex flex-wrap items-baseline justify-between gap-2 py-2.5">
-                  <span className="font-medium">{tr(item.child.fullName)}</span>
-                  <span className="text-[var(--color-danger)]">{tr(item.allergies)}</span>
+            </p>
+            <ul className="mt-2 space-y-1 text-[14px] leading-snug text-[var(--color-text)]">
+              {allergyWarnings.map((w, i) => (
+                <li key={i}>
+                  <span className="tabular-nums text-[#8e8e93]">{dayMonthLabel(w.date, tr)}</span>, {tr(w.mealLabel)}: «{tr(w.token)}» —{" "}
+                  <span className="font-medium">{tr(w.childName)}</span>
+                  {tr("da shu allergiya bor")}
                 </li>
               ))}
             </ul>
+          </div>
+        )}
+
+        <Group
+          title={tr("Haftalik menyu")}
+          refreshing={menuQuery.isFetching && !menuQuery.isLoading}
+          footer={canWrite ? tr("Kunni bosib, shu kun menyusini o'zgartiring.") : undefined}
+          bare
+        >
+          {!weekStart || (!branchId && orgQuery.isLoading) ? (
+            <SkeletonRows rows={7} />
+          ) : !branchId ? (
+            <EmptyState icon={Utensils} title="Filial mavjud emas" />
+          ) : menuQuery.isLoading ? (
+            <SkeletonRows rows={7} />
+          ) : menuQuery.isError ? (
+            <ErrorState message={(menuQuery.error as Error).message} onRetry={() => menuQuery.refetch()} retrying={menuQuery.isFetching} />
+          ) : (
+            <div className={GROUP_BLOCK}>
+              {days.map((day) => (
+                <MenuDayRow
+                  key={day}
+                  day={day}
+                  isToday={day === today}
+                  entry={entryByDate.get(day) ?? null}
+                  onEdit={canWrite ? () => setEditDate(day) : undefined}
+                />
+              ))}
+            </div>
           )}
-        </CardBody>
-      </Card>
+        </Group>
+
+        <Group title={tr("Allergiyasi bor bolalar")} bare>
+          {allergiesQuery.isLoading ? (
+            <SkeletonRows rows={2} />
+          ) : allergiesQuery.isError ? (
+            <ErrorState message={(allergiesQuery.error as Error).message} onRetry={() => allergiesQuery.refetch()} retrying={allergiesQuery.isFetching} />
+          ) : !allergiesQuery.data?.length ? (
+            <div className={GROUP_BLOCK}>
+              <EmptyState icon={Utensils} title="Allergiyasi bor bola yo'q" />
+            </div>
+          ) : (
+            <div className={GROUP_BLOCK}>
+              {allergiesQuery.data.map((item) => (
+                <ListRow
+                  key={item.child.id}
+                  avatar={<IosAvatar name={item.child.fullName} size={44} />}
+                  title={tr(item.child.fullName)}
+                  subtitle={<span className="text-[#d70015]">{tr(item.allergies)}</span>}
+                  meta={item.child.group ? <Pill color={IOS.gray}>{tr(item.child.group.name)}</Pill> : undefined}
+                />
+              ))}
+            </div>
+          )}
+        </Group>
+      </div>
+
+      {canWrite && editDate && (
+        <EditMenuModal open={!!editDate} onClose={() => setEditDate(null)} slug={slug} date={editDate} entry={entryByDate.get(editDate) ?? null} />
+      )}
+
+      {canWrite && weeklyMenuOpen && (
+        <WeeklyMenuModal open={weeklyMenuOpen} onClose={() => setWeeklyMenuOpen(false)} slug={slug} days={days} entryByDate={entryByDate} />
+      )}
+    </div>
+  );
+}
+
+/** Kun qatori: chapda kalendar varag'i (bugun — rangli), o'ngda uch ovqat */
+function MenuDayRow({ day, isToday, entry, onEdit }: { day: string; isToday: boolean; entry: MenuEntry | null; onEdit?: () => void }) {
+  const tr = useTr();
+  const date = new Date(`${day}T00:00:00Z`);
+  const empty = !entry?.breakfast && !entry?.lunch && !entry?.snack;
+  const content = (
+    <>
+      <span
+        className="flex h-[52px] w-[46px] shrink-0 flex-col items-center justify-center rounded-[12px]"
+        style={{ backgroundColor: isToday ? IOS.orange : "rgba(118,118,128,0.12)", color: isToday ? "#fff" : undefined }}
+      >
+        <span className="text-[11px] font-semibold uppercase leading-none" style={{ color: isToday ? "#fff" : IOS.red }}>
+          {tr(WEEKDAYS[date.getUTCDay()]).slice(0, 3)}
+        </span>
+        <span className="mt-1 text-[20px] font-bold leading-none tabular-nums">{date.getUTCDate()}</span>
+      </span>
+      <span className="min-w-0 flex-1 space-y-0.5">
+        {empty ? (
+          <span className="block py-3 text-[15px] text-[#8e8e93]">{tr("Menyu kiritilmagan")}</span>
+        ) : (
+          MEAL_ROWS.map((m) => (
+            <span key={m.key} className="flex gap-2 text-[14.5px] leading-snug">
+              <span className="w-[82px] shrink-0 text-[13px] leading-[1.45] text-[#8e8e93]">{tr(m.label === "Kechki ovqat / gazak" ? "Gazak" : m.label)}</span>
+              <span className="min-w-0 flex-1 break-words text-[var(--color-text)]">{entry?.[m.key] || "—"}</span>
+            </span>
+          ))
+        )}
+      </span>
+      {isToday && (
+        // Telefonda joy tor — bugungi kun rangli varaqdan ham ko'rinadi
+        <span className="shrink-0 self-start max-sm:hidden">
+          <Pill color={IOS.orange}>{tr("Bugun")}</Pill>
+        </span>
+      )}
+    </>
+  );
+  return (
+    <div className="group/row relative">
+      {onEdit ? (
+        <button type="button" onClick={onEdit} className={`flex w-full items-center gap-3 px-4 py-3 text-left ${ROW_PRESS}`}>
+          {content}
+        </button>
+      ) : (
+        <div className="flex items-center gap-3 px-4 py-3">{content}</div>
+      )}
+      <span className={ROW_SEPARATOR} style={{ left: 74 }} aria-hidden="true" />
     </div>
   );
 }

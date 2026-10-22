@@ -5,10 +5,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { MenuEntry } from "@/lib/types";
-import { Modal } from "@/components/ui/modal";
-import { Textarea } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { formatDate } from "@/lib/format";
+import { FieldRow, FormSection, TextArea } from "@/components/ios/form";
+import { IosSheet, SheetPrimaryButton } from "@/components/ios/sheet";
+import { dayMonthLabel } from "@/components/ios/day-stepper";
 import { useTr } from "@/i18n/tr";
 
 const WEEKDAY_LABELS = ["Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba", "Yakshanba"];
@@ -19,6 +18,7 @@ function fieldName(date: string, meal: "breakfast" | "lunch" | "snack") {
   return `${date}__${meal}`;
 }
 
+/** Butun hafta menyusini bir oynada to'ldirish — har kun alohida bo'limda */
 export function WeeklyMenuModal({
   open,
   onClose,
@@ -73,39 +73,36 @@ export function WeeklyMenuModal({
     },
   });
 
+  const busy = isSubmitting || mutation.isPending;
+
   return (
-    <Modal open={open} onClose={onClose} title={tr("Haftalik menyu")}>
-      <form className="space-y-5" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
-        {serverError && (
-          <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {tr(serverError)}
-          </div>
-        )}
-
-        <div className="max-h-[60vh] space-y-5 overflow-y-auto pr-1">
-          {days.map((day, i) => (
-            <div key={day} className="space-y-3 border-b border-[var(--color-border)] pb-4 last:border-0 last:pb-0">
-              <p className="text-sm font-medium text-[var(--color-text)]">
-                {tr(WEEKDAY_LABELS[i])} <span className="font-normal text-[var(--color-text-muted)]">— {formatDate(day)}</span>
-              </p>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <Textarea label={tr("Nonushta")} rows={2} {...register(fieldName(day, "breakfast"))} />
-                <Textarea label={tr("Tushlik")} rows={2} {...register(fieldName(day, "lunch"))} />
-                <Textarea label={tr("Kechki ovqat / gazak")} rows={2} {...register(fieldName(day, "snack"))} />
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="outline" onClick={onClose}>
-            {tr("Bekor qilish")}
-          </Button>
-          <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            {tr("Saqlash")}
-          </Button>
-        </div>
+    <IosSheet
+      open={open}
+      onClose={() => !busy && onClose()}
+      cancelLabel="Bekor"
+      title={tr("Haftalik menyu")}
+      footer={
+        <SheetPrimaryButton type="submit" form="weekly-menu-form" loading={busy}>
+          {tr("Saqlash")}
+        </SheetPrimaryButton>
+      }
+    >
+      <form id="weekly-menu-form" className="space-y-5" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
+        {serverError && <p className="rounded-[14px] bg-[#ff3b30]/[0.08] px-4 py-3 text-[14px] text-[#d70015]">{tr(serverError)}</p>}
+        {days.map((day, i) => (
+          <FormSection key={day} title={`${tr(WEEKDAY_LABELS[i])} · ${dayMonthLabel(day, tr)}`}>
+            <FieldRow label={tr("Nonushta")} htmlFor={fieldName(day, "breakfast")} stacked>
+              <TextArea id={fieldName(day, "breakfast")} rows={1} {...register(fieldName(day, "breakfast"))} />
+            </FieldRow>
+            <FieldRow label={tr("Tushlik")} htmlFor={fieldName(day, "lunch")} stacked>
+              <TextArea id={fieldName(day, "lunch")} rows={1} {...register(fieldName(day, "lunch"))} />
+            </FieldRow>
+            <FieldRow label={tr("Kechki ovqat / gazak")} htmlFor={fieldName(day, "snack")} stacked>
+              <TextArea id={fieldName(day, "snack")} rows={1} {...register(fieldName(day, "snack"))} />
+            </FieldRow>
+          </FormSection>
+        ))}
       </form>
-    </Modal>
+    </IosSheet>
   );
 }
