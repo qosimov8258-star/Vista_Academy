@@ -13,6 +13,7 @@ import { ArrowLeft, ChevronRight, X } from "lucide-react";
 import { ArrowLeftIcon, ChevronRightIcon, LogoutIcon } from "@/components/ui/icons";
 import { GROUP_BLOCK, SECTION_TITLE } from "@/components/ios/tokens";
 import { IOS_TINT, type IosTint } from "@/features/director/ios-icon";
+import { NavTile, SECTION_TINT, tintOf } from "./nav-icons";
 import { isSection, type NavEntry, type NavIcon, type NavLeaf, type NavSection } from "./nav-types";
 import styles from "./director-rail.module.css";
 import { useTr } from "@/i18n/tr";
@@ -269,12 +270,13 @@ export function DirectorRail({
         onClick={hideTip}
         className={clsx(styles.row, rowState(active))}
       >
-        <Icon filled={open && active} className="h-[22px] w-[22px] shrink-0" />
+        {/* Qator 22px belgiga mo'ljallangan — 30px plitka ikki yondan 4px chiqib, markazda turadi */}
+        <NavTile icon={Icon} color={tintOf(Icon)} active={open && active} className="-mx-1" />
         <span className={styles.label}>{tr(item.label)}</span>
         {item.badge != null && item.badge > 0 && (
           <span
             className={clsx(styles.dot, "absolute h-2 w-2 rounded-full bg-[var(--accent-bright)]")}
-            style={{ left: "calc((var(--row-size) - 22px) / 2 + 17px)", top: "calc(50% - 11px)" }}
+            style={{ left: "calc((var(--row-size) - 30px) / 2 + 24px)", top: "calc(50% - 18px)" }}
             aria-hidden="true"
           />
         )}
@@ -302,7 +304,7 @@ export function DirectorRail({
           onClick={onSectionClick(section)}
           className={clsx(styles.row, rowState(active), open && hasActiveChild && !active && styles.rowParent)}
         >
-          <Icon className="h-[22px] w-[22px] shrink-0" />
+          <NavTile icon={Icon} color={tintOf(Icon, section.id)} className="-mx-1" />
           <span className={styles.label}>{tr(section.label)}</span>
           {open && <ChevronRightIcon className={clsx(styles.chevron, "h-4 w-4", expanded ? "rotate-90" : "")} />}
           {!open && section.items.some((i) => (i.badge ?? 0) > 0) && (
@@ -514,14 +516,7 @@ export function DirectorRail({
                       : "font-medium text-[var(--color-text)] hover:bg-[var(--color-surface-sunken)]",
                   )}
                 >
-                  <span
-                    className={clsx(
-                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] transition-colors",
-                      active ? "bg-[var(--accent-soft-icon)]/15 text-[var(--accent-soft-icon)]" : "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)] group-hover:bg-white",
-                    )}
-                  >
-                    <Icon filled={active} className="h-[18px] w-[18px]" />
-                  </span>
+                  <NavTile icon={Icon} color={tintOf(Icon, flyout.section.id)} size={30} active={active} />
                   <span className="min-w-0 flex-1 truncate">{tr(item.label)}</span>
                   {item.badge != null && item.badge > 0 && (
                     <span className="rounded-full bg-[var(--accent-soft-icon)]/15 px-2 py-0.5 text-[11px] font-bold tabular-nums text-[var(--accent-soft-icon)]">{tr(item.badge)}</span>
@@ -550,23 +545,6 @@ export interface DirectorMenuContentProps {
   loggingOut: boolean;
   logoutLabel: string;
 }
-
-/** Har bo'limning o'z iOS rangi — plitkalar shu rangda (bo'limsiz havolalar — tizim rangida) */
-const SECTION_TINT: Record<string, IosTint> = {
-  "bugungi-ishlar": "blue",
-  qabul: "orange",
-  xodimlar: "indigo",
-  kundalik: "teal",
-  "face-id": "purple",
-  coin: "orange",
-  foydali: "green",
-  moliya: "emerald",
-  lending: "pink",
-  filiallar: "blue",
-  guruhlarim: "orange",
-  oqituvchilar: "indigo",
-  darsliklar: "teal",
-};
 
 /**
  * Barcha bo'limlar — iOS uslubida (telefondagi pastki paneldagi "Menyu"
@@ -641,9 +619,7 @@ export function DirectorMenuContent({
         aria-current={active ? "page" : undefined}
         className={clsx("flex min-h-[48px] items-center gap-3 pl-4 transition-colors active:bg-black/[0.05]", active && "bg-[var(--color-primary)]/[0.06]")}
       >
-        <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[8px] bg-[var(--color-primary)] text-white" aria-hidden="true">
-          <Icon filled={active} className="h-[17px] w-[17px]" />
-        </span>
+        <NavTile icon={Icon} color={tintOf(Icon)} active={active} />
         <span className={clsx("flex min-h-[48px] min-w-0 flex-1 items-center gap-2 pr-3", index > 0 && "border-t border-black/[0.08]")}>
           <span className={clsx("min-w-0 flex-1 truncate text-[16px]", active ? "font-semibold text-[var(--color-primary)]" : "text-[var(--color-text)]")}>{tr(item.label)}</span>
           {badgeOf(item)}
