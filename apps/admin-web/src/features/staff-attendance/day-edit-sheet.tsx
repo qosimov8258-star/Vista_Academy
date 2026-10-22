@@ -42,7 +42,7 @@ export function DayEditSheet({
 }: {
   open: boolean;
   onClose: () => void;
-  employee: { fullName: string; position: string; faceId: boolean; recorded: DayDraft } | null;
+  employee: { fullName: string; position: string; photoUrl: string | null; faceId: boolean; recorded: DayDraft } | null;
   value: DayDraft;
   editable: boolean;
   onApply: (draft: DayDraft) => void;
@@ -90,7 +90,7 @@ export function DayEditSheet({
       {employee && (
         <>
           <div className="flex flex-col items-center gap-1.5 text-center">
-            <IosAvatar name={employee.fullName} size={56} />
+            <IosAvatar name={employee.fullName} src={employee.photoUrl} size={56} />
             <span className="text-[13px] text-[#8e8e93]">
               {tr(employee.position)}
               {employee.faceId && (

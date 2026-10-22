@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import type { StaffAttendanceHistory } from "@/lib/types";
 import { PeriodStepper, dayMonthLabel, WEEKDAYS } from "@/components/ios/day-stepper";
 import { IosAvatar, Pill } from "@/components/ios/pill";
+import { employeePhotoUrl } from "@/components/ui/employee-photo";
 import { IosSheet, SheetSection } from "@/components/ios/sheet";
 import { EmptyState, ErrorState, SkeletonRows } from "@/components/ios/states";
 import { CalendarIcon } from "@/components/ios/icons";
@@ -78,7 +79,7 @@ export function EmployeeHistoryModal({
       ) : !data ? null : (
         <>
           <div className="flex flex-col items-center gap-1.5 text-center">
-            <IosAvatar name={data.employee.fullName} size={64} />
+            <IosAvatar name={data.employee.fullName} src={employeePhotoUrl(data.employee)} size={64} />
             <p className="mt-1 text-[17px] font-semibold text-[var(--color-text)]">{tr(data.employee.fullName)}</p>
             <p className="text-[13px] text-[#8e8e93]">
               {tr(formatPositionLabel(data.employee.position, data.employee.subjects))}

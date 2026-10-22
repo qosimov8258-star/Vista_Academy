@@ -30,6 +30,7 @@ import {
 } from "@/features/staff-attendance/day-edit-sheet";
 import { EmployeeHistoryModal, STAFF_STATUS_COLOR, STAFF_STATUS_LABEL } from "@/features/staff-attendance/employee-history-modal";
 import { FaceIdMark, InOutTimes, isFaceIdRecord } from "@/features/staff-attendance/in-out-times";
+import { employeePhotoUrl } from "@/components/ui/employee-photo";
 import { useTr } from "@/i18n/tr";
 
 type Tab = "davomat" | "royxat";
@@ -326,7 +327,7 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
                             key={employee.employeeId}
                             onClick={() => setEditingId(employee.employeeId)}
                             chevron={false}
-                            avatar={<IosAvatar name={employee.fullName} size={44} />}
+                            avatar={<IosAvatar name={employee.fullName} src={employeePhotoUrl({ id: employee.employeeId, avatarUpdatedAt: employee.avatarUpdatedAt })} size={44} />}
                             title={
                               <>
                                 {changed && <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[var(--color-primary)] align-middle" aria-label={tr("O'zgartirilgan")} />}
@@ -423,7 +424,7 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
                           setHistoryEmployeeId(employee.employeeId);
                           setHistoryPeriod(period);
                         }}
-                        avatar={<IosAvatar name={employee.fullName} size={44} />}
+                        avatar={<IosAvatar name={employee.fullName} src={employeePhotoUrl({ id: employee.employeeId, avatarUpdatedAt: employee.avatarUpdatedAt })} size={44} />}
                         title={tr(employee.fullName)}
                         subtitle={`${tr(formatPositionLabel(employee.position, employee.subjects))}${employee.groups.length > 0 ? ` · ${employee.groups.join(", ")}` : ""}`}
                         meta={
@@ -449,7 +450,13 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
         onClose={() => setEditingId(null)}
         employee={
           editing
-            ? { fullName: editing.fullName, position: editing.position, faceId: isFaceIdRecord(editing.note), recorded: recordOf(editing) }
+            ? {
+                fullName: editing.fullName,
+                position: editing.position,
+                photoUrl: employeePhotoUrl({ id: editing.employeeId, avatarUpdatedAt: editing.avatarUpdatedAt }),
+                faceId: isFaceIdRecord(editing.note),
+                recorded: recordOf(editing),
+              }
             : null
         }
         value={editing ? effectiveOf(editing) : { status: null, checkInTime: null, checkOutTime: null }}
