@@ -606,6 +606,7 @@ export interface StaffAttendanceEmployee {
   employeeId: string;
   fullName: string;
   position: string;
+  avatarUpdatedAt: string | null;
   status: StaffAttendanceStatus | null;
   note: string | null;
   checkInTime: string | null;
@@ -630,6 +631,7 @@ export interface StaffAttendanceSummary {
     fullName: string;
     position: string;
     subjects: string[];
+    avatarUpdatedAt: string | null;
     groups: string[];
     present: number;
     absent: number;
@@ -647,6 +649,7 @@ export interface StaffAttendanceHistory {
     fullName: string;
     position: string;
     subjects: string[];
+    avatarUpdatedAt: string | null;
     groups: string[];
   };
   period: string;

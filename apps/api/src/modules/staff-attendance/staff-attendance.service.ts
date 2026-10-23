@@ -67,7 +67,7 @@ export class StaffAttendanceService {
     const [employees, records, lock] = await Promise.all([
       this.prisma.employee.findMany({
         where: { branchId, isActive: true },
-        select: { id: true, fullName: true, position: true },
+        select: { id: true, fullName: true, position: true, avatarUpdatedAt: true },
         orderBy: { fullName: "asc" },
       }),
       this.prisma.employeeAttendance.findMany({ where: { branchId, date } }),
@@ -84,6 +84,7 @@ export class StaffAttendanceService {
         employeeId: e.id,
         fullName: e.fullName,
         position: e.position,
+        avatarUpdatedAt: e.avatarUpdatedAt?.toISOString() ?? null,
         status: recordByEmployee.get(e.id)?.status ?? null,
         note: recordByEmployee.get(e.id)?.note ?? null,
         checkInTime: recordByEmployee.get(e.id)?.checkInTime ?? null,
@@ -149,6 +150,7 @@ export class StaffAttendanceService {
           fullName: true,
           position: true,
           subjects: true,
+          avatarUpdatedAt: true,
           teachingGroups: { select: { group: { select: { name: true } } } },
         },
         orderBy: { fullName: "asc" },
@@ -179,6 +181,7 @@ export class StaffAttendanceService {
         fullName: employee.fullName,
         position: employee.position,
         subjects: employee.subjects,
+        avatarUpdatedAt: employee.avatarUpdatedAt?.toISOString() ?? null,
         groups: employee.teachingGroups.map((t) => t.group.name),
         ...counts,
         rate: marked === 0 ? null : Math.round((counts.present / marked) * 100),
@@ -252,6 +255,7 @@ export class StaffAttendanceService {
         position: true,
         subjects: true,
         branchId: true,
+        avatarUpdatedAt: true,
         teachingGroups: { select: { group: { select: { name: true } } } },
       },
     });
@@ -279,6 +283,7 @@ export class StaffAttendanceService {
         fullName: employee.fullName,
         position: employee.position,
         subjects: employee.subjects,
+        avatarUpdatedAt: employee.avatarUpdatedAt?.toISOString() ?? null,
         groups: employee.teachingGroups.map((t) => t.group.name),
       },
       period,

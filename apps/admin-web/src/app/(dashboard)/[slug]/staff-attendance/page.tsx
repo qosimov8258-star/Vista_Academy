@@ -1,31 +1,42 @@
 "use client";
 
-import { use, useEffect, useRef, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Lock, UserCheck, Wand2 } from "lucide-react";
 import { api } from "@/lib/api";
-import type { Organization, StaffAttendanceDay, StaffAttendanceStatus, StaffAttendanceSummary } from "@/lib/types";
+import type { Organization, StaffAttendanceDay, StaffAttendanceEmployee, StaffAttendanceSummary } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
-import { Card, CardHeader, CardBody, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Select } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { DataTable, THead, TBody, Tr, Th, Td } from "@/components/ui/table";
-import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { canWriteOperational } from "@/lib/permissions";
 import { formatPositionLabel } from "@/lib/employee-position";
-import { LockIcon } from "@/components/ui/icons";
-import { EmployeeHistoryModal } from "@/features/staff-attendance/employee-history-modal";
+import { DayStepper, PeriodStepper } from "@/components/ios/day-stepper";
+import { Segmented } from "@/components/ios/form";
+import { Group as IosGroup, ListRow } from "@/components/ios/group";
+import { PageHeaderCard } from "@/components/ios/page-card";
+import { IosAvatar, Pill } from "@/components/ios/pill";
+import { IosSheet, SheetPrimaryButton, SheetSecondaryButton } from "@/components/ios/sheet";
+import { StatCell, StatStrip } from "@/components/ios/stat-strip";
+import { EmptyState, ErrorState, SkeletonRows } from "@/components/ios/states";
+import { GROUP_BLOCK, IOS } from "@/components/ios/tokens";
+import { OptionPicker } from "@/features/lessons/option-picker";
+import { periodLabel, shiftPeriod } from "@/features/payments/shared";
+import {
+  DayEditSheet,
+  DEFAULT_CHECK_IN_TIME,
+  DEFAULT_CHECK_OUT_TIME,
+  isPresentStatus,
+  type DayDraft,
+} from "@/features/staff-attendance/day-edit-sheet";
+import { EmployeeHistoryModal, STAFF_STATUS_COLOR, STAFF_STATUS_LABEL } from "@/features/staff-attendance/employee-history-modal";
+import { FaceIdMark, InOutTimes, isFaceIdRecord } from "@/features/staff-attendance/in-out-times";
+import { employeePhotoUrl } from "@/components/ui/employee-photo";
 import { useTr } from "@/i18n/tr";
 
+type Tab = "davomat" | "royxat";
+type DayFilter = "all" | "inside" | "left" | "missing";
+
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
-// Ko'pchilik xodim har kuni shu vaqt oralig'ida ishlaydi — har birini qo'lda
-// kiritish o'rniga standart shu bilan to'ldirib qo'yiladi, faqat istisnolar
-// (kimdir erta ketsa va h.k.) qo'lda o'zgartiriladi.
-const DEFAULT_CHECK_IN_TIME = "07:30";
-const DEFAULT_CHECK_OUT_TIME = "18:00";
 
 function todayDateString(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: DEFAULT_TIMEZONE }).format(new Date());
@@ -46,7 +57,7 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
   // in an effect (client-only) avoids a hydration mismatch on the date input.
   const [date, setDate] = useState("");
   const [period, setPeriod] = useState("");
-  const [tab, setTab] = useState<"davomat" | "royxat">("davomat");
+  const [tab, setTab] = useState<Tab>("davomat");
   const { user } = useAuth();
   const canWrite = canWriteOperational(user?.role);
 
@@ -72,10 +83,13 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
     }
   }, [forcedBranchId, branchId, branches]);
 
+  const today = todayDateString();
   const attendanceQuery = useQuery({
     queryKey: ["staff-attendance", slug, branchId, date],
     queryFn: () => api.get<StaffAttendanceDay>(`/app/staff-attendance?branchId=${branchId}&date=${date}`),
     enabled: !!branchId && !!date,
+    // Bugun Face ID terminali vaqtlarni yozib turadi — sahifa ochiq bo'lsa yangilanib tursin
+    refetchInterval: date === today ? 30_000 : false,
   });
 
   const summaryQuery = useQuery({
@@ -89,65 +103,53 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
   const [historyEmployeeId, setHistoryEmployeeId] = useState<string | null>(null);
   const [historyPeriod, setHistoryPeriod] = useState("");
 
-  const [times, setTimes] = useState<Record<string, { checkInTime: string; checkOutTime: string }>>({});
-  const timeFor = (employeeId: string, employee: { checkInTime: string | null; checkOutTime: string | null }) =>
-    times[employeeId] ?? {
-      checkInTime: employee.checkInTime ?? DEFAULT_CHECK_IN_TIME,
-      checkOutTime: employee.checkOutTime ?? DEFAULT_CHECK_OUT_TIME,
-    };
-
-  // Kelishni belgilash: sahifa ochilganda hamma "Keldi" deb ko'rsatiladi (hali
-  // saqlanmagan) — ko'pchilik kun sayin kelgani uchun shunday tezroq. Faqat
-  // kelmagan/kech qolgan kabi istisnolarni o'zgartirib, oxirida "Saqlash"
-  // bosiladi — shunda hammasi birdan yuboriladi.
-  //
-  // `attendanceQuery.data.date` bilan tekshiramiz (shunchaki obyekt
-  // referensiyasi emas) — aks holda sana oldinga-orqaga almashtirilsa (masalan
-  // A -> B -> A, keshdan darhol qaytadi) eski sananing belgilashlari yangi
-  // sanaga "sizib o'tib" saqlanib ketishi mumkin edi.
-  const [localStatuses, setLocalStatuses] = useState<Record<string, StaffAttendanceStatus>>({});
-  // Faqat filial+sana haqiqatan almashganda tozalanadi — aks holda so'rov fon
-  // rejimida qayta yuklanganda (masalan oyna qaytadan fokuslanganda) hali
-  // saqlanmagan belgilashlar jimgina o'chirib yuborilishi mumkin edi.
-  const initializedForRef = useRef<string | null>(null);
+  // Hali saqlanmagan o'zgarishlar (xodim → holat va vaqtlar). Ko'rsatilgani —
+  // qoralama bo'lsa o'sha, bo'lmasa bazadagi yozuv (terminal yoki qo'lda
+  // belgilangan). Yozuvi yo'q xodim «Belgilanmagan» — hech kim avtomatik
+  // «Keldi» deb ko'rsatilmaydi, Face ID'dagi haqiqiy holat chalkashmasin.
+  const [drafts, setDrafts] = useState<Record<string, DayDraft>>({});
+  const [filter, setFilter] = useState<DayFilter>("all");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  // Sana yoki filial almashganda qoralamalar tashlanadi — eski kunning
+  // belgilashlari yangi kunga sizib o'tmasin.
   useEffect(() => {
-    if (!attendanceQuery.data || attendanceQuery.data.date !== date) return;
-    const key = `${branchId}_${date}`;
-    if (initializedForRef.current === key) return;
-    initializedForRef.current = key;
-    setLocalStatuses(
-      Object.fromEntries(attendanceQuery.data.employees.map((e) => [e.employeeId, e.status ?? "PRESENT"])),
-    );
-    // Vaqt maydonlari ham shu sanaga xos — sana almashganda avvalgi
-    // kiritilgan (hali saqlanmagan) vaqtlar olib tashlanadi.
-    setTimes({});
-  }, [attendanceQuery.data, date, branchId]);
-  const statusFor = (employeeId: string) => localStatuses[employeeId] ?? "PRESENT";
+    setDrafts({});
+    setFilter("all");
+  }, [date, branchId]);
+
+  const recordOf = (e: StaffAttendanceEmployee): DayDraft => ({ status: e.status, checkInTime: e.checkInTime, checkOutTime: e.checkOutTime });
+  const effectiveOf = (e: StaffAttendanceEmployee): DayDraft => drafts[e.employeeId] ?? recordOf(e);
 
   // Saqlash — hamma xodimni yozib, so'ng kunni qulflaydi (backend
   // requireOperationalScope/requireBranchScope orqali ruxsatni o'zi tekshiradi
   // — buyerda qayta tekshirmaymiz). Qulflangandan keyin bu kun uchun "Saqlash"
   // butunlay yo'qoladi, chunki ish haqi shu ma'lumotga bog'liq bo'ladi.
+  // Belgilanmagan xodim «Kelmadi» bo'lib yoziladi (tasdiqlash oynasida aytiladi).
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!attendanceQuery.data) return;
       await Promise.all(
         attendanceQuery.data.employees.map((employee) => {
-          const t = timeFor(employee.employeeId, employee);
+          const eff = effectiveOf(employee);
+          const status = eff.status ?? "ABSENT";
+          const present = isPresentStatus(status);
           return api.post("/app/staff-attendance", {
             employeeId: employee.employeeId,
             date,
-            status: statusFor(employee.employeeId),
+            status,
             // Bo'sh satr backend validatsiyasidan o'tmaydi ("" - to'g'ri
             // HH:MM emas) — shuning uchun bo'sh bo'lsa umuman yubormaymiz.
-            checkInTime: t.checkInTime || undefined,
-            checkOutTime: t.checkOutTime || undefined,
+            checkInTime: (present && eff.checkInTime) || undefined,
+            checkOutTime: (present && eff.checkOutTime) || undefined,
           });
         }),
       );
       await api.post("/app/staff-attendance/lock", { branchId, date });
     },
     onSuccess: () => {
+      setConfirmOpen(false);
+      setDrafts({});
       queryClient.invalidateQueries({ queryKey: ["staff-attendance", slug, branchId, date] });
       queryClient.invalidateQueries({ queryKey: ["staff-attendance-summary", slug, branchId] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-summary", slug] });
@@ -166,255 +168,327 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
   const locked = attendanceQuery.data?.locked ?? false;
   const editable = canWrite && !locked;
 
+  const employees = useMemo(() => attendanceQuery.data?.employees ?? [], [attendanceQuery.data]);
+  const rows = employees.map((employee) => ({ employee, eff: effectiveOf(employee) }));
+  const presentRows = rows.filter((r) => isPresentStatus(r.eff.status));
+  const counts = {
+    present: presentRows.length,
+    late: rows.filter((r) => r.eff.status === "LATE").length,
+    inside: presentRows.filter((r) => !r.eff.checkOutTime).length,
+    left: presentRows.filter((r) => !!r.eff.checkOutTime).length,
+    absent: rows.filter((r) => r.eff.status && !isPresentStatus(r.eff.status)).length,
+    unmarked: rows.filter((r) => !r.eff.status).length,
+  };
+  const isToday = date === today;
+  const visibleRows = rows.filter(({ eff }) => {
+    if (filter === "inside") return isPresentStatus(eff.status) && !eff.checkOutTime;
+    if (filter === "left") return isPresentStatus(eff.status) && !!eff.checkOutTime;
+    if (filter === "missing") return !isPresentStatus(eff.status);
+    return true;
+  });
+  const changedCount = Object.keys(drafts).length;
+  const editing = employees.find((e) => e.employeeId === editingId) ?? null;
+
+  // Terminalsiz filialda (yoki terminalga chiqmaganlar uchun) tezkor yo'l:
+  // belgilanmaganlarning hammasini standart vaqt bilan «Keldi» qilish.
+  const markUnmarkedPresent = () =>
+    setDrafts((d) => {
+      const next = { ...d };
+      for (const { employee, eff } of rows) {
+        if (!eff.status) next[employee.employeeId] = { status: "PRESENT", checkInTime: DEFAULT_CHECK_IN_TIME, checkOutTime: DEFAULT_CHECK_OUT_TIME };
+      }
+      return next;
+    });
+
+  const rateColor = (rate: number) => (rate >= 80 ? IOS.green : rate >= 50 ? IOS.orange : IOS.red);
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">{tr("Xodimlar davomati")}</h1>
-        <p className="text-[14px] text-[var(--color-text-muted)]">{tr("Tarbiyachi va boshqa xodimlarning kunlik davomati")}</p>
-      </div>
+    // Telefonda chetlar 16px (asosiy konteyner 24px beradi)
+    <div className="-mx-2 md:mx-0">
+      <div className="mx-auto w-full max-w-4xl space-y-5 pb-2">
+        <PageHeaderCard
+          icon={UserCheck}
+          tint="teal"
+          title={tr("Xodimlar davomati")}
+          subtitle={tr("Tarbiyachi va boshqa xodimlarning kunlik davomati")}
+        />
 
-      {/* Ikki bo'lim: kunlik belgilash va xodimlar ro'yxati + oylik jamlanma. */}
-      <div role="tablist" className="flex w-fit gap-1 rounded-full bg-[var(--color-surface-sunken)] p-1">
-        {(
-          [
-            ["davomat", "Davomat"],
-            ["royxat", tr("Xodimlar ro'yxati")],
-          ] as const
-        ).map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            role="tab"
-            aria-selected={tab === key}
-            onClick={() => setTab(key)}
-            className={`cursor-pointer rounded-full px-4 py-2 text-[14px] font-medium transition-colors ${
-              tab === key
-                ? "bg-[var(--color-surface)] text-[var(--color-text)] shadow-[var(--shadow-xs)]"
-                : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-            }`}
-          >
-            {tr(label)}
-          </button>
-        ))}
-      </div>
+        {/* Ikki bo'lim: kunlik belgilash va xodimlar ro'yxati + oylik jamlanma. */}
+        <div className="max-w-sm">
+          <Segmented<Tab>
+            value={tab}
+            onChange={setTab}
+            label={tr("Bo'lim")}
+            options={[
+              { value: "davomat", label: tr("Davomat") },
+              { value: "royxat", label: tr("Xodimlar ro'yxati") },
+            ]}
+          />
+        </div>
 
-      {tab === "davomat" && (
-        <>
-          <Card className="flex flex-col gap-3 p-4 sm:flex-row">
-            {!forcedBranchId && branches.length > 1 && (
-              <Select label={tr("Filial")} value={branchId} onChange={(e) => setBranchId(e.target.value)} className="sm:max-w-xs">
-                {branches.map((branch) => (
-                  <option key={branch.id} value={branch.id}>
-                    {tr(branch.name)}
-                  </option>
-                ))}
-              </Select>
+        {!forcedBranchId && branches.length > 1 && (
+          <OptionPicker
+            variant="pill"
+            title={tr("Filial")}
+            value={branchId}
+            onChange={setBranchId}
+            placeholder={tr("Filial")}
+            options={branches.map((branch) => ({ id: branch.id, label: tr(branch.name) }))}
+          />
+        )}
+
+        {tab === "davomat" && (
+          <>
+            {date && <DayStepper value={date} onChange={setDate} today={today} />}
+
+            {!canWrite && <ViewOnlyNote role={user?.role} />}
+
+            {canWrite && locked && (
+              <div className="flex items-start gap-3 rounded-[18px] bg-[#ff9500]/[0.12] px-4 py-3 text-[13.5px] leading-snug text-[#c93400]">
+                <Lock className="mt-0.5 h-[17px] w-[17px] shrink-0" strokeWidth={2.2} />
+                <span>
+                  {tr("Bu kun uchun davomat saqlangan va qulflangan")}
+                  {attendanceQuery.data?.lockedByName ? ` — ${attendanceQuery.data.lockedByName}` : ""}
+                  {tr(". Endi o'zgartirib bo'lmaydi.")}
+                </span>
+              </div>
             )}
-            <div className="block">
-              <span className="mb-2 block text-[13px] font-medium text-[var(--color-text)]">{tr("Sana")}</span>
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="h-11 w-full rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-3.5 text-[15px] text-[var(--color-text)] outline-none transition-[border-color,box-shadow] duration-[var(--dur-fast)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/[0.12] sm:w-auto"
-              />
-            </div>
-          </Card>
 
-          {!canWrite && <ViewOnlyNote role={user?.role} />}
+            {!date || (!branchId && orgQuery.isLoading) ? (
+              <SkeletonRows rows={6} />
+            ) : !branchId ? (
+              <EmptyState icon={UserCheck} title="Filial mavjud emas" />
+            ) : attendanceQuery.isLoading ? (
+              <SkeletonRows rows={6} />
+            ) : attendanceQuery.isError ? (
+              <ErrorState message={(attendanceQuery.error as Error).message} onRetry={() => attendanceQuery.refetch()} retrying={attendanceQuery.isFetching} />
+            ) : employees.length === 0 ? (
+              <EmptyState icon={UserCheck} title="Bu filialda faol xodim yo'q" />
+            ) : (
+              <>
+                <StatStrip tone="white">
+                  <StatCell
+                    label={tr("Keldi")}
+                    value={counts.present}
+                    color={IOS.green}
+                    hint={counts.late > 0 ? tr("{0} tasi kech qoldi", counts.late) : `${tr("jami")} ${employees.length}`}
+                  />
+                  <StatCell label={tr(isToday ? "Ichkarida" : "Chiqishsiz")} value={counts.inside} color={IOS.orange} hint={tr(isToday ? "hali ketmagan" : "chiqish yozilmagan")} />
+                  <StatCell label={tr("Ketdi")} value={counts.left} color={IOS.blue} />
+                  <StatCell
+                    label={tr("Kelmadi")}
+                    value={counts.absent + counts.unmarked}
+                    color={IOS.red}
+                    hint={counts.unmarked > 0 ? tr("{0} tasi belgilanmagan", counts.unmarked) : undefined}
+                  />
+                </StatStrip>
 
-          {canWrite && locked && (
-            <div className="flex items-center gap-2.5 rounded-[var(--radius-lg)] border border-[var(--color-warning)]/30 bg-[var(--color-warning-bg)] px-4 py-3 text-[13.5px] text-[var(--color-warning)]">
-              <LockIcon className="h-4 w-4 shrink-0" />
-              <span>
-                {tr("Bu kun uchun davomat saqlangan va qulflangan")}
-                {attendanceQuery.data?.lockedByName ? ` — ${attendanceQuery.data.lockedByName}` : ""}{tr(". Endi o'zgartirib bo'lmaydi.")}
-              </span>
-            </div>
-          )}
+                <Segmented<DayFilter>
+                  value={filter}
+                  onChange={setFilter}
+                  label={tr("Saralash")}
+                  options={[
+                    { value: "all", label: tr("Hammasi") },
+                    { value: "inside", label: tr(isToday ? "Ichkarida" : "Chiqishsiz") },
+                    { value: "left", label: tr("Ketdi") },
+                    { value: "missing", label: tr("Kelmadi") },
+                  ]}
+                />
 
-          {!date ? (
-            <LoadingState />
-          ) : !branchId ? (
-            <EmptyState title={tr("Filial mavjud emas")} />
-          ) : attendanceQuery.isLoading ? (
-            <LoadingState />
-          ) : attendanceQuery.isError ? (
-            <ErrorState message={tr((attendanceQuery.error as Error).message)} />
-          ) : !attendanceQuery.data || attendanceQuery.data.employees.length === 0 ? (
-            <EmptyState title={tr("Bu filialda faol xodim yo'q")} />
-          ) : (
-            <Card className="overflow-hidden">
-              <ul className="divide-y divide-[var(--color-separator)]">
-                {attendanceQuery.data.employees.map((employee) => (
-                  <li key={employee.employeeId} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
-                    <div>
-                      <p className="text-sm font-medium text-[var(--color-text)]">{tr(employee.fullName)}</p>
-                      <p className="text-xs text-[var(--color-text-muted)]">{tr(employee.position)}</p>
+                <IosGroup
+                  title={
+                    <>
+                      {tr("Xodimlar")}
+                      {changedCount > 0 && (
+                        <span className="font-normal normal-case tracking-normal text-[var(--color-primary)]"> · {tr("{0} ta o'zgarish saqlanmagan", changedCount)}</span>
+                      )}
+                    </>
+                  }
+                  refreshing={attendanceQuery.isFetching && !attendanceQuery.isLoading}
+                  footer={
+                    editable
+                      ? tr("Kirish va chiqish vaqtini Face ID terminali o'zi yozadi. Xodimni bosib, holat yoki vaqtni tuzating; oxirida «Saqlash» — kun qulflanadi.")
+                      : undefined
+                  }
+                  bare
+                >
+                  {visibleRows.length === 0 ? (
+                    <div className={GROUP_BLOCK}>
+                      <EmptyState icon={UserCheck} title="Bu bo'limda xodim yo'q" />
                     </div>
-                    {editable ? (
-                      <div className="flex flex-wrap items-center justify-end gap-3">
-                        {statusFor(employee.employeeId) === "PRESENT" && (
-                          <>
-                            <input
-                              type="time"
-                              aria-label={tr("Kelgan vaqti")}
-                              value={timeFor(employee.employeeId, employee).checkInTime}
-                              onChange={(e) =>
-                                setTimes((t) => ({
-                                  ...t,
-                                  [employee.employeeId]: { ...timeFor(employee.employeeId, employee), checkInTime: e.target.value },
-                                }))
-                              }
-                              className="h-9 w-[124px] sm:h-8 sm:w-[124px] rounded-[var(--radius-sm)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-2 text-[12.5px] text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
-                            />
-                            <input
-                              type="time"
-                              aria-label={tr("Ketgan vaqti")}
-                              value={timeFor(employee.employeeId, employee).checkOutTime}
-                              onChange={(e) =>
-                                setTimes((t) => ({
-                                  ...t,
-                                  [employee.employeeId]: { ...timeFor(employee.employeeId, employee), checkOutTime: e.target.value },
-                                }))
-                              }
-                              className="h-9 w-[124px] sm:h-8 sm:w-[124px] rounded-[var(--radius-sm)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-2 text-[12.5px] text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
-                            />
-                          </>
-                        )}
-                        <div className="flex items-center gap-2.5">
-                          <span
-                            className={
-                              statusFor(employee.employeeId) === "PRESENT"
-                                ? "text-[13px] font-medium text-[var(--color-success)]"
-                                : "text-[13px] font-medium text-[var(--color-text-muted)]"
+                  ) : (
+                    <div className={GROUP_BLOCK}>
+                      {visibleRows.map(({ employee, eff }) => {
+                        const present = isPresentStatus(eff.status);
+                        const changed = !!drafts[employee.employeeId];
+                        const faceId = isFaceIdRecord(employee.note) && !changed;
+                        return (
+                          <ListRow
+                            key={employee.employeeId}
+                            onClick={() => setEditingId(employee.employeeId)}
+                            chevron={false}
+                            avatar={<IosAvatar name={employee.fullName} src={employeePhotoUrl({ id: employee.employeeId, avatarUpdatedAt: employee.avatarUpdatedAt })} size={44} />}
+                            title={
+                              <>
+                                {changed && <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[var(--color-primary)] align-middle" aria-label={tr("O'zgartirilgan")} />}
+                                {tr(employee.fullName)}
+                              </>
                             }
-                          >
-                            {statusFor(employee.employeeId) === "PRESENT" ? "Keldi" : "Kelmadi"}
-                          </span>
-                          <Switch
-                            checked={statusFor(employee.employeeId) === "PRESENT"}
-                            onChange={() =>
-                              setLocalStatuses((s) => ({
-                                ...s,
-                                [employee.employeeId]: statusFor(employee.employeeId) === "PRESENT" ? "ABSENT" : "PRESENT",
-                              }))
+                            subtitle={
+                              <>
+                                {tr(employee.position)}
+                                {faceId && (
+                                  <>
+                                    {" · "}
+                                    <FaceIdMark />
+                                  </>
+                                )}
+                              </>
                             }
-                            aria-label={`${employee.fullName} — davomat`}
+                            meta={
+                              present ? (
+                                <InOutTimes checkIn={eff.checkInTime} checkOut={eff.checkOutTime} late={eff.status === "LATE"} />
+                              ) : (
+                                <Pill color={eff.status ? STAFF_STATUS_COLOR[eff.status] : IOS.gray}>
+                                  {tr(eff.status ? STAFF_STATUS_LABEL[eff.status] : "Belgilanmagan")}
+                                </Pill>
+                              )
+                            }
                           />
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        {(employee.checkInTime || employee.checkOutTime) && (
-                          <span className="text-xs tabular-nums text-[var(--color-text-muted)]">
-                            {employee.checkInTime ?? "—"}–{employee.checkOutTime ?? "—"}
-                          </span>
-                        )}
-                        <Badge tone={employee.status === "PRESENT" ? "success" : employee.status ? "danger" : "neutral"}>
-                          {employee.status === "PRESENT" ? "Keldi" : employee.status ? "Kelmadi" : "Belgilanmagan"}
-                        </Badge>
-                      </div>
-                    )}
-                  </li>
-                ))}
-              </ul>
-              {editable && (
-                <div className="hairline flex items-center justify-between gap-3 border-t border-[var(--color-separator)] px-5 py-3.5 sm:px-6">
-                  {saveMutation.isError && (
-                    <span className="text-[13px] text-[var(--color-danger)]">{tr("Saqlashda xatolik yuz berdi")}</span>
+                        );
+                      })}
+                    </div>
                   )}
-                  <Button className="ml-auto" loading={saveMutation.isPending} onClick={() => saveMutation.mutate()}>
-                    {tr("Saqlash")}
-                  </Button>
+                </IosGroup>
+
+                {editable && (
+                  <div className="space-y-2.5">
+                    {counts.unmarked > 0 && (
+                      <SheetSecondaryButton onClick={markUnmarkedPresent}>
+                        <Wand2 className="h-[18px] w-[18px]" strokeWidth={2.2} />
+                        {tr("Belgilanmagan {0} tasini «Keldi» qilish", counts.unmarked)}
+                      </SheetSecondaryButton>
+                    )}
+                    <SheetPrimaryButton onClick={() => setConfirmOpen(true)}>{tr("Saqlash")}</SheetPrimaryButton>
+                  </div>
+                )}
+              </>
+            )}
+          </>
+        )}
+
+        {tab === "royxat" && (
+          <>
+            {period && (
+              <PeriodStepper
+                onPrev={() => setPeriod((p) => shiftPeriod(p, -1))}
+                onNext={() => setPeriod((p) => shiftPeriod(p, 1))}
+                prevLabel={tr("Oldingi oy")}
+                nextLabel={tr("Keyingi oy")}
+                reset={period !== currentPeriodString() ? { label: tr("Shu oy"), onClick: () => setPeriod(currentPeriodString()) } : undefined}
+              >
+                {periodLabel(period, tr)}
+              </PeriodStepper>
+            )}
+
+            {summaryQuery.data && summaryQuery.data.employees.length > 0 && (
+              <StatStrip tone="white">
+                <StatCell label={tr("Keldi")} value={summaryQuery.data.totals.present} color={IOS.green} />
+                <StatCell label={tr("Kelmadi")} value={summaryQuery.data.totals.absent} color={IOS.red} />
+                <StatCell label={tr("Kech qoldi")} value={summaryQuery.data.totals.late} color={IOS.orange} />
+                <StatCell label={tr("Kasal / ta'til")} value={summaryQuery.data.totals.sick + summaryQuery.data.totals.onLeave} />
+              </StatStrip>
+            )}
+
+            <IosGroup
+              title={tr("Xodimlar ro'yxati")}
+              refreshing={summaryQuery.isFetching && !summaryQuery.isLoading}
+              footer={summaryQuery.data?.employees.length ? tr("Xodimni bosib, oylik tarixini ko'ring") : undefined}
+              bare
+            >
+              {!period || summaryQuery.isLoading ? (
+                <SkeletonRows rows={5} />
+              ) : summaryQuery.isError ? (
+                <ErrorState message={(summaryQuery.error as Error).message} onRetry={() => summaryQuery.refetch()} retrying={summaryQuery.isFetching} />
+              ) : !summaryQuery.data || summaryQuery.data.employees.length === 0 ? (
+                <EmptyState icon={UserCheck} title="Bu oy uchun ma'lumot yo'q" />
+              ) : (
+                <div className={GROUP_BLOCK}>
+                  {summaryQuery.data.employees.map((employee) => {
+                    // Kech qoldi, kasal va ta'til — barchasi "Kelmadi" qatoriga qo'shib ko'rsatiladi
+                    const missed = employee.absent + employee.late + employee.sick + employee.onLeave;
+                    return (
+                      <ListRow
+                        key={employee.employeeId}
+                        onClick={() => {
+                          setHistoryEmployeeId(employee.employeeId);
+                          setHistoryPeriod(period);
+                        }}
+                        avatar={<IosAvatar name={employee.fullName} src={employeePhotoUrl({ id: employee.employeeId, avatarUpdatedAt: employee.avatarUpdatedAt })} size={44} />}
+                        title={tr(employee.fullName)}
+                        subtitle={`${tr(formatPositionLabel(employee.position, employee.subjects))}${employee.groups.length > 0 ? ` · ${employee.groups.join(", ")}` : ""}`}
+                        meta={
+                          <span className="flex flex-col items-end gap-1">
+                            {employee.rate === null ? <Pill color={IOS.gray}>—</Pill> : <Pill color={rateColor(employee.rate)}>{employee.rate}%</Pill>}
+                            <span className="whitespace-nowrap text-[12px] tabular-nums text-[#8e8e93]">
+                              {tr("keldi {0}", employee.present)} · {tr("kelmadi {0}", missed)}
+                            </span>
+                          </span>
+                        }
+                      />
+                    );
+                  })}
                 </div>
               )}
-            </Card>
-          )}
-        </>
-      )}
+            </IosGroup>
+          </>
+        )}
+      </div>
 
-      {tab === "royxat" && (
-        <Card className="overflow-hidden">
-          <CardHeader className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle>{tr("Xodimlar ro'yxati —")}{" "}{tr(period)}</CardTitle>
-            <input
-              type="month"
-              value={period}
-              onChange={(e) => setPeriod(e.target.value)}
-              className="h-9 rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-3 text-[13px] text-[var(--color-text)] outline-none focus:border-[var(--color-primary)]"
-            />
-          </CardHeader>
-          <CardBody className="p-0">
-            {!period || summaryQuery.isLoading ? (
-              <div className="px-5 py-5 sm:px-6">
-                <LoadingState rows={3} />
-              </div>
-            ) : summaryQuery.isError ? (
-              <div className="px-5 py-5 sm:px-6">
-                <ErrorState message={tr((summaryQuery.error as Error).message)} />
-              </div>
-            ) : !summaryQuery.data || summaryQuery.data.employees.length === 0 ? (
-              <EmptyState title={tr("Bu oy uchun ma'lumot yo'q")} />
-            ) : (
-              <DataTable compact>
-                <THead>
-                  <tr>
-                    <Th>{tr("Xodim")}</Th>
-                    <Th numeric>{tr("Keldi")}</Th>
-                    <Th numeric>{tr("Kelmadi")}</Th>
-                    {/* Mobilda torlik qilib "Foiz" tashqariga chiqib ketardi — u yerda
-                        foiz xodim ismi ostida (badge sifatida) ko'rsatiladi. */}
-                    <Th numeric className="hidden md:table-cell">{tr("Foiz")}</Th>
-                  </tr>
-                </THead>
-                <TBody>
-                  {summaryQuery.data.employees.map((employee) => (
-                    <Tr
-                      key={employee.employeeId}
-                      onClick={() => {
-                        setHistoryEmployeeId(employee.employeeId);
-                        setHistoryPeriod(period);
-                      }}
-                      className="cursor-pointer"
-                    >
-                      <Td className="font-medium">
-                        {tr(employee.fullName)}
-                        <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[12px] font-normal text-[var(--color-text-muted)]">
-                          {tr(formatPositionLabel(employee.position, employee.subjects))}
-                          {employee.groups.length > 0 ? ` · ${employee.groups.join(", ")}` : ""}
-                          {employee.rate !== null && (
-                            <Badge
-                              tone={employee.rate >= 80 ? "success" : employee.rate >= 50 ? "warning" : "danger"}
-                              className="md:hidden"
-                            >
-                              {tr(employee.rate)}%
-                            </Badge>
-                          )}
-                        </span>
-                      </Td>
-                      <Td numeric className="text-[var(--color-text-muted)]">{tr(employee.present)}</Td>
-                      {/* Kech qoldi, kasal va ta'til — barchasi "Kelmadi" qatoriga qo'shib ko'rsatiladi */}
-                      <Td numeric className="text-[var(--color-text-muted)]">
-                        {employee.absent + employee.late + employee.sick + employee.onLeave}
-                      </Td>
-                      <Td numeric className="hidden md:table-cell">
-                        {employee.rate === null ? (
-                          "—"
-                        ) : (
-                          <Badge tone={employee.rate >= 80 ? "success" : employee.rate >= 50 ? "warning" : "danger"}>
-                            {tr(employee.rate)}%
-                          </Badge>
-                        )}
-                      </Td>
-                    </Tr>
-                  ))}
-                </TBody>
-              </DataTable>
-            )}
-          </CardBody>
-        </Card>
-      )}
+      <DayEditSheet
+        open={!!editing}
+        onClose={() => setEditingId(null)}
+        employee={
+          editing
+            ? {
+                fullName: editing.fullName,
+                position: editing.position,
+                photoUrl: employeePhotoUrl({ id: editing.employeeId, avatarUpdatedAt: editing.avatarUpdatedAt }),
+                faceId: isFaceIdRecord(editing.note),
+                recorded: recordOf(editing),
+              }
+            : null
+        }
+        value={editing ? effectiveOf(editing) : { status: null, checkInTime: null, checkOutTime: null }}
+        editable={editable}
+        onApply={(draft) => editing && setDrafts((d) => ({ ...d, [editing.employeeId]: draft }))}
+      />
+
+      {/* Saqlash qaytarib bo'lmaydi (kun qulflanadi) — ikkinchi bosqichda tasdiqlanadi */}
+      <IosSheet
+        open={confirmOpen}
+        onClose={() => !saveMutation.isPending && setConfirmOpen(false)}
+        cancelLabel="Qaytish"
+        title={tr("Davomatni saqlash")}
+        footer={
+          <SheetPrimaryButton loading={saveMutation.isPending} onClick={() => saveMutation.mutate()}>
+            {tr("Saqlash va qulflash")}
+          </SheetPrimaryButton>
+        }
+      >
+        <div className="space-y-3 px-1 text-[15px] leading-snug text-[var(--color-text)]">
+          <p>
+            {tr("Keldi")}: <b className="tabular-nums">{counts.present}</b> · {tr("Kelmadi")}: <b className="tabular-nums">{counts.absent + counts.unmarked}</b>
+          </p>
+          {counts.unmarked > 0 && (
+            <p className="rounded-[14px] bg-[#ff3b30]/[0.08] px-4 py-3 text-[14px] text-[#d70015]">
+              {tr("{0} ta xodim belgilanmagan — ular «Kelmadi» deb saqlanadi.", counts.unmarked)}
+            </p>
+          )}
+          <p className="text-[13.5px] text-[#8e8e93]">{tr("Saqlangach kun qulflanadi va o'zgartirib bo'lmaydi — ish haqi shu davomatdan hisoblanadi.")}</p>
+          {saveMutation.isError && <p className="text-[13px] text-[#ff3b30]">{tr("Saqlashda xatolik yuz berdi")}</p>}
+        </div>
+      </IosSheet>
 
       <EmployeeHistoryModal
         open={!!historyEmployeeId}
