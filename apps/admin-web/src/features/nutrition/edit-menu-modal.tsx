@@ -7,10 +7,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { MenuEntry } from "@/lib/types";
-import { Modal } from "@/components/ui/modal";
-import { Textarea } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { formatDate } from "@/lib/format";
+import { FieldRow, FormSection, TextArea } from "@/components/ios/form";
+import { IosSheet, SheetPrimaryButton } from "@/components/ios/sheet";
+import { dayMonthLabel, WEEKDAYS } from "@/components/ios/day-stepper";
 import { useTr } from "@/i18n/tr";
 
 const schema = z.object({
@@ -21,6 +20,7 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
+/** Bir kunlik menyu: nonushta, tushlik, kechki ovqat / gazak */
 export function EditMenuModal({
   open,
   onClose,
@@ -58,27 +58,35 @@ export function EditMenuModal({
     },
   });
 
-  return (
-    <Modal open={open} onClose={onClose} title={`Menyu — ${formatDate(date)}`}>
-      <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
-        {serverError && (
-          <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {tr(serverError)}
-          </div>
-        )}
-        <Textarea label={tr("Nonushta")} placeholder={tr("Sutli botqa, non, choy")} rows={2} {...register("breakfast")} />
-        <Textarea label={tr("Tushlik")} placeholder={tr("Sho'rva, osh, salat")} rows={2} {...register("lunch")} />
-        <Textarea label={tr("Kechki ovqat / gazak")} placeholder={tr("Meva, kefir")} rows={2} {...register("snack")} />
+  const weekday = WEEKDAYS[new Date(`${date}T00:00:00Z`).getUTCDay()];
+  const busy = isSubmitting || mutation.isPending;
 
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="outline" onClick={onClose}>
-            {tr("Bekor qilish")}
-          </Button>
-          <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            {tr("Saqlash")}
-          </Button>
-        </div>
+  return (
+    <IosSheet
+      open={open}
+      onClose={() => !busy && onClose()}
+      cancelLabel="Bekor"
+      title={`${tr(weekday)}, ${dayMonthLabel(date, tr)}`}
+      footer={
+        <SheetPrimaryButton type="submit" form="edit-menu-form" loading={busy}>
+          {tr("Saqlash")}
+        </SheetPrimaryButton>
+      }
+    >
+      <form id="edit-menu-form" className="space-y-5" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
+        {serverError && <p className="rounded-[14px] bg-[#ff3b30]/[0.08] px-4 py-3 text-[14px] text-[#d70015]">{tr(serverError)}</p>}
+        <FormSection title={tr("Menyu")} footer={tr("Taomlarni vergul bilan yozing — allergiyasi bor bolalar uchun ogohlantirish shu so'zlardan topiladi.")}>
+          <FieldRow label={tr("Nonushta")} htmlFor="menu-breakfast" stacked>
+            <TextArea id="menu-breakfast" placeholder={tr("Sutli botqa, non, choy")} {...register("breakfast")} />
+          </FieldRow>
+          <FieldRow label={tr("Tushlik")} htmlFor="menu-lunch" stacked>
+            <TextArea id="menu-lunch" placeholder={tr("Sho'rva, osh, salat")} {...register("lunch")} />
+          </FieldRow>
+          <FieldRow label={tr("Kechki ovqat / gazak")} htmlFor="menu-snack" stacked>
+            <TextArea id="menu-snack" placeholder={tr("Meva, kefir")} {...register("snack")} />
+          </FieldRow>
+        </FormSection>
       </form>
-    </Modal>
+    </IosSheet>
   );
 }
