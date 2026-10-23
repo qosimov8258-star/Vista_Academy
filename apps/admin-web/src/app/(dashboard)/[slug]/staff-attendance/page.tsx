@@ -2,7 +2,7 @@
 
 import { use, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Lock, UserCheck, Wand2 } from "lucide-react";
+import { Download, Lock, UserCheck, Wand2 } from "lucide-react";
 import { api } from "@/lib/api";
 import type { Organization, StaffAttendanceDay, StaffAttendanceEmployee, StaffAttendanceSummary } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
@@ -13,6 +13,7 @@ import { formatPositionLabel } from "@/lib/employee-position";
 import { DayStepper, PeriodStepper } from "@/components/ios/day-stepper";
 import { Segmented } from "@/components/ios/form";
 import { Group as IosGroup, ListRow } from "@/components/ios/group";
+import { IosButton } from "@/components/ios/button";
 import { PageHeaderCard } from "@/components/ios/page-card";
 import { IosAvatar, Pill } from "@/components/ios/pill";
 import { IosSheet, SheetPrimaryButton, SheetSecondaryButton } from "@/components/ios/sheet";
@@ -20,6 +21,7 @@ import { StatCell, StatStrip } from "@/components/ios/stat-strip";
 import { EmptyState, ErrorState, SkeletonRows } from "@/components/ios/states";
 import { GROUP_BLOCK, IOS } from "@/components/ios/tokens";
 import { OptionPicker } from "@/features/lessons/option-picker";
+import { ReportSheet } from "@/features/reports/report-sheet";
 import { periodLabel, shiftPeriod } from "@/features/payments/shared";
 import {
   DayEditSheet,
@@ -111,6 +113,9 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
   const [filter, setFilter] = useState<DayFilter>("all");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  // Hisobot — API'dagi StaffAttendanceReportService bilan bir xil qoida: o'qituvchi va oshpazdan boshqa rollar
+  const canDownload = !!user && user.role !== "TEACHER" && user.role !== "CHEF";
   // Sana yoki filial almashganda qoralamalar tashlanadi — eski kunning
   // belgilashlari yangi kunga sizib o'tmasin.
   useEffect(() => {
@@ -211,6 +216,11 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
           tint="teal"
           title={tr("Xodimlar davomati")}
           subtitle={tr("Tarbiyachi va boshqa xodimlarning kunlik davomati")}
+          actions={
+            canDownload && branchId ? (
+              <IosButton label={tr("Yuklab olish")} icon={Download} compact onClick={() => setReportOpen(true)} />
+            ) : undefined
+          }
         />
 
         {/* Ikki bo'lim: kunlik belgilash va xodimlar ro'yxati + oylik jamlanma. */}
@@ -489,6 +499,19 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
           {saveMutation.isError && <p className="text-[13px] text-[#ff3b30]">{tr("Saqlashda xatolik yuz berdi")}</p>}
         </div>
       </IosSheet>
+
+      <ReportSheet
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        period={(tab === "royxat" ? period : date.slice(0, 7)) || undefined}
+        title="Xodimlar davomati hisoboti"
+        endpoint="/app/staff-attendance/report"
+        filePrefix="xodimlar-davomati"
+        formats={["xlsx"]}
+        params={{ branchId }}
+        allHint="Boshidan bugungacha barcha davomat yozuvlari"
+        contents="Excel: «Umumiy» — har xodim bo'yicha kelgan, kech qolgan va kelmagan kunlar, o'rtacha kirish/chiqish va ishlagan vaqti; «Tabel» — har kun kirish va chiqish vaqti (holat rangida); «Kirish-chiqish» — batafsil ro'yxat; «Face ID voqealari» — terminaldagi har bir yuz ko'rsatish."
+      />
 
       <EmployeeHistoryModal
         open={!!historyEmployeeId}
