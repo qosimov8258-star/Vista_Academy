@@ -73,8 +73,10 @@ mint `#00C7BE` · gray `#8E8E93`.
   Ma'no: bola — Baby, guruh — UsersRound, filial — School, xodim — IdCard,
   pul — Wallet, qarz — ReceiptText, hisobot — ChartColumn, audit — ShieldCheck,
   sozlama — Settings, yangilash — RefreshCw.
-- Istisno: yon panel va o'qituvchining pastki tab paneli eski `components/ui/icons`
-  da — u yerda faol bo'lim to'ldirilgan (`filled`) belgi bilan ajratiladi.
+- Menyu ikonkalari (yon panel, telefon «Menyu»si, pastki tab panel) —
+  `components/layout/nav-icons.tsx`: lucide belgi + har birining o'z rangi.
+  Yon panel va «Menyu»da `NavTile` plitkasida, pastki tab panelda bir rangli
+  belgi; faol bo'lim qalinroq chiziq bilan. Yangi bo'lim ikonkasi shu faylga qo'shiladi.
 
 ## 5. Tugmalar, segment, kapsula
 

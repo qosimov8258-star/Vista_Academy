@@ -21,17 +21,9 @@ import { Avatar, initials } from "@/components/ui/avatar";
 import { isSection, type NavEntry, type NavLeaf, type NavSection } from "./nav-types";
 import { DirectorRail } from "./director-rail";
 import { DirectorBottomBar } from "./director-bottom-bar";
-import { BadgePercent } from "lucide-react";
-import type { IconProps } from "@/components/ui/icons";
-
-/** Chegirmalar belgisi — umumiy ikonkalar to'plamida foiz belgisi yo'q, lucide'dan */
-function PercentIcon({ className }: IconProps) {
-  return <BadgePercent className={className} strokeWidth={1.8} aria-hidden="true" />;
-}
+import { ArrowLeftIcon, ChevronRightIcon, CloseIcon, LogoutIcon, SidebarIcon } from "@/components/ui/icons";
 import {
   AuditIcon,
-  CloseIcon,
-  ArrowLeftIcon,
   BellIcon,
   BookIcon,
   BriefcaseIcon,
@@ -40,7 +32,6 @@ import {
   CalendarIcon,
   ChartIcon,
   ChecklistIcon,
-  ChevronRightIcon,
   ChildIcon,
   ClockIcon,
   CoinIcon,
@@ -51,17 +42,16 @@ import {
   KeyIcon,
   MealIcon,
   MoneyIcon,
-  WalletIcon,
   NoteIcon,
+  PercentIcon,
   PhoneIcon,
   QuestionIcon,
   SettingsIcon,
   ShopIcon,
-  LogoutIcon,
-  SidebarIcon,
   StarIcon,
   TeacherIcon,
-} from "@/components/ui/icons";
+  WalletIcon,
+} from "./nav-icons";
 import { useTr } from "@/i18n/tr";
 
 const BADGE_TONE: Record<NonNullable<NavLeaf["badgeTone"]>, string> = {
