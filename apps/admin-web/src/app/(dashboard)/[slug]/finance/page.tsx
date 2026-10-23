@@ -19,6 +19,7 @@ import { downloadCsv } from "@/lib/download";
 import { CreateInvoiceModal } from "@/features/finance/create-invoice-modal";
 import { BulkCreateInvoiceModal } from "@/features/finance/bulk-create-invoice-modal";
 import { PaymentSheet } from "@/features/payments/payment-sheet";
+import { InvoiceEditSheet } from "@/features/finance/invoice-edit-sheet";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { canWriteMoney } from "@/lib/permissions";
 import { useTr } from "@/i18n/tr";
@@ -64,6 +65,9 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
   const [exportError, setExportError] = useState<string | null>(null);
   const { user } = useAuth();
   const canWrite = canWriteMoney(user?.role);
+  // Hisob-fakturani tuzatish va bekor qilish — faqat moliyachi (API'dagi requireFinanceOnly bilan bir xil)
+  const canEditInvoices = user?.role === "FINANCE";
+  const [editInvoice, setEditInvoice] = useState<Invoice | null>(null);
   const { branchId: forcedBranchId, base } = useBranchContext(slug);
 
   const invoicesQuery = useQuery({
@@ -250,7 +254,8 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
             <TBody>
               {invoicesQuery.data.data.map((invoice) => {
                 const net = Number(invoice.amount) - Number(invoice.discountAmount);
-                const remaining = net - Number(invoice.paidAmount);
+                // Bekor qilingan hisob-faktura qarz emas
+                const remaining = invoice.status === "CANCELLED" ? 0 : net - Number(invoice.paidAmount);
                 return (
                   <Tr key={invoice.id}>
                     <Td className="font-medium">
@@ -295,6 +300,11 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
                             {tr("To'lov qabul qilish")}
                           </Button>
                         )}
+                        {canEditInvoices && invoice.status !== "CANCELLED" && (
+                          <Button size="sm" variant="outline" onClick={() => setEditInvoice(invoice)}>
+                            {tr("Tuzatish")}
+                          </Button>
+                        )}
                       </div>
                     </Td>
                   </Tr>
@@ -326,6 +336,7 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
 
       {canWrite && <CreateInvoiceModal open={createOpen} onClose={() => setCreateOpen(false)} slug={slug} />}
       {canWrite && <BulkCreateInvoiceModal open={bulkOpen} onClose={() => setBulkOpen(false)} slug={slug} />}
+      {canEditInvoices && <InvoiceEditSheet slug={slug} invoice={editInvoice} onClose={() => setEditInvoice(null)} />}
       {/* To'lov — To'lovlar sahifasidagi bilan bir xil varaq: summa bolaning eng eski qarzidan boshlab yopiladi */}
       {canWrite && (
         <PaymentSheet

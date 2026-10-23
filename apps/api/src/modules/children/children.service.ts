@@ -301,7 +301,7 @@ export class ChildrenService {
     branchId: string | undefined,
   ): Promise<Map<string, { billedMinor: number; paidMinor: number }>> {
     const invoices = await this.prisma.invoice.findMany({
-      where: { organizationId: scope.organizationId, branchId, period: currentPeriodString() },
+      where: { organizationId: scope.organizationId, branchId, period: currentPeriodString(), status: { not: "CANCELLED" } },
       select: { childId: true, amount: true, discountAmount: true, paidAmount: true },
     });
 

@@ -226,7 +226,7 @@ export class TenantDashboardService {
         }),
         this.prisma.invoice.groupBy({
           by: ["status"],
-          where: { branchId },
+          where: { branchId, status: { not: "CANCELLED" } },
           _count: { _all: true },
           _sum: { amount: true, discountAmount: true, paidAmount: true },
         }),
