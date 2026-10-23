@@ -156,6 +156,7 @@ model Organization {
   faceIdAgentPairingCodes   FaceIdAgentPairingCode[]
   faceEnrollments           FaceEnrollment[]
   faceIdEvents              FaceIdEvent[]
+  staffAbsenceDocuments     StaffAbsenceDocument[]
   faceIdCommands            FaceIdCommand[]
   paymentReminderSettings   PaymentReminderSettings[]
   paymentReminderDispatches PaymentReminderDispatch[]
@@ -346,6 +347,7 @@ model Branch {
   faceIdAgentPairingCodes   FaceIdAgentPairingCode[]
   faceEnrollments           FaceEnrollment[]
   faceIdEvents              FaceIdEvent[]
+  staffAbsenceDocuments     StaffAbsenceDocument[]
   faceIdCommands            FaceIdCommand[]
   paymentReminderSettings   PaymentReminderSettings?
   paymentReminderDispatches PaymentReminderDispatch[]
@@ -619,6 +621,7 @@ model Employee {
   notifications         EmployeeNotification[]
   faceEnrollments       FaceEnrollment[]
   faceIdEvents          FaceIdEvent[]
+  staffAbsenceDocuments StaffAbsenceDocument[]
   faceIdCommands        FaceIdCommand[]
 
   @@index([organizationId, branchId])
@@ -698,6 +701,42 @@ model EmployeeAttendance {
  * qulflanadi — hech kim (hatto qayta ochib) o'zgartira olmaydi, chunki ish
  * haqi shu ma'lumotga bog'liq. Har bir yozuv emas, kunning o'zi qulflanadi.
  */
+/// Xodim kelmagan kun(lar) uchun hujjat — kasallik varaqasi, ariza va h.k.
+/// Bitta hujjat bir nechta kunni qoplaydi (masalan 3, 4, 5 va 7-oktabr):
+/// kunlar `dates` ro'yxatida. Fayl R2'da (`fileKey`) yoki sozlanmagan bo'lsa
+/// bazada (`fileBytes`). Davomat holatiga ta'sir qilmaydi — kun qulflangan
+/// (ish haqi hisoblangan) bo'lsa ham isbot sifatida biriktirilaveradi.
+enum StaffDocumentKind {
+  SICK_NOTE
+  LEAVE_REQUEST
+  OTHER
+}
+
+model StaffAbsenceDocument {
+  id             String            @id @default(uuid())
+  organizationId String            @map("organization_id")
+  branchId       String            @map("branch_id")
+  employeeId     String            @map("employee_id")
+  kind           StaffDocumentKind @default(SICK_NOTE)
+  dates          DateTime[]        @db.Date
+  fileName       String            @map("file_name")
+  mimeType       String            @map("mime_type")
+  sizeBytes      Int               @map("size_bytes")
+  fileKey        String?           @map("file_key")
+  fileBytes      Bytes?            @map("file_bytes")
+  note           String?
+  uploadedByName String            @map("uploaded_by_name")
+  createdAt      DateTime          @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  employee     Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+  @@index([branchId])
+  @@map("staff_absence_documents")
+}
+
 model StaffAttendanceLock {
   id           String   @id @default(uuid())
   branchId     String   @map("branch_id")

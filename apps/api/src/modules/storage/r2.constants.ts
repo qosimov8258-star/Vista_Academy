@@ -12,4 +12,5 @@ export const R2_CATEGORY = {
   PAYMENT_RECEIPT: "payment-receipt",
   DIARY_MEDIA: "diary-media",
   DIARY_POSTER: "diary-poster",
+  STAFF_DOCUMENT: "staff-document",
 } as const;

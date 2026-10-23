@@ -611,6 +611,23 @@ export interface StaffAttendanceEmployee {
   note: string | null;
   checkInTime: string | null;
   checkOutTime: string | null;
+  /** Shu kunga biriktirilgan hujjatlar (kasallik varaqasi, ariza) */
+  documents: { id: string; kind: StaffDocumentKind; fileName: string }[];
+}
+
+export type StaffDocumentKind = "SICK_NOTE" | "LEAVE_REQUEST" | "OTHER";
+
+/** Xodim kelmagan kun(lar) uchun hujjat — bitta fayl bir nechta kunni qoplaydi */
+export interface StaffAbsenceDocument {
+  id: string;
+  kind: StaffDocumentKind;
+  /** "YYYY-MM-DD" */
+  dates: string[];
+  fileName: string;
+  mimeType: string;
+  note: string | null;
+  uploadedByName: string;
+  createdAt: string;
 }
 
 export interface StaffAttendanceDay {
@@ -660,6 +677,7 @@ export interface StaffAttendanceHistory {
     checkOutTime: string | null;
     note: string | null;
   }[];
+  documents: StaffAbsenceDocument[];
 }
 
 export type EatingQuality = "GOOD" | "AVERAGE" | "POOR";

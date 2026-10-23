@@ -2,14 +2,15 @@
 
 import { useEffect, useState } from "react";
 import clsx from "clsx";
-import { LogIn, LogOut, X } from "lucide-react";
-import type { StaffAttendanceStatus } from "@/lib/types";
+import { LogIn, LogOut, Paperclip, X } from "lucide-react";
+import type { StaffAttendanceStatus, StaffDocumentKind } from "@/lib/types";
 import { IosAvatar } from "@/components/ios/pill";
 import { IosSheet, SheetPrimaryButton, SheetSection } from "@/components/ios/sheet";
 import { IOS, ROW_SEPARATOR } from "@/components/ios/tokens";
 import { useTr } from "@/i18n/tr";
 import { STAFF_STATUS_COLOR, STAFF_STATUS_LABEL } from "./employee-history-modal";
 import { FaceIdMark } from "./in-out-times";
+import { DocumentChip, useOpenDocument } from "./absence-documents";
 
 export interface DayDraft {
   status: StaffAttendanceStatus | null;
@@ -39,6 +40,8 @@ export function DayEditSheet({
   value,
   editable,
   onApply,
+  documents = [],
+  onAttach,
 }: {
   open: boolean;
   onClose: () => void;
@@ -46,8 +49,13 @@ export function DayEditSheet({
   value: DayDraft;
   editable: boolean;
   onApply: (draft: DayDraft) => void;
+  /** Shu kunga biriktirilgan hujjatlar */
+  documents?: { id: string; kind: StaffDocumentKind }[];
+  /** Saqlangan holati "kelmagan" bo'lsa — hujjat biriktirish (kun qulflangan bo'lsa ham) */
+  onAttach?: () => void;
 }) {
   const tr = useTr();
+  const { open: openDocument, error: openError } = useOpenDocument();
   const [draft, setDraft] = useState<DayDraft>(value);
   // Har ochilishda sahifadagi joriy qiymatdan boshlanadi
   useEffect(() => {
@@ -128,6 +136,24 @@ export function DayEditSheet({
               })}
             </div>
           </SheetSection>
+
+          {(documents.length > 0 || onAttach) && (
+            <SheetSection title={tr("Hujjat")} footer={openError ?? undefined}>
+              {documents.length > 0 && (
+                <div className="flex flex-wrap gap-2 px-4 py-3">
+                  {documents.map((doc) => (
+                    <DocumentChip key={doc.id} kind={doc.kind} onOpen={() => openDocument(doc.id)} />
+                  ))}
+                </div>
+              )}
+              {onAttach && (
+                <button type="button" onClick={onAttach} className="flex min-h-[48px] w-full items-center gap-2 px-4 text-left text-[16px] text-[var(--color-primary)] active:bg-black/[0.04]">
+                  <Paperclip className="h-[17px] w-[17px]" strokeWidth={2.2} />
+                  {tr(documents.length ? "Yana hujjat biriktirish" : "Hujjat biriktirish (kasallik varaqasi, ariza)")}
+                </button>
+              )}
+            </SheetSection>
+          )}
 
           {present && (
             <SheetSection

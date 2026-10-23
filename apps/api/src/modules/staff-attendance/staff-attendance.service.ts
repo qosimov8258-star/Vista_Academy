@@ -73,6 +73,10 @@ export class StaffAttendanceService {
       this.prisma.employeeAttendance.findMany({ where: { branchId, date } }),
       this.prisma.staffAttendanceLock.findUnique({ where: { branchId_date: { branchId, date } } }),
     ]);
+    const documents = await this.prisma.staffAbsenceDocument.findMany({
+      where: { branchId, dates: { has: date } },
+      select: { id: true, employeeId: true, kind: true, fileName: true },
+    });
 
     const recordByEmployee = new Map(records.map((r) => [r.employeeId, r]));
     return {
@@ -89,6 +93,7 @@ export class StaffAttendanceService {
         note: recordByEmployee.get(e.id)?.note ?? null,
         checkInTime: recordByEmployee.get(e.id)?.checkInTime ?? null,
         checkOutTime: recordByEmployee.get(e.id)?.checkOutTime ?? null,
+        documents: documents.filter((d) => d.employeeId === e.id).map(({ id, kind, fileName }) => ({ id, kind, fileName })),
       })),
     };
   }
@@ -272,10 +277,17 @@ export class StaffAttendanceService {
     const from = new Date(Date.UTC(year, month - 1, 1));
     const to = new Date(Date.UTC(year, month, 0));
 
-    const records = await this.prisma.employeeAttendance.findMany({
-      where: { employeeId: employee.id, date: { gte: from, lte: to } },
-      orderBy: { date: "asc" },
-    });
+    const [records, documents] = await Promise.all([
+      this.prisma.employeeAttendance.findMany({
+        where: { employeeId: employee.id, date: { gte: from, lte: to } },
+        orderBy: { date: "asc" },
+      }),
+      this.prisma.staffAbsenceDocument.findMany({
+        where: { employeeId: employee.id, dates: { hasSome: Array.from({ length: to.getUTCDate() }, (_, i) => new Date(Date.UTC(year, month - 1, i + 1))) } },
+        orderBy: { createdAt: "asc" },
+        select: { id: true, kind: true, dates: true, fileName: true, mimeType: true, note: true, uploadedByName: true, createdAt: true },
+      }),
+    ]);
 
     return {
       employee: {
@@ -294,6 +306,7 @@ export class StaffAttendanceService {
         checkOutTime: r.checkOutTime,
         note: r.note,
       })),
+      documents: documents.map((d) => ({ ...d, dates: d.dates.map((x) => x.toISOString().slice(0, 10)) })),
     };
   }
 

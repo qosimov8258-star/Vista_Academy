@@ -2,6 +2,30 @@ import { getTenantAccessToken } from "./tenant-session";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
 
+/**
+ * Himoyalangan faylni (hujjat, rasm, PDF) yangi oynada ochadi. Oyna darhol
+ * ochiladi (brauzer uni popup deb to'smasin), fayl esa token bilan olinib,
+ * keyin unga qo'yiladi.
+ */
+export async function openFile(path: string): Promise<void> {
+  const win = window.open("about:blank", "_blank");
+  try {
+    const accessToken = getTenantAccessToken();
+    const res = await fetch(`${API_URL}${path}`, {
+      credentials: "include",
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+    });
+    if (!res.ok) throw new Error("Faylni ochib bo'lmadi");
+    const url = URL.createObjectURL(await res.blob());
+    if (win) win.location.href = url;
+    else window.location.assign(url);
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  } catch (error) {
+    win?.close();
+    throw error;
+  }
+}
+
 export async function downloadCsv(path: string, filename: string): Promise<void> {
   const accessToken = getTenantAccessToken();
   const res = await fetch(`${API_URL}${path}`, {
