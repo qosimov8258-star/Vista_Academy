@@ -110,6 +110,19 @@ export function requireMoneyScope(scope: TenantScope): string {
 }
 
 /**
+ * Chegirma — faqat moliyachi beradi, o'zgartiradi va tugatadi. Filial
+ * admini va administrator chegirmani ko'radi (bola profili, hisobotlar),
+ * lekin bera olmaydi: pulga oid qaror moliyachida.
+ */
+export function requireFinanceScope(scope: TenantScope): string {
+  const branchId = requireBranchScope(scope);
+  if (scope.role !== "FINANCE") {
+    throw new ForbiddenException("Chegirmani moliyachi beradi");
+  }
+  return branchId;
+}
+
+/**
  * Operatsion modullar — bolalar, guruhlar, xodimlar, CRM, ovqatlanish,
  * bildirishnomalar, xodimlar davomati. Filial admini va administrator
  * yozadi; moliyachi va o'qituvchi faqat kuzatadi.

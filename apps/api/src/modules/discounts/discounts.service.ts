@@ -2,7 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { DiscountScope, DiscountType, InvoiceStatus, Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
 import { AuditLogService } from "../audit-log/audit-log.service";
-import { TenantAuthenticatedUser, TenantScope, requireMoneyScope, resolveReadBranchFilter, toTenantScope } from "../iam/tenant-auth.types";
+import { TenantAuthenticatedUser, TenantScope, requireFinanceScope, resolveReadBranchFilter, toTenantScope } from "../iam/tenant-auth.types";
 import { monthlyFeeOf } from "../billing/monthly-fee";
 import {
   HIGH_IMPACT_DISCOUNT,
@@ -226,7 +226,7 @@ export class DiscountsService {
 
   async create(caller: TenantAuthenticatedUser, dto: CreateDiscountDto) {
     const scope = toTenantScope(caller);
-    const branchId = requireMoneyScope(scope);
+    const branchId = requireFinanceScope(scope);
     const input = normalizeInput(dto);
     const child = await this.childInBranch(scope, branchId, dto.childId);
 
@@ -249,7 +249,7 @@ export class DiscountsService {
 
   async bulkCreate(caller: TenantAuthenticatedUser, dto: BulkCreateDiscountDto) {
     const scope = toTenantScope(caller);
-    const branchId = requireMoneyScope(scope);
+    const branchId = requireFinanceScope(scope);
     const input = normalizeInput(dto);
     const ids = [...new Set(dto.childIds)];
     const children = await this.prisma.child.findMany({
@@ -299,7 +299,7 @@ export class DiscountsService {
    */
   async update(caller: TenantAuthenticatedUser, id: string, dto: UpdateDiscountDto) {
     const scope = toTenantScope(caller);
-    const branchId = requireMoneyScope(scope);
+    const branchId = requireFinanceScope(scope);
     const existing = await this.prisma.childDiscount.findFirst({
       where: { id, organizationId: scope.organizationId },
       select: { ...ruleView, branchId: true, childId: true, child: { select: { fullName: true } } },
@@ -397,7 +397,7 @@ export class DiscountsService {
    */
   async end(caller: TenantAuthenticatedUser, id: string) {
     const scope = toTenantScope(caller);
-    const branchId = requireMoneyScope(scope);
+    const branchId = requireFinanceScope(scope);
     const existing = await this.prisma.childDiscount.findFirst({
       where: { id, organizationId: scope.organizationId },
       select: { ...ruleView, branchId: true, childId: true, child: { select: { fullName: true } } },
