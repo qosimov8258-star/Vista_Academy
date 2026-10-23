@@ -2,13 +2,47 @@
  * Yuz tanish voqealaridan kunlik xodim davomatini hisoblash — sof
  * funksiyalar (bazaga bog'liq emas), shuning uchun alohida sinovdan o'tadi.
  *
- * Qoida: filial vaqt zonasi (odatda Asia/Tashkent) bo'yicha bir kundagi
- * birinchi voqea — kelgan, oxirgisi — ketgan vaqti. Ketish faqat kelishdan
- * kamida `MIN_CHECKOUT_GAP_MINUTES` keyin bo'lsa yoziladi: aks holda
- * terminal oldida ikki marta yuz ko'rsatish "ketdi" deb yozilib qolardi.
+ * Qoida (filial vaqt zonasi, odatda Asia/Tashkent, bo'yicha bir kun):
+ * - Terminal yo'nalish bersa (kirish va chiqish bitta terminalda, odam
+ *   ekranda "KIRISH"/"CHIQISH"ni tanlaydi) — kelgan vaqti birinchi kirish,
+ *   ketgani oxirgi chiqish. Kirish tanlanmagan bo'lsa ham kelgani birinchi
+ *   voqea (odam "kelmadi" bo'lib qolmasin); chiqishdan keyin yana kirgan
+ *   bo'lsa — hali ketmagan.
+ * - Yo'nalish bo'lmasa — birinchi voqea kelgan, oxirgisi ketgan vaqti.
+ *   Ketish faqat kelishdan kamida `MIN_CHECKOUT_GAP_MINUTES` keyin bo'lsa
+ *   yoziladi: aks holda terminal oldida ikki marta yuz ko'rsatish "ketdi"
+ *   deb yozilib qolardi.
  */
 
 export const MIN_CHECKOUT_GAP_MINUTES = 30;
+
+export type FaceIdDirection = "in" | "out";
+
+/** Bitta terminal voqeasi: vaqti va (terminal bersa) yo'nalishi. */
+export interface FaceIdPassage {
+  time: Date;
+  direction?: FaceIdDirection | null;
+}
+
+/**
+ * Hikvision AcsEvent'dagi `attendanceStatus` → yo'nalish. Terminalda
+ * davomat rejimi yoqilmagan bo'lsa maydon bo'lmaydi yoki "undefined" keladi.
+ */
+export function directionFromRaw(raw: unknown): FaceIdDirection | null {
+  const status = raw && typeof raw === "object" ? (raw as { attendanceStatus?: unknown }).attendanceStatus : undefined;
+  switch (status) {
+    case "checkIn":
+    case "breakIn":
+    case "overtimeIn":
+      return "in";
+    case "checkOut":
+    case "breakOut":
+    case "overtimeOut":
+      return "out";
+    default:
+      return null;
+  }
+}
 
 /** Sana kaliti ("YYYY-MM-DD") berilgan vaqt zonasida. */
 export function localDateKey(time: Date, timeZone: string): string {
@@ -38,16 +72,28 @@ export interface DailyAttendance {
  * kelish/ketish vaqti. Voqea bo'lmasa `null`.
  */
 export function computeDailyAttendance(
-  times: Date[],
+  events: Array<Date | FaceIdPassage>,
   opts: { timeZone: string; openTime?: string | null; graceMinutes: number },
 ): DailyAttendance | null {
-  if (times.length === 0) return null;
-  const sorted = [...times].sort((a, b) => a.getTime() - b.getTime());
-  const first = sorted[0];
-  const last = sorted[sorted.length - 1];
-  const checkInTime = localTimeHHMM(first, opts.timeZone);
-  const gapMinutes = (last.getTime() - first.getTime()) / 60_000;
-  const checkOutTime = gapMinutes >= MIN_CHECKOUT_GAP_MINUTES ? localTimeHHMM(last, opts.timeZone) : null;
+  if (events.length === 0) return null;
+  const sorted = events
+    .map((e) => (e instanceof Date ? { time: e, direction: null } : { time: e.time, direction: e.direction ?? null }))
+    .sort((a, b) => a.time.getTime() - b.time.getTime());
+
+  let arrival: Date;
+  let departure: Date | null;
+  if (sorted.some((e) => e.direction)) {
+    arrival = (sorted.find((e) => e.direction === "in") ?? sorted[0]).time;
+    const lastOut = [...sorted].reverse().find((e) => e.direction === "out" && e.time > arrival);
+    const backInside = lastOut && sorted.some((e) => e.direction === "in" && e.time > lastOut.time);
+    departure = lastOut && !backInside ? lastOut.time : null;
+  } else {
+    arrival = sorted[0].time;
+    const last = sorted[sorted.length - 1].time;
+    departure = (last.getTime() - arrival.getTime()) / 60_000 >= MIN_CHECKOUT_GAP_MINUTES ? last : null;
+  }
+  const checkInTime = localTimeHHMM(arrival, opts.timeZone);
+  const checkOutTime = departure ? localTimeHHMM(departure, opts.timeZone) : null;
 
   const open = opts.openTime ? minutesOf(opts.openTime) : null;
   const arrived = minutesOf(checkInTime);

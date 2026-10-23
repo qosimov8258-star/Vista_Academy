@@ -4,7 +4,7 @@ import { PrismaService } from "../../database/prisma.service";
 import { decryptSecret } from "../../common/crypto/reversible-secret";
 import type { AgentDevice } from "./agent/agent-token.guard";
 import type { AgentEventDto } from "./dto/agent-events.dto";
-import { computeDailyAttendance, lateGraceMinutes, localDateKey, utcWindowAround } from "./face-id-attendance";
+import { computeDailyAttendance, directionFromRaw, lateGraceMinutes, localDateKey, utcWindowAround } from "./face-id-attendance";
 import { parseChildDeviceNo } from "./device-person";
 
 /** Bolaning kunlik davomati uchun beriladigan coin — `AttendanceService.mark` bilan bir xil. */
@@ -179,10 +179,12 @@ export class FaceIdAgentService {
     const window = utcWindowAround(dateKey);
     const events = await this.prisma.faceIdEvent.findMany({
       where: { employeeId, eventTime: { gte: window.from, lt: window.to } },
-      select: { eventTime: true },
+      select: { eventTime: true, raw: true },
     });
-    const times = events.map((e) => e.eventTime).filter((t) => localDateKey(t, branch.timezone) === dateKey);
-    const daily = computeDailyAttendance(times, { timeZone: branch.timezone, openTime: branch.openTime, graceMinutes: lateGraceMinutes() });
+    const passages = events
+      .filter((e) => localDateKey(e.eventTime, branch.timezone) === dateKey)
+      .map((e) => ({ time: e.eventTime, direction: directionFromRaw(e.raw) }));
+    const daily = computeDailyAttendance(passages, { timeZone: branch.timezone, openTime: branch.openTime, graceMinutes: lateGraceMinutes() });
     if (!daily) return false;
 
     const existing = await this.prisma.employeeAttendance.findUnique({
@@ -227,10 +229,12 @@ export class FaceIdAgentService {
     const window = utcWindowAround(dateKey);
     const events = await this.prisma.faceIdEvent.findMany({
       where: { childId: child.id, eventTime: { gte: window.from, lt: window.to } },
-      select: { eventTime: true },
+      select: { eventTime: true, raw: true },
     });
-    const times = events.map((e) => e.eventTime).filter((t) => localDateKey(t, branch.timezone) === dateKey);
-    const daily = computeDailyAttendance(times, { timeZone: branch.timezone, openTime: null, graceMinutes: 0 });
+    const passages = events
+      .filter((e) => localDateKey(e.eventTime, branch.timezone) === dateKey)
+      .map((e) => ({ time: e.eventTime, direction: directionFromRaw(e.raw) }));
+    const daily = computeDailyAttendance(passages, { timeZone: branch.timezone, openTime: null, graceMinutes: 0 });
     if (!daily) return false;
     const date = toDateOnly(dateKey);
     const timeFields = { checkInTime: daily.checkInTime, checkOutTime: daily.checkOutTime };
