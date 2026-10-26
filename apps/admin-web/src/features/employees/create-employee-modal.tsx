@@ -94,7 +94,7 @@ export function CreateEmployeeModal({
   const [subjectsError, setSubjectsError] = useState<string | null>(null);
   const [subjectsModalOpen, setSubjectsModalOpen] = useState(false);
   const isSubjectTeacher = isSubjectTeacherPosition(positionName);
-  // Guruhga biriktirilmaydigan lavozimlar: oshpaz, kassir, administrator.
+  // Guruhga biriktirilmaydigan lavozimlar: oshpaz, operator, administrator (kassir — kabinetsiz).
   const isCookRole = isCookPosition(positionName) || isGrouplessPosition(positionName);
   // Oshpaz yordamchisi, idish yuvuvchi kabi lavozimlarga kabinet ochilmaydi.
   const cabinetless = isCabinetlessPosition(positionName);

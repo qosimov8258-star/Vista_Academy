@@ -6,6 +6,9 @@ import { ALLOW_CHEF_KEY } from "../decorators/allow-chef.decorator";
 import { DENY_CALL_OPERATOR_KEY } from "../decorators/deny-call-operator.decorator";
 import type { TenantAuthenticatedUser } from "../tenant-auth.types";
 
+/** Call operator lavozimi — yangi katalogda "Call Operator", eskisida "Operator". */
+const CALL_OPERATOR_POSITIONS = new Set(["call operator", "operator"]);
+
 @Injectable()
 export class TenantJwtAuthGuard extends AuthGuard("tenant-jwt") {
   constructor(private readonly reflector: Reflector) {
@@ -44,8 +47,8 @@ export class TenantJwtAuthGuard extends AuthGuard("tenant-jwt") {
         throw new ForbiddenException("Oshpaz bu bo'limga kira olmaydi");
       }
     }
-    // Call operator: @DenyCallOperator() bilan belgilangan yo'llarga kirmaydi
-    if (user?.role === "MANAGER" && user.position?.trim().toLowerCase() === "call operator") {
+    // Call operator (eski katalogda "Operator"): @DenyCallOperator() bilan belgilangan yo'llarga kirmaydi
+    if (user?.role === "MANAGER" && CALL_OPERATOR_POSITIONS.has(user.position?.trim().toLowerCase() ?? "")) {
       const denied = this.reflector.getAllAndOverride<boolean>(DENY_CALL_OPERATOR_KEY, [
         context.getHandler(),
         context.getClass(),
