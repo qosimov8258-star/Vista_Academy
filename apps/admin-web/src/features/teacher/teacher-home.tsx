@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/use-auth";
 import { canWriteTeaching } from "@/lib/permissions";
 import { isAssistantPosition, isSubjectTeacherPosition } from "@/lib/employee-position";
 import { Avatar } from "@/components/ui/avatar";
+import { Paperclip } from "lucide-react";
 import { BellIcon, CalendarIcon, ClockIcon, GroupIcon } from "@/components/ios/icons";
 import { EmptyRow, Group, GroupAction, LargeTitle, PrimaryButton, Row, SkeletonRows, TeacherPage, formatDayLong, todayIso } from "./teacher-ui";
 import { TeacherReminders } from "./teacher-reminders";
@@ -169,6 +170,11 @@ export function TeacherHome({ slug }: { slug: string }) {
             />
           ))
         )}
+      </Group>
+
+      {/* Guruh fayllari telefondagi pastki menyuda yo'q — shu yerdan bir bosishda */}
+      <Group>
+        <Row first icon={Paperclip} title={tr("Ota-onalarga fayl yuborish")} subtitle={tr("Vazifa, rasm, video yoki hujjat")} href={`/${slug}/materials`} />
       </Group>
 
       <Group
