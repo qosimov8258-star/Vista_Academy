@@ -44,16 +44,22 @@ function normalizePosition(value: string): string {
 const SUBJECT_TEACHER_POSITION = normalizePosition(DEFAULT_POSITIONS[0]);
 
 // Tizimga kirmaydigan lavozimlar: ro'yxatda turadi, lekin login/parol berilmaydi.
-const CABINETLESS_POSITIONS = new Set(["oshpaz yordamchisi", "idish yuvuchi", "idish yuvuvchi"]);
+// Kassir ham shu yerda: moliyaga kirish alohida moliyachi hisobi bilan ochiladi —
+// xodim formasidan emas (aks holda call operator kassir parolini ko'rib qolardi).
+const CABINETLESS_POSITIONS = new Set(["oshpaz yordamchisi", "idish yuvuchi", "idish yuvuvchi", "kassir"]);
+// Administrator roli bilan kiradigan lavozimlar. Eski bog'chalar katalogida
+// "Administrator" va "Operator" turibdi, yangilarida "Call Operator".
+const MANAGER_POSITIONS = new Set(["call operator", "operator", "administrator"]);
 // Kabineti bor, lekin guruhi yo'q lavozimlar.
-const GROUPLESS_POSITIONS = new Set(["bosh oshpaz", "call operator"]);
+const GROUPLESS_POSITIONS = new Set(["bosh oshpaz", ...MANAGER_POSITIONS]);
 const GROUP_REQUIRED_MESSAGE = "Kamida bitta guruh tanlang";
 
-// Call Operator MANAGER roli bilan kiradi: qarzdorlarga eslatma va filial ishlarini yuritadi.
+// Call Operator / Operator / Administrator MANAGER roli bilan kiradi: qarzdorlarga eslatma
+// va filial ishlarini yuritadi (operatorlar @DenyCallOperator yo'llariga kirmaydi).
 // Bosh oshpaz CHEF roli bilan kiradi: faqat oshxona (menyu, porsiyalar, taom suratlari).
 function roleForPosition(position: string): "MANAGER" | "TEACHER" | "CHEF" {
   const normalized = normalizePosition(position);
-  if (normalized === "call operator") return "MANAGER";
+  if (MANAGER_POSITIONS.has(normalized)) return "MANAGER";
   if (normalized === "bosh oshpaz") return "CHEF";
   return "TEACHER";
 }

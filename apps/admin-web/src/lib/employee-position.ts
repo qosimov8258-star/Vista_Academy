@@ -17,8 +17,12 @@ export function isHeadChefPosition(position: string): boolean {
   return normalizePosition(position) === HEAD_CHEF_POSITION;
 }
 
-/** Kabineti bor, lekin guruhga biriktirilmaydigan lavozimlar (kassir moliyada, oshpaz oshxonada ishlaydi). */
-const GROUPLESS_POSITIONS = new Set(["kassir", "bosh oshpaz", "call operator"]);
+/**
+ * Kabineti bor, lekin guruhga biriktirilmaydigan lavozimlar: oshpaz oshxonada,
+ * operator va administrator butun filial bilan ishlaydi. Eski bog'chalar
+ * katalogida "Administrator" va "Operator", yangilarida "Call Operator".
+ */
+const GROUPLESS_POSITIONS = new Set(["bosh oshpaz", "call operator", "operator", "administrator"]);
 
 export function isGrouplessPosition(position: string): boolean {
   return GROUPLESS_POSITIONS.has(normalizePosition(position));
@@ -28,7 +32,9 @@ export function isGrouplessPosition(position: string): boolean {
 export const CALL_OPERATOR_POSITION = "call operator";
 
 export function isCallOperatorPosition(position: string): boolean {
-  return normalizePosition(position) === CALL_OPERATOR_POSITION;
+  const normalized = normalizePosition(position);
+  // Eski katalogda shu lavozim "Operator" deb nomlangan
+  return normalized === CALL_OPERATOR_POSITION || normalized === "operator";
 }
 
 /** Foydalanuvchi call operator lavozimidagi menejermi (yon panel/pastki panel tanlash uchun). */
@@ -53,9 +59,10 @@ export function isAssistantPosition(position: string): boolean {
 /**
  * Tizimga kirmaydigan lavozimlar: ularga kabinet (login/parol) ochilmaydi,
  * lekin xodimlar ro'yxatida turadi. "yuvuchi" — lavozim katalogidagi yozuv,
- * "yuvuvchi" — odatiy imlo; ikkalasi ham tanib olinadi.
+ * "yuvuvchi" — odatiy imlo; ikkalasi ham tanib olinadi. Kassir moliyaga
+ * alohida moliyachi hisobi bilan kiradi — xodim kabineti orqali emas.
  */
-const CABINETLESS_POSITIONS = new Set(["oshpaz yordamchisi", "idish yuvuchi", "idish yuvuvchi"]);
+const CABINETLESS_POSITIONS = new Set(["oshpaz yordamchisi", "idish yuvuchi", "idish yuvuvchi", "kassir"]);
 
 export function isCabinetlessPosition(position: string): boolean {
   return CABINETLESS_POSITIONS.has(normalizePosition(position));
