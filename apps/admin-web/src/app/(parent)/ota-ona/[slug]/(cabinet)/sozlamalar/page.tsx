@@ -12,6 +12,9 @@ import clsx from "clsx";
 import { CardFx } from "../card-fx";
 import { useCabinetTheme, type ThemeMode } from "../theme";
 import { PasswordSheet } from "./password-sheet";
+import { useLocale } from "next-intl";
+import { locales, type Locale } from "@/i18n/config";
+import { applyLocale } from "@/components/ui/language-switcher";
 import { useTr } from "@/i18n/tr";
 
 /**
@@ -25,6 +28,9 @@ import { useTr } from "@/i18n/tr";
 function clock(ms: number): string {
   return new Date(ms).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" });
 }
+
+/** Til nomlari o'z tilida yoziladi — qaysi til tanlangan bo'lsa ham tanish bo'lsin */
+const LOCALE_NAMES: Record<Locale, string> = { uz: "O'zbekcha", ru: "Русский", en: "English" };
 
 function SunIcon({ className }: { className?: string }) {
   return (
@@ -61,6 +67,7 @@ const THEME_OPTIONS: Array<{ mode: ThemeMode; label: string; Icon: (props: { cla
 
 export default function ParentSettingsPage({ params }: { params: Promise<{ slug: string }> }) {
   const tr = useTr();
+  const locale = useLocale() as Locale;
   const { slug } = use(params);
   const router = useRouter();
   const [leaving, setLeaving] = useState(false);
@@ -130,6 +137,36 @@ export default function ParentSettingsPage({ params }: { params: Promise<{ slug:
           </p>
         </section>
       )}
+
+      {/* Til: tanlov cookie'da saqlanadi va butun kabinetga ta'sir qiladi */}
+      <section className="mt-3 rounded-[var(--p-radius)] bg-[var(--p-card)] p-5 shadow-[var(--p-shadow)]">
+        <p className="text-[15.5px] font-bold text-[var(--p-ink)]">{tr("Til")}</p>
+        <p className="mt-1 text-[13.5px] leading-relaxed text-[var(--p-muted)]">
+          {tr("Kabinetdagi barcha matnlar tanlangan tilda chiqadi.")}
+        </p>
+        <div className="mt-3.5 grid grid-cols-3 gap-2" role="radiogroup" aria-label={tr("Til")}>
+          {locales.map((code) => {
+            const active = code === locale;
+            return (
+              <button
+                key={code}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => !active && applyLocale(code)}
+                className={clsx(
+                  "cursor-pointer rounded-[18px] border-2 px-2 py-3 text-[13.5px] font-bold transition-colors",
+                  active
+                    ? "border-[var(--p-sun)] bg-[var(--p-sun)]/14 text-[var(--p-sun-ink)]"
+                    : "border-[var(--p-line)] text-[var(--p-muted)] active:bg-[var(--p-sunken)]",
+                )}
+              >
+                {LOCALE_NAMES[code]}
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
       {/* Ko'rinish: avto (quyosh botganda qorong'i), yorug', qorong'i */}
       <section className="mt-3 rounded-[var(--p-radius)] bg-[var(--p-card)] p-5 shadow-[var(--p-shadow)]">

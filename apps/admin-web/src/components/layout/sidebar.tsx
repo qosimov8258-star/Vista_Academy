@@ -21,7 +21,7 @@ import { Avatar, initials } from "@/components/ui/avatar";
 import { isSection, type NavEntry, type NavLeaf, type NavSection } from "./nav-types";
 import { DirectorRail } from "./director-rail";
 import { DirectorBottomBar } from "./director-bottom-bar";
-import { ArrowLeftIcon, ChevronRightIcon, CloseIcon, LogoutIcon, SidebarIcon } from "@/components/ui/icons";
+import { ArrowLeftIcon, ChevronRightIcon, CloseIcon, DocumentIcon, LogoutIcon, SidebarIcon } from "@/components/ui/icons";
 import {
   AuditIcon,
   BellIcon,
@@ -308,6 +308,7 @@ export function Sidebar({ slug }: { slug: string }) {
       items: [
         { href: `/${slug}/attendance`, label: t("nav.attendance"), icon: ChecklistIcon, show: true },
         { href: `/${slug}/children`, label: t("nav.children"), icon: ChildIcon, show: true },
+        { href: `/${slug}/materials`, label: tr("Guruh fayllari"), icon: DocumentIcon, show: true },
         { href: `/${slug}/my-lessons/schedule`, label: t("nav.lessonSchedule"), icon: CalendarIcon, show: true },
       ],
     },
@@ -355,6 +356,7 @@ export function Sidebar({ slug }: { slug: string }) {
         // Fan o'qituvchisi kunlik emas, o'z darsi bo'yicha davomat qiladi
         { href: isSubjectTeacher ? `/${slug}/lesson-attendance` : `/${slug}/attendance`, label: t("nav.attendance"), icon: ChecklistIcon, show: true },
         { href: `/${slug}/children`, label: t("nav.children"), icon: ChildIcon, show: !isSubjectTeacher },
+        { href: `/${slug}/materials`, label: tr("Guruh fayllari"), icon: DocumentIcon, show: true },
         // Fan o'qituvchisida dars jadvali alohida "Qo'shimcha darsliklar" o'rniga shu yerda
         { href: `/${slug}/my-lessons/schedule`, label: t("nav.lessonSchedule"), icon: CalendarIcon, show: isSubjectTeacher },
       ],
@@ -424,6 +426,7 @@ export function Sidebar({ slug }: { slug: string }) {
         { href: `${base}/crm`, label: t("nav.crm"), icon: PhoneIcon, show: true },
         { href: `${base}/children`, label: t("nav.children"), icon: ChildIcon, show: true },
         { href: `${base}/groups`, label: t("nav.groups"), icon: GroupIcon, show: true },
+        { href: `${base}/materials`, label: tr("Guruh fayllari"), icon: DocumentIcon, show: true },
         // Bolalar davomati — filial admini va administrator belgilaydi va
         // istalgan o'tgan kunni qayta ochib tuzatadi; Super Admin faqat ko'radi
         { href: `${base}/attendance`, label: t("nav.attendance"), icon: ChecklistIcon, show: true },
