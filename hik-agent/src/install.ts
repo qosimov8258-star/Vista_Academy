@@ -103,11 +103,103 @@ function launchdPlist(layout: InstallLayout): string {
 `;
 }
 
+/**
+ * Windows vazifalar rejalashtiruvchisi uchun XML. `schtasks /SC ONSTART` bilan
+ * yaratilgan vazifa standart sozlamalarni oladi: batareyada ishga tushmaydi,
+ * tok o'chib batareyaga o'tganda to'xtatiladi va 3 kundan keyin o'ldiriladi —
+ * bog'chadagi noutbukda agent "Navbatda" turib qoladi (Holiday Kids, 2026-10-23).
+ * Shuning uchun sozlamalar XML orqali aniq beriladi.
+ */
+export function windowsTaskXml(layout: InstallLayout): string {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return `<?xml version="1.0" encoding="UTF-16"?>
+<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo>
+    <Description>Zeeron agent: ERP va Face ID terminali o'rtasidagi lokal agent</Description>
+    <URI>\\${TASK_NAME}</URI>
+  </RegistrationInfo>
+  <Triggers>
+    <!-- Kompyuter yonishi bilan (foydalanuvchi kirmasa ham); 30 s — tarmoq ko'tarilsin -->
+    <BootTrigger>
+      <Enabled>true</Enabled>
+      <Delay>PT30S</Delay>
+    </BootTrigger>
+    <!-- Zaxira: kimdir kirganda ham — agent ishlab turgan bo'lsa IgnoreNew tufayli hech narsa qilmaydi -->
+    <LogonTrigger>
+      <Enabled>true</Enabled>
+    </LogonTrigger>
+    <!-- Zaxira: har 5 daqiqada — agent biror sabab bilan ishga tushmay qolsa, o'zi ko'tariladi
+         (Holiday Kids noutbukida aynan shu sozlama bilan sinalgan) -->
+    <TimeTrigger>
+      <Enabled>true</Enabled>
+      <StartBoundary>2026-01-01T00:00:00</StartBoundary>
+      <Repetition>
+        <Interval>PT5M</Interval>
+        <StopAtDurationEnd>false</StopAtDurationEnd>
+      </Repetition>
+    </TimeTrigger>
+  </Triggers>
+  <Principals>
+    <!-- S-1-5-18 = SYSTEM -->
+    <Principal id="Author">
+      <UserId>S-1-5-18</UserId>
+      <RunLevel>HighestAvailable</RunLevel>
+    </Principal>
+  </Principals>
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <!-- Batareyada ham ishga tushsin va tok o'chganda to'xtatilmasin -->
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <AllowHardTerminate>true</AllowHardTerminate>
+    <!-- Ishga tushish vaqti o'tkazib yuborilgan bo'lsa — imkon bo'lishi bilan -->
+    <StartWhenAvailable>true</StartWhenAvailable>
+    <!-- Tarmoqni agentning o'zi kutadi (qayta urinish bilan) -->
+    <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
+    <IdleSettings>
+      <StopOnIdleEnd>false</StopOnIdleEnd>
+      <RestartOnIdle>false</RestartOnIdle>
+    </IdleSettings>
+    <AllowStartOnDemand>true</AllowStartOnDemand>
+    <Enabled>true</Enabled>
+    <Hidden>true</Hidden>
+    <RunOnlyIfIdle>false</RunOnlyIfIdle>
+    <WakeToRun>false</WakeToRun>
+    <!-- PT0S = vaqt chegarasi yo'q (standart 3 kun) -->
+    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
+    <!-- Yiqilsa — har daqiqada qayta, 999 martagacha -->
+    <RestartOnFailure>
+      <Interval>PT1M</Interval>
+      <Count>999</Count>
+    </RestartOnFailure>
+  </Settings>
+  <Actions Context="Author">
+    <Exec>
+      <Command>${esc(layout.binary)}</Command>
+      <Arguments>--service</Arguments>
+      <WorkingDirectory>${esc(layout.baseDir)}</WorkingDirectory>
+    </Exec>
+  </Actions>
+</Task>
+`.replace(/\n/g, "\r\n");
+}
+
+/** schtasks /XML faylni UTF-16 (BOM bilan) kutadi. */
+export function utf16WithBom(text: string): Buffer {
+  return Buffer.from(`﻿${text}`, "utf16le");
+}
+
 /** Tizim yonganda o'zi ishga tushishi va hozir ishga tushirish. */
 function registerAutostart(layout: InstallLayout) {
   if (process.platform === "win32") {
-    // SYSTEM nomidan, kompyuter yonishi bilan (foydalanuvchi kirmasa ham), konsol oynasisiz
-    run("schtasks", ["/Create", "/TN", TASK_NAME, "/TR", `"${layout.binary}" --service`, "/SC", "ONSTART", "/RU", "SYSTEM", "/RL", "HIGHEST", "/F"]);
+    // SYSTEM nomidan, kompyuter yonishi bilan (foydalanuvchi kirmasa ham), konsol oynasisiz — sozlamalar windowsTaskXml'da
+    const xmlFile = path.join(layout.baseDir, `${TASK_NAME}.task.xml`);
+    writeFileSync(xmlFile, utf16WithBom(windowsTaskXml(layout)));
+    try {
+      run("schtasks", ["/Create", "/TN", TASK_NAME, "/XML", xmlFile, "/F"]);
+    } finally {
+      rmSync(xmlFile, { force: true });
+    }
     run("schtasks", ["/Run", "/TN", TASK_NAME]);
   } else if (process.platform === "darwin") {
     const plist = `/Library/LaunchDaemons/${LAUNCHD_LABEL}.plist`;
