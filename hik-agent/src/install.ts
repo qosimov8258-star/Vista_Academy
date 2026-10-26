@@ -119,14 +119,25 @@ export function windowsTaskXml(layout: InstallLayout): string {
     <URI>\\${TASK_NAME}</URI>
   </RegistrationInfo>
   <Triggers>
-    <!-- Kompyuter yonishi bilan (foydalanuvchi kirmasa ham) -->
+    <!-- Kompyuter yonishi bilan (foydalanuvchi kirmasa ham); 30 s — tarmoq ko'tarilsin -->
     <BootTrigger>
       <Enabled>true</Enabled>
+      <Delay>PT30S</Delay>
     </BootTrigger>
     <!-- Zaxira: kimdir kirganda ham — agent ishlab turgan bo'lsa IgnoreNew tufayli hech narsa qilmaydi -->
     <LogonTrigger>
       <Enabled>true</Enabled>
     </LogonTrigger>
+    <!-- Zaxira: har 5 daqiqada — agent biror sabab bilan ishga tushmay qolsa, o'zi ko'tariladi
+         (Holiday Kids noutbukida aynan shu sozlama bilan sinalgan) -->
+    <TimeTrigger>
+      <Enabled>true</Enabled>
+      <StartBoundary>2026-01-01T00:00:00</StartBoundary>
+      <Repetition>
+        <Interval>PT5M</Interval>
+        <StopAtDurationEnd>false</StopAtDurationEnd>
+      </Repetition>
+    </TimeTrigger>
   </Triggers>
   <Principals>
     <!-- S-1-5-18 = SYSTEM -->

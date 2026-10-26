@@ -39,9 +39,11 @@ test("Windows vazifasi: batareya, vaqt chegarasi va qayta ishga tushirish sozlam
   assertBalanced(xml);
   assert.match(xml, /^<\?xml version="1\.0" encoding="UTF-16"\?>/);
 
-  // Kompyuter yonishi bilan + zaxira sifatida kirishda
-  assert.match(xml, /<BootTrigger>\s*<Enabled>true<\/Enabled>\s*<\/BootTrigger>/);
+  // Kompyuter yonishi bilan (30 s kutib) + zaxira sifatida kirishda va har 5 daqiqada
+  assert.match(xml, /<BootTrigger>\s*<Enabled>true<\/Enabled>\s*<Delay>PT30S<\/Delay>\s*<\/BootTrigger>/);
   assert.match(xml, /<LogonTrigger>\s*<Enabled>true<\/Enabled>\s*<\/LogonTrigger>/);
+  assert.match(xml, /<TimeTrigger>[\s\S]*<Repetition>\s*<Interval>PT5M<\/Interval>\s*<StopAtDurationEnd>false<\/StopAtDurationEnd>\s*<\/Repetition>[\s\S]*<\/TimeTrigger>/);
+  assert.deepEqual(tags(xml, "StartBoundary").length, 1);
 
   // SYSTEM, eng yuqori huquq
   assert.deepEqual(tags(xml, "UserId"), ["S-1-5-18"]);
