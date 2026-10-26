@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ComponentType } from "react";
 import clsx from "clsx";
-import { BookOpen, CirclePlay, Thermometer } from "lucide-react";
+import { BookOpen, CirclePlay, FileSpreadsheet, Thermometer } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { AttendanceDay, AttendanceRangeSummary, AttendanceStatus, ChronicAbsenceFlag } from "@/lib/types";
@@ -10,10 +10,10 @@ import { useAuth } from "@/lib/use-auth";
 import { canWriteTeaching } from "@/lib/permissions";
 import { isAssistantPosition } from "@/lib/employee-position";
 import { useBranchContext } from "@/lib/use-branch-context";
-import { downloadCsv } from "@/lib/download";
+import { ReportSheet } from "@/features/reports/report-sheet";
 import { ChildPhoto } from "@/components/ui/child-photo";
 import { initials } from "@/components/ui/avatar";
-import { CheckIcon, ChecklistIcon, ClockIcon, CloseIcon, DocumentIcon, NoteIcon, PhoneIcon, type IconProps } from "@/components/ios/icons";
+import { CheckIcon, ChecklistIcon, ClockIcon, CloseIcon, NoteIcon, PhoneIcon, type IconProps } from "@/components/ios/icons";
 import { IOS } from "@/components/ios/tokens";
 import { Pill } from "@/components/ios/pill";
 import { DayStepper } from "@/components/ios/day-stepper";
@@ -65,8 +65,7 @@ export function TeacherAttendance({ slug }: { slug: string }) {
   const [sheetChildId, setSheetChildId] = useState<string | null>(null);
   const [noteChild, setNoteChild] = useState<{ id: string; name: string } | null>(null);
   const [guideOpen, setGuideOpen] = useState(false);
-  const [exporting, setExporting] = useState(false);
-  const [exportError, setExportError] = useState<string | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
 
   const attendanceQuery = useQuery({
     queryKey: ["attendance", slug, branchId, date],
@@ -129,18 +128,6 @@ export function TeacherAttendance({ slug }: { slug: string }) {
     mutationFn: (childId: string) => api.post("/app/attendance/request-contact", { childId, date }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["attendance", slug, branchId, date] }),
   });
-
-  const handleExport = async () => {
-    setExporting(true);
-    setExportError(null);
-    try {
-      await downloadCsv(`/app/exports/attendance?date=${date}&branchId=${branchId}`, `davomat-${date}.csv`);
-    } catch {
-      setExportError(tr("Eksport qilib bo'lmadi — qayta urinib ko'ring"));
-    } finally {
-      setExporting(false);
-    }
-  };
 
   const children = attendanceQuery.data?.children ?? [];
   // Saqlanmagan o'zgarishlar: serverdagi holatdan farq qiladigan (yoki hali yozilmagan) bolalar
@@ -331,16 +318,22 @@ export function TeacherAttendance({ slug }: { slug: string }) {
         )}
       </Group>
 
-      <Group footer={exportError ? <span className="text-[var(--color-danger)]">{tr(exportError)}</span> : tr("Tanlangan kun davomati Excel'da ochiladigan fayl bo'lib yuklanadi.")}>
-        <Row
-          first
-          icon={DocumentIcon}
-          title={tr("CSV yuklab olish")}
-          onClick={exporting || !date ? undefined : handleExport}
-          value={exporting ? "Yuklanmoqda…" : undefined}
-          chevron={!exporting}
-        />
+      <Group footer={tr("Kun, hafta yoki oy tanlanadi — har bola bo'yicha jamlanma, tabel va batafsil ro'yxat.")}>
+        <Row first icon={FileSpreadsheet} title={tr("Excel hisobot yuklab olish")} onClick={date ? () => setReportOpen(true) : undefined} />
       </Group>
+
+      <ReportSheet
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        period={date.slice(0, 7) || undefined}
+        title="Davomat hisoboti"
+        endpoint="/app/attendance/report"
+        filePrefix="bolalar-davomati"
+        formats={["xlsx"]}
+        params={{ branchId }}
+        allHint="Boshidan bugungacha barcha davomat yozuvlari"
+        contents="Excel: «Umumiy» — har bola bo'yicha kelgan, kech qolgan, kelmagan va kasal kunlar hamda davomat foizi; «Tabel» — har kun holat rangida (Face ID bilan kelganda — kelish vaqti); «Kunlar» — har kuni nechta bola kelgani; «Batafsil» — har bir yozuv, izoh va ota-ona sababi bilan."
+      />
 
       <ChildSheet
         child={sheetChild}
