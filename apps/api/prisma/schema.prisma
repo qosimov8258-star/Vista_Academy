@@ -389,6 +389,7 @@ model Group {
   lessonTopics      LessonTopic[]
   lessonGrades      LessonGrade[]
   lessonAttendances LessonAttendance[]
+  materials         GroupMaterial[]
   poems             Poem[]
   proverbs          Proverb[]
   tales             Tale[]
@@ -2746,4 +2747,37 @@ model LandingApplication {
 
   @@index([organizationId, createdAt])
   @@map("landing_applications")
+}
+
+enum GroupMaterialKind {
+  IMAGE
+  VIDEO
+  DOCUMENT
+}
+
+/// Tarbiyachi/o'qituvchi guruhga yuklagan fayl (rasm, video, PDF, hujjat).
+/// Shu guruhdagi bolalarning ota-onalari kabinetda ko'radi. R2 sozlangan
+/// bo'lsa `dataKey`, aks holda fayl bazada (`data`); ro'yxat so'rovlari
+/// `data` ustunini tanlamaydi.
+model GroupMaterial {
+  id             String            @id @default(uuid())
+  organizationId String            @map("organization_id")
+  branchId       String            @map("branch_id")
+  groupId        String            @map("group_id")
+  title          String
+  description    String?
+  kind           GroupMaterialKind
+  originalName   String            @map("original_name")
+  mimeType       String            @map("mime_type")
+  sizeBytes      Int               @map("size_bytes")
+  data           Bytes?
+  dataKey        String?           @map("data_key")
+  createdById    String            @map("created_by_id")
+  createdByName  String            @map("created_by_name")
+  createdAt      DateTime          @default(now()) @map("created_at")
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([groupId, createdAt])
+  @@map("group_materials")
 }

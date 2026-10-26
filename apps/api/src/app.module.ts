@@ -56,6 +56,7 @@ import { ExportsModule } from "./modules/exports/exports.module";
 import { ParentModule } from "./modules/parent/parent.module";
 import { UsefulModule } from "./modules/useful/useful.module";
 import { DiaryModule } from "./modules/diary/diary.module";
+import { GroupMaterialsModule } from "./modules/group-materials/group-materials.module";
 import { LandingModule } from "./modules/landing/landing.module";
 import { FaceIdModule } from "./modules/face-id/face-id.module";
 
@@ -114,6 +115,7 @@ import { FaceIdModule } from "./modules/face-id/face-id.module";
     ParentModule,
     UsefulModule,
     DiaryModule,
+    GroupMaterialsModule,
     LandingModule,
     FaceIdModule,
   ],
