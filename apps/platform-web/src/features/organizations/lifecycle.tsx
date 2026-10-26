@@ -293,7 +293,7 @@ export function ArchiveModal({ organization, open, onClose }: { organization: Or
       <div className="space-y-4">
         <p className="text-[14px] text-[var(--color-text-muted)]">
           Bog&apos;cha paneli va ota-ona kabineti yopiladi, ro&apos;yxatlarda faqat &quot;Arxiv&quot; filtrida ko&apos;rinadi.
-          Ma&apos;lumotlar o&apos;chirilmaydi — arxivdan qaytarish mumkin. Butunlay o&apos;chirish faqat arxivdan keyin ochiladi.
+          Ma&apos;lumotlar o&apos;chirilmaydi — arxivdan istalgan payt qaytarish mumkin.
         </p>
         <Input
           label={`Tasdiqlash uchun manzilni yozing: ${organization.slug}`}

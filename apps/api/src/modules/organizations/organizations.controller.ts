@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Headers, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Headers, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { PlatformUserRole } from "@prisma/client";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
@@ -116,14 +116,6 @@ export class OrganizationsController {
     return this.organizationsService.updateAdminAccount(id, dto);
   }
 
-  /**
-   * Tashkilotni BUTUNLAY o'chiradi (hard delete) — qaytarib bo'lmaydi.
-   * Faqat Platform Super Admin uchun va faqat arxivlangan bog'cha —
-   * tasodifiy o'chirishdan ikki bosqichli himoya.
-   */
-  @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN)
-  @Delete(":id")
-  remove(@Param("id") id: string) {
-    return this.organizationsService.remove(id);
-  }
+  // Bog'chani butunlay o'chirish yo'li ataylab yo'q: hamkorlik tugasa faqat
+  // arxivlanadi (`:id/archive`), ma'lumotlar saqlanib qoladi va qaytarsa bo'ladi.
 }
