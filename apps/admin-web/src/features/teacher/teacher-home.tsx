@@ -174,7 +174,7 @@ export function TeacherHome({ slug }: { slug: string }) {
 
       {/* Guruh fayllari telefondagi pastki menyuda yo'q — shu yerdan bir bosishda */}
       <Group>
-        <Row first icon={Paperclip} title={tr("Ota-onalarga fayl yuborish")} subtitle={tr("Vazifa, rasm, video yoki hujjat")} href={`/${slug}/materials`} />
+        <Row first icon={Paperclip} title={tr("Vazifa jo'natish")} subtitle={tr("Vazifa, rasm, video yoki hujjat")} href={`/${slug}/materials`} />
       </Group>
 
       <Group

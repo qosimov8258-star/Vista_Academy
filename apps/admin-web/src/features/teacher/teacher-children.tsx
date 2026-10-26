@@ -60,7 +60,7 @@ export function TeacherChildren({ slug }: { slug: string }) {
 
       {/* Guruh fayllari telefondagi pastki menyuda yo'q — ota-onalarga yuborish shu yerdan ham */}
       <Group>
-        <Row first icon={Paperclip} title={tr("Ota-onalarga fayl yuborish")} subtitle={tr("Vazifa, rasm, video yoki hujjat")} href={`/${slug}/materials`} />
+        <Row first icon={Paperclip} title={tr("Vazifa jo'natish")} subtitle={tr("Vazifa, rasm, video yoki hujjat")} href={`/${slug}/materials`} />
       </Group>
 
       <div className="space-y-3 px-0">
