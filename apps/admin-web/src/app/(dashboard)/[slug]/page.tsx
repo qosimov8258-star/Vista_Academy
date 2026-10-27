@@ -273,7 +273,7 @@ function RecentPayments({ payments, slug }: { payments: Payment[]; slug: string 
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[14px] font-medium text-[var(--color-text)]">{tr(payment.child?.fullName)}</p>
-                  <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">{formatDateTime(payment.createdAt)}</p>
+                  <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">{formatDateTime(payment.paidAt)}</p>
                 </div>
                 <p className="shrink-0 text-[14px] font-semibold tabular-nums text-[var(--color-success)]">
                   +{formatMoney(payment.amount)}

@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { InvoiceStatus, Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
 import {
@@ -28,6 +28,7 @@ const EPSILON = 0.01;
 /** Ekrandan olingan skrinshotlar ham sig'sin — ota-ona cheki bilan bir xil chegara. */
 const MAX_RECEIPT_IMAGE_BYTES = 3 * 1024 * 1024;
 const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 /** Amallar jurnali uchun usul nomi */
 const METHOD_UZ: Record<string, string> = {
   CASH: "Naqd",
@@ -53,6 +54,7 @@ const paymentListSelect = {
   refundedAt: true,
   refundReason: true,
   refundedByName: true,
+  paidAt: true,
   createdAt: true,
   receiptMimeType: true,
   child: { select: { id: true, fullName: true } },
@@ -430,6 +432,7 @@ export class BillingService {
     if (amount > remaining + EPSILON) {
       throw new BadRequestException("Summa qolgan qarzdan katta bo'lishi mumkin emas");
     }
+    const paidAt = await this.resolvePaidAt(branchId, dto.paidOn);
 
     return this.prisma.$transaction(async (tx) => {
       const payment = await tx.payment.create({
@@ -442,6 +445,7 @@ export class BillingService {
           method: dto.method ?? "CASH",
           note: dto.note,
           recordedByUserId,
+          paidAt,
         },
       });
 
@@ -456,7 +460,7 @@ export class BillingService {
         data: {
           paidAmount: newPaidAmount,
           status: isFullyPaid ? InvoiceStatus.PAID : InvoiceStatus.PARTIALLY_PAID,
-          paidAt: isFullyPaid ? new Date() : invoice.paidAt,
+          paidAt: isFullyPaid ? paidAt : invoice.paidAt,
         },
       });
 
@@ -470,6 +474,7 @@ export class BillingService {
           invoiceId: invoice.id,
           paymentId: payment.id,
           note: `To'lov (${dto.method ?? "CASH"})`,
+          createdAt: paidAt,
         },
       });
 
@@ -480,7 +485,7 @@ export class BillingService {
         entityType: "Payment",
         entityId: result.payment.id,
         branchId,
-        summary: `Hisob-faktura (${invoice.period}) uchun ${amount} ${invoice.currency} to'lov qabul qilindi`,
+        summary: `Hisob-faktura (${invoice.period}) uchun ${amount} ${invoice.currency} to'lov qabul qilindi${backdatedNote(paidAt)}`,
       });
       return result;
     });
@@ -548,6 +553,7 @@ export class BillingService {
       }
       advancePeriod = dto.period;
     }
+    const paidAt = await this.resolvePaidAt(branchId, dto.paidOn);
 
     // Rasm tranzaksiyadan oldin tayyorlanadi: R2 ga yuklash bazaga yozishdan
     // oldin bo'ladi, xato chiqsa to'lov umuman yozilmaydi.
@@ -625,6 +631,7 @@ export class BillingService {
             method: dto.method,
             note,
             recordedByUserId: caller.id,
+            paidAt,
             receiptImage: receipt?.image ?? null,
             receiptImageKey: receipt?.key ?? null,
             receiptMimeType: receipt?.mimeType ?? null,
@@ -648,7 +655,7 @@ export class BillingService {
             data: {
               paidAmount: newPaidAmount,
               status: isFullyPaid ? InvoiceStatus.PAID : InvoiceStatus.PARTIALLY_PAID,
-              paidAt: isFullyPaid ? new Date() : invoice.paidAt,
+              paidAt: isFullyPaid ? paidAt : invoice.paidAt,
             },
           });
           await tx.ledgerEntry.create({
@@ -661,6 +668,7 @@ export class BillingService {
               invoiceId: invoice.id,
               paymentId: payment.id,
               note: `To'lov (${dto.method}) — ${invoice.period}`,
+              createdAt: paidAt,
             },
           });
           allocations.push({ invoiceId: invoice.id, period: invoice.period, amount: part, closed: isFullyPaid });
@@ -677,7 +685,7 @@ export class BillingService {
         branchId,
         summary: `${child.fullName}: ${formatSum(amount)} so'm to'lov qabul qilindi (${METHOD_UZ[dto.method] ?? dto.method}; ${result.allocations
           .map((a) => a.period)
-          .join(", ")})`,
+          .join(", ")})${backdatedNote(paidAt)}`,
       });
       const { receiptImage: _image, ...payment } = result.payment;
       return {
@@ -762,7 +770,7 @@ export class BillingService {
 
       return updatedPayment;
     }).then(async (updatedPayment) => {
-      const paidOn = new Date(payment.createdAt.getTime() + TASHKENT_OFFSET_MS).toISOString().slice(0, 10);
+      const paidOn = new Date(payment.paidAt.getTime() + TASHKENT_OFFSET_MS).toISOString().slice(0, 10);
       const periods = payment.allocations.map((a) => a.invoice.period).join(", ");
       await this.auditLog.logFromUser(caller, {
         action: "payment.refund",
@@ -773,6 +781,35 @@ export class BillingService {
       });
       return updatedPayment;
     });
+  }
+
+  /**
+   * To'lov sanasi. Bo'sh yoki bugun — hozirgi vaqt. O'tgan kun (kecha olingan
+   * pulni bugun kiritish) — ko'pi bilan 1 oy orqaga va o'sha kunning kassasi
+   * yopilmagan bo'lsa: yopilgan kunning summasi keyin o'zgarib qolmasin.
+   */
+  private async resolvePaidAt(branchId: string, paidOn: string | undefined): Promise<Date> {
+    const now = new Date();
+    const today = tashkentDay(now);
+    if (!paidOn || paidOn === today) return now;
+    if (paidOn > today) {
+      throw new BadRequestException("Kelajakdagi sana bilan to'lov kiritib bo'lmaydi");
+    }
+    const earliest = oneMonthBefore(today);
+    if (paidOn < earliest) {
+      throw new BadRequestException(`To'lov sanasi 1 oydan eski bo'lishi mumkin emas — eng erta ${formatDay(earliest)}`);
+    }
+    const dayStartUtc = Date.parse(`${paidOn}T00:00:00.000Z`);
+    const closed = await this.prisma.cashClosing.findUnique({
+      where: { branchId_date: { branchId, date: new Date(dayStartUtc) } },
+      select: { id: true },
+    });
+    if (closed) {
+      throw new ConflictException(`${formatDay(paidOn)} kuni kassa yopilgan — o'sha kunga to'lov kiritib bo'lmaydi`);
+    }
+    // Kun — tanlangani, soat — hozirgi (Toshkent): kun ichidagi tartib saqlanadi
+    const timeOfDayMs = (now.getTime() + TASHKENT_OFFSET_MS) % DAY_MS;
+    return new Date(dayStartUtc - TASHKENT_OFFSET_MS + timeOfDayMs);
   }
 
   async findPayments(scope: TenantScope, query: PaymentQueryDto) {
@@ -787,7 +824,7 @@ export class BillingService {
       this.prisma.payment.findMany({
         where,
         select: paymentListSelect,
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ paidAt: "desc" }, { createdAt: "desc" }],
         skip: (query.page - 1) * query.limit,
         take: query.limit,
       }),
@@ -830,7 +867,7 @@ export class BillingService {
         organizationId: scope.organizationId,
         branchId: scope.branchId ?? undefined,
         status: "COMPLETED",
-        createdAt: { gte: start, lt: end },
+        paidAt: { gte: start, lt: end },
       },
       _sum: { amount: true },
     });
@@ -845,7 +882,7 @@ export class BillingService {
         organizationId: scope.organizationId,
         branchId: scope.branchId ?? undefined,
         status: "COMPLETED",
-        createdAt: { gte: start, lt: end },
+        paidAt: { gte: start, lt: end },
       },
       _sum: { amount: true },
     });
@@ -1078,7 +1115,7 @@ export class BillingService {
           status: "COMPLETED",
           ...periodRange(period),
         },
-        select: { amount: true, createdAt: true },
+        select: { amount: true, paidAt: true },
       }),
     ]);
 
@@ -1356,11 +1393,11 @@ export function currentPeriodString(): string {
 }
 
 /** "2026-09" -> shu oyning Toshkent vaqti bo'yicha UTC chegaralari. */
-function periodRange(period: string): { createdAt: { gte: Date; lt: Date } } {
+function periodRange(period: string): { paidAt: { gte: Date; lt: Date } } {
   const [year, month] = period.split("-").map(Number);
   const offsetMs = DEFAULT_TIMEZONE_UTC_OFFSET_HOURS * 60 * 60 * 1000;
   return {
-    createdAt: {
+    paidAt: {
       gte: new Date(Date.UTC(year, month - 1, 1) - offsetMs),
       lt: new Date(Date.UTC(year, month, 1) - offsetMs),
     },
@@ -1382,7 +1419,7 @@ function tashkentDayOfMonth(date: Date): number {
  * Oyni 7 kunlik haftalarga bo'lib, har biriga shu kunlarda tushgan to'lovlarni
  * yig'adi — bosh sahifadagi "haftalar bo'yicha to'lov" grafigi uchun.
  */
-function buildWeeklyPayments(period: string, payments: { amount: Prisma.Decimal; createdAt: Date }[]) {
+function buildWeeklyPayments(period: string, payments: { amount: Prisma.Decimal; paidAt: Date }[]) {
   const weekCount = Math.ceil(daysInPeriod(period) / 7);
   const weeks = Array.from({ length: weekCount }, (_, i) => ({
     week: i + 1,
@@ -1391,7 +1428,7 @@ function buildWeeklyPayments(period: string, payments: { amount: Prisma.Decimal;
     count: 0,
   }));
   for (const payment of payments) {
-    const day = tashkentDayOfMonth(payment.createdAt);
+    const day = tashkentDayOfMonth(payment.paidAt);
     const index = Math.min(weekCount - 1, Math.floor((day - 1) / 7));
     weeks[index].amount += Number(payment.amount);
     weeks[index].count += 1;
@@ -1440,6 +1477,30 @@ function requireFinanceOnly(scope: TenantScope): string {
     throw new ForbiddenException("Hisob-fakturani faqat moliyachi o'zgartiradi");
   }
   return branchId;
+}
+
+/** Toshkent bo'yicha kalendar kun (YYYY-MM-DD) */
+function tashkentDay(date: Date): string {
+  return new Date(date.getTime() + TASHKENT_OFFSET_MS).toISOString().slice(0, 10);
+}
+
+/** Bir oy oldingi kun: 27.10 -> 27.09; oy qisqa bo'lsa oxirgi kuni (31.03 -> 28.02) */
+function oneMonthBefore(day: string): string {
+  const [y, m, d] = day.split("-").map(Number);
+  const lastDay = new Date(Date.UTC(y, m - 1, 0)).getUTCDate();
+  return new Date(Date.UTC(y, m - 2, Math.min(d, lastDay))).toISOString().slice(0, 10);
+}
+
+/** 2026-10-27 -> 27.10.2026 */
+function formatDay(day: string): string {
+  const [y, m, d] = day.split("-");
+  return `${d}.${m}.${y}`;
+}
+
+/** Amallar jurnali uchun: o'tgan kun bilan kiritilgan to'lovda sanasi ham yoziladi */
+function backdatedNote(paidAt: Date): string {
+  const day = tashkentDay(paidAt);
+  return day === tashkentDay(new Date()) ? "" : ` — to'lov sanasi ${formatDay(day)}`;
 }
 
 function formatSum(value: number): string {

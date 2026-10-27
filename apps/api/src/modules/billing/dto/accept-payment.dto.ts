@@ -26,6 +26,11 @@ export class AcceptPaymentDto {
   @Matches(/^\d{4}-(0[1-9]|1[0-2])$/, { message: "Oy noto'g'ri (YYYY-MM)" })
   period?: string;
 
+  @ApiPropertyOptional({ description: "To'lov sanasi (YYYY-MM-DD, Toshkent). Bo'sh — bugun; o'tgan kun 1 oygacha orqaga" })
+  @IsOptional()
+  @Matches(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/, { message: "To'lov sanasi noto'g'ri (YYYY-MM-DD)" })
+  paidOn?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

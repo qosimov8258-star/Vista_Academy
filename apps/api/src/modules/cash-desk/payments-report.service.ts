@@ -99,15 +99,15 @@ export class PaymentsReportService {
     const [branch, payments] = await Promise.all([
       this.prisma.branch.findUniqueOrThrow({ where: { id: branchId }, select: { name: true, organization: { select: { name: true } } } }),
       this.prisma.payment.findMany({
-        where: { branchId, ...(range ? { createdAt: range } : {}) },
-        orderBy: { createdAt: "asc" },
+        where: { branchId, ...(range ? { paidAt: range } : {}) },
+        orderBy: [{ paidAt: "asc" }, { createdAt: "asc" }],
         select: {
           id: true,
           amount: true,
           method: true,
           status: true,
           note: true,
-          createdAt: true,
+          paidAt: true,
           refundReason: true,
           refundedByName: true,
           refundedAt: true,
@@ -120,8 +120,8 @@ export class PaymentsReportService {
 
     const rows: Row[] = payments.map((p) => ({
       id: p.id,
-      day: dayOf(p.createdAt),
-      time: timeOf(p.createdAt),
+      day: dayOf(p.paidAt),
+      time: timeOf(p.paidAt),
       childName: p.child.fullName,
       publicId: p.child.publicId,
       groupName: p.child.group?.name ?? "Guruhsiz",
@@ -217,7 +217,7 @@ export class PaymentsReportService {
         OR: [
           { status: "ACTIVE" },
           { invoices: { some: invoiceWhere } },
-          ...(range ? [{ payments: { some: { status: "COMPLETED" as const, createdAt: range } } }] : []),
+          ...(range ? [{ payments: { some: { status: "COMPLETED" as const, paidAt: range } } }] : []),
         ],
       },
       orderBy: { fullName: "asc" },
@@ -229,12 +229,12 @@ export class PaymentsReportService {
           select: {
             amount: true,
             discountAmount: true,
-            allocations: { select: { amount: true, payment: { select: { status: true, method: true, createdAt: true } } } },
+            allocations: { select: { amount: true, payment: { select: { status: true, method: true, paidAt: true } } } },
           },
         },
         payments: {
-          where: { status: "COMPLETED", ...(range ? { createdAt: range } : {}) },
-          select: { amount: true, method: true, createdAt: true },
+          where: { status: "COMPLETED", ...(range ? { paidAt: range } : {}) },
+          select: { amount: true, method: true, paidAt: true },
         },
       },
     });
@@ -253,8 +253,8 @@ export class PaymentsReportService {
         paid[column] = (paid[column] ?? 0) + amount;
         dates.add(dayOf(at));
       };
-      if (byRange) for (const p of c.payments) add(p.method, Number(p.amount), p.createdAt);
-      else for (const a of allocations) add(a.payment.method, Number(a.amount), a.payment.createdAt);
+      if (byRange) for (const p of c.payments) add(p.method, Number(p.amount), p.paidAt);
+      else for (const a of allocations) add(a.payment.method, Number(a.amount), a.payment.paidAt);
       const row: GroupChildRow = {
         name: c.fullName,
         fee,

@@ -348,7 +348,7 @@ export class AdminDeskService {
         where: { branchId, date: { gte: toDateOnly(from), lte: toDateOnly(to) } },
         select: { date: true, status: true, childId: true, child: { select: { fullName: true, groupId: true } } },
       }),
-      this.prisma.payment.findMany({ where: { branchId, createdAt: range, status: "COMPLETED" }, select: { amount: true } }),
+      this.prisma.payment.findMany({ where: { branchId, paidAt: range, status: "COMPLETED" }, select: { amount: true } }),
       this.cashDesk.debtors(scope),
       this.prisma.lead.count({ where: { branchId, createdAt: range } }),
       this.prisma.lead.count({ where: { branchId, stage: "WON", updatedAt: range } }),

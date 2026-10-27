@@ -95,6 +95,9 @@ export interface ChildPayment {
   /** Bekor qilish sababi va kim bekor qilgani */
   refundReason: string | null;
   refundedByName: string | null;
+  /** To'lov sanasi (kassa va hisobotlar shu bo'yicha); o'tgan kun bilan kiritilsa `createdAt` dan farq qiladi */
+  paidAt: string;
+  /** Tizimga kiritilgan vaqt */
   createdAt: string;
   hasReceiptImage: boolean;
   recordedByName: string | null;

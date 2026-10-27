@@ -118,7 +118,7 @@ export default function CashPage({ params }: { params: Promise<{ slug: string }>
                           {tr(p.childName)}
                         </Link>
                         <p className="text-[12.5px] text-[var(--color-text-muted)]">
-                          {new Date(p.createdAt).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Tashkent" })}
+                          {new Date(p.paidAt).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Tashkent" })}
                           {" · "}
                           {tr(METHOD_LABEL[p.method])}
                           {p.recordedByName ? ` · ${p.recordedByName}` : ""}

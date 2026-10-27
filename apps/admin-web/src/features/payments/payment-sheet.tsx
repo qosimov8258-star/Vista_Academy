@@ -11,13 +11,13 @@ import type { Invoice, PaymentMethod } from "@/lib/types";
 import { IosSheet, SheetPrimaryButton, SheetRow, SheetSecondaryButton, SheetSection } from "@/components/ios/sheet";
 import { Row } from "@/components/ios/group";
 import { Pill } from "@/components/ios/pill";
-import { PeriodStepper } from "@/components/ios/day-stepper";
+import { DayStepper, PeriodStepper } from "@/components/ios/day-stepper";
 import { SkeletonRows } from "@/components/ios/states";
 import { Spinner } from "@/components/ios/spinner";
 import { GROUP_BLOCK, IOS } from "@/components/ios/tokens";
 import { Toast, type ToastState } from "@/components/ui/toast";
 import { useAuthedImage } from "@/components/ui/child-photo";
-import { currentMonth } from "@/features/cash/shared";
+import { currentMonth, todayTashkent } from "@/features/cash/shared";
 import { useTr } from "@/i18n/tr";
 import {
   METHOD_COLOR,
@@ -41,6 +41,16 @@ interface AcceptResult {
   advancePeriod: string | null;
   remainingDebt: number;
 }
+
+/** Bir oy oldingi kun (server bilan bir xil): 27.10 -> 27.09, 31.03 -> 28.02 */
+function oneMonthBefore(day: string): string {
+  const [y, m, d] = day.split("-").map(Number);
+  const lastDay = new Date(Date.UTC(y, m - 1, 0)).getUTCDate();
+  return new Date(Date.UTC(y, m - 2, Math.min(d, lastDay))).toISOString().slice(0, 10);
+}
+
+/** Toshkent bo'yicha kun (YYYY-MM-DD) — to'lov sanasi kiritilgan kundan farqlanadimi */
+const tashkentDay = (iso: string) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tashkent" }).format(new Date(iso));
 
 type Mode = { kind: "main" } | { kind: "detail"; payment: ChildPayment } | { kind: "cancel"; payment: ChildPayment };
 
@@ -95,6 +105,10 @@ export function PaymentSheet({
   const [photoBusy, setPhotoBusy] = useState(false);
   const [note, setNote] = useState("");
   const [advancePeriod, setAdvancePeriod] = useState(period ?? currentMonth());
+  // To'lov sanasi — sukut bugun; kecha olingan pulni bugun kiritsa o'tgan kun (1 oygacha)
+  const today = todayTashkent();
+  const [paidOn, setPaidOn] = useState(today);
+  const earliestPaidOn = oneMonthBefore(today);
   const [error, setError] = useState<string | null>(null);
   const [showMissing, setShowMissing] = useState(false);
   const [reason, setReason] = useState("");
@@ -110,6 +124,7 @@ export function PaymentSheet({
     setPhoto(null);
     setNote("");
     setAdvancePeriod(period ?? currentMonth());
+    setPaidOn(todayTashkent());
     setError(null);
     setShowMissing(false);
   }, [open, child?.id, period]);
@@ -183,6 +198,7 @@ export function PaymentSheet({
         period: debt > 0 ? undefined : advancePeriod,
         note: note.trim() || undefined,
         receiptImage: needsPhoto ? photo : undefined,
+        paidOn: paidOn !== today ? paidOn : undefined,
       }),
     onSuccess: (res) => {
       setToast({
@@ -343,6 +359,23 @@ export function PaymentSheet({
               </div>
             )}
 
+            {/* To'lov sanasi */}
+            <div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-[15px] text-[var(--color-text)]">{tr("To'lov sanasi")}</span>
+                <DayStepper
+                  value={paidOn}
+                  today={today}
+                  min={earliestPaidOn}
+                  max={today}
+                  onChange={(day) => setPaidOn(day < earliestPaidOn ? earliestPaidOn : day > today ? today : day)}
+                />
+              </div>
+              {paidOn !== today && (
+                <p className="pt-1.5 text-[13px] text-[#ff9500]">{tr("Kassa va hisobotlarda shu kunga yoziladi")}</p>
+              )}
+            </div>
+
             {/* Summa */}
             <div>
               <div className="flex items-center gap-2">
@@ -437,7 +470,7 @@ export function PaymentSheet({
                   subtitle={
                     p.status === "REFUNDED" && p.refundReason
                       ? `${tr("Bekor qilindi")}: ${p.refundReason}`
-                      : [formatDateTime(p.createdAt), p.periods.map((x) => periodLabel(x.period, tr)).join(", ")].filter(Boolean).join(" · ")
+                      : [formatDateTime(p.paidAt), p.periods.map((x) => periodLabel(x.period, tr)).join(", ")].filter(Boolean).join(" · ")
                   }
                   value={p.status === "REFUNDED" ? <Pill color={IOS.gray}>{tr("Bekor qilingan")}</Pill> : undefined}
                 />
@@ -694,7 +727,9 @@ function PaymentDetail({ payment: p }: { payment: ChildPayment }) {
             {tr(METHOD_LABEL[p.method])}
           </span>
         </SheetRow>
-        <SheetRow label={tr("Sana")}>{formatDateTime(p.createdAt)}</SheetRow>
+        <SheetRow label={tr("Sana")}>{formatDateTime(p.paidAt)}</SheetRow>
+        {/* O'tgan kun bilan kiritilgan to'lovda — qachon kiritilgani ham */}
+        {tashkentDay(p.paidAt) !== tashkentDay(p.createdAt) && <SheetRow label={tr("Kiritilgan")}>{formatDateTime(p.createdAt)}</SheetRow>}
         {p.periods.length > 0 && (
           <SheetRow label={tr("Oylar")}>
             {p.periods.map((x) => (
