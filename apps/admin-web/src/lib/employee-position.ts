@@ -42,13 +42,6 @@ export function isCallOperatorUser(user: { role: string; position?: string | nul
   return user?.role === "MANAGER" && !!user.position && isCallOperatorPosition(user.position);
 }
 
-/** Kassir guruh bilan ishlamaydi — unga tarbiyachi bo'limlari kerak emas. */
-export const CASHIER_POSITION = "kassir";
-
-export function isCashierPosition(position: string): boolean {
-  return normalizePosition(position) === CASHIER_POSITION;
-}
-
 /** Tarbiyachi yordamchisi guruhni ko'radi, lekin davomat va xabar yozmaydi. */
 export const ASSISTANT_POSITION = "tarbiyachi yordamchisi";
 
