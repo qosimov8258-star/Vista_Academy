@@ -37,16 +37,23 @@ const clock = (seconds: number) => `${String(Math.floor(seconds / 60)).padStart(
 export const TILE =
   "flex min-h-[104px] cursor-pointer flex-col items-center justify-center gap-2 rounded-[18px] bg-white px-3 py-4 transition-transform active:scale-[0.97]";
 
+/** Qoralama ostidagi "Yana fayl" / "Yana ovoz" — past, keng tugma */
+export const ADD_BUTTON =
+  "flex h-12 cursor-pointer items-center justify-center gap-2 rounded-[14px] bg-white px-3 text-[15px] font-semibold text-[var(--color-text)] transition-transform active:scale-[0.97]";
+
 export function VoiceRecorder({
   onRecorded,
   onError,
   onRecordingChange,
+  compact,
   className,
 }: {
   onRecorded: (file: File) => void;
   onError: (message: string | null) => void;
   /** Yozish boshlandi/tugadi — sahifa shu payt "Fayl tanlash"ni yashiradi */
   onRecordingChange?: (recording: boolean) => void;
+  /** Qoralamaga yana ovoz qo'shish — katta plitka o'rniga past tugma */
+  compact?: boolean;
   className?: string;
 }) {
   const tr = useTr();
@@ -205,6 +212,14 @@ export function VoiceRecorder({
     }
   };
 
+  if (!recording && compact) {
+    return (
+      <button type="button" onClick={start} className={clsx(ADD_BUTTON, className)}>
+        <Mic className="h-5 w-5 text-[#ff3b30]" strokeWidth={2.2} />
+        {tr("Yana ovoz")}
+      </button>
+    );
+  }
   if (!recording) {
     return (
       <button type="button" onClick={start} className={clsx(TILE, className)}>

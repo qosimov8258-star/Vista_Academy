@@ -2,7 +2,7 @@
 
 import { use, useEffect, useRef, useState, type ComponentType } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileText, Film, ImageIcon, Mic, Paperclip } from "lucide-react";
+import { FileText, Film, ImageIcon, Mic, Paperclip, X } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { fetchFileUrl, openFile } from "@/lib/download";
 import type { Group as GroupModel } from "@/lib/types";
@@ -15,7 +15,7 @@ import { IosSheet, SheetPrimaryButton, SheetRow, SheetSecondaryButton, SheetSect
 import { EmptyRow, Group, LargeTitle, PrimaryButton, Row, SkeletonRows, TeacherPage, formatDayShort } from "@/features/teacher/teacher-ui";
 import { GuideRow, GuideSheet } from "@/features/teacher/guide-sheet";
 import { GUIDE_VIDEOS } from "@/features/teacher/guides";
-import { TILE, VoiceRecorder } from "@/features/group-materials/voice-recorder";
+import { ADD_BUTTON, TILE, VoiceRecorder } from "@/features/group-materials/voice-recorder";
 import { useTr } from "@/i18n/tr";
 
 interface Material {
@@ -30,6 +30,8 @@ interface Material {
 }
 
 const MAX_BYTES = 20 * 1024 * 1024;
+/** Bir yuborishda — har biri alohida vazifa bo'lib tushadi */
+const MAX_FILES = 10;
 const ACCEPT = "image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime,audio/*,.mp3,.m4a,.ogg,.opus,.wav,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt";
 
 const KIND: Record<Material["kind"], { label: string; color: string; icon: ComponentType<IconProps> }> = {
@@ -38,6 +40,13 @@ const KIND: Record<Material["kind"], { label: string; color: string; icon: Compo
   AUDIO: { label: "Audio", color: IOS.orange, icon: Mic },
   DOCUMENT: { label: "Hujjat", color: IOS.gray, icon: FileText },
 };
+
+function fileKind(file: File): Material["kind"] {
+  if (file.type.startsWith("audio/")) return "AUDIO";
+  if (file.type.startsWith("image/")) return "IMAGE";
+  if (file.type.startsWith("video/")) return "VIDEO";
+  return "DOCUMENT";
+}
 
 function sizeLabel(bytes: number): string {
   return bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
@@ -119,27 +128,49 @@ export default function MaterialsPage({ params }: { params: Promise<{ slug: stri
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["group-materials", slug, groupId] }),
   });
 
+  // Ovoz yozuvi tugaganda chaqiriladigan funksiya yozish boshlangan paytdagi
+  // holatni ko'radi — oraliqda fayl o'chirilgan bo'lishi mumkin, shuning uchun ref
+  const filesRef = useRef(files);
+  filesRef.current = files;
+
+  /** Tanlangan/yozilgan fayllar qoralamaga QO'SHILADI — avvalgilari o'chmaydi */
   function pickFiles(list: FileList | File[] | null) {
+    const files = filesRef.current;
     const picked = Array.from(list ?? []);
+    if (fileInput.current) fileInput.current.value = "";
+    if (picked.length === 0) return;
     const tooBig = picked.find((file) => file.size > MAX_BYTES);
     if (tooBig) {
       setFormError(tr("«{0}» 20 MB dan katta", tooBig.name));
       return;
     }
+    const fresh = picked.filter((file) => !files.some((f) => f.name === file.name && f.size === file.size));
+    if (files.length + fresh.length > MAX_FILES) {
+      setFormError(tr("Bir martada {0} tagacha fayl yuboriladi", MAX_FILES));
+      return;
+    }
     setFormError(null);
-    setFiles(picked);
+    setFiles([...files, ...fresh]);
   }
 
-  // Yuborishdan oldin ko'rish: ovozni tinglash yoki rasmni ko'rish (bitta fayl bo'lsa)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const single = files.length === 1 ? files[0] : null;
-  const previewKind = single?.type.startsWith("audio/") ? "audio" : single?.type.startsWith("image/") ? "image" : null;
+  function removeFile(index: number) {
+    setFormError(null);
+    setFiles(files.filter((_, i) => i !== index));
+  }
+
+  // Yuborishdan oldin ko'rish: rasm — kichik surat, ovoz — shu qatorning o'zida tinglash
+  const [previews, setPreviews] = useState<Map<File, string>>(new Map());
   useEffect(() => {
-    if (!single || !previewKind) return setPreviewUrl(null);
-    const url = URL.createObjectURL(single);
-    setPreviewUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [single, previewKind]);
+    const map = new Map<File, string>();
+    for (const file of files) {
+      const kind = fileKind(file);
+      if (kind === "IMAGE" || kind === "AUDIO") map.set(file, URL.createObjectURL(file));
+    }
+    setPreviews(map);
+    return () => map.forEach((url) => URL.revokeObjectURL(url));
+  }, [files]);
+  const single = files.length === 1 ? files[0] : null;
+  const singleImage = single && fileKind(single) === "IMAGE" ? previews.get(single) : undefined;
 
   return (
     <TeacherPage className="pb-4">
@@ -181,41 +212,62 @@ export default function MaterialsPage({ params }: { params: Promise<{ slug: stri
                   <span className="text-[15px] font-semibold text-[var(--color-text)]">{tr("Fayl tanlash")}</span>
                 </button>
               )}
-              <VoiceRecorder
-                onRecorded={(file) => {
-                  if (fileInput.current) fileInput.current.value = "";
-                  pickFiles([file]);
-                }}
-                onError={setFormError}
-                onRecordingChange={setRecording}
-              />
+              <VoiceRecorder onRecorded={(file) => pickFiles([file])} onError={setFormError} onRecordingChange={setRecording} />
               {!recording && <p className="col-span-2 px-1 text-[13px] text-[#8e8e93]">{tr("Rasm, video, audio, PDF, Word, Excel — 20 MB gacha")}</p>}
               {formError && <p className="col-span-2 px-1 text-[13px] text-[#ff3b30]">{formError}</p>}
             </div>
           ) : (
             <div className="space-y-3">
               <div className="overflow-hidden rounded-[18px] bg-white">
-                {previewUrl && previewKind === "image" && (
+                {singleImage && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={previewUrl} alt="" className="max-h-[260px] w-full object-cover" />
+                  <img src={singleImage} alt="" className="max-h-[260px] w-full object-cover" />
                 )}
-                {previewUrl && previewKind === "audio" && (
-                  <div className="px-4 pt-4">
-                    <audio src={previewUrl} controls preload="metadata" className="w-full" />
-                  </div>
-                )}
-                {files.map((file, i) => (
-                  <div key={`${file.name}-${i}`} className="relative flex min-h-[52px] items-center gap-3 px-4 py-2.5">
-                    {i > 0 && <span className="absolute left-[64px] right-0 top-0 h-px bg-black/[0.08]" aria-hidden="true" />}
-                    <KindTile
-                      kind={file.type.startsWith("audio/") ? "AUDIO" : file.type.startsWith("image/") ? "IMAGE" : file.type.startsWith("video/") ? "VIDEO" : "DOCUMENT"}
-                      size={32}
-                    />
-                    <span className="min-w-0 flex-1 truncate text-[15px] text-[var(--color-text)]">{file.name}</span>
-                    <span className="shrink-0 text-[13px] tabular-nums text-[#8e8e93]">{sizeLabel(file.size)}</span>
-                  </div>
-                ))}
+                {files.map((file, i) => {
+                  const kind = fileKind(file);
+                  const url = previews.get(file);
+                  return (
+                    <div key={`${file.name}-${file.size}`} className="relative py-2 pl-4 pr-1">
+                      {i > 0 && <span className="absolute left-[60px] right-0 top-0 h-px bg-black/[0.08]" aria-hidden="true" />}
+                      <div className="flex min-h-[40px] items-center gap-3">
+                        {kind === "IMAGE" && url && !singleImage ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={url} alt="" className="h-8 w-8 shrink-0 rounded-[8px] object-cover" />
+                        ) : (
+                          <KindTile kind={kind} size={32} />
+                        )}
+                        <span className="min-w-0 flex-1 truncate text-[15px] text-[var(--color-text)]">{file.name}</span>
+                        <span className="shrink-0 text-[13px] tabular-nums text-[#8e8e93]">{sizeLabel(file.size)}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeFile(i)}
+                          disabled={uploadMutation.isPending}
+                          aria-label={tr("Olib tashlash")}
+                          className="flex h-11 w-10 shrink-0 cursor-pointer items-center justify-center active:opacity-50 disabled:opacity-40"
+                        >
+                          <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-[#767680]/[0.16]">
+                            <X className="h-3.5 w-3.5 text-[#8e8e93]" strokeWidth={3} />
+                          </span>
+                        </button>
+                      </div>
+                      {kind === "AUDIO" && url && <audio src={url} controls preload="metadata" className="mb-1 mt-1.5 h-10 w-[calc(100%-12px)]" />}
+                    </div>
+                  );
+                })}
               </div>
+
+              {/* Ustiga qo'shish: yana fayl yoki yana ovozli xabar */}
+              {files.length < MAX_FILES && !uploadMutation.isPending && (
+                <div className="grid grid-cols-2 gap-3">
+                  {!recording && (
+                    <button type="button" onClick={() => fileInput.current?.click()} className={ADD_BUTTON}>
+                      <Paperclip className="h-5 w-5" style={{ color: IOS.blue }} strokeWidth={2.2} />
+                      {tr("Yana fayl")}
+                    </button>
+                  )}
+                  <VoiceRecorder compact onRecorded={(file) => pickFiles([file])} onError={setFormError} onRecordingChange={setRecording} />
+                </div>
+              )}
 
               <div className="overflow-hidden rounded-[18px] bg-white">
                 {files.length === 1 && (
@@ -239,7 +291,7 @@ export default function MaterialsPage({ params }: { params: Promise<{ slug: stri
               {files.length > 1 && <p className="px-1 text-[13px] text-[#8e8e93]">{tr("Bir nechta fayl — har biri o'z nomi bilan yuboriladi")}</p>}
               {formError && <p className="px-1 text-[13px] text-[#ff3b30]">{formError}</p>}
 
-              <PrimaryButton loading={uploadMutation.isPending} onClick={() => uploadMutation.mutate()}>
+              <PrimaryButton loading={uploadMutation.isPending} disabled={recording} onClick={() => uploadMutation.mutate()}>
                 {tr("Ota-onalarga yuborish")}
               </PrimaryButton>
               <button
@@ -248,7 +300,7 @@ export default function MaterialsPage({ params }: { params: Promise<{ slug: stri
                 onClick={resetDraft}
                 className="block w-full cursor-pointer py-2 text-center text-[15px] font-medium text-[#ff3b30] active:opacity-60 disabled:opacity-40"
               >
-                {tr(previewKind === "audio" ? "O'chirib, qayta yozish" : "Bekor qilish")}
+                {tr(files.length > 1 ? "Hammasini bekor qilish" : "Bekor qilish")}
               </button>
             </div>
           )}
@@ -285,7 +337,7 @@ export default function MaterialsPage({ params }: { params: Promise<{ slug: stri
         steps={[
           { title: "Guruhni tekshiring", text: "Bir nechta guruhingiz bo'lsa, «Guruh» qatorini bosib kerakli guruhni tanlang." },
           { title: "Fayl tanlang yoki ovoz yozing", text: "«Fayl tanlash» — rasm, video yoki hujjat. «Ovoz yozish» — vazifani o'zingiz ovoz bilan aytib bering.", token: <KindTile kind="AUDIO" size={28} /> },
-          { title: "Ovoz yozish", text: "Gapirib bo'lgach qizil kvadrat tugmani bosing. Yuborishdan oldin tinglab ko'rasiz; yoqmasa — «O'chirib, qayta yozish»." },
+          { title: "Ovoz yozish", text: "Gapirib bo'lgach qizil kvadrat tugmani bosing. Yuborishdan oldin tinglab ko'rasiz; yoqmasa — yonidagi × bilan olib tashlang. «Yana fayl» yoki «Yana ovoz» bilan ustiga qo'shish mumkin." },
           { title: "Sarlavha va izoh", text: "Masalan: «She'r yodlash — dushanbagacha». Kerak bo'lsa izohga qo'shimcha tushuntirish yozing." },
           { title: "«Ota-onalarga yuborish»", text: "Vazifa shu guruh bolalarining ota-onalari kabinetidagi «Fayllar» bo'limida darhol paydo bo'ladi." },
         ]}
