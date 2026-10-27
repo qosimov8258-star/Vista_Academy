@@ -308,7 +308,7 @@ export function Sidebar({ slug }: { slug: string }) {
       items: [
         { href: `/${slug}/attendance`, label: t("nav.attendance"), icon: ChecklistIcon, show: true },
         { href: `/${slug}/children`, label: t("nav.children"), icon: ChildIcon, show: true },
-        { href: `/${slug}/materials`, label: tr("Guruh fayllari"), icon: DocumentIcon, show: true },
+        { href: `/${slug}/materials`, label: tr("Vazifa jo'natish"), icon: DocumentIcon, show: true },
         { href: `/${slug}/my-lessons/schedule`, label: t("nav.lessonSchedule"), icon: CalendarIcon, show: true },
       ],
     },
@@ -356,7 +356,7 @@ export function Sidebar({ slug }: { slug: string }) {
         // Fan o'qituvchisi kunlik emas, o'z darsi bo'yicha davomat qiladi
         { href: isSubjectTeacher ? `/${slug}/lesson-attendance` : `/${slug}/attendance`, label: t("nav.attendance"), icon: ChecklistIcon, show: true },
         { href: `/${slug}/children`, label: t("nav.children"), icon: ChildIcon, show: !isSubjectTeacher },
-        { href: `/${slug}/materials`, label: tr("Guruh fayllari"), icon: DocumentIcon, show: true },
+        { href: `/${slug}/materials`, label: tr("Vazifa jo'natish"), icon: DocumentIcon, show: true },
         // Fan o'qituvchisida dars jadvali alohida "Qo'shimcha darsliklar" o'rniga shu yerda
         { href: `/${slug}/my-lessons/schedule`, label: t("nav.lessonSchedule"), icon: CalendarIcon, show: isSubjectTeacher },
       ],

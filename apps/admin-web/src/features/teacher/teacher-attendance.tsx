@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ComponentType } from "react";
 import clsx from "clsx";
+import { BookOpen, CirclePlay, FileSpreadsheet, Thermometer } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { AttendanceDay, AttendanceRangeSummary, AttendanceStatus, ChronicAbsenceFlag } from "@/lib/types";
@@ -9,30 +10,39 @@ import { useAuth } from "@/lib/use-auth";
 import { canWriteTeaching } from "@/lib/permissions";
 import { isAssistantPosition } from "@/lib/employee-position";
 import { useBranchContext } from "@/lib/use-branch-context";
-import { downloadCsv } from "@/lib/download";
+import { ReportSheet } from "@/features/reports/report-sheet";
 import { ChildPhoto } from "@/components/ui/child-photo";
 import { initials } from "@/components/ui/avatar";
-import { CalendarIcon, CheckIcon, ChecklistIcon, DocumentIcon, NoteIcon } from "@/components/ios/icons";
+import { CheckIcon, ChecklistIcon, ClockIcon, CloseIcon, NoteIcon, PhoneIcon, type IconProps } from "@/components/ios/icons";
+import { IOS } from "@/components/ios/tokens";
+import { Pill } from "@/components/ios/pill";
+import { DayStepper } from "@/components/ios/day-stepper";
+import { IosSheet, SheetPrimaryButton, SheetRow, SheetSecondaryButton, SheetSection } from "@/components/ios/sheet";
 import { ChildNoteModal } from "@/features/child-notes/child-note-modal";
-import { EmptyRow, FloatingBar, Group, LargeTitle, PrimaryButton, Row, Segmented, SkeletonRows, TeacherPage, formatDayLong, formatDayShort, todayIso } from "./teacher-ui";
+import { EmptyRow, FloatingBar, Group, LargeTitle, PrimaryButton, Row, SkeletonRows, TeacherPage, formatDayLong, formatDayShort, todayIso } from "./teacher-ui";
 import { TeacherReminders } from "./teacher-reminders";
+import { GUIDE_VIDEOS } from "./guides";
 import styles from "./teacher.module.css";
 import { useTr } from "@/i18n/tr";
 
-const STATUS: { value: AttendanceStatus; label: string; color: string }[] = [
-  { value: "PRESENT", label: "Keldi", color: "var(--color-success)" },
-  { value: "ABSENT", label: "Kelmadi", color: "var(--color-danger)" },
-  { value: "LATE", label: "Kech qoldi", color: "var(--color-warning)" },
-  { value: "SICK", label: "Kasal", color: "var(--color-warning)" },
+// Ranglar filial admini sahifasi bilan bir xil (features/attendance/branch-attendance.tsx)
+const STATUS: { value: AttendanceStatus; label: string; color: string; icon: ComponentType<IconProps> }[] = [
+  { value: "PRESENT", label: "Keldi", color: IOS.green, icon: CheckIcon },
+  { value: "ABSENT", label: "Kelmadi", color: IOS.red, icon: CloseIcon },
+  { value: "LATE", label: "Kech qoldi", color: IOS.orange, icon: ClockIcon },
+  { value: "SICK", label: "Kasal", color: "#af52de", icon: Thermometer },
 ];
 const STATUS_BY_VALUE = Object.fromEntries(STATUS.map((s) => [s.value, s])) as Record<AttendanceStatus, (typeof STATUS)[number]>;
 
+type Child = AttendanceDay["children"][number];
+
 /**
- * Tarbiyachining kunlik davomati — telefon uchun: har bola alohida qatorda,
- * ostida iOS segmented control (Keldi / Kelmadi / Kech qoldi / Kasal).
- * Hamma "Keldi" bo'lib ochiladi — faqat istisnolarni o'zgartirib, pastdagi
- * suzib turuvchi "Saqlash" bosiladi. Mantiq filial admini sahifasi bilan
- * bir xil (o'sha API, o'sha kesh kalitlari).
+ * Tarbiyachining kunlik davomati — telefon uchun. Har bola bitta qatorda:
+ * o'ngdagi yumaloq tugma bir bosishda Keldi ↔ Kelmadi almashtiradi, qatorning
+ * o'zi bosilsa pastdan varaq ochiladi (4 holat, izoh, eslatma, aloqa).
+ * Hamma "Keldi" bo'lib ochiladi — faqat istisnolar o'zgartirilib, "Saqlash"
+ * bosiladi. Tepadagi hisoblagichlar ro'yxatni holat bo'yicha suzadi.
+ * Mantiq filial admini sahifasi bilan bir xil (o'sha API, o'sha kesh kalitlari).
  */
 export function TeacherAttendance({ slug }: { slug: string }) {
   const tr = useTr();
@@ -44,12 +54,18 @@ export function TeacherAttendance({ slug }: { slug: string }) {
   const canWrite = canWriteTeaching(user?.role) && !(user?.position && isAssistantPosition(user.position));
 
   // "Bugun" foydalanuvchi soatiga bog'liq — server va brauzer farq qilmasin
+  const [today, setToday] = useState("");
   const [date, setDate] = useState("");
-  useEffect(() => setDate((d) => d || todayIso()), []);
-  const [tab, setTab] = useState<"all" | "absent">("all");
+  useEffect(() => {
+    const t = todayIso();
+    setToday(t);
+    setDate((d) => d || t);
+  }, []);
+  const [filter, setFilter] = useState<AttendanceStatus | null>(null);
+  const [sheetChildId, setSheetChildId] = useState<string | null>(null);
   const [noteChild, setNoteChild] = useState<{ id: string; name: string } | null>(null);
-  const [exporting, setExporting] = useState(false);
-  const [exportError, setExportError] = useState<string | null>(null);
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
 
   const attendanceQuery = useQuery({
     queryKey: ["attendance", slug, branchId, date],
@@ -84,6 +100,7 @@ export function TeacherAttendance({ slug }: { slug: string }) {
   }, [attendanceQuery.data, date, branchId]);
   const statusFor = (id: string) => localStatuses[id] ?? "PRESENT";
   const noteFor = (id: string) => localNotes[id] ?? "";
+  const setStatus = (id: string, status: AttendanceStatus) => setLocalStatuses((s) => ({ ...s, [id]: status }));
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -102,6 +119,7 @@ export function TeacherAttendance({ slug }: { slug: string }) {
   });
   useEffect(() => {
     saveMutation.reset();
+    setFilter(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date, branchId]);
 
@@ -111,190 +129,157 @@ export function TeacherAttendance({ slug }: { slug: string }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["attendance", slug, branchId, date] }),
   });
 
-  const handleExport = async () => {
-    setExporting(true);
-    setExportError(null);
-    try {
-      await downloadCsv(`/app/exports/attendance?date=${date}&branchId=${branchId}`, `davomat-${date}.csv`);
-    } catch {
-      setExportError(tr("Eksport qilib bo'lmadi — qayta urinib ko'ring"));
-    } finally {
-      setExporting(false);
-    }
-  };
-
   const children = attendanceQuery.data?.children ?? [];
-  const absentChildren = children.filter((c) => c.status === "ABSENT");
   // Saqlanmagan o'zgarishlar: serverdagi holatdan farq qiladigan (yoki hali yozilmagan) bolalar
   const unsaved = children.filter((c) => c.status !== statusFor(c.childId) || (c.note ?? "") !== noteFor(c.childId)).length;
-  const counts = STATUS.map((s) => ({ ...s, count: children.filter((c) => statusFor(c.childId) === s.value).length }));
-  const isToday = date === todayIso();
+  const daySaved = children.some((c) => c.status);
+  // Tarbiyachi — o'zi belgilayotgan holat; yordamchi — faqat saqlangani (belgilanmagan hisobga kirmaydi)
+  const effectiveStatus = (c: Child): AttendanceStatus | null => (canWrite ? statusFor(c.childId) : (c.status ?? null));
+  const counts = STATUS.map((s) => ({ ...s, count: children.filter((c) => effectiveStatus(c) === s.value).length }));
+  const shown = filter ? children.filter((c) => effectiveStatus(c) === filter) : children;
+  const sheetChild = children.find((c) => c.childId === sheetChildId) ?? null;
+  const showSaveBar = canWrite && children.length > 0 && (unsaved > 0 || !daySaved || saveMutation.isPending || saveMutation.isSuccess || saveMutation.isError);
+
+  /** Qator izohi: muhim belgilar → ota-ona sababi → Face ID vaqti → izoh → guruh */
+  const subtitleFor = (child: Child) => {
+    const flag = chronicByChild.get(child.childId);
+    const flags = [
+      flag && flag.consecutiveAbsentDays >= 3 ? tr("{0} kun ketma-ket kelmadi", flag.consecutiveAbsentDays) : null,
+      flag?.overdueAndAbsentToday ? tr("To'lov muddati o'tgan") : null,
+    ].filter(Boolean);
+    if (flags.length) return <span className="font-medium text-[var(--color-danger)]">{flags.join(" · ")}</span>;
+    if (child.parentReason) return <span className="text-[var(--color-text)]">{tr("Ota-ona: {0}", child.parentReason)}</span>;
+    if (child.checkInTime) {
+      return (
+        <span className="font-medium text-[var(--color-success)]">
+          {tr("Face ID ·")} {child.checkInTime}
+          {child.checkOutTime ? ` – ${child.checkOutTime}` : ""}
+        </span>
+      );
+    }
+    const note = noteFor(child.childId);
+    if (note) return note;
+    if (child.contactRequestedAt) return <span className="text-[var(--color-warning)]">{tr("Aloqa so'raldi")}</span>;
+    if (statusFor(child.childId) === "ABSENT") return tr("Sabab yozilmagan");
+    return child.groupName ? tr(child.groupName) : null;
+  };
 
   return (
     <TeacherPage className="pb-4">
-      <LargeTitle
-        eyebrow={date ? formatDayLong(date) : " "}
-        title={tr("Davomat")}
-        trailing={
-          // Tabiiy sana tanlagich ko'rinmas holda kapsula ustida turadi — telefonda o'z g'ildiragi ochiladi
-          <label className="relative flex h-9 cursor-pointer items-center gap-1.5 rounded-full bg-[var(--color-surface)] px-3.5 text-[15px] font-medium text-[var(--color-primary)] shadow-[0_1px_2px_rgba(16,24,40,0.06)] transition-transform active:scale-95">
-            <CalendarIcon className="h-[18px] w-[18px]" strokeWidth={1.9} />
-            {date ? (isToday ? "Bugun" : formatDayShort(date)) : "…"}
-            <input
-              type="date"
-              value={date}
-              max={todayIso()}
-              onChange={(e) => e.target.value && setDate(e.target.value)}
-              aria-label={tr("Sanani tanlash")}
-              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-            />
-          </label>
-        }
-      />
+      <LargeTitle eyebrow={date ? formatDayLong(date) : " "} title={tr("Davomat")} />
 
-      {/* Jonli hisob — belgilar o'zgarishi bilan yangilanadi */}
+      {date && today && <DayStepper value={date} onChange={setDate} today={today} max={today} />}
+
+      <Group>
+        <Row first icon={BookOpen} title={tr("Davomat qilish yo'riqnomasi")} subtitle={tr("Qanday belgilash — 1 daqiqada")} onClick={() => setGuideOpen(true)} />
+      </Group>
+
+      {/* Jonli hisob — bosilsa ro'yxat shu holat bo'yicha suziladi */}
       {children.length > 0 && (
-        <div className={clsx(styles.group, "grid grid-cols-4 divide-x divide-[var(--color-separator)] py-3.5")}>
-          {counts.map((c) => (
-            <div key={c.value} className="flex flex-col items-center gap-0.5 px-1">
-              <span className="text-[24px] font-bold leading-none tabular-nums tracking-[-0.02em]" style={{ color: c.count ? c.color : "var(--color-text-muted)" }}>
-                {tr(c.count)}
-              </span>
-              <span className="truncate text-[12px] font-medium text-[var(--color-text-muted)]">{tr(c.label)}</span>
-            </div>
-          ))}
+        <div className={clsx(styles.group, "grid grid-cols-4 gap-1 p-1.5")} role="radiogroup" aria-label={tr("Holat bo'yicha suzish")}>
+          {counts.map((c) => {
+            const active = filter === c.value;
+            return (
+              <button
+                key={c.value}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => setFilter(active ? null : c.value)}
+                className="flex min-h-[64px] cursor-pointer flex-col items-center justify-center gap-1 rounded-[14px] px-1 transition-[background-color,transform] active:scale-[0.97]"
+                style={{ backgroundColor: active ? `${c.color}1f` : undefined }}
+              >
+                <span className="text-[24px] font-bold leading-none tabular-nums tracking-[-0.02em]" style={{ color: c.count ? c.color : "var(--color-text-muted)" }}>
+                  {c.count}
+                </span>
+                <span className={clsx("max-w-full truncate text-[12px]", active ? "font-semibold" : "font-medium")} style={{ color: active ? c.color : "var(--color-text-muted)" }}>
+                  {tr(c.label)}
+                </span>
+              </button>
+            );
+          })}
         </div>
       )}
 
       {branchId && date && <TeacherReminders slug={slug} branchId={branchId} date={date} />}
 
-      <div className="space-y-3">
-        <Segmented
-          label={tr("Ro'yxat")}
-          value={tab}
-          onChange={setTab}
-          options={[
-            { value: "all", label: "Hammasi" },
-            { value: "absent", label: `Kelmaganlar${absentChildren.length ? ` (${absentChildren.length})` : ""}` },
-          ]}
-        />
-
+      <Group
+        title={filter ? tr(STATUS_BY_VALUE[filter].label) : tr("Bolalar")}
+        action={
+          filter ? (
+            <button type="button" onClick={() => setFilter(null)} className="cursor-pointer text-[15px] font-medium text-[var(--color-primary)] active:opacity-50">
+              {tr("Hammasi")}
+            </button>
+          ) : children.length > 0 ? (
+            <span className="text-[13px] tabular-nums text-[var(--color-text-muted)]">{children.length}</span>
+          ) : undefined
+        }
+        footer={
+          !canWrite
+            ? tr("Davomatni tarbiyachi belgilaydi — siz faqat ko'rasiz.")
+            : children.length > 0
+              ? tr("O'ngdagi belgi: Keldi ↔ Kelmadi. Kech qoldi, Kasal va izoh — bolani bosing.")
+              : undefined
+        }
+      >
         {!date || attendanceQuery.isLoading || (!branchId && !user) ? (
-          <Group>
-            <SkeletonRows rows={5} />
-          </Group>
+          <SkeletonRows rows={6} />
         ) : attendanceQuery.isError ? (
-          <Group>
-            <EmptyRow title={tr("Yuklab bo'lmadi")} description={tr((attendanceQuery.error as Error).message)} />
-          </Group>
+          <EmptyRow title={tr("Yuklab bo'lmadi")} description={tr((attendanceQuery.error as Error).message)} />
         ) : children.length === 0 ? (
-          <Group>
-            <EmptyRow icon={ChecklistIcon} title={tr("Guruhda faol bola yo'q")} />
-          </Group>
-        ) : tab === "absent" ? (
-          <Group footer={tr("Ota-ona sabab yozmagan bo'lsa, «Aloqaga chiqish» filial administratoriga xabar yuboradi.")}>
-            {absentChildren.length === 0 ? (
-              <EmptyRow icon={CheckIcon} title={tr("Hammasi keldi")} description={tr("Bu kunda kelmagan bola yo'q")} />
-            ) : (
-              absentChildren.map((child, i) => (
-                <Row
-                  key={child.childId}
-                  first={i === 0}
-                  leading={<ChildPhoto child={{ id: child.childId, fullName: child.fullName, gender: child.gender, avatarUpdatedAt: child.avatarUpdatedAt }} size={40} fallback={initials(child.fullName)} />}
-                  title={tr(child.fullName)}
-                  subtitle={child.parentReason ? tr("Ota-ona: {0}", child.parentReason) : child.note || "Sabab yozilmagan"}
-                  trailing={
-                    child.parentReason ? undefined : child.contactRequestedAt ? (
-                      <span className="shrink-0 text-[13px] font-medium text-[var(--color-warning)]">{tr("So'raldi")}</span>
-                    ) : canWrite ? (
-                      <button
-                        type="button"
-                        disabled={contactMutation.isPending && contactMutation.variables === child.childId}
-                        onClick={() => contactMutation.mutate(child.childId)}
-                        className="shrink-0 cursor-pointer rounded-full bg-[var(--color-primary)]/10 px-3 py-1.5 text-[13.5px] font-semibold text-[var(--color-primary)] transition-opacity active:opacity-60 disabled:opacity-50"
-                      >
-                        {tr("Aloqaga chiqish")}
-                      </button>
-                    ) : undefined
-                  }
-                />
-              ))
-            )}
-          </Group>
+          <EmptyRow icon={ChecklistIcon} title={tr("Guruhda faol bola yo'q")} />
+        ) : shown.length === 0 ? (
+          <EmptyRow icon={CheckIcon} title={tr("Bu holatda bola yo'q")} description={filter === "ABSENT" ? tr("Bu kunda kelmagan bola yo'q") : undefined} />
         ) : (
-          <Group footer={canWrite ? undefined : tr("Davomatni tarbiyachi belgilaydi — siz faqat ko'rasiz.")}>
-            {children.map((child, i) => {
-              const status = statusFor(child.childId);
-              const flag = chronicByChild.get(child.childId);
-              const flags = [
-                flag && flag.consecutiveAbsentDays >= 3 ? tr("{0} kun ketma-ket kelmadi", flag.consecutiveAbsentDays) : null,
-                flag?.overdueAndAbsentToday ? tr("To'lov muddati o'tgan") : null,
-              ].filter(Boolean);
-              return (
-                <div key={child.childId} className="relative px-4 py-3">
-                  {i > 0 && <span className="absolute left-[68px] right-0 top-0 h-px bg-[var(--color-separator)]" aria-hidden="true" />}
-                  <div className="flex items-center gap-3">
+          shown.map((child, i) => {
+            const status = statusFor(child.childId);
+            const meta = STATUS_BY_VALUE[status];
+            // Kun hali saqlanmagan bo'lsa hammasi "yangi" — nuqta faqat saqlangan kunni o'zgartirganda
+            const changed = daySaved && (child.status !== status || (child.note ?? "") !== noteFor(child.childId));
+            return (
+              <div key={child.childId} className="relative flex items-center">
+                {i > 0 && <span className="absolute left-[72px] right-0 top-0 h-px bg-[var(--color-separator)]" aria-hidden="true" />}
+                <button
+                  type="button"
+                  onClick={() => setSheetChildId(child.childId)}
+                  className={clsx(styles.pressable, "flex min-h-[64px] min-w-0 flex-1 cursor-pointer items-center gap-3.5 py-2.5 pl-4 pr-2 text-left")}
+                >
+                  <span className="relative shrink-0">
                     <ChildPhoto
                       child={{ id: child.childId, fullName: child.fullName, gender: child.gender, avatarUpdatedAt: child.avatarUpdatedAt }}
-                      size={40}
+                      size={44}
                       fallback={initials(child.fullName)}
                     />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[16px] leading-snug text-[var(--color-text)]">{tr(child.fullName)}</p>
-                      {flags.length > 0 ? (
-                        <p className="truncate text-[13px] font-medium text-[var(--color-danger)]">{flags.join(" · ")}</p>
-                      ) : child.checkInTime ? (
-                        // Yuz tanish terminali qayd etgan vaqt
-                        <p className="truncate text-[13px] font-medium text-[var(--color-success)]">
-                          {tr("Face ID ·")}{" "}{tr(child.checkInTime)}
-                          {child.checkOutTime ? ` – ${child.checkOutTime}` : ""}
-                        </p>
-                      ) : (
-                        child.groupName && <p className="truncate text-[13px] text-[var(--color-text-muted)]">{tr(child.groupName)}</p>
-                      )}
-                    </div>
-                    {canWrite ? (
-                      <button
-                        type="button"
-                        onClick={() => setNoteChild({ id: child.childId, name: child.fullName })}
-                        aria-label={tr("{0}: xabar yoki eslatma", child.fullName)}
-                        className="-mr-1.5 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--color-primary)] transition-colors active:bg-black/5"
-                      >
-                        <NoteIcon className="h-[21px] w-[21px]" strokeWidth={1.8} />
-                      </button>
-                    ) : (
-                      <span className="shrink-0 text-[14px] font-semibold" style={{ color: child.status ? STATUS_BY_VALUE[child.status].color : "var(--color-text-muted)" }}>
-                        {child.status ? STATUS_BY_VALUE[child.status].label : "Belgilanmagan"}
-                      </span>
+                    {changed && canWrite && (
+                      <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-white bg-[var(--color-primary)]" aria-label={tr("Saqlanmagan")} />
                     )}
-                  </div>
-                  {canWrite && (
-                    <div className="mt-2.5 space-y-2 sm:pl-[52px]">
-                      <Segmented
-                        size="sm"
-                        label={`${child.fullName} — holat`}
-                        value={status}
-                        onChange={(value) => setLocalStatuses((s) => ({ ...s, [child.childId]: value }))}
-                        options={STATUS.map((s) => ({ value: s.value, label: s.label, tint: s.color }))}
-                      />
-                      {status !== "PRESENT" && (
-                        <input
-                          type="text"
-                          value={noteFor(child.childId)}
-                          onChange={(e) => setLocalNotes((s) => ({ ...s, [child.childId]: e.target.value }))}
-                          placeholder={tr("Izoh (ixtiyoriy)")}
-                          className="h-10 w-full rounded-[10px] bg-[rgba(118,118,128,0.12)] px-3 text-[15px] text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-muted)] focus:ring-2 focus:ring-[var(--color-primary)]/30"
-                        />
-                      )}
-                    </div>
-                  )}
-                  {!canWrite && child.note && <p className="mt-1 pl-[52px] text-[13px] text-[var(--color-text-muted)]">{tr(child.note)}</p>}
-                </div>
-              );
-            })}
-          </Group>
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[16px] leading-snug text-[var(--color-text)]">{tr(child.fullName)}</span>
+                    <span className="mt-0.5 block truncate text-[13.5px] leading-snug text-[var(--color-text-muted)]">{subtitleFor(child) ?? " "}</span>
+                  </span>
+                </button>
+                {canWrite ? (
+                  // Bir bosishda eng ko'p kerak bo'ladigan almashtirish: Keldi ↔ Kelmadi
+                  <button
+                    type="button"
+                    onClick={() => setStatus(child.childId, status === "PRESENT" ? "ABSENT" : "PRESENT")}
+                    aria-label={tr("{0}: {1}. Almashtirish", child.fullName, tr(meta.label))}
+                    className="mr-3 flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full transition-transform active:scale-90"
+                    style={status === "PRESENT" ? { backgroundColor: meta.color } : { backgroundColor: `${meta.color}1f`, boxShadow: `inset 0 0 0 2px ${meta.color}` }}
+                  >
+                    <meta.icon className="h-[22px] w-[22px]" strokeWidth={2.6} style={{ color: status === "PRESENT" ? "#fff" : meta.color }} />
+                  </button>
+                ) : (
+                  <span className="mr-4 shrink-0">
+                    {child.status ? <Pill color={STATUS_BY_VALUE[child.status].color}>{tr(STATUS_BY_VALUE[child.status].label)}</Pill> : <Pill>{tr("Belgilanmagan")}</Pill>}
+                  </span>
+                )}
+              </div>
+            );
+          })
         )}
-      </div>
+      </Group>
 
       <Group title={tr("So'nggi 14 kun")}>
         {summaryQuery.isLoading ? (
@@ -302,67 +287,328 @@ export function TeacherAttendance({ slug }: { slug: string }) {
         ) : !summaryQuery.data || summaryQuery.data.totalChildren === 0 ? (
           <EmptyRow title={tr("Ma'lumot yo'q")} />
         ) : (
-          // Eng yangi kun tepada
+          // Eng yangi kun tepada; kun bosilsa — o'sha kun ochiladi
           [...summaryQuery.data.days].reverse().map((day, i) => {
             const all = Math.max(day.present + day.absent + day.unmarked, 1);
+            const current = day.date === date;
             return (
-              <div key={day.date} className="relative flex items-center gap-3 px-4 py-2.5">
+              <button
+                key={day.date}
+                type="button"
+                onClick={() => {
+                  setDate(day.date);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                className={clsx(styles.pressable, "relative flex min-h-[48px] w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left")}
+              >
                 {i > 0 && <span className="absolute left-4 right-0 top-0 h-px bg-[var(--color-separator)]" aria-hidden="true" />}
-                <span className="w-[92px] shrink-0 text-[14.5px] text-[var(--color-text)]">{formatDayShort(day.date)}</span>
+                <span className={clsx("w-[92px] shrink-0 text-[14.5px]", current ? "font-semibold text-[var(--color-primary)]" : "text-[var(--color-text)]")}>{formatDayShort(day.date)}</span>
                 <span className="flex h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-[rgba(118,118,128,0.14)]" aria-hidden="true">
-                  <span className="h-full bg-[var(--color-success)]" style={{ width: `${(day.present / all) * 100}%` }} />
-                  <span className="h-full bg-[var(--color-danger)]" style={{ width: `${(day.absent / all) * 100}%` }} />
+                  <span className="h-full" style={{ width: `${(day.present / all) * 100}%`, backgroundColor: IOS.green }} />
+                  <span className="h-full" style={{ width: `${(day.absent / all) * 100}%`, backgroundColor: IOS.red }} />
                 </span>
                 <span className="w-[58px] shrink-0 text-right text-[14px] tabular-nums">
-                  <span className={clsx("font-semibold", day.present ? "text-[var(--color-success)]" : "text-[var(--color-text-muted)]")}>{tr(day.present)}</span>
+                  <span className="font-semibold" style={{ color: day.present ? IOS.green : "var(--color-text-muted)" }}>{day.present}</span>
                   <span className="text-[var(--color-text-muted)]"> / </span>
-                  <span className={clsx("font-semibold", day.absent ? "text-[var(--color-danger)]" : "text-[var(--color-text-muted)]")}>{tr(day.absent)}</span>
+                  <span className="font-semibold" style={{ color: day.absent ? IOS.red : "var(--color-text-muted)" }}>{day.absent}</span>
                 </span>
-              </div>
+              </button>
             );
           })
         )}
       </Group>
 
-      <Group footer={exportError ? <span className="text-[var(--color-danger)]">{tr(exportError)}</span> : tr("Tanlangan kun davomati Excel'da ochiladigan fayl bo'lib yuklanadi.")}>
-        <Row
-          first
-          icon={DocumentIcon}
-          title={tr("CSV yuklab olish")}
-          onClick={exporting || !date ? undefined : handleExport}
-          value={exporting ? "Yuklanmoqda…" : undefined}
-          chevron={!exporting}
-        />
+      <Group footer={tr("Kun, hafta yoki oy tanlanadi — har bola bo'yicha jamlanma, tabel va batafsil ro'yxat.")}>
+        <Row first icon={FileSpreadsheet} title={tr("Excel hisobot yuklab olish")} onClick={date ? () => setReportOpen(true) : undefined} />
       </Group>
 
+      <ReportSheet
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        period={date.slice(0, 7) || undefined}
+        title="Davomat hisoboti"
+        endpoint="/app/attendance/report"
+        filePrefix="bolalar-davomati"
+        formats={["xlsx"]}
+        params={{ branchId }}
+        allHint="Boshidan bugungacha barcha davomat yozuvlari"
+        contents="Excel: «Umumiy» — har bola bo'yicha kelgan, kech qolgan, kelmagan va kasal kunlar hamda davomat foizi; «Tabel» — har kun holat rangida (Face ID bilan kelganda — kelish vaqti); «Kunlar» — har kuni nechta bola kelgani; «Batafsil» — har bir yozuv, izoh va ota-ona sababi bilan."
+      />
+
+      <ChildSheet
+        child={sheetChild}
+        onClose={() => setSheetChildId(null)}
+        canWrite={canWrite}
+        status={sheetChild ? statusFor(sheetChild.childId) : "PRESENT"}
+        note={sheetChild ? noteFor(sheetChild.childId) : ""}
+        flagText={(() => {
+          const flag = sheetChild ? chronicByChild.get(sheetChild.childId) : undefined;
+          return [
+            flag && flag.consecutiveAbsentDays >= 3 ? tr("{0} kun ketma-ket kelmadi", flag.consecutiveAbsentDays) : null,
+            flag?.overdueAndAbsentToday ? tr("To'lov muddati o'tgan") : null,
+          ]
+            .filter(Boolean)
+            .join(" · ");
+        })()}
+        onStatus={(s) => sheetChild && setStatus(sheetChild.childId, s)}
+        onNote={(text) => sheetChild && setLocalNotes((n) => ({ ...n, [sheetChild.childId]: text }))}
+        onWriteNote={() => {
+          if (!sheetChild) return;
+          setNoteChild({ id: sheetChild.childId, name: sheetChild.fullName });
+          setSheetChildId(null);
+        }}
+        contact={{
+          pending: contactMutation.isPending && contactMutation.variables === sheetChild?.childId,
+          error: contactMutation.isError && contactMutation.variables === sheetChild?.childId,
+          onRequest: () => sheetChild && contactMutation.mutate(sheetChild.childId),
+        }}
+      />
+
+      <AttendanceGuideSheet open={guideOpen} onClose={() => setGuideOpen(false)} />
+
       {canWrite && noteChild && branchId && date && (
-        <ChildNoteModal
-          open
-          onClose={() => setNoteChild(null)}
-          slug={slug}
-          branchId={branchId}
-          childId={noteChild.id}
-          childName={noteChild.name}
-          date={date}
-        />
+        <ChildNoteModal open onClose={() => setNoteChild(null)} slug={slug} branchId={branchId} childId={noteChild.id} childName={noteChild.name} date={date} />
       )}
-      {/* Saqlash — tab-bar ustida doim qo'l ostida */}
-      {canWrite && tab === "all" && children.length > 0 && (
+
+      {/* Saqlash — faqat saqlanmagan o'zgarish bo'lsa (yoki kun hali saqlanmagan bo'lsa), tab-bar ustida */}
+      {showSaveBar && (
         <FloatingBar>
-          <PrimaryButton loading={saveMutation.isPending} onClick={() => saveMutation.mutate()} disabled={unsaved === 0 && saveMutation.isSuccess}>
-            {saveMutation.isPending ? "Saqlanmoqda…" : unsaved === 0 && saveMutation.isSuccess ? (
+          <PrimaryButton loading={saveMutation.isPending} onClick={() => saveMutation.mutate()} disabled={unsaved === 0 && daySaved}>
+            {saveMutation.isPending ? (
+              "Saqlanmoqda…"
+            ) : unsaved === 0 && daySaved ? (
               <>
                 <CheckIcon className="h-5 w-5" strokeWidth={2.6} /> {tr("Saqlandi")}
               </>
-            ) : unsaved > 0 && children.some((c) => c.status) ? (
+            ) : daySaved ? (
               tr("Saqlash · {0} ta o'zgarish", unsaved)
             ) : (
-              "Saqlash"
+              tr("Davomatni saqlash · {0} bola", children.length)
             )}
           </PrimaryButton>
           {saveMutation.isError && <p className="mt-1.5 text-center text-[13px] font-medium text-[var(--color-danger)]">{tr("Saqlashda xatolik — qayta urinib ko'ring")}</p>}
         </FloatingBar>
       )}
     </TeacherPage>
+  );
+}
+
+/**
+ * Bitta bola varag'i: 4 holat katta tugmalarda, izoh, Face ID vaqti,
+ * ota-ona sababi, "Aloqaga chiqish" va eslatma yozish. O'zgarish darhol
+ * ro'yxatga tushadi — saqlash sahifadagi umumiy "Saqlash" bilan.
+ */
+function ChildSheet({
+  child,
+  onClose,
+  canWrite,
+  status,
+  note,
+  flagText,
+  onStatus,
+  onNote,
+  onWriteNote,
+  contact,
+}: {
+  child: Child | null;
+  onClose: () => void;
+  canWrite: boolean;
+  status: AttendanceStatus;
+  note: string;
+  flagText: string;
+  onStatus: (status: AttendanceStatus) => void;
+  onNote: (text: string) => void;
+  onWriteNote: () => void;
+  contact: { pending: boolean; error: boolean; onRequest: () => void };
+}) {
+  const tr = useTr();
+  const savedAbsent = child?.status === "ABSENT";
+  return (
+    <IosSheet
+      open={!!child}
+      onClose={onClose}
+      cancelLabel="Yopish"
+      title={child ? tr(child.fullName) : ""}
+      footer={canWrite ? <SheetPrimaryButton onClick={onClose}>{tr("Tayyor")}</SheetPrimaryButton> : undefined}
+    >
+      {child && (
+        <div className="space-y-5">
+          <div className="flex flex-col items-center gap-2 pt-1">
+            <ChildPhoto child={{ id: child.childId, fullName: child.fullName, gender: child.gender, avatarUpdatedAt: child.avatarUpdatedAt }} size={72} fallback={initials(child.fullName)} />
+            {child.groupName && <p className="text-[13px] text-[#8e8e93]">{tr(child.groupName)}</p>}
+            {flagText && <Pill color={IOS.red}>{flagText}</Pill>}
+          </div>
+
+          {canWrite ? (
+            <section>
+              <div className="grid grid-cols-2 gap-2.5" role="radiogroup" aria-label={tr("Holat")}>
+                {STATUS.map((s) => {
+                  const active = status === s.value;
+                  return (
+                    <button
+                      key={s.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      onClick={() => onStatus(s.value)}
+                      className="flex h-[56px] cursor-pointer items-center justify-center gap-2 rounded-[16px] text-[16px] font-semibold transition-[background-color,transform] active:scale-[0.97]"
+                      style={active ? { backgroundColor: s.color, color: "#fff" } : { backgroundColor: "#fff", color: s.color }}
+                    >
+                      <s.icon className="h-5 w-5" strokeWidth={2.4} />
+                      {tr(s.label)}
+                    </button>
+                  );
+                })}
+              </div>
+              {status !== "PRESENT" && (
+                <input
+                  type="text"
+                  value={note}
+                  onChange={(e) => onNote(e.target.value)}
+                  placeholder={tr("Izoh (ixtiyoriy)")}
+                  className="mt-2.5 h-12 w-full rounded-[14px] bg-white px-4 text-[16px] text-[var(--color-text)] outline-none placeholder:text-[#c4c4c6] focus:ring-2 focus:ring-[var(--color-primary)]/30"
+                />
+              )}
+            </section>
+          ) : (
+            <SheetSection>
+              <SheetRow label={tr("Holat")}>
+                {child.status ? <Pill color={STATUS_BY_VALUE[child.status].color}>{tr(STATUS_BY_VALUE[child.status].label)}</Pill> : tr("Belgilanmagan")}
+              </SheetRow>
+              {child.note && <SheetRow label={tr("Izoh")}>{tr(child.note)}</SheetRow>}
+            </SheetSection>
+          )}
+
+          {(child.checkInTime || child.parentReason) && (
+            <SheetSection>
+              {child.checkInTime && (
+                <SheetRow label={tr("Face ID")}>
+                  <span className="tabular-nums" style={{ color: IOS.green }}>
+                    {child.checkInTime}
+                    {child.checkOutTime ? ` – ${child.checkOutTime}` : ""}
+                  </span>
+                </SheetRow>
+              )}
+              {child.parentReason && <SheetRow label={tr("Ota-ona")}>{tr(child.parentReason)}</SheetRow>}
+            </SheetSection>
+          )}
+
+          {/* Ota-ona sabab yozmagan, saqlangan "Kelmadi" — filial administratoriga xabar */}
+          {savedAbsent && !child.parentReason && (
+            <SheetSection footer={tr("Ota-ona sabab yozmagan bo'lsa, «Aloqaga chiqish» filial administratoriga xabar yuboradi.")}>
+              {child.contactRequestedAt ? (
+                <SheetRow label={tr("Aloqa")}>
+                  <span style={{ color: IOS.orange }}>{tr("So'raldi")}</span>
+                </SheetRow>
+              ) : canWrite ? (
+                <button
+                  type="button"
+                  disabled={contact.pending}
+                  onClick={contact.onRequest}
+                  className="flex min-h-[48px] w-full cursor-pointer items-center gap-3 px-4 text-left text-[16px] text-[var(--color-primary)] active:bg-black/[0.04] disabled:opacity-50"
+                >
+                  <PhoneIcon className="h-5 w-5" strokeWidth={2} />
+                  {contact.pending ? tr("Yuborilmoqda…") : tr("Aloqaga chiqish")}
+                </button>
+              ) : (
+                <SheetRow label={tr("Aloqa")}>{tr("So'ralmagan")}</SheetRow>
+              )}
+            </SheetSection>
+          )}
+          {contact.error && <p className="px-4 text-[13px] text-[#ff3b30]">{tr("Yuborib bo'lmadi — qayta urinib ko'ring")}</p>}
+
+          {canWrite && (
+            <SheetSecondaryButton onClick={onWriteNote}>
+              <span className="inline-flex items-center gap-2">
+                <NoteIcon className="h-[18px] w-[18px]" strokeWidth={2} />
+                {tr("Xabar yoki eslatma yozish")}
+              </span>
+            </SheetSecondaryButton>
+          )}
+        </div>
+      )}
+    </IosSheet>
+  );
+}
+
+/** Yo'riqnomadagi kichik "tugma" — sahifadagi haqiqiy belgining o'zi, tanib olish oson bo'lsin */
+function GuideToken({ status }: { status: AttendanceStatus }) {
+  const meta = STATUS_BY_VALUE[status];
+  return (
+    <span
+      className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full align-middle"
+      style={status === "PRESENT" ? { backgroundColor: meta.color } : { backgroundColor: `${meta.color}1f`, boxShadow: `inset 0 0 0 2px ${meta.color}` }}
+      aria-hidden="true"
+    >
+      <meta.icon className="h-4 w-4" strokeWidth={2.8} style={{ color: status === "PRESENT" ? "#fff" : meta.color }} />
+    </span>
+  );
+}
+
+const GUIDE_STEPS: { title: string; text: string; token?: AttendanceStatus }[] = [
+  { title: "Hamma bola — «Keldi»", text: "Sahifa ochilganda hamma bola avtomatik keldi deb turadi.", token: "PRESENT" },
+  { title: "Kelmaganini belgilang", text: "Kelmagan bolaning o'ngidagi yashil belgini bir marta bosing — qizil «Kelmadi» bo'ladi. Yana bossangiz qaytadi.", token: "ABSENT" },
+  { title: "Kech qoldi yoki kasal bo'lsa", text: "Bolaning ismini bosing — oyna ochiladi. «Kech qoldi» yoki «Kasal»ni tanlang, xohlasangiz izoh yozing va «Tayyor»ni bosing.", token: "SICK" },
+  { title: "«Saqlash»ni bosing", text: "Pastdagi «Saqlash» tugmasini bosmaguningizcha davomat yozilmaydi. Ko'k nuqta — hali saqlanmagan o'zgarish." },
+  { title: "Ota-ona sabab yozmagan bo'lsa", text: "Kelmagan bolani bosib «Aloqaga chiqish»ni tanlang — administrator ota-onaga qo'ng'iroq qiladi." },
+];
+
+/**
+ * "Davomat qilish yo'riqnomasi" — tarbiyachi uchun sodda qadamlar va pastda
+ * YouTube'dagi tushuntirish videosi (yangi oynada ochiladi).
+ */
+function AttendanceGuideSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const tr = useTr();
+  const videoUrl = GUIDE_VIDEOS.attendance;
+  return (
+    <IosSheet
+      open={open}
+      onClose={onClose}
+      cancelLabel="Yopish"
+      title={tr("Yo'riqnoma")}
+      footer={
+        videoUrl ? (
+          <a
+            href={videoUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-full text-[16px] font-semibold text-white transition-transform active:scale-[0.96]"
+            style={{ backgroundColor: IOS.red }}
+          >
+            <CirclePlay className="h-5 w-5" strokeWidth={2.2} />
+            {tr("Tushuntirish videosi")}
+          </a>
+        ) : (
+          <span className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#767680]/[0.12] text-[15px] font-medium text-[#8e8e93]">
+            <CirclePlay className="h-5 w-5" strokeWidth={2} />
+            {tr("Video tez orada qo'shiladi")}
+          </span>
+        )
+      }
+    >
+      <div className="space-y-4">
+        <p className="px-1 text-[15px] leading-relaxed text-[var(--color-text)]">
+          {tr("Davomat har kuni ertalab, bolalar kelgach belgilanadi. Asosiysi — kelmaganlarni belgilang va «Saqlash»ni bosing.")}
+        </p>
+        <ol className="overflow-hidden rounded-[18px] bg-white">
+          {GUIDE_STEPS.map((step, i) => (
+            <li key={step.title} className="relative flex gap-3.5 px-4 py-3.5">
+              {i > 0 && <span className="absolute left-[56px] right-0 top-0 h-px bg-black/[0.08]" aria-hidden="true" />}
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)] text-[14px] font-bold text-white">{i + 1}</span>
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center justify-between gap-2">
+                  <span className="text-[16px] font-semibold leading-snug text-[var(--color-text)]">{tr(step.title)}</span>
+                  {step.token && <GuideToken status={step.token} />}
+                </span>
+                <span className="mt-1 block text-[14.5px] leading-relaxed text-[#6e6e73]">{tr(step.text)}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
+        <p className="px-1 text-[13px] leading-relaxed text-[#8e8e93]">
+          {tr("Maslahat: tepadagi raqamlarni bossangiz, faqat o'sha holatdagi bolalar qoladi. Face ID orqali kelgan bolada kelgan vaqti yashil yozuvda ko'rinadi.")}
+        </p>
+      </div>
+    </IosSheet>
   );
 }

@@ -10,7 +10,8 @@ import { useBranchContext } from "@/lib/use-branch-context";
 import { ChildPhoto } from "@/components/ui/child-photo";
 import { initials } from "@/components/ui/avatar";
 import { ChevronRightIcon, ChildIcon, CloseIcon, PhoneIcon, SearchIcon } from "@/components/ios/icons";
-import { EmptyRow, Group, LargeTitle, Segmented, SkeletonRows, TeacherPage } from "./teacher-ui";
+import { Paperclip } from "lucide-react";
+import { EmptyRow, Group, LargeTitle, Row, Segmented, SkeletonRows, TeacherPage } from "./teacher-ui";
 import styles from "./teacher.module.css";
 import { useTr } from "@/i18n/tr";
 
@@ -56,6 +57,11 @@ export function TeacherChildren({ slug }: { slug: string }) {
         title={tr("Bolalar")}
         subtitle={childrenQuery.isLoading ? " " : [tr("{0} ta bola", total), groupName].filter(Boolean).join(" · ")}
       />
+
+      {/* Guruh fayllari telefondagi pastki menyuda yo'q — ota-onalarga yuborish shu yerdan ham */}
+      <Group>
+        <Row first icon={Paperclip} title={tr("Vazifa jo'natish")} subtitle={tr("Vazifa, rasm, video yoki hujjat")} href={`/${slug}/materials`} />
+      </Group>
 
       <div className="space-y-3 px-0">
         {/* iOS qidiruv maydoni */}
