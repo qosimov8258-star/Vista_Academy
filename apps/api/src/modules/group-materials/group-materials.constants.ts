@@ -7,8 +7,20 @@ export const MATERIAL_LIMITS = {
   descriptionMaxLength: 1000,
 } as const;
 
-/** Ruxsat etilgan turlar: mimetype -> guruh (rasm, video, hujjat) */
+/** Ruxsat etilgan turlar: mimetype -> guruh (rasm, video, audio, hujjat) */
 export const MATERIAL_MIME_KINDS: Record<string, GroupMaterialKind> = {
+  // Audio: brauzerda yozilgan ovoz (Chrome/Android — webm/opus, iPhone — mp4/aac) va yuklangan fayllar
+  "audio/webm": GroupMaterialKind.AUDIO,
+  "audio/mp4": GroupMaterialKind.AUDIO,
+  "audio/x-m4a": GroupMaterialKind.AUDIO,
+  "audio/m4a": GroupMaterialKind.AUDIO,
+  "audio/aac": GroupMaterialKind.AUDIO,
+  "audio/mpeg": GroupMaterialKind.AUDIO,
+  "audio/mp3": GroupMaterialKind.AUDIO,
+  "audio/ogg": GroupMaterialKind.AUDIO,
+  "audio/opus": GroupMaterialKind.AUDIO,
+  "audio/wav": GroupMaterialKind.AUDIO,
+  "audio/x-wav": GroupMaterialKind.AUDIO,
   "image/jpeg": GroupMaterialKind.IMAGE,
   "image/png": GroupMaterialKind.IMAGE,
   "image/webp": GroupMaterialKind.IMAGE,
