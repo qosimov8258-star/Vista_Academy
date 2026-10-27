@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ComponentType } from "react";
 import clsx from "clsx";
-import { BookOpen, CirclePlay, FileSpreadsheet, Thermometer } from "lucide-react";
+import { FileSpreadsheet, Thermometer } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { AttendanceDay, AttendanceRangeSummary, AttendanceStatus, ChronicAbsenceFlag } from "@/lib/types";
@@ -22,6 +22,7 @@ import { ChildNoteModal } from "@/features/child-notes/child-note-modal";
 import { EmptyRow, FloatingBar, Group, LargeTitle, PrimaryButton, Row, SkeletonRows, TeacherPage, formatDayLong, formatDayShort, todayIso } from "./teacher-ui";
 import { TeacherReminders } from "./teacher-reminders";
 import { GUIDE_VIDEOS } from "./guides";
+import { GuideRow, GuideSheet } from "./guide-sheet";
 import styles from "./teacher.module.css";
 import { useTr } from "@/i18n/tr";
 
@@ -170,9 +171,7 @@ export function TeacherAttendance({ slug }: { slug: string }) {
 
       {date && today && <DayStepper value={date} onChange={setDate} today={today} max={today} />}
 
-      <Group>
-        <Row first icon={BookOpen} title={tr("Davomat qilish yo'riqnomasi")} subtitle={tr("Qanday belgilash — 1 daqiqada")} onClick={() => setGuideOpen(true)} />
-      </Group>
+      <GuideRow title="Davomat qilish yo'riqnomasi" subtitle="Qanday belgilash — 1 daqiqada" onOpen={() => setGuideOpen(true)} />
 
       {/* Jonli hisob — bosilsa ro'yxat shu holat bo'yicha suziladi */}
       {children.length > 0 && (
@@ -364,7 +363,14 @@ export function TeacherAttendance({ slug }: { slug: string }) {
         }}
       />
 
-      <AttendanceGuideSheet open={guideOpen} onClose={() => setGuideOpen(false)} />
+      <GuideSheet
+        open={guideOpen}
+        onClose={() => setGuideOpen(false)}
+        intro="Davomat har kuni ertalab, bolalar kelgach belgilanadi. Asosiysi — kelmaganlarni belgilang va «Saqlash»ni bosing."
+        steps={GUIDE_STEPS.map((step) => ({ ...step, token: step.token ? <GuideToken status={step.token} /> : undefined }))}
+        tip="Maslahat: tepadagi raqamlarni bossangiz, faqat o'sha holatdagi bolalar qoladi. Face ID orqali kelgan bolada kelgan vaqti yashil yozuvda ko'rinadi."
+        videoUrl={GUIDE_VIDEOS.attendance}
+      />
 
       {canWrite && noteChild && branchId && date && (
         <ChildNoteModal open onClose={() => setNoteChild(null)} slug={slug} branchId={branchId} childId={noteChild.id} childName={noteChild.name} date={date} />
@@ -552,63 +558,3 @@ const GUIDE_STEPS: { title: string; text: string; token?: AttendanceStatus }[] =
   { title: "«Saqlash»ni bosing", text: "Pastdagi «Saqlash» tugmasini bosmaguningizcha davomat yozilmaydi. Ko'k nuqta — hali saqlanmagan o'zgarish." },
   { title: "Ota-ona sabab yozmagan bo'lsa", text: "Kelmagan bolani bosib «Aloqaga chiqish»ni tanlang — administrator ota-onaga qo'ng'iroq qiladi." },
 ];
-
-/**
- * "Davomat qilish yo'riqnomasi" — tarbiyachi uchun sodda qadamlar va pastda
- * YouTube'dagi tushuntirish videosi (yangi oynada ochiladi).
- */
-function AttendanceGuideSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const tr = useTr();
-  const videoUrl = GUIDE_VIDEOS.attendance;
-  return (
-    <IosSheet
-      open={open}
-      onClose={onClose}
-      cancelLabel="Yopish"
-      title={tr("Yo'riqnoma")}
-      footer={
-        videoUrl ? (
-          <a
-            href={videoUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full text-[16px] font-semibold text-white transition-transform active:scale-[0.96]"
-            style={{ backgroundColor: IOS.red }}
-          >
-            <CirclePlay className="h-5 w-5" strokeWidth={2.2} />
-            {tr("Tushuntirish videosi")}
-          </a>
-        ) : (
-          <span className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#767680]/[0.12] text-[15px] font-medium text-[#8e8e93]">
-            <CirclePlay className="h-5 w-5" strokeWidth={2} />
-            {tr("Video tez orada qo'shiladi")}
-          </span>
-        )
-      }
-    >
-      <div className="space-y-4">
-        <p className="px-1 text-[15px] leading-relaxed text-[var(--color-text)]">
-          {tr("Davomat har kuni ertalab, bolalar kelgach belgilanadi. Asosiysi — kelmaganlarni belgilang va «Saqlash»ni bosing.")}
-        </p>
-        <ol className="overflow-hidden rounded-[18px] bg-white">
-          {GUIDE_STEPS.map((step, i) => (
-            <li key={step.title} className="relative flex gap-3.5 px-4 py-3.5">
-              {i > 0 && <span className="absolute left-[56px] right-0 top-0 h-px bg-black/[0.08]" aria-hidden="true" />}
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)] text-[14px] font-bold text-white">{i + 1}</span>
-              <span className="min-w-0 flex-1">
-                <span className="flex items-center justify-between gap-2">
-                  <span className="text-[16px] font-semibold leading-snug text-[var(--color-text)]">{tr(step.title)}</span>
-                  {step.token && <GuideToken status={step.token} />}
-                </span>
-                <span className="mt-1 block text-[14.5px] leading-relaxed text-[#6e6e73]">{tr(step.text)}</span>
-              </span>
-            </li>
-          ))}
-        </ol>
-        <p className="px-1 text-[13px] leading-relaxed text-[#8e8e93]">
-          {tr("Maslahat: tepadagi raqamlarni bossangiz, faqat o'sha holatdagi bolalar qoladi. Face ID orqali kelgan bolada kelgan vaqti yashil yozuvda ko'rinadi.")}
-        </p>
-      </div>
-    </IosSheet>
-  );
-}

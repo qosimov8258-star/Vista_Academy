@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Mic, Square } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import clsx from "clsx";
+import { Mic } from "lucide-react";
 import { useTr } from "@/i18n/tr";
 
 /** Bitta ovozli xabarning eng uzun vaqti — undan keyin yozish o'zi to'xtaydi */
@@ -28,7 +28,22 @@ const clock = (seconds: number) => `${String(Math.floor(seconds / 60)).padStart(
  * Yozib bo'lgach tayyor faylni `onRecorded` ga beradi (sahifa uni oddiy
  * yuklangan fayl kabi tinglatib, ota-onalarga yuboradi).
  */
-export function VoiceRecorder({ onRecorded, onError }: { onRecorded: (file: File) => void; onError: (message: string | null) => void }) {
+/** "Fayl tanlash" bilan bir xil katta plitka (Vazifa jo'natish sahifasida yonma-yon) */
+export const TILE =
+  "flex min-h-[104px] cursor-pointer flex-col items-center justify-center gap-2 rounded-[18px] bg-white px-3 py-4 transition-transform active:scale-[0.97]";
+
+export function VoiceRecorder({
+  onRecorded,
+  onError,
+  onRecordingChange,
+  className,
+}: {
+  onRecorded: (file: File) => void;
+  onError: (message: string | null) => void;
+  /** Yozish boshlandi/tugadi — sahifa shu payt "Fayl tanlash"ni yashiradi */
+  onRecordingChange?: (recording: boolean) => void;
+  className?: string;
+}) {
   const tr = useTr();
   const [recording, setRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
@@ -47,6 +62,7 @@ export function VoiceRecorder({ onRecorded, onError }: { onRecorded: (file: File
   };
   // Sahifadan chiqib ketilsa mikrofon yoniq qolib ketmasin
   useEffect(() => release, []);
+  useEffect(() => onRecordingChange?.(recording), [recording, onRecordingChange]);
 
   const start = async () => {
     onError(null);
@@ -101,27 +117,42 @@ export function VoiceRecorder({ onRecorded, onError }: { onRecorded: (file: File
 
   if (!recording) {
     return (
-      <Button variant="secondary" onClick={start}>
-        <Mic className="h-4 w-4" /> {tr("Ovoz yozish")}
-      </Button>
+      <button type="button" onClick={start} className={clsx(TILE, className)}>
+        <span className="flex h-11 w-11 items-center justify-center rounded-full" style={{ backgroundColor: "#ff3b301f", color: "#ff3b30" }}>
+          <Mic className="h-[22px] w-[22px]" strokeWidth={2.2} />
+        </span>
+        <span className="text-[15px] font-semibold text-[var(--color-text)]">{tr("Ovoz yozish")}</span>
+      </button>
     );
   }
   return (
-    <div className="flex w-full flex-wrap items-center gap-3 rounded-[var(--radius-lg)] bg-[#ff3b30]/[0.08] px-4 py-3" role="status" aria-live="polite">
-      <span className="relative flex h-3 w-3" aria-hidden="true">
-        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#ff3b30] opacity-60" />
-        <span className="relative inline-flex h-3 w-3 rounded-full bg-[#ff3b30]" />
+    <div className={clsx("col-span-2 flex flex-col items-center gap-4 rounded-[18px] bg-white px-4 py-5", className)} role="status" aria-live="polite">
+      <span className="flex items-center gap-2.5">
+        <span className="relative flex h-3 w-3" aria-hidden="true">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#ff3b30] opacity-60" />
+          <span className="relative inline-flex h-3 w-3 rounded-full bg-[#ff3b30]" />
+        </span>
+        <span className="text-[15px] font-medium text-[#d70015]">{tr("Yozilmoqda")}</span>
       </span>
-      <span className="text-[15px] font-semibold tabular-nums text-[#d70015]">
-        {tr("Yozilmoqda")} {clock(seconds)}
-      </span>
-      <span className="ml-auto flex gap-2">
-        <Button variant="secondary" size="sm" onClick={() => stop(true)}>
+      <span className="text-[40px] font-light leading-none tabular-nums tracking-tight text-[var(--color-text)]">{clock(seconds)}</span>
+      <span className="flex w-full items-center justify-center gap-8">
+        <button
+          type="button"
+          onClick={() => stop(true)}
+          className="h-11 cursor-pointer rounded-full bg-[#767680]/[0.12] px-5 text-[15px] font-medium text-[var(--color-text)] active:opacity-60"
+        >
           {tr("Bekor qilish")}
-        </Button>
-        <Button size="sm" onClick={() => stop(false)}>
-          <Square className="h-3.5 w-3.5" fill="currentColor" /> {tr("To'xtatish")}
-        </Button>
+        </button>
+        {/* iOS diktofonidagidek: qizil doira ichida kvadrat — to'xtatish */}
+        <button
+          type="button"
+          onClick={() => stop(false)}
+          aria-label={tr("To'xtatish")}
+          className="flex h-16 w-16 cursor-pointer items-center justify-center rounded-full border-[3px] border-[#c7c7cc] transition-transform active:scale-95"
+        >
+          <span className="h-7 w-7 rounded-[6px] bg-[#ff3b30]" />
+        </button>
+        <span className="w-[86px]" aria-hidden="true" />
       </span>
     </div>
   );

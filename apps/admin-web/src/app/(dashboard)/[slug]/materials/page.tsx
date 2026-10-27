@@ -1,23 +1,21 @@
 "use client";
 
-import { use, useEffect, useRef, useState } from "react";
+import { use, useEffect, useRef, useState, type ComponentType } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { FileText, Film, ImageIcon, Mic, Paperclip } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
-import { openFile } from "@/lib/download";
-import type { Group } from "@/lib/types";
+import { fetchFileUrl, openFile } from "@/lib/download";
+import type { Group as GroupModel } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { useBranchContext } from "@/lib/use-branch-context";
-import { canWriteTeaching } from "@/lib/permissions";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input, Select, Textarea } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
-import { ViewOnlyNote } from "@/components/ui/view-only-note";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { DocumentIcon, PlusIcon, TrashIcon } from "@/components/ui/icons";
-import { formatDate } from "@/lib/format";
-import { VoiceRecorder } from "@/features/group-materials/voice-recorder";
+import { canWriteTeaching, isTeacher } from "@/lib/permissions";
+import { CheckIcon, type IconProps } from "@/components/ios/icons";
+import { IOS, SECTION_TITLE } from "@/components/ios/tokens";
+import { IosSheet, SheetPrimaryButton, SheetRow, SheetSecondaryButton, SheetSection } from "@/components/ios/sheet";
+import { EmptyRow, Group, LargeTitle, PrimaryButton, Row, SkeletonRows, TeacherPage, formatDayShort } from "@/features/teacher/teacher-ui";
+import { GuideRow, GuideSheet } from "@/features/teacher/guide-sheet";
+import { GUIDE_VIDEOS } from "@/features/teacher/guides";
+import { TILE, VoiceRecorder } from "@/features/group-materials/voice-recorder";
 import { useTr } from "@/i18n/tr";
 
 interface Material {
@@ -33,57 +31,78 @@ interface Material {
 
 const MAX_BYTES = 20 * 1024 * 1024;
 const ACCEPT = "image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime,audio/*,.mp3,.m4a,.ogg,.opus,.wav,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt";
-const KIND_LABEL: Record<Material["kind"], string> = { IMAGE: "Rasm", VIDEO: "Video", AUDIO: "Audio", DOCUMENT: "Hujjat" };
+
+const KIND: Record<Material["kind"], { label: string; color: string; icon: ComponentType<IconProps> }> = {
+  IMAGE: { label: "Rasm", color: IOS.blue, icon: ImageIcon },
+  VIDEO: { label: "Video", color: "#af52de", icon: Film },
+  AUDIO: { label: "Audio", color: IOS.orange, icon: Mic },
+  DOCUMENT: { label: "Hujjat", color: IOS.gray, icon: FileText },
+};
 
 function sizeLabel(bytes: number): string {
   return bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
+/** Ro'yxatdagi tur plitkasi — iOS uslubida tekis rang + oq belgi */
+function KindTile({ kind, size = 36 }: { kind: Material["kind"]; size?: number }) {
+  const meta = KIND[kind];
+  return (
+    <span className="flex shrink-0 items-center justify-center rounded-[10px]" style={{ width: size, height: size, backgroundColor: meta.color }} aria-hidden="true">
+      <meta.icon className="text-white" style={{ width: size / 2, height: size / 2 }} strokeWidth={2.2} />
+    </span>
+  );
+}
+
 /**
- * Guruh materiallari: tarbiyachi/o'qituvchi guruhga rasm, video yoki hujjat
- * yuklaydi — shu guruhdagi bolalarning ota-onalari kabinetdagi "Fayllar"
- * bo'limida ko'radi. O'qituvchi faqat o'z guruhlariga yuklay oladi (serverda ham).
+ * Vazifa jo'natish (guruh fayllari): tarbiyachi/o'qituvchi guruhga rasm,
+ * video, ovozli vazifa yoki hujjat yuboradi — shu guruh bolalarining
+ * ota-onalari kabinetdagi "Fayllar" bo'limida ko'radi. O'qituvchi faqat o'z
+ * guruhlariga yuklay oladi (serverda ham). iOS uslubida, telefon uchun.
  */
 export default function MaterialsPage({ params }: { params: Promise<{ slug: string }> }) {
   const tr = useTr();
   const { slug } = use(params);
   const { user } = useAuth();
   const canWrite = canWriteTeaching(user?.role);
+  const teacher = isTeacher(user?.role);
   const { branchId: forcedBranchId } = useBranchContext(slug);
   const queryClient = useQueryClient();
   const fileInput = useRef<HTMLInputElement>(null);
 
   const [groupId, setGroupId] = useState("");
+  const [groupPickerOpen, setGroupPickerOpen] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [recording, setRecording] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState<Material | null>(null);
-  const [openError, setOpenError] = useState<string | null>(null);
-  // Yozilgan (yoki tanlangan) ovozni yuborishdan oldin tinglab ko'rish
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const audioFile = files.length === 1 && files[0].type.startsWith("audio/") ? files[0] : null;
-  useEffect(() => {
-    if (!audioFile) return setPreviewUrl(null);
-    const url = URL.createObjectURL(audioFile);
-    setPreviewUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [audioFile]);
+  const [opened, setOpened] = useState<Material | null>(null);
 
   const groupsQuery = useQuery({
     queryKey: ["groups", slug, forcedBranchId],
-    queryFn: () => api.get<Group[]>(`/app/groups${forcedBranchId ? `?branchId=${forcedBranchId}` : ""}`),
+    queryFn: () => api.get<GroupModel[]>(`/app/groups${forcedBranchId ? `?branchId=${forcedBranchId}` : ""}`),
   });
   const groups = groupsQuery.data ?? [];
   useEffect(() => {
     if (!groupId && groups.length > 0) setGroupId(groups[0].id);
   }, [groupId, groups]);
+  const currentGroup = groups.find((g) => g.id === groupId);
 
   const listQuery = useQuery({
     queryKey: ["group-materials", slug, groupId],
     queryFn: () => api.get<Material[]>(`/app/group-materials/groups/${groupId}`),
     enabled: !!groupId,
   });
+  const items = listQuery.data ?? [];
+
+  const resetDraft = () => {
+    setFiles([]);
+    setTitle("");
+    setDescription("");
+    setFormError(null);
+    if (fileInput.current) fileInput.current.value = "";
+  };
 
   const uploadMutation = useMutation({
     mutationFn: async () => {
@@ -94,24 +113,10 @@ export default function MaterialsPage({ params }: { params: Promise<{ slug: stri
         });
       }
     },
-    onSuccess: () => {
-      setFiles([]);
-      setTitle("");
-      setDescription("");
-      setFormError(null);
-      if (fileInput.current) fileInput.current.value = "";
-    },
+    onSuccess: resetDraft,
     onError: (error) => setFormError(error instanceof ApiError ? error.message : tr("Yuklashda xatolik yuz berdi")),
     // Qisman yuklangan bo'lsa ham ro'yxat yangilansin
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["group-materials", slug, groupId] }),
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => api.delete(`/app/group-materials/${id}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["group-materials", slug, groupId] });
-      setDeleting(null);
-    },
   });
 
   function pickFiles(list: FileList | File[] | null) {
@@ -125,136 +130,327 @@ export default function MaterialsPage({ params }: { params: Promise<{ slug: stri
     setFiles(picked);
   }
 
-  const items = listQuery.data ?? [];
+  // Yuborishdan oldin ko'rish: ovozni tinglash yoki rasmni ko'rish (bitta fayl bo'lsa)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const single = files.length === 1 ? files[0] : null;
+  const previewKind = single?.type.startsWith("audio/") ? "audio" : single?.type.startsWith("image/") ? "image" : null;
+  useEffect(() => {
+    if (!single || !previewKind) return setPreviewUrl(null);
+    const url = URL.createObjectURL(single);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [single, previewKind]);
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-[24px] font-bold tracking-[var(--tracking-headline)] text-[var(--color-text)]">{tr("Guruh fayllari")}</h1>
-        <p className="mt-1 text-[15px] text-[var(--color-text-muted)]">
-          {tr("Yuklangan rasm, video, ovoz va hujjatlarni shu guruh bolalarining ota-onalari kabinetda ko'radi")}
-        </p>
-      </div>
+    <TeacherPage className="pb-4">
+      <LargeTitle
+        title={tr(teacher ? "Vazifa jo'natish" : "Guruh fayllari")}
+        subtitle={tr("Rasm, video, ovoz va hujjatlarni guruh bolalarining ota-onalari kabinetda ko'radi")}
+      />
 
-      {!canWrite && <ViewOnlyNote />}
+      <GuideRow title="Vazifa jo'natish yo'riqnomasi" subtitle="Qanday yuborish — 1 daqiqada" onOpen={() => setGuideOpen(true)} />
 
-      <Select label="Guruh" value={groupId} onChange={(e) => setGroupId(e.target.value)}>
-        {groups.map((group) => (
-          <option key={group.id} value={group.id}>
-            {group.name}
-          </option>
-        ))}
-      </Select>
+      {/* Guruh — bitta bo'lsa shunchaki ko'rinadi, ko'p bo'lsa pastdan ro'yxat ochiladi */}
+      <Group footer={!canWrite ? tr("Siz faqat ko'rasiz — yuborish tarbiyachi va administratorniki.") : undefined}>
+        {groupsQuery.isLoading ? (
+          <SkeletonRows rows={1} />
+        ) : groups.length === 0 ? (
+          <EmptyRow title={tr("Guruh yo'q")} description={tr("Sizga biriktirilgan guruh topilmadi")} />
+        ) : (
+          <Row
+            first
+            title={tr("Guruh")}
+            value={currentGroup ? tr(currentGroup.name) : "—"}
+            onClick={groups.length > 1 ? () => setGroupPickerOpen(true) : undefined}
+          />
+        )}
+      </Group>
 
       {canWrite && groupId && (
-        <Card className="space-y-4 p-5">
+        <section>
+          <h2 className={SECTION_TITLE}>{tr("Yangi vazifa")}</h2>
           <input ref={fileInput} type="file" multiple accept={ACCEPT} className="hidden" onChange={(e) => pickFiles(e.target.files)} />
-          <div className="flex flex-wrap items-center gap-3">
-            <Button variant="secondary" onClick={() => fileInput.current?.click()}>
-              <PlusIcon className="h-4 w-4" /> {tr("Fayl tanlash")}
-            </Button>
-            <VoiceRecorder
-              onRecorded={(file) => {
-                if (fileInput.current) fileInput.current.value = "";
-                pickFiles([file]);
-              }}
-              onError={setFormError}
-            />
-            <span className="text-[14px] text-[var(--color-text-muted)]">
-              {files.length === 0
-                ? tr("Rasm, video, audio, PDF, Word, Excel — 20 MB gacha")
-                : files.length === 1
-                  ? files[0].name
-                  : tr("{0} ta fayl tanlandi", String(files.length))}
-            </span>
-          </div>
-          {files.length > 0 && (
-            <>
-              {previewUrl && (
-                <div className="space-y-2">
-                  <audio src={previewUrl} controls preload="metadata" className="w-full" />
-                  <button
-                    type="button"
-                    onClick={() => pickFiles([])}
-                    className="cursor-pointer text-[14px] font-medium text-[var(--color-danger)] active:opacity-60"
-                  >
-                    {tr("O'chirib, qayta yozish")}
-                  </button>
-                </div>
+
+          {files.length === 0 ? (
+            <div className="grid grid-cols-2 gap-3">
+              {!recording && (
+                <button type="button" onClick={() => fileInput.current?.click()} className={TILE}>
+                  <span className="flex h-11 w-11 items-center justify-center rounded-full" style={{ backgroundColor: `${IOS.blue}1f`, color: IOS.blue }}>
+                    <Paperclip className="h-[22px] w-[22px]" strokeWidth={2.2} />
+                  </span>
+                  <span className="text-[15px] font-semibold text-[var(--color-text)]">{tr("Fayl tanlash")}</span>
+                </button>
               )}
-              {files.length === 1 && (
-                <Input label="Sarlavha" value={title} maxLength={120} placeholder={tr("Bo'sh qoldirsangiz fayl nomi olinadi")} onChange={(e) => setTitle(e.target.value)} />
-              )}
-              <Textarea label="Izoh (ixtiyoriy)" value={description} maxLength={1000} onChange={(e) => setDescription(e.target.value)} />
-              {formError && (
-                <div role="alert" className="rounded-[var(--radius-md)] bg-[var(--color-danger-bg)] px-3.5 py-2.5 text-[14px] text-[var(--color-danger)]">
-                  {formError}
-                </div>
-              )}
-              <Button loading={uploadMutation.isPending} onClick={() => uploadMutation.mutate()}>
+              <VoiceRecorder
+                onRecorded={(file) => {
+                  if (fileInput.current) fileInput.current.value = "";
+                  pickFiles([file]);
+                }}
+                onError={setFormError}
+                onRecordingChange={setRecording}
+              />
+              {!recording && <p className="col-span-2 px-1 text-[13px] text-[#8e8e93]">{tr("Rasm, video, audio, PDF, Word, Excel — 20 MB gacha")}</p>}
+              {formError && <p className="col-span-2 px-1 text-[13px] text-[#ff3b30]">{formError}</p>}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="overflow-hidden rounded-[18px] bg-white">
+                {previewUrl && previewKind === "image" && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={previewUrl} alt="" className="max-h-[260px] w-full object-cover" />
+                )}
+                {previewUrl && previewKind === "audio" && (
+                  <div className="px-4 pt-4">
+                    <audio src={previewUrl} controls preload="metadata" className="w-full" />
+                  </div>
+                )}
+                {files.map((file, i) => (
+                  <div key={`${file.name}-${i}`} className="relative flex min-h-[52px] items-center gap-3 px-4 py-2.5">
+                    {i > 0 && <span className="absolute left-[64px] right-0 top-0 h-px bg-black/[0.08]" aria-hidden="true" />}
+                    <KindTile
+                      kind={file.type.startsWith("audio/") ? "AUDIO" : file.type.startsWith("image/") ? "IMAGE" : file.type.startsWith("video/") ? "VIDEO" : "DOCUMENT"}
+                      size={32}
+                    />
+                    <span className="min-w-0 flex-1 truncate text-[15px] text-[var(--color-text)]">{file.name}</span>
+                    <span className="shrink-0 text-[13px] tabular-nums text-[#8e8e93]">{sizeLabel(file.size)}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="overflow-hidden rounded-[18px] bg-white">
+                {files.length === 1 && (
+                  <input
+                    value={title}
+                    maxLength={120}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder={tr("Sarlavha — masalan: «She'r yodlash, dushanbagacha»")}
+                    className="h-[52px] w-full border-b border-black/[0.08] bg-transparent px-4 text-[16px] text-[var(--color-text)] outline-none placeholder:text-[#c4c4c6]"
+                  />
+                )}
+                <textarea
+                  value={description}
+                  maxLength={1000}
+                  rows={3}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder={tr("Izoh (ixtiyoriy)")}
+                  className="block w-full resize-none bg-transparent px-4 py-3 text-[16px] leading-snug text-[var(--color-text)] outline-none placeholder:text-[#c4c4c6]"
+                />
+              </div>
+              {files.length > 1 && <p className="px-1 text-[13px] text-[#8e8e93]">{tr("Bir nechta fayl — har biri o'z nomi bilan yuboriladi")}</p>}
+              {formError && <p className="px-1 text-[13px] text-[#ff3b30]">{formError}</p>}
+
+              <PrimaryButton loading={uploadMutation.isPending} onClick={() => uploadMutation.mutate()}>
                 {tr("Ota-onalarga yuborish")}
-              </Button>
-            </>
+              </PrimaryButton>
+              <button
+                type="button"
+                disabled={uploadMutation.isPending}
+                onClick={resetDraft}
+                className="block w-full cursor-pointer py-2 text-center text-[15px] font-medium text-[#ff3b30] active:opacity-60 disabled:opacity-40"
+              >
+                {tr(previewKind === "audio" ? "O'chirib, qayta yozish" : "Bekor qilish")}
+              </button>
+            </div>
           )}
-          {files.length === 0 && formError && <p className="text-[14px] text-[var(--color-danger)]">{formError}</p>}
-        </Card>
+        </section>
       )}
 
-      {openError && <ErrorState message={openError} />}
+      {groupId && (
+        <Group title={tr("Yuborilganlar")} action={items.length > 0 ? <span className="text-[13px] tabular-nums text-[#8e8e93]">{items.length}</span> : undefined}>
+          {listQuery.isLoading ? (
+            <SkeletonRows rows={3} />
+          ) : listQuery.isError ? (
+            <EmptyRow title={tr("Yuklab bo'lmadi")} description={listQuery.error instanceof ApiError ? listQuery.error.message : undefined} />
+          ) : items.length === 0 ? (
+            <EmptyRow icon={FileText} title={tr("Hali vazifa yuborilmagan")} description={canWrite ? tr("Yuqoridan fayl tanlang yoki ovoz yozing") : undefined} />
+          ) : (
+            items.map((item, i) => (
+              <Row
+                key={item.id}
+                first={i === 0}
+                leading={<KindTile kind={item.kind} />}
+                title={item.title}
+                subtitle={`${tr(KIND[item.kind].label)} · ${item.createdByName} · ${formatDayShort(item.createdAt.slice(0, 10))} · ${sizeLabel(item.sizeBytes)}`}
+                onClick={() => setOpened(item)}
+              />
+            ))
+          )}
+        </Group>
+      )}
 
-      {groupsQuery.isLoading || listQuery.isLoading ? (
-        <LoadingState />
-      ) : listQuery.isError ? (
-        <ErrorState message={listQuery.error instanceof ApiError ? listQuery.error.message : tr("Yuklab bo'lmadi")} />
-      ) : groups.length === 0 ? (
-        <EmptyState title="Guruh yo'q" description="Sizga biriktirilgan guruh topilmadi" />
-      ) : items.length === 0 ? (
-        <EmptyState title="Hali fayl yuklanmagan" icon={<DocumentIcon className="h-[26px] w-[26px]" />} />
-      ) : (
-        <div className="space-y-3">
-          {items.map((item) => (
-            <Card key={item.id} className="flex items-start gap-4 p-4">
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="break-words text-[16px] font-semibold text-[var(--color-text)]">{item.title}</p>
-                  <Badge>{tr(KIND_LABEL[item.kind])}</Badge>
-                </div>
-                {item.description && <p className="mt-1 whitespace-pre-line text-[14px] text-[var(--color-text-muted)]">{item.description}</p>}
-                <p className="mt-1 text-[13px] text-[var(--color-text-muted)]">
-                  {item.createdByName} · {formatDate(item.createdAt)} · {sizeLabel(item.sizeBytes)}
-                </p>
-              </div>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  setOpenError(null);
-                  openFile(`/app/group-materials/${item.id}/file`).catch((e) => setOpenError(e instanceof Error ? e.message : tr("Faylni ochib bo'lmadi")));
-                }}
-              >
-                {tr("Ochish")}
-              </Button>
-              {canWrite && (
-                <Button variant="dangerSoft" size="sm" isIconOnly aria-label={tr("O'chirish")} onClick={() => setDeleting(item)}>
-                  <TrashIcon className="h-4 w-4" />
-                </Button>
-              )}
-            </Card>
+      <GuideSheet
+        open={guideOpen}
+        onClose={() => setGuideOpen(false)}
+        intro="Vazifa, rasm, video yoki ovozli xabarni guruhdagi barcha ota-onalarga bir bosishda yuboring."
+        steps={[
+          { title: "Guruhni tekshiring", text: "Bir nechta guruhingiz bo'lsa, «Guruh» qatorini bosib kerakli guruhni tanlang." },
+          { title: "Fayl tanlang yoki ovoz yozing", text: "«Fayl tanlash» — rasm, video yoki hujjat. «Ovoz yozish» — vazifani o'zingiz ovoz bilan aytib bering.", token: <KindTile kind="AUDIO" size={28} /> },
+          { title: "Ovoz yozish", text: "Gapirib bo'lgach qizil kvadrat tugmani bosing. Yuborishdan oldin tinglab ko'rasiz; yoqmasa — «O'chirib, qayta yozish»." },
+          { title: "Sarlavha va izoh", text: "Masalan: «She'r yodlash — dushanbagacha». Kerak bo'lsa izohga qo'shimcha tushuntirish yozing." },
+          { title: "«Ota-onalarga yuborish»", text: "Vazifa shu guruh bolalarining ota-onalari kabinetidagi «Fayllar» bo'limida darhol paydo bo'ladi." },
+        ]}
+        tip="Maslahat: yuborilgan vazifani bossangiz — ochib ko'rish yoki o'chirish mumkin. O'chirilsa, ota-onalar kabinetidan ham o'chadi."
+        videoUrl={GUIDE_VIDEOS.materials}
+      />
+
+      {/* Guruh tanlash */}
+      <IosSheet open={groupPickerOpen} onClose={() => setGroupPickerOpen(false)} cancelLabel="Yopish" title={tr("Guruh")}>
+        <div className="overflow-hidden rounded-[18px] bg-white">
+          {groups.map((group, i) => (
+            <button
+              key={group.id}
+              type="button"
+              onClick={() => {
+                setGroupId(group.id);
+                resetDraft();
+                setGroupPickerOpen(false);
+              }}
+              className="relative flex min-h-[52px] w-full cursor-pointer items-center justify-between px-4 text-left text-[16px] text-[var(--color-text)] active:bg-black/[0.04]"
+            >
+              {i > 0 && <span className="absolute left-4 right-0 top-0 h-px bg-black/[0.08]" aria-hidden="true" />}
+              {tr(group.name)}
+              {group.id === groupId && <CheckIcon className="h-5 w-5 text-[var(--color-primary)]" strokeWidth={2.5} />}
+            </button>
           ))}
         </div>
-      )}
+      </IosSheet>
 
-      <ConfirmDialog
-        open={!!deleting}
-        onClose={() => setDeleting(null)}
-        title="Faylni o'chirish"
-        description={tr("«{0}» ota-onalar kabinetidan ham o'chadi.", deleting?.title ?? "")}
-        confirmLabel="O'chirish"
-        tone="danger"
-        loading={deleteMutation.isPending}
-        error={deleteMutation.error instanceof ApiError ? deleteMutation.error.message : null}
-        onConfirm={() => deleting && deleteMutation.mutate(deleting.id)}
+      <MaterialSheet
+        material={opened}
+        canWrite={canWrite}
+        onClose={() => setOpened(null)}
+        onDeleted={() => {
+          setOpened(null);
+          queryClient.invalidateQueries({ queryKey: ["group-materials", slug, groupId] });
+        }}
       />
-    </div>
+    </TeacherPage>
+  );
+}
+
+/**
+ * Yuborilgan vazifa varag'i: ovozni shu yerning o'zida tinglash, rasm/videoni
+ * ko'rish, hujjatni ochish; tarbiyachida — ikki bosqichli o'chirish.
+ */
+function MaterialSheet({ material, canWrite, onClose, onDeleted }: { material: Material | null; canWrite: boolean; onClose: () => void; onDeleted: () => void }) {
+  const tr = useTr();
+  const [mediaUrl, setMediaUrl] = useState<string | null>(null);
+  const [mediaError, setMediaError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
+  const [openError, setOpenError] = useState<string | null>(null);
+  const filePath = material ? `/app/group-materials/${material.id}/file` : "";
+  const inline = !!material && material.kind !== "DOCUMENT";
+
+  // Media himoyalangan — token bilan yuklab, shu yerda ko'rsatamiz
+  useEffect(() => {
+    setConfirming(false);
+    setOpenError(null);
+    setMediaError(null);
+    setMediaUrl(null);
+    if (!inline) return;
+    let url: string | null = null;
+    let cancelled = false;
+    fetchFileUrl(filePath)
+      .then((u) => {
+        if (cancelled) return URL.revokeObjectURL(u);
+        url = u;
+        setMediaUrl(u);
+      })
+      .catch(() => !cancelled && setMediaError(tr("Faylni ochib bo'lmadi")));
+    return () => {
+      cancelled = true;
+      if (url) URL.revokeObjectURL(url);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [material?.id]);
+
+  const deleteMutation = useMutation({
+    mutationFn: () => api.delete(`/app/group-materials/${material!.id}`),
+    onSuccess: onDeleted,
+  });
+
+  return (
+    <IosSheet
+      open={!!material}
+      onClose={() => !deleteMutation.isPending && onClose()}
+      cancelLabel="Yopish"
+      title={material ? material.title : ""}
+      footer={
+        material &&
+        (confirming ? (
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <SheetSecondaryButton onClick={() => setConfirming(false)}>{tr("Qoldirish")}</SheetSecondaryButton>
+            </div>
+            <div className="flex-1">
+              <SheetSecondaryButton danger onClick={() => !deleteMutation.isPending && deleteMutation.mutate()}>
+                {tr(deleteMutation.isPending ? "O'chirilmoqda…" : "O'chirish")}
+              </SheetSecondaryButton>
+            </div>
+          </div>
+        ) : material.kind === "DOCUMENT" ? (
+          <SheetPrimaryButton
+            onClick={() => {
+              setOpenError(null);
+              openFile(filePath).catch((e) => setOpenError(e instanceof Error ? e.message : tr("Faylni ochib bo'lmadi")));
+            }}
+          >
+            {tr("Ochish")}
+          </SheetPrimaryButton>
+        ) : undefined)
+      }
+    >
+      {material && (
+        <div className="space-y-5">
+          {inline && (
+            <div className="overflow-hidden rounded-[18px] bg-white">
+              {mediaError ? (
+                <p className="px-4 py-6 text-center text-[14px] text-[#ff3b30]">{mediaError}</p>
+              ) : !mediaUrl ? (
+                <div className="h-24 animate-pulse bg-black/[0.04]" />
+              ) : material.kind === "AUDIO" ? (
+                <div className="flex items-center gap-3 p-4">
+                  <KindTile kind="AUDIO" size={44} />
+                  <audio src={mediaUrl} controls preload="metadata" className="min-w-0 flex-1" />
+                </div>
+              ) : material.kind === "IMAGE" ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={mediaUrl} alt={material.title} className="max-h-[360px] w-full object-contain" />
+              ) : (
+                <video src={mediaUrl} controls playsInline preload="metadata" className="max-h-[360px] w-full bg-black" />
+              )}
+            </div>
+          )}
+
+          {material.description && <p className="whitespace-pre-line px-1 text-[15px] leading-relaxed text-[var(--color-text)]">{material.description}</p>}
+
+          <SheetSection>
+            <SheetRow label={tr("Turi")}>
+              <span style={{ color: KIND[material.kind].color }}>{tr(KIND[material.kind].label)}</span>
+            </SheetRow>
+            <SheetRow label={tr("Yubordi")}>{material.createdByName}</SheetRow>
+            <SheetRow label={tr("Sana")}>{formatDayShort(material.createdAt.slice(0, 10))}</SheetRow>
+            <SheetRow label={tr("Hajmi")}>{sizeLabel(material.sizeBytes)}</SheetRow>
+          </SheetSection>
+
+          {openError && <p className="px-4 text-[13px] text-[#ff3b30]">{openError}</p>}
+
+          {confirming ? (
+            <p className="rounded-[14px] bg-[#ff3b30]/[0.08] px-4 py-3 text-[14px] leading-snug text-[#d70015]">
+              {tr("«{0}» ota-onalar kabinetidan ham o'chadi. Buni qaytarib bo'lmaydi.", material.title)}
+            </p>
+          ) : (
+            canWrite && (
+              <SheetSecondaryButton danger onClick={() => setConfirming(true)}>
+                {tr("Vazifani o'chirish")}
+              </SheetSecondaryButton>
+            )
+          )}
+          {deleteMutation.isError && (
+            <p className="px-4 text-[13px] text-[#ff3b30]">{deleteMutation.error instanceof ApiError ? deleteMutation.error.message : tr("O'chirib bo'lmadi")}</p>
+          )}
+        </div>
+      )}
+    </IosSheet>
   );
 }
