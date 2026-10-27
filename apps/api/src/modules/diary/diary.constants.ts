@@ -12,7 +12,8 @@ export const DIARY_LIMITS = {
   /** Bir guruhga bir kunda */
   photosPerDay: 10,
   videosPerDay: 2,
-  routineMaxItems: 30,
+  /** Har kuni boshqa dars bo'lsa bandlar ko'payadi (Vista: guruhda 35–41 ta) */
+  routineMaxItems: 60,
   titleMaxLength: 80,
   noteMaxLength: 500,
   captionMaxLength: 280,
