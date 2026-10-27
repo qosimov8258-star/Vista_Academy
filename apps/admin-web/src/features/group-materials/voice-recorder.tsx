@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Mic, Square } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import clsx from "clsx";
+import { Mic } from "lucide-react";
 import { useTr } from "@/i18n/tr";
 
 /** Bitta ovozli xabarning eng uzun vaqti — undan keyin yozish o'zi to'xtaydi */
@@ -21,6 +21,11 @@ function pickMimeType(): string {
   return "";
 }
 
+/** Ovoz to'lqini: ustun eni va oralig'i (px), yangi ustun qo'shilish tezligi (ms) */
+const BAR_WIDTH = 3;
+const BAR_STEP = 6;
+const BAR_INTERVAL = 70;
+
 const clock = (seconds: number) => `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 
 /**
@@ -28,7 +33,29 @@ const clock = (seconds: number) => `${String(Math.floor(seconds / 60)).padStart(
  * Yozib bo'lgach tayyor faylni `onRecorded` ga beradi (sahifa uni oddiy
  * yuklangan fayl kabi tinglatib, ota-onalarga yuboradi).
  */
-export function VoiceRecorder({ onRecorded, onError }: { onRecorded: (file: File) => void; onError: (message: string | null) => void }) {
+/** "Fayl tanlash" bilan bir xil katta plitka (Vazifa jo'natish sahifasida yonma-yon) */
+export const TILE =
+  "flex min-h-[104px] cursor-pointer flex-col items-center justify-center gap-2 rounded-[18px] bg-white px-3 py-4 transition-transform active:scale-[0.97]";
+
+/** Qoralama ostidagi "Yana fayl" / "Yana ovoz" — past, keng tugma */
+export const ADD_BUTTON =
+  "flex h-12 cursor-pointer items-center justify-center gap-2 rounded-[14px] bg-white px-3 text-[15px] font-semibold text-[var(--color-text)] transition-transform active:scale-[0.97]";
+
+export function VoiceRecorder({
+  onRecorded,
+  onError,
+  onRecordingChange,
+  compact,
+  className,
+}: {
+  onRecorded: (file: File) => void;
+  onError: (message: string | null) => void;
+  /** Yozish boshlandi/tugadi — sahifa shu payt "Fayl tanlash"ni yashiradi */
+  onRecordingChange?: (recording: boolean) => void;
+  /** Qoralamaga yana ovoz qo'shish — katta plitka o'rniga past tugma */
+  compact?: boolean;
+  className?: string;
+}) {
   const tr = useTr();
   const [recording, setRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
@@ -37,6 +64,11 @@ export function VoiceRecorder({ onRecorded, onError }: { onRecorded: (file: File
   const chunksRef = useRef<Blob[]>([]);
   const cancelledRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Jonli ovoz to'lqini: mikrofon -> AnalyserNode -> canvas'dagi suriluvchi ustunlar
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const levelsRef = useRef<number[]>([]);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const release = () => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -44,9 +76,74 @@ export function VoiceRecorder({ onRecorded, onError }: { onRecorded: (file: File
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
     recorderRef.current = null;
+    analyserRef.current = null;
+    audioCtxRef.current?.close().catch(() => undefined);
+    audioCtxRef.current = null;
   };
   // Sahifadan chiqib ketilsa mikrofon yoniq qolib ketmasin
   useEffect(() => release, []);
+  useEffect(() => onRecordingChange?.(recording), [recording, onRecordingChange]);
+
+  // Yozish paytida to'lqinni chizish: har ~70ms da ovoz balandligidan bitta ustun,
+  // yangisi o'ngda, eskilari chapga surilib xiralashadi (iPhone diktofonidagidek)
+  useEffect(() => {
+    if (!recording) return;
+    let smooth = 0;
+    const samples = new Uint8Array(2048);
+    // Taymer (rAF emas) — ustunlar bir tekis qo'shilsin, sahifa fonda bo'lsa ham
+    const draw = () => {
+      const canvas = canvasRef.current;
+      const ctx = canvas?.getContext("2d");
+      if (!canvas || !ctx) return;
+      const analyser = analyserRef.current;
+      if (analyser) {
+        analyser.getByteTimeDomainData(samples);
+        let sum = 0;
+        for (let i = 0; i < analyser.fftSize; i++) {
+          const v = (samples[i] - 128) / 128;
+          sum += v * v;
+        }
+        // Ildiz — nutqni ko'zga tabiiy ko'rsatadi; jimlikdagi shovqin pastdan kesiladi
+        const level = Math.min(1, Math.max(0, (Math.sqrt(Math.sqrt(sum / analyser.fftSize)) - 0.08) * 2.2));
+        smooth = Math.max(level, smooth * 0.55);
+      }
+
+      const dpr = window.devicePixelRatio || 1;
+      const width = canvas.clientWidth;
+      const height = canvas.clientHeight;
+      if (canvas.width !== Math.round(width * dpr)) canvas.width = Math.round(width * dpr);
+      if (canvas.height !== Math.round(height * dpr)) canvas.height = Math.round(height * dpr);
+      const count = Math.floor(width / BAR_STEP);
+      const levels = levelsRef.current;
+      levels.push(smooth);
+      if (levels.length > count) levels.splice(0, levels.length - count);
+
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, width, height);
+      const mid = height / 2;
+      for (let slot = 0; slot < count; slot++) {
+        // O'ngdan chapga: slot 0 — eng yangisi
+        const level = levels[levels.length - 1 - slot];
+        const x = width - (slot + 1) * BAR_STEP + (BAR_STEP - BAR_WIDTH) / 2;
+        if (level === undefined) {
+          ctx.fillStyle = "#d1d1d6";
+          ctx.fillRect(x, mid - 1, BAR_WIDTH, 2);
+          continue;
+        }
+        const h = Math.max(BAR_WIDTH, level * (height - 4));
+        ctx.globalAlpha = 0.25 + 0.75 * (1 - slot / count);
+        ctx.fillStyle = "#ff3b30";
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(x, mid - h / 2, BAR_WIDTH, h, BAR_WIDTH / 2);
+        else ctx.rect(x, mid - h / 2, BAR_WIDTH, h);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+    };
+    draw();
+    const timer = setInterval(draw, BAR_INTERVAL);
+    return () => clearInterval(timer);
+  }, [recording]);
 
   const start = async () => {
     onError(null);
@@ -61,6 +158,22 @@ export function VoiceRecorder({ onRecorded, onError }: { onRecorded: (file: File
       onError(tr("Mikrofonga ruxsat berilmadi — brauzer sozlamalarida mikrofonga ruxsat bering"));
       return;
     }
+    // To'lqin uchun tahlilchi — bo'lmasa ham yozish ishlayveradi
+    try {
+      const AudioCtx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (AudioCtx) {
+        const audioCtx = new AudioCtx();
+        const analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 2048;
+        audioCtx.createMediaStreamSource(stream).connect(analyser);
+        void audioCtx.resume();
+        audioCtxRef.current = audioCtx;
+        analyserRef.current = analyser;
+      }
+    } catch {
+      analyserRef.current = null;
+    }
+    levelsRef.current = [];
     const mimeType = pickMimeType();
     const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
     chunksRef.current = [];
@@ -99,29 +212,52 @@ export function VoiceRecorder({ onRecorded, onError }: { onRecorded: (file: File
     }
   };
 
+  if (!recording && compact) {
+    return (
+      <button type="button" onClick={start} className={clsx(ADD_BUTTON, className)}>
+        <Mic className="h-5 w-5 text-[#ff3b30]" strokeWidth={2.2} />
+        {tr("Yana ovoz")}
+      </button>
+    );
+  }
   if (!recording) {
     return (
-      <Button variant="secondary" onClick={start}>
-        <Mic className="h-4 w-4" /> {tr("Ovoz yozish")}
-      </Button>
+      <button type="button" onClick={start} className={clsx(TILE, className)}>
+        <span className="flex h-11 w-11 items-center justify-center rounded-full" style={{ backgroundColor: "#ff3b301f", color: "#ff3b30" }}>
+          <Mic className="h-[22px] w-[22px]" strokeWidth={2.2} />
+        </span>
+        <span className="text-[15px] font-semibold text-[var(--color-text)]">{tr("Ovoz yozish")}</span>
+      </button>
     );
   }
   return (
-    <div className="flex w-full flex-wrap items-center gap-3 rounded-[var(--radius-lg)] bg-[#ff3b30]/[0.08] px-4 py-3" role="status" aria-live="polite">
-      <span className="relative flex h-3 w-3" aria-hidden="true">
-        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#ff3b30] opacity-60" />
-        <span className="relative inline-flex h-3 w-3 rounded-full bg-[#ff3b30]" />
+    <div className={clsx("col-span-2 flex flex-col items-center gap-4 rounded-[18px] bg-white px-4 py-5", className)} role="status" aria-live="polite">
+      <span className="flex items-center gap-2.5">
+        <span className="relative flex h-3 w-3" aria-hidden="true">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#ff3b30] opacity-60" />
+          <span className="relative inline-flex h-3 w-3 rounded-full bg-[#ff3b30]" />
+        </span>
+        <span className="text-[15px] font-medium text-[#d70015]">{tr("Yozilmoqda")}</span>
       </span>
-      <span className="text-[15px] font-semibold tabular-nums text-[#d70015]">
-        {tr("Yozilmoqda")} {clock(seconds)}
-      </span>
-      <span className="ml-auto flex gap-2">
-        <Button variant="secondary" size="sm" onClick={() => stop(true)}>
+      <canvas ref={canvasRef} className="h-14 w-full" aria-hidden="true" />
+      <span className="text-[40px] font-light leading-none tabular-nums tracking-tight text-[var(--color-text)]">{clock(seconds)}</span>
+      <span className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-3">
+        <button
+          type="button"
+          onClick={() => stop(true)}
+          className="h-11 cursor-pointer justify-self-start whitespace-nowrap rounded-full bg-[#767680]/[0.12] px-4 text-[15px] font-medium text-[var(--color-text)] active:opacity-60"
+        >
           {tr("Bekor qilish")}
-        </Button>
-        <Button size="sm" onClick={() => stop(false)}>
-          <Square className="h-3.5 w-3.5" fill="currentColor" /> {tr("To'xtatish")}
-        </Button>
+        </button>
+        {/* iOS diktofonidagidek: qizil doira ichida kvadrat — to'xtatish */}
+        <button
+          type="button"
+          onClick={() => stop(false)}
+          aria-label={tr("To'xtatish")}
+          className="flex h-16 w-16 cursor-pointer items-center justify-center rounded-full border-[3px] border-[#c7c7cc] transition-transform active:scale-95"
+        >
+          <span className="h-7 w-7 rounded-[6px] bg-[#ff3b30]" />
+        </button>
       </span>
     </div>
   );

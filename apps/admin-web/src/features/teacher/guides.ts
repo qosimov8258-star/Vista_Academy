@@ -5,4 +5,6 @@
  */
 export const GUIDE_VIDEOS = {
   attendance: null as string | null,
+  /** "Vazifa jo'natish" (guruh fayllari) sahifasi */
+  materials: null as string | null,
 };

@@ -26,6 +26,21 @@ export async function openFile(path: string): Promise<void> {
   }
 }
 
+/**
+ * Himoyalangan faylni (token bilan) yuklab, sahifa ichida ko'rsatish uchun
+ * vaqtinchalik URL qaytaradi — masalan ovozli vazifani shu yerning o'zida
+ * tinglash. Ishlatib bo'lgach `URL.revokeObjectURL` qilinadi.
+ */
+export async function fetchFileUrl(path: string): Promise<string> {
+  const accessToken = getTenantAccessToken();
+  const res = await fetch(`${API_URL}${path}`, {
+    credentials: "include",
+    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+  });
+  if (!res.ok) throw new Error("Faylni ochib bo'lmadi");
+  return URL.createObjectURL(await res.blob());
+}
+
 export async function downloadCsv(path: string, filename: string): Promise<void> {
   const accessToken = getTenantAccessToken();
   const res = await fetch(`${API_URL}${path}`, {
