@@ -16,7 +16,7 @@ import { useBranchContext } from "@/lib/use-branch-context";
 import { useSidebarCollapsed } from "@/lib/use-sidebar-collapsed";
 import { useSidebarSections } from "@/lib/use-sidebar-sections";
 import { ROLE_LABEL, canManageUsers, canViewUseful, isChef, isTeacher, ownsLanding, receivesEmployeeNotifications } from "@/lib/permissions";
-import { formatPositionLabel, isAssistantPosition, isCallOperatorUser, isCashierPosition, isSubjectTeacherPosition } from "@/lib/employee-position";
+import { formatPositionLabel, isAssistantPosition, isCallOperatorUser, isSubjectTeacherPosition } from "@/lib/employee-position";
 import { Avatar, initials } from "@/components/ui/avatar";
 import { isSection, type NavEntry, type NavLeaf, type NavSection } from "./nav-types";
 import { DirectorRail } from "./director-rail";
@@ -146,7 +146,6 @@ export function Sidebar({ slug }: { slug: string }) {
   const isSubjectTeacher = !!user?.position && isSubjectTeacherPosition(user.position);
   const chef = isChef(user?.role);
   const isAssistant = !!user?.position && isAssistantPosition(user.position);
-  const isCashier = !!user?.position && isCashierPosition(user.position);
   // Lending sayt bitta tashkilotniki — boshqa bog'chalarda bo'lim ko'rinmaydi
   const showLandingNav = ownsLanding(user?.organizationSlug);
   const isManager = user?.role === "MANAGER";
@@ -323,27 +322,6 @@ export function Sidebar({ slug }: { slug: string }) {
         { href: `/${slug}/useful/tales`, label: t("nav.tales"), icon: BookIcon, show: showUseful },
       ],
     },
-  ];
-
-  // Kassir: guruhlar emas, pul bilan ishlaydi. Moliyachi roli bilan kiradi.
-  const cashierEntries: NavEntry[] = [
-    { href: `/${slug}`, label: "Bosh sahifa", icon: HomeIcon, show: true, exact: true },
-    { href: `/${slug}/payments`, label: tr("To'lovlar"), icon: WalletIcon, show: true },
-    { href: `/${slug}/expenses`, label: tr("Xarajatlar"), icon: CoinIcon, show: true },
-    { href: `/${slug}/discounts`, label: tr("Chegirmalar"), icon: PercentIcon, show: true },
-    { href: `/${slug}/finance`, label: tr("Hisob-fakturalar"), icon: NoteIcon, show: true },
-    { href: `/${slug}/group-payments`, label: tr("Guruhlar bo'yicha to'lov"), icon: GroupIcon, show: true },
-    { href: `/${slug}/cash-report`, label: "Oylik hisobot", icon: ChartIcon, show: true },
-    {
-      id: "oqituvchilar",
-      label: tr("O'qituvchilar"),
-      icon: TeacherIcon,
-      items: [
-        { href: `/${slug}/hr`, label: "Ish haqi", icon: BriefcaseIcon, show: true },
-        { href: `/${slug}/staff-absences`, label: "Kelmagan kunlar", icon: CalendarIcon, show: true },
-      ],
-    },
-    { href: `/${slug}/my-notifications`, label: "Bildirishnomalarim", icon: BellIcon, show: true },
   ];
 
   const teacherEntries: NavEntry[] = [
@@ -545,7 +523,7 @@ export function Sidebar({ slug }: { slug: string }) {
     show: true,
   };
 
-  const entries = (chef ? chefEntries : isCashier ? cashierEntries : teacher ? (isAssistant ? assistantEntries : teacherEntries) : isNetworkAdmin && !inBranchContext ? rootEntries : isFinance ? financeEntries : isCallOperatorUser(user) ? callOperatorEntries : operationalEntries)
+  const entries = (chef ? chefEntries : teacher ? (isAssistant ? assistantEntries : teacherEntries) : isNetworkAdmin && !inBranchContext ? rootEntries : isFinance ? financeEntries : isCallOperatorUser(user) ? callOperatorEntries : operationalEntries)
     .map((entry) =>
       isSection(entry) ? { ...entry, items: entry.items.filter((item) => item.show) } : entry,
     )
