@@ -2753,6 +2753,8 @@ enum GroupMaterialKind {
   IMAGE
   VIDEO
   DOCUMENT
+  /// Ovozli vazifa — yuklangan audio yoki tarbiyachi brauzerda yozgan ovoz
+  AUDIO
 }
 
 /// Tarbiyachi/o'qituvchi guruhga yuklagan fayl (rasm, video, PDF, hujjat).

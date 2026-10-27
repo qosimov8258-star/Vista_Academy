@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ApiError } from "@/lib/api";
 import { PARENT_API_URL, parentApi } from "@/lib/parent-api";
 import type { ParentAccount, ParentChild } from "@/lib/types";
+import { Mic } from "lucide-react";
 import { DocumentIcon } from "@/components/ui/icons";
 import styles from "../../parent.module.css";
 import { EmptyCard, ListSkeleton, LoadErrorCard } from "../foydali/ui";
@@ -18,7 +19,7 @@ interface Material {
   id: string;
   title: string;
   description: string | null;
-  kind: "IMAGE" | "VIDEO" | "DOCUMENT";
+  kind: "IMAGE" | "VIDEO" | "AUDIO" | "DOCUMENT";
   originalName: string;
   mimeType: string;
   sizeBytes: number;
@@ -38,8 +39,8 @@ function extensionOf(name: string): string {
 }
 
 /**
- * Fayllar — tarbiyachi/o'qituvchi bolaning guruhiga yuklagan rasm, video va
- * hujjatlar. Faqat o'qish; yuklash tomoni: admin-web `/materials`.
+ * Fayllar — tarbiyachi/o'qituvchi bolaning guruhiga yuklagan rasm, video,
+ * ovozli vazifa va hujjatlar. Faqat o'qish; yuklash tomoni: admin-web `/materials`.
  */
 export default function ParentMaterialsPage({ params }: { params: Promise<{ slug: string }> }) {
   const tr = useTr();
@@ -75,7 +76,7 @@ export default function ParentMaterialsPage({ params }: { params: Promise<{ slug
           {tr("Fayllar")}
         </h1>
         <p className="mt-1 text-[14.5px] leading-relaxed text-[var(--p-muted)]">
-          {tr("Tarbiyachi guruhga yuklagan rasm, video va hujjatlar")}
+          {tr("Tarbiyachi guruhga yuklagan rasm, video, ovozli vazifa va hujjatlar")}
         </p>
       </header>
 
@@ -115,6 +116,11 @@ export default function ParentMaterialsPage({ params }: { params: Promise<{ slug
                 <video src={fileUrl(item.id)} controls preload="metadata" playsInline className="max-h-[320px] w-full bg-black" />
               )}
               <div className="flex items-start gap-3 p-4">
+                {item.kind === "AUDIO" && (
+                  <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#ff9500]/15 text-[#ff9500]" aria-hidden="true">
+                    <Mic className="h-6 w-6" strokeWidth={2.2} />
+                  </span>
+                )}
                 {item.kind === "DOCUMENT" && (
                   <a
                     href={fileUrl(item.id)}
@@ -136,6 +142,10 @@ export default function ParentMaterialsPage({ params }: { params: Promise<{ slug
                   <p className="mt-1 text-[12.5px] text-[var(--p-muted)]">
                     {item.createdByName} · {new Date(item.createdAt).toLocaleDateString(locale === "uz" ? "uz-UZ" : locale === "ru" ? "ru-RU" : "en-GB")} · {sizeLabel(item.sizeBytes)}
                   </p>
+                  {item.kind === "AUDIO" && (
+                    // Ovozli vazifa shu yerning o'zida eshitiladi
+                    <audio src={fileUrl(item.id)} controls preload="metadata" className="mt-3 w-full" />
+                  )}
                   {item.kind === "DOCUMENT" && (
                     <a
                       href={fileUrl(item.id)}

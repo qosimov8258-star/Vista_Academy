@@ -17,13 +17,14 @@ import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DocumentIcon, PlusIcon, TrashIcon } from "@/components/ui/icons";
 import { formatDate } from "@/lib/format";
+import { VoiceRecorder } from "@/features/group-materials/voice-recorder";
 import { useTr } from "@/i18n/tr";
 
 interface Material {
   id: string;
   title: string;
   description: string | null;
-  kind: "IMAGE" | "VIDEO" | "DOCUMENT";
+  kind: "IMAGE" | "VIDEO" | "AUDIO" | "DOCUMENT";
   originalName: string;
   sizeBytes: number;
   createdByName: string;
@@ -31,8 +32,8 @@ interface Material {
 }
 
 const MAX_BYTES = 20 * 1024 * 1024;
-const ACCEPT = "image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt";
-const KIND_LABEL: Record<Material["kind"], string> = { IMAGE: "Rasm", VIDEO: "Video", DOCUMENT: "Hujjat" };
+const ACCEPT = "image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime,audio/*,.mp3,.m4a,.ogg,.opus,.wav,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt";
+const KIND_LABEL: Record<Material["kind"], string> = { IMAGE: "Rasm", VIDEO: "Video", AUDIO: "Audio", DOCUMENT: "Hujjat" };
 
 function sizeLabel(bytes: number): string {
   return bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
@@ -59,6 +60,15 @@ export default function MaterialsPage({ params }: { params: Promise<{ slug: stri
   const [formError, setFormError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<Material | null>(null);
   const [openError, setOpenError] = useState<string | null>(null);
+  // Yozilgan (yoki tanlangan) ovozni yuborishdan oldin tinglab ko'rish
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const audioFile = files.length === 1 && files[0].type.startsWith("audio/") ? files[0] : null;
+  useEffect(() => {
+    if (!audioFile) return setPreviewUrl(null);
+    const url = URL.createObjectURL(audioFile);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [audioFile]);
 
   const groupsQuery = useQuery({
     queryKey: ["groups", slug, forcedBranchId],
@@ -104,7 +114,7 @@ export default function MaterialsPage({ params }: { params: Promise<{ slug: stri
     },
   });
 
-  function pickFiles(list: FileList | null) {
+  function pickFiles(list: FileList | File[] | null) {
     const picked = Array.from(list ?? []);
     const tooBig = picked.find((file) => file.size > MAX_BYTES);
     if (tooBig) {
@@ -122,7 +132,7 @@ export default function MaterialsPage({ params }: { params: Promise<{ slug: stri
       <div>
         <h1 className="text-[24px] font-bold tracking-[var(--tracking-headline)] text-[var(--color-text)]">{tr("Guruh fayllari")}</h1>
         <p className="mt-1 text-[15px] text-[var(--color-text-muted)]">
-          {tr("Yuklangan rasm, video va hujjatlarni shu guruh bolalarining ota-onalari kabinetda ko'radi")}
+          {tr("Yuklangan rasm, video, ovoz va hujjatlarni shu guruh bolalarining ota-onalari kabinetda ko'radi")}
         </p>
       </div>
 
@@ -143,9 +153,16 @@ export default function MaterialsPage({ params }: { params: Promise<{ slug: stri
             <Button variant="secondary" onClick={() => fileInput.current?.click()}>
               <PlusIcon className="h-4 w-4" /> {tr("Fayl tanlash")}
             </Button>
+            <VoiceRecorder
+              onRecorded={(file) => {
+                if (fileInput.current) fileInput.current.value = "";
+                pickFiles([file]);
+              }}
+              onError={setFormError}
+            />
             <span className="text-[14px] text-[var(--color-text-muted)]">
               {files.length === 0
-                ? tr("Rasm, video, PDF, Word, Excel — 20 MB gacha")
+                ? tr("Rasm, video, audio, PDF, Word, Excel — 20 MB gacha")
                 : files.length === 1
                   ? files[0].name
                   : tr("{0} ta fayl tanlandi", String(files.length))}
@@ -153,6 +170,18 @@ export default function MaterialsPage({ params }: { params: Promise<{ slug: stri
           </div>
           {files.length > 0 && (
             <>
+              {previewUrl && (
+                <div className="space-y-2">
+                  <audio src={previewUrl} controls preload="metadata" className="w-full" />
+                  <button
+                    type="button"
+                    onClick={() => pickFiles([])}
+                    className="cursor-pointer text-[14px] font-medium text-[var(--color-danger)] active:opacity-60"
+                  >
+                    {tr("O'chirib, qayta yozish")}
+                  </button>
+                </div>
+              )}
               {files.length === 1 && (
                 <Input label="Sarlavha" value={title} maxLength={120} placeholder={tr("Bo'sh qoldirsangiz fayl nomi olinadi")} onChange={(e) => setTitle(e.target.value)} />
               )}
