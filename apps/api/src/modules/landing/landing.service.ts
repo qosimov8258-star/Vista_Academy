@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { unlink } from "fs/promises";
 import { basename, join } from "path";
+import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
 import { landingOwnerSlug } from "./landing-owner.guard";
 import { LANDING_UPLOAD_DIR } from "../../common/constants/uploads";
@@ -447,13 +448,20 @@ export class LandingService {
   // --- Arizalar ("Ariza qoldirish" sahifasi) ------------------------------------
 
   /**
-   * Ariza qaysi bog'chaniki ekani aniqlanadi — shu tashkilotning call
-   * operatori uni "Bugun qo'ng'iroq qilish" ro'yxatida ko'radi.
+   * Ariza qaysi bog'chaniki ekani aniqlanadi va o'sha tashkilotning CRM'iga
+   * ("Qabul va bolalar → Arizalar") WEBSITE manbali lid bo'lib tushadi.
+   * `landing_applications` — xom yozuv (tarix uchun) bo'lib qoladi.
    */
   async createApplication(dto: CreateLandingApplicationDto, originHeader?: string) {
     const organizationId = await this.resolveApplicationOrganizationId(dto.organizationSlug, originHeader);
-    return this.prisma.landingApplication.create({
-      data: { organizationId, fullName: dto.fullName, phone: dto.phone },
+    return this.prisma.$transaction(async (tx) => {
+      const application = await tx.landingApplication.create({
+        data: { organizationId, fullName: dto.fullName, phone: dto.phone },
+      });
+      if (organizationId) {
+        await upsertWebsiteLead(tx, organizationId, dto.fullName, dto.phone);
+      }
+      return application;
     });
   }
 
@@ -502,4 +510,34 @@ export class LandingService {
     );
     return null;
   }
+}
+
+/** Telefon raqamini solishtirish uchun — oxirgi 9 raqam (+998 bor-yo'qligidan qat'i nazar) */
+const phoneKey = (phone: string) => phone.replace(/\D/g, "").slice(-9);
+
+/**
+ * Lending arizasini CRM lidiga aylantiradi. Shu telefondan hali yopilmagan
+ * (WON/LOST emas) sayt lidi bo'lsa — yangisi ochilmaydi, unga "qayta ariza"
+ * izohi qo'shiladi (bir odam formani bir necha marta yuborsa ham bitta lid).
+ * Bola ismi formada so'ralmaydi — bo'sh; arizachi ota-ona deb olinadi.
+ * Lid tashkilotning birinchi filialiga yoziladi.
+ */
+export async function upsertWebsiteLead(tx: Prisma.TransactionClient, organizationId: string, fullName: string, phone: string) {
+  const open = await tx.lead.findMany({
+    where: { organizationId, source: "WEBSITE", stage: { notIn: ["WON", "LOST"] } },
+    select: { id: true, parentPhone: true },
+  });
+  const existing = open.find((lead) => phoneKey(lead.parentPhone) === phoneKey(phone));
+  if (existing) {
+    await tx.lead.update({ where: { id: existing.id }, data: { updatedAt: new Date() } });
+    await tx.leadActivity.create({ data: { leadId: existing.id, type: "NOTE", note: `Lending sahifadan qayta ariza qoldirdi (${fullName})` } });
+    return existing.id;
+  }
+  const branch = await tx.branch.findFirst({ where: { organizationId }, orderBy: { createdAt: "asc" }, select: { id: true } });
+  if (!branch) return null;
+  const lead = await tx.lead.create({
+    data: { organizationId, branchId: branch.id, childFullName: "", parentName: fullName, parentPhone: phone, source: "WEBSITE" },
+  });
+  await tx.leadActivity.create({ data: { leadId: lead.id, type: "NOTE", note: "Lending sahifadan ariza" } });
+  return lead.id;
 }

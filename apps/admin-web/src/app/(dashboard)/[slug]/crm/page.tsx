@@ -85,9 +85,10 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
           <ul className="space-y-3 md:hidden">
             {landingLeads.map((lead) => (
               <li key={lead.id} className="rounded-[20px] border border-[var(--color-border-hair)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)]">
-                <p className="text-[16px] font-semibold tracking-[-0.01em] text-[var(--color-text)]">{tr(lead.childFullName)}</p>
+                {/* Lending formasida bola ismi so'ralmaydi — unda sarlavha arizachi (ota-ona) ismi */}
+                <p className="text-[16px] font-semibold tracking-[-0.01em] text-[var(--color-text)]">{tr(lead.childFullName || lead.parentName)}</p>
                 <p className="mt-0.5 text-[13px] text-[var(--color-text-muted)]">
-                  {tr(lead.parentName)}
+                  {lead.childFullName ? tr(lead.parentName) : tr("Bola ismi ko'rsatilmagan")}
                   {lead.ageGroup ? ` · ${AGE_GROUP_LABEL[lead.ageGroup]}` : ""}
                 </p>
                 <div className="mt-3 flex items-center justify-between gap-2">
@@ -116,7 +117,7 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
               <TBody>
                 {landingLeads.map((lead) => (
                   <Tr key={lead.id}>
-                    <Td className="font-medium">{tr(lead.childFullName)}</Td>
+                    <Td className="font-medium">{lead.childFullName ? tr(lead.childFullName) : <span className="text-[var(--color-text-muted)]">—</span>}</Td>
                     <Td>
                       <span className="font-medium text-[var(--color-text)]">{tr(lead.parentName)}</span>
                       <br />
