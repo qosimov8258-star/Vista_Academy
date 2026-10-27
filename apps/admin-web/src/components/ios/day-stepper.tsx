@@ -34,6 +34,7 @@ export function PeriodStepper({
   onNext,
   prevLabel,
   nextLabel,
+  prevDisabled,
   nextDisabled,
   reset,
 }: {
@@ -42,13 +43,14 @@ export function PeriodStepper({
   onNext: () => void;
   prevLabel: string;
   nextLabel: string;
+  prevDisabled?: boolean;
   nextDisabled?: boolean;
   reset?: { label: string; onClick: () => void };
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <div className="inline-flex h-10 max-w-full items-center rounded-full bg-[#767680]/[0.12] px-0.5">
-        <button type="button" className={ARROW} onClick={onPrev} aria-label={prevLabel}>
+        <button type="button" className={ARROW} onClick={onPrev} disabled={prevDisabled} aria-label={prevLabel}>
           <ChevronLeft className="h-[18px] w-[18px]" strokeWidth={2.2} />
         </button>
         <div className="relative flex h-9 min-w-0 items-center px-1.5 text-[15px] font-medium tabular-nums text-[var(--color-text)]">{children}</div>
@@ -73,9 +75,21 @@ export function PeriodStepper({
  * Kun tanlash — bitta kulrang kapsula: ‹ sana ▾ ›. Strelkalar oy/yil
  * chegarasidan ham o'tadi; o'rtasi bosilsa tizim kalendari ochiladi.
  * Bugundan boshqa kun tanlansa yonida "Bugun" kapsulasi chiqadi.
- * `max` berilsa undan keyingi kunga o'tkazilmaydi.
+ * `max` berilsa undan keyingi, `min` berilsa undan oldingi kunga o'tkazilmaydi.
  */
-export function DayStepper({ value, onChange, today, max }: { value: string; onChange: (value: string) => void; today: string; max?: string }) {
+export function DayStepper({
+  value,
+  onChange,
+  today,
+  min,
+  max,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  today: string;
+  min?: string;
+  max?: string;
+}) {
   const tr = useTr();
   const inputRef = useRef<HTMLInputElement>(null);
   const d = new Date(`${value}T00:00:00Z`);
@@ -94,6 +108,7 @@ export function DayStepper({ value, onChange, today, max }: { value: string; onC
       onNext={() => onChange(shiftDay(value, 1))}
       prevLabel={tr("Oldingi kun")}
       nextLabel={tr("Keyingi kun")}
+      prevDisabled={!!min && value <= min}
       nextDisabled={!!max && value >= max}
       reset={value !== today ? { label: tr("Bugun"), onClick: () => onChange(today) } : undefined}
     >
@@ -103,6 +118,7 @@ export function DayStepper({ value, onChange, today, max }: { value: string; onC
           ref={inputRef}
           type="date"
           value={value}
+          min={min}
           max={max}
           onChange={(event) => event.target.value && onChange(event.target.value)}
           onClick={() => {

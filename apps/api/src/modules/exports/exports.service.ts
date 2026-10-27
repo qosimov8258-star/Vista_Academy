@@ -357,7 +357,8 @@ export class ExportsService {
     row("To'lov turi", PAYMENT_METHOD_LABEL[payment.method] ?? payment.method);
     const periods = payment.allocations.map((a) => a.invoice.period);
     if (periods.length > 0) row("Davr", periods.join(", "));
-    row("Sana", payment.createdAt.toISOString().slice(0, 10));
+    // To'lov sanasi Toshkent bo'yicha (o'tgan kun bilan kiritilgan bo'lsa — o'sha kun)
+    row("Sana", new Date(payment.paidAt.getTime() + 5 * 60 * 60 * 1000).toISOString().slice(0, 10));
     if (payment.recordedBy) row("Qabul qildi", payment.recordedBy.fullName);
     if (payment.note) row("Izoh", payment.note);
     if (payment.status === "REFUNDED" && payment.refundedAt) {

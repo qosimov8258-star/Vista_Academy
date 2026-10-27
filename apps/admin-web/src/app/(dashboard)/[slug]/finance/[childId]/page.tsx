@@ -224,7 +224,7 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
     (receiptsQuery.data ?? []).filter((r) => r.paymentId).map((r) => [r.paymentId as string, r]),
   );
   const timeline: TimelineEntry[] = [
-    ...allPayments.map((payment): TimelineEntry => ({ kind: "payment", createdAt: payment.createdAt, payment })),
+    ...allPayments.map((payment): TimelineEntry => ({ kind: "payment", createdAt: payment.paidAt, payment })),
     ...openReceipts.map((receipt): TimelineEntry => ({ kind: "receipt", createdAt: receipt.createdAt, receipt })),
   ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 

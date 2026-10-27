@@ -39,6 +39,8 @@ export interface CashDay {
     status: "COMPLETED" | "REFUNDED";
     note: string | null;
     recordedByName: string | null;
+    /** To'lov sanasi — kassa kuni shu bo'yicha */
+    paidAt: string;
     createdAt: string;
   }[];
   /** Faqat naqd xarajatlar — kassadagi naqdni shular kamaytiradi */

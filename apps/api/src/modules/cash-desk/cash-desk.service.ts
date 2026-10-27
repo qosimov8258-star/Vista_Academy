@@ -26,7 +26,7 @@ function toDateOnly(value: string): Date {
   return new Date(`${value}T00:00:00.000Z`);
 }
 
-/** Toshkent kalendar kunining UTC chegaralari — to'lovlar `createdAt` bo'yicha shu kunga tushadi. */
+/** Toshkent kalendar kunining UTC chegaralari — to'lovlar `paidAt` (to'lov sanasi) bo'yicha shu kunga tushadi. */
 function dayRange(date: string) {
   const start = new Date(toDateOnly(date).getTime() - TASHKENT_OFFSET_MS);
   return { gte: start, lt: new Date(start.getTime() + DAY_MS) };
@@ -120,9 +120,9 @@ export class CashDeskService {
     const range = dayRange(date);
     const [payments, refunds, expenses, closing] = await Promise.all([
       this.prisma.payment.findMany({
-        where: { branchId, createdAt: range },
+        where: { branchId, paidAt: range },
         include: { child: { select: { id: true, fullName: true } }, recordedBy: { select: { fullName: true } } },
-        orderBy: { createdAt: "desc" },
+        orderBy: { paidAt: "desc" },
       }),
       this.prisma.payment.findMany({ where: { branchId, refundedAt: range }, select: { method: true, amount: true } }),
       this.prisma.expense.findMany({ where: { branchId, date: toDateOnly(date) }, omit: { receiptImage: true }, orderBy: { createdAt: "desc" } }),
@@ -165,6 +165,7 @@ export class CashDeskService {
         status: p.status,
         note: p.note,
         recordedByName: p.recordedBy?.fullName ?? null,
+        paidAt: p.paidAt,
         createdAt: p.createdAt,
       })),
       expenses: expenses.map((e) => toExpenseRow(e, !!closing)),
@@ -493,7 +494,7 @@ export class CashDeskService {
     const range = { gte: dayRange(first).gte, lt: dayRange(last).lt };
 
     const [payments, refunds, expenses, invoices, payroll] = await Promise.all([
-      this.prisma.payment.findMany({ where: { branchId, createdAt: range }, select: { amount: true, method: true, createdAt: true } }),
+      this.prisma.payment.findMany({ where: { branchId, paidAt: range }, select: { amount: true, method: true, paidAt: true } }),
       this.prisma.payment.findMany({ where: { branchId, refundedAt: range }, select: { amount: true } }),
       this.prisma.expense.findMany({ where: { branchId, date: { gte: toDateOnly(first), lte: toDateOnly(last) } }, select: { amount: true, category: true } }),
       this.prisma.invoice.findMany({ where: { branchId, period: month, status: { not: "CANCELLED" } }, select: { amount: true, discountAmount: true, paidAmount: true } }),
@@ -505,7 +506,7 @@ export class CashDeskService {
     for (const p of payments) {
       byMethod[p.method].count += 1;
       byMethod[p.method].total += Number(p.amount);
-      const day = new Date(p.createdAt.getTime() + TASHKENT_OFFSET_MS).toISOString().slice(0, 10);
+      const day = new Date(p.paidAt.getTime() + TASHKENT_OFFSET_MS).toISOString().slice(0, 10);
       byDay.set(day, (byDay.get(day) ?? 0) + Number(p.amount));
     }
     const byCategory = new Map<string, number>();

@@ -468,6 +468,8 @@ export interface Payment {
   status: PaymentStatus;
   note: string | null;
   refundedAt: string | null;
+  /** To'lov sanasi — o'tgan kun bilan kiritilsa `createdAt` dan farq qiladi */
+  paidAt: string;
   createdAt: string;
   child?: { id: string; fullName: string };
 }
