@@ -55,9 +55,11 @@ export class GroupMaterialsService {
     if (!file || file.size === 0) {
       throw new BadRequestException("Fayl yuborilmadi");
     }
-    const kind = MATERIAL_MIME_KINDS[file.mimetype];
+    // Brauzerda yozilgan ovoz "audio/webm;codecs=opus" kabi keladi — parametrsiz turini olamiz
+    const mimeType = file.mimetype.split(";")[0].trim().toLowerCase();
+    const kind = MATERIAL_MIME_KINDS[mimeType];
     if (!kind) {
-      throw new BadRequestException("Rasm, video, PDF, Word, Excel, PowerPoint yoki matn fayli yuklash mumkin");
+      throw new BadRequestException("Rasm, video, audio, PDF, Word, Excel, PowerPoint yoki matn fayli yuklash mumkin");
     }
     if (file.size > MATERIAL_LIMITS.maxBytes) {
       throw new BadRequestException(`Fayl ${MATERIAL_LIMITS.maxBytes / 1024 / 1024} MB dan oshmasligi kerak`);
@@ -71,7 +73,7 @@ export class GroupMaterialsService {
     let dataKey: string | null = null;
     if (this.r2.enabled) {
       dataKey = this.r2.buildKey(group.organizationId, R2_CATEGORY.GROUP_MATERIAL);
-      await this.r2.uploadBuffer(dataKey, file.buffer, file.mimetype);
+      await this.r2.uploadBuffer(dataKey, file.buffer, mimeType);
       data = null;
     }
 
@@ -84,7 +86,7 @@ export class GroupMaterialsService {
         description: dto.description?.trim() || null,
         kind,
         originalName,
-        mimeType: file.mimetype,
+        mimeType,
         sizeBytes: file.size,
         data,
         dataKey,
@@ -182,8 +184,26 @@ export class GroupMaterialsService {
     const buffer = Buffer.from(row.data!);
     res.setHeader("Cache-Control", "private, max-age=86400, immutable");
     res.setHeader("Content-Type", row.mimeType);
-    res.setHeader("Content-Length", String(buffer.byteLength));
+    res.setHeader("Accept-Ranges", "bytes");
     res.setHeader("Content-Disposition", `inline; filename*=UTF-8''${encodeURIComponent(row.originalName)}`);
+    // iPhone'dagi audio/video pleyeri faylni qismlab so'raydi (Range) — busiz ijro etmaydi
+    const range = /^bytes=(\d*)-(\d*)$/.exec(String(res.req?.headers.range ?? ""));
+    if (range && (range[1] || range[2])) {
+      const size = buffer.byteLength;
+      const start = range[1] ? Number(range[1]) : Math.max(0, size - Number(range[2]));
+      const end = range[1] && range[2] ? Math.min(Number(range[2]), size - 1) : size - 1;
+      if (start >= size || start > end) {
+        res.status(416).setHeader("Content-Range", `bytes */${size}`);
+        res.end();
+        return;
+      }
+      res.status(206);
+      res.setHeader("Content-Range", `bytes ${start}-${end}/${size}`);
+      res.setHeader("Content-Length", String(end - start + 1));
+      res.end(buffer.subarray(start, end + 1));
+      return;
+    }
+    res.setHeader("Content-Length", String(buffer.byteLength));
     res.end(buffer);
   }
 
