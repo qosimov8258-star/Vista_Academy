@@ -37,10 +37,6 @@ function mondayOf(value: string): string {
 
 /** Oylik to'lov muddatidan shuncha kun o'tgach qarzdor call operatorga o'tadi. */
 const DEBT_GRACE_DAYS = 5;
-/** Saytdan tushgan ariza shuncha kun ichida qo'ng'iroq ro'yxatida turadi. */
-const LANDING_LOOKBACK_DAYS = 30;
-/** Frontenddagi "Aloqa qila olmadim" izohi — bunday ariza ertaga yana ro'yxatga chiqadi. */
-const NO_ANSWER_NOTE = "Aloqa qila olmadim — telefonni olmadi";
 
 const GUARDIAN_SELECT = {
   orderBy: [{ isPrimary: "desc" as const }, { createdAt: "asc" as const }],
@@ -64,7 +60,7 @@ export class AdminDeskService {
     const date = assertDate(dateInput);
     const day = toDateOnly(date);
 
-    const [debtors, absences, priorAbsences, leads, fakeReceiptsToday, logs, landingApps] = await Promise.all([
+    const [debtors, absences, priorAbsences, leads, fakeReceiptsToday, logs] = await Promise.all([
       this.cashDesk.debtors(scope),
       this.prisma.attendance.findMany({
         where: { branchId, date: day, status: "ABSENT", child: { status: { not: "INACTIVE" } } },
@@ -77,6 +73,8 @@ export class AdminDeskService {
       this.prisma.lead.findMany({
         where: {
           branchId,
+          // Saytdan kelgan arizalar faqat CRM'da ("Qabul va bolalar → Arizalar") — bu ro'yxatga tushmaydi
+          source: { not: "WEBSITE" },
           stage: { notIn: ["WON", "LOST"] },
           OR: [{ stage: "NEW" }, { followUpDate: { lte: day } }],
         },
@@ -95,12 +93,6 @@ export class AdminDeskService {
         },
       }),
       this.prisma.callLog.findMany({ where: { branchId, date: day } }),
-      // Lending sahifadan kelgan arizalar — tashkilot bo'yicha (tashkilotning barcha filiallariga)
-      this.prisma.landingApplication.findMany({
-        where: { organizationId: scope.organizationId, createdAt: { gte: new Date(day.getTime() - LANDING_LOOKBACK_DAYS * DAY_MS) } },
-        select: { id: true, fullName: true, phone: true, createdAt: true },
-        orderBy: { createdAt: "asc" },
-      }),
     ]);
 
     // Guardian bo'yicha jami rad etilgan cheklar soni — faqat 2-yoki-undan
@@ -116,15 +108,6 @@ export class AdminDeskService {
       : [];
     const rejectedCountByGuardian = new Map(rejectedCounts.map((r) => [r.guardianId, r._count._all]));
 
-    // Javob berilgan ariza ertasi kuni qaytmaydi; "aloqa qila olmadim" bo'lsa qaytadi
-    const landingLogs = landingApps.length
-      ? await this.prisma.callLog.findMany({
-          where: { branchId, kind: "LEAD", subjectId: { in: landingApps.map((a) => `landing:${a.id}`) } },
-          select: { subjectId: true, date: true, note: true },
-        })
-      : [];
-    const landingAnswered = new Set(landingLogs.filter((l) => l.note !== NO_ANSWER_NOTE).map((l) => l.subjectId));
-    const landingToday = new Set(landingLogs.filter((l) => l.date.getTime() === day.getTime()).map((l) => l.subjectId));
     const debtCutoff = addDays(date, -DEBT_GRACE_DAYS);
 
     const logByKey = new Map(logs.map((l) => [`${l.kind}:${l.subjectId}`, l]));
@@ -193,19 +176,6 @@ export class AdminDeskService {
             ...withLog("FAKE_RECEIPT", r.guardianId),
           };
         }),
-      ...landingApps
-        .filter((a) => !landingAnswered.has(`landing:${a.id}`) || landingToday.has(`landing:${a.id}`))
-        .map((a) => ({
-          kind: "LEAD" as const,
-          subjectId: `landing:${a.id}`,
-          title: a.fullName,
-          subtitle: "Ariza (saytdan)",
-          contactName: a.fullName as string | null,
-          phone: a.phone as string | null,
-          contacts: [{ name: a.fullName as string | null, relation: null as string | null, phone: a.phone as string | null }],
-          badge: null as string | null,
-          ...withLog("LEAD", `landing:${a.id}`),
-        })),
     ];
     return { date, items, open: items.filter((i) => !i.done).length };
   }
