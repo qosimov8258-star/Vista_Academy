@@ -7,6 +7,8 @@ import { formatChildPublicId } from "../children/child-creation";
 import { assertMoneyReader } from "../billing/billing.service";
 import { resolveTeacherGroupIds, teacherChildWhere } from "../iam/teacher-scope";
 import { allOn } from "../../common/features/feature-access";
+import { R2Service } from "../storage/r2.service";
+import { renderPaymentReceiptPdf } from "./payment-receipt-pdf";
 
 /** Bolalar ro'yxati (ota-ona telefonlari bilan) va lidlar eksporti — o'qituvchiga emas. */
 function assertNotTeacher(scope: TenantScope) {
@@ -61,7 +63,10 @@ function toDateOnly(value: string): Date {
 
 @Injectable()
 export class ExportsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly r2: R2Service,
+  ) {}
 
   async childrenCsv(scope: TenantScope, branchId?: string, disabled: readonly string[] = []): Promise<string> {
     assertNotTeacher(scope);
@@ -316,10 +321,11 @@ export class ExportsService {
       where: { id: paymentId, organizationId: scope.organizationId },
       include: {
         organization: { select: { name: true } },
-        branch: { select: { name: true, address: true } },
+        // `select` global `omit` dan ustun — filial belgisi kvitansiya tepasiga chiqadi
+        branch: { select: { name: true, address: true, avatar: true, avatarKey: true, avatarMimeType: true } },
         child: { select: { fullName: true, publicId: true } },
         recordedBy: { select: { fullName: true } },
-        allocations: { include: { invoice: { select: { period: true } } } },
+        allocations: { include: { invoice: { select: { period: true } } }, orderBy: { invoice: { period: "asc" } } },
       },
     });
     if (!payment) {
@@ -329,49 +335,42 @@ export class ExportsService {
       throw new ForbiddenException("Bu to'lovga kirish huquqingiz yo'q");
     }
 
-    const doc = new PDFDocument({ size: "A4", margin: 50 });
-    const chunks: Buffer[] = [];
-    doc.on("data", (chunk) => chunks.push(chunk));
-    const done = new Promise<Buffer>((resolve) => {
-      doc.on("end", () => resolve(Buffer.concat(chunks)));
+    return renderPaymentReceiptPdf({
+      number: payment.id.replace(/-/g, "").slice(0, 8).toUpperCase(),
+      organizationName: payment.organization.name,
+      branchName: payment.branch.name,
+      branchAddress: payment.branch.address,
+      branchLogo: await this.readBranchLogo(payment.branch),
+      childName: payment.child.fullName,
+      childPublicId: formatChildPublicId(payment.child.publicId),
+      amount: Number(payment.amount),
+      currency: payment.currency,
+      methodLabel: PAYMENT_METHOD_LABEL[payment.method] ?? payment.method,
+      periods: payment.allocations.map((a) => ({ period: a.invoice.period, amount: Number(a.amount) })),
+      // Toshkent bo'yicha (o'tgan kun bilan kiritilgan bo'lsa — o'sha kun)
+      paidAt: payment.paidAt,
+      recordedBy: payment.recordedBy?.fullName ?? null,
+      note: payment.note,
+      refunded:
+        payment.status === "REFUNDED" ? { at: payment.refundedAt, reason: payment.refundReason } : null,
     });
+  }
 
-    doc.fontSize(18).text(payment.organization.name, { align: "left" });
-    doc.fontSize(11).fillColor("#555").text(payment.branch.name);
-    if (payment.branch.address) doc.text(payment.branch.address);
-    doc.moveDown(1.5);
-
-    doc
-      .fillColor("#000")
-      .fontSize(16)
-      .text(payment.status === "REFUNDED" ? "To'lov kvitansiyasi (qaytarilgan)" : "To'lov kvitansiyasi", {
-        align: "left",
-      });
-    doc.moveDown(1);
-
-    doc.fontSize(11).fillColor("#000");
-    const row = (label: string, value: string) => {
-      doc.text(`${label}: ${value}`);
-      doc.moveDown(0.3);
-    };
-    row("Bola", `${payment.child.fullName} (${formatChildPublicId(payment.child.publicId)})`);
-    row("Summa", formatMoney(payment.amount, payment.currency));
-    row("To'lov turi", PAYMENT_METHOD_LABEL[payment.method] ?? payment.method);
-    const periods = payment.allocations.map((a) => a.invoice.period);
-    if (periods.length > 0) row("Davr", periods.join(", "));
-    // To'lov sanasi Toshkent bo'yicha (o'tgan kun bilan kiritilgan bo'lsa — o'sha kun)
-    row("Sana", new Date(payment.paidAt.getTime() + 5 * 60 * 60 * 1000).toISOString().slice(0, 10));
-    if (payment.recordedBy) row("Qabul qildi", payment.recordedBy.fullName);
-    if (payment.note) row("Izoh", payment.note);
-    if (payment.status === "REFUNDED" && payment.refundedAt) {
-      row("Qaytarilgan sana", payment.refundedAt.toISOString().slice(0, 10));
+  /** Filial belgisi kvitansiya uchun — topilmasa yoki o'qilmasa bosh harf bilan chiziladi. */
+  private async readBranchLogo(branch: {
+    avatar: Uint8Array | null;
+    avatarKey: string | null;
+    avatarMimeType: string | null;
+  }): Promise<Buffer | null> {
+    if (branch.avatarMimeType !== "image/jpeg" && branch.avatarMimeType !== "image/png") return null;
+    try {
+      if (branch.avatarKey && this.r2.enabled) {
+        return (await this.r2.getObjectBuffer(branch.avatarKey)).buffer;
+      }
+      return branch.avatar ? Buffer.from(branch.avatar) : null;
+    } catch {
+      return null;
     }
-
-    doc.moveDown(2);
-    doc.fontSize(9).fillColor("#888").text(`Chop etilgan sana: ${new Date().toISOString().slice(0, 10)}`);
-
-    doc.end();
-    return done;
   }
 
   /**
