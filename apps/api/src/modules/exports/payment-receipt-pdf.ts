@@ -4,7 +4,7 @@ import { drawZeeronLogo } from "./zeeron-logo";
 /**
  * To'lov kvitansiyasi (A5) — ota-onaga beriladigan qog'oz tasdiqnoma.
  * Tepada bog'cha belgisi va nomi, o'rtada summa (raqam va yozuvda) hamda
- * "TO'LANDI" muhri, pastda imzo/muhr joyi va Zeeron platformasi belgisi.
+ * "TO'LANDI" muhri, pastda Zeeron platformasi belgisi.
  */
 export type PaymentReceiptData = {
   number: string;
@@ -251,24 +251,7 @@ export function renderPaymentReceiptPdf(data: PaymentReceiptData): Promise<Buffe
     if (data.refunded.reason) row("Sabab", data.refunded.reason, { bold: false, color: VOID });
   }
 
-  // ── Imzo va muhr o'rni ──
   const footerTop = H - 66;
-  const signY = Math.min(y + 58, footerTop - 40);
-  const sigW = 118;
-  const sigLine = (x: number, label: string) => {
-    doc.moveTo(x, signY).lineTo(x + sigW, signY).lineWidth(0.7).strokeColor("#A8A29E").stroke();
-    doc.font("Helvetica").fontSize(7.5).fillColor(MUTED);
-    doc.text(label, x, signY + 4, { width: sigW, align: "center", lineBreak: false });
-  };
-  sigLine(PAD, "Qabul qildi (imzo)");
-  sigLine(PAD + sigW + 22, "To'lovchi (imzo)");
-  const sealCx = W - PAD - 30;
-  const sealCy = signY - 8;
-  doc.save();
-  doc.circle(sealCx, sealCy, 26).dash(2, { space: 2 }).lineWidth(0.7).strokeColor("#A8A29E").stroke();
-  doc.restore();
-  doc.font("Helvetica").fontSize(7.5).fillColor("#A8A29E");
-  doc.text("M.O'.", sealCx - 26, sealCy - 4, { width: 52, align: "center", lineBreak: false });
 
   // Yirtiladigan chek qirrasi
   doc.save();
