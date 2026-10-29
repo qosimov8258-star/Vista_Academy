@@ -463,13 +463,13 @@ function MaterialSheet({ material, canWrite, onClose, onDeleted }: { material: M
               ) : material.kind === "AUDIO" ? (
                 <div className="flex items-center gap-3 p-4">
                   <KindTile kind="AUDIO" size={44} />
-                  <audio src={mediaUrl} controls preload="metadata" className="min-w-0 flex-1" />
+                  <audio src={mediaUrl} controls preload="metadata" onError={() => setMediaError(tr("Faylni ochib bo'lmadi"))} className="min-w-0 flex-1" />
                 </div>
               ) : material.kind === "IMAGE" ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={mediaUrl} alt={material.title} className="max-h-[360px] w-full object-contain" />
+                <img src={mediaUrl} alt={material.title} onError={() => setMediaError(tr("Faylni ochib bo'lmadi"))} className="max-h-[360px] w-full object-contain" />
               ) : (
-                <video src={mediaUrl} controls playsInline preload="metadata" className="max-h-[360px] w-full bg-black" />
+                <video src={mediaUrl} controls playsInline preload="metadata" onError={() => setMediaError(tr("Faylni ochib bo'lmadi"))} className="max-h-[360px] w-full bg-black" />
               )}
             </div>
           )}
