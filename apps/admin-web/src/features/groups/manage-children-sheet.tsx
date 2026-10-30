@@ -22,7 +22,7 @@ type Tab = "in" | "add";
 /**
  * O'quvchilarni boshqarish: guruhdagi bolalar (bosilsa — chiqarish yoki
  * boshqa guruhga o'tkazish; qarzi bo'lsa avval ogohlantiriladi) va
- * qo'shish (filialdagi boshqa bolalar, bir nechtasini birdan tanlash;
+ * qo'shish (filialdagi guruhsiz bolalar, bir nechtasini birdan tanlash;
  * sig'im oshsa ogohlantiriladi). Bolalar va ularning qarzi bitta so'rovda
  * (`/app/cash/children`) olinadi.
  */
@@ -62,7 +62,9 @@ export function ManageChildrenSheet({ open, onClose, slug, group }: { open: bool
 
   const all = useMemo(() => childrenQuery.data?.children ?? [], [childrenQuery.data]);
   const inGroup = all.filter((c) => c.groupId === group?.id);
-  const others = all.filter((c) => c.groupId !== group?.id);
+  // «Qo'shish» faqat hech qaysi guruhda yo'q bolalarni ko'rsatadi — boshqa guruhdagi bola
+  // bu yerdan emas, o'sha guruhning o'zidan (yoki «Guruhdan chiqarish» orqali) o'tkaziladi.
+  const others = all.filter((c) => !c.groupId);
   const q = search.trim().toLowerCase();
   const match = (c: PeriodChild) => !q || c.childName.toLowerCase().includes(q) || String(c.publicId ?? "").includes(q);
   const otherGroups = (groupsQuery.data ?? []).filter((g) => g.id !== group?.id && g.status === "ACTIVE" && g.branchId === group?.branchId);
@@ -102,8 +104,6 @@ export function ManageChildrenSheet({ open, onClose, slug, group }: { open: bool
       else next.add(id);
       return next;
     });
-
-  const groupLabel = (c: PeriodChild) => (c.groupName ? tr("hozir: {0}", c.groupName) : tr("guruhsiz"));
 
   // --- 2-bosqich: chiqarishni tasdiqlash ---
   if (removing) {
@@ -230,7 +230,7 @@ export function ManageChildrenSheet({ open, onClose, slug, group }: { open: bool
         footer={
           tab === "in"
             ? tr("Bolani bosing — guruhdan chiqarish yoki boshqa guruhga o'tkazish.")
-            : tr("Boshqa guruhdagi bola tanlansa, u shu guruhga o'tadi.")
+            : tr("Faqat hech qaysi guruhda yo'q bolalar ko'rsatiladi.")
         }
       >
         {childrenQuery.isLoading || !period ? (
@@ -263,7 +263,7 @@ export function ManageChildrenSheet({ open, onClose, slug, group }: { open: bool
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[15px] font-medium text-[var(--color-text)]">{tr(c.childName)}</span>
                     <span className="block truncate text-[12.5px] text-[#8e8e93]">
-                      {[c.publicId ? `ID ${c.publicId}` : null, tab === "add" ? groupLabel(c) : null].filter(Boolean).join(" · ")}
+                      {[c.publicId ? `ID ${c.publicId}` : null].filter(Boolean).join(" · ")}
                     </span>
                   </span>
                   {debt && <Pill color={IOS.red}>−{groupDigits(c.totalDebt)}</Pill>}
