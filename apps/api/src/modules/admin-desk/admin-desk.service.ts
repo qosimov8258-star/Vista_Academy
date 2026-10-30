@@ -3,6 +3,7 @@ import { PrismaService } from "../../database/prisma.service";
 import { TenantScope, requireBranchScope, requireOperationalScope, requireTeachingScope } from "../iam/tenant-auth.types";
 import { assertNotAssistant, assertTeacherOwnsChild, resolveTeacherGroupIds } from "../iam/teacher-scope";
 import { CashDeskService } from "../cash-desk/cash-desk.service";
+import { phoneKey } from "../landing/landing.service";
 import { BroadcastDto, CallDoneDto, MarkPickupDto } from "./dto/admin-desk.dto";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -29,6 +30,15 @@ function dayRange(from: string, toInclusive: string) {
   const start = new Date(toDateOnly(from).getTime() - TASHKENT_OFFSET_MS);
   return { gte: start, lt: new Date(toDateOnly(toInclusive).getTime() + DAY_MS - TASHKENT_OFFSET_MS) };
 }
+function formatTashkentDateTime(value: Date): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Tashkent",
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(value);
+}
 function mondayOf(value: string): string {
   const d = toDateOnly(value);
   const diff = d.getUTCDay() === 0 ? -6 : 1 - d.getUTCDay();
@@ -37,6 +47,10 @@ function mondayOf(value: string): string {
 
 /** Oylik to'lov muddatidan shuncha kun o'tgach qarzdor call operatorga o'tadi. */
 const DEBT_GRACE_DAYS = 5;
+/** Frontenddagi "Aloqa qila olmadim" izohi — bunday ariza ertaga yana ro'yxatga chiqadi. */
+const NO_ANSWER_PREFIX = "Aloqa qila olmadim";
+/** "Qo'ng'iroq qilinganlar" ro'yxati shuncha kunlik arizalarni ko'rsatadi. */
+const CALLED_LEADS_LOOKBACK_DAYS = 30;
 
 const GUARDIAN_SELECT = {
   orderBy: [{ isPrimary: "desc" as const }, { createdAt: "asc" as const }],
@@ -70,15 +84,15 @@ export class AdminDeskService {
         where: { branchId, status: "ABSENT", date: { in: [toDateOnly(addDays(date, -1)), toDateOnly(addDays(date, -2))] } },
         select: { childId: true },
       }),
+      // Saytdan kelgan arizalar tashkilotning birinchi filialiga yoziladi — shuning
+      // uchun ular tashkilotning har bir filial operatoriga ko'rinadi.
       this.prisma.lead.findMany({
         where: {
-          branchId,
-          // Saytdan kelgan arizalar faqat CRM'da ("Qabul va bolalar → Arizalar") — bu ro'yxatga tushmaydi
-          source: { not: "WEBSITE" },
+          OR: [{ branchId }, { organizationId: scope.organizationId, source: "WEBSITE" }],
           stage: { notIn: ["WON", "LOST"] },
-          OR: [{ stage: "NEW" }, { followUpDate: { lte: day } }],
+          AND: [{ OR: [{ stage: "NEW" }, { followUpDate: { lte: day } }] }],
         },
-        select: { id: true, childFullName: true, parentName: true, parentPhone: true, stage: true, followUpDate: true },
+        select: { id: true, childFullName: true, parentName: true, parentPhone: true, stage: true, source: true, followUpDate: true, createdAt: true },
         orderBy: { createdAt: "asc" },
       }),
       // Shu kuni rad etilgan cheklar — soxta chek 2-yoki-undan-ko'p marta
@@ -107,6 +121,30 @@ export class AdminDeskService {
         })
       : [];
     const rejectedCountByGuardian = new Map(rejectedCounts.map((r) => [r.guardianId, r._count._all]));
+
+    // Arizaga qo'ng'iroq filialga emas, arizaga bog'liq: boshqa filial operatori
+    // qo'ng'iroq qilgan bo'lsa ham ariza "qilingan" hisoblanadi. Javob olingan
+    // ariza ertasi kuni qaytmaydi — faqat qayta bog'lanish sanasi kelsa yoki
+    // ota-ona saytdan yana ariza qoldirsa qaytadi; "aloqa qila olmadim" bo'lsa
+    // ertaga yana chiqadi.
+    const leadLogs = leads.length
+      ? await this.prisma.callLog.findMany({
+          where: { kind: "LEAD", subjectId: { in: leads.map((l) => l.id) }, date: { lte: day } },
+          select: { subjectId: true, date: true, note: true, calledByName: true, createdAt: true },
+          orderBy: { createdAt: "desc" },
+        })
+      : [];
+    const leadLogToday = new Map<string, (typeof leadLogs)[number]>();
+    const leadLastAnsweredAt = new Map<string, Date>();
+    for (const log of leadLogs) {
+      if (log.date.getTime() === day.getTime() && !leadLogToday.has(log.subjectId)) leadLogToday.set(log.subjectId, log);
+      if (!log.note?.startsWith(NO_ANSWER_PREFIX) && !leadLastAnsweredAt.has(log.subjectId)) leadLastAnsweredAt.set(log.subjectId, log.createdAt);
+    }
+    const reappliedAt = await this.websiteReapplications(scope.organizationId, leads, leadLastAnsweredAt);
+    const followUpDue = (l: (typeof leads)[number]) => !!l.followUpDate && l.followUpDate.getTime() <= day.getTime();
+    const openLeads = leads.filter(
+      (l) => leadLogToday.has(l.id) || followUpDue(l) || !leadLastAnsweredAt.has(l.id) || reappliedAt.has(l.id),
+    );
 
     const debtCutoff = addDays(date, -DEBT_GRACE_DAYS);
 
@@ -148,17 +186,27 @@ export class AdminDeskService {
           ...withLog("ABSENT", a.childId),
         };
       }),
-      ...leads.map((l) => ({
-        kind: "LEAD" as const,
-        subjectId: l.id,
-        title: l.childFullName,
-        subtitle: `Ariza (${l.stage === "NEW" ? "yangi" : "qayta bog'lanish"})`,
-        contactName: l.parentName,
-        phone: l.parentPhone,
-        contacts: l.parentPhone ? [{ name: l.parentName as string | null, relation: null as string | null, phone: l.parentPhone as string | null }] : [],
-        badge: null as string | null,
-        ...withLog("LEAD", l.id),
-      })),
+      ...openLeads.map((l) => {
+        const reapplied = reappliedAt.get(l.id);
+        // Qo'ng'iroqdan keyin saytdan yana ariza kelgan bo'lsa — bugungi belgi eskirgan, ariza yana ochiq
+        const log = reapplied ? undefined : leadLogToday.get(l.id);
+        return {
+          kind: "LEAD" as const,
+          subjectId: l.id,
+          // Saytdan kelgan arizada bola ismi so'ralmaydi — ota-ona ismi ko'rsatiladi
+          title: l.childFullName || l.parentName,
+          subtitle: reapplied
+            ? `Saytdan qayta ariza · ${formatTashkentDateTime(reapplied)}`
+            : `${l.source === "WEBSITE" ? "Saytdan ariza" : "Ariza"} (${followUpDue(l) ? "qayta bog'lanish" : "yangi"}) · ${formatTashkentDateTime(l.createdAt)}`,
+          contactName: l.parentName,
+          phone: l.parentPhone,
+          contacts: l.parentPhone ? [{ name: l.parentName as string | null, relation: null as string | null, phone: l.parentPhone as string | null }] : [],
+          badge: (l.source === "WEBSITE" ? "Sayt" : null) as string | null,
+          done: !!log,
+          doneNote: log?.note ?? null,
+          calledByName: log?.calledByName ?? null,
+        };
+      }),
       ...fakeReceiptsToday
         .filter((r, i, arr) => arr.findIndex((x) => x.guardianId === r.guardianId) === i)
         .filter((r) => (rejectedCountByGuardian.get(r.guardianId) ?? 0) >= 2)
@@ -180,22 +228,124 @@ export class AdminDeskService {
     return { date, items, open: items.filter((i) => !i.done).length };
   }
 
+  /**
+   * "Qo'ng'iroq qilinganlar": oxirgi 30 kunda javob olingan arizalar (eng
+   * yangisi tepada) — operator kimga qachon qo'ng'iroq qilinganini ko'radi.
+   */
+  async calledLeads(scope: TenantScope) {
+    const branchId = requireOperationalScope(scope);
+    const since = toDateOnly(addDays(todayTashkent(), -CALLED_LEADS_LOOKBACK_DAYS));
+    const logs = await this.prisma.callLog.findMany({
+      where: { kind: "LEAD", date: { gte: since }, branch: { organizationId: scope.organizationId } },
+      select: { subjectId: true, date: true, note: true, calledByName: true, createdAt: true },
+      orderBy: { createdAt: "desc" },
+    });
+    const answered = logs.filter((l) => !l.note?.startsWith(NO_ANSWER_PREFIX));
+    // Bir arizaga bir necha marta qo'ng'iroq bo'lsa — eng oxirgisi
+    const latest = new Map<string, (typeof answered)[number]>();
+    for (const log of answered) if (!latest.has(log.subjectId)) latest.set(log.subjectId, log);
+    if (latest.size === 0) return { items: [] };
+
+    const leads = await this.prisma.lead.findMany({
+      where: {
+        id: { in: [...latest.keys()] },
+        OR: [{ branchId }, { organizationId: scope.organizationId, source: "WEBSITE" }],
+      },
+      select: { id: true, branchId: true, childFullName: true, parentName: true, parentPhone: true, source: true, stage: true, createdAt: true },
+    });
+    const items = leads
+      .map((l) => {
+        const log = latest.get(l.id)!;
+        return {
+          leadId: l.id,
+          title: l.childFullName || l.parentName,
+          parentName: l.parentName,
+          phone: l.parentPhone,
+          source: l.source,
+          stage: l.stage,
+          appliedAt: l.createdAt,
+          calledAt: log.createdAt,
+          calledByName: log.calledByName,
+          note: log.note,
+          // CRM filial bo'yicha: boshqa filialga yozilgan sayt arizasini bu operator CRM'da ocha olmaydi
+          inMyBranch: l.branchId === branchId,
+        };
+      })
+      .sort((a, b) => b.calledAt.getTime() - a.calledAt.getTime());
+    return { items };
+  }
+
   async callDone(scope: TenantScope, actorName: string, dto: CallDoneDto) {
     const branchId = requireOperationalScope(scope);
     const date = toDateOnly(assertDate(dto.date.slice(0, 10)));
-    await this.prisma.callLog.deleteMany({ where: { branchId, kind: dto.kind, subjectId: dto.subjectId, date } });
-    await this.prisma.callLog.create({
-      data: { branchId, kind: dto.kind, subjectId: dto.subjectId, date, note: dto.note?.trim() || null, calledByName: actorName },
+    const lead = dto.kind === "LEAD" ? await this.findLeadInOrg(scope, dto.subjectId) : null;
+    await this.prisma.$transaction(async (tx) => {
+      // Arizaga qo'ng'iroq filialdan qat'i nazar bitta — boshqa filial yozuvi ham almashtiriladi
+      await tx.callLog.deleteMany({ where: { ...(lead ? {} : { branchId }), kind: dto.kind, subjectId: dto.subjectId, date } });
+      await tx.callLog.create({
+        data: { branchId, kind: dto.kind, subjectId: dto.subjectId, date, note: dto.note?.trim() || null, calledByName: actorName },
+      });
+      // Qo'ng'iroq CRM'dagi ariza tarixida ham ko'rinsin
+      if (lead) {
+        await tx.leadActivity.create({
+          data: { leadId: lead.id, type: "CALL", note: dto.note?.trim() || null, createdByUserId: scope.userId },
+        });
+      }
     });
     return { success: true };
   }
 
   async callUndo(scope: TenantScope, dto: CallDoneDto) {
     const branchId = requireOperationalScope(scope);
+    const date = toDateOnly(assertDate(dto.date.slice(0, 10)));
+    const lead = dto.kind === "LEAD" ? await this.findLeadInOrg(scope, dto.subjectId) : null;
     await this.prisma.callLog.deleteMany({
-      where: { branchId, kind: dto.kind, subjectId: dto.subjectId, date: toDateOnly(assertDate(dto.date.slice(0, 10))) },
+      where: { ...(lead ? {} : { branchId }), kind: dto.kind, subjectId: dto.subjectId, date },
     });
+    if (lead) {
+      // Bekor qilingan qo'ng'iroq CRM tarixida qolmasin — shu kungi eng oxirgi CALL yozuvi
+      const range = dayRange(dto.date.slice(0, 10), dto.date.slice(0, 10));
+      const last = await this.prisma.leadActivity.findFirst({
+        where: { leadId: lead.id, type: "CALL", createdAt: range },
+        orderBy: { createdAt: "desc" },
+        select: { id: true },
+      });
+      if (last) await this.prisma.leadActivity.delete({ where: { id: last.id } });
+    }
     return { success: true };
+  }
+
+  /**
+   * Javob olingan qo'ng'iroqdan keyin saytdan yana ariza qoldirgan lidlar
+   * (bir telefondan qayta ariza yangi lid ochmaydi — `upsertWebsiteLead`):
+   * leadId → eng oxirgi ariza vaqti.
+   */
+  private async websiteReapplications(
+    organizationId: string,
+    leads: { id: string; source: string; parentPhone: string }[],
+    lastAnsweredAt: Map<string, Date>,
+  ) {
+    const result = new Map<string, Date>();
+    const called = leads.filter((l) => l.source === "WEBSITE" && lastAnsweredAt.has(l.id));
+    if (called.length === 0) return result;
+    const since = new Date(Math.min(...called.map((l) => lastAnsweredAt.get(l.id)!.getTime())));
+    const applications = await this.prisma.landingApplication.findMany({
+      where: { organizationId, createdAt: { gt: since } },
+      select: { phone: true, createdAt: true },
+      orderBy: { createdAt: "desc" },
+    });
+    for (const lead of called) {
+      const key = phoneKey(lead.parentPhone);
+      const latest = applications.find((a) => phoneKey(a.phone) === key && a.createdAt > lastAnsweredAt.get(lead.id)!);
+      if (latest) result.set(lead.id, latest.createdAt);
+    }
+    return result;
+  }
+
+  private async findLeadInOrg(scope: TenantScope, leadId: string) {
+    const lead = await this.prisma.lead.findFirst({ where: { id: leadId, organizationId: scope.organizationId }, select: { id: true } });
+    if (!lead) throw new NotFoundException("Ariza topilmadi");
+    return lead;
   }
 
   /** Jonli doska: guruhlar bo'yicha kelganlar, olib ketilganlar, ovqat soni va kelmagan xodimlar. */

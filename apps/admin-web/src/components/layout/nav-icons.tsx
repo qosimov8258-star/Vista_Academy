@@ -18,6 +18,7 @@ import {
   KeyRound,
   Lightbulb,
   Phone,
+  PhoneOutgoing,
   ScanFace,
   School,
   Settings,
@@ -74,6 +75,7 @@ export const CalendarIcon = navIcon(CalendarDays, "red");
 export const ChecklistIcon = navIcon(ClipboardCheck, "green");
 export const ClockIcon = navIcon(AlarmClock, "orange");
 export const PhoneIcon = navIcon(Phone, "green");
+export const PhoneOutgoingIcon = navIcon(PhoneOutgoing, "teal");
 export const FaceIdIcon = navIcon(ScanFace, "purple");
 export const GlobeIcon = navIcon(Globe, "pink");
 export const MealIcon = navIcon(Utensils, "orange");

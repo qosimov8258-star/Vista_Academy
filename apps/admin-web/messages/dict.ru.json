@@ -2749,5 +2749,12 @@
  "«{0}» ota-onalar kabinetidan ham o'chadi.": "«{0}» также исчезнет из кабинета родителей.",
  "Faylni ochib bo'lmadi": "Не удалось открыть файл",
  "To'lov bo'limi yopiq": "Раздел оплаты закрыт",
- "Sizga moliya bo'limiga kirish huquqi berilmagan. Bog'cha ma'muriyatiga murojaat qiling.": "У вас нет доступа к разделу финансов. Обратитесь в администрацию детского сада."
+ "Sizga moliya bo'limiga kirish huquqi berilmagan. Bog'cha ma'muriyatiga murojaat qiling.": "У вас нет доступа к разделу финансов. Обратитесь в администрацию детского сада.",
+ "Sayt": "Сайт",
+ "Qo'ng'iroq qilinganlar": "Обзвоненные",
+ "Oxirgi 30 kunda javob olingan arizalar": "Заявки с ответом за последние 30 дней",
+ "Hali qo'ng'iroq qilingan ariza yo'q": "Пока нет заявок, по которым позвонили",
+ "«Qo'ng'iroqlar»da «Qo'ng'iroq qildim» bosilgan arizalar shu yerda chiqadi": "Здесь появятся заявки, отмеченные «Я позвонил» в разделе «Звонки»",
+ "Bosilsa — CRM'dagi ariza ochiladi.": "Нажмите — откроется заявка в CRM.",
+ "Ism yoki telefon": "Имя или телефон"
 }

@@ -52,6 +52,7 @@ import {
   NoteIcon,
   PercentIcon,
   PhoneIcon,
+  PhoneOutgoingIcon,
   QuestionIcon,
   SettingsIcon,
   ShopIcon,
@@ -379,7 +380,9 @@ export function Sidebar({ slug }: { slug: string }) {
   // pastki panelda turadi, qolganlari "Menyu" ichida — shuning uchun eng kerakligi oldinda.
   const callOperatorEntries: NavEntry[] = [
     { href: base, label: t("nav.home"), icon: HomeIcon, show: true, exact: true },
-    { href: `${base}/calls`, label: tr("Qo'ng'iroqlar"), icon: PhoneIcon, show: true },
+    // `exact` — aks holda «Qo'ng'iroq qilinganlar» (/calls/called) ochiqligida ikkalasi ham faol ko'rinadi
+    { href: `${base}/calls`, label: tr("Qo'ng'iroqlar"), icon: PhoneIcon, show: true, exact: true },
+    { href: `${base}/calls/called`, label: tr("Qo'ng'iroq qilinganlar"), icon: PhoneOutgoingIcon, show: true },
     { href: `${base}/crm`, label: t("nav.crm"), icon: PhoneIcon, show: true },
     { href: `${base}/debtors`, label: "Qarzdorlar", icon: MoneyIcon, show: true },
     { href: `${base}/notifications`, label: t("nav.notifications"), icon: BellIcon, show: true },
@@ -397,7 +400,8 @@ export function Sidebar({ slug }: { slug: string }) {
       label: "Bugungi ishlar",
       icon: PhoneIcon,
       items: [
-        { href: `${base}/calls`, label: tr("Qo'ng'iroqlar"), icon: PhoneIcon, show: (isManager || isBranchAdmin) && !inBranchContext },
+        { href: `${base}/calls`, label: tr("Qo'ng'iroqlar"), icon: PhoneIcon, show: (isManager || isBranchAdmin) && !inBranchContext, exact: true },
+        { href: `${base}/calls/called`, label: tr("Qo'ng'iroq qilinganlar"), icon: PhoneOutgoingIcon, show: (isManager || isBranchAdmin) && !inBranchContext },
         { href: `${base}/pickups`, label: "Olib ketish", icon: ChildIcon, show: !inBranchContext && !isManager && !isBranchAdmin },
         { href: `${base}/board`, label: "Bugungi holat", icon: ChartIcon, show: !inBranchContext },
         { href: `${base}/weekly-report`, label: "Haftalik hisobot", icon: NoteIcon, show: !inBranchContext },
