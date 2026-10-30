@@ -140,6 +140,20 @@ export class ParentController {
     return this.paymentReceiptsService.listForParent(parent, childId);
   }
 
+  /** To'lov sahifasi xulosasi: qolgan qarz, muddat, kutilayotgan cheklar. */
+  @Get("children/:childId/payment-summary")
+  @UseGuards(ParentJwtAuthGuard)
+  paymentSummary(@CurrentParent() parent: AuthenticatedParent, @Param("childId") childId: string) {
+    return this.paymentReceiptsService.summaryForParent(parent, childId);
+  }
+
+  /** Bog'cha to'lov kartasi — ota-ona shu kartaga pul o'tkazib, chek yuklaydi. */
+  @Get("payment-card")
+  @UseGuards(ParentJwtAuthGuard)
+  paymentCard(@CurrentParent() parent: AuthenticatedParent) {
+    return this.paymentReceiptsService.getCardForParent(parent);
+  }
+
   /** Ota-ona yuklagan chek surati. */
   @Get("payment-receipts/:id/image")
   @Header("Cache-Control", "private, max-age=60")

@@ -161,6 +161,7 @@ model Organization {
   paymentReminderSettings   PaymentReminderSettings[]
   paymentReminderDispatches PaymentReminderDispatch[]
   paymentReceipts           PaymentReceipt[]
+  paymentCard               PaymentCard?
 
   @@map("organizations")
 }
@@ -230,6 +231,7 @@ model TenantUser {
   proverbs                Proverb[]
   tales                   Tale[]
   reviewedPaymentReceipts PaymentReceipt[]     @relation("PaymentReceiptReviewer")
+  updatedPaymentCards     PaymentCard[]        @relation("PaymentCardUpdater")
 
   @@unique([organizationId, login])
   @@index([branchId])
@@ -1430,6 +1432,8 @@ model PaymentReceipt {
   guardianId       String               @map("guardian_id")
   claimedAmount    Decimal              @map("claimed_amount") @db.Decimal(12, 2)
   currency         String               @default("UZS")
+  /// Ota-onaning ixtiyoriy izohi (masalan, "may oyi uchun") — moliyachi chek bilan birga ko'radi.
+  note             String?              @db.Text
   image            Bytes?
   imageKey         String?              @map("image_key")
   mimeType         String               @map("mime_type")
@@ -1453,6 +1457,30 @@ model PaymentReceipt {
   @@index([status])
   @@index([guardianId])
   @@map("payment_receipts")
+}
+
+/**
+ * Bog'cha to'lovlarini qabul qiladigan karta. Moliyachi to'liq raqamini
+ * kiritadi, barcha ota-ona kabinetlarida ko'rinadi (ota-ona shu kartaga
+ * pul o'tkazib, chek yuklaydi). Tashkilotga bitta karta.
+ */
+model PaymentCard {
+  id              String   @id @default(uuid())
+  organizationId  String   @unique @map("organization_id")
+  /// Faqat raqamlar, 16 ta (bo'shliqsiz saqlanadi)
+  cardNumber      String   @map("card_number")
+  holderName      String   @map("holder_name")
+  bankName        String?  @map("bank_name")
+  /// Ota-onaga ko'rsatiladigan qo'shimcha izoh (masalan, "To'lov izohiga bola ismini yozing")
+  note            String?  @db.Text
+  updatedByUserId String?  @map("updated_by_user_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  updatedBy    TenantUser?  @relation("PaymentCardUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  @@map("payment_cards")
 }
 
 model PaymentAllocation {

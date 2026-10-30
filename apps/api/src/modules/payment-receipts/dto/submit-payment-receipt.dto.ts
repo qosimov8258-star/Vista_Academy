@@ -1,11 +1,17 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { IsNumber, IsPositive, IsString, Matches } from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { IsNumber, IsOptional, IsPositive, IsString, Matches, MaxLength } from "class-validator";
 
 export class SubmitPaymentReceiptDto {
   @ApiProperty({ description: "Ota-ona da'vo qilgan to'lov summasi" })
   @IsNumber()
   @IsPositive()
   amount!: number;
+
+  @ApiPropertyOptional({ description: "Ota-onaning izohi — moliyachi chek bilan birga ko'radi" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  note?: string;
 
   @ApiProperty({
     description: "data:image/... ko'rinishidagi base64 chek surati (brauzerda kichraytiriladi)",

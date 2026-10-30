@@ -266,7 +266,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
 
         {/* To'lov eslatmasi — bog'cha sozlagan kunlar oynasida to'lanmagan
             hisob-faktura bo'lsa chiqadi, to'lov qilingach o'zi yo'qoladi. */}
-        {reminderQuery.data?.visible && <PaymentReminderCard reminder={reminderQuery.data} />}
+        {reminderQuery.data?.visible && <PaymentReminderCard reminder={reminderQuery.data} payHref={`/ota-ona/${slug}/tolov`} />}
 
         {/* Chek yuklash — faqat to'lov kutilayotganda ochiladi (aks holda
             tasdiqlash uchun ochiq hisob-faktura topilmaydi). Oldingi
@@ -504,7 +504,7 @@ function Empty({ text }: { text: string }) {
  * bo'lsa qizil — bola to'lov qilinguncha (invoice PAID bo'lguncha) ko'rinib
  * turadi, buni backend har safar jonli hisoblab beradi.
  */
-function PaymentReminderCard({ reminder }: { reminder: ParentPaymentReminder }) {
+function PaymentReminderCard({ reminder, payHref }: { reminder: ParentPaymentReminder; payHref: string }) {
   const tr = useTr();
   const overdue = !!reminder.overdue;
   return (
@@ -531,6 +531,15 @@ function PaymentReminderCard({ reminder }: { reminder: ParentPaymentReminder }) 
           {reminder.amount && (
             <p className="mt-2 text-[15px] font-bold text-[var(--p-ink)]">{formatMoney(reminder.amount)}</p>
           )}
+          <Link
+            href={payHref}
+            className={clsx(
+              "mt-3 inline-flex rounded-full px-4 py-2 text-[13.5px] font-bold text-white",
+              overdue ? "bg-[var(--p-coral)]" : "bg-[var(--p-sun)] text-[#3a2a00]",
+            )}
+          >
+            {tr("To'lov qilish")}
+          </Link>
         </div>
       </div>
     </section>
