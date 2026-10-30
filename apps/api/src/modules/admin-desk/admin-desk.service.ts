@@ -3,6 +3,7 @@ import { PrismaService } from "../../database/prisma.service";
 import { TenantScope, requireBranchScope, requireOperationalScope, requireTeachingScope } from "../iam/tenant-auth.types";
 import { assertNotAssistant, assertTeacherOwnsChild, resolveTeacherGroupIds } from "../iam/teacher-scope";
 import { CashDeskService } from "../cash-desk/cash-desk.service";
+import { phoneKey } from "../landing/landing.service";
 import { BroadcastDto, CallDoneDto, MarkPickupDto } from "./dto/admin-desk.dto";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -122,27 +123,28 @@ export class AdminDeskService {
     const rejectedCountByGuardian = new Map(rejectedCounts.map((r) => [r.guardianId, r._count._all]));
 
     // Arizaga qo'ng'iroq filialga emas, arizaga bog'liq: boshqa filial operatori
-    // qo'ng'iroq qilgan bo'lsa ham ariza "qilingan" hisoblanadi. Avvalgi kunlarda
-    // javob olingan yangi ariza ertasi kuni qaytmaydi (faqat qayta bog'lanish
-    // sanasi kelsa qaytadi); "aloqa qila olmadim" bo'lsa — ertaga yana chiqadi.
+    // qo'ng'iroq qilgan bo'lsa ham ariza "qilingan" hisoblanadi. Javob olingan
+    // ariza ertasi kuni qaytmaydi — faqat qayta bog'lanish sanasi kelsa yoki
+    // ota-ona saytdan yana ariza qoldirsa qaytadi; "aloqa qila olmadim" bo'lsa
+    // ertaga yana chiqadi.
     const leadLogs = leads.length
       ? await this.prisma.callLog.findMany({
           where: { kind: "LEAD", subjectId: { in: leads.map((l) => l.id) }, date: { lte: day } },
-          select: { subjectId: true, date: true, note: true, calledByName: true },
+          select: { subjectId: true, date: true, note: true, calledByName: true, createdAt: true },
           orderBy: { createdAt: "desc" },
         })
       : [];
     const leadLogToday = new Map<string, (typeof leadLogs)[number]>();
-    const leadAnsweredBefore = new Set<string>();
+    const leadLastAnsweredAt = new Map<string, Date>();
     for (const log of leadLogs) {
-      if (log.date.getTime() === day.getTime()) {
-        if (!leadLogToday.has(log.subjectId)) leadLogToday.set(log.subjectId, log);
-      } else if (!log.note?.startsWith(NO_ANSWER_PREFIX)) {
-        leadAnsweredBefore.add(log.subjectId);
-      }
+      if (log.date.getTime() === day.getTime() && !leadLogToday.has(log.subjectId)) leadLogToday.set(log.subjectId, log);
+      if (!log.note?.startsWith(NO_ANSWER_PREFIX) && !leadLastAnsweredAt.has(log.subjectId)) leadLastAnsweredAt.set(log.subjectId, log.createdAt);
     }
+    const reappliedAt = await this.websiteReapplications(scope.organizationId, leads, leadLastAnsweredAt);
     const followUpDue = (l: (typeof leads)[number]) => !!l.followUpDate && l.followUpDate.getTime() <= day.getTime();
-    const openLeads = leads.filter((l) => leadLogToday.has(l.id) || followUpDue(l) || !leadAnsweredBefore.has(l.id));
+    const openLeads = leads.filter(
+      (l) => leadLogToday.has(l.id) || followUpDue(l) || !leadLastAnsweredAt.has(l.id) || reappliedAt.has(l.id),
+    );
 
     const debtCutoff = addDays(date, -DEBT_GRACE_DAYS);
 
@@ -185,13 +187,17 @@ export class AdminDeskService {
         };
       }),
       ...openLeads.map((l) => {
-        const log = leadLogToday.get(l.id);
+        const reapplied = reappliedAt.get(l.id);
+        // Qo'ng'iroqdan keyin saytdan yana ariza kelgan bo'lsa — bugungi belgi eskirgan, ariza yana ochiq
+        const log = reapplied ? undefined : leadLogToday.get(l.id);
         return {
           kind: "LEAD" as const,
           subjectId: l.id,
           // Saytdan kelgan arizada bola ismi so'ralmaydi — ota-ona ismi ko'rsatiladi
           title: l.childFullName || l.parentName,
-          subtitle: `${l.source === "WEBSITE" ? "Saytdan ariza" : "Ariza"} (${followUpDue(l) ? "qayta bog'lanish" : "yangi"}) · ${formatTashkentDateTime(l.createdAt)}`,
+          subtitle: reapplied
+            ? `Saytdan qayta ariza · ${formatTashkentDateTime(reapplied)}`
+            : `${l.source === "WEBSITE" ? "Saytdan ariza" : "Ariza"} (${followUpDue(l) ? "qayta bog'lanish" : "yangi"}) · ${formatTashkentDateTime(l.createdAt)}`,
           contactName: l.parentName,
           phone: l.parentPhone,
           contacts: l.parentPhone ? [{ name: l.parentName as string | null, relation: null as string | null, phone: l.parentPhone as string | null }] : [],
@@ -245,7 +251,7 @@ export class AdminDeskService {
         id: { in: [...latest.keys()] },
         OR: [{ branchId }, { organizationId: scope.organizationId, source: "WEBSITE" }],
       },
-      select: { id: true, childFullName: true, parentName: true, parentPhone: true, source: true, stage: true, createdAt: true },
+      select: { id: true, branchId: true, childFullName: true, parentName: true, parentPhone: true, source: true, stage: true, createdAt: true },
     });
     const items = leads
       .map((l) => {
@@ -261,6 +267,8 @@ export class AdminDeskService {
           calledAt: log.createdAt,
           calledByName: log.calledByName,
           note: log.note,
+          // CRM filial bo'yicha: boshqa filialga yozilgan sayt arizasini bu operator CRM'da ocha olmaydi
+          inMyBranch: l.branchId === branchId,
         };
       })
       .sort((a, b) => b.calledAt.getTime() - a.calledAt.getTime());
@@ -305,6 +313,33 @@ export class AdminDeskService {
       if (last) await this.prisma.leadActivity.delete({ where: { id: last.id } });
     }
     return { success: true };
+  }
+
+  /**
+   * Javob olingan qo'ng'iroqdan keyin saytdan yana ariza qoldirgan lidlar
+   * (bir telefondan qayta ariza yangi lid ochmaydi — `upsertWebsiteLead`):
+   * leadId → eng oxirgi ariza vaqti.
+   */
+  private async websiteReapplications(
+    organizationId: string,
+    leads: { id: string; source: string; parentPhone: string }[],
+    lastAnsweredAt: Map<string, Date>,
+  ) {
+    const result = new Map<string, Date>();
+    const called = leads.filter((l) => l.source === "WEBSITE" && lastAnsweredAt.has(l.id));
+    if (called.length === 0) return result;
+    const since = new Date(Math.min(...called.map((l) => lastAnsweredAt.get(l.id)!.getTime())));
+    const applications = await this.prisma.landingApplication.findMany({
+      where: { organizationId, createdAt: { gt: since } },
+      select: { phone: true, createdAt: true },
+      orderBy: { createdAt: "desc" },
+    });
+    for (const lead of called) {
+      const key = phoneKey(lead.parentPhone);
+      const latest = applications.find((a) => phoneKey(a.phone) === key && a.createdAt > lastAnsweredAt.get(lead.id)!);
+      if (latest) result.set(lead.id, latest.createdAt);
+    }
+    return result;
   }
 
   private async findLeadInOrg(scope: TenantScope, leadId: string) {

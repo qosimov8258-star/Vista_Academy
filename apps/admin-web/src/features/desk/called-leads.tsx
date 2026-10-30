@@ -18,7 +18,8 @@ const formatDateTime = (value: string) =>
 
 /**
  * "Qo'ng'iroq qilinganlar" — oxirgi 30 kunda javob olingan arizalar (sayt
- * arizalari ham). Bosilsa CRM'dagi ariza sahifasi ochiladi (bosqich, izoh).
+ * arizalari ham). Bosilsa CRM'dagi ariza sahifasi ochiladi (bosqich, izoh) —
+ * faqat ariza shu filialga yozilgan bo'lsa (CRM filial bo'yicha ishlaydi).
  */
 export function CalledLeadsList({ slug }: { slug: string }) {
   const tr = useTr();
@@ -41,17 +42,16 @@ export function CalledLeadsList({ slug }: { slug: string }) {
           {tr("Qo'ng'iroq qilingan arizalar")} <span className="tabular-nums">· {items.length}</span>
         </>
       }
-      footer={tr("Oxirgi 30 kun. Bosilsa — CRM'dagi ariza ochiladi.")}
+      footer={tr(items.some((i) => i.inMyBranch) ? "Oxirgi 30 kun. Bosilsa — CRM'dagi ariza ochiladi." : "Oxirgi 30 kun")}
     >
       {items.map((item) => (
         <ListRow
           key={item.leadId}
-          href={`/${slug}/crm/${item.leadId}`}
+          href={item.inMyBranch ? `/${slug}/crm/${item.leadId}` : undefined}
           avatar={<IosIcon icon={PhoneCall} tint="green" size={44} />}
           title={item.title}
           subtitle={[item.phone, item.calledByName, formatDateTime(item.calledAt), item.note].filter(Boolean).join(" · ")}
           meta={item.source === "WEBSITE" ? <Pill color={IOS.blue}>{tr("Sayt")}</Pill> : undefined}
-          chevron
         />
       ))}
     </Group>

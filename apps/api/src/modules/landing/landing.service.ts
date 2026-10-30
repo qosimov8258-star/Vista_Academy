@@ -513,7 +513,7 @@ export class LandingService {
 }
 
 /** Telefon raqamini solishtirish uchun — oxirgi 9 raqam (+998 bor-yo'qligidan qat'i nazar) */
-const phoneKey = (phone: string) => phone.replace(/\D/g, "").slice(-9);
+export const phoneKey = (phone: string) => phone.replace(/\D/g, "").slice(-9);
 
 /**
  * Lending arizasini CRM lidiga aylantiradi. Shu telefondan hali yopilmagan

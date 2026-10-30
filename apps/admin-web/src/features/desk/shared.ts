@@ -33,6 +33,8 @@ export interface CalledLeadsResult {
     calledAt: string;
     calledByName: string;
     note: string | null;
+    /** Ariza shu operator filialida — CRM'da ochiladi */
+    inMyBranch: boolean;
   }[];
 }
 
