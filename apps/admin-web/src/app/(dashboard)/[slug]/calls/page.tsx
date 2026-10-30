@@ -10,7 +10,6 @@ import { ChipRow, IosChip } from "@/components/ios/filters";
 import { PageCard, PageHeaderCard } from "@/components/ios/page-card";
 import { PullToRefresh } from "@/components/ios/pull-to-refresh";
 import { CallsList } from "@/features/desk/calls-list";
-import { CalledLeadsList } from "@/features/desk/called-leads";
 import { CALL_KIND_LABEL, todayTashkent, type CallKind, type CallsResult } from "@/features/desk/shared";
 import { useTr } from "@/i18n/tr";
 
@@ -88,8 +87,6 @@ export default function CallsPage({ params }: { params: Promise<{ slug: string }
         </ChipRow>
 
         <CallsList slug={slug} filter={filter} />
-
-        {(filter === "ALL" || filter === "LEAD") && <CalledLeadsList slug={slug} />}
       </div>
     </div>
   );

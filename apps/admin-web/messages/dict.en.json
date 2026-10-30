@@ -2697,8 +2697,11 @@
  "Faylni ochib bo'lmadi": "Could not open the file",
  "To'lov bo'limi yopiq": "Payments section is closed",
  "Sizga moliya bo'limiga kirish huquqi berilmagan. Bog'cha ma'muriyatiga murojaat qiling.": "You don't have access to the finance section. Please contact the kindergarten administration.",
- "Qo'ng'iroq qilingan arizalar": "Called applications",
- "Oxirgi 30 kun. Bosilsa — CRM'dagi ariza ochiladi.": "Last 30 days. Tap to open the application in CRM.",
  "Sayt": "Website",
- "Oxirgi 30 kun": "Last 30 days"
+ "Qo'ng'iroq qilinganlar": "Called",
+ "Oxirgi 30 kunda javob olingan arizalar": "Answered applications from the last 30 days",
+ "Hali qo'ng'iroq qilingan ariza yo'q": "No called applications yet",
+ "«Qo'ng'iroqlar»da «Qo'ng'iroq qildim» bosilgan arizalar shu yerda chiqadi": "Applications marked “I called” in Calls appear here",
+ "Bosilsa — CRM'dagi ariza ochiladi.": "Tap to open the application in CRM.",
+ "Ism yoki telefon": "Name or phone"
 }
