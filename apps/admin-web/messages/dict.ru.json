@@ -2696,5 +2696,8 @@
  "«{0}» ota-onalar kabinetidan ham o'chadi.": "«{0}» также исчезнет из кабинета родителей.",
  "Faylni ochib bo'lmadi": "Не удалось открыть файл",
  "To'lov bo'limi yopiq": "Раздел оплаты закрыт",
- "Sizga moliya bo'limiga kirish huquqi berilmagan. Bog'cha ma'muriyatiga murojaat qiling.": "У вас нет доступа к разделу финансов. Обратитесь в администрацию детского сада."
+ "Sizga moliya bo'limiga kirish huquqi berilmagan. Bog'cha ma'muriyatiga murojaat qiling.": "У вас нет доступа к разделу финансов. Обратитесь в администрацию детского сада.",
+ "Qo'ng'iroq qilingan arizalar": "Заявки, по которым позвонили",
+ "Oxirgi 30 kun. Bosilsa — CRM'dagi ariza ochiladi.": "Последние 30 дней. Нажмите — откроется заявка в CRM.",
+ "Sayt": "Сайт"
 }

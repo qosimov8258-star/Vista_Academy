@@ -2696,5 +2696,8 @@
  "«{0}» ota-onalar kabinetidan ham o'chadi.": "“{0}” will also disappear from the parents' cabinet.",
  "Faylni ochib bo'lmadi": "Could not open the file",
  "To'lov bo'limi yopiq": "Payments section is closed",
- "Sizga moliya bo'limiga kirish huquqi berilmagan. Bog'cha ma'muriyatiga murojaat qiling.": "You don't have access to the finance section. Please contact the kindergarten administration."
+ "Sizga moliya bo'limiga kirish huquqi berilmagan. Bog'cha ma'muriyatiga murojaat qiling.": "You don't have access to the finance section. Please contact the kindergarten administration.",
+ "Qo'ng'iroq qilingan arizalar": "Called applications",
+ "Oxirgi 30 kun. Bosilsa — CRM'dagi ariza ochiladi.": "Last 30 days. Tap to open the application in CRM.",
+ "Sayt": "Website"
 }

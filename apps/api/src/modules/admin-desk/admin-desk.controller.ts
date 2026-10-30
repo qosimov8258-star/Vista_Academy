@@ -20,6 +20,12 @@ export class AdminDeskController {
     return this.service.calls(toTenantScope(user), date);
   }
 
+  /** Oxirgi 30 kunda qo'ng'iroq qilingan (javob olingan) arizalar */
+  @Get("calls/leads-called")
+  calledLeads(@CurrentTenantUser() user: TenantAuthenticatedUser) {
+    return this.service.calledLeads(toTenantScope(user));
+  }
+
   @Post("calls/done")
   callDone(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: CallDoneDto) {
     return this.service.callDone(toTenantScope(user), user.fullName, dto);

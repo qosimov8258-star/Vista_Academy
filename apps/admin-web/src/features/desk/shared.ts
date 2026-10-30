@@ -20,6 +20,22 @@ export interface CallsResult {
   open: number;
 }
 
+/** "Qo'ng'iroq qilinganlar" — javob olingan arizalar (oxirgi 30 kun) */
+export interface CalledLeadsResult {
+  items: {
+    leadId: string;
+    title: string;
+    parentName: string;
+    phone: string;
+    source: string;
+    stage: string;
+    appliedAt: string;
+    calledAt: string;
+    calledByName: string;
+    note: string | null;
+  }[];
+}
+
 export const CALL_KIND_LABEL: Record<CallKind, string> = {
   DEBT: "Qarz",
   ABSENT: "Kelmagan bola",
