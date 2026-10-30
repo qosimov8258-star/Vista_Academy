@@ -1,4 +1,5 @@
-import { Controller, Get, Header, Param, Post, Body, Res, UseGuards } from "@nestjs/common";
+import { Controller, Get, Header, Param, ParseEnumPipe, Post, Put, Query, Body, Res, UseGuards } from "@nestjs/common";
+import { PaymentReceiptStatus } from "@prisma/client";
 import type { Response } from "express";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { Public } from "../../common/decorators/public.decorator";
@@ -10,6 +11,7 @@ import { R2Service } from "../storage/r2.service";
 import { PaymentReceiptsService } from "./payment-receipts.service";
 import { ApprovePaymentReceiptDto } from "./dto/approve-payment-receipt.dto";
 import { RejectPaymentReceiptDto } from "./dto/reject-payment-receipt.dto";
+import { UpsertPaymentCardDto } from "./dto/upsert-payment-card.dto";
 import { AttachPaymentReceiptImageDto } from "./dto/attach-payment-receipt-image.dto";
 
 /** Moliyachi tomoni — ota-ona yuklagan to'lov cheklarini ko'rib chiqish. */
@@ -23,6 +25,26 @@ export class PaymentReceiptsController {
     private readonly paymentReceiptsService: PaymentReceiptsService,
     private readonly r2: R2Service,
   ) {}
+
+  /** Moliyachi cheklar navbati (kutilayotgan/tasdiqlangan/rad etilgan). */
+  @Get("payment-receipts")
+  listForReview(
+    @CurrentTenantUser() user: TenantAuthenticatedUser,
+    @Query("status", new ParseEnumPipe(PaymentReceiptStatus, { optional: true })) status?: PaymentReceiptStatus,
+  ) {
+    return this.paymentReceiptsService.listForReview(toTenantScope(user), status);
+  }
+
+  /** Ota-onalarga ko'rinadigan to'lov kartasi. */
+  @Get("payment-card")
+  getCard(@CurrentTenantUser() user: TenantAuthenticatedUser) {
+    return this.paymentReceiptsService.getCardForStaff(toTenantScope(user));
+  }
+
+  @Put("payment-card")
+  upsertCard(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: UpsertPaymentCardDto) {
+    return this.paymentReceiptsService.upsertCard(user, dto);
+  }
 
   @Get("children/:childId/payment-receipts")
   listForChild(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("childId") childId: string) {

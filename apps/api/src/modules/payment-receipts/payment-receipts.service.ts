@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { InvoiceStatus } from "@prisma/client";
+import { InvoiceStatus, PaymentReceiptStatus } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantAuthenticatedUser, TenantScope, requireMoneyScope, toTenantScope } from "../iam/tenant-auth.types";
 import { AuditLogService } from "../audit-log/audit-log.service";
@@ -10,6 +10,7 @@ import { R2_CATEGORY } from "../storage/r2.constants";
 import { SubmitPaymentReceiptDto } from "./dto/submit-payment-receipt.dto";
 import { ApprovePaymentReceiptDto } from "./dto/approve-payment-receipt.dto";
 import { RejectPaymentReceiptDto } from "./dto/reject-payment-receipt.dto";
+import { UpsertPaymentCardDto } from "./dto/upsert-payment-card.dto";
 import { AttachPaymentReceiptImageDto } from "./dto/attach-payment-receipt-image.dto";
 
 /** Ekrandan olingan skrinshotlar kattaroq bo'lishi mumkin — bola surati (600KB)dan farqli, 3MB gacha. */
@@ -17,12 +18,21 @@ const MAX_RECEIPT_IMAGE_BYTES = 3 * 1024 * 1024;
 /** Bir bola uchun bir vaqtda ko'rib chiqilmagan cheklar — cheksiz yuklab xotirani to'ldirmaslik uchun. */
 const MAX_PENDING_RECEIPTS_PER_CHILD = 5;
 
+const cardSelect = {
+  cardNumber: true,
+  holderName: true,
+  bankName: true,
+  note: true,
+  updatedAt: true,
+} as const;
+
 const receiptSummarySelect = {
   id: true,
   childId: true,
   guardianId: true,
   claimedAmount: true,
   currency: true,
+  note: true,
   status: true,
   reviewNote: true,
   reviewedByUserId: true,
@@ -103,6 +113,7 @@ export class PaymentReceiptsService {
         childId: child.id,
         guardianId: parent.id,
         claimedAmount: dto.amount,
+        note: dto.note?.trim() || null,
         image,
         imageKey,
         mimeType,
@@ -129,6 +140,49 @@ export class PaymentReceiptsService {
       throw new NotFoundException("Chek topilmadi");
     }
     return receipt;
+  }
+
+  /**
+   * To'lov sahifasi tepasidagi xulosa: ochiq hisob-fakturalar bo'yicha qolgan
+   * qarz, eng yaqin muddat va hali tasdiqlanmagan cheklar summasi. Tasdiqlanmagan
+   * chek qarzni kamaytirmaydi — faqat ota-onaga "yuborgansiz" deb ko'rsatiladi.
+   */
+  async summaryForParent(parent: AuthenticatedParent, childId: string) {
+    const child = await this.assertParentOwnsChildWithFinance(parent, childId);
+    const [invoices, pending] = await Promise.all([
+      this.prisma.invoice.findMany({
+        where: {
+          childId: child.id,
+          status: { in: [InvoiceStatus.PENDING, InvoiceStatus.PARTIALLY_PAID, InvoiceStatus.OVERDUE] },
+        },
+        orderBy: { dueDate: "asc" },
+        select: { amount: true, discountAmount: true, paidAmount: true, dueDate: true, currency: true },
+      }),
+      this.prisma.paymentReceipt.aggregate({
+        where: { childId: child.id, guardianId: parent.id, status: "PENDING" },
+        _sum: { claimedAmount: true },
+        _count: true,
+      }),
+    ]);
+    const remaining = invoices.reduce(
+      (sum, i) => sum + Math.max(0, Number(i.amount) - Number(i.discountAmount) - Number(i.paidAmount)),
+      0,
+    );
+    return {
+      remainingAmount: remaining,
+      currency: invoices[0]?.currency ?? "UZS",
+      nextDueDate: invoices[0]?.dueDate ?? null,
+      pendingAmount: Number(pending._sum.claimedAmount ?? 0),
+      pendingCount: pending._count,
+    };
+  }
+
+  /** Ota-ona to'lov qiladigan karta (tashkilot bo'yicha bitta). Karta kiritilmagan bo'lsa — null. */
+  async getCardForParent(parent: AuthenticatedParent) {
+    return this.prisma.paymentCard.findUnique({
+      where: { organizationId: parent.organizationId },
+      select: cardSelect,
+    });
   }
 
   // ---------------------------------------------------------------
@@ -224,6 +278,76 @@ export class PaymentReceiptsService {
       imageKey: payment.receiptImageKey,
       mimeType: payment.receiptMimeType,
     };
+  }
+
+  async getCardForStaff(scope: TenantScope) {
+    assertMoneyReader(scope);
+    return this.prisma.paymentCard.findUnique({
+      where: { organizationId: scope.organizationId },
+      select: cardSelect,
+    });
+  }
+
+  /**
+   * Karta tashkilot bo'yicha bitta va barcha ota-onalarga ko'rinadi, shuning
+   * uchun uni faqat moliyachi va Super Admin o'zgartiradi (filial admini emas).
+   */
+  async upsertCard(caller: TenantAuthenticatedUser, dto: UpsertPaymentCardDto) {
+    if (caller.role !== "FINANCE" && caller.role !== "NETWORK_ADMIN") {
+      throw new ForbiddenException("To'lov kartasini faqat moliyachi yoki Super Admin o'zgartira oladi");
+    }
+    const data = {
+      cardNumber: dto.cardNumber,
+      holderName: dto.holderName.trim(),
+      bankName: dto.bankName?.trim() || null,
+      note: dto.note?.trim() || null,
+      updatedByUserId: caller.id,
+    };
+    const card = await this.prisma.paymentCard.upsert({
+      where: { organizationId: caller.organizationId },
+      create: { organizationId: caller.organizationId, ...data },
+      update: data,
+      select: cardSelect,
+    });
+    await this.auditLog.logFromUser(caller, {
+      action: "payment_card.update",
+      entityType: "PaymentCard",
+      entityId: caller.organizationId,
+      branchId: caller.branchId ?? undefined,
+      summary: `To'lov kartasi yangilandi (…${dto.cardNumber.slice(-4)})`,
+    });
+    return card;
+  }
+
+  /**
+   * Moliyachi uchun cheklar navbati: filial bo'yicha, holat va qidiruv bilan.
+   * Tasdiqlash/rad etish ham shu filial doirasida (`loadPendingReceipt`).
+   */
+  async listForReview(scope: TenantScope, status?: PaymentReceiptStatus) {
+    assertMoneyReader(scope);
+    const where = {
+      organizationId: scope.organizationId,
+      ...(scope.branchId ? { branchId: scope.branchId } : {}),
+      ...(status ? { status } : {}),
+    };
+    const [items, pendingCount] = await this.prisma.$transaction([
+      this.prisma.paymentReceipt.findMany({
+        where,
+        orderBy: [{ createdAt: "desc" }],
+        take: 200,
+        select: {
+          ...receiptSummarySelect,
+          child: { select: { fullName: true, group: { select: { name: true } } } },
+          guardian: { select: { fullName: true, phone: true } },
+          reviewedBy: { select: { fullName: true } },
+          payment: { select: { method: true } },
+        },
+      }),
+      this.prisma.paymentReceipt.count({
+        where: { ...where, status: "PENDING" },
+      }),
+    ]);
+    return { items, pendingCount };
   }
 
   private async loadPendingReceipt(scope: TenantScope, receiptId: string) {

@@ -486,6 +486,7 @@ export interface PaymentReceipt {
   guardianId: string;
   claimedAmount: string;
   currency: string;
+  note?: string | null;
   status: PaymentReceiptStatus;
   reviewNote: string | null;
   reviewedByUserId: string | null;
@@ -1137,10 +1138,46 @@ export interface ParentPaymentReceipt {
   id: string;
   claimedAmount: string;
   currency: string;
+  note: string | null;
   status: PaymentReceiptStatus;
   reviewNote: string | null;
   reviewedAt: string | null;
   createdAt: string;
+}
+
+/** Bog'cha to'lov kartasi — moliyachi kiritadi, barcha ota-onalarga ko'rinadi. */
+export interface PaymentCardInfo {
+  cardNumber: string;
+  holderName: string;
+  bankName: string | null;
+  note: string | null;
+  updatedAt: string;
+}
+
+/** `GET /app/parent/children/:id/payment-summary` — to'lov sahifasi xulosasi. */
+export interface ParentPaymentSummary {
+  remainingAmount: number;
+  currency: string;
+  nextDueDate: string | null;
+  pendingAmount: number;
+  pendingCount: number;
+}
+
+/** `GET /app/payment-receipts` — moliyachi cheklar navbatidagi bitta chek. */
+export interface ReviewReceiptItem {
+  id: string;
+  childId: string;
+  claimedAmount: string;
+  currency: string;
+  note: string | null;
+  status: PaymentReceiptStatus;
+  reviewNote: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+  child: { fullName: string; group: { name: string } | null };
+  guardian: { fullName: string; phone: string };
+  reviewedBy: { fullName: string } | null;
+  payment: { method: PaymentMethod } | null;
 }
 
 /** `GET /app/parent/children/:id/products` javobi — coin do'koni. */

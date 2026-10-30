@@ -22,6 +22,13 @@ import { isSection, type NavEntry, type NavLeaf, type NavSection } from "./nav-t
 import { DirectorRail } from "./director-rail";
 import { DirectorBottomBar } from "./director-bottom-bar";
 import { ArrowLeftIcon, ChevronRightIcon, CloseIcon, DocumentIcon, LogoutIcon, SidebarIcon } from "@/components/ui/icons";
+import { ReceiptText } from "lucide-react";
+import type { IconProps } from "@/components/ui/icons";
+
+/** To'lov cheklari belgisi — umumiy ikonkalar to'plamida chek yo'q, lucide'dan */
+function ReceiptIcon({ className }: IconProps) {
+  return <ReceiptText className={className} strokeWidth={1.8} aria-hidden="true" />;
+}
 import {
   AuditIcon,
   BellIcon,
@@ -509,6 +516,7 @@ export function Sidebar({ slug }: { slug: string }) {
     // "Kassa" menyuda yo'q: to'lov qabul qilish — To'lovlar, chiqim —
     // Xarajatlar sahifasida; kunning kassa holati bosh sahifadagi kartada.
     { href: `/${slug}/payments`, label: tr("To'lovlar"), icon: WalletIcon, show: true },
+    { href: `/${slug}/payment-receipts`, label: tr("To'lov cheklari"), icon: ReceiptIcon, show: true },
     { href: `/${slug}/expenses`, label: tr("Xarajatlar"), icon: CoinIcon, show: true },
     { href: `/${slug}/discounts`, label: tr("Chegirmalar"), icon: PercentIcon, show: true },
     { href: `/${slug}/audit-logs`, label: "Audit", icon: AuditIcon, show: true },
@@ -1039,6 +1047,7 @@ export function Sidebar({ slug }: { slug: string }) {
           user
             ? [
                 { href: `/${slug}/payments`, label: tr("To'lovlar"), icon: WalletIcon, show: true },
+                { href: `/${slug}/payment-receipts`, label: tr("To'lov cheklari"), icon: ReceiptIcon, show: true },
                 { href: `/${slug}/expenses`, label: tr("Xarajatlar"), icon: CoinIcon, show: true },
                 { href: `/${slug}/discounts`, label: tr("Chegirmalar"), icon: PercentIcon, show: true },
                 { href: `/${slug}/audit-logs`, label: "Audit", icon: AuditIcon, show: true },
