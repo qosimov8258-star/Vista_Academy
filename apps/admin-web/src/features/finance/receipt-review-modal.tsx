@@ -68,7 +68,7 @@ export function ReceiptReviewModal({
   const isPendingReceipt = !payment && receipt?.status === "PENDING";
   const amount = payment ? payment.amount : receipt!.claimedAmount;
   const currency = payment ? payment.currency : receipt!.currency;
-  const createdAt = payment ? payment.createdAt : receipt!.createdAt;
+  const createdAt = payment ? payment.paidAt : receipt!.createdAt;
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["payment-receipts", slug, childId] });

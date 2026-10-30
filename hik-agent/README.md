@@ -46,7 +46,8 @@ npm run build
 2. Yuklangan faylni ikki marta bosing:
    - **Windows** (`zeeron-agent-XXXX-XXXX.exe`): "kompyuteringiz himoyalandi" chiqsa — "Batafsil" → "Baribir ishga
      tushirish", administrator so'roviga "Ha". `C:\ProgramData\Zeeron\Agent` ga o'rnatiladi, vazifalar
-     rejalashtiruvchisida `ZeeronAgent` (SYSTEM, kompyuter yonishi bilan, oynasiz). Log: `agent.log`.
+     rejalashtiruvchisida `ZeeronAgent` (SYSTEM, kompyuter yonishi bilan, oynasiz; batareyada ham ishlaydi,
+     vaqt chegarasi yo'q, yiqilsa har daqiqada qayta — yashirin vazifa). Log: `agent.log`.
    - **macOS** (`Zeeron-Agent-XXXX-XXXX.pkg`): o'ng tugma → "Ochish" → o'rnatuvchi. `/Library/Application Support/Zeeron Agent`,
      LaunchDaemon `uz.zeeron.agent`. Log: `agent.log`.
 3. Tayyor: fayl nomidagi bir martalik kod bilan ERP'ga o'zi ulanadi; keyin ERP'da qo'shilgan qurilmalar unga o'zi tushadi.

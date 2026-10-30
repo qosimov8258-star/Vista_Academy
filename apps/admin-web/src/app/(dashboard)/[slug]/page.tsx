@@ -11,9 +11,8 @@ import { Card } from "@/components/ui/card";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { formatMoney, formatChildId, formatDateTime } from "@/lib/format";
 import { isChef, isTeacher } from "@/lib/permissions";
-import { isCallOperatorUser, isCashierPosition } from "@/lib/employee-position";
+import { isCallOperatorUser } from "@/lib/employee-position";
 import { ChefHome } from "@/features/nutrition/chef-home";
-import { CashierHome } from "@/features/cash/cashier-home";
 import { AdminHome } from "@/features/desk/admin-home";
 import { BranchAdminHome } from "@/features/branch-admin/branch-admin-home";
 import { DirectorHome } from "@/features/director/director-home";
@@ -274,7 +273,7 @@ function RecentPayments({ payments, slug }: { payments: Payment[]; slug: string 
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[14px] font-medium text-[var(--color-text)]">{tr(payment.child?.fullName)}</p>
-                  <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">{formatDateTime(payment.createdAt)}</p>
+                  <p className="truncate text-[12.5px] text-[var(--color-text-muted)]">{formatDateTime(payment.paidAt)}</p>
                 </div>
                 <p className="shrink-0 text-[14px] font-semibold tabular-nums text-[var(--color-success)]">
                   +{formatMoney(payment.amount)}
@@ -335,21 +334,6 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
   if (orgQuery.isError) return <ErrorState message={tr((orgQuery.error as Error).message)} />;
   const org = orgQuery.data;
   if (!org) return null;
-
-  // Kassir guruh bilan ishlamaydi — o'z kassa sahifasini ko'radi.
-  if (user?.position && isCashierPosition(user.position)) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
-            {user?.branchName ?? org.name}
-          </h1>
-          <p className="text-[13px] text-[var(--color-text-muted)]">{tr("Bugun ·")}{" "}{todayLabel()}</p>
-        </div>
-        <CashierHome slug={slug} />
-      </div>
-    );
-  }
 
   // Oshpaz dars o'tmaydi — unga porsiyalar, bugungi taomlar va allergiyalar ko'rsatiladi
   // (sarlavha va sana ChefHome'ning o'zida).

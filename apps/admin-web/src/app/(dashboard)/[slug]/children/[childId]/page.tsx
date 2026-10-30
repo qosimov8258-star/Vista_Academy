@@ -42,7 +42,6 @@ import { useBranchContext } from "@/lib/use-branch-context";
 import { downloadCsv } from "@/lib/download";
 import { prepareChildPhoto } from "@/lib/child-photo";
 import { formatAge, formatChildId, formatDate, formatDateTime, formatGender, formatPhone } from "@/lib/format";
-import { isCashierPosition } from "@/lib/employee-position";
 import { canWriteOperational, canWriteTeaching, canWriteDiscounts } from "@/lib/permissions";
 import { WEEKDAYS, dayMonthLabel } from "@/components/ios/day-stepper";
 import { Segmented } from "@/components/ios/form";
@@ -118,8 +117,8 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const canWrite = canWriteOperational(user?.role);
-  // Moliyachi va kassirga ota-ona kartasi tepasida to'lov qabul qilish kartasi
-  const showCash = user?.role === "FINANCE" || (!!user?.position && isCashierPosition(user.position));
+  // Moliyachiga ota-ona kartasi tepasida to'lov qabul qilish kartasi
+  const showCash = user?.role === "FINANCE";
   // Davomatga izoh yozish — tarbiyachilik ishi (kunlik davomat bilan bir xil ruxsat)
   const canWriteAttendance = canWriteTeaching(user?.role);
   // `assertMoneyReader` faqat o'qituvchini rad etadi — UI ham shunday

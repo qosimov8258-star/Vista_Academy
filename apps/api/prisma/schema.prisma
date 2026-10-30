@@ -1401,6 +1401,10 @@ model Payment {
   receiptImage     Bytes?        @map("receipt_image")
   receiptImageKey  String?       @map("receipt_image_key")
   receiptMimeType  String?       @map("receipt_mime_type")
+  /// To'lov qilingan vaqt — kassa, hisobotlar va kvitansiya shu bo'yicha.
+  /// Odatda kiritilgan vaqt (`createdAt`) bilan bir xil; moliyachi o'tgan
+  /// kunni tanlasa (1 oygacha orqaga) o'sha kun bo'ladi.
+  paidAt           DateTime      @default(now()) @map("paid_at")
   createdAt        DateTime      @default(now()) @map("created_at")
   updatedAt        DateTime      @updatedAt @map("updated_at")
 
@@ -1414,6 +1418,7 @@ model Payment {
 
   @@index([organizationId, branchId])
   @@index([childId])
+  @@index([branchId, paidAt])
   @@map("payments")
 }
 
@@ -2781,6 +2786,8 @@ enum GroupMaterialKind {
   IMAGE
   VIDEO
   DOCUMENT
+  /// Ovozli vazifa — yuklangan audio yoki tarbiyachi brauzerda yozgan ovoz
+  AUDIO
 }
 
 /// Tarbiyachi/o'qituvchi guruhga yuklagan fayl (rasm, video, PDF, hujjat).

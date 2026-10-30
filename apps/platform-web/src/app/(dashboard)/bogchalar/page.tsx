@@ -432,7 +432,6 @@ function BogchalarContent() {
           open
           organization={editOrg}
           onClose={() => setEditOrg(null)}
-          onDeleted={() => setEditOrg(null)}
         />
       )}
     </div>

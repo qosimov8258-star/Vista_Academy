@@ -20,7 +20,6 @@ import { initials } from "@/components/ui/avatar";
 import { formatAge, formatChildId, formatDateTime, formatGender, formatMoney, formatPhone, formatDate } from "@/lib/format";
 import { downloadCsv } from "@/lib/download";
 import { useBranchContext } from "@/lib/use-branch-context";
-import { isCashierPosition } from "@/lib/employee-position";
 import { ChildCashCard } from "@/features/cash/child-cash-card";
 import { canWriteMoney, canWriteOperational } from "@/lib/permissions";
 import { AddGuardianModal } from "@/features/guardians/add-guardian-modal";
@@ -104,8 +103,8 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const canWrite = canWriteMoney(user?.role);
-  // Moliyachi va kassirga ota-ona kartasi o'rnida to'lov qabul qilish kartasi ko'rinadi
-  const showCash = canWrite && (user?.role === "FINANCE" || (!!user?.position && isCashierPosition(user.position)));
+  // Moliyachiga ota-ona kartasi o'rnida to'lov qabul qilish kartasi ko'rinadi
+  const showCash = canWrite && user?.role === "FINANCE";
   // Bola profilini tahrirlash (surat, asosiy ma'lumot, ota-ona) — moliya emas,
   // operatsion huquq. Moliyachida bu yo'q, faqat ko'radi.
   const canWriteChild = canWriteOperational(user?.role);
@@ -224,7 +223,7 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
     (receiptsQuery.data ?? []).filter((r) => r.paymentId).map((r) => [r.paymentId as string, r]),
   );
   const timeline: TimelineEntry[] = [
-    ...allPayments.map((payment): TimelineEntry => ({ kind: "payment", createdAt: payment.createdAt, payment })),
+    ...allPayments.map((payment): TimelineEntry => ({ kind: "payment", createdAt: payment.paidAt, payment })),
     ...openReceipts.map((receipt): TimelineEntry => ({ kind: "receipt", createdAt: receipt.createdAt, receipt })),
   ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 

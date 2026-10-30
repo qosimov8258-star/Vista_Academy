@@ -2,7 +2,6 @@
 
 import { use, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import { api, ApiError } from "@/lib/api";
@@ -45,7 +44,6 @@ const card = "rounded-[var(--radius-xl)] bg-[var(--color-surface)] shadow-[var(-
 
 export default function BogchaDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const router = useRouter();
   const invalidate = useInvalidateOrganization(id);
 
   const [subscriptionModal, setSubscriptionModal] = useState<"assign" | "change" | null>(null);
@@ -197,8 +195,8 @@ export default function BogchaDetailPage({ params }: { params: Promise<{ id: str
           <div className="mt-4 flex items-start gap-2.5 rounded-[16px] bg-[var(--color-surface-sunken)] px-4 py-3 text-[13.5px] text-[var(--color-text-muted)]">
             <AlertIcon className="mt-0.5 h-4 w-4 shrink-0" />
             <span>
-              Arxivda{org.archivedAt ? ` (${formatDayMonth(org.archivedAt)} dan)` : ""}: panel yopiq, ma&apos;lumotlar saqlangan. Butunlay
-              o&apos;chirish — &quot;Tahrirlash&quot; oynasida.
+              Arxivda{org.archivedAt ? ` (${formatDayMonth(org.archivedAt)} dan)` : ""}: panel yopiq, ma&apos;lumotlar saqlangan. Istalgan payt
+              arxivdan qaytarish mumkin.
             </span>
           </div>
         )}
@@ -371,7 +369,7 @@ export default function BogchaDetailPage({ params }: { params: Promise<{ id: str
             <section className={clsx(card, "p-5")}>
               <h2 className="text-[17px] font-medium text-[var(--color-text)]">Arxiv</h2>
               <p className="mt-1 text-[12.5px] text-[var(--color-text-muted)]">
-                Hamkorlik tugasa — panel yopiladi, ma&apos;lumot saqlanadi. Butunlay o&apos;chirish faqat arxivdan keyin.
+                Hamkorlik tugasa — panel yopiladi, ma&apos;lumot saqlanadi va qaytarsa bo&apos;ladi. Bog&apos;cha butunlay o&apos;chirilmaydi.
               </p>
               <Button className="mt-3" size="sm" variant="outline" onClick={() => setArchiveOpen(true)}>
                 <RefreshIcon className="h-3.5 w-3.5" />
@@ -390,10 +388,6 @@ export default function BogchaDetailPage({ params }: { params: Promise<{ id: str
         open={editOpen}
         organization={org}
         onClose={() => setEditOpen(false)}
-        onDeleted={() => {
-          setEditOpen(false);
-          router.push("/bogchalar");
-        }}
       />
       <SuspendModal organization={org} open={suspendOpen} onClose={() => setSuspendOpen(false)} />
       {org.subscription && (
