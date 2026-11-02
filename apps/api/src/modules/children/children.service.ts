@@ -20,7 +20,7 @@ import { CreateChildDto } from "./dto/create-child.dto";
 import { UpdateChildDto } from "./dto/update-child.dto";
 import { ChildQueryDto } from "./dto/child-query.dto";
 import { UpdateChildAvatarDto } from "./dto/update-child-avatar.dto";
-import { createChildWithGuardian, withPublicIdRetry, composeChildFullName } from "./child-creation";
+import { assertGroupHasRoom, createChildWithGuardian, withPublicIdRetry, composeChildFullName } from "./child-creation";
 
 /** Ro'yxatda ota-ona telefoni ko'rinishi uchun asosiy vasiy ham olinadi. */
 const childInclude = {
@@ -49,7 +49,8 @@ export class ChildrenService {
     const scope = toTenantScope(caller);
     const branchId = requireOperationalScope(scope);
     if (dto.groupId) {
-      await this.requireGroup(branchId, dto.groupId);
+      const group = await this.requireGroup(branchId, dto.groupId);
+      await assertGroupHasRoom(this.prisma, group, { allowOverCapacity: dto.allowOverCapacity });
     }
 
     const created = await withPublicIdRetry(() =>
@@ -165,6 +166,13 @@ export class ChildrenService {
     if (dto.status && existing.status === "QUARANTINED") {
       throw new BadRequestException("Karantindagi bolaning holatini avval karantinni yopib, keyin o'zgartiring");
     }
+    // Sig'im: bola guruhga yangi kirsa yoki arxivdan qaytsa. Boshqa tahrirlar to'xtamaydi.
+    const nextGroupId = dto.groupId === undefined ? existing.groupId : dto.groupId || null;
+    const nextStatus = dto.status ?? existing.status;
+    if (nextGroupId && nextStatus === "ACTIVE" && (nextGroupId !== existing.groupId || existing.status !== "ACTIVE")) {
+      const group = await this.prisma.group.findUniqueOrThrow({ where: { id: nextGroupId } });
+      await assertGroupHasRoom(this.prisma, group, { allowOverCapacity: dto.allowOverCapacity, exceptChildId: id });
+    }
 
     const firstName = dto.firstName ?? existing.firstName;
     const lastName = dto.lastName ?? existing.lastName;
@@ -177,7 +185,7 @@ export class ChildrenService {
         fullName: composeChildFullName(lastName, firstName),
         gender: dto.gender,
         birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
-        groupId: dto.groupId === undefined ? undefined : dto.groupId,
+        groupId: dto.groupId === undefined ? undefined : dto.groupId || null,
         status: dto.status,
       },
       include: childInclude,

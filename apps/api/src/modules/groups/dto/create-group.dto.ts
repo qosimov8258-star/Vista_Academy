@@ -1,9 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { Type } from "class-transformer";
+import { Transform, Type } from "class-transformer";
 import { IsInt, IsNumber, IsOptional, IsString, Max, Min, MinLength, ValidateIf } from "class-validator";
+
+const trim = ({ value }: { value: unknown }) => (typeof value === "string" ? value.trim() : value);
 
 export class CreateGroupDto {
   @ApiProperty({ example: "Kapalakchalar (3-4 yosh)" })
+  @Transform(trim)
   @IsString()
   @MinLength(2)
   name!: string;

@@ -1,13 +1,17 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import type { Response } from "express";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantScope, requireTeachingScope } from "../iam/tenant-auth.types";
 import { assertTeacherOwnsGroup, resolveTeacherGroupIds } from "../iam/teacher-scope";
+import { PushService } from "../push/push.service";
 import { R2Service } from "../storage/r2.service";
 import { R2_CATEGORY } from "../storage/r2.constants";
 import { MATERIAL_LIMITS, MATERIAL_MIME_KINDS } from "./group-materials.constants";
 import { UploadMaterialDto } from "./dto/upload-material.dto";
+
+/** Bir xodim ketma-ket bir nechta fayl yuborsa, ota-onaga bitta xabar boradi */
+const PUSH_QUIET_MS = 60_000;
 
 const LIST_SELECT = {
   id: true,
@@ -18,6 +22,7 @@ const LIST_SELECT = {
   originalName: true,
   mimeType: true,
   sizeBytes: true,
+  createdById: true,
   createdByName: true,
   createdAt: true,
 } satisfies Prisma.GroupMaterialSelect;
@@ -31,12 +36,13 @@ export class GroupMaterialsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly r2: R2Service,
+    private readonly push: PushService,
   ) {}
 
   /* ------------------------------------------------------------ tarbiyachi tomoni */
 
   async list(scope: TenantScope, groupId: string) {
-    await this.requireGroup(scope, groupId);
+    await this.requireReadableGroup(scope, groupId);
     return this.prisma.groupMaterial.findMany({
       where: { groupId },
       select: LIST_SELECT,
@@ -77,7 +83,10 @@ export class GroupMaterialsService {
       data = null;
     }
 
-    return this.prisma.groupMaterial.create({
+    const recent = await this.prisma.groupMaterial.count({
+      where: { groupId: group.id, createdById: author.id, createdAt: { gte: new Date(Date.now() - PUSH_QUIET_MS) } },
+    });
+    const created = await this.prisma.groupMaterial.create({
       data: {
         organizationId: group.organizationId,
         branchId: group.branchId,
@@ -95,17 +104,38 @@ export class GroupMaterialsService {
       },
       select: LIST_SELECT,
     });
+    if (recent === 0) {
+      // Push xatosi yuklashni to'xtatmaydi
+      void this.notifyParents(group.id).catch(() => undefined);
+    }
+    return created;
+  }
+
+  private async notifyParents(groupId: string) {
+    const links = await this.prisma.childGuardian.findMany({
+      where: { canReceiveNotifications: true, child: { groupId, status: "ACTIVE" } },
+      select: { guardianId: true },
+      distinct: ["guardianId"],
+    });
+    await this.push.sendToGuardians(links.map((link) => link.guardianId), {
+      title: "Yangi vazifa",
+      body: "Bolangiz guruhiga yangi vazifa yuborildi. Kabinetda ko'ring.",
+    });
   }
 
   async remove(scope: TenantScope, id: string) {
     const material = await this.prisma.groupMaterial.findUnique({
       where: { id },
-      select: { id: true, groupId: true, organizationId: true, dataKey: true },
+      select: { id: true, groupId: true, organizationId: true, dataKey: true, createdById: true },
     });
     if (!material || material.organizationId !== scope.organizationId) {
       throw new NotFoundException("Fayl topilmadi");
     }
     await this.requireGroup(scope, material.groupId);
+    // Tarbiyachi faqat o'zi yuborganini o'chiradi; boshqasini administrator
+    if (scope.role === "TEACHER" && material.createdById !== scope.userId) {
+      throw new ForbiddenException("Faqat o'zingiz yuborgan faylni o'chira olasiz");
+    }
     await this.prisma.groupMaterial.delete({ where: { id: material.id } });
     if (material.dataKey) {
       await this.r2.deleteObject(material.dataKey);
@@ -209,6 +239,21 @@ export class GroupMaterialsService {
     }
     res.setHeader("Content-Length", String(buffer.byteLength));
     res.end(buffer);
+  }
+
+  /** O'qish uchun: filial xodimlari o'z filialida, Super Admin butun tashkilotda kuzatadi. */
+  private async requireReadableGroup(scope: TenantScope, groupId: string) {
+    if (scope.branchId) {
+      await this.requireGroup(scope, groupId);
+      return;
+    }
+    const group = await this.prisma.group.findFirst({
+      where: { id: groupId, branch: { organizationId: scope.organizationId } },
+      select: { id: true },
+    });
+    if (!group) {
+      throw new NotFoundException("Guruh topilmadi");
+    }
   }
 
   private async requireGroup(scope: TenantScope, groupId: string) {

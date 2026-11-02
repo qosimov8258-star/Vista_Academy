@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Gender, GuardianRelation } from "@prisma/client";
 import { Transform } from "class-transformer";
-import { IsDateString, IsEnum, IsOptional, IsString, Matches, MinLength } from "class-validator";
+import { IsBoolean, IsDateString, IsEnum, IsOptional, IsString, Matches, MinLength } from "class-validator";
 
 const trim = ({ value }: { value: unknown }) => (typeof value === "string" ? value.trim() : value);
 
@@ -59,4 +59,10 @@ export class CreateChildDto {
   @IsString()
   @MinLength(8, { message: "Parol kamida 8 ta belgidan iborat bo'lishi kerak" })
   guardianPassword?: string;
+
+  /** Xodim tasdiqladi: guruh to'lgan bo'lsa ham qo'shilsin */
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  allowOverCapacity?: boolean;
 }

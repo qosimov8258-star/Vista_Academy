@@ -1,7 +1,7 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from "class-validator";
-import { LeadStage } from "@prisma/client";
+import { LeadSource, LeadStage } from "@prisma/client";
 
 export class LeadQueryDto {
   @ApiPropertyOptional({ default: 1 })
@@ -28,4 +28,9 @@ export class LeadQueryDto {
   @IsOptional()
   @IsEnum(LeadStage)
   stage?: LeadStage;
+
+  @ApiPropertyOptional({ enum: LeadSource })
+  @IsOptional()
+  @IsEnum(LeadSource)
+  source?: LeadSource;
 }

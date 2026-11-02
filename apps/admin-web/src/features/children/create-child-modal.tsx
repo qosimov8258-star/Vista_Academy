@@ -21,6 +21,7 @@ import { Spinner } from "@/components/ios/spinner";
 import { prepareChildPhoto } from "@/lib/child-photo";
 import { initials } from "@/components/ui/avatar";
 import { validateUzbekPhone } from "@/lib/phone";
+import { GroupFullPrompt } from "./group-full-prompt";
 import { useTr } from "@/i18n/tr";
 import { useFeatureEnabled } from "@/lib/use-auth";
 
@@ -115,6 +116,8 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
   const formId = useId();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [groupFull, setGroupFull] = useState<string | null>(null);
+  const allowOverCapacity = useRef(false);
   const [photoImage, setPhotoImage] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [photoChecking, setPhotoChecking] = useState(false);
@@ -181,6 +184,7 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
         guardianRelation: values.guardianRelation,
         guardianPhone: values.guardianPhone,
         guardianPassword: showGuardianPassword ? values.guardianPassword || undefined : undefined,
+        allowOverCapacity: allowOverCapacity.current || undefined,
       });
       // Surat bola yaratilgandan keyin alohida so'rov bilan yuklanadi; shu so'rov
       // muvaffaqiyatsiz bo'lsa ham bola yozuvi allaqachon yaratilgan hisoblanadi.
@@ -213,7 +217,14 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
       }
     },
     onError: (err) => {
+      if (err instanceof ApiError && err.code === "GROUP_FULL") {
+        setGroupFull(err.message);
+        return;
+      }
       setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
+    },
+    onSettled: () => {
+      allowOverCapacity.current = false;
     },
   });
 
@@ -221,6 +232,7 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
     if (mutation.isPending) return;
     reset();
     setServerError(null);
+    setGroupFull(null);
     setPhotoImage(null);
     setPhotoError(null);
     setCreatedCredentials(null);
@@ -236,6 +248,7 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
   };
   const submit = handleSubmit((values) => {
     setServerError(null);
+    setGroupFull(null);
     mutation.mutate(values);
   }, onInvalid);
 
@@ -280,6 +293,18 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
       }
     >
       <form id={formId} noValidate onSubmit={submit} className="space-y-6">
+        {groupFull && (
+          <GroupFullPrompt
+            message={groupFull}
+            confirmLabel="Baribir qo'shish"
+            loading={saving}
+            onCancel={() => setGroupFull(null)}
+            onConfirm={() => {
+              allowOverCapacity.current = true;
+              void submit();
+            }}
+          />
+        )}
         {serverError && (
           <p role="alert" className="rounded-[18px] bg-[#ff3b30]/[0.1] px-4 py-3 text-[14px] text-[#ff3b30]">
             {tr(serverError)}

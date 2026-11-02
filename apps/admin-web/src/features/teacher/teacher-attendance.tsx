@@ -100,6 +100,8 @@ export function TeacherAttendance({ slug }: { slug: string }) {
   const setStatus = (id: string, status: AttendanceStatus) => {
     rememberBase(id);
     setLocalStatuses((s) => ({ ...s, [id]: status }));
+    // "Keldi"ga o'tganda eski kelmaslik izohi qolmaydi
+    if (status === "PRESENT") setLocalNotes((n) => ({ ...n, [id]: "" }));
   };
   const clearLocal = () => {
     setLocalStatuses({});

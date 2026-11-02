@@ -12,7 +12,8 @@ import { DataTable, THead, TBody, Tr, Th, Td } from "@/components/ui/table";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { formatDate } from "@/lib/format";
 import { downloadCsv } from "@/lib/download";
-import { AGE_GROUP_LABEL } from "@/features/crm/labels";
+import { AGE_GROUP_LABEL, STAGE_LABEL, STAGE_TONE } from "@/features/crm/labels";
+import { Badge } from "@/components/ui/badge";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { useTr } from "@/i18n/tr";
 
@@ -27,7 +28,7 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
     setExporting(true);
     setExportError(null);
     try {
-      await downloadCsv(`/app/exports/leads${forcedBranchId ? `?branchId=${forcedBranchId}` : ""}`, "arizalar.csv");
+      await downloadCsv(`/app/exports/leads?source=WEBSITE${forcedBranchId ? `&branchId=${forcedBranchId}` : ""}`, "arizalar.csv");
     } catch {
       setExportError(tr("Eksport qilib bo'lmadi — qayta urinib ko'ring"));
     } finally {
@@ -37,11 +38,12 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
 
   const leadsQuery = useQuery({
     queryKey: ["leads", slug, forcedBranchId],
-    queryFn: () => getPaginated<Lead>(`/app/leads?page=1&limit=100${forcedBranchId ? `&branchId=${forcedBranchId}` : ""}`),
+    queryFn: () => getPaginated<Lead>(`/app/leads?page=1&limit=100&source=WEBSITE${forcedBranchId ? `&branchId=${forcedBranchId}` : ""}`),
   });
 
   // Faqat landing sahifadan kelgan xabarlar — o'quv rejimi: ko'rish uchun, tahrirlab bo'lmaydi
-  const landingLeads = leadsQuery.data?.data.filter((lead) => lead.source === "WEBSITE") ?? [];
+  const landingLeads = leadsQuery.data?.data ?? [];
+  const totalLeads = leadsQuery.data?.meta.total ?? landingLeads.length;
 
   return (
     <div className="space-y-5">
@@ -80,7 +82,7 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
         <EmptyState title={tr("Hozircha xabar yo'q")} />
       ) : (
         <>
-          <p className="text-[13px] tabular-nums text-[var(--color-text-muted)]">{tr("Jami")}{" "}{tr(landingLeads.length)} {tr("ta xabar")}</p>
+          <p className="text-[13px] tabular-nums text-[var(--color-text-muted)]">{tr("Jami")}{" "}{tr(totalLeads)} {tr("ta xabar")}</p>
           {/* Telefonda jadval o'rniga kartochkalar */}
           <ul className="space-y-3 md:hidden">
             {landingLeads.map((lead) => (
@@ -91,6 +93,9 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
                   {lead.childFullName ? tr(lead.parentName) : tr("Bola ismi ko'rsatilmagan")}
                   {lead.ageGroup ? ` · ${AGE_GROUP_LABEL[lead.ageGroup]}` : ""}
                 </p>
+                <div className="mt-2">
+                  <Badge tone={STAGE_TONE[lead.stage]}>{tr(STAGE_LABEL[lead.stage])}</Badge>
+                </div>
                 <div className="mt-3 flex items-center justify-between gap-2">
                   <a
                     href={`tel:${lead.parentPhone}`}
@@ -111,6 +116,7 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
                   <Th>{tr("Bola")}</Th>
                   <Th>{tr("Ota-ona")}</Th>
                   <Th>{tr("Yosh guruhi")}</Th>
+                  <Th>{tr("Holati")}</Th>
                   <Th>{tr("Sana")}</Th>
                 </tr>
               </THead>
@@ -124,6 +130,7 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
                       <span className="text-[12.5px] tabular-nums text-[var(--color-text-muted)]">{tr(lead.parentPhone)}</span>
                     </Td>
                     <Td className="text-[var(--color-text-muted)]">{lead.ageGroup ? AGE_GROUP_LABEL[lead.ageGroup] : "—"}</Td>
+                    <Td><Badge tone={STAGE_TONE[lead.stage]}>{tr(STAGE_LABEL[lead.stage])}</Badge></Td>
                     <Td className="tabular-nums text-[var(--color-text-muted)]">{formatDate(lead.createdAt)}</Td>
                   </Tr>
                 ))}

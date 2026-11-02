@@ -4,6 +4,7 @@ import { TenantScope, requireTeachingScope } from "../iam/tenant-auth.types";
 import { assertNotAssistant } from "../iam/teacher-scope";
 import { assertTeacherOwnsChild, resolveTeacherGroupIds, teacherChildWhere } from "../iam/teacher-scope";
 import { NotificationsService } from "../notifications/notifications.service";
+import { PushService } from "../push/push.service";
 import { MarkAttendanceDto } from "./dto/mark-attendance.dto";
 import { BulkMarkAttendanceDto } from "./dto/bulk-mark-attendance.dto";
 import { AttendanceQueryDto } from "./dto/attendance-query.dto";
@@ -27,9 +28,20 @@ function addDays(value: Date, days: number): Date {
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 const DEFAULT_RANGE_DAYS = 14;
 const MAX_RANGE_DAYS = 366;
+/** Davomatni shuncha kundan eski kunga yozib bo'lmaydi */
+const MAX_BACKFILL_DAYS = 366;
+/** Tarbiyachi shuncha kun orqaga yoza oladi; eskisini administrator tuzatadi */
+const TEACHER_BACKFILL_DAYS = 31;
+/** Kunlik coin faqat yaqin kunlar uchun beriladi — eski kunni to'ldirish coin bermaydi */
+const COIN_BACKFILL_DAYS = 7;
 
 function todayDateString(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: DEFAULT_TIMEZONE }).format(new Date());
+}
+
+/** Xabar matni uchun: "bugun (2026-11-03)" yoki o'tgan kun bo'lsa "2026-10-29 kuni" */
+function dayPhrase(day: string): string {
+  return day === todayDateString() ? `bugun (${day})` : `${day} kuni`;
 }
 
 @Injectable()
@@ -37,6 +49,7 @@ export class AttendanceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    private readonly push: PushService,
   ) {}
 
   async mark(scope: TenantScope, dto: MarkAttendanceDto) {
@@ -50,12 +63,33 @@ export class AttendanceService {
       throw new ForbiddenException("Bu bolaga kirish huquqingiz yo'q");
     }
     await assertTeacherOwnsChild(this.prisma, scope, child);
-    const date = toDateOnly(dto.date);
+    if (child.status === "INACTIVE") {
+      throw new BadRequestException("Bola arxivda — davomat yozilmaydi");
+    }
+    const day = dto.date.slice(0, 10);
+    const date = toDateOnly(day);
+    const today = todayDateString();
+    if (day > today) {
+      throw new BadRequestException("Kelajak kun uchun davomat belgilab bo'lmaydi");
+    }
+    const ageDays = Math.round((toDateOnly(today).getTime() - date.getTime()) / 86_400_000);
+    if (ageDays > MAX_BACKFILL_DAYS) {
+      throw new BadRequestException(`${MAX_BACKFILL_DAYS} kundan eski kunga davomat yozib bo'lmaydi`);
+    }
+    if (scope.role === "TEACHER" && ageDays > TEACHER_BACKFILL_DAYS) {
+      throw new ForbiddenException(`Tarbiyachi ${TEACHER_BACKFILL_DAYS} kundan eski kunni o'zgartira olmaydi — administratorga ayting`);
+    }
+    // Bola qo'shilishidan oldingi va eski kunlar coin bermaydi
+    const earnsCoin = ageDays <= COIN_BACKFILL_DAYS && date >= toDateOnly(dateKey(child.createdAt));
 
+    let becameAbsent = false;
     const record = await this.prisma.$transaction(async (tx) => {
+      // Ikki qurilmadan bir vaqtda kelsa navbat bilan o'tadi — aks holda coin ikki marta yoziladi
+      await tx.$queryRaw`SELECT 1 FROM "children" WHERE "id" = ${child.id} FOR NO KEY UPDATE`;
       const existing = await tx.attendance.findUnique({
         where: { childId_date: { childId: dto.childId, date } },
       });
+      becameAbsent = dto.status === "ABSENT" && existing?.status !== "ABSENT";
       const wasPresent = existing?.status === "PRESENT";
       const willBePresent = dto.status === "PRESENT";
 
@@ -63,7 +97,7 @@ export class AttendanceService {
       let coinTransactionId: string | null | undefined;
       let coinTransactionIdToRemove: string | null = null;
 
-      if (!wasPresent && willBePresent) {
+      if (!wasPresent && willBePresent && earnsCoin) {
         // ABSENT/LATE/SICK/belgilanmagan -> PRESENT: bitta kunga bitta marta +5 coin.
         const coinTransaction = await tx.coinTransaction.create({
           data: {
@@ -72,7 +106,7 @@ export class AttendanceService {
             childId: child.id,
             amount: 5,
             source: "ATTENDANCE",
-            reason: `Kunlik davomat — ${dto.date}`,
+            reason: `Kunlik davomat — ${day}`,
             recordedByUserId: scope.userId,
           },
         });
@@ -83,6 +117,9 @@ export class AttendanceService {
         coinTransactionIdToRemove = existing.coinTransactionId;
       }
 
+      // "Keldi"ga o'tganda eski kelmaslik izohi qolmaydi; "Kelmadi"/"Kasal"da terminal vaqti qolmaydi
+      const note = willBePresent && dto.note === undefined ? null : dto.note;
+      const clearsTimes = dto.status === "ABSENT" || dto.status === "SICK";
       const updated = await tx.attendance.upsert({
         where: { childId_date: { childId: dto.childId, date } },
         create: {
@@ -90,12 +127,13 @@ export class AttendanceService {
           branchId: child.branchId,
           date,
           status: dto.status,
-          note: dto.note,
+          note,
           coinTransactionId: coinTransactionId ?? undefined,
         },
         update: {
           status: dto.status,
-          note: dto.note,
+          note,
+          ...(clearsTimes ? { checkInTime: null, checkOutTime: null } : {}),
           ...(coinTransactionId !== undefined ? { coinTransactionId } : {}),
         },
       });
@@ -109,20 +147,28 @@ export class AttendanceService {
       return updated;
     });
 
-    if (dto.status === "ABSENT") {
-      const link = await this.prisma.childGuardian.findFirst({
+    // Qayta saqlash takror xabar bermaydi — faqat "kelmadi"ga o'tgan payt
+    if (becameAbsent) {
+      const links = await this.prisma.childGuardian.findMany({
         where: { childId: child.id, canReceiveNotifications: true },
         include: { guardian: true },
         orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
       });
+      const link = links[0];
       await this.notifications.logSystemEvent({
         organizationId: scope.organizationId,
         branchId: child.branchId,
         childId: child.id,
         eventType: "CHILD_ABSENT",
         recipientName: link?.guardian.fullName ?? "Ota-ona",
-        message: `${child.fullName} bugun (${dto.date}) bog'chaga kelmadi.`,
+        message: `${child.fullName} ${dayPhrase(day)} bog'chaga kelmadi.`,
       });
+      // O'tgan kunni to'ldirishda ota-onani bezovta qilmaymiz. Push xatosi davomatni to'xtatmaydi.
+      if (day === today) {
+        void this.push
+          .sendToGuardians(links.map((item) => item.guardianId), { title: "Davomat", body: `${child.fullName} bugun bog'chaga kelmadi.` })
+          .catch(() => undefined);
+      }
     }
 
     return record;
@@ -209,7 +255,7 @@ export class AttendanceService {
       childId: child.id,
       eventType: "CHILD_ABSENT",
       recipientName: "Administrator",
-      message: `${child.fullName} bugun (${dto.date}) kelmadi, ota-ona sabab qoldirmadi — tarbiyachi aloqaga chiqishni so'radi.`,
+      message: `${child.fullName} ${dayPhrase(dto.date.slice(0, 10))} kelmadi, ota-ona sabab qoldirmadi — tarbiyachi aloqaga chiqishni so'radi.`,
     });
     return updated;
   }
@@ -439,10 +485,16 @@ export class AttendanceService {
     // Streakni aniqlash uchun oxirgi 14 kunlik yozuv yetarli — undan
     // uzoqroq tekshirish shart emas, ketma-ketlik shu oraliqda buziladi.
     const since = addDays(toDateOnly(todayDateString()), -13);
-    const [records, overdueInvoices] = await Promise.all([
+    const [records, workedDays, overdueInvoices] = await Promise.all([
       this.prisma.attendance.findMany({
         where: { childId: { in: childIds }, date: { gte: since } },
         select: { childId: true, date: true, status: true },
+      }),
+      // Filialda kamida bitta bola belgilangan kunlar — dam olish kunlari hisobga kirmaydi
+      this.prisma.attendance.findMany({
+        where: { branchId: resolvedBranchId, date: { gte: since } },
+        select: { date: true },
+        distinct: ["date"],
         orderBy: { date: "desc" },
       }),
       this.prisma.invoice.findMany({
@@ -455,12 +507,13 @@ export class AttendanceService {
       }),
     ]);
 
-    const recordsByChild = new Map<string, { date: Date; status: string }[]>();
+    const recordsByChild = new Map<string, Map<string, string>>();
     for (const record of records) {
-      const list = recordsByChild.get(record.childId) ?? [];
-      list.push({ date: record.date, status: record.status });
-      recordsByChild.set(record.childId, list);
+      const days = recordsByChild.get(record.childId) ?? new Map<string, string>();
+      days.set(dateKey(record.date), record.status);
+      recordsByChild.set(record.childId, days);
     }
+    const today = todayDateString();
     const overdueChildIds = new Set(overdueInvoices.map((i) => i.childId));
 
     const flags: {
@@ -470,15 +523,19 @@ export class AttendanceService {
       overdueAndAbsentToday: boolean;
     }[] = [];
     for (const child of children) {
-      // Har bir bolaning yozuvi eng yangisidan boshlab, uzilmagan "ABSENT"
-      // ketma-ketligi hisoblanadi (kunlar allaqachon `desc` tartibda keladi).
-      const recs = recordsByChild.get(child.id) ?? [];
+      // Filial ishlagan kunlar bo'yicha eng yangisidan boshlab uzilmagan "ABSENT"
+      // ketma-ketligi. Kelgan yoki belgilanmagan kun ketma-ketlikni uzadi; faqat
+      // bugun hali belgilanmagan bo'lishi mumkin — u o'tkazib yuboriladi.
+      const days = recordsByChild.get(child.id);
       let streak = 0;
-      for (const r of recs) {
-        if (r.status === "ABSENT") streak += 1;
+      for (const worked of workedDays) {
+        const key = dateKey(worked.date);
+        const status = days?.get(key);
+        if (!status && key === today) continue;
+        if (status === "ABSENT") streak += 1;
         else break;
       }
-      const overdueAndAbsentToday = overdueChildIds.has(child.id) && recs[0]?.status === "ABSENT";
+      const overdueAndAbsentToday = overdueChildIds.has(child.id) && days?.get(today) === "ABSENT";
       if (streak >= 3 || overdueAndAbsentToday) {
         flags.push({ childId: child.id, fullName: child.fullName, consecutiveAbsentDays: streak, overdueAndAbsentToday });
       }

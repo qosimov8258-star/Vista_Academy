@@ -1,4 +1,5 @@
 import { Controller, Get, Param, Query, Res, UseGuards } from "@nestjs/common";
+import { LeadSource } from "@prisma/client";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
 import { Public } from "../../common/decorators/public.decorator";
@@ -47,9 +48,11 @@ export class ExportsController {
   async leads(
     @CurrentTenantUser() user: TenantAuthenticatedUser,
     @Query("branchId") branchId: string | undefined,
+    @Query("source") source: string | undefined,
     @Res() res: Response,
   ) {
-    const csv = await this.exportsService.leadsCsv(toTenantScope(user), branchId);
+    const leadSource = source && source in LeadSource ? (source as LeadSource) : undefined;
+    const csv = await this.exportsService.leadsCsv(toTenantScope(user), branchId, leadSource);
     sendCsv(res, "arizalar.csv", csv);
   }
 

@@ -132,17 +132,24 @@ export class GuardiansService {
     }
 
     try {
-      return await this.prisma.childGuardian.create({
-        data: {
-          childId,
-          guardianId,
-          relation: dto.relation,
-          isPrimary: dto.isPrimary,
-          canPickup: dto.canPickup,
-          canViewFinance: dto.canViewFinance,
-          canReceiveNotifications: dto.canReceiveNotifications,
-        },
-        include: { guardian: true },
+      return await this.prisma.$transaction(async (tx) => {
+        const created = await tx.childGuardian.create({
+          data: {
+            childId,
+            guardianId,
+            relation: dto.relation,
+            isPrimary: dto.isPrimary,
+            canPickup: dto.canPickup,
+            canViewFinance: dto.canViewFinance,
+            canReceiveNotifications: dto.canReceiveNotifications,
+          },
+          include: { guardian: true },
+        });
+        // Asosiy vasiy bitta bo'ladi
+        if (dto.isPrimary) {
+          await tx.childGuardian.updateMany({ where: { childId, id: { not: created.id } }, data: { isPrimary: false } });
+        }
+        return created;
       });
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
@@ -164,10 +171,16 @@ export class GuardiansService {
     if (scope.branchId && link.child.branchId !== scope.branchId) {
       throw new ForbiddenException("Bu yozuvga kirish huquqingiz yo'q");
     }
-    return this.prisma.childGuardian.update({
-      where: { id: linkId },
-      data: dto,
-      include: { guardian: true },
+    return this.prisma.$transaction(async (tx) => {
+      // Asosiy vasiy bitta bo'ladi
+      if (dto.isPrimary) {
+        await tx.childGuardian.updateMany({ where: { childId: link.childId, id: { not: linkId } }, data: { isPrimary: false } });
+      }
+      return tx.childGuardian.update({
+        where: { id: linkId },
+        data: dto,
+        include: { guardian: true },
+      });
     });
   }
 
@@ -298,7 +311,21 @@ export class GuardiansService {
     if (scope.branchId && link.child.branchId !== scope.branchId) {
       throw new ForbiddenException("Bu yozuvga kirish huquqingiz yo'q");
     }
-    await this.prisma.childGuardian.delete({ where: { id: linkId } });
+    // Bolaning kamida bitta vasiysi bo'ladi; asosiy olib tashlansa navbatdagisi asosiy bo'ladi
+    const others = await this.prisma.childGuardian.findMany({
+      where: { childId: link.childId, id: { not: linkId } },
+      select: { id: true, isPrimary: true },
+      orderBy: { createdAt: "asc" },
+    });
+    if (others.length === 0) {
+      throw new BadRequestException("Bolada kamida bitta ota-ona qolishi kerak — avval boshqasini qo'shing");
+    }
+    await this.prisma.$transaction(async (tx) => {
+      await tx.childGuardian.delete({ where: { id: linkId } });
+      if (link.isPrimary && !others.some((other) => other.isPrimary)) {
+        await tx.childGuardian.update({ where: { id: others[0].id }, data: { isPrimary: true } });
+      }
+    });
     return { removed: true };
   }
 }

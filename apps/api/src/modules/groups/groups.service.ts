@@ -51,6 +51,7 @@ export class GroupsService {
   async create(caller: TenantAuthenticatedUser, dto: CreateGroupDto) {
     const scope = toTenantScope(caller);
     const branchId = requireOperationalScope(scope);
+    await this.assertNameFree(branchId, dto.name);
     let created;
     try {
       created = await this.prisma.group.create({
@@ -107,6 +108,15 @@ export class GroupsService {
     // moliyachi va o'qituvchi tahrirlamaydi (create bilan bir xil qoida).
     requireOperationalScope(scope);
     const group = await this.assertAccess(scope, id);
+    if (dto.name !== undefined) {
+      await this.assertNameFree(group.branchId, dto.name, id);
+    }
+    if (dto.status === "INACTIVE" && group.status !== "INACTIVE") {
+      const active = await this.prisma.child.count({ where: { groupId: id, status: "ACTIVE" } });
+      if (active > 0) {
+        throw new BadRequestException(`Guruhda ${active} ta faol bola bor — avval ularni boshqa guruhga o'tkazing`);
+      }
+    }
     if (dto.capacity !== undefined) {
       // Faqat faol bolalar joy band qiladi — nofaol/karantindagi bola
       // sig'imni kamaytirishga to'sqinlik qilmasligi kerak.
@@ -319,6 +329,17 @@ export class GroupsService {
       },
       items,
     };
+  }
+
+  /** Bir filialda bir xil nom (katta-kichik harfdan qat'i nazar) bo'lmasin. */
+  private async assertNameFree(branchId: string, name: string, exceptId?: string) {
+    const taken = await this.prisma.group.findFirst({
+      where: { branchId, name: { equals: name, mode: "insensitive" }, ...(exceptId ? { id: { not: exceptId } } : {}) },
+      select: { id: true },
+    });
+    if (taken) {
+      throw new ConflictException("Bu nom bilan guruh allaqachon mavjud");
+    }
   }
 
   /** Guruh shu tashkilot/filialga tegishlimi va o'qituvchiga biriktirilganmi. */

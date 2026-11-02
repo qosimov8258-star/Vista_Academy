@@ -25,6 +25,7 @@ interface Material {
   kind: "IMAGE" | "VIDEO" | "AUDIO" | "DOCUMENT";
   originalName: string;
   sizeBytes: number;
+  createdById: string | null;
   createdByName: string;
   createdAt: string;
 }
@@ -369,7 +370,7 @@ export default function MaterialsPage({ params }: { params: Promise<{ slug: stri
 
       <MaterialSheet
         material={opened}
-        canWrite={canWrite}
+        canDelete={canWrite && (!teacher || opened?.createdById === user?.id)}
         onClose={() => setOpened(null)}
         onDeleted={() => {
           setOpened(null);
@@ -384,7 +385,7 @@ export default function MaterialsPage({ params }: { params: Promise<{ slug: stri
  * Yuborilgan vazifa varag'i: ovozni shu yerning o'zida tinglash, rasm/videoni
  * ko'rish, hujjatni ochish; tarbiyachida — ikki bosqichli o'chirish.
  */
-function MaterialSheet({ material, canWrite, onClose, onDeleted }: { material: Material | null; canWrite: boolean; onClose: () => void; onDeleted: () => void }) {
+function MaterialSheet({ material, canDelete, onClose, onDeleted }: { material: Material | null; canDelete: boolean; onClose: () => void; onDeleted: () => void }) {
   const tr = useTr();
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
   const [mediaError, setMediaError] = useState<string | null>(null);
@@ -492,7 +493,7 @@ function MaterialSheet({ material, canWrite, onClose, onDeleted }: { material: M
               {tr("«{0}» ota-onalar kabinetidan ham o'chadi. Buni qaytarib bo'lmaydi.", material.title)}
             </p>
           ) : (
-            canWrite && (
+            canDelete && (
               <SheetSecondaryButton danger onClick={() => setConfirming(true)}>
                 {tr("Vazifani o'chirish")}
               </SheetSecondaryButton>

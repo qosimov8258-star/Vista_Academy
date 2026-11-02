@@ -4,7 +4,7 @@ import { Controller, useForm, type FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo, useState, useRef } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { Child, Group } from "@/lib/types";
 import { Toast, type ToastState } from "@/components/ui/toast";
@@ -12,6 +12,7 @@ import { IosSheet, SheetPrimaryButton } from "@/components/ios/sheet";
 import { DobPicker, FieldRow, FormSection, Segmented, TextInput } from "@/components/ios/form";
 import { ChildGroupPicker } from "@/features/children/create-child-modal";
 import { useTr } from "@/i18n/tr";
+import { GroupFullPrompt } from "./group-full-prompt";
 import { useFeatureEnabled } from "@/lib/use-auth";
 
 const schema = z.object({
@@ -52,6 +53,8 @@ export function EditChildModal({
   const formId = useId();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [groupFull, setGroupFull] = useState<string | null>(null);
+  const allowOverCapacity = useRef(false);
   const [toast, setToast] = useState<ToastState | null>(null);
   const quarantined = child.status === "QUARANTINED";
 
@@ -99,6 +102,7 @@ export function EditChildModal({
         birthDate: showBirthDate ? values.birthDate || undefined : undefined,
         status: quarantined ? undefined : values.status,
         groupId: values.groupId || null,
+        allowOverCapacity: allowOverCapacity.current || undefined,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["child", slug, child.id] });
@@ -107,7 +111,14 @@ export function EditChildModal({
       onClose();
     },
     onError: (err) => {
+      if (err instanceof ApiError && err.code === "GROUP_FULL") {
+        setGroupFull(err.message);
+        return;
+      }
       setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
+    },
+    onSettled: () => {
+      allowOverCapacity.current = false;
     },
   });
 
@@ -120,6 +131,7 @@ export function EditChildModal({
   const submit = handleSubmit((values) => {
     if (!isDirty) return;
     setServerError(null);
+    setGroupFull(null);
     mutation.mutate(values);
   }, onInvalid);
   const err = (key: keyof FormValues) => errors[key]?.message as string | undefined;
@@ -137,6 +149,18 @@ export function EditChildModal({
       }
     >
       <form id={formId} noValidate onSubmit={submit} className="space-y-6">
+        {groupFull && (
+          <GroupFullPrompt
+            message={groupFull}
+            confirmLabel="Baribir saqlash"
+            loading={saving}
+            onCancel={() => setGroupFull(null)}
+            onConfirm={() => {
+              allowOverCapacity.current = true;
+              void submit();
+            }}
+          />
+        )}
         {serverError && (
           <p role="alert" className="rounded-[18px] bg-[#ff3b30]/[0.1] px-4 py-3 text-[14px] text-[#ff3b30]">
             {tr(serverError)}

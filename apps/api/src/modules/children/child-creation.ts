@@ -1,4 +1,4 @@
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, ConflictException } from "@nestjs/common";
 import { Gender, GuardianRelation, Prisma } from "@prisma/client";
 import * as argon2 from "argon2";
 import { normalizePhone } from "../../common/phone";
@@ -48,6 +48,27 @@ export async function allocateChildPublicId(
   }
 
   throw new Error("5 xonali bola ID lari tugadi — raqam uzunligini oshirish kerak");
+}
+
+/**
+ * Guruhda bo'sh joy bormi. Faqat faol bolalar joy band qiladi. To'lgan bo'lsa
+ * `GROUP_FULL` qaytadi — ekran xodimdan so'rab, `allowOverCapacity` bilan qayta yuboradi.
+ */
+export async function assertGroupHasRoom(
+  prisma: Pick<Prisma.TransactionClient, "child">,
+  group: { id: string; name: string; capacity: number },
+  options: { allowOverCapacity?: boolean; exceptChildId?: string } = {},
+): Promise<void> {
+  if (options.allowOverCapacity) return;
+  const active = await prisma.child.count({
+    where: { groupId: group.id, status: "ACTIVE", ...(options.exceptChildId ? { id: { not: options.exceptChildId } } : {}) },
+  });
+  if (active >= group.capacity) {
+    throw new ConflictException({
+      code: "GROUP_FULL",
+      message: `«${group.name}» guruhi to'lgan (${active}/${group.capacity})`,
+    });
+  }
 }
 
 export interface ChildGuardianInput {
@@ -124,6 +145,23 @@ export async function createChildWithGuardian<T extends Prisma.ChildInclude>(
 
   if (existingGuardian) {
     guardianId = existingGuardian.id;
+    // Bir xil so'rov ikki marta kelsa ikkinchisi navbat kutib, quyidagi tekshiruvga tushadi
+    await tx.$queryRaw`SELECT 1 FROM "guardians" WHERE "id" = ${guardianId} FOR NO KEY UPDATE`;
+    const duplicate = await tx.child.findFirst({
+      where: {
+        organizationId: input.organizationId,
+        fullName: { equals: composeChildFullName(input.lastName, input.firstName), mode: "insensitive" },
+        guardians: { some: { guardianId } },
+      },
+      select: { publicId: true, status: true },
+    });
+    if (duplicate) {
+      throw new ConflictException(
+        duplicate.status === "INACTIVE"
+          ? `Bu bola arxivda (id${duplicate.publicId}) — yangisini qo'shmang, arxivdan qaytaring`
+          : `Bu bola allaqachon ro'yxatda (id${duplicate.publicId})`,
+      );
+    }
     // Kabineti allaqachon ochiq bo'lsa parolga tegilmaydi — aks holda ota-ona
     // eski parolidan to'satdan chetlashtirilardi.
     // Boshqa filialda ham bolasi bo'lsa kabinet bu yerdan ochilmaydi — aks holda
