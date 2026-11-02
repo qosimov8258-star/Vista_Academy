@@ -583,6 +583,7 @@
  "Yuqoridan fayl tanlang yoki ovoz yozing": "Выберите файл выше или запишите голос",
  "{0} kishilik": "на {0} мест",
  "{0} suratini kattalashtirish": "Увеличить фото: {0}",
+ "{0} ta bolani boshqa xodim belgilagan — ularga tegilmadi": "{0} детей уже отметил другой сотрудник — их не изменили",
  "{0} ta bolaning davomati hali belgilanmagan — raqam o'zgarishi mumkin.": "Посещаемость {0} детей ещё не отмечена — число может измениться.",
  "{0} ta dars": "{0} уроков",
  "{0} ta dars xonaga biriktirilmagan — ular xona bo'yicha to'qnashuvda tekshirilmaydi": "{0} уроков без кабинета — для них конфликт кабинета не проверяется",

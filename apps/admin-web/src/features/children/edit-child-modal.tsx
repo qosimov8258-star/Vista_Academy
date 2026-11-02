@@ -16,8 +16,8 @@ import { useFeatureEnabled } from "@/lib/use-auth";
 
 const schema = z.object({
   groupId: z.string().optional(),
-  lastName: z.string().min(2, "Familiya kamida 2 belgi"),
-  firstName: z.string().min(2, "Ism kamida 2 belgi"),
+  lastName: z.string().trim().min(2, "Familiya kamida 2 belgi"),
+  firstName: z.string().trim().min(2, "Ism kamida 2 belgi"),
   gender: z.enum(["MALE", "FEMALE"], { message: "Jinsini tanlang" }),
   birthDate: z.string().optional(),
   status: z.enum(["ACTIVE", "INACTIVE"]),

@@ -583,6 +583,7 @@
  "Yuqoridan fayl tanlang yoki ovoz yozing": "Pick a file above or record your voice",
  "{0} kishilik": "{0} seats",
  "{0} suratini kattalashtirish": "Enlarge {0} photo",
+ "{0} ta bolani boshqa xodim belgilagan — ularga tegilmadi": "{0} children were already marked by another staff member — left unchanged",
  "{0} ta bolaning davomati hali belgilanmagan — raqam o'zgarishi mumkin.": "Attendance of {0} children isn't marked yet — the number may change.",
  "{0} ta dars": "{0} lessons",
  "{0} ta dars xonaga biriktirilmagan — ular xona bo'yicha to'qnashuvda tekshirilmaydi": "{0} lessons have no room — they aren't checked for room conflicts",

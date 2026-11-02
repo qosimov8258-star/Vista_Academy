@@ -1,16 +1,21 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { Gender } from "@prisma/client";
+import { Transform } from "class-transformer";
 import { IsDateString, IsEnum, IsIn, IsOptional, IsString, MinLength } from "class-validator";
+
+const trim = ({ value }: { value: unknown }) => (typeof value === "string" ? value.trim() : value);
 
 export class UpdateChildDto {
   @ApiPropertyOptional()
   @IsOptional()
+  @Transform(trim)
   @IsString()
   @MinLength(2)
   firstName?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
+  @Transform(trim)
   @IsString()
   @MinLength(2)
   lastName?: string;

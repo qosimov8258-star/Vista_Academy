@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ComponentType } from "react";
+import { useEffect, useState, type ComponentType } from "react";
 import clsx from "clsx";
 import { FileSpreadsheet, Thermometer } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -85,34 +85,44 @@ export function TeacherAttendance({ slug }: { slug: string }) {
   });
   const chronicByChild = new Map((chronicQuery.data ?? []).map((f) => [f.childId, f]));
 
-  // Mahalliy belgilar faqat filial+sana haqiqatan almashganda qayta to'ldiriladi —
-  // oyna qayta fokuslanib so'rov yangilansa, saqlanmagan belgilar o'chib ketmasin.
+  // Faqat tarbiyachi o'zi o'zgartirgan bolalar (hali saqlanmagan). Qolganlari serverdagi
+  // holatni ko'rsatadi: oyna qayta fokuslanib so'rov yangilansa, administrator yoki terminal
+  // belgisi ko'rinadi, terilgan belgilar esa o'chib ketmaydi.
   const [localStatuses, setLocalStatuses] = useState<Record<string, AttendanceStatus>>({});
   const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
-  const initializedFor = useRef<string | null>(null);
-  useEffect(() => {
-    const data = attendanceQuery.data;
-    if (!data || data.date !== date) return;
-    const key = `${branchId}_${date}`;
-    if (initializedFor.current === key) return;
-    initializedFor.current = key;
-    setLocalStatuses(Object.fromEntries(data.children.map((c) => [c.childId, c.status ?? "PRESENT"])));
-    setLocalNotes(Object.fromEntries(data.children.map((c) => [c.childId, c.note ?? ""])));
-  }, [attendanceQuery.data, date, branchId]);
-  const statusFor = (id: string) => localStatuses[id] ?? "PRESENT";
-  const noteFor = (id: string) => localNotes[id] ?? "";
-  const setStatus = (id: string, status: AttendanceStatus) => setLocalStatuses((s) => ({ ...s, [id]: status }));
+  // O'zgartirish paytida ko'rilgan holat — shu orada boshqa xodim belgilagan bo'lsa, bosib ketilmaydi
+  const [localBases, setLocalBases] = useState<Record<string, AttendanceStatus | null>>({});
+  const serverRow = (id: string) => attendanceQuery.data?.children.find((c) => c.childId === id);
+  const statusFor = (id: string): AttendanceStatus => localStatuses[id] ?? serverRow(id)?.status ?? "PRESENT";
+  const noteFor = (id: string) => localNotes[id] ?? serverRow(id)?.note ?? "";
+  const rememberBase = (id: string) =>
+    setLocalBases((b) => (id in b ? b : { ...b, [id]: serverRow(id)?.status ?? null }));
+  const setStatus = (id: string, status: AttendanceStatus) => {
+    rememberBase(id);
+    setLocalStatuses((s) => ({ ...s, [id]: status }));
+  };
+  const clearLocal = () => {
+    setLocalStatuses({});
+    setLocalNotes({});
+    setLocalBases({});
+  };
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (!attendanceQuery.data) return;
-      await Promise.all(
-        attendanceQuery.data.children.map((child) =>
-          api.post("/app/attendance", { childId: child.childId, date, status: statusFor(child.childId), note: noteFor(child.childId) }),
-        ),
-      );
+      const rows = attendanceQuery.data?.children ?? [];
+      const items = rows
+        .filter((c) => c.status !== statusFor(c.childId) || (c.note ?? "") !== noteFor(c.childId))
+        .map((c) => ({
+          childId: c.childId,
+          status: statusFor(c.childId),
+          note: noteFor(c.childId),
+          baseStatus: c.childId in localBases ? localBases[c.childId] : c.status,
+        }));
+      if (items.length === 0) return { saved: 0, conflicts: [] as string[] };
+      return api.post<{ saved: number; conflicts: string[] }>("/app/attendance/bulk", { date, items });
     },
     onSuccess: () => {
+      clearLocal();
       queryClient.invalidateQueries({ queryKey: ["attendance", slug, branchId, date] });
       queryClient.invalidateQueries({ queryKey: ["attendance-summary", slug, branchId] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-summary", slug] });
@@ -120,6 +130,7 @@ export function TeacherAttendance({ slug }: { slug: string }) {
   });
   useEffect(() => {
     saveMutation.reset();
+    clearLocal();
     setFilter(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date, branchId]);
@@ -350,7 +361,11 @@ export function TeacherAttendance({ slug }: { slug: string }) {
             .join(" · ");
         })()}
         onStatus={(s) => sheetChild && setStatus(sheetChild.childId, s)}
-        onNote={(text) => sheetChild && setLocalNotes((n) => ({ ...n, [sheetChild.childId]: text }))}
+        onNote={(text) => {
+          if (!sheetChild) return;
+          rememberBase(sheetChild.childId);
+          setLocalNotes((n) => ({ ...n, [sheetChild.childId]: text }));
+        }}
         onWriteNote={() => {
           if (!sheetChild) return;
           setNoteChild({ id: sheetChild.childId, name: sheetChild.fullName });
@@ -392,6 +407,11 @@ export function TeacherAttendance({ slug }: { slug: string }) {
               tr("Davomatni saqlash · {0} bola", children.length)
             )}
           </PrimaryButton>
+          {(saveMutation.data?.conflicts.length ?? 0) > 0 && (
+            <p className="mt-1.5 text-center text-[13px] font-medium text-[#ff9500]">
+              {tr("{0} ta bolani boshqa xodim belgilagan — ularga tegilmadi", saveMutation.data?.conflicts.length ?? 0)}
+            </p>
+          )}
           {saveMutation.isError && <p className="mt-1.5 text-center text-[13px] font-medium text-[var(--color-danger)]">{tr("Saqlashda xatolik — qayta urinib ko'ring")}</p>}
         </FloatingBar>
       )}

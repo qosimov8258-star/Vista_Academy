@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { ArrayMaxSize, ArrayMinSize, IsArray, IsDateString, IsEnum, IsOptional, IsString, MaxLength, ValidateNested } from "class-validator";
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsDateString, IsEnum, IsOptional, IsString, MaxLength, ValidateIf, ValidateNested } from "class-validator";
 import { AttendanceStatus } from "@prisma/client";
 
 export class BulkAttendanceItemDto {
@@ -17,6 +17,12 @@ export class BulkAttendanceItemDto {
   @IsString()
   @MaxLength(500)
   note?: string;
+
+  /** Xodim ekranda ko'rgan holat (`null` — belgilanmagan). Serverdagidan farq qilsa, bola saqlanmaydi */
+  @ApiPropertyOptional({ enum: AttendanceStatus, nullable: true })
+  @ValidateIf((_, value) => value !== undefined && value !== null)
+  @IsEnum(AttendanceStatus)
+  baseStatus?: AttendanceStatus | null;
 }
 
 /**

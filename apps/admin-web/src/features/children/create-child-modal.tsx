@@ -31,11 +31,11 @@ function buildSchema(hasGroups: boolean, genderRequired: boolean) {
   return z
     .object({
       groupId: hasGroups ? z.string().min(1, "Guruhni tanlang") : z.string().optional(),
-      lastName: z.string().min(2, "Familiya kamida 2 belgi"),
-      firstName: z.string().min(2, "Ism kamida 2 belgi"),
+      lastName: z.string().trim().min(2, "Familiya kamida 2 belgi"),
+      firstName: z.string().trim().min(2, "Ism kamida 2 belgi"),
       gender: genderRequired ? z.enum(["MALE", "FEMALE"], { message: "Jinsini tanlang" }) : z.enum(["MALE", "FEMALE"]).optional(),
       birthDate: z.string().optional(),
-      guardianFullName: z.string().min(2, "Ota-ona ismi kamida 2 belgi"),
+      guardianFullName: z.string().trim().min(2, "Ota-ona ismi kamida 2 belgi"),
       guardianRelation: z.enum(["MOTHER", "FATHER", "GRANDPARENT", "OTHER"]),
       guardianPhone: z
         .string()
