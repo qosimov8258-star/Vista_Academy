@@ -47,6 +47,8 @@ export class PaymentRemindersService {
         branchId,
         status: { in: UNPAID_STATUSES },
         dueDate: { gte: lowerBound, lte: upperBound },
+        // Arxivdagi bolaning ota-onasiga eslatma ketmaydi (qarzi hisobda qoladi)
+        child: { status: { not: "INACTIVE" } },
       },
       include: {
         child: {

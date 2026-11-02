@@ -153,7 +153,8 @@ export function BranchAttendance({ slug }: { slug: string }) {
   const noteOf = (id: string) => local[id]?.note ?? saved.get(id)?.note ?? "";
   const baseOf = (id: string) => saved.get(id)?.status ?? null;
   const setStatus = (id: string, status: AttendanceStatus) =>
-    setLocal((s) => ({ ...s, [id]: { status, note: s[id]?.note ?? saved.get(id)?.note ?? "", base: s[id]?.base ?? baseOf(id) } }));
+    // "Keldi"ga o'tganda eski kelmaslik izohi qolmaydi
+    setLocal((s) => ({ ...s, [id]: { status, note: status === "PRESENT" ? "" : (s[id]?.note ?? saved.get(id)?.note ?? ""), base: s[id]?.base ?? baseOf(id) } }));
   const setNote = (id: string, note: string) =>
     setLocal((s) => ({ ...s, [id]: { status: s[id]?.status ?? baseOf(id) ?? "PRESENT", note, base: s[id]?.base ?? baseOf(id) } }));
 
@@ -219,8 +220,11 @@ export function BranchAttendance({ slug }: { slug: string }) {
   };
 
   const counts = useMemo(() => {
+    // Belgilanmagan bola sukutda "Keldi" turadi, lekin saqlanmaguncha sanalmaydi
     const out: Record<AttendanceStatus, number> = { PRESENT: 0, ABSENT: 0, LATE: 0, SICK: 0 };
-    for (const c of children) out[statusOf(c.childId)] += 1;
+    for (const c of children) {
+      if (c.status !== null || local[c.childId]) out[statusOf(c.childId)] += 1;
+    }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [children, local]);
@@ -303,6 +307,11 @@ export function BranchAttendance({ slug }: { slug: string }) {
             {tr("Hamma «Keldi» deb turibdi — faqat kelmaganlarni o'zgartirib, pastdagi «Saqlash»ni bosing.")}
           </p>
         )}
+        {canWrite && !loading && markedCount > 0 && markedCount < children.length && (
+          <p className="px-4 text-[13px] leading-snug text-[#8e8e93]">
+            {tr("{0} ta bola hali belgilanmagan — yuqoridagi sonlarga kirmaydi, saqlasangiz «Keldi» bo'ladi.", children.length - markedCount)}
+          </p>
+        )}
         {canWrite && !loading && markedCount > 0 && date !== today && (
           <p className="px-4 text-[13px] leading-snug text-[#8e8e93]">{tr("Bu kun belgilangan — o'zgartirib, qayta saqlashingiz mumkin.")}</p>
         )}
@@ -351,7 +360,7 @@ export function BranchAttendance({ slug }: { slug: string }) {
               <p className={clsx(GROUP_BLOCK, "px-4 py-8 text-center text-[14px] text-[#8e8e93]")}>{tr("Bu tanlovda bola yo'q")}</p>
             ) : (
               sections.map(([group, rows]) => {
-                const here = rows.filter((c) => ["PRESENT", "LATE"].includes(statusOf(c.childId))).length;
+                const here = rows.filter((c) => (c.status !== null || local[c.childId]) && ["PRESENT", "LATE"].includes(statusOf(c.childId))).length;
                 return (
                   <Group
                     key={group}

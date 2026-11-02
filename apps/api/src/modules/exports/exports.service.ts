@@ -1,4 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { LeadSource } from "@prisma/client";
 import PDFDocument from "pdfkit";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantScope } from "../iam/tenant-auth.types";
@@ -130,10 +131,10 @@ export class ExportsService {
     );
   }
 
-  async leadsCsv(scope: TenantScope, branchId?: string): Promise<string> {
+  async leadsCsv(scope: TenantScope, branchId?: string, source?: LeadSource): Promise<string> {
     assertNotTeacher(scope);
     const leads = await this.prisma.lead.findMany({
-      where: { organizationId: scope.organizationId, branchId: scope.branchId ?? branchId },
+      where: { organizationId: scope.organizationId, branchId: scope.branchId ?? branchId, ...(source ? { source } : {}) },
       include: { assignedTo: { select: { fullName: true } } },
       orderBy: { createdAt: "desc" },
     });

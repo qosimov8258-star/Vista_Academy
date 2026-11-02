@@ -19,7 +19,7 @@ const STATUS_OPTIONS = [
 ];
 
 const schema = z.object({
-  name: z.string().min(2, "Nomi kamida 2 belgi"),
+  name: z.string().trim().min(2, "Nomi kamida 2 belgi"),
   capacity: z.coerce.number().int().min(1).max(100),
   status: z.enum(["ACTIVE", "INACTIVE"]),
 });

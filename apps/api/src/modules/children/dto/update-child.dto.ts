@@ -1,7 +1,7 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { Gender } from "@prisma/client";
 import { Transform } from "class-transformer";
-import { IsDateString, IsEnum, IsIn, IsOptional, IsString, MinLength } from "class-validator";
+import { IsBoolean, IsDateString, IsEnum, IsIn, IsOptional, IsString, MinLength } from "class-validator";
 
 const trim = ({ value }: { value: unknown }) => (typeof value === "string" ? value.trim() : value);
 
@@ -43,4 +43,10 @@ export class UpdateChildDto {
   @IsOptional()
   @IsIn(["ACTIVE", "INACTIVE"])
   status?: "ACTIVE" | "INACTIVE";
+
+  /** Xodim tasdiqladi: guruh to'lgan bo'lsa ham qo'shilsin */
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  allowOverCapacity?: boolean;
 }

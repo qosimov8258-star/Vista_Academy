@@ -2,7 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantAuthenticatedUser, TenantScope, requireOperationalScope, toTenantScope } from "../iam/tenant-auth.types";
-import { createChildWithGuardian, withPublicIdRetry } from "../children/child-creation";
+import { assertGroupHasRoom, createChildWithGuardian, withPublicIdRetry } from "../children/child-creation";
 import { AuditLogService } from "../audit-log/audit-log.service";
 
 /** "Umaraliyev Usmon" -> { lastName: "Umaraliyev", firstName: "Usmon" } */
@@ -68,6 +68,7 @@ export class CrmService {
       organizationId: scope.organizationId,
       branchId: scope.branchId ?? query.branchId,
       ...(query.stage ? { stage: query.stage } : {}),
+      ...(query.source ? { source: query.source } : {}),
     };
 
     const [items, total] = await this.prisma.$transaction([
@@ -114,6 +115,10 @@ export class CrmService {
     }
     if (dto.stage === "WON") {
       throw new BadRequestException("WON holatiga faqat 'bolaga aylantirish' orqali o'tish mumkin");
+    }
+    // Bolaga aylantirilgan ariza qaytarilmaydi — aks holda ikkinchi bola yaratilardi
+    if (lead.stage === "WON" || lead.convertedChildId) {
+      throw new BadRequestException("Bu ariza bolaga aylantirilgan — bosqichini o'zgartirib bo'lmaydi");
     }
 
     return this.prisma.$transaction(async (tx) => {
@@ -219,6 +224,10 @@ export class CrmService {
       if (!group) {
         throw new NotFoundException("Guruh topilmadi");
       }
+      if (group.status !== "ACTIVE") {
+        throw new BadRequestException("Bu guruh nofaol — bolani faol guruhga biriktiring");
+      }
+      await assertGroupHasRoom(this.prisma, group);
     }
 
     // Bola qo'lda qo'shilgani bilan bir xil yo'ldan o'tadi: qisqa ID oladi va
@@ -227,6 +236,14 @@ export class CrmService {
     // keyinchalik bolaning kartochkasidan aniqlashtiriladi.
     return withPublicIdRetry(() =>
       this.prisma.$transaction(async (tx) => {
+        // Ikki qurilmadan bir vaqtda bosilsa faqat bittasi o'tadi
+        const claimed = await tx.lead.updateMany({
+          where: { id, stage: { notIn: ["WON", "LOST"] } },
+          data: { stage: "WON" },
+        });
+        if (claimed.count === 0) {
+          throw new BadRequestException("Bu ariza allaqachon yakunlangan");
+        }
         const { child } = await createChildWithGuardian(
           tx,
           {

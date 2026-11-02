@@ -1,11 +1,14 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
-import { Type } from "class-transformer";
+import { Transform, Type } from "class-transformer";
 import { IsEnum, IsInt, IsNumber, IsOptional, IsString, Max, Min, MinLength, ValidateIf } from "class-validator";
+
+const trim = ({ value }: { value: unknown }) => (typeof value === "string" ? value.trim() : value);
 import { GroupStatus } from "@prisma/client";
 
 export class UpdateGroupDto {
   @ApiPropertyOptional({ example: "Kapalakchalar (3-4 yosh)" })
   @IsOptional()
+  @Transform(trim)
   @IsString()
   @MinLength(2)
   name?: string;

@@ -79,7 +79,9 @@ export function ManageChildrenSheet({ open, onClose, slug, group }: { open: bool
 
   const moveMutation = useMutation({
     mutationFn: async ({ ids, groupId }: { ids: string[]; groupId: string | null }) => {
-      for (const id of ids) await api.patch(`/app/children/${id}`, { groupId });
+      // Shu guruhga qo'shishda sig'im ogohlantirishi ekranda ko'rsatilgan — xodim tasdiqlagan
+      const allowOverCapacity = groupId === group?.id || undefined;
+      for (const id of ids) await api.patch(`/app/children/${id}`, { groupId, allowOverCapacity });
       return ids.length;
     },
     onSuccess: (n, { groupId }) => {

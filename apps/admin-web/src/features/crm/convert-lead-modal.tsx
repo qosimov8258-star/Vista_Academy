@@ -82,7 +82,7 @@ export function ConvertLeadModal({
         </p>
         <Select label={tr("Guruh (ixtiyoriy)")} defaultValue="" {...register("groupId")}>
           <option value="">{tr("Tanlanmagan")}</option>
-          {groups?.map((group) => (
+          {groups?.filter((group) => group.status === "ACTIVE").map((group) => (
             <option key={group.id} value={group.id}>
               {tr(group.name)}
             </option>

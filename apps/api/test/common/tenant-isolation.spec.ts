@@ -77,7 +77,7 @@ describe("surunkali kelmaganlar — boshqa tashkilot filiali", () => {
         },
       },
     };
-    const service = new AttendanceService(prisma as never, {} as never);
+    const service = new AttendanceService(prisma as never, {} as never, {} as never);
     return { service, childQueries };
   }
 
