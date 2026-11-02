@@ -73,6 +73,12 @@ export interface PaymentSheetChild {
  * yetishmayotganini aytadi. So'nggi to'lovlar bosilsa — tafsilot, chek
  * surati, kvitansiya va sabab bilan bekor qilish (shu varaq ichida).
  */
+/** Oldindan to'lov oylari oralig'i (server ham shuni tekshiradi): 3 oy orqaga, 12 oy oldinga */
+function advanceLimits() {
+  const month = currentMonth();
+  return { min: shiftPeriod(month, -3), max: shiftPeriod(month, 12) };
+}
+
 export function PaymentSheet({
   slug,
   child,
@@ -156,14 +162,27 @@ export function PaymentSheet({
   );
   const debt = Math.round(openInvoices.reduce((s, i) => s + i.remaining, 0));
   const loaded = invoicesQuery.isSuccess;
+  // Hisobi bor oylar — oldindan to'lov ularga yozilmaydi
+  const takenPeriods = useMemo(
+    () => new Set((invoicesQuery.data?.data ?? []).filter((i) => i.status !== "CANCELLED").map((i) => i.period)),
+    [invoicesQuery.data],
+  );
+  const limits = advanceLimits();
 
   // Summa — qolgan qarz bilan to'ldiriladi (bir marta, ma'lumot kelganda)
   useEffect(() => {
     if (!open || prefilled || !loaded) return;
     // Qarz bo'lmasa — bolaning oylik narxi (guruh narxi) oldindan to'lov sifatida
     setAmount(debt > 0 ? String(debt) : current?.monthlyFee ? String(Math.round(current.monthlyFee)) : "");
+    // Sukut bo'yicha — hisobi yo'q birinchi oy (to'langan oyni tanlab, xato olmasin)
+    let month = period ?? currentMonth();
+    if (month < limits.min) month = limits.min;
+    if (month > limits.max) month = limits.max;
+    while (takenPeriods.has(month) && month < limits.max) month = shiftPeriod(month, 1);
+    setAdvancePeriod(month);
     setPrefilled(true);
-  }, [open, prefilled, loaded, debt, current?.monthlyFee]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, prefilled, loaded, debt, current?.monthlyFee, takenPeriods, period]);
 
   const value = Number(amount || 0);
   const tooBig = debt > 0 && value > debt;
@@ -188,6 +207,8 @@ export function PaymentSheet({
       ? "Summani kiriting"
       : tooBig
         ? "Summa qarzdan katta"
+        : debt === 0 && takenPeriods.has(advancePeriod)
+          ? "Bu oy allaqachon to'langan"
         : !method
           ? "Usulni tanlang"
           : needsPhoto && !photo
@@ -358,6 +379,8 @@ export function PaymentSheet({
                   onNext={() => setAdvancePeriod((p) => shiftPeriod(p, 1))}
                   prevLabel={tr("Oldingi oy")}
                   nextLabel={tr("Keyingi oy")}
+                  prevDisabled={advancePeriod <= limits.min}
+                  nextDisabled={advancePeriod >= limits.max}
                 >
                   {periodLabel(advancePeriod, tr)}
                 </PeriodStepper>
@@ -413,6 +436,11 @@ export function PaymentSheet({
                 )}
               </div>
               <AmountHint debt={debt} value={value} allocation={allocation} advance={loaded && debt === 0 ? advancePeriod : null} />
+              {loaded && debt === 0 && !!current?.monthlyFee && value > current.monthlyFee && (
+                <p className="px-1 pt-1 text-[13px] leading-snug text-[#c93400]">
+                  {tr("Oylik narx {0} so'm — kiritilgan summa undan ko'p, hisob shu summada yoziladi", groupDigits(current.monthlyFee))}
+                </p>
+              )}
             </div>
 
             {/* Usul */}

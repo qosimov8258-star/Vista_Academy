@@ -142,6 +142,11 @@ export function ruleLabel(rule: Pick<DiscountRule, "type" | "value">, tr: Tr = p
   return tr("{0} narx", groupDigits(rule.value));
 }
 
+/** Ro'yxat uchun: summa oylikdan katta qoidada haqiqatda ayirilgani ko'rsatiladi (−9 000 000 emas) */
+export function appliedRuleLabel(rule: Pick<DiscountRule, "type" | "value">, discount: number, tr: Tr = plain): string {
+  return rule.type === "FIXED_AMOUNT" && rule.value > discount ? `−${groupDigits(discount)}` : ruleLabel(rule, tr);
+}
+
 export const TYPE_LABEL: Record<DiscountType, string> = {
   PERCENTAGE: "Foiz",
   FIXED_AMOUNT: "Summa",

@@ -53,6 +53,8 @@ export function groupDigits(value: number | string): string {
 export interface PeriodChild {
   childId: string;
   childName: string;
+  /** Arxivdagi bola — shu oy hisobi bo'lgani uchun ro'yxatda qolgan */
+  archived?: boolean;
   publicId: number | null;
   groupId: string | null;
   groupName: string | null;

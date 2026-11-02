@@ -44,6 +44,9 @@ const METHOD_UZ: Record<string, string> = {
 
 /** Xuddi shu bola, summa va usuldagi to'lov shu vaqt ichida yana kelsa — takror so'rov (ikki qurilma, qayta yuborish) */
 const DUPLICATE_PAYMENT_WINDOW_MS = 15_000;
+/** Qarz yo'q bolaga to'lov yoziladigan oylar oralig'i */
+const ADVANCE_MONTHS_BACK = 3;
+const ADVANCE_MONTHS_AHEAD = 12;
 /** Oldindan to'lov bilan yaratilgan hisob-fakturaning CHARGE yozuvidagi belgi */
 const ADVANCE_CHARGE_MARK = "(oldindan to'lov)";
 
@@ -779,6 +782,11 @@ export class BillingService {
     }
     if (!period) {
       throw new BadRequestException("Qarz yo'q — oldindan to'lov uchun oyni tanlang");
+    }
+    // Xato bosilgan yil (2020, 2099) pulni yo'qotib qo'ymasin
+    const thisMonth = tashkentDay(new Date()).slice(0, 7);
+    if (period < shiftMonth(thisMonth, -ADVANCE_MONTHS_BACK) || period > shiftMonth(thisMonth, ADVANCE_MONTHS_AHEAD)) {
+      throw new BadRequestException(`Oy juda uzoq — to'lovni ${ADVANCE_MONTHS_BACK} oy orqaga va ${ADVANCE_MONTHS_AHEAD} oy oldinga yozish mumkin`);
     }
     const existing = await db.invoice.findFirst({
       where: { childId, period, status: { not: InvoiceStatus.CANCELLED } },
@@ -1624,6 +1632,11 @@ function tashkentDay(date: Date): string {
 }
 
 /** Bir oy oldingi kun: 27.10 -> 27.09; oy qisqa bo'lsa oxirgi kuni (31.03 -> 28.02) */
+function shiftMonth(period: string, months: number): string {
+  const [y, m] = period.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1 + months, 1)).toISOString().slice(0, 7);
+}
+
 function oneMonthBefore(day: string): string {
   const [y, m, d] = day.split("-").map(Number);
   const lastDay = new Date(Date.UTC(y, m - 1, 0)).getUTCDate();

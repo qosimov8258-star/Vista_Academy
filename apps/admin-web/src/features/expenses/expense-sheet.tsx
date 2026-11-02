@@ -89,6 +89,11 @@ export function ExpenseSheet({ request, onClose }: { request: ExpenseSheetReques
   const [keepSaved, setKeepSaved] = useState(false);
   const [showMissing, setShowMissing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Xato oynaning pastida ko'rinmay qolmasin — saqlanmagani sababi darhol ko'rinsin
+  const errorRef = useRef<HTMLParagraphElement | null>(null);
+  useEffect(() => {
+    if (error) errorRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [error]);
   const [toast, setToast] = useState<ToastState | null>(null);
 
   const fillForm = (row: ExpenseRow | null, day?: string) => {
@@ -302,7 +307,7 @@ export function ExpenseSheet({ request, onClose }: { request: ExpenseSheetReques
               className={clsx("h-11 w-full rounded-[12px] px-3.5 text-[15px] text-[var(--color-text)] outline-none placeholder:text-[#8e8e93]", FILL)}
             />
           </div>
-          {error && <p className="px-4 pt-2 text-[13px] text-[#ff3b30]">{error}</p>}
+          {error && <p ref={errorRef} className="px-4 pt-2 text-[13px] text-[#ff3b30]">{error}</p>}
         </section>
       </>
     );

@@ -13,7 +13,7 @@ import { Toast, type ToastState } from "@/components/ui/toast";
 import { groupDigits, periodLabel } from "@/features/payments/shared";
 import { useTr } from "@/i18n/tr";
 import { DiscountFormFields, Note, draftProblem, draftValue, invoicesNote, newDraft, useDiscountInvalidate, type DiscountDraft } from "./discount-sheet";
-import { DISCOUNT_COLOR, computeDiscount, ruleLabel, type BulkDiscountResult, type DiscountFamily, type DiscountRow } from "./shared";
+import { DISCOUNT_COLOR, appliedRuleLabel, computeDiscount, ruleLabel, type BulkDiscountResult, type DiscountFamily, type DiscountRow } from "./shared";
 
 const PAGE = 6;
 const DEFAULT_REASON = "Aka-uka / opa-singil";
@@ -143,7 +143,7 @@ export function DiscountAssistant({
                         {[c.groupName ? tr(c.groupName) : tr("Guruhsiz"), `${groupDigits(c.net)} ${tr("so'm")}`].join(" · ")}
                       </span>
                     </span>
-                    {c.rule && c.discount > 0 && <Pill color={DISCOUNT_COLOR}>{ruleLabel(c.rule, tr)}</Pill>}
+                    {c.rule && c.discount > 0 && <Pill color={DISCOUNT_COLOR}>{appliedRuleLabel(c.rule, c.discount, tr)}</Pill>}
                   </>
                 );
                 return (

@@ -628,7 +628,7 @@ export class CashDeskService {
     const branchId = requireMoneyScope(scope);
     const [rows, children, groups, open] = await Promise.all([
       this.childPaymentRows(branchId, period),
-      this.prisma.child.findMany({ where: { branchId, status: { not: "INACTIVE" } }, select: { id: true, publicId: true } }),
+      this.prisma.child.findMany({ where: { branchId }, select: { id: true, publicId: true } }),
       this.prisma.group.findMany({ where: { branchId }, select: { id: true, name: true } }),
       this.prisma.invoice.findMany({
         where: { branchId, status: { in: [...OPEN_INVOICE] } },
@@ -666,10 +666,13 @@ export class CashDeskService {
     }
     const [children, invoices, branch] = await Promise.all([
       this.prisma.child.findMany({
-        where: { branchId, status: { not: "INACTIVE" } },
+        // Arxivdagi bola shu oy hisobi bo'lsa qoladi: uning puli ham kassaga tushgan,
+        // aks holda sahifa jami bosh sahifadan kam chiqadi
+        where: { branchId, OR: [{ status: { not: "INACTIVE" } }, { invoices: { some: { period, status: { not: "CANCELLED" } } } }] },
         select: {
           id: true,
           fullName: true,
+          status: true,
           groupId: true,
           group: { select: { monthlyFee: true } },
           childDiscounts: { select: discountRuleSelect },
@@ -706,6 +709,7 @@ export class CashDeskService {
       return {
         childId: c.id,
         childName: c.fullName,
+        archived: c.status === "INACTIVE",
         groupId: c.groupId,
         state,
         billed: inv?.billed ?? 0,
