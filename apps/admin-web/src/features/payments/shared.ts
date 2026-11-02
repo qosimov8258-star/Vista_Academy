@@ -101,7 +101,8 @@ export interface ChildPayment {
   createdAt: string;
   hasReceiptImage: boolean;
   recordedByName: string | null;
-  periods: { invoiceId: string; period: string; amount: string }[];
+  /** `advance` — hisob oldindan to'lov bilan yaratilgan: to'lov bekor qilinsa u ham bekor bo'ladi */
+  periods: { invoiceId: string; period: string; amount: string; advance?: boolean }[];
 }
 
 /** Chek suratini brauzerda kichraytirib, data URL qiladi (server 3MB gacha qabul qiladi). */

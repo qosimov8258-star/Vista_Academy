@@ -110,6 +110,11 @@ export function PaymentSheet({
   const [paidOn, setPaidOn] = useState(today);
   const earliestPaidOn = oneMonthBefore(today);
   const [error, setError] = useState<string | null>(null);
+  // Xato oynaning pastida ko'rinmay qolmasin (masalan, kassa yopilgan bo'lsa)
+  const errorRef = useRef<HTMLParagraphElement | null>(null);
+  useEffect(() => {
+    if (error) errorRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [error]);
   const [showMissing, setShowMissing] = useState(false);
   const [reason, setReason] = useState("");
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -446,7 +451,7 @@ export function PaymentSheet({
               className={clsx("h-11 w-full rounded-[12px] px-3.5 text-[15px] text-[var(--color-text)] outline-none placeholder:text-[#8e8e93]", FILL)}
             />
           </div>
-          {error && <p className="px-4 pt-2 text-[13px] text-[#ff3b30]">{error}</p>}
+          {error && <p ref={errorRef} className="px-4 pt-2 text-[13px] text-[#ff3b30]">{error}</p>}
         </section>
 
         {/* So'nggi to'lovlar */}
@@ -530,9 +535,14 @@ export function PaymentSheet({
             {groupDigits(p.amount)} {tr("so'm")} · {tr(METHOD_LABEL[p.method])}
           </p>
           <p className="mt-1">
-            {p.periods.length > 0
-              ? `${tr("Bekor qilingach shu oylar yana qarz bo'ladi")}: ${p.periods.map((x) => periodLabel(x.period, tr)).join(", ")}.`
-              : tr("Bekor qilingach summa qarzga qaytadi.")}
+            {p.periods.some((x) => !x.advance) || p.periods.length === 0
+              ? p.periods.length > 0
+                ? `${tr("Bekor qilingach shu oylar yana qarz bo'ladi")}: ${p.periods.filter((x) => !x.advance).map((x) => periodLabel(x.period, tr)).join(", ")}.`
+                : tr("Bekor qilingach summa qarzga qaytadi.")
+              : null}
+            {p.periods.some((x) => x.advance)
+              ? ` ${tr("Oldindan yozilgan hisob ham bekor qilinadi")}: ${p.periods.filter((x) => x.advance).map((x) => periodLabel(x.period, tr)).join(", ")}.`
+              : null}
           </p>
           <p className="mt-1">{tr("Yozuv o'chirilmaydi — sababi bilan amallar jurnalida qoladi.")}</p>
         </div>
@@ -565,7 +575,7 @@ export function PaymentSheet({
               className={clsx("w-full resize-none rounded-[12px] px-3.5 py-2.5 text-[15px] text-[var(--color-text)] outline-none placeholder:text-[#8e8e93]", FILL)}
             />
           </div>
-          {error && <p className="px-4 pt-2 text-[13px] text-[#ff3b30]">{error}</p>}
+          {error && <p ref={errorRef} className="px-4 pt-2 text-[13px] text-[#ff3b30]">{error}</p>}
         </section>
       </>
     );

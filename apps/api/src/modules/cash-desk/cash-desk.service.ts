@@ -345,6 +345,9 @@ export class CashDeskService {
     const scope = toTenantScope(caller);
     const branchId = requireMoneyScope(scope);
     const date = assertDate(dto.date.slice(0, 10));
+    if (date > new Date(Date.now() + TASHKENT_OFFSET_MS).toISOString().slice(0, 10)) {
+      throw new BadRequestException("Kelajakdagi kunni yopib bo'lmaydi");
+    }
     await this.assertNotClosed(branchId, date);
     const day = await this.day(scope, date);
     const difference = dto.countedCash - day.expectedCash;
