@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsDateString, IsNumber, IsOptional, IsPositive, IsString, Matches, Min } from "class-validator";
+import { IsDateString, IsOptional, IsString, Matches } from "class-validator";
+import { DiscountAmount, MoneyAmount } from "./money";
 
 export class CreateInvoiceDto {
   @ApiProperty()
@@ -7,14 +8,12 @@ export class CreateInvoiceDto {
   childId!: string;
 
   @ApiProperty({ example: 850000, description: "Chegirmadan oldingi to'liq summa" })
-  @IsNumber()
-  @IsPositive()
+  @MoneyAmount()
   amount!: number;
 
   @ApiPropertyOptional({ example: 85000, description: "Chegirma summasi (masalan ko'p farzandli oila uchun)" })
   @IsOptional()
-  @IsNumber()
-  @Min(0)
+  @DiscountAmount()
   discountAmount?: number;
 
   @ApiProperty({ example: "2026-09", description: "Davr (YYYY-MM)" })

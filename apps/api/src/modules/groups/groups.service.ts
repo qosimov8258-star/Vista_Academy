@@ -229,7 +229,8 @@ export class GroupsService {
       const key = dateKey(record.date);
       const day = byDay.get(key) ?? { present: 0, absent: 0 };
       const child = byChild.get(record.childId) ?? { present: 0, absent: 0 };
-      if (record.status === "PRESENT") {
+      // Kech qolgan bola kelgan, kasal bola kelmagan hisoblanadi
+      if (record.status === "PRESENT" || record.status === "LATE") {
         day.present += 1;
         child.present += 1;
       } else {
@@ -311,8 +312,9 @@ export class GroupsService {
       date,
       total: children.length,
       counts: {
-        present: items.filter((item) => item.status === "PRESENT").length,
-        absent: items.filter((item) => item.status === "ABSENT").length,
+        // Kech qolgan bola kelgan, kasal bola kelmagan hisoblanadi — jami bolalar soniga teng chiqadi
+        present: items.filter((item) => item.status === "PRESENT" || item.status === "LATE").length,
+        absent: items.filter((item) => item.status === "ABSENT" || item.status === "SICK").length,
         unmarked: items.filter((item) => item.status === null).length,
       },
       items,

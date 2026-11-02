@@ -1,7 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsDateString, IsEnum, IsIn, IsNumber, IsOptional, IsPositive, IsString, Matches, Max, MaxLength, Min } from "class-validator";
+import { IsDateString, IsEnum, IsIn, IsNumber, IsOptional, IsString, Matches, Max, MaxLength, Min } from "class-validator";
 import { PaymentMethod } from "@prisma/client";
 import { EXPENSE_CATEGORIES } from "../expense-categories";
+import { MAX_MONEY, MoneyAmount } from "../../billing/dto/money";
 
 export class CreateExpenseDto {
   @ApiProperty({ example: "2026-09-19" })
@@ -9,9 +10,7 @@ export class CreateExpenseDto {
   date!: string;
 
   @ApiProperty({ example: 150000 })
-  @IsNumber()
-  @IsPositive({ message: "Summa 0 dan katta bo'lishi kerak" })
-  @Max(10_000_000_000)
+  @MoneyAmount()
   amount!: number;
 
   @ApiProperty({ enum: EXPENSE_CATEGORIES, example: "Oziq-ovqat" })
@@ -51,10 +50,12 @@ export class CloseCashDto {
   @ApiProperty({ description: "Kassir kassada sanagan naqd pul", example: 1200000 })
   @IsNumber()
   @Min(0)
+  @Max(MAX_MONEY, { message: "Summa juda katta" })
   countedCash!: number;
 
   @ApiPropertyOptional({ description: "Farq bo'lsa sababi" })
   @IsOptional()
   @IsString()
+  @MaxLength(500)
   note?: string;
 }

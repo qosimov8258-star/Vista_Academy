@@ -316,6 +316,7 @@ function ChildRow({ child: c, withGroup = false, onClick }: { child: PeriodChild
   const older = c.totalDebt - c.remaining;
   const subtitle = [
     c.publicId ? `ID ${c.publicId}` : null,
+    c.archived ? tr("arxivda") : null,
     withGroup ? (c.groupName ? tr(c.groupName) : tr("Guruhsiz")) : null,
     // NONE holatida eski qarz o'ngda ko'rinadi — ikki marta yozilmasin
     c.state !== "NONE" && older > 0.5 ? `${tr("eski qarz")} ${groupDigits(older)}` : null,

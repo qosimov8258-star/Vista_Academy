@@ -133,6 +133,10 @@ export class AttendanceService {
    * `mark()`ning o'zi chaqiriladi — ruxsat, guruh, coin va "kelmadi"
    * bildirishnomasi bir xil ishlaydi. Kelajak kunni belgilab bo'lmaydi;
    * o'tgan kunlar esa istalgan payt qayta ochib tuzatiladi.
+   *
+   * `baseStatus` — xodim ekranda ko'rib turgan holat. Oyna ochiq turgan paytda
+   * boshqa xodim yoki terminal shu bolani belgilagan bo'lsa, u bosib ketilmaydi:
+   * bola `conflicts` ro'yxatida qaytadi.
    */
   async markMany(scope: TenantScope, dto: BulkMarkAttendanceDto) {
     requireTeachingScope(scope);
@@ -141,7 +145,19 @@ export class AttendanceService {
       throw new BadRequestException("Kelajak kun uchun davomat belgilab bo'lmaydi");
     }
     // Bir bola ikki marta kelsa — oxirgisi hisoblanadi
-    const items = [...new Map(dto.items.map((item) => [item.childId, item])).values()];
+    const unique = [...new Map(dto.items.map((item) => [item.childId, item])).values()];
+    const current = await this.prisma.attendance.findMany({
+      where: { childId: { in: unique.map((item) => item.childId) }, date: toDateOnly(dto.date.slice(0, 10)) },
+      select: { childId: true, status: true },
+    });
+    const currentByChild = new Map(current.map((record) => [record.childId, record.status]));
+    const stale = unique.filter(
+      (item) => item.baseStatus !== undefined && (currentByChild.get(item.childId) ?? null) !== item.baseStatus,
+    );
+    const staleIds = new Set(stale.map((item) => item.childId));
+    const items = unique.filter((item) => !staleIds.has(item.childId));
+    // Ikkala xodim bir xil belgilagan bo'lsa — bu to'qnashuv emas
+    const conflicts = stale.filter((item) => currentByChild.get(item.childId) !== item.status).map((item) => item.childId);
     const CHUNK = 8;
     for (let i = 0; i < items.length; i += CHUNK) {
       await Promise.all(
@@ -150,7 +166,7 @@ export class AttendanceService {
         ),
       );
     }
-    return { date: dto.date.slice(0, 10), saved: items.length };
+    return { date: dto.date.slice(0, 10), saved: items.length, conflicts };
   }
 
   /**
@@ -299,7 +315,8 @@ export class AttendanceService {
     for (const record of records) {
       const key = dateKey(record.date);
       const day = byDay.get(key) ?? { present: 0, absent: 0 };
-      if (record.status === "PRESENT") day.present += 1;
+      // Kech qolgan bola kelgan hisoblanadi (hisobot va bola kartasi bilan bir xil)
+      if (record.status === "PRESENT" || record.status === "LATE") day.present += 1;
       else day.absent += 1;
       byDay.set(key, day);
     }
@@ -382,11 +399,11 @@ export class AttendanceService {
       branch: { organizationId: scope.organizationId },
       ...(teacherGroupIds === null ? {} : { child: { groupId: { in: teacherGroupIds } } }),
     };
-    // Kech qoldi va kasal bolalar ham "kelmaganlar" qatorida hisoblanadi —
-    // dashboard kartasida faqat "Keldi" / "Kelmadi" ikkita holat ko'rsatiladi.
+    // Dashboard kartasida faqat "Keldi" / "Kelmadi" ikkita holat ko'rsatiladi:
+    // kech qolgan kelganlarga, kasal kelmaganlarga qo'shiladi.
     const [present, absent] = await Promise.all([
-      this.prisma.attendance.count({ where: { ...base, status: "PRESENT" } }),
-      this.prisma.attendance.count({ where: { ...base, status: { in: ["ABSENT", "LATE", "SICK"] } } }),
+      this.prisma.attendance.count({ where: { ...base, status: { in: ["PRESENT", "LATE"] } } }),
+      this.prisma.attendance.count({ where: { ...base, status: { in: ["ABSENT", "SICK"] } } }),
     ]);
     return { present, absent };
   }

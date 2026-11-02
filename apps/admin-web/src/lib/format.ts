@@ -2,26 +2,23 @@ import type { Gender } from "./types";
 
 export function formatMoney(value: string | number, currency = "UZS"): string {
   const num = typeof value === "string" ? Number(value) : value;
-  return new Intl.NumberFormat("uz-UZ", { maximumFractionDigits: 0 }).format(num) + " " + currency;
+  return `${Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ")} ${currency}`;
 }
 
+const pad = (n: number) => String(n).padStart(2, "0");
+
+/** "02.11.2026" — brauzer tiliga bog'liq emas (uz-UZ "2026-11-02" berardi) */
 export function formatDate(value: string): string {
-  return new Intl.DateTimeFormat("uz-UZ", { day: "2-digit", month: "2-digit", year: "numeric" }).format(
-    new Date(value),
-  );
+  const d = new Date(value);
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`;
 }
 
+/** "02.11.2026, 20:47" */
 export function formatDateTime(value: string): string {
-  return new Intl.DateTimeFormat("uz-UZ", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
+  const d = new Date(value);
+  return `${formatDate(value)}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-/** Bolaning qisqa raqami. Bazada son, ko'rsatishda "id12345". */
 export function formatChildId(publicId: number): string {
   return `id${publicId}`;
 }

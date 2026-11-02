@@ -1,5 +1,6 @@
 "use client";
 
+import { groupDigits } from "@/features/payments/shared";
 import { OperatorHome } from "@/features/desk/operator-home";
 import { use, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -413,7 +414,7 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
               <PeriodPicker period={period} max={currentPeriod()} onChange={setPeriod} />
             </div>
             <p className="mt-4 text-[32px] font-bold leading-none tracking-[-0.02em] tabular-nums text-[var(--color-text)]">
-              {formatMoney(totalPaid)}
+              {groupDigits(totalPaid)} {tr("so'm")}
             </p>
           </div>
 

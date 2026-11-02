@@ -396,14 +396,19 @@ export class PaymentReceiptsService {
       throw new BadRequestException("Bu chek allaqachon ko'rib chiqilgan");
     }
 
-    let result: Awaited<ReturnType<BillingService["recordPayment"]>>;
+    let result: Awaited<ReturnType<BillingService["acceptPayment"]>>;
     try {
-      result = await this.billingService.recordPayment(caller, {
-        invoiceId: invoice.id,
-        amount: Number(receipt.claimedAmount),
-        method: dto.method,
-        note: dto.note ?? "To'lov cheki tasdiqlandi",
-      });
+      // Eng eski oydan boshlab taqsimlanadi: ota-ona bitta chek bilan bir necha oyni to'lashi mumkin
+      result = await this.billingService.acceptPayment(
+        caller,
+        {
+          childId: receipt.childId,
+          amount: Number(receipt.claimedAmount),
+          method: dto.method,
+          note: dto.note ?? "To'lov cheki tasdiqlandi",
+        },
+        { receiptOnFile: true },
+      );
     } catch (err) {
       // To'lov yozilmadi — chek qayta ko'rib chiqilishi uchun PENDING ga qaytadi
       await this.prisma.paymentReceipt.update({

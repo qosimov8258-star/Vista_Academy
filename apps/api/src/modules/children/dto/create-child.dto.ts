@@ -1,6 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Gender, GuardianRelation } from "@prisma/client";
+import { Transform } from "class-transformer";
 import { IsDateString, IsEnum, IsOptional, IsString, Matches, MinLength } from "class-validator";
+
+const trim = ({ value }: { value: unknown }) => (typeof value === "string" ? value.trim() : value);
 
 export class CreateChildDto {
   @ApiPropertyOptional()
@@ -9,11 +12,13 @@ export class CreateChildDto {
   groupId?: string;
 
   @ApiProperty({ example: "Umaraliyev", description: "Familiya" })
+  @Transform(trim)
   @IsString()
   @MinLength(2)
   lastName!: string;
 
   @ApiProperty({ example: "Usmon", description: "Ism" })
+  @Transform(trim)
   @IsString()
   @MinLength(2)
   firstName!: string;
@@ -32,6 +37,7 @@ export class CreateChildDto {
   // Bolaning o'z telefoni bo'lmaydi — bog'cha ota-ona bilan aloqaga chiqadi,
   // shuning uchun kamida bitta vasiy majburiy.
   @ApiProperty({ example: "Umaraliyev Aziz" })
+  @Transform(trim)
   @IsString()
   @MinLength(2)
   guardianFullName!: string;

@@ -1,3 +1,4 @@
+import { BadRequestException } from "@nestjs/common";
 import { Gender, GuardianRelation, Prisma } from "@prisma/client";
 import * as argon2 from "argon2";
 import { normalizePhone } from "../../common/phone";
@@ -103,6 +104,10 @@ export async function createChildWithGuardian<T extends Prisma.ChildInclude>(
   input: CreateChildInput,
   include: T,
 ): Promise<{ child: Prisma.ChildGetPayload<{ include: T }>; credentials: GuardianCredentials | null }> {
+  // Lending arizasida bola ismi so'ralmaydi — ismsiz bola yaratilmasin
+  if (!composeChildFullName(input.lastName, input.firstName)) {
+    throw new BadRequestException("Bola ismi kiritilmagan");
+  }
   const publicId = await allocateChildPublicId(tx, input.organizationId);
   const phone = normalizePhone(input.guardian.phone);
 

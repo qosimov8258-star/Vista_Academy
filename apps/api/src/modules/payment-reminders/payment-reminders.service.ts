@@ -41,7 +41,7 @@ export class PaymentRemindersService {
     const lowerBound = new Date(today.getTime() - window.daysAfterDue * DAY_MS);
     const upperBound = new Date(today.getTime() + window.daysBeforeDue * DAY_MS);
 
-    return this.prisma.invoice.findMany({
+    const invoices = await this.prisma.invoice.findMany({
       where: {
         organizationId,
         branchId,
@@ -60,6 +60,8 @@ export class PaymentRemindersService {
       },
       orderBy: { dueDate: "asc" },
     });
+    // To'lanadigan summasi qolmagan hisobga "0 so'm to'lang" eslatmasi ketmasin
+    return invoices.filter((i) => Number(i.amount) - Number(i.discountAmount) - Number(i.paidAmount) > 0.005);
   }
 
   async updateSettings(scope: TenantScope, dto: UpdateReminderSettingsDto, branchId?: string) {

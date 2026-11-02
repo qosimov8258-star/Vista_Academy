@@ -261,12 +261,20 @@ export function Sidebar({ slug }: { slug: string }) {
     }
     return item.exact ? currentPath === item.href : pathname.startsWith(item.href);
   };
-  const financeMobileEntries: NavEntry[] = [
-    { href: `/${slug}`, label: "Bosh sahifa", icon: HomeIcon, show: true, exact: true },
+  const financeMenuLinks: NavLeaf[] = [
+    { href: `/${slug}/payment-receipts`, label: tr("To'lov cheklari"), icon: ReceiptIcon, show: true },
+    { href: `/${slug}/audit-logs`, label: "Audit", icon: AuditIcon, show: true },
     { href: financeBase ? `${financeBase}/employees` : `/${slug}`, label: "Xodimlar", icon: TeacherIcon, show: true },
     { href: financeBase ? `${financeBase}/children` : `/${slug}`, label: tr("O'quvchilar"), icon: ChildIcon, show: true },
     { href: financeBase ? `${financeBase}/reminders` : `/${slug}`, label: "Eslatmalar", icon: ClockIcon, show: true },
-    financeFiliallarEntry,
+  ];
+  const financeMobileEntries: NavEntry[] = [
+    { href: `/${slug}`, label: "Bosh sahifa", icon: HomeIcon, show: true, exact: true },
+    // Moliyachining kundalik ishi pastda; qolganlari "Menyu" ichida
+    { href: `/${slug}/payments`, label: tr("To'lovlar"), icon: WalletIcon, show: true },
+    { href: `/${slug}/expenses`, label: tr("Xarajatlar"), icon: CoinIcon, show: true },
+    { href: `/${slug}/discounts`, label: tr("Chegirmalar"), icon: PercentIcon, show: true },
+    ...financeMenuLinks,
   ];
 
   const rootEntries: NavEntry[] = [
@@ -1050,11 +1058,7 @@ export function Sidebar({ slug }: { slug: string }) {
         menuEntries={
           user
             ? [
-                { href: `/${slug}/payments`, label: tr("To'lovlar"), icon: WalletIcon, show: true },
-                { href: `/${slug}/payment-receipts`, label: tr("To'lov cheklari"), icon: ReceiptIcon, show: true },
-                { href: `/${slug}/expenses`, label: tr("Xarajatlar"), icon: CoinIcon, show: true },
-                { href: `/${slug}/discounts`, label: tr("Chegirmalar"), icon: PercentIcon, show: true },
-                { href: `/${slug}/audit-logs`, label: "Audit", icon: AuditIcon, show: true },
+                ...financeMenuLinks,
                 financeFiliallarEntry,
               ]
             : []

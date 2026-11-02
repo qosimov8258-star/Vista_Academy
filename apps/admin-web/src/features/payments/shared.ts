@@ -33,8 +33,9 @@ const MONTHS = ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avg
 /** "2026-10" → "Oktabr 2026" */
 export function periodLabel(period: string, tr: (key: string) => string): string {
   const [y, m] = period.split("-").map(Number);
-  const name = tr(MONTHS[(m ?? 1) - 1] ?? "");
-  return `${name.charAt(0).toUpperCase()}${name.slice(1)} ${y}`;
+  // Bosh harfli kalit: ruschada "Ноябрь 2026" (kichik harfli kalit — sana uchun: "2 ноября")
+  const raw = MONTHS[(m ?? 1) - 1] ?? "";
+  return `${tr(`${raw.charAt(0).toUpperCase()}${raw.slice(1)}`)} ${y}`;
 }
 
 /** "2026-10" ± oy */
@@ -53,6 +54,8 @@ export function groupDigits(value: number | string): string {
 export interface PeriodChild {
   childId: string;
   childName: string;
+  /** Arxivdagi bola — shu oy hisobi bo'lgani uchun ro'yxatda qolgan */
+  archived?: boolean;
   publicId: number | null;
   groupId: string | null;
   groupName: string | null;
@@ -101,7 +104,8 @@ export interface ChildPayment {
   createdAt: string;
   hasReceiptImage: boolean;
   recordedByName: string | null;
-  periods: { invoiceId: string; period: string; amount: string }[];
+  /** `advance` — hisob oldindan to'lov bilan yaratilgan: to'lov bekor qilinsa u ham bekor bo'ladi */
+  periods: { invoiceId: string; period: string; amount: string; advance?: boolean }[];
 }
 
 /** Chek suratini brauzerda kichraytirib, data URL qiladi (server 3MB gacha qabul qiladi). */

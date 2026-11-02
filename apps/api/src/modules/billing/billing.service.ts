@@ -42,6 +42,45 @@ const METHOD_UZ: Record<string, string> = {
   OTHER: "Boshqa",
 };
 
+/** Xuddi shu bola, summa va usuldagi to'lov shu vaqt ichida yana kelsa — takror so'rov (ikki qurilma, qayta yuborish) */
+const DUPLICATE_PAYMENT_WINDOW_MS = 15_000;
+/** Qarz yo'q bolaga to'lov yoziladigan oylar oralig'i */
+const ADVANCE_MONTHS_BACK = 3;
+const ADVANCE_MONTHS_AHEAD = 12;
+/** Oldindan to'lov bilan yaratilgan hisob-fakturaning CHARGE yozuvidagi belgi */
+const ADVANCE_CHARGE_MARK = "(oldindan to'lov)";
+
+/**
+ * Bir bolaning pul amallarini navbatga qo'yadi (tranzaksiya oxirigacha). Busiz
+ * bir vaqtda kelgan ikki so'rov bir xil qarzni o'qib, pulni ikki marta yozardi.
+ * Chaqirgandan keyin hisob-fakturalar qaytadan o'qilishi shart.
+ */
+async function lockChildMoney(tx: Prisma.TransactionClient, childId: string) {
+  await tx.$queryRaw`SELECT 1 FROM "children" WHERE "id" = ${childId} FOR NO KEY UPDATE`;
+}
+
+async function assertNotDuplicatePayment(tx: Prisma.TransactionClient, childId: string, amount: number, method: Prisma.PaymentCreateInput["method"]) {
+  const recent = await tx.payment.findFirst({
+    where: { childId, amount, method, status: { not: "REFUNDED" }, createdAt: { gte: new Date(Date.now() - DUPLICATE_PAYMENT_WINDOW_MS) } },
+    select: { id: true },
+  });
+  if (recent) {
+    throw new ConflictException("Xuddi shu to'lov hozirgina yozildi — ikki marta yuborilmadimi? Ro'yxatni tekshiring");
+  }
+}
+
+/** Bir bolaga bir oy uchun ikkinchi hisob-faktura — ommaviy yozishda bu bola shunchaki o'tkazib yuboriladi */
+class DuplicateInvoiceException extends BadRequestException {
+  constructor(period: string) {
+    super(`${period} oyi uchun bu bolaga hisob-faktura allaqachon yozilgan — kerak bo'lsa, borini moliyachi tuzatadi`);
+  }
+}
+
+/** Bazadagi "bir oyga bitta hisob" qoidasi (invoices_child_period_active_key) ishlaganda */
+function isUniqueViolation(error: unknown): boolean {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+}
+
 /** To'lovlar ro'yxati uchun: chek rasmi baytlari (`receiptImage`) har qatorda tortilmasin. */
 const paymentListSelect = {
   id: true,
@@ -59,7 +98,18 @@ const paymentListSelect = {
   receiptMimeType: true,
   child: { select: { id: true, fullName: true } },
   recordedBy: { select: { fullName: true } },
-  allocations: { select: { amount: true, invoice: { select: { id: true, period: true } } } },
+  allocations: {
+    select: {
+      amount: true,
+      invoice: {
+        select: {
+          id: true,
+          period: true,
+          ledgerEntries: { where: { type: "CHARGE", note: { contains: ADVANCE_CHARGE_MARK } }, select: { id: true }, take: 1 },
+        },
+      },
+    },
+  },
 } satisfies Prisma.PaymentSelect;
 
 @Injectable()
@@ -93,17 +143,21 @@ export class BillingService {
     if (discountAmount > dto.amount) {
       throw new BadRequestException("Chegirma summadan katta bo'lishi mumkin emas");
     }
-    // Bir bolaga bir oy uchun bitta hisob-faktura — ikkinchisi bolani ikki
-    // baravar qarzdor qilib qo'yadi. Xato bo'lsa, borini moliyachi tuzatadi.
-    const sameMonth = await this.prisma.invoice.findFirst({
-      where: { childId: child.id, period: dto.period, status: { not: InvoiceStatus.CANCELLED } },
-      select: { id: true },
-    });
-    if (sameMonth) {
-      throw new BadRequestException(`${dto.period} oyi uchun bu bolaga hisob-faktura allaqachon yozilgan — kerak bo'lsa, borini moliyachi tuzatadi`);
-    }
+    // 100% chegirma: to'lanadigan narsa yo'q — hisob ochiq qolmasin (qarz va eslatma chiqmasin)
+    const nothingToPay = dto.amount - discountAmount <= EPSILON;
 
     return this.prisma.$transaction(async (tx) => {
+      await lockChildMoney(tx, child.id);
+      // Bir bolaga bir oy uchun bitta hisob-faktura — ikkinchisi bolani ikki
+      // baravar qarzdor qilib qo'yadi. Xato bo'lsa, borini moliyachi tuzatadi.
+      const sameMonth = await tx.invoice.findFirst({
+        where: { childId: child.id, period: dto.period, status: { not: InvoiceStatus.CANCELLED } },
+        select: { id: true },
+      });
+      if (sameMonth) {
+        throw new DuplicateInvoiceException(dto.period);
+      }
+
       const invoice = await tx.invoice.create({
         data: {
           organizationId: scope.organizationId,
@@ -117,6 +171,7 @@ export class BillingService {
           currency: branch.currency,
           period: dto.period,
           dueDate: new Date(dto.dueDate),
+          ...(nothingToPay ? { status: InvoiceStatus.PAID, paidAt: new Date() } : {}),
         },
       });
 
@@ -147,6 +202,8 @@ export class BillingService {
       }
 
       return invoice;
+    }).catch((error: unknown) => {
+      throw isUniqueViolation(error) ? new DuplicateInvoiceException(dto.period) : error;
     }).then(async (invoice) => {
       await this.auditLog.logFromUser(caller, {
         action: "invoice.create",
@@ -345,6 +402,7 @@ export class BillingService {
     // narxi umuman yo'q bola tashlab ketiladi va alohida sanaladi.
     const created = [];
     let noFeeCount = 0;
+    let racedCount = 0;
     for (const child of targets) {
       const amount = dto.amount ?? monthlyFeeOf(child.group, branch);
       if (!amount || amount <= 0) {
@@ -354,18 +412,24 @@ export class BillingService {
       if ((dto.discountAmount ?? 0) > amount) {
         throw new BadRequestException("Chegirma summadan katta bo'lishi mumkin emas");
       }
-      created.push(
-        await this.create(caller, {
-          childId: child.id,
-          amount,
-          discountAmount: dto.discountAmount,
-          period: dto.period,
-          dueDate: dto.dueDate,
-        }),
-      );
+      try {
+        created.push(
+          await this.create(caller, {
+            childId: child.id,
+            amount,
+            discountAmount: dto.discountAmount,
+            period: dto.period,
+            dueDate: dto.dueDate,
+          }),
+        );
+      } catch (error) {
+        // Shu orada boshqa so'rov yozib ulgurgan — bu bola tayyor, qolganlari davom etadi
+        if (!(error instanceof DuplicateInvoiceException)) throw error;
+        racedCount += 1;
+      }
     }
 
-    return { createdCount: created.length, skippedCount: children.length - targets.length, noFeeCount };
+    return { createdCount: created.length, skippedCount: children.length - targets.length + racedCount, noFeeCount };
   }
 
   async findAll(scope: TenantScope, query: InvoiceQueryDto) {
@@ -435,6 +499,18 @@ export class BillingService {
     const paidAt = await this.resolvePaidAt(branchId, dto.paidOn);
 
     return this.prisma.$transaction(async (tx) => {
+      await lockChildMoney(tx, invoice.childId);
+      // Navbat kutilgan orada boshqa to'lov o'tgan bo'lishi mumkin
+      const current = await tx.invoice.findUniqueOrThrow({ where: { id: invoice.id } });
+      if (current.status === "PAID" || current.status === "CANCELLED") {
+        throw new BadRequestException("Bu hisob-faktura bo'yicha to'lov qabul qilib bo'lmaydi");
+      }
+      const netNow = Number(current.amount) - Number(current.discountAmount);
+      if (amount > netNow - Number(current.paidAmount) + EPSILON) {
+        throw new BadRequestException("Summa qolgan qarzdan katta bo'lishi mumkin emas");
+      }
+      await assertNotDuplicatePayment(tx, invoice.childId, amount, dto.method ?? "CASH");
+
       const payment = await tx.payment.create({
         data: {
           organizationId: scope.organizationId,
@@ -453,14 +529,14 @@ export class BillingService {
         data: { paymentId: payment.id, invoiceId: invoice.id, amount },
       });
 
-      const newPaidAmount = Number(invoice.paidAmount) + amount;
-      const isFullyPaid = newPaidAmount >= netPayable - EPSILON;
+      const newPaidAmount = Number(current.paidAmount) + amount;
+      const isFullyPaid = newPaidAmount >= netNow - EPSILON;
       const updatedInvoice = await tx.invoice.update({
         where: { id: invoice.id },
         data: {
           paidAmount: newPaidAmount,
           status: isFullyPaid ? InvoiceStatus.PAID : InvoiceStatus.PARTIALLY_PAID,
-          paidAt: isFullyPaid ? paidAt : invoice.paidAt,
+          paidAt: isFullyPaid ? paidAt : current.paidAt,
         },
       });
 
@@ -501,7 +577,7 @@ export class BillingService {
    *  - naqddan boshqa usulda chek surati majburiy va to'lov bilan birga
    *    saqlanadi (to'lov cheksiz qolib ketmasin).
    */
-  async acceptPayment(caller: TenantAuthenticatedUser, dto: AcceptPaymentDto) {
+  async acceptPayment(caller: TenantAuthenticatedUser, dto: AcceptPaymentDto, options?: { receiptOnFile?: boolean }) {
     const scope = toTenantScope(caller);
     const branchId = requireMoneyScope(scope);
     const amount = Math.round(dto.amount * 100) / 100;
@@ -510,7 +586,7 @@ export class BillingService {
     const [child, branch] = await Promise.all([
       this.prisma.child.findFirst({
         where: { id: dto.childId, organizationId: scope.organizationId },
-        select: { id: true, fullName: true, branchId: true, group: { select: { monthlyFee: true } } },
+        select: { id: true, fullName: true, branchId: true, status: true, group: { select: { monthlyFee: true } } },
       }),
       this.prisma.branch.findUniqueOrThrow({ where: { id: branchId }, select: { currency: true, defaultTuitionAmount: true } }),
     ]);
@@ -520,38 +596,18 @@ export class BillingService {
     if (child.branchId !== branchId) {
       throw new ForbiddenException("Bu bola boshqa filialda — to'lovni o'sha filial kassasi qabul qiladi");
     }
-    if (dto.method !== "CASH" && !dto.receiptImage) {
+    // Ota-ona chekini tasdiqlashda surat chekning o'zida turadi
+    if (dto.method !== "CASH" && !dto.receiptImage && !options?.receiptOnFile) {
       throw new BadRequestException("Naqddan boshqa usulda chek surati majburiy");
     }
     if (dto.method === "CASH" && dto.receiptImage) {
       throw new BadRequestException("Naqd to'lovga chek surati biriktirilmaydi");
     }
 
-    const openInvoices = (
-      await this.prisma.invoice.findMany({
-        where: { childId: child.id, branchId, status: { in: [InvoiceStatus.PENDING, InvoiceStatus.PARTIALLY_PAID, InvoiceStatus.OVERDUE] } },
-        orderBy: [{ period: "asc" }, { dueDate: "asc" }],
-      })
-    ).filter((i) => Number(i.amount) - Number(i.discountAmount) - Number(i.paidAmount) > EPSILON);
-    const totalDebt = openInvoices.reduce((s, i) => s + Number(i.amount) - Number(i.discountAmount) - Number(i.paidAmount), 0);
-
-    let advancePeriod: string | null = null;
-    if (totalDebt > EPSILON) {
-      if (amount > totalDebt + EPSILON) {
-        throw new BadRequestException(`Qolgan qarz ${formatSum(totalDebt)} so'm — undan ko'p qabul qilib bo'lmaydi`);
-      }
-    } else {
-      if (!dto.period) {
-        throw new BadRequestException("Qarz yo'q — oldindan to'lov uchun oyni tanlang");
-      }
-      const existing = await this.prisma.invoice.findFirst({
-        where: { childId: child.id, period: dto.period, status: { not: InvoiceStatus.CANCELLED } },
-        select: { id: true },
-      });
-      if (existing) {
-        throw new BadRequestException(`${dto.period} oyi allaqachon to'langan — boshqa oyni tanlang`);
-      }
-      advancePeriod = dto.period;
+    // Rasm yuklashdan oldin tez tekshiruv; haqiqiy qaror navbatga turgandan keyin tranzaksiya ichida
+    const plan = await this.planAccept(this.prisma, child.id, branchId, amount, dto.period);
+    if (plan.advancePeriod && child.status === "INACTIVE") {
+      throw new BadRequestException("Bola arxivda — unga oldindan to'lov yozib bo'lmaydi");
     }
     const paidAt = await this.resolvePaidAt(branchId, dto.paidOn);
 
@@ -568,17 +624,23 @@ export class BillingService {
       }
     }
 
-    // Oy to'lovi bolaning oylik narxidan (guruh narxi, bo'lmasa filial narxi)
-    // kam bo'lmaydi — qisman oldindan to'langan oyning qolgani qarz bo'lib ko'rinsin.
-    // Shu oy uchun chegirma qoidasi bo'lsa — hisob-fakturaga chegirma bilan yoziladi.
-    const advanceFee = advancePeriod ? monthlyFeeOf(child.group, branch) : 0;
-    const advanceDiscount = advancePeriod
-      ? discountFor(await this.prisma.childDiscount.findMany({ where: { childId: child.id }, select: discountRuleSelect }), advancePeriod, advanceFee)
-      : 0;
-    const advanceAmount = advancePeriod ? Math.max(amount + advanceDiscount, advanceFee) : 0;
-
     try {
       const result = await this.prisma.$transaction(async (tx) => {
+        await lockChildMoney(tx, child.id);
+        const { openInvoices, totalDebt, advancePeriod } = await this.planAccept(tx, child.id, branchId, amount, dto.period);
+        // Oldindan to'lovda takror so'rovni yuqoridagi "oy allaqachon to'langan" tekshiruvi tutadi;
+        // ketma-ket shu oy va keyingi oy uchun bir xil summa to'lash esa odatiy holat
+        if (!advancePeriod) await assertNotDuplicatePayment(tx, child.id, amount, dto.method);
+
+        // Oy to'lovi bolaning oylik narxidan (guruh narxi, bo'lmasa filial narxi)
+        // kam bo'lmaydi — qisman oldindan to'langan oyning qolgani qarz bo'lib ko'rinsin.
+        // Shu oy uchun chegirma qoidasi bo'lsa — hisob-fakturaga chegirma bilan yoziladi.
+        const advanceFee = advancePeriod ? monthlyFeeOf(child.group, branch) : 0;
+        const advanceDiscount = advancePeriod
+          ? discountFor(await tx.childDiscount.findMany({ where: { childId: child.id }, select: discountRuleSelect }), advancePeriod, advanceFee)
+          : 0;
+        const advanceAmount = advancePeriod ? Math.max(amount + advanceDiscount, advanceFee) : 0;
+
         const targets = [...openInvoices];
         if (advancePeriod) {
           const invoiceAmount = advanceAmount;
@@ -602,7 +664,7 @@ export class BillingService {
               type: "CHARGE",
               amount: invoiceAmount,
               invoiceId: invoice.id,
-              note: `Hisob-faktura — ${advancePeriod} (oldindan to'lov)`,
+              note: `Hisob-faktura — ${advancePeriod} ${ADVANCE_CHARGE_MARK}`,
             },
           });
           if (advanceDiscount > 0) {
@@ -674,10 +736,10 @@ export class BillingService {
           allocations.push({ invoiceId: invoice.id, period: invoice.period, amount: part, closed: isFullyPaid });
         }
 
-        return { payment, allocations };
+        const remainingDebt = advancePeriod ? Math.max(0, advanceAmount - advanceDiscount - amount) : Math.max(0, totalDebt - amount);
+        return { payment, allocations, advancePeriod, remainingDebt };
       });
 
-      const remainingDebt = Math.max(0, totalDebt - amount);
       await this.auditLog.logFromUser(caller, {
         action: "payment.record",
         entityType: "Payment",
@@ -691,15 +753,53 @@ export class BillingService {
       return {
         payment: { ...payment, hasReceiptImage: receipt !== null },
         allocations: result.allocations,
-        advancePeriod,
-        remainingDebt: advancePeriod ? Math.max(0, advanceAmount - advanceDiscount - amount) : remainingDebt,
+        advancePeriod: result.advancePeriod,
+        remainingDebt: result.remainingDebt,
       };
     } catch (error) {
       if (receipt?.key) {
         await this.r2.deleteObject(receipt.key).catch(() => undefined);
       }
+      if (isUniqueViolation(error) && dto.period) throw new DuplicateInvoiceException(dto.period);
       throw error;
     }
+  }
+
+  /**
+   * To'lov qanday taqsimlanishini aniqlaydi: qarz bo'lsa — ochiq hisoblar (eng
+   * eskisidan), bo'lmasa — `period` oyi uchun oldindan to'lov. Noto'g'ri bo'lsa xato.
+   */
+  private async planAccept(db: Prisma.TransactionClient, childId: string, branchId: string, amount: number, period: string | undefined) {
+    const openInvoices = (
+      await db.invoice.findMany({
+        where: { childId, branchId, status: { in: [InvoiceStatus.PENDING, InvoiceStatus.PARTIALLY_PAID, InvoiceStatus.OVERDUE] } },
+        orderBy: [{ period: "asc" }, { dueDate: "asc" }],
+      })
+    ).filter((i) => Number(i.amount) - Number(i.discountAmount) - Number(i.paidAmount) > EPSILON);
+    const totalDebt = openInvoices.reduce((s, i) => s + Number(i.amount) - Number(i.discountAmount) - Number(i.paidAmount), 0);
+
+    if (totalDebt > EPSILON) {
+      if (amount > totalDebt + EPSILON) {
+        throw new BadRequestException(`Qolgan qarz ${formatSum(totalDebt)} so'm — undan ko'p qabul qilib bo'lmaydi`);
+      }
+      return { openInvoices, totalDebt, advancePeriod: null };
+    }
+    if (!period) {
+      throw new BadRequestException("Qarz yo'q — oldindan to'lov uchun oyni tanlang");
+    }
+    // Xato bosilgan yil (2020, 2099) pulni yo'qotib qo'ymasin
+    const thisMonth = tashkentDay(new Date()).slice(0, 7);
+    if (period < shiftMonth(thisMonth, -ADVANCE_MONTHS_BACK) || period > shiftMonth(thisMonth, ADVANCE_MONTHS_AHEAD)) {
+      throw new BadRequestException(`Oy juda uzoq — to'lovni ${ADVANCE_MONTHS_BACK} oy orqaga va ${ADVANCE_MONTHS_AHEAD} oy oldinga yozish mumkin`);
+    }
+    const existing = await db.invoice.findFirst({
+      where: { childId, period, status: { not: InvoiceStatus.CANCELLED } },
+      select: { id: true },
+    });
+    if (existing) {
+      throw new BadRequestException(`${period} oyi allaqachon to'langan — boshqa oyni tanlang`);
+    }
+    return { openInvoices, totalDebt, advancePeriod: period };
   }
 
   /**
@@ -727,12 +827,51 @@ export class BillingService {
     if (payment.status === "REFUNDED") {
       throw new BadRequestException("To'lov allaqachon bekor qilingan");
     }
+    // Bekor qilingan pul bugungi kassadan chiqadi — yopilgan kun summasi o'zgarmasin
+    await this.assertDayOpen(branchId, tashkentDay(new Date()), "To'lovni ertaga bekor qiling");
+    const cancelledAdvances: string[] = [];
 
     return this.prisma.$transaction(async (tx) => {
-      for (const allocation of payment.allocations) {
+      await lockChildMoney(tx, payment.childId);
+      // Navbat kutilgan orada bekor qilingan yoki hisoblari o'zgargan bo'lishi mumkin
+      const current = await tx.payment.findUniqueOrThrow({
+        where: { id: payment.id },
+        select: { status: true, allocations: { select: { amount: true, invoice: true } } },
+      });
+      if (current.status === "REFUNDED") {
+        throw new BadRequestException("To'lov allaqachon bekor qilingan");
+      }
+
+      for (const allocation of current.allocations) {
         const invoice = allocation.invoice;
         const netPayable = Number(invoice.amount) - Number(invoice.discountAmount);
         const newPaidAmount = Math.max(0, Number(invoice.paidAmount) - Number(allocation.amount));
+
+        // Oldindan to'lov bilan yaratilgan hisob o'zi shu to'lov uchun edi: pul
+        // qaytgach u ham bekor bo'ladi, aks holda bola soxta qarzdor bo'lib qolardi
+        const advanceCharge =
+          newPaidAmount <= EPSILON
+            ? await tx.ledgerEntry.findFirst({ where: { invoiceId: invoice.id, type: "CHARGE", note: { contains: ADVANCE_CHARGE_MARK } }, select: { id: true } })
+            : null;
+        if (advanceCharge) {
+          await tx.invoice.update({ where: { id: invoice.id }, data: { paidAmount: 0, status: InvoiceStatus.CANCELLED, paidAt: null } });
+          if (netPayable > EPSILON) {
+            await tx.ledgerEntry.create({
+              data: {
+                organizationId: scope.organizationId,
+                branchId,
+                childId: payment.childId,
+                type: "ADJUSTMENT",
+                amount: -netPayable,
+                invoiceId: invoice.id,
+                note: `Oldindan to'lov bekor qilindi — ${invoice.period} hisobi ham bekor. Sabab: ${reason}`,
+              },
+            });
+          }
+          cancelledAdvances.push(invoice.period);
+          continue;
+        }
+
         const newStatus =
           newPaidAmount <= EPSILON
             ? InvoiceStatus.PENDING
@@ -777,7 +916,7 @@ export class BillingService {
         entityType: "Payment",
         entityId: updatedPayment.id,
         branchId,
-        summary: `${payment.child.fullName}: ${formatSum(Number(payment.amount))} so'm to'lov bekor qilindi (${METHOD_UZ[payment.method] ?? payment.method}, ${paidOn}${periods ? `; ${periods}` : ""}). Sabab: ${reason}`,
+        summary: `${payment.child.fullName}: ${formatSum(Number(payment.amount))} so'm to'lov bekor qilindi (${METHOD_UZ[payment.method] ?? payment.method}, ${paidOn}${periods ? `; ${periods}` : ""}). Sabab: ${reason}${cancelledAdvances.length ? `. Oldindan yozilgan hisob ham bekor: ${cancelledAdvances.join(", ")}` : ""}`,
       });
       return updatedPayment;
     });
@@ -785,13 +924,24 @@ export class BillingService {
 
   /**
    * To'lov sanasi. Bo'sh yoki bugun — hozirgi vaqt. O'tgan kun (kecha olingan
-   * pulni bugun kiritish) — ko'pi bilan 1 oy orqaga va o'sha kunning kassasi
-   * yopilmagan bo'lsa: yopilgan kunning summasi keyin o'zgarib qolmasin.
+   * pulni bugun kiritish) — ko'pi bilan 1 oy orqaga. Ikkala holatda ham o'sha
+   * kunning kassasi yopilmagan bo'lishi kerak: yopilgan kun summasi o'zgarmasin.
    */
   private async resolvePaidAt(branchId: string, paidOn: string | undefined): Promise<Date> {
     const now = new Date();
     const today = tashkentDay(now);
-    if (!paidOn || paidOn === today) return now;
+    if (paidOn) {
+      // 31-noyabr formatdan o'tadi, lekin kalendarda yo'q
+      const [y, m, d] = paidOn.split("-").map(Number);
+      const date = new Date(Date.UTC(y, m - 1, d));
+      if (date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) {
+        throw new BadRequestException("To'lov sanasi noto'g'ri");
+      }
+    }
+    if (!paidOn || paidOn === today) {
+      await this.assertDayOpen(branchId, today, "To'lovni ertaga kiriting");
+      return now;
+    }
     if (paidOn > today) {
       throw new BadRequestException("Kelajakdagi sana bilan to'lov kiritib bo'lmaydi");
     }
@@ -799,17 +949,21 @@ export class BillingService {
     if (paidOn < earliest) {
       throw new BadRequestException(`To'lov sanasi 1 oydan eski bo'lishi mumkin emas — eng erta ${formatDay(earliest)}`);
     }
+    await this.assertDayOpen(branchId, paidOn, "O'sha kunga to'lov kiritib bo'lmaydi");
     const dayStartUtc = Date.parse(`${paidOn}T00:00:00.000Z`);
-    const closed = await this.prisma.cashClosing.findUnique({
-      where: { branchId_date: { branchId, date: new Date(dayStartUtc) } },
-      select: { id: true },
-    });
-    if (closed) {
-      throw new ConflictException(`${formatDay(paidOn)} kuni kassa yopilgan — o'sha kunga to'lov kiritib bo'lmaydi`);
-    }
     // Kun — tanlangani, soat — hozirgi (Toshkent): kun ichidagi tartib saqlanadi
     const timeOfDayMs = (now.getTime() + TASHKENT_OFFSET_MS) % DAY_MS;
     return new Date(dayStartUtc - TASHKENT_OFFSET_MS + timeOfDayMs);
+  }
+
+  private async assertDayOpen(branchId: string, day: string, hint: string) {
+    const closed = await this.prisma.cashClosing.findUnique({
+      where: { branchId_date: { branchId, date: new Date(`${day}T00:00:00.000Z`) } },
+      select: { id: true },
+    });
+    if (closed) {
+      throw new ConflictException(`${formatDay(day)} kuni kassa yopilgan. ${hint}`);
+    }
   }
 
   async findPayments(scope: TenantScope, query: PaymentQueryDto) {
@@ -835,7 +989,12 @@ export class BillingService {
       ...item,
       hasReceiptImage: receiptMimeType !== null,
       recordedByName: recordedBy?.fullName ?? null,
-      periods: allocations.map((a) => ({ invoiceId: a.invoice.id, period: a.invoice.period, amount: a.amount })),
+      periods: allocations.map((a) => ({
+        invoiceId: a.invoice.id,
+        period: a.invoice.period,
+        amount: a.amount,
+        advance: a.invoice.ledgerEntries.length > 0,
+      })),
     }));
     return { data, meta: { page: query.page, limit: query.limit, total } };
   }
@@ -1485,6 +1644,11 @@ function tashkentDay(date: Date): string {
 }
 
 /** Bir oy oldingi kun: 27.10 -> 27.09; oy qisqa bo'lsa oxirgi kuni (31.03 -> 28.02) */
+function shiftMonth(period: string, months: number): string {
+  const [y, m] = period.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1 + months, 1)).toISOString().slice(0, 7);
+}
+
 function oneMonthBefore(day: string): string {
   const [y, m, d] = day.split("-").map(Number);
   const lastDay = new Date(Date.UTC(y, m - 1, 0)).getUTCDate();

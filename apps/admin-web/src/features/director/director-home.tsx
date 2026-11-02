@@ -210,7 +210,8 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
   const branchFinance = new Map((current?.branches ?? []).map((b) => [b.branchId, b]));
   const periodLabel = (period: string) => {
     const [y, m] = period.split("-").map(Number);
-    return `${tr(MONTHS[m - 1])} ${y}`;
+    // Bosh harfli kalit: ruschada "Ноябрь 2026", kichik harflisi sana uchun ("2 ноября")
+    return `${tr(`${MONTHS[m - 1].charAt(0).toUpperCase()}${MONTHS[m - 1].slice(1)}`)} ${y}`;
   };
 
   // Har bo'limning o'z tizim rangi — iOS Sozlamalaridagidek (filial admini bilan mos)

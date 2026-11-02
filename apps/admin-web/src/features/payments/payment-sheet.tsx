@@ -43,7 +43,7 @@ interface AcceptResult {
 }
 
 /** Bir oy oldingi kun (server bilan bir xil): 27.10 -> 27.09, 31.03 -> 28.02 */
-function oneMonthBefore(day: string): string {
+export function oneMonthBefore(day: string): string {
   const [y, m, d] = day.split("-").map(Number);
   const lastDay = new Date(Date.UTC(y, m - 1, 0)).getUTCDate();
   return new Date(Date.UTC(y, m - 2, Math.min(d, lastDay))).toISOString().slice(0, 10);
@@ -73,6 +73,12 @@ export interface PaymentSheetChild {
  * yetishmayotganini aytadi. So'nggi to'lovlar bosilsa — tafsilot, chek
  * surati, kvitansiya va sabab bilan bekor qilish (shu varaq ichida).
  */
+/** Oldindan to'lov oylari oralig'i (server ham shuni tekshiradi): 3 oy orqaga, 12 oy oldinga */
+function advanceLimits() {
+  const month = currentMonth();
+  return { min: shiftPeriod(month, -3), max: shiftPeriod(month, 12) };
+}
+
 export function PaymentSheet({
   slug,
   child,
@@ -110,6 +116,11 @@ export function PaymentSheet({
   const [paidOn, setPaidOn] = useState(today);
   const earliestPaidOn = oneMonthBefore(today);
   const [error, setError] = useState<string | null>(null);
+  // Xato oynaning pastida ko'rinmay qolmasin (masalan, kassa yopilgan bo'lsa)
+  const errorRef = useRef<HTMLParagraphElement | null>(null);
+  useEffect(() => {
+    if (error) errorRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [error]);
   const [showMissing, setShowMissing] = useState(false);
   const [reason, setReason] = useState("");
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -151,14 +162,27 @@ export function PaymentSheet({
   );
   const debt = Math.round(openInvoices.reduce((s, i) => s + i.remaining, 0));
   const loaded = invoicesQuery.isSuccess;
+  // Hisobi bor oylar — oldindan to'lov ularga yozilmaydi
+  const takenPeriods = useMemo(
+    () => new Set((invoicesQuery.data?.data ?? []).filter((i) => i.status !== "CANCELLED").map((i) => i.period)),
+    [invoicesQuery.data],
+  );
+  const limits = advanceLimits();
 
   // Summa — qolgan qarz bilan to'ldiriladi (bir marta, ma'lumot kelganda)
   useEffect(() => {
     if (!open || prefilled || !loaded) return;
     // Qarz bo'lmasa — bolaning oylik narxi (guruh narxi) oldindan to'lov sifatida
     setAmount(debt > 0 ? String(debt) : current?.monthlyFee ? String(Math.round(current.monthlyFee)) : "");
+    // Sukut bo'yicha — hisobi yo'q birinchi oy (to'langan oyni tanlab, xato olmasin)
+    let month = period ?? currentMonth();
+    if (month < limits.min) month = limits.min;
+    if (month > limits.max) month = limits.max;
+    while (takenPeriods.has(month) && month < limits.max) month = shiftPeriod(month, 1);
+    setAdvancePeriod(month);
     setPrefilled(true);
-  }, [open, prefilled, loaded, debt, current?.monthlyFee]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, prefilled, loaded, debt, current?.monthlyFee, takenPeriods, period]);
 
   const value = Number(amount || 0);
   const tooBig = debt > 0 && value > debt;
@@ -183,6 +207,8 @@ export function PaymentSheet({
       ? "Summani kiriting"
       : tooBig
         ? "Summa qarzdan katta"
+        : debt === 0 && takenPeriods.has(advancePeriod)
+          ? "Bu oy allaqachon to'langan"
         : !method
           ? "Usulni tanlang"
           : needsPhoto && !photo
@@ -353,6 +379,8 @@ export function PaymentSheet({
                   onNext={() => setAdvancePeriod((p) => shiftPeriod(p, 1))}
                   prevLabel={tr("Oldingi oy")}
                   nextLabel={tr("Keyingi oy")}
+                  prevDisabled={advancePeriod <= limits.min}
+                  nextDisabled={advancePeriod >= limits.max}
                 >
                   {periodLabel(advancePeriod, tr)}
                 </PeriodStepper>
@@ -392,7 +420,7 @@ export function PaymentSheet({
                     aria-label={tr("Summa")}
                     value={amount ? groupDigits(amount) : ""}
                     placeholder="0"
-                    onChange={(e) => setAmount(e.target.value.replace(/\D/g, "").replace(/^0+(?=\d)/, "").slice(0, 12))}
+                    onChange={(e) => setAmount(e.target.value.replace(/\D/g, "").replace(/^0+(?=\d)/, "").slice(0, 10))}
                     className="min-w-0 flex-1 bg-transparent text-[24px] font-bold tabular-nums text-[var(--color-text)] outline-none placeholder:text-[#c4c4c6]"
                   />
                   <span className="shrink-0 text-[15px] font-semibold text-[#8e8e93]">{tr("so'm")}</span>
@@ -408,6 +436,11 @@ export function PaymentSheet({
                 )}
               </div>
               <AmountHint debt={debt} value={value} allocation={allocation} advance={loaded && debt === 0 ? advancePeriod : null} />
+              {loaded && debt === 0 && !!current?.monthlyFee && value > current.monthlyFee && (
+                <p className="px-1 pt-1 text-[13px] leading-snug text-[#c93400]">
+                  {tr("Oylik narx {0} so'm — kiritilgan summa undan ko'p, hisob shu summada yoziladi", groupDigits(current.monthlyFee))}
+                </p>
+              )}
             </div>
 
             {/* Usul */}
@@ -446,7 +479,7 @@ export function PaymentSheet({
               className={clsx("h-11 w-full rounded-[12px] px-3.5 text-[15px] text-[var(--color-text)] outline-none placeholder:text-[#8e8e93]", FILL)}
             />
           </div>
-          {error && <p className="px-4 pt-2 text-[13px] text-[#ff3b30]">{error}</p>}
+          {error && <p ref={errorRef} className="px-4 pt-2 text-[13px] text-[#ff3b30]">{error}</p>}
         </section>
 
         {/* So'nggi to'lovlar */}
@@ -530,9 +563,14 @@ export function PaymentSheet({
             {groupDigits(p.amount)} {tr("so'm")} · {tr(METHOD_LABEL[p.method])}
           </p>
           <p className="mt-1">
-            {p.periods.length > 0
-              ? `${tr("Bekor qilingach shu oylar yana qarz bo'ladi")}: ${p.periods.map((x) => periodLabel(x.period, tr)).join(", ")}.`
-              : tr("Bekor qilingach summa qarzga qaytadi.")}
+            {p.periods.some((x) => !x.advance) || p.periods.length === 0
+              ? p.periods.length > 0
+                ? `${tr("Bekor qilingach shu oylar yana qarz bo'ladi")}: ${p.periods.filter((x) => !x.advance).map((x) => periodLabel(x.period, tr)).join(", ")}.`
+                : tr("Bekor qilingach summa qarzga qaytadi.")
+              : null}
+            {p.periods.some((x) => x.advance)
+              ? ` ${tr("Oldindan yozilgan hisob ham bekor qilinadi")}: ${p.periods.filter((x) => x.advance).map((x) => periodLabel(x.period, tr)).join(", ")}.`
+              : null}
           </p>
           <p className="mt-1">{tr("Yozuv o'chirilmaydi — sababi bilan amallar jurnalida qoladi.")}</p>
         </div>
@@ -565,7 +603,7 @@ export function PaymentSheet({
               className={clsx("w-full resize-none rounded-[12px] px-3.5 py-2.5 text-[15px] text-[var(--color-text)] outline-none placeholder:text-[#8e8e93]", FILL)}
             />
           </div>
-          {error && <p className="px-4 pt-2 text-[13px] text-[#ff3b30]">{error}</p>}
+          {error && <p ref={errorRef} className="px-4 pt-2 text-[13px] text-[#ff3b30]">{error}</p>}
         </section>
       </>
     );

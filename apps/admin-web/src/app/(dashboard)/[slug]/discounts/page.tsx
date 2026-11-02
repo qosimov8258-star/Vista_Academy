@@ -23,7 +23,7 @@ import { currentMonth } from "@/features/cash/shared";
 import { groupDigits, periodLabel, shiftPeriod } from "@/features/payments/shared";
 import { DiscountAssistant } from "@/features/discounts/discount-assistant";
 import { DiscountSheet } from "@/features/discounts/discount-sheet";
-import { DISCOUNT_COLOR, matchesSearch, ruleLabel, type DiscountDashboard, type DiscountRow } from "@/features/discounts/shared";
+import { DISCOUNT_COLOR, appliedRuleLabel, matchesSearch, type DiscountDashboard, type DiscountRow } from "@/features/discounts/shared";
 import { useTr } from "@/i18n/tr";
 
 type Filter = "discounted" | "review" | "all";
@@ -43,8 +43,9 @@ export default function DiscountsPage({ params }: { params: Promise<{ slug: stri
   const queryClient = useQueryClient();
   const { user } = useAuth();
   // Chegirmani faqat moliyachi beradi — boshqalar (Super Admin filialda) faqat ko'radi
-  const canWrite = canWriteDiscounts(user?.role);
   const { branchId } = useBranchContext(slug);
+  // Boshqa filial ochilgan bo'lsa moliyachi ham faqat ko'radi
+  const canWrite = canWriteDiscounts(user?.role) && (!branchId || branchId === user?.branchId);
 
   const [thisMonth, setThisMonth] = useState("");
   const [period, setPeriod] = useState("");
@@ -370,7 +371,7 @@ function ChildRow({ row: r, withBranch, onClick }: { row: DiscountRow; withBranc
 
   let meta;
   if (r.discount > 0) {
-    const label = r.rule ? ruleLabel(r.rule, tr) : `${Math.round(r.rate * 100)}%`;
+    const label = r.rule ? appliedRuleLabel(r.rule, r.discount, tr) : `${Math.round(r.rate * 100)}%`;
     meta = (
       <span className="flex flex-col items-end gap-0.5 leading-tight">
         <span className="flex items-baseline gap-1.5">

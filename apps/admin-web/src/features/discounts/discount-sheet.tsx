@@ -81,6 +81,8 @@ export function draftProblem(d: DiscountDraft, gross: number): string | null {
   if (d.type === "PERCENTAGE" && value > 100) return "Foiz 100 dan oshmasin";
   if (!(gross > 0)) return "Oylik narx belgilanmagan";
   if (!(value > 0)) return "Qiymatni kiriting";
+  if (d.type === "FIXED_AMOUNT" && value > gross) return "Chegirma oylik to'lovdan katta";
+  if (d.type === "FINAL_AMOUNT" && value >= gross) return "Yakuniy narx oylik to'lovdan kam bo'lsin";
   return null;
 }
 

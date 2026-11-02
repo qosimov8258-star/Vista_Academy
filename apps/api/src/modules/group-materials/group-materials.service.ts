@@ -113,13 +113,17 @@ export class GroupMaterialsService {
     return { deleted: true };
   }
 
-  /** Faylni xodimga yuboradi: o'qituvchi uchun faqat o'z guruhlari. */
+  /** Faylni xodimga yuboradi: o'z filiali doirasida, o'qituvchi uchun faqat o'z guruhlari. */
   async sendForStaff(scope: TenantScope, id: string, res: Response) {
     const row = await this.prisma.groupMaterial.findUnique({
       where: { id },
-      select: { groupId: true, organizationId: true },
+      select: { groupId: true, organizationId: true, branchId: true },
     });
     if (!row || row.organizationId !== scope.organizationId) {
+      throw new NotFoundException("Fayl topilmadi");
+    }
+    // Ro'yxat bilan bir xil: boshqa filial xodimi va moliyachi faylni ocholmaydi
+    if ((scope.branchId && row.branchId !== scope.branchId) || scope.role === "FINANCE") {
       throw new NotFoundException("Fayl topilmadi");
     }
     const teacherGroups = await resolveTeacherGroupIds(this.prisma, scope);

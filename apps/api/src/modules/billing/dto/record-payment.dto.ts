@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsEnum, IsNumber, IsOptional, IsPositive, IsString, Matches } from "class-validator";
+import { IsEnum, IsOptional, IsString, Matches } from "class-validator";
 import { PaymentMethod } from "@prisma/client";
+import { MoneyAmount } from "./money";
 
 export class RecordPaymentDto {
   @ApiProperty()
@@ -9,8 +10,7 @@ export class RecordPaymentDto {
 
   @ApiPropertyOptional({ description: "Bo'sh qoldirilsa hisob-fakturaning qolgan qarzi to'liq to'langan deb hisoblanadi" })
   @IsOptional()
-  @IsNumber()
-  @IsPositive()
+  @MoneyAmount()
   amount?: number;
 
   @ApiPropertyOptional({ enum: PaymentMethod, default: "CASH" })

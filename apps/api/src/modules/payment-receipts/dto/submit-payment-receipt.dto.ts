@@ -1,10 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsNumber, IsOptional, IsPositive, IsString, Matches, MaxLength } from "class-validator";
+import { IsOptional, IsString, Matches, MaxLength } from "class-validator";
+import { MoneyAmount } from "../../billing/dto/money";
 
 export class SubmitPaymentReceiptDto {
   @ApiProperty({ description: "Ota-ona da'vo qilgan to'lov summasi" })
-  @IsNumber()
-  @IsPositive()
+  @MoneyAmount()
   amount!: number;
 
   @ApiPropertyOptional({ description: "Ota-onaning izohi — moliyachi chek bilan birga ko'radi" })

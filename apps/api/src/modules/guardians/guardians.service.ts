@@ -8,6 +8,7 @@ import {
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantScope, requireOperationalScope } from "../iam/tenant-auth.types";
+import { assertTeacherOwnsChild } from "../iam/teacher-scope";
 import { AddChildGuardianDto } from "./dto/add-child-guardian.dto";
 import { UpdateChildGuardianDto } from "./dto/update-child-guardian.dto";
 import { GuardianQueryDto } from "./dto/guardian-query.dto";
@@ -26,6 +27,8 @@ export class GuardiansService {
     if (scope.branchId && child.branchId !== scope.branchId) {
       throw new ForbiddenException("Bu bolaga kirish huquqingiz yo'q");
     }
+    // O'qituvchi faqat o'z guruhidagi bolaning ota-onasini ko'radi
+    await assertTeacherOwnsChild(this.prisma, scope, child);
     return child;
   }
 
@@ -118,7 +121,15 @@ export class GuardiansService {
 
     // Kabineti bor vasiyni biriktirish shu bolada ikkinchi kabinet paydo
     // qilmasin — aks holda bir bolaga ikki xil login bo'lib qolardi.
-    await this.assertNoSecondCabinet(child.id, guardianId);
+    // Bolaga bitta kabinet qoidasi faqat kabineti ochiq odamga tegishli: kabinetsiz
+    // ona, buvi yoki olib ketuvchini kabinet ochiq bolaga ham qo'shish mumkin.
+    const incoming = await this.prisma.guardian.findUniqueOrThrow({
+      where: { id: guardianId },
+      select: { passwordHash: true, isActive: true },
+    });
+    if (incoming.passwordHash && incoming.isActive) {
+      await this.assertNoSecondCabinet(child.id, guardianId);
+    }
 
     try {
       return await this.prisma.childGuardian.create({

@@ -139,15 +139,15 @@ export class ParentService {
     });
     const byDate = new Map(records.map((r) => [r.date.toISOString().slice(0, 10), r.status]));
 
-    // `AttendanceStatus` LATE/SICK'ni ham o'z ichiga oladi — chiziqda ular
-    // ham chizilaveradi, faqat quyidagi present/absent hisobiga kirmaydi.
+    // Chiziqda LATE/SICK ham o'z rangida chiziladi; sonlarda kech qolgan
+    // kelganlarga, kasal kelmaganlarga qo'shiladi.
     const items: { date: string; status: AttendanceStatus | null }[] = [];
     for (let cursor = from; cursor <= to; cursor = addDays(cursor, 1)) {
       const key = cursor.toISOString().slice(0, 10);
       items.push({ date: key, status: byDate.get(key) ?? null });
     }
-    const present = items.filter((i) => i.status === "PRESENT").length;
-    const absent = items.filter((i) => i.status === "ABSENT").length;
+    const present = items.filter((i) => i.status === "PRESENT" || i.status === "LATE").length;
+    const absent = items.filter((i) => i.status === "ABSENT" || i.status === "SICK").length;
     return { items, present, absent, marked: present + absent };
   }
 

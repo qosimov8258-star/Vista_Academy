@@ -1,18 +1,17 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsDateString, IsNumber, IsOptional, IsPositive, IsString, MaxLength, Min, MinLength } from "class-validator";
+import { IsDateString, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
+import { DiscountAmount, MoneyAmount } from "./money";
 
 /** Hisob-fakturani tuzatish (faqat moliyachi): summa, chegirma, muddat — sabab majburiy */
 export class UpdateInvoiceDto {
   @ApiPropertyOptional({ example: 2600000, description: "Chegirmadan oldingi to'liq summa" })
   @IsOptional()
-  @IsNumber()
-  @IsPositive()
+  @MoneyAmount()
   amount?: number;
 
   @ApiPropertyOptional({ example: 0 })
   @IsOptional()
-  @IsNumber()
-  @Min(0)
+  @DiscountAmount()
   discountAmount?: number;
 
   @ApiPropertyOptional({ example: "2026-10-10" })

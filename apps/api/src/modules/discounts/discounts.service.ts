@@ -92,7 +92,7 @@ export class DiscountsService {
     const scope = toTenantScope(caller);
     assertDiscountReader(scope);
     const period = query.period ?? currentPeriod();
-    const rows = await this.rows(scope, period, resolveReadBranchFilter(scope, query.branchId));
+    const rows = await this.rows(scope, period, discountBranchFilter(scope, query.branchId));
 
     const discounted = rows.filter((r) => r.discount > 0);
     const gross = sum(rows.map((r) => r.gross));
@@ -143,7 +143,7 @@ export class DiscountsService {
     const scope = toTenantScope(caller);
     assertDiscountReader(scope);
     const period = query.period ?? currentPeriod();
-    const branchId = resolveReadBranchFilter(scope, query.branchId);
+    const branchId = discountBranchFilter(scope, query.branchId);
     const rows = await this.rows(scope, period, branchId);
     const byId = new Map(rows.map((r) => [r.childId, r]));
 
@@ -319,6 +319,7 @@ export class DiscountsService {
     if (!startPeriod) throw new BadRequestException("Bir oylik chegirma uchun oyni tanlang");
     const reason = dto.reason === undefined ? existing.reason : dto.reason.trim() || null;
     const moneyChanged = type !== existing.type || scopeKind !== existing.scope || value !== Number(existing.value) || startPeriod !== existing.startPeriod;
+    if (moneyChanged) await assertDiscountFits(this.prisma, existing.childId, type, value, scopeKind === "PERMANENT" ? cur : startPeriod);
 
     const result = await this.prisma.$transaction(
       async (tx) => {
@@ -452,6 +453,7 @@ export class DiscountsService {
   // ---------------------------------------------------------------------------
 
   private async giveOne(tx: Tx, caller: TenantAuthenticatedUser, scope: TenantScope, branchId: string, childId: string, input: NormalizedInput) {
+    await assertDiscountFits(tx, childId, input.type, input.value, input.startPeriod);
     const before = await childRules(tx, childId);
     const replaced = await retireSameSlot(tx, childId, input.scope, input.startPeriod, []);
     const discount = await tx.childDiscount.create({
@@ -553,6 +555,39 @@ interface NormalizedInput {
   value: number;
   startPeriod: string;
   reason: string | null;
+}
+
+/**
+ * Moliyachi faqat o'z filialida chegirma beradi, shuning uchun ro'yxat ham sukut
+ * bo'yicha o'z filiali: aks holda boshqa filial bolasini tanlab, saqlashda xato olardi.
+ */
+function discountBranchFilter(scope: TenantScope, queryBranchId?: string): string | undefined {
+  if (queryBranchId) return resolveReadBranchFilter(scope, queryBranchId);
+  return scope.role === "FINANCE" ? (scope.branchId ?? undefined) : resolveReadBranchFilter(scope);
+}
+
+const digits = (value: number) => Math.round(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+
+/**
+ * Summa yoki yakuniy narx oylik to'lovga sig'ishi kerak (narx hisob-fakturadan,
+ * bo'lmasa guruh/filial narxidan). Narx noma'lum bo'lsa tekshirilmaydi — hisob
+ * yozilganda chegirma baribir summadan oshmaydi.
+ */
+async function assertDiscountFits(db: Tx, childId: string, type: DiscountType, value: number, period: string) {
+  if (type === "PERCENTAGE") return;
+  const child = await db.child.findUniqueOrThrow({
+    where: { id: childId },
+    select: { fullName: true, group: { select: { monthlyFee: true } }, branch: { select: { defaultTuitionAmount: true } } },
+  });
+  const invoice = await db.invoice.findFirst({ where: { childId, period, status: { not: InvoiceStatus.CANCELLED } }, select: { amount: true } });
+  const gross = invoice ? Number(invoice.amount) : monthlyFeeOf(child.group, child.branch);
+  if (!(gross > 0)) return;
+  if (type === "FIXED_AMOUNT" && value > gross) {
+    throw new BadRequestException(`${child.fullName}: chegirma oylik to'lovdan (${digits(gross)} so'm) katta bo'lmasin`);
+  }
+  if (type === "FINAL_AMOUNT" && value >= gross) {
+    throw new BadRequestException(`${child.fullName}: yakuniy narx oylik to'lovdan (${digits(gross)} so'm) kam bo'lsin`);
+  }
 }
 
 function normalizeInput(dto: { type: DiscountType; scope: DiscountScope; value: number; period?: string; reason?: string }): NormalizedInput {

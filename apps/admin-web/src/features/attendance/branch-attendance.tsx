@@ -144,24 +144,18 @@ export function BranchAttendance({ slug }: { slug: string }) {
   const saved = useMemo(() => new Map(children.map((c) => [c.childId, c])), [children]);
   const markedCount = children.filter((c) => c.status !== null).length;
 
-  // Mahalliy (hali saqlanmagan) holatlar — faqat filial+sana almashganda
-  // yoki saqlangandan keyin serverdagidan qayta to'ldiriladi; fon
-  // yangilanishi terilgan belgilarni o'chirib yubormasin.
-  const [local, setLocal] = useState<Record<string, { status: AttendanceStatus; note: string }>>({});
-  const initializedFor = useRef<string | null>(null);
-  useEffect(() => {
-    const data = attendanceQuery.data;
-    if (!data || data.date !== date) return;
-    const key = `${branchId}_${date}`;
-    if (initializedFor.current === key) return;
-    initializedFor.current = key;
-    setLocal(Object.fromEntries(data.children.map((c) => [c.childId, { status: c.status ?? "PRESENT", note: c.note ?? "" }])));
-  }, [attendanceQuery.data, date, branchId]);
+  // Faqat xodim o'zi o'zgartirgan bolalar (hali saqlanmagan). Qolganlari serverdagi
+  // holatni ko'rsatadi: fon yangilanishi boshqa xodim belgisini ko'rsatadi, xodimning
+  // terganini esa o'chirmaydi. `base` — o'zgartirish paytida ko'rilgan holat.
+  const [local, setLocal] = useState<Record<string, { status: AttendanceStatus; note: string; base: AttendanceStatus | null }>>({});
 
   const statusOf = (id: string): AttendanceStatus => local[id]?.status ?? saved.get(id)?.status ?? "PRESENT";
   const noteOf = (id: string) => local[id]?.note ?? saved.get(id)?.note ?? "";
-  const setStatus = (id: string, status: AttendanceStatus) => setLocal((s) => ({ ...s, [id]: { status, note: s[id]?.note ?? "" } }));
-  const setNote = (id: string, note: string) => setLocal((s) => ({ ...s, [id]: { status: s[id]?.status ?? "PRESENT", note } }));
+  const baseOf = (id: string) => saved.get(id)?.status ?? null;
+  const setStatus = (id: string, status: AttendanceStatus) =>
+    setLocal((s) => ({ ...s, [id]: { status, note: s[id]?.note ?? saved.get(id)?.note ?? "", base: s[id]?.base ?? baseOf(id) } }));
+  const setNote = (id: string, note: string) =>
+    setLocal((s) => ({ ...s, [id]: { status: s[id]?.status ?? baseOf(id) ?? "PRESENT", note, base: s[id]?.base ?? baseOf(id) } }));
 
   /** Serverga ketadiganlar: belgilanmaganlar va o'zgarganlar */
   const changes = useMemo(
@@ -172,7 +166,12 @@ export function BranchAttendance({ slug }: { slug: string }) {
           if (!l) return c.status === null;
           return c.status === null || l.status !== c.status || (l.note || "") !== (c.note || "");
         })
-        .map((c) => ({ childId: c.childId, status: statusOf(c.childId), note: noteOf(c.childId).trim() || undefined })),
+        .map((c) => ({
+          childId: c.childId,
+          status: statusOf(c.childId),
+          note: noteOf(c.childId).trim() || undefined,
+          baseStatus: c.childId in local ? local[c.childId].base : c.status,
+        })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [children, local],
   );
@@ -183,9 +182,9 @@ export function BranchAttendance({ slug }: { slug: string }) {
   });
 
   const saveMutation = useMutation({
-    mutationFn: () => api.post<{ saved: number }>("/app/attendance/bulk", { date, items: changes }),
+    mutationFn: () => api.post<{ saved: number; conflicts: string[] }>("/app/attendance/bulk", { date, items: changes }),
     onSuccess: async () => {
-      initializedFor.current = null;
+      setLocal({});
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["attendance", slug, branchId, date] }),
         queryClient.invalidateQueries({ queryKey: ["attendance-summary", slug, branchId] }),
@@ -204,6 +203,7 @@ export function BranchAttendance({ slug }: { slug: string }) {
   // Kun/filial almashganda — eski "Saqlandi"/xato xabari yangi kunga osilmasin
   useEffect(() => {
     saveMutation.reset();
+    setLocal({});
     setSheetChildId(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date, branchId]);
@@ -394,6 +394,10 @@ export function BranchAttendance({ slug }: { slug: string }) {
                     {saveMutation.isError ? (
                       <p className="truncate text-[13px] font-medium text-[#ff3b30]">
                         {saveMutation.error instanceof ApiError ? tr(saveMutation.error.message) : tr("Saqlashda xatolik yuz berdi")}
+                      </p>
+                    ) : changes.length === 0 && (saveMutation.data?.conflicts.length ?? 0) > 0 ? (
+                      <p className="text-[13px] font-medium leading-snug text-[#ff9500]">
+                        {tr("{0} ta bolani boshqa xodim belgilagan — ularga tegilmadi", saveMutation.data?.conflicts.length ?? 0)}
                       </p>
                     ) : changes.length > 0 ? (
                       <>
