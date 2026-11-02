@@ -33,18 +33,33 @@ function dayRange(date: string) {
 }
 
 function assertDate(value: string | undefined, label = "Sana"): string {
-  if (!value || !DATE_RE.test(value)) {
+  if (!value || !DATE_RE.test(value) || !isRealDay(value)) {
     throw new BadRequestException(`${label} noto'g'ri (YYYY-MM-DD)`);
   }
   return value;
 }
 
+/** 31-fevral formatdan o'tadi, lekin kalendarda yo'q */
+function isRealDay(value: string): boolean {
+  const [y, m, d] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  return date.getUTCMonth() === m - 1 && date.getUTCDate() === d;
+}
+
 /** Xarajat sanasi: YYYY-MM-DD va kelajakda emas (Toshkent bo'yicha bugun ham mumkin) */
-function assertExpenseDate(value: string): string {
+function assertExpenseDate(value: string, unchangedDate?: string): string {
   const date = assertDate(value?.slice(0, 10));
+  // Eski xarajatning summasini tuzatish mumkin — sanasi o'zgarmasa cheklov yo'q
+  if (date === unchangedDate) return date;
   const today = new Date(Date.now() + TASHKENT_OFFSET_MS).toISOString().slice(0, 10);
   if (date > today) {
     throw new BadRequestException("Kelajakdagi sana bilan xarajat yozib bo'lmaydi");
+  }
+  const [y, m, d] = today.split("-").map(Number);
+  const lastDay = new Date(Date.UTC(y, m - 1, 0)).getUTCDate();
+  const earliest = new Date(Date.UTC(y, m - 2, Math.min(d, lastDay))).toISOString().slice(0, 10);
+  if (date < earliest) {
+    throw new BadRequestException("Xarajat sanasi 1 oydan eski bo'lishi mumkin emas");
   }
   return date;
 }
@@ -230,7 +245,7 @@ export class CashDeskService {
       throw new NotFoundException("Xarajat topilmadi");
     }
     const oldDate = row.date.toISOString().slice(0, 10);
-    const date = assertExpenseDate(dto.date);
+    const date = assertExpenseDate(dto.date, oldDate);
     await this.assertNotClosed(branchId, oldDate);
     if (date !== oldDate) await this.assertNotClosed(branchId, date);
     const method = dto.method ?? row.method;

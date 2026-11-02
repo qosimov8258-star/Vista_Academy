@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { DiscountScope, DiscountType } from "@prisma/client";
-import { ArrayMaxSize, ArrayMinSize, IsArray, IsEnum, IsNumber, IsOptional, IsString, Matches, MaxLength, Min } from "class-validator";
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsEnum, IsNumber, IsOptional, IsString, Matches, Max, MaxLength, Min } from "class-validator";
+import { MAX_MONEY } from "../../billing/dto/money";
 
 const PERIOD = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -16,6 +17,7 @@ class DiscountFields {
   @ApiProperty({ example: 10 })
   @IsNumber()
   @Min(0)
+  @Max(MAX_MONEY, { message: "Chegirma qiymati juda katta" })
   value!: number;
 
   @ApiPropertyOptional({ example: "2026-10", description: "Bir oylik chegirma uchun majburiy (YYYY-MM)" })
@@ -60,6 +62,7 @@ export class UpdateDiscountDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(MAX_MONEY, { message: "Chegirma qiymati juda katta" })
   value?: number;
 
   @ApiPropertyOptional()

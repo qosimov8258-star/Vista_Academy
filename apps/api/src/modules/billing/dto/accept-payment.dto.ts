@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsEnum, IsNumber, IsOptional, IsPositive, IsString, Matches, MaxLength } from "class-validator";
+import { IsEnum, IsOptional, IsString, Matches, MaxLength } from "class-validator";
 import { PaymentMethod } from "@prisma/client";
+import { MoneyAmount } from "./money";
 
 /**
  * Kassada bola bo'yicha to'lov qabul qilish (bitta forma): summa bolaning
@@ -13,8 +14,7 @@ export class AcceptPaymentDto {
   childId!: string;
 
   @ApiProperty()
-  @IsNumber()
-  @IsPositive()
+  @MoneyAmount()
   amount!: number;
 
   @ApiProperty({ enum: PaymentMethod })

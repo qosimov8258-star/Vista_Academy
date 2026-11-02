@@ -13,7 +13,7 @@ import { Spinner } from "@/components/ios/spinner";
 import { GROUP_BLOCK, SECTION_TITLE } from "@/components/ios/tokens";
 import { Toast, type ToastState } from "@/components/ui/toast";
 import { useAuthedImage } from "@/components/ui/child-photo";
-import { ReceiptPicker } from "@/features/payments/payment-sheet";
+import { ReceiptPicker, oneMonthBefore } from "@/features/payments/payment-sheet";
 import { todayTashkent } from "@/features/cash/shared";
 import { METHOD_COLOR, METHOD_LABEL, groupDigits, prepareReceiptPhoto } from "@/features/payments/shared";
 import { useTr } from "@/i18n/tr";
@@ -211,7 +211,7 @@ export function ExpenseSheet({ request, onClose }: { request: ExpenseSheetReques
               aria-label={tr("Summa")}
               value={amount ? groupDigits(amount) : ""}
               placeholder="0"
-              onChange={(e) => setAmount(e.target.value.replace(/\D/g, "").replace(/^0+(?=\d)/, "").slice(0, 11))}
+              onChange={(e) => setAmount(e.target.value.replace(/\D/g, "").replace(/^0+(?=\d)/, "").slice(0, 10))}
               className="min-w-0 flex-1 bg-transparent text-[24px] font-bold tabular-nums text-[var(--color-text)] outline-none placeholder:text-[#c7c7cc]"
             />
             <span className="shrink-0 text-[15px] font-semibold text-[#8e8e93]">{tr("so'm")}</span>
@@ -298,7 +298,7 @@ export function ExpenseSheet({ request, onClose }: { request: ExpenseSheetReques
           <div className={clsx(GROUP_BLOCK, "space-y-3 p-4")}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-[15px] text-[var(--color-text)]">{tr("Sana")}</span>
-              {date && today && <DayStepper value={date} onChange={setDate} today={today} max={today} />}
+              {date && today && <DayStepper value={date} onChange={setDate} today={today} max={today} min={oneMonthBefore(today)} />}
             </div>
             <input
               value={note}

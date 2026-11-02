@@ -577,7 +577,7 @@ export class BillingService {
    *  - naqddan boshqa usulda chek surati majburiy va to'lov bilan birga
    *    saqlanadi (to'lov cheksiz qolib ketmasin).
    */
-  async acceptPayment(caller: TenantAuthenticatedUser, dto: AcceptPaymentDto) {
+  async acceptPayment(caller: TenantAuthenticatedUser, dto: AcceptPaymentDto, options?: { receiptOnFile?: boolean }) {
     const scope = toTenantScope(caller);
     const branchId = requireMoneyScope(scope);
     const amount = Math.round(dto.amount * 100) / 100;
@@ -586,7 +586,7 @@ export class BillingService {
     const [child, branch] = await Promise.all([
       this.prisma.child.findFirst({
         where: { id: dto.childId, organizationId: scope.organizationId },
-        select: { id: true, fullName: true, branchId: true, group: { select: { monthlyFee: true } } },
+        select: { id: true, fullName: true, branchId: true, status: true, group: { select: { monthlyFee: true } } },
       }),
       this.prisma.branch.findUniqueOrThrow({ where: { id: branchId }, select: { currency: true, defaultTuitionAmount: true } }),
     ]);
@@ -596,7 +596,8 @@ export class BillingService {
     if (child.branchId !== branchId) {
       throw new ForbiddenException("Bu bola boshqa filialda — to'lovni o'sha filial kassasi qabul qiladi");
     }
-    if (dto.method !== "CASH" && !dto.receiptImage) {
+    // Ota-ona chekini tasdiqlashda surat chekning o'zida turadi
+    if (dto.method !== "CASH" && !dto.receiptImage && !options?.receiptOnFile) {
       throw new BadRequestException("Naqddan boshqa usulda chek surati majburiy");
     }
     if (dto.method === "CASH" && dto.receiptImage) {
@@ -604,7 +605,10 @@ export class BillingService {
     }
 
     // Rasm yuklashdan oldin tez tekshiruv; haqiqiy qaror navbatga turgandan keyin tranzaksiya ichida
-    await this.planAccept(this.prisma, child.id, branchId, amount, dto.period);
+    const plan = await this.planAccept(this.prisma, child.id, branchId, amount, dto.period);
+    if (plan.advancePeriod && child.status === "INACTIVE") {
+      throw new BadRequestException("Bola arxivda — unga oldindan to'lov yozib bo'lmaydi");
+    }
     const paidAt = await this.resolvePaidAt(branchId, dto.paidOn);
 
     // Rasm tranzaksiyadan oldin tayyorlanadi: R2 ga yuklash bazaga yozishdan
@@ -926,6 +930,14 @@ export class BillingService {
   private async resolvePaidAt(branchId: string, paidOn: string | undefined): Promise<Date> {
     const now = new Date();
     const today = tashkentDay(now);
+    if (paidOn) {
+      // 31-noyabr formatdan o'tadi, lekin kalendarda yo'q
+      const [y, m, d] = paidOn.split("-").map(Number);
+      const date = new Date(Date.UTC(y, m - 1, d));
+      if (date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) {
+        throw new BadRequestException("To'lov sanasi noto'g'ri");
+      }
+    }
     if (!paidOn || paidOn === today) {
       await this.assertDayOpen(branchId, today, "To'lovni ertaga kiriting");
       return now;

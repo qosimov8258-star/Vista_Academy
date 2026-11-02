@@ -43,7 +43,7 @@ interface AcceptResult {
 }
 
 /** Bir oy oldingi kun (server bilan bir xil): 27.10 -> 27.09, 31.03 -> 28.02 */
-function oneMonthBefore(day: string): string {
+export function oneMonthBefore(day: string): string {
   const [y, m, d] = day.split("-").map(Number);
   const lastDay = new Date(Date.UTC(y, m - 1, 0)).getUTCDate();
   return new Date(Date.UTC(y, m - 2, Math.min(d, lastDay))).toISOString().slice(0, 10);
@@ -420,7 +420,7 @@ export function PaymentSheet({
                     aria-label={tr("Summa")}
                     value={amount ? groupDigits(amount) : ""}
                     placeholder="0"
-                    onChange={(e) => setAmount(e.target.value.replace(/\D/g, "").replace(/^0+(?=\d)/, "").slice(0, 12))}
+                    onChange={(e) => setAmount(e.target.value.replace(/\D/g, "").replace(/^0+(?=\d)/, "").slice(0, 10))}
                     className="min-w-0 flex-1 bg-transparent text-[24px] font-bold tabular-nums text-[var(--color-text)] outline-none placeholder:text-[#c4c4c6]"
                   />
                   <span className="shrink-0 text-[15px] font-semibold text-[#8e8e93]">{tr("so'm")}</span>
