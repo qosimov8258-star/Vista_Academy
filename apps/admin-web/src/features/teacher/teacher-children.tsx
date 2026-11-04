@@ -10,7 +10,8 @@ import { useBranchContext } from "@/lib/use-branch-context";
 import { ChildPhoto } from "@/components/ui/child-photo";
 import { initials } from "@/components/ui/avatar";
 import { ChevronRightIcon, ChildIcon, CloseIcon, PhoneIcon, SearchIcon } from "@/components/ios/icons";
-import { Paperclip } from "lucide-react";
+import { ChildPhotoSheet } from "@/features/children/child-photo-sheet";
+import { Camera, Paperclip } from "lucide-react";
 import { EmptyRow, Group, LargeTitle, Row, Segmented, SkeletonRows, TeacherPage } from "./teacher-ui";
 import styles from "./teacher.module.css";
 import { useTr } from "@/i18n/tr";
@@ -29,6 +30,9 @@ export function TeacherChildren({ slug }: { slug: string }) {
   const { branchId: forcedBranchId } = useBranchContext(slug);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<"" | "ACTIVE" | "INACTIVE">("ACTIVE");
+  const [onlyNoPhoto, setOnlyNoPhoto] = useState(false);
+  const [photoChild, setPhotoChild] = useState<Child | null>(null);
+  const [photoOpen, setPhotoOpen] = useState(false);
 
   const childrenQuery = useQuery({
     queryKey: ["children", slug, 1, forcedBranchId, search, "", status, LIMIT],
@@ -47,9 +51,11 @@ export function TeacherChildren({ slug }: { slug: string }) {
   });
   const allergyIds = new Set((allergiesQuery.data ?? []).map((a) => a.child.id));
 
-  const list = childrenQuery.data?.data ?? [];
+  const all = childrenQuery.data?.data ?? [];
+  const noPhotoCount = all.filter((c) => c.status === "ACTIVE" && !c.avatarUpdatedAt).length;
+  const list = onlyNoPhoto ? all.filter((c) => !c.avatarUpdatedAt) : all;
   const total = childrenQuery.data?.meta.total ?? 0;
-  const groupName = list.find((c) => c.group)?.group?.name;
+  const groupName = all.find((c) => c.group)?.group?.name;
 
   return (
     <TeacherPage>
@@ -61,6 +67,15 @@ export function TeacherChildren({ slug }: { slug: string }) {
       {/* Guruh fayllari telefondagi pastki menyuda yo'q — ota-onalarga yuborish shu yerdan ham */}
       <Group>
         <Row first icon={Paperclip} title={tr("Vazifa jo'natish")} subtitle={tr("Vazifa, rasm, video yoki hujjat")} href={`/${slug}/materials`} />
+        {(noPhotoCount > 0 || onlyNoPhoto) && (
+          <Row
+            icon={Camera}
+            title={tr("Surati yo'q bolalar")}
+            subtitle={onlyNoPhoto ? tr("Hammasini ko'rsatish uchun bosing") : tr("Surat Face ID uchun kerak")}
+            value={noPhotoCount}
+            onClick={() => setOnlyNoPhoto((on) => !on)}
+          />
+        )}
       </Group>
 
       <div className="space-y-3 px-0">
@@ -99,7 +114,7 @@ export function TeacherChildren({ slug }: { slug: string }) {
       </div>
 
       <Group
-        footer={total > list.length ? tr("Birinchi {0} ta ko'rsatildi — aniqroq qidiring.", list.length) : undefined}
+        footer={total > all.length ? tr("Birinchi {0} ta ko'rsatildi — aniqroq qidiring.", all.length) : undefined}
         className={clsx(childrenQuery.isFetching && !childrenQuery.isLoading && "opacity-70 transition-opacity")}
       >
         {childrenQuery.isLoading ? (
@@ -114,11 +129,26 @@ export function TeacherChildren({ slug }: { slug: string }) {
             return (
               <div key={child.id} className="relative flex items-center">
                 {i > 0 && <span className="absolute left-[72px] right-0 top-0 h-px bg-[var(--color-separator)]" aria-hidden="true" />}
-                <Link
-                  href={`/${slug}/children/${child.id}`}
-                  className={clsx(styles.pressable, "flex min-w-0 flex-1 items-center gap-3 py-2.5 pl-4 pr-2")}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPhotoChild(child);
+                    setPhotoOpen(true);
+                  }}
+                  aria-label={tr("{0} surati", child.fullName)}
+                  className="relative ml-4 shrink-0 cursor-pointer rounded-full transition-transform active:scale-95"
                 >
                   <ChildPhoto child={child} size={44} fallback={initials(child.fullName)} />
+                  {!child.avatarUpdatedAt && (
+                    <span className="absolute -bottom-0.5 -right-0.5 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-[var(--color-primary)] text-white ring-2 ring-white">
+                      <Camera className="h-2.5 w-2.5" strokeWidth={2.6} />
+                    </span>
+                  )}
+                </button>
+                <Link
+                  href={`/${slug}/children/${child.id}`}
+                  className={clsx(styles.pressable, "flex min-w-0 flex-1 items-center gap-3 py-2.5 pl-3 pr-2")}
+                >
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-1.5">
                       <span className="truncate text-[16px] leading-snug text-[var(--color-text)]">{tr(child.fullName)}</span>
@@ -147,6 +177,10 @@ export function TeacherChildren({ slug }: { slug: string }) {
           })
         )}
       </Group>
+
+      {photoChild && (
+        <ChildPhotoSheet open={photoOpen} onClose={() => setPhotoOpen(false)} slug={slug} child={photoChild} canRemove={false} />
+      )}
     </TeacherPage>
   );
 }

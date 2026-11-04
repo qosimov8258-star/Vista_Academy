@@ -5,6 +5,7 @@ import {
   TenantAuthenticatedUser,
   TenantScope,
   requireOperationalScope,
+  requireTeachingScope,
   resolveReadBranchFilter,
   toTenantScope,
 } from "../iam/tenant-auth.types";
@@ -209,11 +210,12 @@ export class ChildrenService {
    * Bola suratini saqlaydi. Rasm brauzerda kvadrat qilib kesilib, 512px ga
    * kichraytirilgan holda keladi — server faqat hajmini tekshiradi.
    *
-   * Yozish huquqi bolani tahrirlash bilan bir xil: filial xodimlari qo'yadi,
-   * Super Admin faqat ko'radi (requireOperationalScope filialsiz rolni rad
-   * etadi), o'qituvchi esa faqat o'z guruhidagi bolaga.
+   * Filial xodimlari va o'qituvchi (faqat o'z guruhidagi bolaga) qo'yadi, Super
+   * Admin faqat ko'radi, moliyachi va oshpazga yopiq (requireTeachingScope).
+   * Shu surat Face ID terminaliga ham ketadi — kim qo'ygani jurnalga yoziladi.
    */
-  async updateAvatar(scope: TenantScope, id: string, dto: UpdateChildAvatarDto) {
+  async updateAvatar(caller: TenantAuthenticatedUser, id: string, dto: UpdateChildAvatarDto) {
+    const scope = toTenantScope(caller);
     const child = await this.requireWritableChild(scope, id);
 
     const [header, base64] = dto.image.split(",", 2);
@@ -245,12 +247,21 @@ export class ChildrenService {
     if (child.avatarKey && this.r2.enabled) {
       await this.r2.deleteObject(child.avatarKey);
     }
+    await this.auditLog.logFromUser(caller, {
+      action: "child.avatar",
+      entityType: "Child",
+      entityId: child.id,
+      branchId: child.branchId,
+      summary: `${child.fullName} surati ${child.avatarUpdatedAt ? "almashtirildi" : "qo'yildi"}`,
+    });
     // Yangi surat yuz tanish terminallariga ham yuboriladi
     await this.faceIdCommands.enqueueChildFace(child.id);
     return { avatarUpdatedAt: updated.avatarUpdatedAt };
   }
 
+  /** O'chirish o'qituvchiga yopiq: u faqat suratni qo'yadi yoki almashtiradi. */
   async removeAvatar(scope: TenantScope, id: string) {
+    requireOperationalScope(scope);
     const child = await this.requireWritableChild(scope, id);
     const previous = await this.prisma.child.update({
       where: { id: child.id },
@@ -274,10 +285,10 @@ export class ChildrenService {
 
   /** Yozish uchun: bola shu tashkilot/filialda va o'qituvchining guruhida. */
   private async requireWritableChild(scope: TenantScope, id: string) {
-    const branchId = requireOperationalScope(scope);
+    const branchId = requireTeachingScope(scope);
     const child = await this.prisma.child.findFirst({
       where: { id, organizationId: scope.organizationId },
-      select: { id: true, branchId: true, groupId: true, avatarKey: true },
+      select: { id: true, branchId: true, groupId: true, avatarKey: true, fullName: true, avatarUpdatedAt: true },
     });
     if (!child) {
       throw new NotFoundException("Bola topilmadi");
