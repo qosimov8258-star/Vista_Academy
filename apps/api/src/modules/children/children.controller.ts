@@ -63,7 +63,7 @@ export class ChildrenController {
     @Param("id") id: string,
     @Body() dto: UpdateChildAvatarDto,
   ) {
-    return this.childrenService.updateAvatar(toTenantScope(user), id, dto);
+    return this.childrenService.updateAvatar(user, id, dto);
   }
 
   @Delete(":id/avatar")

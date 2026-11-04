@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
+import { use, useEffect, useState, type ComponentType, type ReactNode } from "react";
 import Link from "next/link";
 import clsx from "clsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -40,9 +40,9 @@ import type {
 import { useAuth } from "@/lib/use-auth";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { downloadCsv } from "@/lib/download";
-import { prepareChildPhoto } from "@/lib/child-photo";
+import { ChildPhotoSheet } from "@/features/children/child-photo-sheet";
 import { formatAge, formatChildId, formatDate, formatDateTime, formatGender, formatPhone } from "@/lib/format";
-import { canWriteOperational, canWriteTeaching, canWriteDiscounts } from "@/lib/permissions";
+import { canWriteOperational, canWriteTeaching, canWriteDiscounts, isTeacher } from "@/lib/permissions";
 import { WEEKDAYS, dayMonthLabel } from "@/components/ios/day-stepper";
 import { Segmented } from "@/components/ios/form";
 import { Group, ListRow, Row } from "@/components/ios/group";
@@ -117,6 +117,9 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const canWrite = canWriteOperational(user?.role);
+  // Suratni o'qituvchi ham qo'yadi (faqat o'z guruhidagi bola kartasiga kira oladi)
+  const teacher = isTeacher(user?.role);
+  const canEditPhoto = canWrite || teacher;
   // Moliyachiga ota-ona kartasi tepasida to'lov qabul qilish kartasi
   const showCash = user?.role === "FINANCE";
   // Davomatga izoh yozish — tarbiyachilik ishi (kunlik davomat bilan bir xil ruxsat)
@@ -226,13 +229,13 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
               <div className="flex flex-col items-center text-center">
                 <button
                   type="button"
-                  disabled={!canWrite}
+                  disabled={!canEditPhoto}
                   onClick={() => setPhotoOpen(true)}
                   className="relative rounded-full transition-transform enabled:active:scale-95"
-                  aria-label={canWrite ? tr("Bolaning suratini almashtirish") : undefined}
+                  aria-label={canEditPhoto ? tr("Bolaning suratini almashtirish") : undefined}
                 >
                   <ChildPhoto child={child} size={88} fallback={initials(child.fullName)} />
-                  {canWrite && (
+                  {canEditPhoto && (
                     <span className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full bg-[var(--color-primary)] text-white ring-[3px] ring-white">
                       <Camera className="h-3.5 w-3.5" strokeWidth={2.4} />
                     </span>
@@ -580,8 +583,8 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
       </div>
 
       {/* ---------------- Varaqlar ---------------- */}
-      {child && canWrite && (
-        <PhotoSheet open={photoOpen} onClose={() => setPhotoOpen(false)} slug={slug} child={child} />
+      {child && canEditPhoto && (
+        <ChildPhotoSheet open={photoOpen} onClose={() => setPhotoOpen(false)} slug={slug} child={child} canRemove={canWrite} />
       )}
       {child && canWrite && <DocsSheet open={docsOpen} onClose={() => setDocsOpen(false)} childId={childId} />}
 
@@ -741,107 +744,6 @@ function ExpandableGroup({ title, action, footer, items, empty, loading }: { tit
 }
 
 /** Surat varag'i: yuz tekshiruvi va kesish brauzerda, keyin saqlanadi; o'chirish */
-function PhotoSheet({ open, onClose, slug, child }: { open: boolean; onClose: () => void; slug: string; child: Child }) {
-  const tr = useTr();
-  const queryClient = useQueryClient();
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [checking, setChecking] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [confirmRemove, setConfirmRemove] = useState(false);
-
-  useEffect(() => {
-    if (open) {
-      setError(null);
-      setConfirmRemove(false);
-    }
-  }, [open]);
-
-  const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: ["child", slug, child.id] });
-    queryClient.invalidateQueries({ queryKey: ["children", slug] });
-  };
-  const upload = useMutation({
-    mutationFn: (image: string) => api.put(`/app/children/${child.id}/avatar`, { image }),
-    onSuccess: () => {
-      invalidate();
-      onClose();
-    },
-    onError: (err) => setError(err instanceof ApiError ? err.message : tr("Suratni saqlab bo'lmadi")),
-  });
-  const remove = useMutation({
-    mutationFn: () => api.delete(`/app/children/${child.id}/avatar`),
-    onSuccess: () => {
-      invalidate();
-      onClose();
-    },
-    onError: (err) => setError(err instanceof ApiError ? err.message : tr("Suratni o'chirib bo'lmadi")),
-  });
-
-  const pick = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-    setError(null);
-    setChecking(true);
-    try {
-      // Yuz tekshiruvi va kesish shu yerda — natija tayyor bo'lsagina yuboriladi
-      const result = await prepareChildPhoto(file);
-      if (!result.ok) {
-        setError(result.reason);
-        return;
-      }
-      upload.mutate(result.image);
-    } finally {
-      setChecking(false);
-    }
-  };
-  const busy = checking || upload.isPending || remove.isPending;
-
-  return (
-    <IosSheet
-      open={open}
-      onClose={() => !busy && onClose()}
-      title={tr("Surat")}
-      footer={
-        confirmRemove ? (
-          <div className="space-y-2.5">
-            <button type="button" disabled={busy} onClick={() => remove.mutate()} className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#ff3b30] text-[16px] font-semibold text-white active:scale-[0.96] disabled:opacity-60">
-              {remove.isPending ? <Spinner className="h-5 w-5 text-white" /> : <Trash2 className="h-[18px] w-[18px]" strokeWidth={2.2} />}
-              {tr("O'chirish")}
-            </button>
-            <SheetSecondaryButton onClick={() => setConfirmRemove(false)}>{tr("Qoldirish")}</SheetSecondaryButton>
-          </div>
-        ) : (
-          <div className="space-y-2.5">
-            <SheetPrimaryButton loading={checking || upload.isPending} onClick={() => inputRef.current?.click()}>
-              <Camera className="h-[18px] w-[18px]" strokeWidth={2.2} />
-              {child.avatarUpdatedAt ? tr("Suratni almashtirish") : tr("Surat qo'yish")}
-            </SheetPrimaryButton>
-            {child.avatarUpdatedAt && (
-              <SheetSecondaryButton danger onClick={() => setConfirmRemove(true)}>
-                {tr("Suratni o'chirish")}
-              </SheetSecondaryButton>
-            )}
-          </div>
-        )
-      }
-    >
-      <div className="flex flex-col items-center gap-3 py-2 text-center">
-        <ChildPhoto child={child} size={120} fallback={initials(child.fullName)} />
-        <p className="max-w-[300px] text-[13px] leading-snug text-[#8e8e93]">
-          {checking ? tr("Surat tekshirilmoqda…") : confirmRemove ? tr("Surat o'chiriladi, o'rniga bosh harflar ko'rinadi.") : tr("Yuzi ko'rinib turgan surat, 3 MB gacha. Yuz avtomatik topiladi va kesiladi.")}
-        </p>
-        {error && (
-          <p role="alert" className="rounded-[12px] bg-[#ff3b30]/[0.1] px-3 py-2 text-[13px] text-[#ff3b30]">
-            {tr(error)}
-          </p>
-        )}
-      </div>
-      <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={pick} />
-    </IosSheet>
-  );
-}
-
 /** Hujjatlar: shartnoma va ma'lumotnoma (PDF) */
 function DocsSheet({ open, onClose, childId }: { open: boolean; onClose: () => void; childId: string }) {
   const tr = useTr();
