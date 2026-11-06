@@ -21,6 +21,7 @@ import { PaymentQueryDto } from "./dto/payment-query.dto";
 import { FinanceChildrenQueryDto, FinanceSummaryQueryDto } from "./dto/finance-query.dto";
 import { AcceptPaymentDto, RefundPaymentDto } from "./dto/accept-payment.dto";
 import { CancelInvoiceDto, UpdateInvoiceDto } from "./dto/update-invoice.dto";
+import { SetChildFeeDto } from "./dto/child-fee.dto";
 import { R2Service } from "../storage/r2.service";
 import { R2_CATEGORY } from "../storage/r2.constants";
 
@@ -49,6 +50,8 @@ const ADVANCE_MONTHS_BACK = 3;
 const ADVANCE_MONTHS_AHEAD = 12;
 /** Oldindan to'lov bilan yaratilgan hisob-fakturaning CHARGE yozuvidagi belgi */
 const ADVANCE_CHARGE_MARK = "(oldindan to'lov)";
+/** Qarzdan ko'p summa kiritilganda: ko'pincha bolaning oylik narxi noto'g'ri yozilgan bo'ladi */
+const FEE_HINT = "Oylik narx noto'g'ri bo'lsa, Bolalar bo'limida bolani tahrirlab o'zgartiring";
 
 /**
  * Bir bolaning pul amallarini navbatga qo'yadi (tranzaksiya oxirigacha). Busiz
@@ -375,7 +378,7 @@ export class BillingService {
           status: "ACTIVE",
           ...(dto.groupId ? { groupId: dto.groupId } : {}),
         },
-        select: { id: true, group: { select: { monthlyFee: true } } },
+        select: { id: true, monthlyFee: true, group: { select: { monthlyFee: true } } },
       }),
       this.prisma.branch.findUniqueOrThrow({ where: { id: branchId }, select: { defaultTuitionAmount: true } }),
     ]);
@@ -398,13 +401,13 @@ export class BillingService {
     const alreadyInvoiced = new Set(existing.map((i) => i.childId));
     const targets = children.filter((c) => !alreadyInvoiced.has(c.id));
 
-    // Summa berilmasa — har bola o'z guruhi narxida (bo'lmasa filial narxi);
+    // Summa berilmasa — har bola o'z narxida (bo'lmasa guruh, u ham bo'lmasa filial narxi);
     // narxi umuman yo'q bola tashlab ketiladi va alohida sanaladi.
     const created = [];
     let noFeeCount = 0;
     let racedCount = 0;
     for (const child of targets) {
-      const amount = dto.amount ?? monthlyFeeOf(child.group, branch);
+      const amount = dto.amount ?? monthlyFeeOf(child.group, branch, child);
       if (!amount || amount <= 0) {
         noFeeCount += 1;
         continue;
@@ -494,7 +497,7 @@ export class BillingService {
       throw new BadRequestException("Summa musbat bo'lishi kerak");
     }
     if (amount > remaining + EPSILON) {
-      throw new BadRequestException("Summa qolgan qarzdan katta bo'lishi mumkin emas");
+      throw new BadRequestException(`Summa qolgan qarzdan katta bo'lishi mumkin emas. ${FEE_HINT}`);
     }
     const paidAt = await this.resolvePaidAt(branchId, dto.paidOn);
 
@@ -507,7 +510,7 @@ export class BillingService {
       }
       const netNow = Number(current.amount) - Number(current.discountAmount);
       if (amount > netNow - Number(current.paidAmount) + EPSILON) {
-        throw new BadRequestException("Summa qolgan qarzdan katta bo'lishi mumkin emas");
+        throw new BadRequestException(`Summa qolgan qarzdan katta bo'lishi mumkin emas. ${FEE_HINT}`);
       }
       await assertNotDuplicatePayment(tx, invoice.childId, amount, dto.method ?? "CASH");
 
@@ -586,7 +589,7 @@ export class BillingService {
     const [child, branch] = await Promise.all([
       this.prisma.child.findFirst({
         where: { id: dto.childId, organizationId: scope.organizationId },
-        select: { id: true, fullName: true, branchId: true, status: true, group: { select: { monthlyFee: true } } },
+        select: { id: true, fullName: true, branchId: true, status: true, monthlyFee: true, group: { select: { monthlyFee: true } } },
       }),
       this.prisma.branch.findUniqueOrThrow({ where: { id: branchId }, select: { currency: true, defaultTuitionAmount: true } }),
     ]);
@@ -632,10 +635,10 @@ export class BillingService {
         // ketma-ket shu oy va keyingi oy uchun bir xil summa to'lash esa odatiy holat
         if (!advancePeriod) await assertNotDuplicatePayment(tx, child.id, amount, dto.method);
 
-        // Oy to'lovi bolaning oylik narxidan (guruh narxi, bo'lmasa filial narxi)
+        // Oy to'lovi bolaning oylik narxidan (o'z narxi, guruh yoki filial narxi)
         // kam bo'lmaydi — qisman oldindan to'langan oyning qolgani qarz bo'lib ko'rinsin.
         // Shu oy uchun chegirma qoidasi bo'lsa — hisob-fakturaga chegirma bilan yoziladi.
-        const advanceFee = advancePeriod ? monthlyFeeOf(child.group, branch) : 0;
+        const advanceFee = advancePeriod ? monthlyFeeOf(child.group, branch, child) : 0;
         const advanceDiscount = advancePeriod
           ? discountFor(await tx.childDiscount.findMany({ where: { childId: child.id }, select: discountRuleSelect }), advancePeriod, advanceFee)
           : 0;
@@ -780,7 +783,7 @@ export class BillingService {
 
     if (totalDebt > EPSILON) {
       if (amount > totalDebt + EPSILON) {
-        throw new BadRequestException(`Qolgan qarz ${formatSum(totalDebt)} so'm — undan ko'p qabul qilib bo'lmaydi`);
+        throw new BadRequestException(`Qolgan qarz ${formatSum(totalDebt)} so'm — undan ko'p qabul qilib bo'lmaydi. ${FEE_HINT}`);
       }
       return { openInvoices, totalDebt, advancePeriod: null };
     }
@@ -1017,6 +1020,139 @@ export class BillingService {
         payment: { select: { id: true, method: true, status: true } },
       },
     });
+  }
+
+  /** Bolaning oylik narxi: o'z narxi, guruh/filial narxi va shu oyning hisob-fakturasi */
+  async childFee(scope: TenantScope, childId: string) {
+    const branchId = requireMoneyScope(scope);
+    const child = await this.requireFeeChild(scope.organizationId, branchId, childId);
+    const period = tashkentDay(new Date()).slice(0, 7);
+    const invoice = await this.prisma.invoice.findFirst({
+      where: { childId, period, status: { not: InvoiceStatus.CANCELLED } },
+      select: { period: true, amount: true, discountAmount: true, paidAmount: true, status: true },
+    });
+    const fallbackFee = monthlyFeeOf(child.group, child.branch);
+    return {
+      ownFee: child.monthlyFee === null ? null : Number(child.monthlyFee),
+      groupFee: fallbackFee || null,
+      period,
+      invoice: invoice
+        ? { period: invoice.period, amount: Number(invoice.amount), discountAmount: Number(invoice.discountAmount), paidAmount: Number(invoice.paidAmount), status: invoice.status }
+        : null,
+    };
+  }
+
+  /**
+   * Bolaning oylik narxini o'zgartirish (bolani tahrirlash oynasidan) — shu
+   * oydan boshlab amal qiladi: narx bolaning o'zida saqlanadi (keyingi oylar
+   * hisob-fakturasi shu narxda yoziladi) va shu oy hamda keyingi oylarning
+   * amaldagi hisob-fakturalari yangi narxga o'tadi. O'tgan oylar o'zgarmaydi.
+   * Guruh narxiga teng bo'lsa bolaning o'z narxi saqlanmaydi (guruh narxiga
+   * ergashadi). Allaqachon yangi narxdan ko'p to'langan oy o'zgarmaydi va
+   * javobda alohida qaytadi. Farq bola tarixiga ADJUSTMENT bo'lib tushadi.
+   */
+  async setChildFee(caller: TenantAuthenticatedUser, childId: string, dto: SetChildFeeDto) {
+    const scope = toTenantScope(caller);
+    const branchId = requireMoneyScope(scope);
+    const child = await this.requireFeeChild(scope.organizationId, branchId, childId);
+    const fallbackFee = monthlyFeeOf(child.group, child.branch);
+    const oldFee = monthlyFeeOf(child.group, child.branch, child);
+    const requested = dto.amount ?? null;
+    const ownFee = requested === null || Math.abs(requested - fallbackFee) < EPSILON ? null : requested;
+    const newFee = ownFee ?? fallbackFee;
+    const period = tashkentDay(new Date()).slice(0, 7);
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      await lockChildMoney(tx, child.id);
+      await tx.child.update({ where: { id: child.id }, data: { monthlyFee: ownFee } });
+
+      const changed: { period: string; from: number; to: number }[] = [];
+      const skipped: { period: string; paid: number }[] = [];
+      // Narx umuman yo'q bo'lib qolsa (guruh va filial narxi bo'sh) hisob-fakturalar 0 ga tushirilmaydi
+      if (newFee <= 0) return { changed, skipped };
+
+      const rules = await tx.childDiscount.findMany({ where: { childId: child.id }, select: discountRuleSelect });
+      const invoices = await tx.invoice.findMany({
+        where: { childId: child.id, period: { gte: period }, status: { not: InvoiceStatus.CANCELLED } },
+        orderBy: { period: "asc" },
+      });
+      for (const invoice of invoices) {
+        const oldAmount = Number(invoice.amount);
+        if (Math.abs(oldAmount - newFee) < EPSILON) continue;
+        const oldDiscount = Number(invoice.discountAmount);
+        const paid = Number(invoice.paidAmount);
+        // Chegirma qoidadan kelgan bo'lsa — yangi narxdan qayta hisoblanadi, qo'lda berilgani saqlanadi
+        const fromRule = Math.abs(oldDiscount - discountFor(rules, invoice.period, oldAmount)) < EPSILON;
+        const discount = fromRule ? discountFor(rules, invoice.period, newFee) : Math.min(oldDiscount, newFee);
+        const net = newFee - discount;
+        if (net < paid - EPSILON) {
+          skipped.push({ period: invoice.period, paid });
+          continue;
+        }
+        const status = paid >= net - EPSILON ? InvoiceStatus.PAID : paid > EPSILON ? InvoiceStatus.PARTIALLY_PAID : InvoiceStatus.PENDING;
+        await tx.invoice.update({
+          where: { id: invoice.id },
+          data: { amount: newFee, discountAmount: discount, status, paidAt: status === InvoiceStatus.PAID ? (invoice.paidAt ?? new Date()) : null },
+        });
+        await tx.ledgerEntry.create({
+          data: {
+            organizationId: scope.organizationId,
+            branchId,
+            childId: child.id,
+            type: "ADJUSTMENT",
+            amount: newFee - oldAmount,
+            invoiceId: invoice.id,
+            note: `Oylik narx o'zgardi — ${invoice.period}: ${formatSum(oldAmount)} → ${formatSum(newFee)}`,
+          },
+        });
+        if (Math.abs(discount - oldDiscount) >= EPSILON) {
+          await tx.ledgerEntry.create({
+            data: {
+              organizationId: scope.organizationId,
+              branchId,
+              childId: child.id,
+              type: "DISCOUNT",
+              amount: -(discount - oldDiscount),
+              invoiceId: invoice.id,
+              note: `Chegirma yangi narxdan — ${invoice.period}: ${formatSum(oldDiscount)} → ${formatSum(discount)}`,
+            },
+          });
+        }
+        changed.push({ period: invoice.period, from: oldAmount, to: newFee });
+      }
+      return { changed, skipped };
+    });
+
+    const parts = [
+      `oylik narx ${oldFee > 0 ? formatSum(oldFee) : "yo'q"} → ${newFee > 0 ? formatSum(newFee) : "yo'q"} so'm${ownFee === null ? " (guruh narxi)" : ""}`,
+      ...result.changed.map((c) => `${c.period} hisobi ${formatSum(c.from)} → ${formatSum(c.to)}`),
+      ...result.skipped.map((s) => `${s.period} o'zgarmadi (${formatSum(s.paid)} so'm to'langan)`),
+    ];
+    await this.auditLog.logFromUser(caller, {
+      action: "child.fee",
+      entityType: "Child",
+      entityId: child.id,
+      branchId,
+      summary: `${child.fullName}: ${parts.join("; ")}`,
+    });
+    return { ownFee, fee: newFee || null, changed: result.changed, skipped: result.skipped };
+  }
+
+  private async requireFeeChild(organizationId: string, branchId: string, childId: string) {
+    const child = await this.prisma.child.findFirst({
+      where: { id: childId, organizationId },
+      select: {
+        id: true,
+        fullName: true,
+        branchId: true,
+        monthlyFee: true,
+        group: { select: { monthlyFee: true } },
+        branch: { select: { defaultTuitionAmount: true } },
+      },
+    });
+    if (!child) throw new NotFoundException("Bola topilmadi");
+    if (child.branchId !== branchId) throw new ForbiddenException("Bu bolaga kirish huquqingiz yo'q");
+    return child;
   }
 
   async monthRevenue(scope: TenantScope): Promise<number> {

@@ -35,6 +35,7 @@ const childSelect = {
   fullName: true,
   lastName: true,
   branchId: true,
+  monthlyFee: true,
   group: { select: { id: true, name: true, monthlyFee: true } },
   childDiscounts: { select: ruleView },
 } satisfies Prisma.ChildSelect;
@@ -525,7 +526,7 @@ export class DiscountsService {
       const branch = branchById.get(c.branchId)!;
       const rule = chooseDiscount(c.childDiscounts, period);
       const invoice = invoiceByChild.get(c.id);
-      const gross = invoice ? invoice.amount : monthlyFeeOf(c.group, branch);
+      const gross = invoice ? invoice.amount : monthlyFeeOf(c.group, branch, c);
       const discount = invoice ? invoice.discount : discountAmountOf(rule, gross);
       return {
         childId: c.id,
@@ -577,10 +578,10 @@ async function assertDiscountFits(db: Tx, childId: string, type: DiscountType, v
   if (type === "PERCENTAGE") return;
   const child = await db.child.findUniqueOrThrow({
     where: { id: childId },
-    select: { fullName: true, group: { select: { monthlyFee: true } }, branch: { select: { defaultTuitionAmount: true } } },
+    select: { fullName: true, monthlyFee: true, group: { select: { monthlyFee: true } }, branch: { select: { defaultTuitionAmount: true } } },
   });
   const invoice = await db.invoice.findFirst({ where: { childId, period, status: { not: InvoiceStatus.CANCELLED } }, select: { amount: true } });
-  const gross = invoice ? Number(invoice.amount) : monthlyFeeOf(child.group, child.branch);
+  const gross = invoice ? Number(invoice.amount) : monthlyFeeOf(child.group, child.branch, child);
   if (!(gross > 0)) return;
   if (type === "FIXED_AMOUNT" && value > gross) {
     throw new BadRequestException(`${child.fullName}: chegirma oylik to'lovdan (${digits(gross)} so'm) katta bo'lmasin`);

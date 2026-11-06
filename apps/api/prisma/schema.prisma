@@ -432,6 +432,9 @@ model Child {
   gender           Gender?
   birthDate        DateTime?   @map("birth_date")
   status           ChildStatus @default(ACTIVE)
+  /// Bolaning o'z oylik narxi (kelishilgan narx). Bo'sh bo'lsa guruh narxi,
+  /// u ham bo'lmasa filial narxi olinadi.
+  monthlyFee       Decimal?    @map("monthly_fee") @db.Decimal(12, 2)
   // Bola surati. Filial va foydalanuvchi rasmlari bilan bir xil yondashuv:
   // brauzerda kichraytirilib, R2 sozlangan bo'lsa `avatarKey`ga, aks holda
   // bevosita bazaga (`avatar`) yoziladi. Blob oddiy so'rovlarga tushmasligi
