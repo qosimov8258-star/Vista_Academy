@@ -15,7 +15,9 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       omit: {
         branch: { avatar: true },
         tenantUser: { avatar: true },
-        child: { avatar: true },
+        // Bolaning o'z narxi — pul ma'lumoti: tarbiyachi va oshpazga bola bilan birga ketmasin;
+        // kerak joylar (moliya) uni `select` bilan so'raydi.
+        child: { avatar: true, monthlyFee: true },
         employee: { avatar: true },
         product: { image1: true, image2: true, image3: true },
         // Ota-ona paroli xeshi javoblarga tushmasin (`include: { guardian: true }` ko'p joyda);

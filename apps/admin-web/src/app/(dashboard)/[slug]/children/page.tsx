@@ -429,7 +429,7 @@ function BranchChildren({ slug }: { slug: string }) {
           key={editingChild.id}
           open={editOpen}
           onClose={() => setEditOpen(false)}
-          onSaved={() => setToast({ type: "success", message: tr("Saqlandi") })}
+          onSaved={(message) => setToast({ type: "success", message: message ?? tr("Saqlandi") })}
           slug={slug}
           child={editingChild}
         />

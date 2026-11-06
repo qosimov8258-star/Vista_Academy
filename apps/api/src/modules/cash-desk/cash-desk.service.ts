@@ -689,6 +689,7 @@ export class CashDeskService {
           fullName: true,
           status: true,
           groupId: true,
+          monthlyFee: true,
           group: { select: { monthlyFee: true } },
           childDiscounts: { select: discountRuleSelect },
         },
@@ -714,7 +715,7 @@ export class CashDeskService {
     }
     return children.map((c) => {
       const inv = byChild.get(c.id);
-      const fee = monthlyFeeOf(c.group, branch);
+      const fee = monthlyFeeOf(c.group, branch, c);
       const discount = discountFor(c.childDiscounts, period, fee);
       let state: "NONE" | "PAID" | "PARTIAL" | "OVERDUE" = "NONE";
       if (inv) {
@@ -732,8 +733,8 @@ export class CashDeskService {
         remaining: inv ? Math.max(inv.billed - inv.paid, 0) : 0,
         dueDate: inv?.dueDate ?? null,
         /**
-         * Shu oy to'lanadigan summa: oylik narx (guruh narxi, bo'lmasa filial
-         * narxi) chegirma qoidasi ayirilgan holda — hisob-faktura hali yo'q
+         * Shu oy to'lanadigan summa: oylik narx (bolaning o'z narxi, guruh yoki
+         * filial narxi) chegirma qoidasi ayirilgan holda — hisob-faktura hali yo'q
          * bo'lsa shu kutiladi.
          */
         monthlyFee: fee - discount || null,

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Put, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { Public } from "../../common/decorators/public.decorator";
 import { TenantJwtAuthGuard } from "../iam/guards/tenant-jwt-auth.guard";
@@ -13,6 +13,7 @@ import { PaymentQueryDto } from "./dto/payment-query.dto";
 import { FinanceChildrenQueryDto, FinanceSummaryQueryDto } from "./dto/finance-query.dto";
 import { AcceptPaymentDto, RefundPaymentDto } from "./dto/accept-payment.dto";
 import { CancelInvoiceDto, UpdateInvoiceDto } from "./dto/update-invoice.dto";
+import { SetChildFeeDto } from "./dto/child-fee.dto";
 
 @ApiBearerAuth()
 @ApiTags("Tenant Billing")
@@ -86,5 +87,17 @@ export class BillingController {
   @Get("children/:id/ledger")
   childLedger(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string) {
     return this.billingService.childLedger(toTenantScope(user), id);
+  }
+
+  /** Bolaning oylik narxi va shu oy hisob-fakturasi (bolani tahrirlash oynasi uchun) */
+  @Get("children/:id/monthly-fee")
+  childFee(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id", ParseUUIDPipe) id: string) {
+    return this.billingService.childFee(toTenantScope(user), id);
+  }
+
+  /** Bolaning oylik narxini o'zgartirish — shu oydan boshlab amal qiladi */
+  @Put("children/:id/monthly-fee")
+  setChildFee(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id", ParseUUIDPipe) id: string, @Body() dto: SetChildFeeDto) {
+    return this.billingService.setChildFee(user, id, dto);
   }
 }
