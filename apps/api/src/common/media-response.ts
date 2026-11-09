@@ -3,14 +3,14 @@ import { Response } from "express";
 import { R2Service } from "../modules/storage/r2.service";
 
 /**
- * R2/Bytes ikki oqimli media javobi: `key` bo'lsa qisqa muddatli imzolangan
- * R2 havolasiga 302 redirect qilinadi (brauzer <img>/<video> uni o'zi kuzatadi,
- * Range so'rovlarini ham R2'ning o'zi qo'llab-quvvatlaydi). `key` yo'q bo'lsa —
- * eski yo'l: baytlar to'g'ridan-to'g'ri javobga yoziladi.
+ * R2/Bytes ikki oqimli media javobi: `key` bo'lsa fayl R2'dan serverda
+ * o'qiladi, `key` yo'q bo'lsa — eski yo'l, baytlar bazadan. Ikkala holatda
+ * ham baytlar shu javobning o'zida uzatiladi.
  *
- * Redirect javobida Cache-Control atayin qisqa (imzo muddatidan kam) qilib
- * qo'yiladi — aks holda brauzer eskirgan imzolangan havolani uzoq keshlab,
- * keyingi ochishda 403 beradi.
+ * R2'ga 302 redirect qilinmaydi: panel suratlarni `fetch()` bilan (token
+ * sarlavhasi bilan) o'qiydi, redirect esa uni bucket'ga olib boradi — bucket'da
+ * CORS yo'q, brauzer javobni bloklaydi va surat o'rnida bosh harflar qolib
+ * ketardi. Bu yerdagi fayllar kichik (surat, chek, hujjat), proksi arzon.
  */
 export async function sendMediaResponse(
   res: Response,
@@ -19,17 +19,18 @@ export async function sendMediaResponse(
   notFoundMessage: string,
 ): Promise<void> {
   if (media.key) {
-    const url = await r2.getPresignedReadUrl(media.key);
-    res.setHeader("Cache-Control", "private, max-age=60");
-    res.redirect(302, url);
+    const object = await r2.getObjectBuffer(media.key).catch(() => null);
+    if (!object) {
+      throw new NotFoundException(notFoundMessage);
+    }
+    res.setHeader("Content-Type", media.mimeType ?? object.contentType ?? "application/octet-stream");
+    res.send(object.buffer);
     return;
   }
   if (!media.bytes || !media.mimeType) {
     throw new NotFoundException(notFoundMessage);
   }
-  // Cache-Control atayin tegilmaydi — yo'nalish o'zining (@Header()) qiymatini
-  // saqlab qoladi, chunki bu yerda haqiqiy baytlar uzatiladi va imzo muddati
-  // bilan bog'liq muammo yo'q.
+  // Cache-Control atayin tegilmaydi — yo'nalish o'zining (@Header()) qiymatini saqlab qoladi
   res.setHeader("Content-Type", media.mimeType);
   res.send(Buffer.from(media.bytes));
 }
