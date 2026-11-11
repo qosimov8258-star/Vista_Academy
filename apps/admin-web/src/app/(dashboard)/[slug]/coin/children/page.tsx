@@ -15,6 +15,7 @@ import { useBranchContext } from "@/lib/use-branch-context";
 import { isTeacher } from "@/lib/permissions";
 import { WeeklyAssessmentModal } from "@/features/coins/weekly-assessment-modal";
 import { CoinHistoryModal } from "@/features/coins/coin-history-modal";
+import { AwardStarsSheet } from "@/features/coins/award-stars-sheet";
 import { useTr } from "@/i18n/tr";
 
 export default function CoinChildrenPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -26,6 +27,8 @@ export default function CoinChildrenPage({ params }: { params: Promise<{ slug: s
   const canAssess = isTeacher(user?.role);
   const [assessTarget, setAssessTarget] = useState<CoinChildBalance | null>(null);
   const [historyTarget, setHistoryTarget] = useState<CoinChildBalance | null>(null);
+  const [awardTarget, setAwardTarget] = useState<CoinChildBalance | null>(null);
+  const [awardOpen, setAwardOpen] = useState(false);
 
   const orgQuery = useQuery({
     queryKey: ["org", slug],
@@ -71,9 +74,9 @@ export default function CoinChildrenPage({ params }: { params: Promise<{ slug: s
       <div className="flex items-start gap-3 rounded-[var(--radius-lg)] bg-[var(--color-primary)]/[0.06] px-4 py-3.5">
         <InfoIcon className="mt-px h-5 w-5 shrink-0 text-[var(--color-primary)]" />
         <div>
-          <p className="text-[14px] font-semibold text-[var(--color-text)]">{tr("Yulduzcha hech qachon qo'lda berilmaydi")}</p>
+          <p className="text-[14px] font-semibold text-[var(--color-text)]">{tr("Yulduzcha qanday yig'iladi")}</p>
           <p className="text-[14px] text-[var(--color-text-muted)]">
-            {tr("Yulduzcha faqat avtomatik hisoblanadi: har kelgan kuni uchun +5 (davomat), haftalik savol-javob va she'r yodlashdan esa max +50/hafta. Bu yerda faqat natija ko'rinadi.")}
+            {tr("Har kelgan kuni uchun +5 (davomat), haftalik savol-javob va she'r yodlashdan max +50/hafta. Bundan tashqari tarbiyachi o'z guruhidagi bolaga xohlagancha yulduzcha bera oladi.")}
           </p>
         </div>
       </div>
@@ -111,6 +114,17 @@ export default function CoinChildrenPage({ params }: { params: Promise<{ slug: s
                       {tr("Haftalik baholash")}
                     </Button>
                   )}
+                  {canAssess && (
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        setAwardTarget(child);
+                        setAwardOpen(true);
+                      }}
+                    >
+                      {tr("Yulduzcha berish")}
+                    </Button>
+                  )}
                 </div>
               </li>
             ))}
@@ -125,6 +139,16 @@ export default function CoinChildrenPage({ params }: { params: Promise<{ slug: s
           slug={slug}
           branchId={branchId}
           child={assessTarget}
+        />
+      )}
+
+      {awardTarget && (
+        <AwardStarsSheet
+          open={awardOpen}
+          onClose={() => setAwardOpen(false)}
+          slug={slug}
+          child={{ id: awardTarget.childId, fullName: awardTarget.fullName, gender: awardTarget.gender, avatarUpdatedAt: awardTarget.avatarUpdatedAt }}
+          balance={balancesQuery.data?.find((row) => row.childId === awardTarget.childId)?.balance}
         />
       )}
 

@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { Public } from "../../common/decorators/public.decorator";
 import { TenantJwtAuthGuard } from "../iam/guards/tenant-jwt-auth.guard";
@@ -6,6 +6,7 @@ import { CurrentTenantUser } from "../iam/decorators/current-tenant-user.decorat
 import { TenantAuthenticatedUser, toTenantScope } from "../iam/tenant-auth.types";
 import { CoinsService } from "./coins.service";
 import { CoinsQueryDto } from "./dto/coins-query.dto";
+import { AwardCoinsDto } from "./dto/award-coins.dto";
 
 @ApiBearerAuth()
 @ApiTags("Tenant Coins")
@@ -23,5 +24,15 @@ export class CoinsController {
   @Get("children/:childId/transactions")
   listTransactions(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("childId") childId: string) {
     return this.coinsService.listTransactions(toTenantScope(user), childId);
+  }
+
+  /** Tarbiyachi o'z guruhidagi bolaga qo'lda yulduzcha beradi. */
+  @Post("children/:childId/award")
+  award(
+    @CurrentTenantUser() user: TenantAuthenticatedUser,
+    @Param("childId", ParseUUIDPipe) childId: string,
+    @Body() dto: AwardCoinsDto,
+  ) {
+    return this.coinsService.award(toTenantScope(user), childId, dto);
   }
 }

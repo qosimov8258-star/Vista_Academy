@@ -13,7 +13,7 @@ import { useTr } from "@/i18n/tr";
 const SOURCE_LABEL: Record<CoinTransactionSource, string> = {
   ATTENDANCE: "Davomat",
   WEEKLY_ASSESSMENT: "Haftalik so'rov",
-  MANUAL: "Qo'lda (eski)",
+  MANUAL: "Tarbiyachi berdi",
 };
 
 const SOURCE_TONE: Record<CoinTransactionSource, "success" | "info" | "neutral"> = {

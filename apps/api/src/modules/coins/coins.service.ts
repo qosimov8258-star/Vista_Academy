@@ -1,8 +1,9 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../database/prisma.service";
-import { TenantScope } from "../iam/tenant-auth.types";
+import { TenantScope, requireBranchScope } from "../iam/tenant-auth.types";
 import { resolveTeacherGroupIds, teacherChildWhere, assertTeacherOwnsChild } from "../iam/teacher-scope";
 import { CoinsQueryDto } from "./dto/coins-query.dto";
+import { AwardCoinsDto } from "./dto/award-coins.dto";
 
 /** Bola tafsilotidagi coin tarixida qaytariladigan yozuvlar soni chegarasi. */
 const TRANSACTIONS_HISTORY_LIMIT = 200;
@@ -99,5 +100,43 @@ export class CoinsService {
       take: TRANSACTIONS_HISTORY_LIMIT,
       select: { id: true, amount: true, reason: true, source: true, createdAt: true },
     });
+  }
+
+  /**
+   * Tarbiyachining qo'lda bergan yulduzchasi (manba — MANUAL). Faqat
+   * tarbiyachi va faqat o'z guruhidagi faol bolaga; necha marta berish
+   * cheklanmaydi. Javobda bolaning yangi balansi.
+   */
+  async award(scope: TenantScope, childId: string, dto: AwardCoinsDto) {
+    if (scope.role !== "TEACHER") {
+      throw new ForbiddenException("Yulduzchani faqat tarbiyachi beradi");
+    }
+    const branchId = requireBranchScope(scope);
+    const child = await this.prisma.child.findFirst({
+      where: { id: childId, organizationId: scope.organizationId, branchId },
+      select: { id: true, groupId: true, status: true },
+    });
+    if (!child) {
+      throw new NotFoundException("Bola topilmadi");
+    }
+    await assertTeacherOwnsChild(this.prisma, scope, child);
+    if (child.status !== "ACTIVE") {
+      throw new BadRequestException("Nofaol bolaga yulduzcha berib bo'lmaydi");
+    }
+
+    const reason = dto.reason?.trim() || "Tarbiyachidan rag'bat";
+    await this.prisma.coinTransaction.create({
+      data: {
+        organizationId: scope.organizationId,
+        branchId,
+        childId: child.id,
+        amount: dto.amount,
+        reason,
+        source: "MANUAL",
+        recordedByUserId: scope.userId,
+      },
+    });
+    const total = await this.prisma.coinTransaction.aggregate({ where: { childId: child.id }, _sum: { amount: true } });
+    return { childId: child.id, awarded: dto.amount, balance: total._sum.amount ?? 0 };
   }
 }
