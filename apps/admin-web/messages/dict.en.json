@@ -2795,5 +2795,13 @@
  "Bolani bosing — yulduzcha tarixi ochiladi.": "Tap a child to open their star history.",
  "Savol yoki she'rni belgilang": "Mark a question or the poem",
  "{0} ta yulduzcha": "{0} stars",
- "{0} ta yulduzcha bilan saqlash": "Save with {0} stars"
+ "{0} ta yulduzcha bilan saqlash": "Save with {0} stars",
+ "Surati yo'q · {0}": "No photo · {0}",
+ "Bolani bosing — profilida suratini qo'yasiz.": "Tap a child to add the photo in their profile.",
+ "Bolalar surati": "Children's photos",
+ "{0} tasida yo'q": "{0} missing",
+ "Guruhda bola yo'q": "No children in group",
+ "{0} tasida bor": "{0} with photo",
+ "Hammasida bor": "All have one",
+ "bolaning surati bor": "children have a photo"
 }

@@ -35,6 +35,7 @@ import { IosIcon, type IosTint } from "@/features/director/ios-icon";
 import { MONTHS, WEEKDAYS, greeting, tashkentNow } from "@/features/director/director-home";
 import { todayTashkent, type BoardResult, type WeeklyResult } from "@/features/desk/shared";
 import { useTr } from "@/i18n/tr";
+import { PhotoStatsGroup, type PhotoStats } from "./photo-stats";
 
 /** Ro'yxatda birdaniga ko'rsatiladigan guruhlar; qolgani "Yana ko'rsatish" bilan */
 const PAGE = 10;
@@ -67,6 +68,7 @@ interface GroupToday {
  *   ishda yo'q xodimlar; har daqiqada o'zi yangilanadi;
  * - `/app/desk/weekly` — guruhlar (tarbiyachilari bilan) va shu haftadagi
  *   yangi arizalar;
+ * - `/app/desk/photos` — guruhlar kesimida bolalar surati (bor / yo'q);
  * - havolalar: Bugungi holat (board), Guruhlar, guruh sahifasi, Arizalar (CRM),
  *   shuningdek ovqatlanish, xodimlar davomati va asosiy bo'limlar;
  * - yangilash tugmasi va telefonda pastga tortib yangilash.
@@ -88,6 +90,10 @@ export function BranchAdminHome({ slug, branchName }: { slug: string; branchName
     queryKey: ["desk-weekly", slug, date],
     queryFn: () => api.get<WeeklyResult>(`/app/desk/weekly?from=${date}`),
   });
+  const photos = useQuery({
+    queryKey: ["desk-photos", slug],
+    queryFn: () => api.get<PhotoStats>("/app/desk/photos"),
+  });
 
   const [shown, setShown] = useState(PAGE);
   const [openGroup, setOpenGroup] = useState<GroupToday | null>(null);
@@ -96,10 +102,10 @@ export function BranchAdminHome({ slug, branchName }: { slug: string; branchName
   const [manualRefresh, setManualRefresh] = useState(false);
 
   const refresh = useCallback(async () => {
-    const results = await Promise.all([board.refetch(), weekly.refetch()]);
+    const results = await Promise.all([board.refetch(), weekly.refetch(), photos.refetch()]);
     const failed = results.some((r) => r.isError);
     setToast(failed ? { type: "error", message: tr("Yangilab bo'lmadi") } : { type: "success", message: tr("Yangilandi") });
-  }, [board, weekly, tr]);
+  }, [board, weekly, photos, tr]);
 
   const onRefreshClick = async () => {
     setManualRefresh(true);
@@ -208,43 +214,48 @@ export function BranchAdminHome({ slug, branchName }: { slug: string; branchName
         </Group>
 
         <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)] lg:items-start">
-          {/* Guruhlar */}
-          <Group
-            title={
-              <>
-                {tr("Guruhlar")}
-                {groups.length > 0 && <span className="font-normal normal-case tracking-normal">· {groups.length}</span>}
-              </>
-            }
-            refreshing={weekly.isFetching && !weekly.isLoading && !manualRefresh}
-            action={<GroupLink href={`/${slug}/groups`}>{tr("Barchasi")}</GroupLink>}
-            bare
-          >
-            {weekly.isLoading ? (
-              <SkeletonRows rows={5} />
-            ) : weekly.isError && !weekly.data ? (
-              <ErrorState message={(weekly.error as Error).message} onRetry={() => weekly.refetch()} retrying={weekly.isFetching} />
-            ) : groups.length === 0 ? (
-              <EmptyState icon={GroupIcon} title="Bu filialda hali guruh yo'q" />
-            ) : (
-              <div className={GROUP_BLOCK}>
-                {groups.slice(0, shown).map((g) => (
-                  <ListRow
-                    key={g.id}
-                    onClick={() => setOpenGroup(g)}
-                    avatar={<IosAvatar name={g.name} letters={1} />}
-                    title={tr(g.name)}
-                    subtitle={`${tr("{0} ta bola", g.total)} · ${g.teachers.length > 0 ? g.teachers.join(", ") : tr("Tarbiyachi biriktirilmagan")}`}
-                    meta={<GroupPill g={g} />}
-                    chevron
-                  />
-                ))}
-                {groups.length > shown && (
-                  <Row title={<span className="text-[var(--color-primary)]">{tr("Yana ko'rsatish")}</span>} value={groups.length - shown} onClick={() => setShown((n) => n + PAGE)} chevron={false} />
-                )}
-              </div>
-            )}
-          </Group>
+          <div className="min-w-0 space-y-5">
+            {/* Guruhlar */}
+            <Group
+              title={
+                <>
+                  {tr("Guruhlar")}
+                  {groups.length > 0 && <span className="font-normal normal-case tracking-normal">· {groups.length}</span>}
+                </>
+              }
+              refreshing={weekly.isFetching && !weekly.isLoading && !manualRefresh}
+              action={<GroupLink href={`/${slug}/groups`}>{tr("Barchasi")}</GroupLink>}
+              bare
+            >
+              {weekly.isLoading ? (
+                <SkeletonRows rows={5} />
+              ) : weekly.isError && !weekly.data ? (
+                <ErrorState message={(weekly.error as Error).message} onRetry={() => weekly.refetch()} retrying={weekly.isFetching} />
+              ) : groups.length === 0 ? (
+                <EmptyState icon={GroupIcon} title="Bu filialda hali guruh yo'q" />
+              ) : (
+                <div className={GROUP_BLOCK}>
+                  {groups.slice(0, shown).map((g) => (
+                    <ListRow
+                      key={g.id}
+                      onClick={() => setOpenGroup(g)}
+                      avatar={<IosAvatar name={g.name} letters={1} />}
+                      title={tr(g.name)}
+                      subtitle={`${tr("{0} ta bola", g.total)} · ${g.teachers.length > 0 ? g.teachers.join(", ") : tr("Tarbiyachi biriktirilmagan")}`}
+                      meta={<GroupPill g={g} />}
+                      chevron
+                    />
+                  ))}
+                  {groups.length > shown && (
+                    <Row title={<span className="text-[var(--color-primary)]">{tr("Yana ko'rsatish")}</span>} value={groups.length - shown} onClick={() => setShown((n) => n + PAGE)} chevron={false} />
+                  )}
+                </div>
+              )}
+            </Group>
+
+            {/* Bolalar surati — guruhlar kesimida */}
+            <PhotoStatsGroup slug={slug} query={photos} manualRefresh={manualRefresh} />
+          </div>
 
           <div className="min-w-0 space-y-5">
             {/* Bugun — ko'rsatkichlar */}
