@@ -6,13 +6,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Trash2 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import type { CreateEmployeeResult, Employee, EmployeeCredentials, Group } from "@/lib/types";
-import { deleteEmployeeWithConfirmation, revealEmployeePassword, webauthnErrorMessage } from "@/lib/webauthn";
+import { deleteEmployeeWithConfirmation, webauthnErrorMessage } from "@/lib/webauthn";
 import { IosSheet, SheetPrimaryButton, SheetRow, SheetSection } from "@/components/ios/sheet";
 import { FieldRow, FormSection, PasswordInput, TextInput } from "@/components/ios/form";
 import { Row } from "@/components/ios/group";
 import { Pill } from "@/components/ios/pill";
 import { Spinner } from "@/components/ios/spinner";
-import { CheckIcon, CopyIcon, EyeIcon, EyeOffIcon } from "@/components/ios/icons";
+import { CheckIcon, CopyIcon } from "@/components/ios/icons";
 import { IOS, ROW_SEPARATOR } from "@/components/ios/tokens";
 import { IosIcon } from "@/features/director/ios-icon";
 import { EmployeePhoto } from "@/components/ui/employee-photo";
@@ -29,13 +29,12 @@ const LOGIN_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{1,30}[A-Za-z0-9]$/;
 /**
  * Xodim varag'i — iOS uslubida (SaaS ERP'dagi o'quvchi varag'i tartibida):
  * tepada surat, ism, lavozim va holat; keyin «Ma'lumot», «Kabinet»
- * (login, parol), fan o'qituvchisida «Mavzular», oxirida «Amallar»
+ * (login, yangi parol), fan o'qituvchisida «Mavzular», oxirida «Amallar»
  * (tahrirlash, o'chirish).
  *
- * Parol qaytarib olinadigan (shifrlangan) holda saqlanadi, lekin ko'rsatishdan
- * oldin har safar admin qurilmasi WebAuthn (Face ID/Windows Hello/PIN) bilan
- * tasdiqlanishi kerak — shundan keyingina ochiladi (`revealEmployeePassword`).
- * O'chirish ham shunday tasdiqlanadi.
+ * Joriy parol hech qayerda ko'rsatilmaydi — server uni faqat hash ko'rinishida
+ * saqlaydi. Admin faqat yangi parol qo'ya oladi. O'chirish admin qurilmasi
+ * WebAuthn (Face ID/Windows Hello/PIN) bilan tasdiqlangandan keyin bajariladi.
  */
 export function EmployeeDetailModal({
   open,
@@ -56,10 +55,6 @@ export function EmployeeDetailModal({
   const lastEmployee = useRef<Employee | null>(employeeProp);
   if (employeeProp) lastEmployee.current = employeeProp;
   const employee = employeeProp ?? lastEmployee.current;
-
-  const [visiblePassword, setVisiblePassword] = useState<string | null>(null);
-  const [revealing, setRevealing] = useState(false);
-  const [revealError, setRevealError] = useState<string | null>(null);
 
   const [accountOpen, setAccountOpen] = useState(false);
   const [groupIds, setGroupIds] = useState<string[]>([]);
@@ -88,9 +83,6 @@ export function EmployeeDetailModal({
 
   useEffect(() => {
     if (!open) {
-      setVisiblePassword(null);
-      setRevealing(false);
-      setRevealError(null);
       setAccountOpen(false);
       setGroupIds([]);
       setAccountError(null);
@@ -141,8 +133,6 @@ export function EmployeeDetailModal({
       setNewPassword("");
       setConfirmNewPassword("");
       setCredentialsError(null);
-      // Yangi parol qo'yilgan bo'lsa, avval ko'rsatilgan eski parol endi eskirgan.
-      setVisiblePassword(null);
       queryClient.invalidateQueries({ queryKey: ["employees", slug] });
       setToast({ type: "success", message: "Saqlandi" });
     },
@@ -241,23 +231,6 @@ export function EmployeeDetailModal({
     setGroupIds((prev) => (prev.includes(id) ? [] : [id]));
   };
 
-  const handleShowPassword = async () => {
-    if (visiblePassword) {
-      setVisiblePassword(null);
-      return;
-    }
-    setRevealing(true);
-    setRevealError(null);
-    try {
-      const { password } = await revealEmployeePassword(employee.id);
-      setVisiblePassword(password);
-    } catch (err) {
-      setRevealError(webauthnErrorMessage(err));
-    } finally {
-      setRevealing(false);
-    }
-  };
-
   const handleDelete = async () => {
     setDeleting(true);
     setDeleteError(null);
@@ -351,10 +324,8 @@ export function EmployeeDetailModal({
             footer={
               credentialsError ? (
                 <span className="text-[#ff3b30]">{tr(credentialsError)}</span>
-              ) : revealError ? (
-                <span className="text-[#ff3b30]">{tr(revealError)}</span>
               ) : canWrite ? (
-                tr("Parolni ko'rish uchun qurilmangiz (Face ID, PIN) tasdiqlanadi.")
+                tr("Joriy parol ko'rsatilmaydi. Xodim parolini unutgan bo'lsa — yangi parol qo'ying.")
               ) : undefined
             }
           >
@@ -372,22 +343,6 @@ export function EmployeeDetailModal({
                 className="text-right"
               />
             </FieldRow>
-            <div className="group/row relative flex min-h-[48px] items-center gap-3 px-4">
-              <span className="w-[108px] shrink-0 py-3 text-[15px] text-[var(--color-text)]">{tr("Joriy parol")}</span>
-              <span className="min-w-0 flex-1 truncate text-right font-mono text-[15px] text-[#8e8e93]">{visiblePassword ?? "••••••••••"}</span>
-              {canWrite && (
-                <button
-                  type="button"
-                  onClick={handleShowPassword}
-                  disabled={revealing}
-                  aria-label={visiblePassword ? tr("Parolni yashirish") : tr("Parolni ko'rsatish")}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--color-primary)] transition-colors hover:bg-[#767680]/[0.12] disabled:cursor-wait"
-                >
-                  {revealing ? <Spinner className="h-4 w-4" /> : visiblePassword ? <EyeOffIcon className="h-[18px] w-[18px]" /> : <EyeIcon className="h-[18px] w-[18px]" />}
-                </button>
-              )}
-              <span className={ROW_SEPARATOR} aria-hidden="true" />
-            </div>
             {canWrite && (
               <FieldRow label={tr("Yangi parol")} htmlFor="employee-new-password" error={!newPassword ? (passwordError ?? undefined) : undefined}>
                 <PasswordInput

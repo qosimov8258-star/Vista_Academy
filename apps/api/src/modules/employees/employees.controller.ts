@@ -82,23 +82,6 @@ export class EmployeesController {
     return this.employeesService.updateCredentials(toTenantScope(user), id, dto);
   }
 
-  /**
-   * Xodim kabineti parolini ko'rsatadi. `X-Reveal-Token` — admin qurilmasi
-   * WebAuthn bilan tasdiqlangandan keyin `/app/webauthn/authentication/verify`
-   * dan olinadigan qisqa umrli token.
-   */
-  @Get(":id/password")
-  revealPassword(
-    @CurrentTenantUser() user: TenantAuthenticatedUser,
-    @Param("id") id: string,
-    @Headers("x-reveal-token") revealToken?: string,
-  ) {
-    if (!revealToken) {
-      throw new BadRequestException("Reveal token kerak");
-    }
-    return this.employeesService.revealPassword(toTenantScope(user), id, revealToken);
-  }
-
   /** Xodim tafsilot oynasidagi "Mavzu qo'shasizmi?" ro'yxati. */
   @Get(":id/topics")
   listTopics(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string) {

@@ -9,7 +9,6 @@ import { Gender, GuardianRelation, Prisma, PrismaClient } from "@prisma/client";
 import * as argon2 from "argon2";
 import "dotenv/config";
 import { createChildWithGuardian, withPublicIdRetry } from "../src/modules/children/child-creation";
-import { encryptSecret } from "../src/common/crypto/reversible-secret";
 import { DEFAULT_POSITIONS } from "../src/common/constants/default-positions";
 import { DEFAULT_SUBJECTS } from "../src/common/constants/default-subjects";
 
@@ -111,7 +110,6 @@ async function main() {
         organizationId: organization.id,
         login: ADMIN_LOGIN,
         passwordHash: adminPasswordHash,
-        passwordEncrypted: encryptSecret(ADMIN_PASSWORD),
         fullName: "Test Super Admin",
         role: "NETWORK_ADMIN",
       },
@@ -194,7 +192,6 @@ async function main() {
       branchId: financeBranch.id,
       login: FINANCE_LOGIN,
       passwordHash: financePasswordHash,
-      passwordEncrypted: encryptSecret(FINANCE_PASSWORD),
       fullName: "Test Moliyachi",
       role: "FINANCE",
     },
@@ -219,7 +216,6 @@ async function main() {
       branchId: financeBranch.id,
       login: BRANCH_ADMIN_LOGIN,
       passwordHash: await argon2.hash(BRANCH_ADMIN_PASSWORD),
-      passwordEncrypted: encryptSecret(BRANCH_ADMIN_PASSWORD),
       fullName: "Test Filial Admini",
       role: "BRANCH_ADMIN",
     },

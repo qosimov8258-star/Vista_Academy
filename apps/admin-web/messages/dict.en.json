@@ -2794,11 +2794,11 @@
  "Mavzular": "Topics",
  "Mavzuni o'chirish uchun ustiga bosing.": "Tap a topic to delete it.",
  "Nofaol qilinsa xodim kabinetga kira olmaydi va Face ID terminalidan olib tashlanadi. Tarixi saqlanib qoladi.": "An inactive employee can't sign in and is removed from the Face ID terminal. Their history is kept.",
- "Parolni ko'rish uchun qurilmangiz (Face ID, PIN) tasdiqlanadi.": "To view the password, your device (Face ID, PIN) is verified.",
  "Tekshirilmoqda…": "Checking…",
  "Xodim faqat shu guruhni ko'radi va davomatini yuritadi.": "The employee sees only this group and keeps its attendance.",
  "Xodim nofaol: kabinetga kira olmaydi, Face ID uni tanimaydi. Davomat va oylik tarixi saqlangan.": "The employee is inactive: can't sign in and Face ID won't recognise them. Attendance and payroll history is kept.",
  "Xodimning yuzi ko'rinib turgan suratni tanlang.": "Choose a photo showing the employee's face.",
  "Yangi fan «Yangi xodim» oynasidagi fanlar ro'yxatidan qo'shiladi.": "New subjects are added from the subject list in the “New employee” window.",
- "Yangi lavozim «Yangi xodim» oynasidagi lavozimlar ro'yxatidan qo'shiladi.": "New positions are added from the position list in the “New employee” window."
+ "Yangi lavozim «Yangi xodim» oynasidagi lavozimlar ro'yxatidan qo'shiladi.": "New positions are added from the position list in the “New employee” window.",
+ "Joriy parol ko'rsatilmaydi. Xodim parolini unutgan bo'lsa — yangi parol qo'ying.": "The current password is never shown. If the employee forgot it, set a new one."
 }

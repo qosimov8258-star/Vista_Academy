@@ -2794,11 +2794,11 @@
  "Mavzular": "Темы",
  "Mavzuni o'chirish uchun ustiga bosing.": "Нажмите на тему, чтобы удалить её.",
  "Nofaol qilinsa xodim kabinetga kira olmaydi va Face ID terminalidan olib tashlanadi. Tarixi saqlanib qoladi.": "Неактивный сотрудник не сможет войти в кабинет и будет удалён из терминала Face ID. История сохранится.",
- "Parolni ko'rish uchun qurilmangiz (Face ID, PIN) tasdiqlanadi.": "Чтобы увидеть пароль, подтвердите устройство (Face ID, PIN).",
  "Tekshirilmoqda…": "Проверяется…",
  "Xodim faqat shu guruhni ko'radi va davomatini yuritadi.": "Сотрудник видит только эту группу и ведёт её посещаемость.",
  "Xodim nofaol: kabinetga kira olmaydi, Face ID uni tanimaydi. Davomat va oylik tarixi saqlangan.": "Сотрудник неактивен: не может войти, Face ID его не узнаёт. История посещаемости и зарплаты сохранена.",
  "Xodimning yuzi ko'rinib turgan suratni tanlang.": "Выберите фото, где видно лицо сотрудника.",
  "Yangi fan «Yangi xodim» oynasidagi fanlar ro'yxatidan qo'shiladi.": "Новый предмет добавляется в списке предметов окна «Новый сотрудник».",
- "Yangi lavozim «Yangi xodim» oynasidagi lavozimlar ro'yxatidan qo'shiladi.": "Новая должность добавляется в списке должностей окна «Новый сотрудник»."
+ "Yangi lavozim «Yangi xodim» oynasidagi lavozimlar ro'yxatidan qo'shiladi.": "Новая должность добавляется в списке должностей окна «Новый сотрудник».",
+ "Joriy parol ko'rsatilmaydi. Xodim parolini unutgan bo'lsa — yangi parol qo'ying.": "Текущий пароль не показывается. Если сотрудник забыл пароль — задайте новый."
 }

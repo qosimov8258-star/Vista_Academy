@@ -4,7 +4,6 @@ import { Prisma, type TenantUserRole } from "@prisma/client";
 import * as argon2 from "argon2";
 import { PrismaService } from "../../database/prisma.service";
 import { normalizePhone } from "../../common/phone";
-import { encryptSecret, decryptSecret } from "../../common/crypto/reversible-secret";
 import { generateEmployeeLogin, generateEmployeePassword } from "../../common/text/generate-credentials";
 import { DEFAULT_POSITIONS } from "../../common/constants/default-positions";
 import {
@@ -171,7 +170,7 @@ export class EmployeesService {
 
     const accountGroupIds = requireGroupsFor(dto.position, dto.account.groupIds);
     await this.assertGroupsBelongToBranch(branchId, accountGroupIds);
-    const { login, password, passwordHash, passwordEncrypted } = await this.resolveCredentials(
+    const { login, password, passwordHash } = await this.resolveCredentials(
       scope.organizationId,
       dto.firstName,
       dto.lastName,
@@ -189,7 +188,6 @@ export class EmployeesService {
             branchId,
             login,
             passwordHash,
-            passwordEncrypted,
             fullName,
             role: roleForPosition(dto.position),
           },
@@ -232,9 +230,9 @@ export class EmployeesService {
   /**
    * Login va parolni admin bergan bo'lsa shuni ishlatadi, aks holda
    * login (`ism.familiya`) va tasodifiy parol avtomatik generatsiya
-   * qiladi. Parol autentifikatsiya uchun argon2 hash sifatida, "Parolni
-   * ko'rsatish" funksiyasi uchun esa alohida shifrlangan (qaytarib
-   * olinadigan) ko'rinishda saqlanadi.
+   * qiladi. Parol faqat argon2 hash sifatida saqlanadi — qaytarib
+   * ochiladigan nusxasi yo'q, tizimda hech kim uni ko'ra olmaydi. Yangi
+   * parol faqat yaratilgan javobda bir marta qaytadi.
    */
   private async resolveCredentials(
     organizationId: string,
@@ -253,11 +251,8 @@ export class EmployeesService {
           return !!existing;
         });
     const password = customPassword ?? generateEmployeePassword();
-    const [passwordHash, passwordEncrypted] = await Promise.all([
-      argon2.hash(password),
-      Promise.resolve(encryptSecret(password)),
-    ]);
-    return { login, password, passwordHash, passwordEncrypted };
+    const passwordHash = await argon2.hash(password);
+    return { login, password, passwordHash };
   }
 
   async findAll(scope: TenantScope, query: EmployeeQueryDto) {
@@ -464,7 +459,7 @@ export class EmployeesService {
     }
     const groupIds = requireGroupsFor(employee.position, dto.groupIds);
     await this.assertGroupsBelongToBranch(branchId, groupIds);
-    const { login, password, passwordHash, passwordEncrypted } = await this.resolveCredentials(
+    const { login, password, passwordHash } = await this.resolveCredentials(
       scope.organizationId,
       employee.firstName,
       employee.lastName,
@@ -480,7 +475,6 @@ export class EmployeesService {
             branchId,
             login,
             passwordHash,
-            passwordEncrypted,
             fullName: employee.fullName,
             role: roleForPosition(employee.position),
           },
@@ -529,13 +523,10 @@ export class EmployeesService {
     assertCanManageCredentials(scope.role, employee.tenantUser?.role);
 
     const password = generateEmployeePassword();
-    const [passwordHash, passwordEncrypted] = await Promise.all([
-      argon2.hash(password),
-      Promise.resolve(encryptSecret(password)),
-    ]);
+    const passwordHash = await argon2.hash(password);
     await this.prisma.tenantUser.update({
       where: { id: employee.tenantUserId },
-      data: { passwordHash, passwordEncrypted },
+      data: { passwordHash, passwordEncrypted: null },
     });
     await this.prisma.tenantRefreshToken.updateMany({
       where: { tenantUserId: employee.tenantUserId, revokedAt: null },
@@ -579,12 +570,8 @@ export class EmployeesService {
       data.login = dto.login.trim().toLowerCase();
     }
     if (dto.password) {
-      const [passwordHash, passwordEncrypted] = await Promise.all([
-        argon2.hash(dto.password),
-        Promise.resolve(encryptSecret(dto.password)),
-      ]);
-      data.passwordHash = passwordHash;
-      data.passwordEncrypted = passwordEncrypted;
+      data.passwordHash = await argon2.hash(dto.password);
+      data.passwordEncrypted = null;
     }
 
     try {
@@ -603,33 +590,6 @@ export class EmployeesService {
     } catch (err) {
       throw this.translateLoginConflict(err);
     }
-  }
-
-  /**
-   * Xodim kabineti parolini ko'rsatadi. WebAuthn bilan tasdiqlangan qisqa
-   * umrli "reveal token" talab qilinadi — shu tokensiz parol hech qachon
-   * qaytarilmaydi.
-   */
-  async revealPassword(scope: TenantScope, id: string, revealToken: string) {
-    if (!verifyRevealToken(this.jwt, revealToken, scope.userId)) {
-      throw new UnauthorizedException("Qurilma tasdiqlanmagan yoki muddati tugagan");
-    }
-    const branchId = requireOperationalScope(scope);
-    const employee = await this.prisma.employee.findFirst({
-      where: { id, organizationId: scope.organizationId, branchId },
-      select: { tenantUser: { select: { login: true, passwordEncrypted: true, role: true } } },
-    });
-    if (!employee?.tenantUser) {
-      throw new NotFoundException("Xodimning kabineti yo'q");
-    }
-    assertCanManageCredentials(scope.role, employee.tenantUser.role);
-    if (!employee.tenantUser.passwordEncrypted) {
-      throw new BadRequestException("Bu xodim uchun parol saqlanmagan — yangi parol generatsiya qiling");
-    }
-    return {
-      login: employee.tenantUser.login,
-      password: decryptSecret(Buffer.from(employee.tenantUser.passwordEncrypted)),
-    };
   }
 
   /**

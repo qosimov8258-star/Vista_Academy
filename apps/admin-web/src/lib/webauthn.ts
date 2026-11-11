@@ -39,7 +39,7 @@ async function registerDevice(): Promise<void> {
   await api.post("/app/webauthn/registration/verify", { response, deviceName: guessDeviceName() });
 }
 
-/** Qurilma tasdiqlanadi va parolni bir marta ochish uchun qisqa umrli token qaytadi. */
+/** Qurilma tasdiqlanadi va xavfli amal (xodimni o'chirish) uchun qisqa umrli token qaytadi. */
 async function authenticateAndGetRevealToken(): Promise<string> {
   assertSupported();
   const optionsJSON = await api.post<PublicKeyCredentialRequestOptionsJSON>("/app/webauthn/authentication/options");
@@ -51,24 +51,8 @@ async function authenticateAndGetRevealToken(): Promise<string> {
 }
 
 /**
- * Xodim kabineti parolini ko'rsatadi. Avval qurilmasi ro'yxatdan o'tganini
- * tekshiradi — bo'lmasa, avval ro'yxatdan o'tkazadi (bitta amal ichida),
- * so'ng WebAuthn bilan tasdiqlab, tokenni parolni olish uchun ishlatadi.
- */
-export async function revealEmployeePassword(employeeId: string): Promise<{ login: string; password: string }> {
-  const alreadyRegistered = await hasRegisteredDevice();
-  if (!alreadyRegistered) {
-    await registerDevice();
-  }
-  const revealToken = await authenticateAndGetRevealToken();
-  return api.get<{ login: string; password: string }>(`/app/employees/${employeeId}/password`, {
-    headers: { "X-Reveal-Token": revealToken },
-  });
-}
-
-/**
- * Xodimni butunlay o'chiradi. Parolni ko'rsatish bilan bir xil qurilma
- * tasdiqlashi (Face ID/Windows Hello/PIN) talab qilinadi — shu tokensiz
+ * Xodimni butunlay o'chiradi. Admin qurilmasi tasdiqlashi
+ * (Face ID/Windows Hello/PIN) talab qilinadi — shu tokensiz
  * o'chirish hech qachon amalga oshmaydi.
  */
 export async function deleteEmployeeWithConfirmation(employeeId: string): Promise<void> {
