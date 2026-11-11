@@ -5,13 +5,15 @@ import Link from "next/link";
 import clsx from "clsx";
 import { useQuery } from "@tanstack/react-query";
 import { api, getPaginated } from "@/lib/api";
-import type { Child, ChildAllergy } from "@/lib/types";
+import type { Child, ChildAllergy, CoinChildBalance } from "@/lib/types";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { ChildPhoto } from "@/components/ui/child-photo";
 import { initials } from "@/components/ui/avatar";
 import { ChevronRightIcon, ChildIcon, CloseIcon, PhoneIcon, SearchIcon } from "@/components/ios/icons";
 import { ChildPhotoSheet } from "@/features/children/child-photo-sheet";
-import { Camera, Paperclip } from "lucide-react";
+import { AwardStarsSheet } from "@/features/coins/award-stars-sheet";
+import { IOS } from "@/components/ios/tokens";
+import { Camera, Paperclip, Star } from "lucide-react";
 import { EmptyRow, Group, LargeTitle, Row, Segmented, SkeletonRows, TeacherPage } from "./teacher-ui";
 import styles from "./teacher.module.css";
 import { useTr } from "@/i18n/tr";
@@ -33,6 +35,8 @@ export function TeacherChildren({ slug }: { slug: string }) {
   const [onlyNoPhoto, setOnlyNoPhoto] = useState(false);
   const [photoChild, setPhotoChild] = useState<Child | null>(null);
   const [photoOpen, setPhotoOpen] = useState(false);
+  const [starChild, setStarChild] = useState<Child | null>(null);
+  const [starOpen, setStarOpen] = useState(false);
 
   const childrenQuery = useQuery({
     queryKey: ["children", slug, 1, forcedBranchId, search, "", status, LIMIT],
@@ -50,6 +54,12 @@ export function TeacherChildren({ slug }: { slug: string }) {
     queryFn: () => api.get<ChildAllergy[]>(`/app/health/allergies${forcedBranchId ? `?branchId=${forcedBranchId}` : ""}`),
   });
   const allergyIds = new Set((allergiesQuery.data ?? []).map((a) => a.child.id));
+  // Har bir bolaning yulduzcha balansi — ro'yxatdagi ⭐ tugmasida ko'rinadi
+  const starsQuery = useQuery({
+    queryKey: ["coin-children", slug, forcedBranchId ?? "mine"],
+    queryFn: () => api.get<CoinChildBalance[]>(`/app/coins/children${forcedBranchId ? `?branchId=${forcedBranchId}` : ""}`),
+  });
+  const starsByChild = new Map((starsQuery.data ?? []).map((row) => [row.childId, row.balance]));
 
   const all = childrenQuery.data?.data ?? [];
   const noPhotoCount = all.filter((c) => c.status === "ACTIVE" && !c.avatarUpdatedAt).length;
@@ -161,8 +171,27 @@ export function TeacherChildren({ slug }: { slug: string }) {
                       {child.status !== "ACTIVE" && " · Nofaol"}
                     </span>
                   </span>
-                  {!guardian?.guardian.phone && <ChevronRightIcon className="h-4 w-4 shrink-0 text-[#c4c4c7]" />}
+                  {!guardian?.guardian.phone && child.status !== "ACTIVE" && <ChevronRightIcon className="h-4 w-4 shrink-0 text-[#c4c4c7]" />}
                 </Link>
+                {child.status === "ACTIVE" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStarChild(child);
+                      setStarOpen(true);
+                    }}
+                    aria-label={tr("{0}ga yulduzcha berish", child.fullName)}
+                    className="flex h-11 shrink-0 cursor-pointer items-center gap-1 rounded-full px-2 transition-transform active:scale-95"
+                  >
+                    <span
+                      className="flex h-8 items-center gap-1 rounded-full px-2.5 text-[14px] font-semibold tabular-nums"
+                      style={{ backgroundColor: `${IOS.orange}1f`, color: IOS.orange }}
+                    >
+                      <Star className="h-4 w-4" fill={IOS.orange} strokeWidth={0} />
+                      {starsByChild.get(child.id) ?? "·"}
+                    </span>
+                  </button>
+                )}
                 {guardian?.guardian.phone && (
                   <a
                     href={`tel:${guardian.guardian.phone.replace(/[^\d+]/g, "")}`}
@@ -177,6 +206,16 @@ export function TeacherChildren({ slug }: { slug: string }) {
           })
         )}
       </Group>
+
+      {starChild && (
+        <AwardStarsSheet
+          open={starOpen}
+          onClose={() => setStarOpen(false)}
+          slug={slug}
+          child={starChild}
+          balance={starsByChild.get(starChild.id)}
+        />
+      )}
 
       {photoChild && (
         <ChildPhotoSheet open={photoOpen} onClose={() => setPhotoOpen(false)} slug={slug} child={photoChild} canRemove={false} />

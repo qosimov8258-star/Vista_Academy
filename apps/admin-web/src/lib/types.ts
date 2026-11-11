@@ -322,8 +322,8 @@ export interface CoinChildBalance {
   weeklyAssessmentCoins: number;
 }
 
-/** Coin qaysi avtomatik manbadan berilganini bildiradi — hech qachon qo'lda emas. */
-export type CoinTransactionSource = "ATTENDANCE" | "WEEKLY_ASSESSMENT" | "MANUAL";
+/** Yulduzcha qayerdan kelgani (yoki do'konda sarflangani — manfiy summa). */
+export type CoinTransactionSource = "ATTENDANCE" | "WEEKLY_ASSESSMENT" | "PRODUCT_PURCHASE" | "MANUAL";
 
 /** `GET /app/coins/children/:childId/transactions` ro'yxatidagi bitta yozuv. */
 export interface CoinTransaction {
