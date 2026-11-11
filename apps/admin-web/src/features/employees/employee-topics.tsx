@@ -5,7 +5,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import { api, ApiError } from "@/lib/api";
 import type { EmployeeTopic } from "@/lib/types";
-import { CloseIcon } from "@/components/ui/icons";
+import { CloseIcon, PlusIcon } from "@/components/ios/icons";
+import { IosSwitch } from "@/components/ios/form";
+import { GROUP_BLOCK, ROW_SEPARATOR, SECTION_TITLE } from "@/components/ios/tokens";
 import { useTr } from "@/i18n/tr";
 
 /**
@@ -84,112 +86,105 @@ export function EmployeeTopics({
   };
 
   return (
-    <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] p-4">
-      <label className="flex cursor-pointer items-center justify-between gap-3">
-        <span>
-          <span className="block text-sm font-medium text-[var(--color-text)]">{tr("Mavzu qo'shasizmi?")}</span>
-          <span className="block text-xs text-[var(--color-text-muted)]">
-            {tr("O'tilgan yoki o'tiladigan dars mavzularini shu yerga qo'shib boring.")}
+    <section>
+      <h3 className={SECTION_TITLE}>{tr("Mavzular")}</h3>
+      <div className={GROUP_BLOCK}>
+        <div className="group/row relative flex min-h-[52px] items-center gap-3 px-4 py-2.5">
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15px] text-[var(--color-text)]">{tr("Mavzu qo'shasizmi?")}</span>
+            <span className="block text-[12.5px] leading-snug text-[#8e8e93]">
+              {tr("O'tilgan yoki o'tiladigan dars mavzularini shu yerga qo'shib boring.")}
+            </span>
           </span>
-        </span>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={isOn}
-          aria-label={tr("Mavzu qo'shasizmi?")}
-          onClick={() => onManagedByAdminChange(!isOn)}
-          className={clsx(
-            "relative h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-[var(--dur-fast)]",
-            isOn ? "bg-[var(--color-primary)]" : "bg-[var(--color-border)]",
-          )}
-        >
-          <span
-            className={clsx(
-              "absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-[var(--dur-fast)]",
-              isOn && "translate-x-5",
-            )}
-          />
-        </button>
-      </label>
+          <IosSwitch checked={isOn} onChange={onManagedByAdminChange} label={tr("Mavzu qo'shasizmi?")} />
+        </div>
 
-      {isOn && (
-        <div className="mt-3.5 space-y-3 border-t border-[var(--color-border)] pt-3.5">
-          {error && <p className="text-xs text-[var(--color-danger)]">{tr(error)}</p>}
-
-          <div className="relative">
-            <input
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              onFocus={() => setInputFocused(true)}
-              onBlur={() => setTimeout(() => setInputFocused(false), 150)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  submit(value);
-                }
-              }}
-              placeholder={tr("Mavzu nomini kiriting va Enter bosing...")}
-              disabled={addMutation.isPending}
-              className="w-full rounded-2xl border border-[var(--color-border)] bg-white px-3.5 py-2.5 text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[var(--color-primary)] disabled:opacity-60"
-            />
-            {inputFocused && suggestions.length > 0 && (
-              <div className="absolute z-10 mt-1.5 max-h-48 w-full overflow-y-auto rounded-2xl border border-[var(--color-border)] bg-white p-1.5 shadow-lg">
-                {suggestions.map((subject) => (
+        {isOn && (
+          <>
+            <div className="group/row relative px-4">
+              <input
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                onFocus={() => setInputFocused(true)}
+                onBlur={() => setTimeout(() => setInputFocused(false), 150)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    submit(value);
+                  }
+                }}
+                placeholder={tr("Mavzu nomini kiriting va Enter bosing...")}
+                disabled={addMutation.isPending}
+                className="w-full bg-transparent py-3 text-[15px] text-[var(--color-text)] outline-none placeholder:text-[#c4c4c6] disabled:opacity-50"
+              />
+              <span className={ROW_SEPARATOR} aria-hidden="true" />
+            </div>
+            {inputFocused &&
+              suggestions.map((subject) => (
+                <div key={subject} className="group/row relative">
                   <button
-                    key={subject}
                     type="button"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => submit(subject)}
-                    className="block w-full cursor-pointer rounded-xl px-3 py-2 text-left text-sm text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]"
+                    className="flex min-h-[44px] w-full items-center gap-2 px-4 text-left text-[15px] text-[var(--color-primary)] transition-colors hover:bg-[#767680]/[0.05] active:bg-[#767680]/[0.1]"
                   >
-                    {tr(subject)}
+                    <PlusIcon className="h-4 w-4 shrink-0" strokeWidth={2.4} />
+                    <span className="truncate">{tr(subject)}</span>
                   </button>
-                ))}
-              </div>
-            )}
-          </div>
+                  <span className={ROW_SEPARATOR} aria-hidden="true" />
+                </div>
+              ))}
 
-          {topicsQuery.isLoading ? (
-            <p className="text-xs text-[var(--color-text-muted)]">{tr("Yuklanmoqda...")}</p>
-          ) : topics.length === 0 ? (
-            <p className="text-xs text-[var(--color-text-muted)]">{tr("Hali mavzu qo'shilmagan")}</p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {topics.map((topic) => {
-                const selected = selectedId === topic.id;
-                return (
-                  <span
-                    key={topic.id}
-                    onClick={() => setSelectedId(selected ? null : topic.id)}
-                    className={clsx(
-                      "flex cursor-pointer items-center gap-1 rounded-full px-3 py-1.5 text-[13px] transition-colors",
-                      selected
-                        ? "bg-[var(--color-primary)]/10 text-[var(--color-primary)] ring-1 ring-inset ring-[var(--color-primary)]/30"
-                        : "bg-[var(--color-surface-sunken)] text-[var(--color-text)] hover:bg-[var(--color-border)]",
-                    )}
-                  >
-                    {tr(topic.title)}
-                    {selected && (
-                      <button
-                        type="button"
-                        aria-label={tr("Mavzuni o'chirish")}
-                        disabled={removeMutation.isPending}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeMutation.mutate(topic.id);
-                        }}
-                        className="flex h-4 w-4 cursor-pointer items-center justify-center rounded-full text-[var(--color-text-muted)] hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)] disabled:opacity-50"
+            <div className="group/row relative px-4 py-3">
+              {topicsQuery.isLoading ? (
+                <p className="text-[13px] text-[#8e8e93]">{tr("Yuklanmoqda...")}</p>
+              ) : topics.length === 0 ? (
+                <p className="text-[13px] text-[#8e8e93]">{tr("Hali mavzu qo'shilmagan")}</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {topics.map((topic) => {
+                    const selected = selectedId === topic.id;
+                    return (
+                      <span
+                        key={topic.id}
+                        onClick={() => setSelectedId(selected ? null : topic.id)}
+                        className={clsx(
+                          "flex h-8 cursor-pointer items-center gap-1 rounded-full px-3 text-[13.5px] transition-colors",
+                          selected
+                            ? "bg-[var(--color-primary)]/[0.12] font-medium text-[var(--color-primary)]"
+                            : "bg-[#767680]/[0.12] text-[var(--color-text)]",
+                        )}
                       >
-                        <CloseIcon className="h-3 w-3" />
-                      </button>
-                    )}
-                  </span>
-                );
-              })}
+                        {tr(topic.title)}
+                        {selected && (
+                          <button
+                            type="button"
+                            aria-label={tr("Mavzuni o'chirish")}
+                            disabled={removeMutation.isPending}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeMutation.mutate(topic.id);
+                            }}
+                            className="-mr-1 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full text-[#ff3b30] disabled:opacity-50"
+                          >
+                            <CloseIcon className="h-3.5 w-3.5" strokeWidth={2.6} />
+                          </button>
+                        )}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+              <span className={ROW_SEPARATOR} aria-hidden="true" />
             </div>
-          )}
-        </div>
+          </>
+        )}
+      </div>
+      {isOn && (
+        <p className={clsx("px-4 pt-2 text-[12.5px] leading-snug", error ? "text-[#ff3b30]" : "text-[#8e8e93]")}>
+          {error ? tr(error) : tr("Mavzuni o'chirish uchun ustiga bosing.")}
+        </p>
       )}
-    </div>
+    </section>
   );
 }

@@ -22,6 +22,7 @@ import { R2Service } from "../storage/r2.service";
 import { R2_CATEGORY } from "../storage/r2.constants";
 import { CreateEmployeeDto, EmployeeAccountDto } from "./dto/create-employee.dto";
 import { UpdateEmployeeCredentialsDto } from "./dto/update-employee-credentials.dto";
+import { UpdateEmployeeDto } from "./dto/update-employee.dto";
 import { CreateEmployeeTopicDto } from "./dto/create-employee-topic.dto";
 import { UpdateEmployeeTopicsSettingDto } from "./dto/update-employee-topics-setting.dto";
 import { UpdateEmployeeGroupsDto } from "./dto/update-employee-groups.dto";
@@ -300,6 +301,149 @@ export class EmployeesService {
       }
       return tx.employee.findUniqueOrThrow({ where: { id: employeeId }, include: employeeInclude });
     });
+  }
+
+  /**
+   * Xodimni tahrirlash: ism, telefon, lavozim (fan), faol/nofaol holati va
+   * kabineti bo'lsa — guruhi. Kabinet (TenantUser) xodim bilan birga
+   * moslanadi: ism o'zgarsa kabinetdagi ism ham, lavozim o'zgarsa rol ham
+   * (o'qituvchi/oshpaz/administrator), nofaol bo'lsa kabinet yopiladi va
+   * ochiq seanslar tugatiladi. Yuz tanish terminali ham yangilanadi.
+   *
+   * Huquq: administrator (MANAGER) faqat o'qituvchi va oshpazni tahrirlaydi
+   * va hech kimni administrator qila olmaydi — login/parol qoidasi bilan bir xil.
+   * Filial admini yoki moliyachi kabinetiga bog'langan xodimning roli
+   * lavozimdan qayta hisoblanmaydi (adminni o'qituvchiga tushirib qo'ymaslik uchun).
+   */
+  async update(caller: TenantAuthenticatedUser, id: string, dto: UpdateEmployeeDto) {
+    const scope = toTenantScope(caller);
+    const branchId = requireOperationalScope(scope);
+    const employee = await this.prisma.employee.findFirst({
+      where: { id, organizationId: scope.organizationId, branchId },
+      include: { tenantUser: { select: { id: true, role: true } }, teachingGroups: { select: { groupId: true } } },
+    });
+    if (!employee) {
+      throw new NotFoundException("Xodim topilmadi");
+    }
+    const currentRole = employee.tenantUser?.role ?? null;
+    if (scope.role === "MANAGER" && currentRole && !["TEACHER", "CHEF"].includes(currentRole)) {
+      throw new ForbiddenException("Bu xodimni tahrirlashga huquqingiz yo'q");
+    }
+
+    const firstName = dto.firstName?.trim() ?? employee.firstName;
+    const lastName = dto.lastName?.trim() ?? employee.lastName;
+    const fullName = composeEmployeeFullName(lastName, firstName);
+    const position = dto.position?.trim() ?? employee.position;
+    const positionChanged = normalizePosition(position) !== normalizePosition(employee.position);
+
+    let phone = employee.phone;
+    if (dto.phone !== undefined) {
+      phone = dto.phone.trim() ? normalizePhone(dto.phone) : null;
+      if (phone && phone !== employee.phone) {
+        const taken = await this.prisma.employee.findFirst({
+          where: { organizationId: scope.organizationId, phone, id: { not: id } },
+          select: { id: true },
+        });
+        if (taken) {
+          throw new ConflictException("Bu telefon raqami boshqa xodimda allaqachon mavjud");
+        }
+      }
+    }
+
+    const isSubjectTeacher = normalizePosition(position) === SUBJECT_TEACHER_POSITION;
+    const subjects = isSubjectTeacher ? (dto.subjects ?? employee.subjects).map((s) => s.trim()).filter(Boolean) : [];
+    if (isSubjectTeacher && subjects.length === 0) {
+      throw new BadRequestException("Kamida bitta fan tanlang");
+    }
+
+    if (employee.tenantUser && positionChanged && CABINETLESS_POSITIONS.has(normalizePosition(position))) {
+      throw new BadRequestException("Kabineti bor xodimni kabinetsiz lavozimga o'tkazib bo'lmaydi");
+    }
+
+    // Kabinet roli lavozimdan kelib chiqadigan bo'lsagina qayta hisoblanadi
+    const derivedRoles: TenantUserRole[] = ["TEACHER", "CHEF", "MANAGER"];
+    const nextRole = currentRole && derivedRoles.includes(currentRole) ? roleForPosition(position) : currentRole;
+    if (nextRole && nextRole !== currentRole && scope.role === "MANAGER" && nextRole === "MANAGER") {
+      throw new ForbiddenException("Administrator lavozimiga faqat filial admini o'tkaza oladi");
+    }
+
+    const isActive = dto.isActive ?? employee.isActive;
+    if (!isActive && employee.tenantUserId === scope.userId) {
+      throw new BadRequestException("O'zingizni nofaol qila olmaysiz");
+    }
+
+    // Guruh: faqat kabineti bor o'qituvchi/oshpaz/administratorda. Guruhsiz
+    // lavozimga o'tsa guruhdan chiqariladi.
+    let groupIds: string[] | null = null;
+    if (employee.tenantUser && currentRole && derivedRoles.includes(currentRole)) {
+      if (GROUPLESS_POSITIONS.has(normalizePosition(position))) {
+        groupIds = employee.teachingGroups.length > 0 ? [] : null;
+      } else if (dto.groupIds !== undefined) {
+        groupIds = requireGroupsFor(position, dto.groupIds);
+        await this.assertGroupsBelongToBranch(branchId, groupIds);
+      } else if (positionChanged && employee.teachingGroups.length === 0) {
+        throw new BadRequestException(GROUP_REQUIRED_MESSAGE);
+      }
+    }
+
+    const nameChanged = fullName !== employee.fullName;
+    const activeChanged = isActive !== employee.isActive;
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      if (employee.tenantUser) {
+        const userData: Prisma.TenantUserUpdateInput = {};
+        if (nameChanged) userData.fullName = fullName;
+        if (nextRole && nextRole !== currentRole) userData.role = nextRole;
+        if (activeChanged) userData.isActive = isActive;
+        if (Object.keys(userData).length > 0) {
+          await tx.tenantUser.update({ where: { id: employee.tenantUser.id }, data: userData });
+        }
+        // Nofaol qilinsa yoki roli o'zgarsa — eski seans eski huquq bilan qolmasin
+        if ((activeChanged && !isActive) || (nextRole && nextRole !== currentRole)) {
+          await tx.tenantRefreshToken.updateMany({
+            where: { tenantUserId: employee.tenantUser.id, revokedAt: null },
+            data: { revokedAt: new Date() },
+          });
+        }
+      }
+      if (groupIds !== null) {
+        await tx.groupTeacher.deleteMany({ where: { employeeId: id } });
+        if (groupIds.length > 0) {
+          await tx.groupTeacher.createMany({ data: groupIds.map((groupId) => ({ groupId, employeeId: id })) });
+        }
+      }
+      return tx.employee.update({
+        where: { id },
+        data: { firstName, lastName, fullName, phone, position, subjects, isActive },
+        include: employeeInclude,
+      });
+    });
+
+    const changes = [
+      nameChanged && `ism: ${employee.fullName} → ${fullName}`,
+      phone !== employee.phone && "telefon",
+      positionChanged && `lavozim: ${employee.position} → ${position}`,
+      activeChanged && (isActive ? "faol qilindi" : "nofaol qilindi"),
+      groupIds !== null && "guruh",
+    ].filter(Boolean);
+    if (changes.length > 0) {
+      await this.auditLog.logFromUser(caller, {
+        action: "employee.update",
+        entityType: "Employee",
+        entityId: id,
+        branchId,
+        summary: `${fullName} tahrirlandi (${changes.join(", ")})`,
+      });
+    }
+
+    // Yuz tanish terminallari: nofaol — olib tashlanadi; faol bo'lsa ism/surat yangilanadi
+    if (activeChanged && !isActive) {
+      await this.faceIdCommands.enqueueDelete({ organizationId: employee.organizationId, branchId, employeeNo: employee.employeeNo });
+    } else if (isActive && (nameChanged || activeChanged)) {
+      await this.faceIdCommands.enqueueEmployeeSync(id);
+      if (activeChanged) await this.faceIdCommands.enqueueFace(id);
+    }
+    return updated;
   }
 
   /** Kabineti bo'lmagan xodimga keyinchalik login ochish. Login/parol avtomatik generatsiya qilinadi. */
