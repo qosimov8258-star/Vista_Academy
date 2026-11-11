@@ -7,14 +7,21 @@
 import { use } from "react";
 import { useAuth } from "@/lib/use-auth";
 import { isTeacher } from "@/lib/permissions";
-import { LoadingState } from "@/components/ui/states";
+import { SkeletonRows } from "@/components/ios/states";
+import { GROUP_BLOCK } from "@/components/ios/tokens";
 import { TeacherSchedule } from "@/features/teacher/teacher-schedule";
 import LessonSchedulePage from "../../lessons/schedule/page";
 
 export default function MyLessonSchedulePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const { user, isLoading } = useAuth();
-  if (isLoading) return <LoadingState />;
+  if (isLoading) {
+    return (
+      <div className={GROUP_BLOCK}>
+        <SkeletonRows rows={3} />
+      </div>
+    );
+  }
   if (isTeacher(user?.role)) return <TeacherSchedule slug={slug} />;
   return <LessonSchedulePage params={params} />;
 }

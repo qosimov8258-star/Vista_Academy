@@ -2934,5 +2934,21 @@
  "Landing sahifadagi forma to'ldirilsa, ariza shu yerda paydo bo'ladi.": "When the landing page form is filled in, the request appears here.",
  "Manba": "Source",
  "Sanani o'chirsangiz, «Belgilanmagan» bo'lib qoladi.": "If you clear a date, it shows as “Not set”.",
- "Faoliyat qo'shish": "Add activity"
+ "Faoliyat qo'shish": "Add activity",
+ "yan": "Jan",
+ "fev": "Feb",
+ "mar": "Mar",
+ "apr": "Apr",
+ "avg": "Aug",
+ "sen": "Sep",
+ "okt": "Oct",
+ "noy": "Nov",
+ "dek": "Dec",
+ "Rahbariyat sizga yuborgan xabarlar shu yerga tushadi.": "Messages from management arrive here.",
+ "Belgilanmoqda…": "Marking…",
+ "Avvalgilar": "Earlier",
+ "Xabarni bossangiz — o'qilgan bo'ladi.": "Tap a message to mark it as read.",
+ "O'qilgan deb belgilash": "Mark as read",
+ "Bugun {0} ta dars · haftasiga {1} ta": "{0} lessons today · {1} this week",
+ "Boshqa kunni tanlang — darsi bor kunlar ostida nuqta bor.": "Pick another day — days with lessons have a dot."
 }

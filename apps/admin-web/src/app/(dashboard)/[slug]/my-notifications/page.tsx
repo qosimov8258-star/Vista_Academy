@@ -1,27 +1,53 @@
 "use client";
 
 import { use } from "react";
+import clsx from "clsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { EmployeeNotification } from "@/lib/types";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
-import { BellIcon } from "@/components/ios/icons";
-import { formatDateTime } from "@/lib/format";
+import { BellIcon, CalendarIcon } from "@/components/ios/icons";
+import { ErrorState } from "@/components/ios/states";
+import { IosIcon } from "@/features/director/ios-icon";
 import { useAuth } from "@/lib/use-auth";
-import { isChef, isTeacher } from "@/lib/permissions";
+import { isChef } from "@/lib/permissions";
 import { EmptyRow, Group, GroupAction, LargeTitle, SkeletonRows, TeacherPage } from "@/features/teacher/teacher-ui";
+import styles from "@/features/teacher/teacher.module.css";
 import { useTr } from "@/i18n/tr";
 
+const MONTHS_SHORT = ["yan", "fev", "mar", "apr", "may", "iyun", "iyul", "avg", "sen", "okt", "noy", "dek"];
+const TZ = "Asia/Tashkent";
+
+/** Toshkent vaqtida "YYYY-MM-DD" */
+function dayKey(date: Date): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(date);
+}
+
+/** iOS «Xabarlar»dagidek qisqa vaqt: bugun — "14:20", kecha — "Kecha", aks holda "3-noy" */
+function shortTime(iso: string, tr: (s: string, ...a: (string | number)[]) => string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const key = dayKey(d);
+  if (key === dayKey(now)) {
+    return new Intl.DateTimeFormat("ru-RU", { timeZone: TZ, hour: "2-digit", minute: "2-digit" }).format(d);
+  }
+  if (key === dayKey(new Date(now.getTime() - 86_400_000))) return tr("Kecha");
+  const [y, m, day] = key.split("-").map(Number);
+  const label = `${day}-${tr(MONTHS_SHORT[m - 1])}`;
+  return y === Number(dayKey(now).slice(0, 4)) ? label : `${label} ${y}`;
+}
+
+/**
+ * Xodimning xabarlari (tarbiyachi va oshpaz) — iOS ro'yxati: yangilari
+ * alohida bo'limda, oldida tizim rangidagi nuqta; bosilsa o'qilgan bo'ladi.
+ * Telefonda tab panelidan ochiladi, matn qirqilmaydi.
+ */
 export default function MyNotificationsPage({ params }: { params: Promise<{ slug: string }> }) {
   const tr = useTr();
   const { slug } = use(params);
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  // Oshpazga dars jadvali haqida emas, unga yuborilgan xabarlar keladi
+  // Oshpazga dars jadvali haqida emas, rahbariyat yuborgan xabarlar keladi
   const chef = isChef(user?.role);
-  const teacher = isTeacher(user?.role);
 
   const notificationsQuery = useQuery({
     queryKey: ["employee-notifications", slug],
@@ -39,113 +65,135 @@ export default function MyNotificationsPage({ params }: { params: Promise<{ slug
   });
 
   const notifications = notificationsQuery.data ?? [];
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const unread = notifications.filter((n) => !n.isRead);
+  const read = notifications.filter((n) => n.isRead);
+  const footer = chef
+    ? tr("Rahbariyat sizga yuborgan xabarlar shu yerga tushadi.")
+    : tr("Dars jadvalingiz belgilanganda yoki o'zgarganda shu yerga xabar tushadi.");
 
-  // Tarbiyachi kabineti — iOS ro'yxati: o'qilmaganlar oldida tizim rangidagi nuqta
-  if (teacher) {
-    return (
-      <TeacherPage>
-        <LargeTitle title={tr("Xabarlar")} subtitle={unreadCount > 0 ? tr("{0} ta o'qilmagan", unreadCount) : tr("Hammasi o'qilgan")} />
-        <Group
-          action={unreadCount > 0 ? <GroupAction onClick={() => markAllReadMutation.mutate()}>{tr("Hammasini o'qish")}</GroupAction> : undefined}
-          title={notifications.length > 0 ? tr("So'nggi") : undefined}
-          footer={tr("Dars jadvalingiz belgilanganda yoki o'zgarganda shu yerga xabar tushadi.")}
-        >
-          {notificationsQuery.isLoading ? (
-            <SkeletonRows rows={4} />
-          ) : notificationsQuery.isError ? (
-            <EmptyRow title={tr("Yuklab bo'lmadi")} description={tr((notificationsQuery.error as Error).message)} />
-          ) : notifications.length === 0 ? (
-            <EmptyRow icon={BellIcon} title={tr("Hozircha xabar yo'q")} />
-          ) : (
-            notifications.map((n, i) => (
-              <button
-                key={n.id}
-                type="button"
-                disabled={n.isRead}
-                onClick={() => markReadMutation.mutate(n.id)}
-                className="relative flex w-full items-start gap-3 py-3 pl-4 pr-4 text-left transition-colors enabled:cursor-pointer enabled:active:bg-black/5"
-              >
-                {i > 0 && <span className="absolute left-9 right-0 top-0 h-px bg-[var(--color-separator)]" aria-hidden="true" />}
-                <span
-                  className={`mt-[7px] h-2.5 w-2.5 shrink-0 rounded-full ${n.isRead ? "bg-transparent" : "bg-[var(--color-primary)]"}`}
-                  aria-label={n.isRead ? undefined : tr("O'qilmagan")}
-                />
-                <span className="min-w-0 flex-1">
-                  <span className={`block text-[15.5px] leading-snug text-[var(--color-text)] ${n.isRead ? "" : "font-semibold"}`}>{tr(n.message)}</span>
-                  <span className="mt-1 block text-[13px] text-[var(--color-text-muted)]">{formatDateTime(n.createdAt)}</span>
-                </span>
-              </button>
-            ))
-          )}
-        </Group>
-      </TeacherPage>
-    );
-  }
+  const renderRows = (list: EmployeeNotification[]) =>
+    list.map((n, i) => (
+      <NotificationRow
+        key={n.id}
+        notification={n}
+        first={i === 0}
+        chef={chef}
+        time={shortTime(n.createdAt, tr)}
+        pending={markReadMutation.isPending && markReadMutation.variables === n.id}
+        onRead={() => markReadMutation.mutate(n.id)}
+      />
+    ));
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
-            {tr("Bildirishnomalarim")}
-          </h1>
-          <p className="mt-0.5 text-[14px] text-[var(--color-text-muted)]">
-            {chef
-              ? "Rahbariyat sizga yuborgan xabarlar shu yerga tushadi"
-              : tr("Dars jadvalingiz belgilanganda yoki o'zgarganda shu yerga xabar tushadi")}
-          </p>
-        </div>
-        {unreadCount > 0 && (
-          <Button variant="outline" onClick={() => markAllReadMutation.mutate()} loading={markAllReadMutation.isPending}>
-            {tr("Barchasini o'qilgan deb belgilash")}
-          </Button>
-        )}
-      </div>
+    <TeacherPage>
+      <LargeTitle
+        icon={BellIcon}
+        tint="red"
+        title={tr("Xabarlar")}
+        subtitle={
+          notificationsQuery.data
+            ? unread.length > 0
+              ? tr("{0} ta o'qilmagan", unread.length)
+              : notifications.length > 0
+                ? tr("Hammasi o'qilgan")
+                : footer
+            : undefined
+        }
+      />
 
       {notificationsQuery.isLoading ? (
-        <LoadingState rows={4} />
-      ) : notificationsQuery.isError ? (
-        <ErrorState message={tr((notificationsQuery.error as Error).message)} />
-      ) : notifications.length === 0 ? (
-        <EmptyState
-          icon={<BellIcon className="h-[26px] w-[26px]" />}
-          title={tr("Hozircha bildirishnoma yo'q")}
-          description={chef ? tr("Sizga xabar yuborilganda shu yerda ko'rinadi") : tr("Sizga dars jadvali belgilanganda shu yerda ko'rinadi")}
+        <Group>
+          <SkeletonRows rows={4} />
+        </Group>
+      ) : notificationsQuery.isError && !notificationsQuery.data ? (
+        <ErrorState
+          message={tr((notificationsQuery.error as Error).message)}
+          onRetry={() => notificationsQuery.refetch()}
+          retrying={notificationsQuery.isFetching}
         />
+      ) : notifications.length === 0 ? (
+        <Group footer={footer}>
+          <EmptyRow
+            icon={BellIcon}
+            title={tr("Hozircha xabar yo'q")}
+            description={chef ? tr("Sizga xabar yuborilganda shu yerda ko'rinadi") : tr("Sizga dars jadvali belgilanganda shu yerda ko'rinadi")}
+          />
+        </Group>
       ) : (
-        <div className="space-y-2">
-          {notifications.map((notification) => (
-            <Card
-              key={notification.id}
-              className={`flex items-start gap-3 p-4 ${!notification.isRead ? "border-[var(--color-primary)]/30" : ""}`}
+        <>
+          {unread.length > 0 && (
+            <Group
+              title={tr("Yangi")}
+              action={
+                <GroupAction onClick={() => !markAllReadMutation.isPending && markAllReadMutation.mutate()}>
+                  {tr(markAllReadMutation.isPending ? "Belgilanmoqda…" : "Hammasini o'qish")}
+                </GroupAction>
+              }
+              footer={read.length === 0 ? footer : tr("Xabarni bossangiz — o'qilgan bo'ladi.")}
             >
-              <span
-                className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] ${
-                  notification.isRead
-                    ? "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)]"
-                    : "bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
-                }`}
-              >
-                <BellIcon className="h-[18px] w-[18px]" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm text-[var(--color-text)]">{tr(notification.message)}</p>
-                <p className="mt-1 text-xs text-[var(--color-text-muted)]">{formatDateTime(notification.createdAt)}</p>
-              </div>
-              {!notification.isRead && (
-                <button
-                  type="button"
-                  onClick={() => markReadMutation.mutate(notification.id)}
-                  className="shrink-0 cursor-pointer text-[12.5px] font-medium text-[var(--color-primary)] hover:underline"
-                >
-                  {tr("O'qildi")}
-                </button>
-              )}
-            </Card>
-          ))}
-        </div>
+              {renderRows(unread)}
+            </Group>
+          )}
+          {read.length > 0 && (
+            <Group title={tr(unread.length > 0 ? "Avvalgilar" : "So'nggi")} footer={footer}>
+              {renderRows(read)}
+            </Group>
+          )}
+        </>
       )}
-    </div>
+    </TeacherPage>
+  );
+}
+
+/**
+ * Bitta xabar: 30px plitka, to'liq matn (qirqilmaydi), o'ngda vaqt. Yangisi
+ * qalin va o'ngida tizim rangidagi nuqta — bosilsa o'qilgan bo'ladi.
+ */
+function NotificationRow({
+  notification: n,
+  first,
+  chef,
+  time,
+  pending,
+  onRead,
+}: {
+  notification: EmployeeNotification;
+  first: boolean;
+  chef: boolean;
+  time: string;
+  pending: boolean;
+  onRead: () => void;
+}) {
+  const tr = useTr();
+  return (
+    <button
+      type="button"
+      disabled={n.isRead || pending}
+      onClick={onRead}
+      aria-label={n.isRead ? undefined : tr("O'qilgan deb belgilash")}
+      className={clsx("relative flex min-h-[56px] w-full items-start gap-3 px-4 py-3 text-left", !n.isRead && styles.pressable, !n.isRead && "cursor-pointer")}
+    >
+      {!first && <span className="absolute left-[58px] right-0 top-0 h-px bg-black/[0.08]" aria-hidden="true" />}
+      <IosIcon icon={chef ? BellIcon : CalendarIcon} tint={n.isRead ? "gray" : chef ? "red" : "orange"} size={30} />
+      <span className="min-w-0 flex-1">
+        <span className="flex items-baseline gap-2">
+          <span
+            className={clsx(
+              "min-w-0 flex-1 whitespace-pre-line break-words text-[15.5px] leading-snug text-[var(--color-text)]",
+              !n.isRead && "font-semibold",
+            )}
+          >
+            {tr(n.message)}
+          </span>
+          <span className="shrink-0 text-[13px] tabular-nums text-[#8e8e93]">{time}</span>
+        </span>
+      </span>
+      {!n.isRead && (
+        <span
+          className={clsx("mt-[7px] h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--color-primary)]", pending && "animate-pulse opacity-50")}
+          aria-label={tr("O'qilmagan")}
+        />
+      )}
+    </button>
   );
 }

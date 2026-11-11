@@ -2934,5 +2934,21 @@
  "Landing sahifadagi forma to'ldirilsa, ariza shu yerda paydo bo'ladi.": "Когда форму на лендинге заполнят, заявка появится здесь.",
  "Manba": "Источник",
  "Sanani o'chirsangiz, «Belgilanmagan» bo'lib qoladi.": "Если стереть дату, будет «Не указано».",
- "Faoliyat qo'shish": "Добавить активность"
+ "Faoliyat qo'shish": "Добавить активность",
+ "yan": "янв",
+ "fev": "фев",
+ "mar": "мар",
+ "apr": "апр",
+ "avg": "авг",
+ "sen": "сен",
+ "okt": "окт",
+ "noy": "ноя",
+ "dek": "дек",
+ "Rahbariyat sizga yuborgan xabarlar shu yerga tushadi.": "Сюда приходят сообщения от руководства.",
+ "Belgilanmoqda…": "Отмечаем…",
+ "Avvalgilar": "Ранее",
+ "Xabarni bossangiz — o'qilgan bo'ladi.": "Нажмите на сообщение — оно станет прочитанным.",
+ "O'qilgan deb belgilash": "Отметить как прочитанное",
+ "Bugun {0} ta dars · haftasiga {1} ta": "Сегодня уроков: {0} · за неделю: {1}",
+ "Boshqa kunni tanlang — darsi bor kunlar ostida nuqta bor.": "Выберите другой день — под днями с уроками есть точка."
 }
