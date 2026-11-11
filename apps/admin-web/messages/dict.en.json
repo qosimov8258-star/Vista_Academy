@@ -2918,5 +2918,11 @@
  "Boshlanish vaqtini kiriting": "Enter the start time",
  "To'ldirilgan jadval yo'q": "No filled timetables",
  "Avval bitta guruh jadvalini to'ldiring — keyin uni boshqa guruhlarga ko'chirasiz.": "Fill in one group's timetable first, then copy it to other groups.",
- "Vaqt qatorlari bilan boshlash": "Start with time rows"
+ "Vaqt qatorlari bilan boshlash": "Start with time rows",
+ "Bolani bosing — surat, yulduzcha va ota-ona bir joyda.": "Tap a child — photo, stars and parents in one place.",
+ "Davomat, sog'liq, rivojlanish": "Attendance, health, development",
+ "Faqat surati yo'qlar ko'rsatilmoqda": "Showing only children without a photo",
+ "Nofaol bolalar": "Inactive children",
+ "Surati yo'q": "No photo",
+ "Yulduzcha": "Stars"
 }

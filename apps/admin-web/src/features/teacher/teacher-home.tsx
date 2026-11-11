@@ -40,9 +40,9 @@ function tashkentHour(): number {
 }
 
 /**
- * Tarbiyachi bosh sahifasi — iOS uslubida: katta salomlashuv, bugungi
- * davomat halqasi, eslatmalar, guruhlar va haftalik darslar guruhlangan
- * ro'yxatda. Rangli fonli ikonkalar yo'q — belgilar tizim rangida.
+ * Tarbiyachi bosh sahifasi — panelning iOS uslubida: salomlashuv kartasi
+ * (28px), bugungi davomat halqasi va katta «Davomat» tugmasi (bosh barmoq
+ * uchun), eslatmalar, guruhlar va haftalik darslar — rangli plitkali qatorlar.
  */
 export function TeacherHome({ slug }: { slug: string }) {
   const tr = useTr();
@@ -98,6 +98,7 @@ export function TeacherHome({ slug }: { slug: string }) {
     <TeacherPage>
       <LargeTitle
         eyebrow={formatDayLong(today)}
+        hero
         title={greeting(tashkentHour())}
         subtitle={[user?.fullName, groups.map((g) => g.name).join(", ")].filter(Boolean).join(" · ")}
         trailing={
@@ -129,7 +130,7 @@ export function TeacherHome({ slug }: { slug: string }) {
               <div className="flex items-center gap-5">
                 <AttendanceRing present={present} absent={absent} total={total} />
                 <div className="min-w-0 flex-1">
-                  <p className="text-[13px] font-semibold uppercase tracking-[0.05em] text-[var(--color-text-muted)]">{tr("Bugungi davomat")}</p>
+                  <p className="text-[13px] uppercase tracking-wide text-[#8e8e93]">{tr("Bugungi davomat")}</p>
                   <p className="mt-1 text-[19px] font-bold leading-snug tracking-[-0.015em] text-[var(--color-text)]">
                     {marked === 0 ? tr("Hali belgilanmagan") : marked >= total ? "Hammasi belgilandi" : tr("{0} ta bola qoldi", total - marked)}
                   </p>
@@ -164,6 +165,7 @@ export function TeacherHome({ slug }: { slug: string }) {
               key={group.id}
               first={i === 0}
               icon={GroupIcon}
+              tint="indigo"
               title={tr(group.name)}
               value={tr("{0} bola", group._count?.children ?? 0)}
               href={subjectTeacher ? undefined : `/${slug}/children`}
@@ -174,7 +176,7 @@ export function TeacherHome({ slug }: { slug: string }) {
 
       {/* Guruh fayllari telefondagi pastki menyuda yo'q — shu yerdan bir bosishda */}
       <Group>
-        <Row first icon={Paperclip} title={tr("Vazifa jo'natish")} subtitle={tr("Vazifa, rasm, video yoki hujjat")} href={`/${slug}/materials`} />
+        <Row first icon={Paperclip} tint="teal" title={tr("Vazifa jo'natish")} subtitle={tr("Vazifa, rasm, video yoki hujjat")} href={`/${slug}/materials`} />
       </Group>
 
       <Group
@@ -202,7 +204,7 @@ export function TeacherHome({ slug }: { slug: string }) {
                 subtitle={`${lesson.group.name} guruhi${lesson.room ? ` · ${lesson.room.name}` : ""}`}
                 trailing={
                   isToday ? (
-                    <span className="shrink-0 rounded-full bg-[var(--color-primary)] px-2.5 py-1 text-[12px] font-semibold text-white">{tr("Bugun")}</span>
+                    <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-[var(--color-primary)] px-2.5 text-[12.5px] font-semibold text-white">{tr("Bugun")}</span>
                   ) : (
                     <span className="shrink-0 text-[14px] text-[var(--color-text-muted)]">{tr(day.label)}</span>
                   )
@@ -212,7 +214,7 @@ export function TeacherHome({ slug }: { slug: string }) {
           })
         )}
         {lessons.length > LESSONS_PREVIEW && (
-          <Row icon={CalendarIcon} title={tr("Yana {0} ta dars", lessons.length - LESSONS_PREVIEW)} href={`/${slug}/my-lessons/schedule`} />
+          <Row icon={CalendarIcon} tint="orange" title={tr("Yana {0} ta dars", lessons.length - LESSONS_PREVIEW)} href={`/${slug}/my-lessons/schedule`} />
         )}
       </Group>
 
@@ -220,6 +222,7 @@ export function TeacherHome({ slug }: { slug: string }) {
         <Row
           first
           icon={BellIcon}
+          tint="red"
           title={tr("Bildirishnomalar")}
           href={`/${slug}/my-notifications`}
           trailing={
@@ -230,7 +233,7 @@ export function TeacherHome({ slug }: { slug: string }) {
             ) : undefined
           }
         />
-        {!subjectTeacher && <Row icon={CalendarIcon} title={tr("Dars jadvali")} href={`/${slug}/my-lessons/schedule`} />}
+        {!subjectTeacher && <Row icon={CalendarIcon} tint="orange" title={tr("Dars jadvali")} href={`/${slug}/my-lessons/schedule`} />}
       </Group>
     </TeacherPage>
   );

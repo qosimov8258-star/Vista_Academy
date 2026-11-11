@@ -2918,5 +2918,11 @@
  "Boshlanish vaqtini kiriting": "Введите время начала",
  "To'ldirilgan jadval yo'q": "Нет заполненных расписаний",
  "Avval bitta guruh jadvalini to'ldiring — keyin uni boshqa guruhlarga ko'chirasiz.": "Сначала заполните расписание одной группы — потом скопируете его в другие.",
- "Vaqt qatorlari bilan boshlash": "Начать со строк времени"
+ "Vaqt qatorlari bilan boshlash": "Начать со строк времени",
+ "Bolani bosing — surat, yulduzcha va ota-ona bir joyda.": "Нажмите на ребёнка — фото, звёздочки и родители в одном месте.",
+ "Davomat, sog'liq, rivojlanish": "Посещаемость, здоровье, развитие",
+ "Faqat surati yo'qlar ko'rsatilmoqda": "Показаны только дети без фото",
+ "Nofaol bolalar": "Неактивные дети",
+ "Surati yo'q": "Нет фото",
+ "Yulduzcha": "Звёздочки"
 }

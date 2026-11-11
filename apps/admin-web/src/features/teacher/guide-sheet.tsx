@@ -19,7 +19,7 @@ export function GuideRow({ title, subtitle = "1 daqiqada", onOpen }: { title: st
   const tr = useTr();
   return (
     <Group>
-      <Row first icon={BookOpen} title={tr(title)} subtitle={tr(subtitle)} onClick={onOpen} />
+      <Row first icon={BookOpen} tint="purple" title={tr(title)} subtitle={tr(subtitle)} onClick={onOpen} />
     </Group>
   );
 }

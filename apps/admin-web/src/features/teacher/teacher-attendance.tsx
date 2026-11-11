@@ -180,7 +180,7 @@ export function TeacherAttendance({ slug }: { slug: string }) {
 
   return (
     <TeacherPage className="pb-4">
-      <LargeTitle eyebrow={date ? formatDayLong(date) : " "} title={tr("Davomat")} />
+      <LargeTitle icon={ChecklistIcon} tint="green" eyebrow={date ? formatDayLong(date) : " "} title={tr("Davomat")} />
 
       {date && today && <DayStepper value={date} onChange={setDate} today={today} max={today} />}
 
@@ -219,11 +219,11 @@ export function TeacherAttendance({ slug }: { slug: string }) {
         title={filter ? tr(STATUS_BY_VALUE[filter].label) : tr("Bolalar")}
         action={
           filter ? (
-            <button type="button" onClick={() => setFilter(null)} className="cursor-pointer text-[15px] font-medium text-[var(--color-primary)] active:opacity-50">
+            <button type="button" onClick={() => setFilter(null)} className="cursor-pointer text-[13.5px] font-medium text-[var(--color-primary)] active:opacity-50">
               {tr("Hammasi")}
             </button>
           ) : children.length > 0 ? (
-            <span className="text-[13px] tabular-nums text-[var(--color-text-muted)]">{children.length}</span>
+            <span className="text-[13px] tabular-nums text-[#8e8e93]">{children.length}</span>
           ) : undefined
         }
         footer={
@@ -250,7 +250,7 @@ export function TeacherAttendance({ slug }: { slug: string }) {
             const changed = daySaved && (child.status !== status || (child.note ?? "") !== noteFor(child.childId));
             return (
               <div key={child.childId} className="relative flex items-center">
-                {i > 0 && <span className="absolute left-[72px] right-0 top-0 h-px bg-[var(--color-separator)]" aria-hidden="true" />}
+                {i > 0 && <span className="absolute left-[72px] right-0 top-0 h-px bg-black/[0.08]" aria-hidden="true" />}
                 <button
                   type="button"
                   onClick={() => setSheetChildId(child.childId)}
@@ -313,7 +313,7 @@ export function TeacherAttendance({ slug }: { slug: string }) {
                 }}
                 className={clsx(styles.pressable, "relative flex min-h-[48px] w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left")}
               >
-                {i > 0 && <span className="absolute left-4 right-0 top-0 h-px bg-[var(--color-separator)]" aria-hidden="true" />}
+                {i > 0 && <span className="absolute left-4 right-0 top-0 h-px bg-black/[0.08]" aria-hidden="true" />}
                 <span className={clsx("w-[92px] shrink-0 text-[14.5px]", current ? "font-semibold text-[var(--color-primary)]" : "text-[var(--color-text)]")}>{formatDayShort(day.date)}</span>
                 <span className="flex h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-[rgba(118,118,128,0.14)]" aria-hidden="true">
                   <span className="h-full" style={{ width: `${(day.present / all) * 100}%`, backgroundColor: IOS.green }} />
@@ -331,7 +331,7 @@ export function TeacherAttendance({ slug }: { slug: string }) {
       </Group>
 
       <Group footer={tr("Kun, hafta yoki oy tanlanadi — har bola bo'yicha jamlanma, tabel va batafsil ro'yxat.")}>
-        <Row first icon={FileSpreadsheet} title={tr("Excel hisobot yuklab olish")} onClick={date ? () => setReportOpen(true) : undefined} />
+        <Row first icon={FileSpreadsheet} tint="green" title={tr("Excel hisobot yuklab olish")} onClick={date ? () => setReportOpen(true) : undefined} />
       </Group>
 
       <ReportSheet
