@@ -135,8 +135,8 @@ export class OrganizationLifecycleService {
 
   /**
    * "Bog'chaga kirish": bog'chaning birinchi faol Super Admin hisobi nomidan
-   * 60 soniyalik bir martalik chipta. Panel uni 30 daqiqalik seansga
-   * almashtiradi va bog'cha audit jurnaliga yozadi.
+   * 60 soniyalik bir martalik chipta. Panel uni Super Admin'ning oddiy
+   * seansiga almashtiradi (qarang: TenantAuthService.enterWithPlatformTicket).
    */
   async createEntryTicket(id: string, operator: AuthenticatedUser) {
     const organization = await this.requireOrganization(id);

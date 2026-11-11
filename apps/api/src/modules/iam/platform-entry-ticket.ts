@@ -6,23 +6,20 @@ import { requireTenantAccessSecret } from "./tenant-auth.service";
  * "Bog'chaga kirish" (impersonatsiya) chiptasi. Platforma operatori bog'cha
  * sahifasida tugmani bosadi → platforma API shu qisqa muddatli chiptani
  * beradi → brauzer bog'cha paneliga `/enter#t=<chipta>` bilan o'tadi → panel
- * chiptani `POST /app/auth/enter` ga yuborib, 30 daqiqalik seans oladi.
+ * chiptani `POST /app/auth/enter` ga yuborib, Super Admin seansini oladi.
  *
  * Chipta URL'da (fragmentda — serverga, loglarga va Referer'ga tushmaydi)
  * bo'lgani uchun juda qisqa yashaydi va faqat bir marta ishlatiladi.
  */
 export const ENTRY_TICKET_PURPOSE = "platform-entry";
 export const ENTRY_TICKET_TTL_SECONDS = 60;
-/** Operator seansi — refresh token berilmaydi, muddat tugasa qayta kirish kerak. */
-export const IMPERSONATION_TTL = "30m";
-export const IMPERSONATION_TTL_MS = 30 * 60 * 1000;
 
 export interface PlatformEntryTicketPayload {
   purpose: typeof ENTRY_TICKET_PURPOSE;
   /** Kiriladigan bog'cha hisobi (TenantUser.id) */
   sub: string;
   organizationId: string;
-  /** Kirgan platforma operatori — audit va bannerda ko'rsatish uchun */
+  /** Kirgan platforma operatori — server logi uchun */
   operatorId: string;
   operatorName: string;
   jti: string;

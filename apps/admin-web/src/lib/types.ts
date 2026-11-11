@@ -27,8 +27,6 @@ export interface TenantAuthenticatedUser {
   subjects: string[];
   /** Administrator xodim tafsilotida "Mavzu qo'shasizmi?"ni yoqib saqlagan bo'lsa — true. Shu holatda o'qituvchi "Savol-javob"ga o'zi mavzu qo'sha olmaydi. */
   topicsManagedByAdmin: boolean;
-  /** Platforma operatori "Bog'chaga kirish" bilan kirgan bo'lsa — operator ismi. */
-  impersonatedBy?: string | null;
   /** Platforma shu panel uchun o'chirgan funksiyalar kalitlari (formadagi maydonlar ham shu yerda). */
   disabledFeatures?: string[];
 }

@@ -1,17 +1,10 @@
-import { ForbiddenException, Injectable, UnauthorizedException } from "@nestjs/common";
+import { ForbiddenException, Injectable, Logger, UnauthorizedException } from "@nestjs/common";
 import { JwtService, JwtSignOptions } from "@nestjs/jwt";
 import * as argon2 from "argon2";
 import { createHash, randomBytes } from "crypto";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantAccessTokenPayload, TenantAuthenticatedUser } from "./tenant-auth.types";
-import { AuditLogService } from "../audit-log/audit-log.service";
-import {
-  ENTRY_TICKET_PURPOSE,
-  IMPERSONATION_TTL,
-  IMPERSONATION_TTL_MS,
-  consumeTicketId,
-  type PlatformEntryTicketPayload,
-} from "./platform-entry-ticket";
+import { ENTRY_TICKET_PURPOSE, consumeTicketId, type PlatformEntryTicketPayload } from "./platform-entry-ticket";
 import { ORGANIZATION_WITH_SUBSCRIPTION_STATUS, isOrganizationSuspended, organizationBlockedMessage } from "./organization-access";
 
 export interface IssuedTenantTokens {
@@ -30,17 +23,21 @@ const REFRESH_TTL_DAYS = Number(process.env.JWT_TENANT_REFRESH_TTL_DAYS ?? proce
 
 @Injectable()
 export class TenantAuthService {
+  private readonly logger = new Logger(TenantAuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
-    private readonly auditLog: AuditLogService,
   ) {}
 
   /**
-   * Platforma operatorining bir martalik chiptasini 30 daqiqalik seansga
-   * almashtiradi (refresh token yo'q). Bog'cha audit jurnaliga yoziladi.
+   * Platforma operatorining bir martalik chiptasini tekshirib, bog'chaning
+   * Super Admin hisobini qaytaradi. Seansni controller oddiy kirishdagidek
+   * (`issueTokens`) beradi: operator panelda Super Admin o'zi kirgandek
+   * ishlaydi — banner, alohida belgi va cheklangan muddat yo'q. Bog'cha
+   * jurnaliga ham yozilmaydi; faqat server logida iz qoladi.
    */
-  async enterWithPlatformTicket(ticket: string): Promise<{ user: TenantAuthenticatedUser; accessToken: string; accessTokenTtlMs: number }> {
+  async enterWithPlatformTicket(ticket: string): Promise<TenantAuthenticatedUser> {
     let payload: PlatformEntryTicketPayload & { exp: number };
     try {
       payload = this.jwt.verify(ticket, { secret: requireTenantAccessSecret() });
@@ -65,30 +62,10 @@ export class TenantAuthService {
       throw new ForbiddenException(organizationBlockedMessage(tenantUser.organization));
     }
 
-    const user: TenantAuthenticatedUser = {
-      ...this.toAuthenticatedUser(tenantUser, tenantUser.organization),
-      impersonatedBy: payload.operatorName,
-    };
-    const tokenPayload: TenantAccessTokenPayload = {
-      sub: user.id,
-      organizationId: user.organizationId,
-      organizationSlug: user.organizationSlug,
-      branchSlug: user.branchSlug,
-      branchId: user.branchId,
-      login: user.login,
-      role: user.role,
-      impersonatedBy: payload.operatorName,
-    };
-    const accessToken = this.jwt.sign(tokenPayload, { secret: requireTenantAccessSecret(), expiresIn: IMPERSONATION_TTL });
-
-    await this.auditLog.logFromUser(user, {
-      action: "platform.impersonate",
-      entityType: "Organization",
-      entityId: user.organizationId,
-      summary: `Platforma operatori ${payload.operatorName} panelga kirdi (30 daqiqa)`,
-    });
-
-    return { user, accessToken, accessTokenTtlMs: IMPERSONATION_TTL_MS };
+    this.logger.log(
+      `Platforma operatori ${payload.operatorId} "${tenantUser.organization.slug}" bog'chasiga Super Admin sifatida kirdi`,
+    );
+    return this.toAuthenticatedUser(tenantUser, tenantUser.organization);
   }
 
   async validateCredentials(orgSlug: string, login: string, password: string): Promise<TenantAuthenticatedUser> {
