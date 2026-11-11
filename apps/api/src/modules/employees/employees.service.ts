@@ -4,7 +4,6 @@ import { Prisma, type TenantUserRole } from "@prisma/client";
 import * as argon2 from "argon2";
 import { PrismaService } from "../../database/prisma.service";
 import { normalizePhone } from "../../common/phone";
-import { encryptSecret, decryptSecret } from "../../common/crypto/reversible-secret";
 import { generateEmployeeLogin, generateEmployeePassword } from "../../common/text/generate-credentials";
 import { DEFAULT_POSITIONS } from "../../common/constants/default-positions";
 import {
@@ -22,6 +21,7 @@ import { R2Service } from "../storage/r2.service";
 import { R2_CATEGORY } from "../storage/r2.constants";
 import { CreateEmployeeDto, EmployeeAccountDto } from "./dto/create-employee.dto";
 import { UpdateEmployeeCredentialsDto } from "./dto/update-employee-credentials.dto";
+import { UpdateEmployeeDto } from "./dto/update-employee.dto";
 import { CreateEmployeeTopicDto } from "./dto/create-employee-topic.dto";
 import { UpdateEmployeeTopicsSettingDto } from "./dto/update-employee-topics-setting.dto";
 import { UpdateEmployeeGroupsDto } from "./dto/update-employee-groups.dto";
@@ -170,7 +170,7 @@ export class EmployeesService {
 
     const accountGroupIds = requireGroupsFor(dto.position, dto.account.groupIds);
     await this.assertGroupsBelongToBranch(branchId, accountGroupIds);
-    const { login, password, passwordHash, passwordEncrypted } = await this.resolveCredentials(
+    const { login, password, passwordHash } = await this.resolveCredentials(
       scope.organizationId,
       dto.firstName,
       dto.lastName,
@@ -188,7 +188,6 @@ export class EmployeesService {
             branchId,
             login,
             passwordHash,
-            passwordEncrypted,
             fullName,
             role: roleForPosition(dto.position),
           },
@@ -231,9 +230,9 @@ export class EmployeesService {
   /**
    * Login va parolni admin bergan bo'lsa shuni ishlatadi, aks holda
    * login (`ism.familiya`) va tasodifiy parol avtomatik generatsiya
-   * qiladi. Parol autentifikatsiya uchun argon2 hash sifatida, "Parolni
-   * ko'rsatish" funksiyasi uchun esa alohida shifrlangan (qaytarib
-   * olinadigan) ko'rinishda saqlanadi.
+   * qiladi. Parol faqat argon2 hash sifatida saqlanadi — qaytarib
+   * ochiladigan nusxasi yo'q, tizimda hech kim uni ko'ra olmaydi. Yangi
+   * parol faqat yaratilgan javobda bir marta qaytadi.
    */
   private async resolveCredentials(
     organizationId: string,
@@ -252,11 +251,8 @@ export class EmployeesService {
           return !!existing;
         });
     const password = customPassword ?? generateEmployeePassword();
-    const [passwordHash, passwordEncrypted] = await Promise.all([
-      argon2.hash(password),
-      Promise.resolve(encryptSecret(password)),
-    ]);
-    return { login, password, passwordHash, passwordEncrypted };
+    const passwordHash = await argon2.hash(password);
+    return { login, password, passwordHash };
   }
 
   async findAll(scope: TenantScope, query: EmployeeQueryDto) {
@@ -302,6 +298,149 @@ export class EmployeesService {
     });
   }
 
+  /**
+   * Xodimni tahrirlash: ism, telefon, lavozim (fan), faol/nofaol holati va
+   * kabineti bo'lsa — guruhi. Kabinet (TenantUser) xodim bilan birga
+   * moslanadi: ism o'zgarsa kabinetdagi ism ham, lavozim o'zgarsa rol ham
+   * (o'qituvchi/oshpaz/administrator), nofaol bo'lsa kabinet yopiladi va
+   * ochiq seanslar tugatiladi. Yuz tanish terminali ham yangilanadi.
+   *
+   * Huquq: administrator (MANAGER) faqat o'qituvchi va oshpazni tahrirlaydi
+   * va hech kimni administrator qila olmaydi — login/parol qoidasi bilan bir xil.
+   * Filial admini yoki moliyachi kabinetiga bog'langan xodimning roli
+   * lavozimdan qayta hisoblanmaydi (adminni o'qituvchiga tushirib qo'ymaslik uchun).
+   */
+  async update(caller: TenantAuthenticatedUser, id: string, dto: UpdateEmployeeDto) {
+    const scope = toTenantScope(caller);
+    const branchId = requireOperationalScope(scope);
+    const employee = await this.prisma.employee.findFirst({
+      where: { id, organizationId: scope.organizationId, branchId },
+      include: { tenantUser: { select: { id: true, role: true } }, teachingGroups: { select: { groupId: true } } },
+    });
+    if (!employee) {
+      throw new NotFoundException("Xodim topilmadi");
+    }
+    const currentRole = employee.tenantUser?.role ?? null;
+    if (scope.role === "MANAGER" && currentRole && !["TEACHER", "CHEF"].includes(currentRole)) {
+      throw new ForbiddenException("Bu xodimni tahrirlashga huquqingiz yo'q");
+    }
+
+    const firstName = dto.firstName?.trim() ?? employee.firstName;
+    const lastName = dto.lastName?.trim() ?? employee.lastName;
+    const fullName = composeEmployeeFullName(lastName, firstName);
+    const position = dto.position?.trim() ?? employee.position;
+    const positionChanged = normalizePosition(position) !== normalizePosition(employee.position);
+
+    let phone = employee.phone;
+    if (dto.phone !== undefined) {
+      phone = dto.phone.trim() ? normalizePhone(dto.phone) : null;
+      if (phone && phone !== employee.phone) {
+        const taken = await this.prisma.employee.findFirst({
+          where: { organizationId: scope.organizationId, phone, id: { not: id } },
+          select: { id: true },
+        });
+        if (taken) {
+          throw new ConflictException("Bu telefon raqami boshqa xodimda allaqachon mavjud");
+        }
+      }
+    }
+
+    const isSubjectTeacher = normalizePosition(position) === SUBJECT_TEACHER_POSITION;
+    const subjects = isSubjectTeacher ? (dto.subjects ?? employee.subjects).map((s) => s.trim()).filter(Boolean) : [];
+    if (isSubjectTeacher && subjects.length === 0) {
+      throw new BadRequestException("Kamida bitta fan tanlang");
+    }
+
+    if (employee.tenantUser && positionChanged && CABINETLESS_POSITIONS.has(normalizePosition(position))) {
+      throw new BadRequestException("Kabineti bor xodimni kabinetsiz lavozimga o'tkazib bo'lmaydi");
+    }
+
+    // Kabinet roli lavozimdan kelib chiqadigan bo'lsagina qayta hisoblanadi
+    const derivedRoles: TenantUserRole[] = ["TEACHER", "CHEF", "MANAGER"];
+    const nextRole = currentRole && derivedRoles.includes(currentRole) ? roleForPosition(position) : currentRole;
+    if (nextRole && nextRole !== currentRole && scope.role === "MANAGER" && nextRole === "MANAGER") {
+      throw new ForbiddenException("Administrator lavozimiga faqat filial admini o'tkaza oladi");
+    }
+
+    const isActive = dto.isActive ?? employee.isActive;
+    if (!isActive && employee.tenantUserId === scope.userId) {
+      throw new BadRequestException("O'zingizni nofaol qila olmaysiz");
+    }
+
+    // Guruh: faqat kabineti bor o'qituvchi/oshpaz/administratorda. Guruhsiz
+    // lavozimga o'tsa guruhdan chiqariladi.
+    let groupIds: string[] | null = null;
+    if (employee.tenantUser && currentRole && derivedRoles.includes(currentRole)) {
+      if (GROUPLESS_POSITIONS.has(normalizePosition(position))) {
+        groupIds = employee.teachingGroups.length > 0 ? [] : null;
+      } else if (dto.groupIds !== undefined) {
+        groupIds = requireGroupsFor(position, dto.groupIds);
+        await this.assertGroupsBelongToBranch(branchId, groupIds);
+      } else if (positionChanged && employee.teachingGroups.length === 0) {
+        throw new BadRequestException(GROUP_REQUIRED_MESSAGE);
+      }
+    }
+
+    const nameChanged = fullName !== employee.fullName;
+    const activeChanged = isActive !== employee.isActive;
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      if (employee.tenantUser) {
+        const userData: Prisma.TenantUserUpdateInput = {};
+        if (nameChanged) userData.fullName = fullName;
+        if (nextRole && nextRole !== currentRole) userData.role = nextRole;
+        if (activeChanged) userData.isActive = isActive;
+        if (Object.keys(userData).length > 0) {
+          await tx.tenantUser.update({ where: { id: employee.tenantUser.id }, data: userData });
+        }
+        // Nofaol qilinsa yoki roli o'zgarsa — eski seans eski huquq bilan qolmasin
+        if ((activeChanged && !isActive) || (nextRole && nextRole !== currentRole)) {
+          await tx.tenantRefreshToken.updateMany({
+            where: { tenantUserId: employee.tenantUser.id, revokedAt: null },
+            data: { revokedAt: new Date() },
+          });
+        }
+      }
+      if (groupIds !== null) {
+        await tx.groupTeacher.deleteMany({ where: { employeeId: id } });
+        if (groupIds.length > 0) {
+          await tx.groupTeacher.createMany({ data: groupIds.map((groupId) => ({ groupId, employeeId: id })) });
+        }
+      }
+      return tx.employee.update({
+        where: { id },
+        data: { firstName, lastName, fullName, phone, position, subjects, isActive },
+        include: employeeInclude,
+      });
+    });
+
+    const changes = [
+      nameChanged && `ism: ${employee.fullName} → ${fullName}`,
+      phone !== employee.phone && "telefon",
+      positionChanged && `lavozim: ${employee.position} → ${position}`,
+      activeChanged && (isActive ? "faol qilindi" : "nofaol qilindi"),
+      groupIds !== null && "guruh",
+    ].filter(Boolean);
+    if (changes.length > 0) {
+      await this.auditLog.logFromUser(caller, {
+        action: "employee.update",
+        entityType: "Employee",
+        entityId: id,
+        branchId,
+        summary: `${fullName} tahrirlandi (${changes.join(", ")})`,
+      });
+    }
+
+    // Yuz tanish terminallari: nofaol — olib tashlanadi; faol bo'lsa ism/surat yangilanadi
+    if (activeChanged && !isActive) {
+      await this.faceIdCommands.enqueueDelete({ organizationId: employee.organizationId, branchId, employeeNo: employee.employeeNo });
+    } else if (isActive && (nameChanged || activeChanged)) {
+      await this.faceIdCommands.enqueueEmployeeSync(id);
+      if (activeChanged) await this.faceIdCommands.enqueueFace(id);
+    }
+    return updated;
+  }
+
   /** Kabineti bo'lmagan xodimga keyinchalik login ochish. Login/parol avtomatik generatsiya qilinadi. */
   async openAccount(caller: TenantAuthenticatedUser, employeeId: string, dto: EmployeeAccountDto) {
     const scope = toTenantScope(caller);
@@ -320,7 +459,7 @@ export class EmployeesService {
     }
     const groupIds = requireGroupsFor(employee.position, dto.groupIds);
     await this.assertGroupsBelongToBranch(branchId, groupIds);
-    const { login, password, passwordHash, passwordEncrypted } = await this.resolveCredentials(
+    const { login, password, passwordHash } = await this.resolveCredentials(
       scope.organizationId,
       employee.firstName,
       employee.lastName,
@@ -336,7 +475,6 @@ export class EmployeesService {
             branchId,
             login,
             passwordHash,
-            passwordEncrypted,
             fullName: employee.fullName,
             role: roleForPosition(employee.position),
           },
@@ -385,13 +523,10 @@ export class EmployeesService {
     assertCanManageCredentials(scope.role, employee.tenantUser?.role);
 
     const password = generateEmployeePassword();
-    const [passwordHash, passwordEncrypted] = await Promise.all([
-      argon2.hash(password),
-      Promise.resolve(encryptSecret(password)),
-    ]);
+    const passwordHash = await argon2.hash(password);
     await this.prisma.tenantUser.update({
       where: { id: employee.tenantUserId },
-      data: { passwordHash, passwordEncrypted },
+      data: { passwordHash, passwordEncrypted: null },
     });
     await this.prisma.tenantRefreshToken.updateMany({
       where: { tenantUserId: employee.tenantUserId, revokedAt: null },
@@ -435,12 +570,8 @@ export class EmployeesService {
       data.login = dto.login.trim().toLowerCase();
     }
     if (dto.password) {
-      const [passwordHash, passwordEncrypted] = await Promise.all([
-        argon2.hash(dto.password),
-        Promise.resolve(encryptSecret(dto.password)),
-      ]);
-      data.passwordHash = passwordHash;
-      data.passwordEncrypted = passwordEncrypted;
+      data.passwordHash = await argon2.hash(dto.password);
+      data.passwordEncrypted = null;
     }
 
     try {
@@ -459,33 +590,6 @@ export class EmployeesService {
     } catch (err) {
       throw this.translateLoginConflict(err);
     }
-  }
-
-  /**
-   * Xodim kabineti parolini ko'rsatadi. WebAuthn bilan tasdiqlangan qisqa
-   * umrli "reveal token" talab qilinadi — shu tokensiz parol hech qachon
-   * qaytarilmaydi.
-   */
-  async revealPassword(scope: TenantScope, id: string, revealToken: string) {
-    if (!verifyRevealToken(this.jwt, revealToken, scope.userId)) {
-      throw new UnauthorizedException("Qurilma tasdiqlanmagan yoki muddati tugagan");
-    }
-    const branchId = requireOperationalScope(scope);
-    const employee = await this.prisma.employee.findFirst({
-      where: { id, organizationId: scope.organizationId, branchId },
-      select: { tenantUser: { select: { login: true, passwordEncrypted: true, role: true } } },
-    });
-    if (!employee?.tenantUser) {
-      throw new NotFoundException("Xodimning kabineti yo'q");
-    }
-    assertCanManageCredentials(scope.role, employee.tenantUser.role);
-    if (!employee.tenantUser.passwordEncrypted) {
-      throw new BadRequestException("Bu xodim uchun parol saqlanmagan — yangi parol generatsiya qiling");
-    }
-    return {
-      login: employee.tenantUser.login,
-      password: decryptSecret(Buffer.from(employee.tenantUser.passwordEncrypted)),
-    };
   }
 
   /**

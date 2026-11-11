@@ -1,73 +1,27 @@
 "use client";
 
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { CreateEmployeeResult, EmployeeCredentials, Group, Position } from "@/lib/types";
-import { Modal } from "@/components/ui/modal";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { StatusInput, type FieldStatus } from "@/components/ui/status-input";
-import { CredentialRow } from "@/components/ui/credential-row";
-import { PasswordChecklist, getPasswordRules } from "@/components/ui/password-checklist";
-import { PositionsModal } from "@/features/employees/positions-modal";
-import { SubjectsModal } from "@/features/employees/subjects-modal";
-import { PencilIcon, ChevronDownIcon, CheckIcon, EyeIcon, EyeOffIcon } from "@/components/ui/icons";
+import { IosSheet, SheetPrimaryButton, SheetSection } from "@/components/ios/sheet";
+import { FieldRow, FormSection, IosSwitch, PasswordInput, TextInput } from "@/components/ios/form";
+import { Row } from "@/components/ios/group";
+import { CheckIcon } from "@/components/ios/icons";
+import { ROW_SEPARATOR } from "@/components/ios/tokens";
 import { initials } from "@/components/ui/avatar";
-import { prepareChildPhoto } from "@/lib/child-photo";
+import { PasswordChecklist, getPasswordRules } from "@/components/ui/password-checklist";
 import { isCabinetlessPosition, isCookPosition, isGrouplessPosition, isSubjectTeacherPosition } from "@/lib/employee-position";
-import { validateUzbekPhone } from "@/lib/phone";
+import { CatalogPickerSheet, CheckRow, CopyRow, PhotoPickerHero, PickerRow, phoneErrorText } from "@/features/employees/employee-form-parts";
 import { useTr } from "@/i18n/tr";
 
-const schema = z
-  .object({
-    lastName: z.string().min(2, "Familiya kamida 2 belgi"),
-    firstName: z.string().min(2, "Ism kamida 2 belgi"),
-    phone: z
-      .string()
-      .min(1, "Telefon raqami kiritilishi shart")
-      .superRefine((value, ctx) => {
-        const error = validateUzbekPhone(value);
-        if (error === "prefix") {
-          ctx.addIssue({ code: "custom", message: "Telefon raqami +998 bilan boshlanishi kerak" });
-        } else if (error === "length") {
-          ctx.addIssue({ code: "custom", message: "Telefon raqami 9 xonali bo'lishi kerak (+998 dan keyin)" });
-        } else if (error === "code") {
-          ctx.addIssue({
-            code: "custom",
-            message: "Bunday operator kodi mavjud emas (masalan: 90, 91, 93, 94, 95, 97, 98, 99)",
-          });
-        }
-      }),
-    // Kabinet ixtiyoriy: oshpaz yoki farrosh tizimga kirmaydi
-    withAccount: z.boolean(),
-    groupIds: z.array(z.string()),
-    // Login/parol ixtiyoriy — bo'sh qoldirilsa backend avtomatik generatsiya qiladi
-    login: z.string().optional(),
-    password: z.string().optional(),
-    confirmPassword: z.string().optional(),
-  })
-  .superRefine((values, ctx) => {
-    if (!values.withAccount) return;
-    if (values.login && values.login.trim().length < 3) {
-      ctx.addIssue({ code: "custom", path: ["login"], message: "Login kamida 3 belgi bo'lishi kerak" });
-    }
-    if (values.password) {
-      const unmet = getPasswordRules(values.password).some((rule) => !rule.met);
-      if (unmet) {
-        ctx.addIssue({ code: "custom", path: ["password"], message: "Parol talablarga javob bermaydi" });
-      }
-      if (values.password !== values.confirmPassword) {
-        ctx.addIssue({ code: "custom", path: ["confirmPassword"], message: "Parollar mos kelmadi" });
-      }
-    }
-  });
-
-type FormValues = z.infer<typeof schema>;
-
+/**
+ * Yangi xodim — iOS varag'i (tahrirlash varag'i bilan bir xil tartib):
+ * tepada surat (majburiy, yuz tekshiriladi), ism, ish (lavozim, fan,
+ * telefon), kabinet (ixtiyoriy: login/parol, guruh). Lavozim va fan
+ * ichki varaqda tanlanadi yoki o'sha yerda yangisi qo'shiladi.
+ * Kabinet ochilsa login va parol bir marta ko'rsatiladi.
+ */
 export function CreateEmployeeModal({
   open,
   onClose,
@@ -81,134 +35,91 @@ export function CreateEmployeeModal({
 }) {
   const tr = useTr();
   const queryClient = useQueryClient();
-  const [serverError, setServerError] = useState<string | null>(null);
-  const [photoImage, setPhotoImage] = useState<string | null>(null);
-  const [photoError, setPhotoError] = useState<string | null>(null);
-  const [photoRequiredError, setPhotoRequiredError] = useState<string | null>(null);
-  const [photoChecking, setPhotoChecking] = useState(false);
-  const photoInputRef = useRef<HTMLInputElement>(null);
-  const [positionName, setPositionName] = useState(initialPosition?.name ?? "");
-  const [positionError, setPositionError] = useState<string | null>(null);
-  const [positionsModalOpen, setPositionsModalOpen] = useState(false);
-  const [subjects, setSubjects] = useState<string[]>([]);
-  const [subjectsError, setSubjectsError] = useState<string | null>(null);
-  const [subjectsModalOpen, setSubjectsModalOpen] = useState(false);
-  const isSubjectTeacher = isSubjectTeacherPosition(positionName);
-  // Guruhga biriktirilmaydigan lavozimlar: oshpaz, operator, administrator (kassir — kabinetsiz).
-  const isCookRole = isCookPosition(positionName) || isGrouplessPosition(positionName);
-  // Oshpaz yordamchisi, idish yuvuvchi kabi lavozimlarga kabinet ochilmaydi.
-  const cabinetless = isCabinetlessPosition(positionName);
-  const [groupsError, setGroupsError] = useState<string | null>(null);
-  const [createdCredentials, setCreatedCredentials] = useState<EmployeeCredentials | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const [photo, setPhoto] = useState<string | null>(null);
+  const [lastName, setLastName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [phone, setPhone] = useState("+998 ");
+  const [position, setPosition] = useState("");
+  const [subject, setSubject] = useState("");
+  const [withAccount, setWithAccount] = useState(false);
+  const [login, setLogin] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [groupId, setGroupId] = useState("");
+  const [picker, setPicker] = useState<"position" | "subject" | null>(null);
+  const [tried, setTried] = useState(false);
+  const [createdCredentials, setCreatedCredentials] = useState<EmployeeCredentials | null>(null);
+
+  // Har ochilishda toza forma
   useEffect(() => {
-    if (open) {
-      setPositionName(initialPosition?.name ?? "");
-      setPositionError(null);
-      setSubjects([]);
-      setSubjectsError(null);
-      setPhotoImage(null);
-      setPhotoError(null);
-      setPhotoRequiredError(null);
-      setGroupsError(null);
-      setCreatedCredentials(null);
-    }
+    if (!open) return;
+    setPhoto(null);
+    setLastName("");
+    setFirstName("");
+    setPhone("+998 ");
+    setPosition(initialPosition?.name ?? "");
+    setSubject("");
+    setWithAccount(false);
+    setLogin("");
+    setPassword("");
+    setConfirmPassword("");
+    setGroupId("");
+    setPicker(null);
+    setTried(false);
+    setCreatedCredentials(null);
   }, [open, initialPosition]);
 
-  useEffect(() => {
-    // Lavozim "Fan o'qituvchisi"dan boshqasiga o'zgarsa, eski fan tanlovi eskirgan hisoblanadi
-    if (!isSubjectTeacher) {
-      setSubjects([]);
-      setSubjectsError(null);
-    }
-  }, [isSubjectTeacher]);
+  const subjectTeacher = isSubjectTeacherPosition(position);
+  // Oshpaz yordamchisi, idish yuvuvchi, kassir — tizimga kirmaydi
+  const cabinetless = isCabinetlessPosition(position);
+  // Oshpaz, operator, administrator guruhga biriktirilmaydi
+  const groupless = isCookPosition(position) || isGrouplessPosition(position);
+  const account = withAccount && !cabinetless;
+  const needsGroup = account && !groupless;
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    watch,
-    setValue,
-    formState: { errors, isSubmitting, dirtyFields },
-  } = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    mode: "onChange",
-    defaultValues: { withAccount: false, groupIds: [] },
-  });
-
-  useEffect(() => {
-    // Oshpaz guruhga biriktirilmaydi — lavozim oshpazga o'zgarsa, guruh tanlovi va xatosi bekor bo'ladi
-    if (isCookRole) {
-      setValue("groupIds", []);
-      setGroupsError(null);
-    }
-  }, [isCookRole, setValue]);
-
-  useEffect(() => {
-    if (cabinetless) setValue("withAccount", false);
-  }, [cabinetless, setValue]);
-
-  const withAccount = watch("withAccount") && !cabinetless;
-  const groupIds = watch("groupIds");
-  const lastName = watch("lastName");
-  const firstName = watch("firstName");
-  const password = watch("password");
-  const confirmPassword = watch("confirmPassword");
-  const passwordRules = getPasswordRules(password ?? "", confirmPassword ?? "");
-
-  const handlePhotoPick = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-
-    setPhotoError(null);
-    setPhotoChecking(true);
-    try {
-      const result = await prepareChildPhoto(file);
-      if (!result.ok) {
-        setPhotoError(result.reason);
-        return;
-      }
-      setPhotoImage(result.image);
-      setPhotoRequiredError(null);
-    } finally {
-      setPhotoChecking(false);
-    }
-  };
-
-  const nameFieldStatus = (value: string | undefined, dirty: boolean | undefined, error: string | undefined): FieldStatus => {
-    if (error) return "error";
-    if (dirty && value && value.trim().length >= 2) return "success";
-    return "neutral";
-  };
-
-  const { data: groups } = useQuery({
+  const groupsQuery = useQuery({
     queryKey: ["groups", slug],
     queryFn: () => api.get<Group[]>("/app/groups"),
-    enabled: open && withAccount && !isCookRole,
+    enabled: open && needsGroup,
   });
 
-  const mutation = useMutation({
-    mutationFn: async (values: FormValues) => {
+  const loginTrim = login.trim();
+  const passwordRules = getPasswordRules(password, confirmPassword);
+  const errors = {
+    photo: !photo ? "Xodim surati talab qilinadi" : undefined,
+    lastName: lastName.trim().length < 2 ? "Familiya kamida 2 belgi" : undefined,
+    firstName: firstName.trim().length < 2 ? "Ism kamida 2 belgi" : undefined,
+    phone: phone.replace(/\D/g, "").length <= 3 ? "Telefon raqami kiritilishi shart" : phoneErrorText(phone),
+    position: position.trim().length < 2 ? "Lavozimni tanlang" : undefined,
+    subject: subjectTeacher && !subject ? "Fanni tanlang" : undefined,
+    login: account && loginTrim && loginTrim.length < 3 ? "Login kamida 3 belgi bo'lishi kerak" : undefined,
+    password: account && password && getPasswordRules(password).some((r) => !r.met) ? "Parol talablarga javob bermaydi" : undefined,
+    confirm: account && password && password !== confirmPassword ? "Parollar mos kelmadi" : undefined,
+    group: needsGroup && !groupId ? "Guruhni tanlang" : undefined,
+  };
+  const valid = Object.values(errors).every((e) => !e);
+  const show = (key: keyof typeof errors) => (tried ? errors[key] : undefined);
+
+  const create = useMutation({
+    mutationFn: async () => {
       const result = await api.post<CreateEmployeeResult>("/app/employees", {
-        lastName: values.lastName,
-        firstName: values.firstName,
-        phone: values.phone || undefined,
-        position: positionName.trim(),
-        subjects: isSubjectTeacher ? subjects : undefined,
-        account: values.withAccount && !cabinetless
+        lastName: lastName.trim(),
+        firstName: firstName.trim(),
+        phone: phone.trim(),
+        position: position.trim(),
+        subjects: subjectTeacher ? [subject] : undefined,
+        account: account
           ? {
-              groupIds: values.groupIds,
-              login: values.login?.trim() || undefined,
-              password: values.password || undefined,
+              groupIds: needsGroup ? [groupId] : [],
+              login: loginTrim || undefined,
+              password: password || undefined,
             }
           : undefined,
       });
       // Surat xodim yaratilgandan keyin alohida so'rov bilan yuklanadi; shu so'rov
       // muvaffaqiyatsiz bo'lsa ham xodim yozuvi allaqachon yaratilgan hisoblanadi.
-      await api.put(`/app/employees/${result.employee.id}/avatar`, { image: photoImage }).catch(() => {});
+      await api.put(`/app/employees/${result.employee.id}/avatar`, { image: photo }).catch(() => {});
       return result;
     },
     onSuccess: (result) => {
@@ -216,386 +127,175 @@ export function CreateEmployeeModal({
       queryClient.invalidateQueries({ queryKey: ["dashboard-summary", slug] });
       queryClient.invalidateQueries({ queryKey: ["groups", slug] });
       queryClient.invalidateQueries({ queryKey: ["positions", slug] });
-      setPhotoImage(null);
-      setPhotoError(null);
-      if (result.credentials) {
-        // Login/parol shu javobda bir marta keladi — yopishdan oldin ko'rsatiladi.
-        setCreatedCredentials(result.credentials);
-      } else {
-        reset();
-        setPositionName("");
-        onClose();
-      }
-    },
-    onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
+      // Login/parol shu javobda bir marta keladi — yopishdan oldin ko'rsatiladi
+      if (result.credentials) setCreatedCredentials(result.credentials);
+      else onClose();
     },
   });
+  const { reset } = create;
+  useEffect(() => {
+    if (open) reset();
+  }, [open, reset]);
 
-  const toggleGroup = (id: string) => {
-    // Har bir xodim (tarbiyachi ham, fan o'qituvchisi ham) faqat bitta guruhga
-    // biriktiriladi: yangisini bosish avvalgisini almashtiradi (xuddi shu
-    // guruhni qayta bossa — bekor qilinadi).
-    setValue("groupIds", groupIds.includes(id) ? [] : [id], { shouldValidate: true });
-    setGroupsError(null);
+  const submit = () => {
+    setTried(true);
+    if (!valid || create.isPending) return;
+    create.mutate();
   };
-
-  const handleClose = () => {
-    reset();
-    setServerError(null);
-    setPhotoImage(null);
-    setPhotoError(null);
-    setPhotoRequiredError(null);
-    setPositionName("");
-    setPositionError(null);
-    setSubjects([]);
-    setGroupsError(null);
-    setSubjectsError(null);
-    setCreatedCredentials(null);
-    setShowPassword(false);
-    setShowConfirmPassword(false);
-    onClose();
-  };
+  const close = () => !create.isPending && onClose();
 
   if (createdCredentials) {
     return (
-      <Modal open={open} onClose={handleClose} title={tr("Xodim yaratildi")}>
-        <div className="space-y-4">
-          <div className="flex flex-col items-center gap-2 text-center">
-            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-success-bg)] text-[var(--color-success)]">
-              <CheckIcon className="h-6 w-6" />
-            </span>
-            <p className="text-sm text-[var(--color-text-muted)]">
-              {tr("Kabinet ochildi. Login va parolni xodimga bering — parol qayta ko'rsatilmaydi.")}
-            </p>
-          </div>
-          <CredentialRow label={tr("Login")} value={createdCredentials.login} />
-          <CredentialRow label={tr("Parol")} value={createdCredentials.password} />
-          <div className="flex justify-end pt-1">
-            <Button type="button" onClick={handleClose}>
-              {tr("Yopish")}
-            </Button>
-          </div>
+      <IosSheet open={open} onClose={onClose} cancelLabel="Yopish" title={tr("Xodim qo'shildi")} footer={<SheetPrimaryButton onClick={onClose}>{tr("Tayyor")}</SheetPrimaryButton>}>
+        <div className="flex flex-col items-center gap-2 pt-1 text-center">
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#34c759]/[0.14] text-[#34c759]">
+            <CheckIcon className="h-7 w-7" strokeWidth={2.6} />
+          </span>
+          <p className="px-6 text-[13px] text-[#8e8e93]">{tr("Kabinet ochildi. Login va parolni xodimga bering — parol qayta ko'rsatilmaydi.")}</p>
         </div>
-      </Modal>
+        <SheetSection>
+          <CopyRow label={tr("Login")} value={createdCredentials.login} />
+          <CopyRow label={tr("Parol")} value={createdCredentials.password} />
+        </SheetSection>
+      </IosSheet>
     );
   }
 
   return (
-    <Modal open={open} onClose={handleClose} title={tr("Yangi xodim")}>
-      <form
-        className="space-y-4"
-        onSubmit={handleSubmit((values) => {
-          if (!photoImage) {
-            setPhotoRequiredError(tr("Xodim surati talab qilinadi"));
-            return;
-          }
-          if (positionName.trim().length < 2) {
-            setPositionError(tr("Lavozimni tanlang yoki yarating"));
-            return;
-          }
-          if (isSubjectTeacher && subjects.length === 0) {
-            setSubjectsError(tr("Kamida bitta fan tanlang"));
-            return;
-          }
-          if (values.withAccount && !cabinetless && !isCookRole && values.groupIds.length === 0) {
-            setGroupsError(tr("Kamida bitta guruh tanlang"));
-            return;
-          }
-          setServerError(null);
-          mutation.mutate(values);
-        })}
+    <>
+      <IosSheet
+        open={open}
+        onClose={close}
+        title={tr("Yangi xodim")}
+        footer={
+          <SheetPrimaryButton onClick={submit} loading={create.isPending} dim={!valid}>
+            {tr("Qo'shish")}
+          </SheetPrimaryButton>
+        }
       >
-        {serverError && (
-          <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {tr(serverError)}
-          </div>
-        )}
-
-        <div className="flex flex-col items-center gap-2">
-          <div className="group relative shrink-0">
-            {photoImage ? (
-              // eslint-disable-next-line @next/next/no-img-element -- data: URL, Next optimizatsiyasi kerak emas
-              <img
-                src={photoImage}
-                alt={tr("Xodim surati")}
-                width={72}
-                height={72}
-                className="h-[72px] w-[72px] shrink-0 rounded-full object-cover ring-1 ring-inset ring-[rgba(16,24,40,0.06)]"
-              />
-            ) : (
-              <span
-                className={`flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)]/10 text-[26px] font-semibold text-[var(--color-primary)] ring-1 ring-inset ${
-                  photoRequiredError ? "ring-2 ring-[var(--color-danger)]" : "ring-[rgba(16,24,40,0.06)]"
-                }`}
-              >
-                {initials(`${firstName ?? ""} ${lastName ?? ""}`) || "?"}
-              </span>
-            )}
-            <button
-              type="button"
-              onClick={() => photoInputRef.current?.click()}
-              disabled={photoChecking}
-              aria-label={tr("Xodim suratini tanlash")}
-              title={tr("Surat qo'yish")}
-              className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-full bg-black/45 text-white opacity-0 transition-opacity duration-[var(--dur-fast)] hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none disabled:cursor-wait disabled:opacity-100 motion-reduce:transition-none"
-            >
-              {photoChecking ? (
-                <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-              ) : (
-                <PencilIcon className="h-5 w-5" />
-              )}
-            </button>
-            <input
-              ref={photoInputRef}
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              className="hidden"
-              onChange={handlePhotoPick}
-            />
-          </div>
-          <button
-            type="button"
-            onClick={() => photoInputRef.current?.click()}
-            disabled={photoChecking}
-            className="cursor-pointer text-[12.5px] font-medium text-[var(--color-primary)] hover:underline disabled:opacity-60"
-          >
-            {photoChecking ? "Tekshirilmoqda..." : photoImage ? "Suratni almashtirish" : tr("Surat qo'yish (majburiy)")}
-          </button>
-          {(photoError || photoRequiredError) && (
-            <p role="alert" className="max-w-[320px] text-center text-[12.5px] text-[var(--color-danger)]">
-              {photoError || photoRequiredError}
-            </p>
-          )}
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <StatusInput
-            label={tr("Ism")}
-            placeholder={tr("Dilnoza")}
-            error={errors.firstName?.message}
-            status={nameFieldStatus(firstName, dirtyFields.firstName, errors.firstName?.message)}
-            {...register("firstName")}
-          />
-          {/* Fullname birlashtirishda familiya oldinda: ro'yxatlar va
-              hujjatlar "Familiya Ism" tartibida saqlanadi */}
-          <StatusInput
-            label={tr("Familiya")}
-            placeholder={tr("Yusupova")}
-            error={errors.lastName?.message}
-            status={nameFieldStatus(lastName, dirtyFields.lastName, errors.lastName?.message)}
-            {...register("lastName")}
-          />
-        </div>
-
-        <Input
-          label={tr("Telefon raqami")}
-          type="tel"
-          placeholder="+998 90 123 45 67"
-          maxLength={13}
-          error={errors.phone?.message}
-          {...register("phone")}
+        <PhotoPickerHero
+          hasPhoto={!!photo}
+          preview={photo ? <img src={photo} alt="" className="h-full w-full rounded-full object-cover" /> : null}
+          initialsText={initials(`${lastName} ${firstName}`)}
+          onPick={setPhoto}
+          onRemove={() => setPhoto(null)}
+          hint="Majburiy · faqat xodimning o'zi, yuzi aniq ko'rinsin — Face ID shu surat bilan taniydi"
+          error={show("photo")}
         />
 
-        <div>
-          <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">{tr("Lavozim")}</span>
-          <button
-            type="button"
-            onClick={() => setPositionsModalOpen(true)}
-            className="flex w-full cursor-pointer items-center justify-between rounded-2xl border border-[var(--color-border)] bg-white px-3.5 py-2.5 text-left text-sm text-[var(--color-text)] outline-none transition-colors hover:bg-[var(--color-surface-hover)] focus:border-[var(--color-primary)]"
-          >
-            <span className={positionName ? undefined : "text-gray-400"}>
-              {positionName || tr("Lavozimni tanlang yoki yarating")}
-            </span>
-            <ChevronDownIcon className="h-4 w-4 shrink-0 text-gray-400" />
-          </button>
-          {positionError && <span className="mt-1 block text-xs text-[#dc2626]">{tr(positionError)}</span>}
-        </div>
+        <FormSection>
+          <FieldRow label={tr("Familiya")} htmlFor="new-emp-last" error={show("lastName")}>
+            <TextInput id="new-emp-last" value={lastName} onChange={(e) => setLastName(e.target.value)} maxLength={60} placeholder={tr("Yusupova")} autoComplete="off" />
+          </FieldRow>
+          <FieldRow label={tr("Ism")} htmlFor="new-emp-first" error={show("firstName")}>
+            <TextInput id="new-emp-first" value={firstName} onChange={(e) => setFirstName(e.target.value)} maxLength={60} placeholder={tr("Dilnoza")} autoComplete="off" />
+          </FieldRow>
+        </FormSection>
 
-        {isSubjectTeacher && (
-          <div>
-            <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">{tr("Fan")}</span>
-            <button
-              type="button"
-              onClick={() => setSubjectsModalOpen(true)}
-              className="flex w-full cursor-pointer items-center justify-between rounded-2xl border border-[var(--color-border)] bg-white px-3.5 py-2.5 text-left text-sm text-[var(--color-text)] outline-none transition-colors hover:bg-[var(--color-surface-hover)] focus:border-[var(--color-primary)]"
-            >
-              <span className={subjects.length > 0 ? undefined : "text-gray-400"}>
-                {subjects.length > 0 ? subjects.join(", ") : tr("Fanni tanlang yoki yarating")}
-              </span>
-              <ChevronDownIcon className="h-4 w-4 shrink-0 text-gray-400" />
-            </button>
-            {subjectsError && <span className="mt-1 block text-xs text-[#dc2626]">{tr(subjectsError)}</span>}
-          </div>
-        )}
+        <FormSection title={tr("Ish")}>
+          <PickerRow label={tr("Lavozim")} value={position ? tr(position) : ""} placeholder={tr("Tanlang")} onClick={() => setPicker("position")} error={show("position")} />
+          {subjectTeacher && <PickerRow label={tr("Fan")} value={subject ? tr(subject) : ""} placeholder={tr("Tanlang")} onClick={() => setPicker("subject")} error={show("subject")} />}
+          <FieldRow label={tr("Telefon")} htmlFor="new-emp-phone" error={show("phone")}>
+            <TextInput
+              id="new-emp-phone"
+              type="tel"
+              inputMode="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              maxLength={17}
+              placeholder="+998 90 123 45 67"
+              autoComplete="off"
+              className="tabular-nums"
+            />
+          </FieldRow>
+        </FormSection>
 
         {cabinetless ? (
-          <p className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3.5 text-xs text-[var(--color-text-muted)]">
-            {tr("Bu lavozimdagi xodim tizimga kirmaydi — kabinet ochilmaydi, faqat xodimlar ro'yxatida turadi.")}
-          </p>
+          <FormSection title={tr("Kabinet")}>
+            <Row title={<span className="text-[#8e8e93]">{tr("Bu lavozimdagi xodim tizimga kirmaydi — kabinet ochilmaydi, faqat xodimlar ro'yxatida turadi.")}</span>} />
+          </FormSection>
         ) : (
-        <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3.5">
-          <label className="flex cursor-pointer items-start gap-2.5">
-            <input
-              type="checkbox"
-              className="mt-0.5 h-4 w-4 cursor-pointer accent-[var(--color-primary)]"
-              {...register("withAccount")}
-            />
-            <span>
-              <span className="block text-sm font-medium text-[var(--color-text)]">{tr("Kabinet ochish")}</span>
-              <span className="block text-xs text-[var(--color-text-muted)]">
-                {tr("Tarbiyachi tizimga kirib, o'ziga biriktirilgan guruhlarga davomat qo'yadi. Oshpaz yoki farrosh kabi xodimlarga kerak emas.")}
-              </span>
-            </span>
-          </label>
-
-          {withAccount && (
-            <div className="mt-4 space-y-4 border-t border-[var(--color-border)] pt-4">
-              <p className="text-xs text-[var(--color-text-muted)]">
-                {tr("Login va parolni o'zingiz kiriting yoki bo'sh qoldiring — bo'sh qoldirilsa avtomatik yaratiladi va bir marta ko'rsatiladi.")}
-              </p>
-
-              <Input
-                label={tr("Login")}
-                placeholder={tr("dilnoza.yusupova (ixtiyoriy)")}
-                autoComplete="off"
-                error={errors.login?.message}
-                {...register("login")}
-              />
-
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="mb-2 block text-[13px] font-medium text-[var(--color-text)]" htmlFor="password">
-                    {tr("Parol")}
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder={tr("Ixtiyoriy")}
-                      autoComplete="new-password"
-                      className="h-11 w-full rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-3.5 pr-10 text-[15px] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/60 outline-none transition-[border-color,box-shadow] duration-[var(--dur-fast)] ease-[var(--ease-out)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/[0.12]"
-                      {...register("password")}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((v) => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400 hover:text-[var(--color-text)]"
-                      aria-label={showPassword ? "Parolni yashirish" : tr("Parolni ko'rsatish")}
-                    >
-                      {showPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
-                    </button>
-                  </div>
-                  {errors.password?.message && (
-                    <span className="mt-1.5 block text-[13px] text-[var(--color-danger)]">{tr(errors.password.message)}</span>
-                  )}
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-[13px] font-medium text-[var(--color-text)]" htmlFor="confirmPassword">
-                    {tr("Parolni tasdiqlang")}
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="confirmPassword"
-                      type={showConfirmPassword ? "text" : "password"}
-                      placeholder={tr("Ixtiyoriy")}
-                      autoComplete="new-password"
-                      className="h-11 w-full rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-3.5 pr-10 text-[15px] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/60 outline-none transition-[border-color,box-shadow] duration-[var(--dur-fast)] ease-[var(--ease-out)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/[0.12]"
-                      {...register("confirmPassword")}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword((v) => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400 hover:text-[var(--color-text)]"
-                      aria-label={showConfirmPassword ? "Parolni yashirish" : tr("Parolni ko'rsatish")}
-                    >
-                      {showConfirmPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
-                    </button>
-                  </div>
-                  {errors.confirmPassword?.message && (
-                    <span className="mt-1.5 block text-[13px] text-[var(--color-danger)]">{tr(errors.confirmPassword.message)}</span>
-                  )}
-                </div>
-              </div>
-
-              {password && (
-                <div className="rounded-[var(--radius-md)] bg-[var(--color-surface)] p-3">
-                  <PasswordChecklist rules={passwordRules} />
-                </div>
-              )}
-
-              {!isCookRole && (
-                <div>
-                  <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">{tr("Guruhlari")}</span>
-                  {!groups ? (
-                    <p className="text-xs text-[var(--color-text-muted)]">{tr("Guruhlar yuklanmoqda...")}</p>
-                  ) : groups.length === 0 ? (
-                    <p className="text-xs text-[var(--color-text-muted)]">
-                      {tr("Avval guruh oching — tarbiyachi qaysi guruhga biriktirilishi kerakligi shundan aniqlanadi.")}
-                    </p>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {groups.map((group) => {
-                        const selected = groupIds.includes(group.id);
-                        return (
-                          <button
-                            key={group.id}
-                            type="button"
-                            onClick={() => toggleGroup(group.id)}
-                            aria-pressed={selected}
-                            className={`cursor-pointer rounded-full border px-3 py-1.5 text-[13px] transition-colors ${
-                              selected
-                                ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
-                                : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]"
-                            }`}
-                          >
-                            {tr(group.name)}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                  {groupsError && <span className="mt-1.5 block text-xs text-[var(--color-danger)]">{tr(groupsError)}</span>}
-                </div>
-              )}
+          <FormSection
+            title={tr("Kabinet")}
+            footer={
+              account
+                ? tr("Login va parolni o'zingiz kiriting yoki bo'sh qoldiring — bo'sh qoldirilsa avtomatik yaratiladi va bir marta ko'rsatiladi.")
+                : tr("Tarbiyachi tizimga kirib, o'ziga biriktirilgan guruhlarga davomat qo'yadi. Oshpaz yoki farrosh kabi xodimlarga kerak emas.")
+            }
+          >
+            <div className="group/row relative flex min-h-[52px] items-center gap-3 px-4">
+              <span className="flex-1 text-[15px] text-[var(--color-text)]">{tr("Kabinet ochish")}</span>
+              <IosSwitch checked={withAccount} onChange={setWithAccount} label={tr("Kabinet ochish")} />
             </div>
-          )}
-        </div>
+            {account && (
+              <>
+                <FieldRow label={tr("Login")} htmlFor="new-emp-login" error={show("login")}>
+                  <TextInput id="new-emp-login" value={login} onChange={(e) => setLogin(e.target.value)} placeholder={tr("Ixtiyoriy")} autoComplete="off" autoCapitalize="none" />
+                </FieldRow>
+                <FieldRow label={tr("Parol")} htmlFor="new-emp-password" error={show("password")}>
+                  <PasswordInput id="new-emp-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={tr("Ixtiyoriy")} autoComplete="new-password" />
+                </FieldRow>
+                {password && (
+                  <>
+                    <FieldRow label={tr("Tasdiqlash")} htmlFor="new-emp-confirm" error={show("confirm")}>
+                      <PasswordInput id="new-emp-confirm" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder={tr("Parolni tasdiqlang")} autoComplete="new-password" />
+                    </FieldRow>
+                    <div className="group/row relative px-4 py-3">
+                      <PasswordChecklist rules={passwordRules} />
+                      <span className={ROW_SEPARATOR} aria-hidden="true" />
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+          </FormSection>
         )}
 
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="outline" onClick={handleClose}>
-            {tr("Bekor qilish")}
-          </Button>
-          <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            {tr("Yaratish")}
-          </Button>
-        </div>
-      </form>
+        {needsGroup && (
+          <FormSection
+            title={tr("Guruh")}
+            footer={show("group") ? <span className="text-[#ff3b30]">{tr(errors.group!)}</span> : tr("Xodim faqat shu guruhni ko'radi va davomatini yuritadi.")}
+          >
+            {groupsQuery.isLoading ? (
+              <Row title={<span className="text-[#8e8e93]">{tr("Guruhlar yuklanmoqda...")}</span>} />
+            ) : (groupsQuery.data ?? []).length === 0 ? (
+              <Row title={<span className="text-[#8e8e93]">{tr("Avval guruh oching — tarbiyachi qaysi guruhga biriktirilishi kerakligi shundan aniqlanadi.")}</span>} />
+            ) : (
+              (groupsQuery.data ?? []).map((g) => (
+                // Qayta bosilsa tanlov bekor qilinadi
+                <CheckRow key={g.id} label={tr(g.name)} checked={groupId === g.id} onClick={() => setGroupId((prev) => (prev === g.id ? "" : g.id))} />
+              ))
+            )}
+          </FormSection>
+        )}
 
-      <PositionsModal
-        open={positionsModalOpen}
-        onClose={() => setPositionsModalOpen(false)}
+        {create.error && (
+          <p role="alert" className="px-4 text-[13px] text-[#ff3b30]">
+            {create.error instanceof ApiError ? tr(create.error.message) : tr("Kutilmagan xatolik yuz berdi")}
+          </p>
+        )}
+        {tried && !valid && !create.error && (
+          <p className="px-4 text-[13px] text-[#ff3b30]">{tr("Qizil belgilangan maydonlarni to'ldiring")}</p>
+        )}
+      </IosSheet>
+
+      {/* Lavozim / fan — ichki varaq: tanlash yoki yangisini qo'shish */}
+      <CatalogPickerSheet
+        open={open && picker !== null}
+        onClose={() => setPicker(null)}
+        kind={picker ?? "position"}
         slug={slug}
-        selected={positionName}
+        selected={picker === "subject" ? subject : position}
         onSelect={(name) => {
-          setPositionName(name);
-          setPositionError(null);
+          if (picker === "subject") {
+            setSubject(name);
+          } else {
+            setPosition(name);
+            // Lavozim o'zgarsa eski fan tanlovi eskiradi
+            if (!isSubjectTeacherPosition(name)) setSubject("");
+          }
         }}
       />
-
-      <SubjectsModal
-        open={subjectsModalOpen}
-        onClose={() => setSubjectsModalOpen(false)}
-        slug={slug}
-        selected={subjects}
-        onToggle={(name) => {
-          // Bitta o'qituvchiga bitta fan: yangisini bosish avvalgisini almashtiradi
-          setSubjects((prev) => (prev.includes(name) ? [] : [name]));
-          setSubjectsError(null);
-        }}
-      />
-    </Modal>
+    </>
   );
 }

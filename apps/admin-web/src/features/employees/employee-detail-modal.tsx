@@ -1,19 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Pencil, Trash2 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import type { CreateEmployeeResult, Employee, EmployeeCredentials, Group } from "@/lib/types";
-import { deleteEmployeeWithConfirmation, revealEmployeePassword, webauthnErrorMessage } from "@/lib/webauthn";
-import { Modal } from "@/components/ui/modal";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { CredentialRow } from "@/components/ui/credential-row";
+import { deleteEmployeeWithConfirmation, webauthnErrorMessage } from "@/lib/webauthn";
+import { IosSheet, SheetPrimaryButton, SheetRow, SheetSection } from "@/components/ios/sheet";
+import { FieldRow, FormSection, PasswordInput, TextInput } from "@/components/ios/form";
+import { Row } from "@/components/ios/group";
+import { Pill } from "@/components/ios/pill";
+import { Spinner } from "@/components/ios/spinner";
+import { CheckIcon } from "@/components/ios/icons";
+import { IOS, ROW_SEPARATOR } from "@/components/ios/tokens";
+import { IosIcon } from "@/features/director/ios-icon";
 import { EmployeePhoto } from "@/components/ui/employee-photo";
 import { initials } from "@/components/ui/avatar";
-import { PhoneIcon, EyeIcon, EyeOffIcon, CheckIcon, TrashIcon } from "@/components/ui/icons";
 import { formatPositionLabel, isCabinetlessPosition, isGrouplessPosition, isSubjectTeacherPosition } from "@/lib/employee-position";
 import { EmployeeTopics } from "@/features/employees/employee-topics";
+import { EditEmployeeSheet } from "@/features/employees/edit-employee-sheet";
+import { CopyRow } from "@/features/employees/employee-form-parts";
 import { PasswordChecklist, getPasswordRules } from "@/components/ui/password-checklist";
 import { Toast, type ToastState } from "@/components/ui/toast";
 import { useTr } from "@/i18n/tr";
@@ -21,16 +27,20 @@ import { useTr } from "@/i18n/tr";
 const LOGIN_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{1,30}[A-Za-z0-9]$/;
 
 /**
- * Xodim ustiga bosilganda ochiladi: telefon, login va kabinet paroli shu yerda.
- * Parol qaytarib olinadigan (shifrlangan) holda saqlanadi, lekin ko'rsatishdan
- * oldin har safar admin qurilmasi WebAuthn (Face ID/Windows Hello/PIN) bilan
- * tasdiqlanishi kerak — shundan keyingina ochiladi (`revealEmployeePassword`).
+ * Xodim varag'i — iOS uslubida (SaaS ERP'dagi o'quvchi varag'i tartibida):
+ * tepada surat, ism, lavozim va holat; keyin «Ma'lumot», «Kabinet»
+ * (login, yangi parol), fan o'qituvchisida «Mavzular», oxirida «Amallar»
+ * (tahrirlash, o'chirish).
+ *
+ * Joriy parol hech qayerda ko'rsatilmaydi — server uni faqat hash ko'rinishida
+ * saqlaydi. Admin faqat yangi parol qo'ya oladi. O'chirish admin qurilmasi
+ * WebAuthn (Face ID/Windows Hello/PIN) bilan tasdiqlangandan keyin bajariladi.
  */
 export function EmployeeDetailModal({
   open,
   onClose,
   slug,
-  employee,
+  employee: employeeProp,
   canWrite,
 }: {
   open: boolean;
@@ -41,10 +51,10 @@ export function EmployeeDetailModal({
 }) {
   const tr = useTr();
   const queryClient = useQueryClient();
-
-  const [visiblePassword, setVisiblePassword] = useState<string | null>(null);
-  const [revealing, setRevealing] = useState(false);
-  const [revealError, setRevealError] = useState<string | null>(null);
+  // Yopilish animatsiyasida (va o'chirilgandan keyin) varaq bo'shab qolmasin
+  const lastEmployee = useRef<Employee | null>(employeeProp);
+  if (employeeProp) lastEmployee.current = employeeProp;
+  const employee = employeeProp ?? lastEmployee.current;
 
   const [accountOpen, setAccountOpen] = useState(false);
   const [groupIds, setGroupIds] = useState<string[]>([]);
@@ -55,11 +65,12 @@ export function EmployeeDetailModal({
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  const [editOpen, setEditOpen] = useState(false);
+
   const [loginInput, setLoginInput] = useState("");
   const [savedLogin, setSavedLogin] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
-  const [showNewPassword, setShowNewPassword] = useState(false);
   const [credentialsError, setCredentialsError] = useState<string | null>(null);
   // Maydonga tegishli xatolar o'sha maydon ostida chiqadi — parol to'g'ri
   // bo'lsa-yu, login xatosi parol ostida chiqib chalg'itmasin
@@ -72,9 +83,6 @@ export function EmployeeDetailModal({
 
   useEffect(() => {
     if (!open) {
-      setVisiblePassword(null);
-      setRevealing(false);
-      setRevealError(null);
       setAccountOpen(false);
       setGroupIds([]);
       setAccountError(null);
@@ -83,6 +91,7 @@ export function EmployeeDetailModal({
       setDeleting(false);
       setDeleteError(null);
       setTopicsSaveError(null);
+      setEditOpen(false);
     }
   }, [open]);
 
@@ -95,8 +104,9 @@ export function EmployeeDetailModal({
     setSavedLogin(login);
     setNewPassword("");
     setConfirmNewPassword("");
-    setShowNewPassword(false);
     setCredentialsError(null);
+    setLoginError(null);
+    setPasswordError(null);
   }, [employee?.id, employee?.tenantUser?.login]);
 
   // Almashtirgich holati serverdagi qiymatga moslanadi — xodim almashganda yoki
@@ -122,10 +132,7 @@ export function EmployeeDetailModal({
       setLoginInput(result.login);
       setNewPassword("");
       setConfirmNewPassword("");
-      setShowNewPassword(false);
       setCredentialsError(null);
-      // Yangi parol qo'yilgan bo'lsa, avval ko'rsatilgan eski parol endi eskirgan.
-      setVisiblePassword(null);
       queryClient.invalidateQueries({ queryKey: ["employees", slug] });
       setToast({ type: "success", message: "Saqlandi" });
     },
@@ -167,10 +174,10 @@ export function EmployeeDetailModal({
     !!employee.tenantUser && (loginInput.trim().toLowerCase() !== savedLogin || newPassword.length > 0);
   const topicsDirty = topicsManagedByAdmin !== (employee.topicsManagedByAdmin ?? false);
   const dirty = credentialsDirty || topicsDirty;
+  const saving = credentialsMutation.isPending || topicsSettingMutation.isPending;
 
-  // Oynaning tagidagi yagona "Saqlash" tugmasi hamma o'zgargan bo'limlarni
-  // (login/parol va "Mavzu qo'shasizmi?" almashtirgichi) birgalikda saqlaydi —
-  // har bir bo'lim uchun alohida tugma bo'lmasin.
+  // Varaq tepasidagi yagona "Saqlash" hamma o'zgargan bo'limlarni (login/parol
+  // va "Mavzu qo'shasizmi?" almashtirgichi) birgalikda saqlaydi.
   const handleSave = async () => {
     setCredentialsError(null);
     setLoginError(null);
@@ -224,23 +231,6 @@ export function EmployeeDetailModal({
     setGroupIds((prev) => (prev.includes(id) ? [] : [id]));
   };
 
-  const handleShowPassword = async () => {
-    if (visiblePassword) {
-      setVisiblePassword(null);
-      return;
-    }
-    setRevealing(true);
-    setRevealError(null);
-    try {
-      const { password } = await revealEmployeePassword(employee.id);
-      setVisiblePassword(password);
-    } catch (err) {
-      setRevealError(webauthnErrorMessage(err));
-    } finally {
-      setRevealing(false);
-    }
-  };
-
   const handleDelete = async () => {
     setDeleting(true);
     setDeleteError(null);
@@ -256,282 +246,201 @@ export function EmployeeDetailModal({
     }
   };
 
+  const onEnter = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && credentialsDirty && !saving) {
+      e.preventDefault();
+      handleSave();
+    }
+  };
+
+  // Kabinet ochilgach login/parol bir marta ko'rsatiladi
   if (createdCredentials) {
     return (
-      <Modal open={open} onClose={onClose} title={tr("Kabinet ochildi")} widthClassName="max-w-md">
-        <div className="space-y-4">
-          <div className="flex flex-col items-center gap-2 text-center">
-            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-success-bg)] text-[var(--color-success)]">
-              <CheckIcon className="h-6 w-6" />
-            </span>
-            <p className="text-sm text-[var(--color-text-muted)]">
-              {tr("Login va parolni xodimga bering — parol qayta ko'rsatilmaydi.")}
-            </p>
-          </div>
-          <CredentialRow label={tr("Login")} value={createdCredentials.login} />
-          <CredentialRow label={tr("Parol")} value={createdCredentials.password} />
-          <div className="flex justify-end pt-1">
-            <Button type="button" onClick={onClose}>
-              {tr("Yopish")}
-            </Button>
-          </div>
+      <IosSheet open={open} onClose={onClose} cancelLabel="Yopish" title={tr("Kabinet ochildi")} footer={<SheetPrimaryButton onClick={onClose}>{tr("Tayyor")}</SheetPrimaryButton>}>
+        <div className="flex flex-col items-center gap-2 pt-1 text-center">
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#34c759]/[0.14] text-[#34c759]">
+            <CheckIcon className="h-7 w-7" strokeWidth={2.6} />
+          </span>
+          <p className="px-6 text-[13px] text-[#8e8e93]">{tr("Login va parolni xodimga bering — parol qayta ko'rsatilmaydi.")}</p>
         </div>
-      </Modal>
+        <SheetSection>
+          <CopyRow label={tr("Login")} value={createdCredentials.login} />
+          <CopyRow label={tr("Parol")} value={createdCredentials.password} />
+        </SheetSection>
+      </IosSheet>
     );
   }
 
+  const positionLabel = formatPositionLabel(employee.position, employee.subjects);
+  const groupNames = (employee.teachingGroups ?? []).map((link) => link.group?.name ?? tr("Guruh"));
+  const cabinetless = isCabinetlessPosition(employee.position);
+
   return (
-    <Modal open={open} onClose={onClose} title={tr("Xodim")} widthClassName="max-w-md">
-      <div className="space-y-5">
-        <div className="flex flex-col items-center gap-2">
-          <EmployeePhoto
-            employee={employee}
-            size={72}
-            shape="circle"
-            fallback={initials(employee.fullName)}
-            className="text-[22px]"
-          />
-          <div className="text-center">
-            <p className="text-[16px] font-semibold text-[var(--color-text)]">{tr(employee.fullName)}</p>
-            <p className="text-[13px] text-[var(--color-text-muted)]">
-              {tr(formatPositionLabel(employee.position, employee.subjects))}
-            </p>
+    <>
+      <IosSheet
+        open={open && !editOpen}
+        onClose={onClose}
+        cancelLabel="Yopish"
+        title={tr("Xodim")}
+        action={dirty ? { label: "Saqlash", onClick: handleSave, loading: saving } : undefined}
+      >
+        {/* Bosh qism: surat, ism, lavozim, holat */}
+        <div className="flex flex-col items-center gap-2 pt-1">
+          <EmployeePhoto employee={employee} size={88} fallback={initials(employee.fullName)} className="text-[30px]" />
+          <p className="px-6 text-center text-[20px] font-bold leading-tight text-[var(--color-text)]">{tr(employee.fullName)}</p>
+          <p className="-mt-1 px-6 text-center text-[15px] text-[#8e8e93]">{tr(positionLabel)}</p>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <Pill color={employee.isActive ? IOS.green : IOS.gray}>{tr(employee.isActive ? "Faol" : "Nofaol")}</Pill>
+            <Pill color={IOS.gray} title={tr("Face ID raqami")}>
+              ID {employee.employeeNo}
+            </Pill>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge tone={employee.isActive ? "success" : "neutral"}>{employee.isActive ? "Faol" : "Nofaol"}</Badge>
-            {canWrite && !deleteConfirming && (
-              <button
-                type="button"
-                onClick={() => setDeleteConfirming(true)}
-                className="flex cursor-pointer items-center gap-1 rounded-full bg-[var(--color-danger-bg)] px-2.5 py-1 text-[12px] font-medium text-[var(--color-danger)] hover:brightness-[0.96]"
-              >
-                <TrashIcon className="h-3.5 w-3.5" />
-                {tr("O'chirish")}
-              </button>
+        </div>
+
+        <SheetSection title={tr("Ma'lumot")}>
+          <SheetRow label={tr("Telefon")}>
+            {employee.phone ? (
+              <a href={`tel:${employee.phone}`} className="tabular-nums text-[var(--color-primary)]">
+                {employee.phone}
+              </a>
+            ) : (
+              tr("Kiritilmagan")
             )}
-          </div>
-        </div>
+          </SheetRow>
+          <SheetRow label={tr("Lavozim")}>
+            <span className="block truncate">{tr(positionLabel)}</span>
+          </SheetRow>
+          {groupNames.length > 0 && (
+            <SheetRow label={tr("Guruh")}>
+              <span className="block truncate">{groupNames.map((n) => tr(n)).join(", ")}</span>
+            </SheetRow>
+          )}
+        </SheetSection>
 
-        {deleteConfirming && (
-          <div className="space-y-2 rounded-[var(--radius-lg)] border border-[var(--color-danger)]/25 bg-[var(--color-danger-bg)] p-3.5">
-            <p className="text-[13px] text-[var(--color-danger)]">
-              &quot;{tr(employee.fullName)}{tr("\"ni butunlay o'chirmoqchimisiz? Uning davomat va oylik tarixi ham qaytarib bo'lmas tarzda o'chadi.")}
-            </p>
-            {deleteError && <p className="text-xs text-[var(--color-danger)]">{tr(deleteError)}</p>}
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                disabled={deleting}
-                onClick={() => {
-                  setDeleteConfirming(false);
-                  setDeleteError(null);
-                }}
-              >
-                {tr("Bekor qilish")}
-              </Button>
-              <Button type="button" variant="danger" size="sm" loading={deleting} onClick={handleDelete}>
-                {tr("Ha, o'chirish")}
-              </Button>
-            </div>
-          </div>
-        )}
-
-        <div className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-sunken)] px-4 py-3">
-          <PhoneIcon className="h-4 w-4 shrink-0 text-[var(--color-text-muted)]" />
-          <span className="text-sm text-[var(--color-text)]">{employee.phone ?? "Telefon raqami kiritilmagan"}</span>
-        </div>
-
-        {employee.teachingGroups?.length ? (
-          <div className="flex flex-wrap gap-1.5">
-            {employee.teachingGroups.map((link) => (
-              <Badge key={link.groupId} tone="primary">
-                {link.group?.name ?? tr("Guruh")}
-              </Badge>
-            ))}
-          </div>
-        ) : null}
-
+        {/* Kabinet: login va parol */}
         {employee.tenantUser ? (
-          <div className="space-y-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] p-4">
-            <div>
-              <label className="mb-1.5 block text-[13px] font-medium text-[var(--color-text)]" htmlFor="employee-login">
-                {tr("Login")}
-              </label>
-              <input
+          <FormSection
+            title={tr("Kabinet")}
+            footer={
+              credentialsError ? (
+                <span className="text-[#ff3b30]">{tr(credentialsError)}</span>
+              ) : canWrite ? (
+                tr("Joriy parol ko'rsatilmaydi. Xodim parolini unutgan bo'lsa — yangi parol qo'ying.")
+              ) : undefined
+            }
+          >
+            <FieldRow label={tr("Login")} htmlFor="employee-login" error={loginError ?? undefined}>
+              <TextInput
                 id="employee-login"
                 value={loginInput}
                 onChange={(e) => {
                   setLoginInput(e.target.value);
                   setLoginError(null);
                 }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && credentialsDirty && !credentialsMutation.isPending) {
-                    e.preventDefault();
-                    handleSave();
-                  }
-                }}
-                disabled={!canWrite || credentialsMutation.isPending}
-                aria-invalid={!!loginError}
-                className={`w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[var(--color-primary)] disabled:opacity-60 ${loginError ? "border-[var(--color-danger)]" : "border-[var(--color-border)]"}`}
+                onKeyDown={onEnter}
+                disabled={!canWrite || saving}
+                autoComplete="off"
+                className="text-right"
               />
-              {loginError && <p className="mt-1.5 text-xs text-[var(--color-danger)]">{tr(loginError)}</p>}
-            </div>
-
-            <div className="flex items-center justify-between gap-3 border-t border-[var(--color-border)] pt-3">
-              <div className="min-w-0">
-                <p className="text-[13px] font-medium text-[var(--color-text)]">{tr("Joriy parol")}</p>
-                <p className="truncate font-mono text-sm text-[var(--color-text-muted)]">
-                  {visiblePassword ?? "••••••••••"}
-                </p>
-              </div>
-              {canWrite && (
-                <button
-                  type="button"
-                  onClick={handleShowPassword}
-                  disabled={revealing}
-                  className="flex shrink-0 cursor-pointer items-center gap-1 rounded-full bg-[var(--color-surface-sunken)] px-2.5 py-1.5 text-[12px] font-medium text-[var(--color-text)] hover:bg-[var(--color-border)] disabled:cursor-wait disabled:opacity-60"
-                  aria-label={visiblePassword ? "Parolni yashirish" : tr("Parolni ko'rsatish")}
-                >
-                  {revealing ? (
-                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  ) : visiblePassword ? (
-                    <EyeOffIcon className="h-3.5 w-3.5" />
-                  ) : (
-                    <EyeIcon className="h-3.5 w-3.5" />
-                  )}
-                  {revealing ? "Tasdiqlanmoqda..." : visiblePassword ? "Yashirish" : tr("Ko'rsatish")}
-                </button>
-              )}
-            </div>
-            {revealError && <p className="text-xs text-[var(--color-danger)]">{tr(revealError)}</p>}
-
+            </FieldRow>
             {canWrite && (
-              <div className="border-t border-[var(--color-border)] pt-3">
-                <label
-                  className="mb-1.5 block text-[13px] font-medium text-[var(--color-text)]"
-                  htmlFor="employee-new-password"
-                >
-                  {tr("Yangi parol")}
-                </label>
-                <div className="relative">
-                  <input
-                    id="employee-new-password"
-                    type={showNewPassword ? "text" : "password"}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && credentialsDirty && !credentialsMutation.isPending) {
-                        e.preventDefault();
-                        handleSave();
-                      }
-                    }}
-                    placeholder={tr("O'zgartirmaslik uchun bo'sh qoldiring")}
-                    autoComplete="new-password"
-                    disabled={credentialsMutation.isPending}
-                    className="w-full rounded-xl border border-[var(--color-border)] bg-white px-3.5 py-2.5 pr-10 text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[var(--color-primary)] disabled:opacity-60"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNewPassword((v) => !v)}
-                    aria-label={showNewPassword ? "Parolni yashirish" : tr("Parolni ko'rsatish")}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-                  >
-                    {showNewPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
-                  </button>
-                </div>
-
-                {newPassword && (
-                  <>
-                    <input
-                      type={showNewPassword ? "text" : "password"}
-                      value={confirmNewPassword}
-                      onChange={(e) => setConfirmNewPassword(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && credentialsDirty && !credentialsMutation.isPending) {
-                          e.preventDefault();
-                          handleSave();
-                        }
-                      }}
-                      placeholder={tr("Yangi parolni tasdiqlang")}
-                      autoComplete="new-password"
-                      disabled={credentialsMutation.isPending}
-                      className="mt-2 w-full rounded-xl border border-[var(--color-border)] bg-white px-3.5 py-2.5 text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[var(--color-primary)] disabled:opacity-60"
-                    />
-                    <div className="mt-2.5">
-                      <PasswordChecklist rules={getPasswordRules(newPassword, confirmNewPassword)} />
-                    </div>
-                  </>
-                )}
-                {passwordError && <p className="mt-1.5 text-xs text-[var(--color-danger)]">{tr(passwordError)}</p>}
+              <FieldRow label={tr("Yangi parol")} htmlFor="employee-new-password" error={!newPassword ? (passwordError ?? undefined) : undefined}>
+                <PasswordInput
+                  id="employee-new-password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  onKeyDown={onEnter}
+                  placeholder={tr("O'zgartirmaslik uchun bo'sh qoldiring")}
+                  autoComplete="new-password"
+                  disabled={saving}
+                />
+              </FieldRow>
+            )}
+            {canWrite && newPassword && (
+              <FieldRow label={tr("Tasdiqlash")} htmlFor="employee-confirm-password" error={passwordError ?? undefined}>
+                <PasswordInput
+                  id="employee-confirm-password"
+                  value={confirmNewPassword}
+                  onChange={(e) => setConfirmNewPassword(e.target.value)}
+                  onKeyDown={onEnter}
+                  placeholder={tr("Yangi parolni tasdiqlang")}
+                  autoComplete="new-password"
+                  disabled={saving}
+                />
+              </FieldRow>
+            )}
+            {canWrite && newPassword && (
+              <div className="group/row relative px-4 py-3">
+                <PasswordChecklist rules={getPasswordRules(newPassword, confirmNewPassword)} />
+                <span className={ROW_SEPARATOR} aria-hidden="true" />
               </div>
             )}
-
-            {credentialsError && <p className="text-xs text-[var(--color-danger)]">{tr(credentialsError)}</p>}
-          </div>
+          </FormSection>
         ) : (
-          <div className="space-y-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] p-4">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-sm text-[var(--color-text-muted)]">
-                {isCabinetlessPosition(employee.position) ? tr("Bu lavozim tizimga kirmaydi — kabinet kerak emas") : "Kabinet ochilmagan"}
-              </p>
-              {canWrite && !accountOpen && !isCabinetlessPosition(employee.position) && (
-                <Button type="button" variant="outline" size="sm" onClick={() => setAccountOpen(true)}>
-                  {tr("Kabinet ochish")}
-                </Button>
-              )}
-            </div>
-
-            {accountOpen && (
-              <div className="space-y-3 border-t border-[var(--color-border)] pt-3">
-                {accountError && (
-                  <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-                    {tr(accountError)}
-                  </div>
-                )}
-                <p className="text-xs text-[var(--color-text-muted)]">
-                  {tr("Login va parol avtomatik generatsiya qilinadi va bir marta ko'rsatiladi.")}
-                </p>
-                {!isGrouplessPosition(employee.position) && (
-                <div>
-                  <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">{tr("Guruhlari")}</span>
-                  {!groups ? (
-                    <p className="text-xs text-[var(--color-text-muted)]">{tr("Guruhlar yuklanmoqda...")}</p>
+          <SheetSection
+            title={tr("Kabinet")}
+            footer={
+              accountError ? (
+                <span className="text-[#ff3b30]">{tr(accountError)}</span>
+              ) : cabinetless ? (
+                tr("Bu lavozim tizimga kirmaydi — kabinet kerak emas")
+              ) : accountOpen ? (
+                tr("Login va parol avtomatik generatsiya qilinadi va bir marta ko'rsatiladi.")
+              ) : undefined
+            }
+          >
+            {!accountOpen ? (
+              <Row
+                title={tr(cabinetless ? "Kabinetsiz lavozim" : "Kabinet ochilmagan")}
+                value={
+                  canWrite && !cabinetless ? (
+                    <button type="button" onClick={() => setAccountOpen(true)} className="font-medium text-[var(--color-primary)] transition-opacity active:opacity-50">
+                      {tr("Kabinet ochish")}
+                    </button>
+                  ) : undefined
+                }
+              />
+            ) : (
+              <>
+                {!isGrouplessPosition(employee.position) &&
+                  (!groups ? (
+                    <Row title={<span className="text-[#8e8e93]">{tr("Guruhlar yuklanmoqda...")}</span>} />
                   ) : groups.length === 0 ? (
-                    <p className="text-xs text-[var(--color-text-muted)]">{tr("Avval guruh oching.")}</p>
+                    <Row title={<span className="text-[#8e8e93]">{tr("Avval guruh oching.")}</span>} />
                   ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {groups.map((group) => {
-                        const selected = groupIds.includes(group.id);
-                        return (
+                    groups.map((group) => {
+                      const selected = groupIds.includes(group.id);
+                      return (
+                        <div key={group.id} className="group/row relative">
                           <button
-                            key={group.id}
                             type="button"
+                            role="radio"
+                            aria-checked={selected}
                             onClick={() => toggleGroup(group.id)}
-                            aria-pressed={selected}
-                            className={`cursor-pointer rounded-full border px-3 py-1.5 text-[13px] transition-colors ${
-                              selected
-                                ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
-                                : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]"
-                            }`}
+                            className="flex min-h-[48px] w-full items-center gap-3 px-4 text-left transition-colors hover:bg-[#767680]/[0.05] active:bg-[#767680]/[0.1]"
                           >
-                            {tr(group.name)}
+                            <span className="min-w-0 flex-1 truncate py-3 text-[15px] text-[var(--color-text)]">{tr(group.name)}</span>
+                            {selected && <CheckIcon className="h-[18px] w-[18px] shrink-0 text-[var(--color-primary)]" strokeWidth={2.6} />}
                           </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-                )}
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setAccountOpen(false)}>
-                    {tr("Bekor qilish")}
-                  </Button>
-                  <Button
+                          <span className={ROW_SEPARATOR} aria-hidden="true" />
+                        </div>
+                      );
+                    })
+                  ))}
+                <div className="group/row relative flex gap-2 px-4 py-3">
+                  <button
                     type="button"
-                    size="sm"
-                    loading={accountMutation.isPending}
+                    onClick={() => {
+                      setAccountOpen(false);
+                      setAccountError(null);
+                    }}
+                    className="h-10 flex-1 rounded-full bg-[#767680]/[0.12] text-[15px] font-semibold text-[var(--color-text)] transition-transform active:scale-[0.97]"
+                  >
+                    {tr("Bekor qilish")}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={accountMutation.isPending}
                     onClick={() => {
                       if (groupIds.length === 0 && !isGrouplessPosition(employee.position)) {
                         setAccountError(tr("Kamida bitta guruh tanlang"));
@@ -540,45 +449,75 @@ export function EmployeeDetailModal({
                       setAccountError(null);
                       accountMutation.mutate();
                     }}
+                    className="flex h-10 flex-1 items-center justify-center rounded-full bg-[var(--color-primary)] text-[15px] font-semibold text-white transition-transform active:scale-[0.97] disabled:opacity-60"
                   >
-                    {tr("Ochish")}
-                  </Button>
+                    {accountMutation.isPending ? <Spinner className="h-4 w-4 text-white" /> : tr("Ochish")}
+                  </button>
+                  <span className={ROW_SEPARATOR} aria-hidden="true" />
                 </div>
-              </div>
+              </>
             )}
-          </div>
+          </SheetSection>
         )}
 
         {isSubjectTeacherPosition(employee.position) && (
-          <EmployeeTopics
-            slug={slug}
-            employeeId={employee.id}
-            managedByAdmin={topicsManagedByAdmin}
-            onManagedByAdminChange={setTopicsManagedByAdmin}
-          />
+          <EmployeeTopics slug={slug} employeeId={employee.id} managedByAdmin={topicsManagedByAdmin} onManagedByAdminChange={setTopicsManagedByAdmin} />
+        )}
+        {topicsSaveError && <p className="px-4 text-[13px] text-[#ff3b30]">{tr(topicsSaveError)}</p>}
+
+        {canWrite && (
+          <SheetSection title={tr("Amallar")}>
+            <Row leading={<IosIcon icon={Pencil} tint="blue" size={30} />} title={tr("Tahrirlash")} subtitle={tr("Ism, telefon, lavozim, guruh, surat, holat")} onClick={() => setEditOpen(true)} />
+            {!deleteConfirming ? (
+              <Row
+                leading={<IosIcon icon={Trash2} tint="red" size={30} />}
+                title={<span className="text-[#ff3b30]">{tr("O'chirish")}</span>}
+                onClick={() => setDeleteConfirming(true)}
+                chevron={false}
+              />
+            ) : (
+              // Tasdiqlash — varaq ichida ikkinchi bosqich
+              <div className="group/row relative space-y-3 bg-[#ff3b30]/[0.06] px-4 py-3.5">
+                <p className="text-[13.5px] leading-snug text-[#ff3b30]">
+                  &quot;{tr(employee.fullName)}
+                  {tr("\"ni butunlay o'chirmoqchimisiz? Uning davomat va oylik tarixi ham qaytarib bo'lmas tarzda o'chadi.")}
+                </p>
+                {employee.isActive && (
+                  <p className="text-[12.5px] leading-snug text-[#8e8e93]">{tr("Ishdan ketgan bo'lsa, tarixini saqlab qolish uchun «Tahrirlash»da nofaol qiling.")}</p>
+                )}
+                {deleteError && <p className="text-[12.5px] text-[#ff3b30]">{tr(deleteError)}</p>}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={deleting}
+                    onClick={() => {
+                      setDeleteConfirming(false);
+                      setDeleteError(null);
+                    }}
+                    className="h-10 flex-1 rounded-full bg-white text-[15px] font-semibold text-[var(--color-text)] transition-transform active:scale-[0.97]"
+                  >
+                    {tr("Qoldirish")}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={deleting}
+                    onClick={handleDelete}
+                    className="flex h-10 flex-1 items-center justify-center rounded-full bg-[#ff3b30] text-[15px] font-semibold text-white transition-transform active:scale-[0.97] disabled:opacity-60"
+                  >
+                    {deleting ? <Spinner className="h-4 w-4 text-white" /> : tr("O'chirish")}
+                  </button>
+                </div>
+                <span className={ROW_SEPARATOR} style={{ left: 58 }} aria-hidden="true" />
+              </div>
+            )}
+          </SheetSection>
         )}
 
-        {topicsSaveError && <p className="text-xs text-[var(--color-danger)]">{tr(topicsSaveError)}</p>}
-
-        <div className="flex justify-end pt-1">
-          {dirty ? (
-            <Button
-              type="button"
-              variant="info"
-              loading={credentialsMutation.isPending || topicsSettingMutation.isPending}
-              onClick={handleSave}
-            >
-              {tr("Saqlash")}
-            </Button>
-          ) : (
-            <Button type="button" variant="secondary" onClick={onClose}>
-              {tr("Yopish")}
-            </Button>
-          )}
-        </div>
-      </div>
+      </IosSheet>
 
       <Toast toast={toast} onDismiss={() => setToast(null)} />
-    </Modal>
+
+      {canWrite && <EditEmployeeSheet open={open && editOpen} onClose={() => setEditOpen(false)} slug={slug} employee={employee} />}
+    </>
   );
 }

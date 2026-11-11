@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { PlatformUserRole } from "@prisma/client";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
@@ -104,16 +104,6 @@ export class OrganizationsController {
   @Get(":id/admin")
   getAdminAccount(@Param("id") id: string) {
     return this.organizationsService.getAdminAccount(id);
-  }
-
-  @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN)
-  @Get(":id/admin/password")
-  revealAdminPassword(
-    @Param("id") id: string,
-    @Headers("x-reveal-token") revealToken: string | undefined,
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
-    return this.organizationsService.revealAdminPassword(id, revealToken, user.id);
   }
 
   /** Super Admin login/parolini qo'lda o'zgartiradi (avtomatik generatsiya emas). */

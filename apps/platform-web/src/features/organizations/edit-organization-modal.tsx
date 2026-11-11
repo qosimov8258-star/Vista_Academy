@@ -5,13 +5,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
-import { revealOrganizationAdminPassword, webauthnErrorMessage } from "@/lib/webauthn";
 import type { Organization, Plan, SubscriptionStatus } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Input, Select } from "@/components/ui/input";
 import { PasswordVeilInput } from "@/components/ui/password-veil-input";
 import { Button } from "@/components/ui/button";
-import { EyeIcon, EyeOffIcon } from "@/components/ui/icons";
 import { subscriptionStatusLabel } from "@/features/subscriptions/status";
 import { useEffect, useState } from "react";
 
@@ -43,21 +41,16 @@ export function EditOrganizationModal({
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
 
-  const [visiblePassword, setVisiblePassword] = useState<string | null>(null);
-  const [revealing, setRevealing] = useState(false);
-  const [revealError, setRevealError] = useState<string | null>(null);
-
   const [loginDraft, setLoginDraft] = useState("");
   const [passwordDraft, setPasswordDraft] = useState("");
   const [credentialsError, setCredentialsError] = useState<string | null>(null);
+  const [credentialsSaved, setCredentialsSaved] = useState(false);
 
-  // Modal yopilganda ko'rsatilgan parol ekranda qolib ketmasligi uchun —
-  // qayta ochilganda yana WebAuthn tasdiqlashi talab qilinadi.
+  // Parol hech qachon ko'rsatilmaydi: server uni faqat hash ko'rinishida
+  // saqlaydi. Bu yerda faqat login va yangi parol qo'yiladi.
   useEffect(() => {
     if (!open) {
-      setVisiblePassword(null);
-      setRevealing(false);
-      setRevealError(null);
+      setCredentialsSaved(false);
       setLoginDraft("");
       setPasswordDraft("");
       setCredentialsError(null);
@@ -74,7 +67,7 @@ export function EditOrganizationModal({
 
   const { data: adminAccount } = useQuery({
     queryKey: ["organization-admin", organization.id],
-    queryFn: () => api.get<{ login: string; hasStoredPassword: boolean }>(`/platform/organizations/${organization.id}/admin`),
+    queryFn: () => api.get<{ login: string }>(`/platform/organizations/${organization.id}/admin`),
     enabled: open,
   });
 
@@ -89,15 +82,11 @@ export function EditOrganizationModal({
   const updateCredentialsMutation = useMutation({
     mutationFn: (payload: { login?: string; password?: string }) =>
       api.patch<{ login: string }>(`/platform/organizations/${organization.id}/admin`, payload),
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["organization-admin", organization.id] });
       setPasswordDraft("");
       setCredentialsError(null);
-      // Yangi parol shu yerda darhol ko'rinsin — foydalanuvchi uni WebAuthn
-      // bilan qayta tasdiqlamasdan ko'chirib, kirish oynasiga kiritsin.
-      if (variables.password) {
-        setVisiblePassword(variables.password);
-      }
+      setCredentialsSaved(true);
     },
     onError: (err) => {
       setCredentialsError(err instanceof ApiError ? err.message : "Saqlab bo'lmadi");
@@ -123,24 +112,8 @@ export function EditOrganizationModal({
       return;
     }
     setCredentialsError(null);
+    setCredentialsSaved(false);
     updateCredentialsMutation.mutate(payload);
-  };
-
-  const handleShowPassword = async () => {
-    if (visiblePassword) {
-      setVisiblePassword(null);
-      return;
-    }
-    setRevealing(true);
-    setRevealError(null);
-    try {
-      const { password } = await revealOrganizationAdminPassword(organization.id);
-      setVisiblePassword(password);
-    } catch (err) {
-      setRevealError(webauthnErrorMessage(err));
-    } finally {
-      setRevealing(false);
-    }
   };
 
   const {
@@ -247,34 +220,10 @@ export function EditOrganizationModal({
             <p className="text-xs text-[var(--color-text-muted)]">Yuklanmoqda...</p>
           ) : (
             <>
-              <div className="flex items-center justify-between gap-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-sunken)] px-4 py-3">
-                <div className="min-w-0">
-                  <p className="text-[12px] font-medium text-[var(--color-text-muted)]">Joriy parol</p>
-                  <p className="truncate font-mono text-[15px] text-[var(--color-text)]">
-                    {visiblePassword ?? "••••••••"}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleShowPassword}
-                  disabled={revealing}
-                  className="flex shrink-0 cursor-pointer items-center gap-1 rounded-full bg-[var(--color-primary)]/10 px-2.5 py-1.5 text-[12px] font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary)]/[0.18] disabled:cursor-wait disabled:opacity-60"
-                  aria-label={visiblePassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
-                >
-                  {revealing ? (
-                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  ) : visiblePassword ? (
-                    <EyeOffIcon className="h-3.5 w-3.5" />
-                  ) : (
-                    <EyeIcon className="h-3.5 w-3.5" />
-                  )}
-                  {revealing ? "Tasdiqlanmoqda..." : visiblePassword ? "Yashirish" : "Ko'rsatish"}
-                </button>
-              </div>
-              {revealError && <p className="text-xs text-[var(--color-danger)]">{revealError}</p>}
-
-              <div className="space-y-3 border-t border-[var(--color-border)] pt-3">
-                <p className="text-xs text-[var(--color-text-muted)]">Login yoki parolni qo&apos;lda o&apos;zgartirish</p>
+              <div className="space-y-3">
+                <p className="text-xs text-[var(--color-text-muted)]">
+                  Joriy parol ko&apos;rsatilmaydi. Admin parolni unutgan bo&apos;lsa — yangi parol qo&apos;ying.
+                </p>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <Input
                     label="Login"
@@ -291,6 +240,7 @@ export function EditOrganizationModal({
                   />
                 </div>
                 {credentialsError && <p className="text-xs text-[var(--color-danger)]">{credentialsError}</p>}
+                {credentialsSaved && !credentialsError && <p className="text-xs text-[var(--color-success)]">Saqlandi</p>}
                 <div className="flex justify-end">
                   <Button
                     type="button"
