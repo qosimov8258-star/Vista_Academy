@@ -66,7 +66,6 @@ export class TenantJwtStrategy extends PassportStrategy(Strategy, "tenant-jwt") 
       position: tenantUser.employee?.position ?? null,
       subjects: tenantUser.employee?.subjects ?? [],
       topicsManagedByAdmin: tenantUser.employee?.topicsManagedByAdmin ?? false,
-      impersonatedBy: payload.impersonatedBy ?? null,
       disabledFeatures: disabledFeatureKeys(
         tenantUser.organization.subscription?.plan.features,
         tenantUser.organization.featureOverrides,

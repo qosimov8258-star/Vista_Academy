@@ -44,23 +44,17 @@ export class TenantAuthController {
 
   /**
    * Platforma operatori "Bog'chaga kirish" — bir martalik chipta evaziga
-   * 30 daqiqalik seans. Refresh token berilmaydi (cookie'dagisi ham
-   * o'chiriladi): muddat tugagach operator qaytadan platformadan kiradi.
+   * tanlangan filial admini hisobiga oddiy kirishdagi kabi to'liq seans
+   * (access + refresh token).
    */
   @LoginThrottle()
   @Post("enter")
   @HttpCode(HttpStatus.OK)
-  async enter(@Body() dto: TenantEnterDto, @Res({ passthrough: true }) res: Response) {
-    const result = await this.authService.enterWithPlatformTicket(dto.ticket);
-    clearAuthCookies(res);
-    res.cookie(ACCESS_COOKIE, result.accessToken, {
-      httpOnly: true,
-      secure: process.env.COOKIE_SECURE === "true",
-      sameSite: "lax",
-      maxAge: result.accessTokenTtlMs,
-      path: "/",
-    });
-    return { user: result.user, accessToken: result.accessToken, refreshToken: null };
+  async enter(@Body() dto: TenantEnterDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const user = await this.authService.enterWithPlatformTicket(dto.ticket);
+    const tokens = await this.authService.issueTokens(user, requestMeta(req));
+    setAuthCookies(res, tokens);
+    return { user, ...tokenResponse(tokens) };
   }
 
   @Post("refresh")
