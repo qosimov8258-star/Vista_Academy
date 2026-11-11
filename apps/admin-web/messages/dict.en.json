@@ -2830,5 +2830,12 @@
  "Ism, telefon, lavozim, guruh, surat, holat": "Name, phone, position, group, photo, status",
  "Ism kamida 2 belgi": "First name must be at least 2 characters",
  "Ishdan ketgan bo'lsa, tarixini saqlab qolish uchun «Tahrirlash»da nofaol qiling.": "If they have left, deactivate them in “Edit” to keep their history.",
- "Lavozimni tanlang": "Choose a position"
+ "Lavozimni tanlang": "Choose a position",
+ "{0} ta tovar": "{0} products",
+ "{0} tasi tugagan": "{0} out of stock",
+ "Narx va soni": "Price and quantity",
+ "3 tagacha surat. Birinchisi ro'yxatda ko'rinadi.": "Up to 3 photos. The first one is shown in the list.",
+ "Nomi, narxi, soni, suratlari": "Name, price, quantity, photos",
+ "Izoh 500 belgidan oshmasin": "Description must be at most 500 characters",
+ "Tovarlar": "Products"
 }

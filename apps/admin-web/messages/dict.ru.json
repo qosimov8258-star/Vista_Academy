@@ -2830,5 +2830,12 @@
  "Ism, telefon, lavozim, guruh, surat, holat": "Имя, телефон, должность, группа, фото, статус",
  "Ism kamida 2 belgi": "Имя — минимум 2 символа",
  "Ishdan ketgan bo'lsa, tarixini saqlab qolish uchun «Tahrirlash»da nofaol qiling.": "Если сотрудник уволился, сделайте его неактивным в «Редактировать» — история сохранится.",
- "Lavozimni tanlang": "Выберите должность"
+ "Lavozimni tanlang": "Выберите должность",
+ "{0} ta tovar": "{0} товаров",
+ "{0} tasi tugagan": "{0} закончились",
+ "Narx va soni": "Цена и количество",
+ "3 tagacha surat. Birinchisi ro'yxatda ko'rinadi.": "До 3 фото. Первое показывается в списке.",
+ "Nomi, narxi, soni, suratlari": "Название, цена, количество, фото",
+ "Izoh 500 belgidan oshmasin": "Описание — не более 500 символов",
+ "Tovarlar": "Товары"
 }
