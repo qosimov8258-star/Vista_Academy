@@ -7,6 +7,27 @@ ilovasidagidek) va egasining Sabot loyihasi bilan **bir xil ko'rinadi**. Hamma
 yangi sahifa va tegiladigan UI shu uslubda qilinadi. Bu qoidalar faqat
 `admin-web` uchun — `platform-web` o'z skinida qoladi.
 
+## 0. Asosiy talab — HAR BIR yangi narsa iOS uslubida va telefonda qulay
+
+Egasining qarori (2026-11-11): **bundan keyingi hamma dizayn shu iOS uslubida
+bo'ladi** va **har bir yangi qo'shilgan narsa telefonda ishlatishga qulay
+bo'lishi shart**. Bu tavsiya emas — majburiy:
+
+- Yangi sahifa, oyna, forma, ro'yxat — faqat shu fayldagi iOS qismlari bilan
+  (`IosSheet`, `Group`/`Row`/`ListRow`, `PageHeaderCard`, `Pill`…). Eski
+  `components/ui/*` (`Modal`, `Card`, `Button`, `Badge`, native `<select>`)
+  yangi kodda ishlatilmaydi.
+- Eski uslubdagi sahifaga tegilsa — o'sha sahifa (va undan ochiladigan
+  oynalar) iOS uslubiga o'tkaziladi.
+- Telefon birinchi: avval 375px da o'ylanadi, keyin kompyuterga
+  kengaytiriladi. Bosiladigan joy ≥ 44px, sonlar uchun −/+ tugmalari,
+  suratlar barmoq bilan suriladi, asosiy tugma pastda (`SheetPrimaryButton`),
+  gorizontal surilish yo'q (10-bo'lim).
+- Chiroyli bo'lsin: tekis iOS ranglari, bo'sh joy, aniq ierarxiya — o'rtacha
+  «ishlaydi» yetarli emas.
+- «Tayyor» deyishdan oldin kompyuter **va** 375px telefon o'lchamida
+  tekshiriladi (12-bo'lim).
+
 **Qayta chizishda faqat ko'rinish o'zgaradi.** Ma'lumot, so'rovlar, havolalar,
 bo'limlar tartibi va xulq (UX) o'zgarmaydi; hech bir funksiya olib tashlanmaydi.
 O'zgarishdan oldin sahifadagi funksiyalarni ro'yxatga oling, keyin hammasini
