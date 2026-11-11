@@ -56,6 +56,12 @@ export class AdminDeskController {
     return this.service.undoPickup(toTenantScope(user), childId, date);
   }
 
+  /** Guruhlar kesimida bolalar surati: nechtasida bor, nechtasida yo'q. */
+  @Get("photos")
+  photos(@CurrentTenantUser() user: TenantAuthenticatedUser) {
+    return this.service.photos(toTenantScope(user));
+  }
+
   @Get("weekly")
   weekly(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query("from") from?: string) {
     return this.service.weekly(toTenantScope(user), from);

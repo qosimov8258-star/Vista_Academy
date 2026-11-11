@@ -2779,5 +2779,13 @@
  "Hali qo'ng'iroq qilingan ariza yo'q": "Пока нет заявок, по которым позвонили",
  "«Qo'ng'iroqlar»da «Qo'ng'iroq qildim» bosilgan arizalar shu yerda chiqadi": "Здесь появятся заявки, отмеченные «Я позвонил» в разделе «Звонки»",
  "Bosilsa — CRM'dagi ariza ochiladi.": "Нажмите — откроется заявка в CRM.",
- "Ism yoki telefon": "Имя или телефон"
+ "Ism yoki telefon": "Имя или телефон",
+ "Bolalar surati": "Фото детей",
+ "bolaning surati bor": "детей с фото",
+ "{0} tasida yo'q": "нет у {0}",
+ "Hammasida bor": "У всех есть",
+ "{0} tasida bor": "есть у {0}",
+ "Guruhda bola yo'q": "В группе нет детей",
+ "Surati yo'q · {0}": "Без фото · {0}",
+ "Bolani bosing — profilida suratini qo'yasiz.": "Нажмите на ребёнка — фото загружается в его профиле."
 }

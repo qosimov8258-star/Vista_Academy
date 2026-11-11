@@ -2779,5 +2779,13 @@
  "Hali qo'ng'iroq qilingan ariza yo'q": "No called applications yet",
  "«Qo'ng'iroqlar»da «Qo'ng'iroq qildim» bosilgan arizalar shu yerda chiqadi": "Applications marked “I called” in Calls appear here",
  "Bosilsa — CRM'dagi ariza ochiladi.": "Tap to open the application in CRM.",
- "Ism yoki telefon": "Name or phone"
+ "Ism yoki telefon": "Name or phone",
+ "Bolalar surati": "Children's photos",
+ "bolaning surati bor": "children have a photo",
+ "{0} tasida yo'q": "{0} missing",
+ "Hammasida bor": "All have one",
+ "{0} tasida bor": "{0} with photo",
+ "Guruhda bola yo'q": "No children in group",
+ "Surati yo'q · {0}": "No photo · {0}",
+ "Bolani bosing — profilida suratini qo'yasiz.": "Tap a child to add the photo in their profile."
 }
