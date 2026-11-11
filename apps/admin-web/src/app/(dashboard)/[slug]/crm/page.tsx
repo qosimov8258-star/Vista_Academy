@@ -19,16 +19,17 @@ import { AGE_GROUP_LABEL, STAGE_COLOR, STAGE_LABEL } from "@/features/crm/labels
 import { useTr } from "@/i18n/tr";
 
 /**
- * Arizalar (CRM) — landing sahifadan kelgan xabarlar, faqat ko'rish uchun.
+ * Arizalar (CRM) — landing sahifadan kelgan xabarlar.
  * Funksiyalar: ro'yxat (100 tagacha), jami soni, bosqich belgisi, ota-onaga
- * qo'ng'iroq, CSV eksport.
+ * qo'ng'iroq, CSV eksport. Qator bosilsa ariza sahifasi ochiladi.
  */
 export default function CrmPage({ params }: { params: Promise<{ slug: string }> }) {
   const tr = useTr();
   const { slug } = use(params);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
-  const { branchId: forcedBranchId } = useBranchContext(slug);
+  const { branchId: forcedBranchId, branchSlug } = useBranchContext(slug);
+  const crmHref = branchSlug ? `/${slug}/${branchSlug}/crm` : `/${slug}/crm`;
 
   const handleExport = async () => {
     setExporting(true);
@@ -59,7 +60,7 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
           tint="green"
           title={tr("Arizalar (CRM)")}
           count={leadsQuery.data ? tr("{0} ta xabar", totalLeads) : undefined}
-          subtitle={tr("Landing sahifadan kelgan xabarlar — faqat ko'rish uchun")}
+          subtitle={tr("Landing sahifadan kelgan xabarlar")}
           actions={<IosButton label={tr("Eksport (CSV)")} icon={Download} compact loading={exporting} onClick={handleExport} />}
         />
 
@@ -80,6 +81,7 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
             {landingLeads.map((lead) => (
               <ListRow
                 key={lead.id}
+                href={`${crmHref}/${lead.id}`}
                 avatar={<IosAvatar name={lead.childFullName || lead.parentName} />}
                 // Lending formasida bola ismi so'ralmaydi — unda sarlavha arizachi (ota-ona) ismi
                 title={tr(lead.childFullName || lead.parentName)}

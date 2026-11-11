@@ -2788,5 +2788,6 @@
  "Mas'ul": "Ответственный",
  "Sanalar": "Даты",
  "Sanani o'chirsangiz, «Belgilanmagan» bo'lib qoladi.": "Если стереть дату, будет «Не указано».",
- "{0} ta xabar": "{0} сообщений"
+ "{0} ta xabar": "{0} сообщений",
+ "Landing sahifadan kelgan xabarlar": "Сообщения с лендинга"
 }

@@ -2788,5 +2788,6 @@
  "Mas'ul": "Responsible",
  "Sanalar": "Dates",
  "Sanani o'chirsangiz, «Belgilanmagan» bo'lib qoladi.": "If you clear a date, it shows as “Not set”.",
- "{0} ta xabar": "{0} messages"
+ "{0} ta xabar": "{0} messages",
+ "Landing sahifadan kelgan xabarlar": "Messages from the landing page"
 }
