@@ -2791,5 +2791,9 @@
  "Har kelgan kuni uchun +5 (davomat), haftalik savol-javob va she'r yodlashdan max +50/hafta. Bundan tashqari tarbiyachi o'z guruhidagi bolaga xohlagancha yulduzcha bera oladi.": "+5 за каждый день посещения, до +50 в неделю за еженедельную викторину и стихи. Кроме того, воспитатель может давать звёздочки детям своей группы сколько угодно.",
  "Tarbiyachi berdi": "От воспитателя",
  "Yulduzchani faqat tarbiyachi beradi": "Звёздочки выдаёт только воспитатель",
- "Nofaol bolaga yulduzcha berib bo'lmaydi": "Нельзя дать звёздочки неактивному ребёнку"
+ "Nofaol bolaga yulduzcha berib bo'lmaydi": "Нельзя дать звёздочки неактивному ребёнку",
+ "Bolani bosing — yulduzcha tarixi ochiladi.": "Нажмите на ребёнка — откроется история звёздочек.",
+ "Savol yoki she'rni belgilang": "Отметьте вопрос или стихотворение",
+ "{0} ta yulduzcha": "{0} звёздочек",
+ "{0} ta yulduzcha bilan saqlash": "Сохранить с {0} звёздочками"
 }
