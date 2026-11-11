@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import clsx from "clsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Trash2 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
@@ -12,7 +11,7 @@ import { FieldRow, FormSection, PasswordInput, TextInput } from "@/components/io
 import { Row } from "@/components/ios/group";
 import { Pill } from "@/components/ios/pill";
 import { Spinner } from "@/components/ios/spinner";
-import { CheckIcon, CopyIcon } from "@/components/ios/icons";
+import { CheckIcon } from "@/components/ios/icons";
 import { IOS, ROW_SEPARATOR } from "@/components/ios/tokens";
 import { IosIcon } from "@/features/director/ios-icon";
 import { EmployeePhoto } from "@/components/ui/employee-photo";
@@ -20,6 +19,7 @@ import { initials } from "@/components/ui/avatar";
 import { formatPositionLabel, isCabinetlessPosition, isGrouplessPosition, isSubjectTeacherPosition } from "@/lib/employee-position";
 import { EmployeeTopics } from "@/features/employees/employee-topics";
 import { EditEmployeeSheet } from "@/features/employees/edit-employee-sheet";
+import { CopyRow } from "@/features/employees/employee-form-parts";
 import { PasswordChecklist, getPasswordRules } from "@/components/ui/password-checklist";
 import { Toast, type ToastState } from "@/components/ui/toast";
 import { useTr } from "@/i18n/tr";
@@ -519,38 +519,5 @@ export function EmployeeDetailModal({
 
       {canWrite && <EditEmployeeSheet open={open && editOpen} onClose={() => setEditOpen(false)} slug={slug} employee={employee} />}
     </>
-  );
-}
-
-/** Bir martalik ko'rsatiladigan login/parol qatori — nusxalash tugmasi bilan */
-function CopyRow({ label, value }: { label: string; value: string }) {
-  const tr = useTr();
-  const [copied, setCopied] = useState(false);
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      // Clipboard ruxsati yo'q — qiymat ekranda ko'rinib turadi
-    }
-  };
-  return (
-    <div className="group/row relative flex min-h-[52px] items-center gap-3 px-4">
-      <span className="w-[72px] shrink-0 text-[15px] text-[var(--color-text)]">{label}</span>
-      <span className="min-w-0 flex-1 truncate text-right font-mono text-[15px] text-[var(--color-text)]">{value}</span>
-      <button
-        type="button"
-        onClick={copy}
-        aria-label={tr("Nusxalash")}
-        className={clsx(
-          "flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-[#767680]/[0.12]",
-          copied ? "text-[#34c759]" : "text-[var(--color-primary)]",
-        )}
-      >
-        {copied ? <CheckIcon className="h-[18px] w-[18px]" strokeWidth={2.6} /> : <CopyIcon className="h-[18px] w-[18px]" />}
-      </button>
-      <span className={ROW_SEPARATOR} aria-hidden="true" />
-    </div>
   );
 }

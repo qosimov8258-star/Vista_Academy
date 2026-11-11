@@ -2798,7 +2798,13 @@
  "Xodim faqat shu guruhni ko'radi va davomatini yuritadi.": "The employee sees only this group and keeps its attendance.",
  "Xodim nofaol: kabinetga kira olmaydi, Face ID uni tanimaydi. Davomat va oylik tarixi saqlangan.": "The employee is inactive: can't sign in and Face ID won't recognise them. Attendance and payroll history is kept.",
  "Xodimning yuzi ko'rinib turgan suratni tanlang.": "Choose a photo showing the employee's face.",
- "Yangi fan «Yangi xodim» oynasidagi fanlar ro'yxatidan qo'shiladi.": "New subjects are added from the subject list in the “New employee” window.",
- "Yangi lavozim «Yangi xodim» oynasidagi lavozimlar ro'yxatidan qo'shiladi.": "New positions are added from the position list in the “New employee” window.",
- "Joriy parol ko'rsatilmaydi. Xodim parolini unutgan bo'lsa — yangi parol qo'ying.": "The current password is never shown. If the employee forgot it, set a new one."
+ "Joriy parol ko'rsatilmaydi. Xodim parolini unutgan bo'lsa — yangi parol qo'ying.": "The current password is never shown. If the employee forgot it, set a new one.",
+ "Hozircha fan yo'q — pastdan qo'shing": "No subjects yet — add one below",
+ "Hozircha lavozim yo'q — pastdan qo'shing": "No positions yet — add one below",
+ "Lavozimni tanlang": "Choose a position",
+ "Majburiy · faqat xodimning o'zi, yuzi aniq ko'rinsin — Face ID shu surat bilan taniydi": "Required · only the employee, face clearly visible — Face ID recognises them by this photo",
+ "Qizil belgilangan maydonlarni to'ldiring": "Fill in the fields marked in red",
+ "Qo'shilgani bog'chaning ro'yxatiga yoziladi va shu yerda tanlanadi.": "What you add goes into the kindergarten's list and is selected here.",
+ "Xodim qo'shildi": "Employee added",
+ "Yangi qo'shish": "Add new"
 }
