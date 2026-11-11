@@ -2924,5 +2924,15 @@
  "Faqat surati yo'qlar ko'rsatilmoqda": "Showing only children without a photo",
  "Nofaol bolalar": "Inactive children",
  "Surati yo'q": "No photo",
- "Yulduzcha": "Stars"
+ "Yulduzcha": "Stars",
+ "Ariza topilmadi": "Request not found",
+ "Mas'ul": "Responsible",
+ "Sanalar": "Dates",
+ "{0} ta xabar": "{0} messages",
+ "Landing sahifadan kelgan xabarlar": "Messages from the landing page",
+ "Bola profilini ko'rish": "View child profile",
+ "Landing sahifadagi forma to'ldirilsa, ariza shu yerda paydo bo'ladi.": "When the landing page form is filled in, the request appears here.",
+ "Manba": "Source",
+ "Sanani o'chirsangiz, «Belgilanmagan» bo'lib qoladi.": "If you clear a date, it shows as “Not set”.",
+ "Faoliyat qo'shish": "Add activity"
 }

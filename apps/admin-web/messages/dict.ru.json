@@ -2924,5 +2924,15 @@
  "Faqat surati yo'qlar ko'rsatilmoqda": "Показаны только дети без фото",
  "Nofaol bolalar": "Неактивные дети",
  "Surati yo'q": "Нет фото",
- "Yulduzcha": "Звёздочки"
+ "Yulduzcha": "Звёздочки",
+ "Ariza topilmadi": "Заявка не найдена",
+ "Mas'ul": "Ответственный",
+ "Sanalar": "Даты",
+ "{0} ta xabar": "{0} сообщений",
+ "Landing sahifadan kelgan xabarlar": "Сообщения с лендинга",
+ "Bola profilini ko'rish": "Открыть профиль ребёнка",
+ "Landing sahifadagi forma to'ldirilsa, ariza shu yerda paydo bo'ladi.": "Когда форму на лендинге заполнят, заявка появится здесь.",
+ "Manba": "Источник",
+ "Sanani o'chirsangiz, «Belgilanmagan» bo'lib qoladi.": "Если стереть дату, будет «Не указано».",
+ "Faoliyat qo'shish": "Добавить активность"
 }

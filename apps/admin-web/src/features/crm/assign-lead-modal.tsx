@@ -1,23 +1,17 @@
 "use client";
 
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { Lead, TenantUser } from "@/lib/types";
-import { Modal } from "@/components/ui/modal";
-import { Select } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { IosSheet, SheetPrimaryButton } from "@/components/ios/sheet";
+import { FormSection } from "@/components/ios/form";
+import { CheckRow } from "@/components/ios/check-row";
+import { Row } from "@/components/ios/group";
+import { IosAvatar } from "@/components/ios/pill";
 import { useTr } from "@/i18n/tr";
 
-const schema = z.object({
-  assignedToUserId: z.string().min(1, "Xodimni tanlang"),
-});
-
-type FormValues = z.infer<typeof schema>;
-
+/** Arizaga mas'ul xodimni belgilash — ro'yxatdan bittasi ✓ bilan */
 export function AssignLeadModal({
   open,
   onClose,
@@ -33,7 +27,8 @@ export function AssignLeadModal({
 }) {
   const tr = useTr();
   const queryClient = useQueryClient();
-  const [serverError, setServerError] = useState<string | null>(null);
+  const [userId, setUserId] = useState("");
+  const [tried, setTried] = useState(false);
 
   const usersQuery = useQuery({
     queryKey: ["users", slug],
@@ -41,55 +36,63 @@ export function AssignLeadModal({
     enabled: open,
   });
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    values: { assignedToUserId: currentAssignedToUserId ?? "" },
-  });
-
   const mutation = useMutation({
-    mutationFn: (values: FormValues) => api.patch<Lead>(`/app/leads/${leadId}/assign`, values),
+    mutationFn: () => api.patch<Lead>(`/app/leads/${leadId}/assign`, { assignedToUserId: userId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["lead", slug, leadId] });
       queryClient.invalidateQueries({ queryKey: ["leads", slug] });
       onClose();
     },
-    onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
-    },
   });
+  const { reset } = mutation;
+
+  useEffect(() => {
+    if (!open) return;
+    setUserId(currentAssignedToUserId ?? "");
+    setTried(false);
+    reset();
+  }, [open, currentAssignedToUserId, reset]);
+
+  const submit = () => {
+    setTried(true);
+    if (!userId) return;
+    mutation.mutate();
+  };
 
   return (
-    <Modal open={open} onClose={onClose} title={tr("Mas'ulni belgilash")} widthClassName="max-w-md">
-      <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
-        {serverError && (
-          <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {tr(serverError)}
-          </div>
+    <IosSheet
+      open={open}
+      onClose={() => !mutation.isPending && onClose()}
+      title={tr("Mas'ulni belgilash")}
+      footer={
+        <SheetPrimaryButton onClick={submit} loading={mutation.isPending} dim={!userId}>
+          {tr("Saqlash")}
+        </SheetPrimaryButton>
+      }
+    >
+      <FormSection title={tr("Mas'ul xodim")} footer={tried && !userId ? <span className="text-[#ff3b30]">{tr("Xodimni tanlang")}</span> : undefined}>
+        {usersQuery.isLoading ? (
+          <Row title={<span className="text-[#8e8e93]">{tr("Yuklanmoqda...")}</span>} />
+        ) : (usersQuery.data ?? []).length === 0 ? (
+          <Row title={<span className="text-[#8e8e93]">{tr("Xodim topilmadi")}</span>} />
+        ) : (
+          (usersQuery.data ?? []).map((u) => (
+            <CheckRow
+              key={u.id}
+              label={tr(u.fullName)}
+              checked={userId === u.id}
+              onClick={() => setUserId(u.id)}
+              leading={<IosAvatar name={u.fullName} size={30} />}
+            />
+          ))
         )}
-        <Select label={tr("Mas'ul xodim")} defaultValue="" error={errors.assignedToUserId?.message} {...register("assignedToUserId")}>
-          <option value="" disabled>
-            {tr("Tanlang")}
-          </option>
-          {usersQuery.data?.map((u) => (
-            <option key={u.id} value={u.id}>
-              {tr(u.fullName)}
-            </option>
-          ))}
-        </Select>
+      </FormSection>
 
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="outline" onClick={onClose}>
-            {tr("Bekor qilish")}
-          </Button>
-          <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            {tr("Saqlash")}
-          </Button>
-        </div>
-      </form>
-    </Modal>
+      {mutation.error && (
+        <p role="alert" className="px-4 text-[13px] text-[#ff3b30]">
+          {mutation.error instanceof ApiError ? tr(mutation.error.message) : tr("Kutilmagan xatolik yuz berdi")}
+        </p>
+      )}
+    </IosSheet>
   );
 }

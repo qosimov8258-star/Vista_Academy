@@ -1,26 +1,17 @@
 "use client";
 
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { Lead } from "@/lib/types";
-import { Modal } from "@/components/ui/modal";
-import { Input, Textarea } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { IosSheet, SheetPrimaryButton } from "@/components/ios/sheet";
+import { FieldRow, FormSection, TextArea } from "@/components/ios/form";
 import { useTr } from "@/i18n/tr";
 
-const schema = z.object({
-  followUpDate: z.string().optional(),
-  trialDate: z.string().optional(),
-  contractDate: z.string().optional(),
-  contractNote: z.string().optional(),
-});
+const DATE_INPUT =
+  "w-full bg-transparent py-3 text-right text-[15px] tabular-nums text-[var(--color-text)] outline-none [&::-webkit-date-and-time-value]:text-right";
 
-type FormValues = z.infer<typeof schema>;
-
+/** Keyingi bog'lanish, sinov kuni, shartnoma sanasi va izohi */
 export function EditLeadDetailsModal({
   open,
   onClose,
@@ -36,68 +27,74 @@ export function EditLeadDetailsModal({
 }) {
   const tr = useTr();
   const queryClient = useQueryClient();
-  const [serverError, setServerError] = useState<string | null>(null);
-
-  const {
-    register,
-    handleSubmit,
-    formState: { isSubmitting },
-  } = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    values: {
-      followUpDate: lead.followUpDate?.slice(0, 10) ?? "",
-      trialDate: lead.trialDate?.slice(0, 10) ?? "",
-      contractDate: lead.contractDate?.slice(0, 10) ?? "",
-      contractNote: lead.contractNote ?? "",
-    },
-  });
+  const [followUpDate, setFollowUpDate] = useState("");
+  const [trialDate, setTrialDate] = useState("");
+  const [contractDate, setContractDate] = useState("");
+  const [contractNote, setContractNote] = useState("");
 
   const mutation = useMutation({
     // Bo'sh qoldirilgan maydon `null` bilan yuboriladi (`undefined` emas) —
     // `undefined` kalitlari JSON'ga chiqmaydi va backend uni "o'zgarmasin"
     // deb tushunadi, `null` esa "tozala" deb. Aks holda bir marta sana
     // kiritilgach uni hech qachon tozalab bo'lmas edi.
-    mutationFn: (values: FormValues) =>
+    mutationFn: () =>
       api.patch<Lead>(`/app/leads/${leadId}/details`, {
-        followUpDate: values.followUpDate || null,
-        trialDate: values.trialDate || null,
-        contractDate: values.contractDate || null,
-        contractNote: values.contractNote || null,
+        followUpDate: followUpDate || null,
+        trialDate: trialDate || null,
+        contractDate: contractDate || null,
+        contractNote: contractNote || null,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["lead", slug, leadId] });
       queryClient.invalidateQueries({ queryKey: ["leads", slug] });
       onClose();
     },
-    onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
-    },
   });
+  const { reset } = mutation;
+
+  useEffect(() => {
+    if (!open) return;
+    setFollowUpDate(lead.followUpDate?.slice(0, 10) ?? "");
+    setTrialDate(lead.trialDate?.slice(0, 10) ?? "");
+    setContractDate(lead.contractDate?.slice(0, 10) ?? "");
+    setContractNote(lead.contractNote ?? "");
+    reset();
+  }, [open, lead, reset]);
 
   return (
-    <Modal open={open} onClose={onClose} title={tr("Tafsilotlarni tahrirlash")}>
-      <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
-        {serverError && (
-          <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {tr(serverError)}
-          </div>
-        )}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input label={tr("Keyingi bog'lanish sanasi")} type="date" {...register("followUpDate")} />
-          <Input label={tr("Sinov kuni")} type="date" {...register("trialDate")} />
-        </div>
-        <Input label={tr("Shartnoma sanasi")} type="date" {...register("contractDate")} />
-        <Textarea label={tr("Shartnoma izohi")} rows={3} placeholder={tr("Shartlar, oylik to'lov, izoh...")} {...register("contractNote")} />
+    <IosSheet
+      open={open}
+      onClose={() => !mutation.isPending && onClose()}
+      title={tr("Tafsilotlarni tahrirlash")}
+      footer={
+        <SheetPrimaryButton onClick={() => mutation.mutate()} loading={mutation.isPending}>
+          {tr("Saqlash")}
+        </SheetPrimaryButton>
+      }
+    >
+      <FormSection title={tr("Sanalar")} footer={tr("Sanani o'chirsangiz, «Belgilanmagan» bo'lib qoladi.")}>
+        <FieldRow label={tr("Keyingi bog'lanish")} htmlFor="lead-follow">
+          <input id="lead-follow" type="date" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} className={DATE_INPUT} />
+        </FieldRow>
+        <FieldRow label={tr("Sinov kuni")} htmlFor="lead-trial">
+          <input id="lead-trial" type="date" value={trialDate} onChange={(e) => setTrialDate(e.target.value)} className={DATE_INPUT} />
+        </FieldRow>
+        <FieldRow label={tr("Shartnoma sanasi")} htmlFor="lead-contract">
+          <input id="lead-contract" type="date" value={contractDate} onChange={(e) => setContractDate(e.target.value)} className={DATE_INPUT} />
+        </FieldRow>
+      </FormSection>
 
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="outline" onClick={onClose}>
-            {tr("Bekor qilish")}
-          </Button>
-          <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            {tr("Saqlash")}
-          </Button>
-        </div>
-      </form>
-    </Modal>
+      <FormSection>
+        <FieldRow label={tr("Shartnoma izohi")} htmlFor="lead-note" stacked>
+          <TextArea id="lead-note" rows={3} value={contractNote} onChange={(e) => setContractNote(e.target.value)} placeholder={tr("Shartlar, oylik to'lov, izoh...")} />
+        </FieldRow>
+      </FormSection>
+
+      {mutation.error && (
+        <p role="alert" className="px-4 text-[13px] text-[#ff3b30]">
+          {mutation.error instanceof ApiError ? tr(mutation.error.message) : tr("Kutilmagan xatolik yuz berdi")}
+        </p>
+      )}
+    </IosSheet>
   );
 }

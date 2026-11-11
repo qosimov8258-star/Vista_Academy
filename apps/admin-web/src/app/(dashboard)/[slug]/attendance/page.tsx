@@ -3,7 +3,7 @@
 import { use } from "react";
 import { useAuth } from "@/lib/use-auth";
 import { isTeacher } from "@/lib/permissions";
-import { LoadingState } from "@/components/ui/states";
+import { SkeletonRows } from "@/components/ios/states";
 import { TeacherAttendance } from "@/features/teacher/teacher-attendance";
 import { BranchAttendance } from "@/features/attendance/branch-attendance";
 
@@ -15,7 +15,7 @@ import { BranchAttendance } from "@/features/attendance/branch-attendance";
 export default function AttendancePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const { user, isLoading } = useAuth();
-  if (isLoading) return <LoadingState />;
+  if (isLoading) return <SkeletonRows rows={6} />;
   if (isTeacher(user?.role)) return <TeacherAttendance slug={slug} />;
   return <BranchAttendance slug={slug} />;
 }
