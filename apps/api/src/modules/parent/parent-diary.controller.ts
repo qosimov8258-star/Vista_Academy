@@ -35,6 +35,12 @@ export class ParentDiaryController {
     return this.parentDiaryService.recentDays(parent, childId, count ? Number(count) : undefined);
   }
 
+  /** Bola guruhining haftalik jadvali (Du … Ya, vaqt qatorlari) */
+  @Get("children/:childId/timetable")
+  timetable(@CurrentParent() parent: AuthenticatedParent, @Param("childId") childId: string) {
+    return this.parentDiaryService.timetable(parent, childId);
+  }
+
   @Get("diary/media/:id/file")
   mediaFile(
     @CurrentParent() parent: AuthenticatedParent,

@@ -365,3 +365,31 @@ body {
     background: linear-gradient(180deg, var(--accent-bright), var(--accent-soft-icon));
   }
 }
+
+/* Haftalik jadvalni chop etish: sahifada faqat jadval qoladi (PDF ko'rinishi) */
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 12mm;
+  }
+  body:has([data-print-area]) * {
+    visibility: hidden;
+  }
+  body:has([data-print-area]) [data-print-area],
+  body:has([data-print-area]) [data-print-area] * {
+    visibility: visible;
+  }
+  body:has([data-print-area]) [data-print-area] {
+    display: block !important;
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    overflow: visible !important;
+  }
+  [data-print-area] .overflow-x-auto {
+    overflow: visible !important;
+  }
+  [data-print-area] table {
+    min-width: 0 !important;
+  }
+}

@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import type { Request, Response } from "express";
 import { PrismaService } from "../../database/prisma.service";
 import { DiaryDayService } from "../diary/diary-day.service";
+import { TimetableService } from "../diary/timetable.service";
 import { DIARY_LIMITS, addDays, dateKey, isRealDate, toDateOnly, todayIn } from "../diary/diary.constants";
 import { AuthenticatedParent } from "./parent-auth.types";
 
@@ -16,7 +17,18 @@ export class ParentDiaryService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly days: DiaryDayService,
+    private readonly timetables: TimetableService,
   ) {}
+
+  /** Bolaning guruhi haftalik jadvali; guruhsiz bola — bo'sh jadval */
+  async timetable(parent: AuthenticatedParent, childId: string) {
+    const child = await this.ownChild(parent, childId);
+    const today = todayIn(child.branch.timezone);
+    if (!child.group) {
+      return { groupId: null, groupName: null, note: "", rows: [], today };
+    }
+    return { ...(await this.timetables.forGroup(child.group.id)), today };
+  }
 
   async day(parent: AuthenticatedParent, childId: string, dateInput?: string) {
     const child = await this.ownChild(parent, childId);

@@ -35,6 +35,7 @@ const KNOWN_ORG_PAGES = new Set([
   "notifications",
   "lessons",
   "my-lessons",
+  "timetable",
   "coin",
   "my-notifications",
   "settings",
@@ -70,6 +71,7 @@ const BRANCH_DRILL_PAGES = new Set([
   "nutrition",
   "reminders",
   "staff-attendance",
+  "timetable",
   "useful",
 ]);
 
