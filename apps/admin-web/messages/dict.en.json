@@ -2779,5 +2779,13 @@
  "Hali qo'ng'iroq qilingan ariza yo'q": "No called applications yet",
  "«Qo'ng'iroqlar»da «Qo'ng'iroq qildim» bosilgan arizalar shu yerda chiqadi": "Applications marked “I called” in Calls appear here",
  "Bosilsa — CRM'dagi ariza ochiladi.": "Tap to open the application in CRM.",
- "Ism yoki telefon": "Name or phone"
+ "Ism yoki telefon": "Name or phone",
+ "3 tagacha surat. Birinchisi ro'yxatda ko'rinadi.": "Up to 3 photos. The first one is shown in the list.",
+ "Izoh 500 belgidan oshmasin": "Description must be at most 500 characters",
+ "Narx va soni": "Price and quantity",
+ "Nomi, narxi, soni, suratlari": "Name, price, quantity, photos",
+ "Tovarlar": "Products",
+ "{0} ta tovar": "{0} products",
+ "{0} ta yulduzcha": "{0} stars",
+ "{0} tasi tugagan": "{0} out of stock"
 }
