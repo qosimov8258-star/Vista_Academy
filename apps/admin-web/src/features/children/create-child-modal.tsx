@@ -8,13 +8,13 @@ import { useId, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import { api, ApiError } from "@/lib/api";
 import type { CreateChildResult, ChildCredentials, Group } from "@/lib/types";
-import { PasswordChecklist, getPasswordRules } from "@/components/ui/password-checklist";
-import { CredentialRow } from "@/components/ui/credential-row";
+import { PasswordChecklist, getPasswordRules } from "@/components/ios/password-checklist";
+import { CopyRow } from "@/components/ios/copy-row";
 import { CameraIcon, CheckIcon, ChevronRightIcon, GroupIcon } from "@/components/ios/icons";
 import { Toast, type ToastState } from "@/components/ui/toast";
 import { IosSheet, SheetPrimaryButton, SheetSection } from "@/components/ios/sheet";
 import { DobPicker, FieldRow, FormSection, IosSwitch, MoneyInput, PasswordInput, Segmented, TextInput } from "@/components/ios/form";
-import { ROW_PRESS, ROW_SEPARATOR } from "@/components/ios/tokens";
+import { GROUP_BLOCK, ROW_PRESS, ROW_SEPARATOR } from "@/components/ios/tokens";
 import { SkeletonRows } from "@/components/ios/states";
 import { GroupTile } from "@/features/groups/group-sheets";
 import { Spinner } from "@/components/ios/spinner";
@@ -272,9 +272,9 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
             {tr("Ota-ona kabineti ochildi. Login va parolni ota-onaga bering — parol qayta ko'rsatilmaydi.")}
           </p>
         </div>
-        <div className="space-y-2.5">
-          <CredentialRow label={tr("Login")} value={createdCredentials.login} />
-          <CredentialRow label={tr("Parol")} value={createdCredentials.password} />
+        <div className={GROUP_BLOCK}>
+          <CopyRow label={tr("Login")} value={createdCredentials.login} />
+          <CopyRow label={tr("Parol")} value={createdCredentials.password} />
         </div>
       </IosSheet>
     );

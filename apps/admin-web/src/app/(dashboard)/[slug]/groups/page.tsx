@@ -17,7 +17,7 @@ import { PullToRefresh } from "@/components/ios/pull-to-refresh";
 import { StatCell, StatStrip } from "@/components/ios/stat-strip";
 import { EmptyState, ErrorState, SkeletonRows } from "@/components/ios/states";
 import { IOS } from "@/components/ios/tokens";
-import { ViewOnlyNote } from "@/components/ui/view-only-note";
+import { ViewOnlyNote } from "@/components/ios/view-only-note";
 import { CapacityBar, GroupFormSheet, GroupTile } from "@/features/groups/group-sheets";
 import { groupDigits } from "@/features/payments/shared";
 import { useTr } from "@/i18n/tr";

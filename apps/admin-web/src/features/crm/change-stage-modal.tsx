@@ -1,32 +1,23 @@
 "use client";
 
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { Lead, LeadStage } from "@/lib/types";
-import { Modal } from "@/components/ui/modal";
-import { Select, Textarea } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { STAGE_LABEL } from "./labels";
+import { IosSheet, SheetPrimaryButton } from "@/components/ios/sheet";
+import { FieldRow, FormSection, TextArea } from "@/components/ios/form";
+import { CheckRow } from "@/components/ios/check-row";
+import { STAGE_COLOR, STAGE_LABEL } from "./labels";
 import { useTr } from "@/i18n/tr";
 
 const CHANGEABLE_STAGES = ["NEW", "TRIAL_DAY_SCHEDULED", "CONTRACT", "LOST"] as const;
 type ChangeableStage = (typeof CHANGEABLE_STAGES)[number];
 
-const schema = z.object({
-  stage: z.enum(["NEW", "TRIAL_DAY_SCHEDULED", "CONTRACT", "LOST"]),
-  lostReason: z.string().optional(),
-});
-
-type FormValues = z.infer<typeof schema>;
-
 function isChangeableStage(stage: LeadStage): stage is ChangeableStage {
   return (CHANGEABLE_STAGES as readonly LeadStage[]).includes(stage);
 }
 
+/** Ariza bosqichini o'zgartirish. "Yo'qotildi" uchun sabab majburiy. */
 export function ChangeStageModal({
   open,
   onClose,
@@ -42,29 +33,15 @@ export function ChangeStageModal({
 }) {
   const tr = useTr();
   const queryClient = useQueryClient();
-  const [serverError, setServerError] = useState<string | null>(null);
-
-  const {
-    register,
-    handleSubmit,
-    watch,
-    setError,
-    formState: { errors, isSubmitting },
-  } = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: {
-      stage: isChangeableStage(currentStage) ? currentStage : "NEW",
-      lostReason: "",
-    },
-  });
-
-  const stage = watch("stage");
+  const [stage, setStage] = useState<ChangeableStage>("NEW");
+  const [lostReason, setLostReason] = useState("");
+  const [reasonError, setReasonError] = useState<string | null>(null);
 
   const mutation = useMutation({
-    mutationFn: (values: FormValues) =>
+    mutationFn: () =>
       api.patch<Lead>(`/app/leads/${leadId}/stage`, {
-        stage: values.stage,
-        lostReason: values.stage === "LOST" ? values.lostReason : undefined,
+        stage,
+        lostReason: stage === "LOST" ? lostReason : undefined,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["lead", slug, leadId] });
@@ -72,54 +49,73 @@ export function ChangeStageModal({
       queryClient.invalidateQueries({ queryKey: ["lead-stats", slug] });
       onClose();
     },
-    onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
-    },
   });
+  const { reset } = mutation;
+
+  useEffect(() => {
+    if (!open) return;
+    setStage(isChangeableStage(currentStage) ? currentStage : "NEW");
+    setLostReason("");
+    setReasonError(null);
+    reset();
+  }, [open, currentStage, reset]);
+
+  const submit = () => {
+    if (stage === "LOST" && !lostReason.trim()) {
+      setReasonError("Yo'qotilgan ariza uchun sabab kiritilishi shart");
+      return;
+    }
+    mutation.mutate();
+  };
 
   return (
-    <Modal open={open} onClose={onClose} title={tr("Bosqichni o'zgartirish")}>
-      <form
-        className="space-y-4"
-        onSubmit={handleSubmit((values) => {
-          if (values.stage === "LOST" && !values.lostReason?.trim()) {
-            setError("lostReason", { message: tr("Yo'qotilgan ariza uchun sabab kiritilishi shart") });
-            return;
-          }
-          mutation.mutate(values);
-        })}
-      >
-        {serverError && (
-          <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-            {tr(serverError)}
-          </div>
-        )}
-        <Select label={tr("Yangi bosqich")} error={errors.stage?.message} {...register("stage")}>
-          {CHANGEABLE_STAGES.map((s) => (
-            <option key={s} value={s}>
-              {tr(STAGE_LABEL[s])}
-            </option>
-          ))}
-        </Select>
-        {stage === "LOST" && (
-          <Textarea
-            label={tr("Yo'qotish sababi")}
-            rows={3}
-            placeholder={tr("Masalan: narx mos kelmadi")}
-            error={errors.lostReason?.message}
-            {...register("lostReason")}
+    <IosSheet
+      open={open}
+      onClose={() => !mutation.isPending && onClose()}
+      title={tr("Bosqichni o'zgartirish")}
+      footer={
+        <SheetPrimaryButton onClick={submit} loading={mutation.isPending}>
+          {tr("Saqlash")}
+        </SheetPrimaryButton>
+      }
+    >
+      <FormSection title={tr("Yangi bosqich")}>
+        {CHANGEABLE_STAGES.map((s) => (
+          <CheckRow
+            key={s}
+            label={tr(STAGE_LABEL[s])}
+            checked={stage === s}
+            onClick={() => {
+              setStage(s);
+              setReasonError(null);
+            }}
+            leading={<span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: STAGE_COLOR[s] }} aria-hidden="true" />}
           />
-        )}
+        ))}
+      </FormSection>
 
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="outline" onClick={onClose}>
-            {tr("Bekor qilish")}
-          </Button>
-          <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            {tr("Saqlash")}
-          </Button>
-        </div>
-      </form>
-    </Modal>
+      {stage === "LOST" && (
+        <FormSection>
+          <FieldRow label={tr("Yo'qotish sababi")} htmlFor="lost-reason" error={reasonError ?? undefined} stacked>
+            <TextArea
+              id="lost-reason"
+              rows={3}
+              value={lostReason}
+              onChange={(e) => {
+                setLostReason(e.target.value);
+                setReasonError(null);
+              }}
+              placeholder={tr("Masalan: narx mos kelmadi")}
+            />
+          </FieldRow>
+        </FormSection>
+      )}
+
+      {mutation.error && (
+        <p role="alert" className="px-4 text-[13px] text-[#ff3b30]">
+          {mutation.error instanceof ApiError ? tr(mutation.error.message) : tr("Kutilmagan xatolik yuz berdi")}
+        </p>
+      )}
+    </IosSheet>
   );
 }

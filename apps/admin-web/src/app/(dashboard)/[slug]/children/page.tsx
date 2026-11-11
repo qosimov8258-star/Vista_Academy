@@ -8,8 +8,7 @@ import type { Child, ChildAllergy, Group } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { ChildIcon, DocumentIcon, PhoneIcon, PlusIcon, SearchIcon } from "@/components/ios/icons";
 import { rowLinkProps } from "@/components/ui/table";
-import { LoadingState } from "@/components/ui/states";
-import { ViewOnlyNote } from "@/components/ui/view-only-note";
+import { ViewOnlyNote } from "@/components/ios/view-only-note";
 import { ChildPhoto } from "@/components/ui/child-photo";
 import { initials } from "@/components/ui/avatar";
 import { Toast, type ToastState } from "@/components/ui/toast";
@@ -50,7 +49,7 @@ type ChildrenFinanceStats = { paid: number; partial: number; unpaid: number; sto
 export default function ChildrenPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const { user, isLoading } = useAuth();
-  if (isLoading) return <LoadingState rows={6} />;
+  if (isLoading) return <SkeletonRows rows={6} />;
   if (isTeacher(user?.role)) return <TeacherChildren slug={slug} />;
   return <BranchChildren slug={slug} />;
 }

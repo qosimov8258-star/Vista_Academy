@@ -16,6 +16,15 @@ export const STAGE_TONE: Record<LeadStage, "primary" | "warning" | "success" | "
   LOST: "danger",
 };
 
+/** iOS uslubidagi sahifalar uchun bosqich rangi (`Pill`) */
+export const STAGE_COLOR: Record<LeadStage, string> = {
+  NEW: "#007aff",
+  TRIAL_DAY_SCHEDULED: "#ff9500",
+  CONTRACT: "#5856d6",
+  WON: "#34c759",
+  LOST: "#ff3b30",
+};
+
 export const STAGE_ORDER: LeadStage[] = ["NEW", "TRIAL_DAY_SCHEDULED", "CONTRACT", "WON", "LOST"];
 
 export const AGE_GROUP_LABEL: Record<AgeGroup, string> = {

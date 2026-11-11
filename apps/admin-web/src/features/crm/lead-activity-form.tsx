@@ -1,73 +1,86 @@
 "use client";
 
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { useEffect, useState } from "react";
+import clsx from "clsx";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
-import type { LeadActivity } from "@/lib/types";
-import { Select, Textarea } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import type { LeadActivity, LeadActivityType } from "@/lib/types";
+import { IosSheet, SheetPrimaryButton } from "@/components/ios/sheet";
+import { FieldRow, FormSection, TextArea } from "@/components/ios/form";
 import { ACTIVITY_LABEL } from "./labels";
 import { useTr } from "@/i18n/tr";
 
-const schema = z.object({
-  type: z.enum(["CALL", "MESSAGE", "MEETING", "TRIAL_DAY", "STAGE_CHANGE", "NOTE"]),
-  note: z.string().optional(),
-});
+const TYPES = Object.keys(ACTIVITY_LABEL) as LeadActivityType[];
 
-type FormValues = z.infer<typeof schema>;
-
-export function LeadActivityForm({ slug, leadId }: { slug: string; leadId: string }) {
+/**
+ * Arizaga faoliyat qo'shish (qo'ng'iroq, xabar, uchrashuv…). Turi — 6 ta
+ * kapsula (native select o'rniga), izoh ixtiyoriy.
+ */
+export function LeadActivitySheet({ open, onClose, slug, leadId }: { open: boolean; onClose: () => void; slug: string; leadId: string }) {
   const tr = useTr();
   const queryClient = useQueryClient();
-  const [serverError, setServerError] = useState<string | null>(null);
-
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { type: "NOTE", note: "" } });
+  const [type, setType] = useState<LeadActivityType>("NOTE");
+  const [note, setNote] = useState("");
 
   const mutation = useMutation({
-    mutationFn: (values: FormValues) =>
-      api.post<LeadActivity>(`/app/leads/${leadId}/activities`, {
-        type: values.type,
-        note: values.note || undefined,
-      }),
+    mutationFn: () => api.post<LeadActivity>(`/app/leads/${leadId}/activities`, { type, note: note.trim() || undefined }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["lead", slug, leadId] });
-      reset({ type: "NOTE", note: "" });
-    },
-    onError: (err) => {
-      setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi"));
+      onClose();
     },
   });
+  const { reset } = mutation;
+
+  useEffect(() => {
+    if (!open) return;
+    setType("NOTE");
+    setNote("");
+    reset();
+  }, [open, reset]);
 
   return (
-    <form className="space-y-3" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
-      {serverError && (
-        <div className="rounded-lg bg-[var(--color-danger-bg)] px-3 py-2 text-sm text-[var(--color-danger)]">
-          {tr(serverError)}
-        </div>
-      )}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[200px_1fr]">
-        <Select label={tr("Turi")} {...register("type")}>
-          {Object.entries(ACTIVITY_LABEL).map(([value, label]) => (
-            <option key={value} value={value}>
-              {tr(label)}
-            </option>
-          ))}
-        </Select>
-        <Textarea label={tr("Izoh (ixtiyoriy)")} rows={2} placeholder={tr("Qo'shimcha ma'lumot")} {...register("note")} />
-      </div>
-      <div className="flex justify-end">
-        <Button type="submit" size="sm" loading={isSubmitting || mutation.isPending}>
+    <IosSheet
+      open={open}
+      onClose={() => !mutation.isPending && onClose()}
+      title={tr("Faoliyat qo'shish")}
+      footer={
+        <SheetPrimaryButton onClick={() => mutation.mutate()} loading={mutation.isPending}>
           {tr("Qo'shish")}
-        </Button>
-      </div>
-    </form>
+        </SheetPrimaryButton>
+      }
+    >
+      <section>
+        <h3 className="px-4 pb-1.5 text-[13px] uppercase tracking-wide text-[#8e8e93]">{tr("Turi")}</h3>
+        <div role="radiogroup" aria-label={tr("Turi")} className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {TYPES.map((t) => (
+            <button
+              key={t}
+              type="button"
+              role="radio"
+              aria-checked={type === t}
+              onClick={() => setType(t)}
+              className={clsx(
+                "h-11 truncate rounded-full px-3 text-[14.5px] font-semibold transition-colors",
+                type === t ? "bg-[var(--color-primary)] text-white" : "bg-white text-[var(--color-text)]",
+              )}
+            >
+              {tr(ACTIVITY_LABEL[t])}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <FormSection>
+        <FieldRow label={tr("Izoh (ixtiyoriy)")} htmlFor="activity-note" stacked>
+          <TextArea id="activity-note" rows={3} value={note} onChange={(e) => setNote(e.target.value)} placeholder={tr("Qo'shimcha ma'lumot")} />
+        </FieldRow>
+      </FormSection>
+
+      {mutation.error && (
+        <p role="alert" className="px-4 text-[13px] text-[#ff3b30]">
+          {mutation.error instanceof ApiError ? tr(mutation.error.message) : tr("Kutilmagan xatolik yuz berdi")}
+        </p>
+      )}
+    </IosSheet>
   );
 }

@@ -2779,5 +2779,14 @@
  "Hali qo'ng'iroq qilingan ariza yo'q": "Пока нет заявок, по которым позвонили",
  "«Qo'ng'iroqlar»da «Qo'ng'iroq qildim» bosilgan arizalar shu yerda chiqadi": "Здесь появятся заявки, отмеченные «Я позвонил» в разделе «Звонки»",
  "Bosilsa — CRM'dagi ariza ochiladi.": "Нажмите — откроется заявка в CRM.",
- "Ism yoki telefon": "Имя или телефон"
+ "Ism yoki telefon": "Имя или телефон",
+ "Ariza topilmadi": "Заявка не найдена",
+ "Bola profilini ko'rish": "Открыть профиль ребёнка",
+ "Faoliyat qo'shish": "Добавить активность",
+ "Landing sahifadagi forma to'ldirilsa, ariza shu yerda paydo bo'ladi.": "Когда форму на лендинге заполнят, заявка появится здесь.",
+ "Manba": "Источник",
+ "Mas'ul": "Ответственный",
+ "Sanalar": "Даты",
+ "Sanani o'chirsangiz, «Belgilanmagan» bo'lib qoladi.": "Если стереть дату, будет «Не указано».",
+ "{0} ta xabar": "{0} сообщений"
 }
