@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsOptional, IsString, MaxLength } from "class-validator";
+import { IsOptional, IsString, IsUUID, MaxLength } from "class-validator";
 
 export class SuspendOrganizationDto {
   /** Bog'cha xodimlariga kirishda ko'rsatiladi. */
@@ -16,4 +16,12 @@ export class ArchiveOrganizationDto {
   @IsString()
   @MaxLength(80)
   confirmSlug!: string;
+}
+
+export class EnterOrganizationDto {
+  /** Qaysi filial admini nomidan kiriladi. Bog'chada bitta filial admini bo'lsa — shart emas. */
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  branchId?: string;
 }

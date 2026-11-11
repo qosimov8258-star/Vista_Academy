@@ -31,11 +31,11 @@ export class TenantAuthService {
   ) {}
 
   /**
-   * Platforma operatorining bir martalik chiptasini tekshirib, bog'chaning
-   * Super Admin hisobini qaytaradi. Seansni controller oddiy kirishdagidek
-   * (`issueTokens`) beradi: operator panelda Super Admin o'zi kirgandek
-   * ishlaydi — banner, alohida belgi va cheklangan muddat yo'q. Bog'cha
-   * jurnaliga ham yozilmaydi; faqat server logida iz qoladi.
+   * Platforma operatorining bir martalik chiptasini tekshirib, chiptadagi
+   * bog'cha hisobini (filial admini) qaytaradi. Seansni controller oddiy
+   * kirishdagidek (`issueTokens`) beradi: operator panelda o'sha admin o'zi
+   * kirgandek ishlaydi — banner, alohida belgi va cheklangan muddat yo'q.
+   * Bog'cha jurnaliga ham yozilmaydi; faqat server logida iz qoladi.
    */
   async enterWithPlatformTicket(ticket: string): Promise<TenantAuthenticatedUser> {
     let payload: PlatformEntryTicketPayload & { exp: number };
@@ -63,7 +63,7 @@ export class TenantAuthService {
     }
 
     this.logger.log(
-      `Platforma operatori ${payload.operatorId} "${tenantUser.organization.slug}" bog'chasiga Super Admin sifatida kirdi`,
+      `Platforma operatori ${payload.operatorId} "${tenantUser.organization.slug}" bog'chasiga ${tenantUser.login} (${tenantUser.role}) sifatida kirdi`,
     );
     return this.toAuthenticatedUser(tenantUser, tenantUser.organization);
   }

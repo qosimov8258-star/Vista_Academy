@@ -44,7 +44,7 @@ export class TenantAuthController {
 
   /**
    * Platforma operatori "Bog'chaga kirish" — bir martalik chipta evaziga
-   * bog'chaning Super Admin hisobiga oddiy kirishdagi kabi to'liq seans
+   * tanlangan filial admini hisobiga oddiy kirishdagi kabi to'liq seans
    * (access + refresh token).
    */
   @LoginThrottle()

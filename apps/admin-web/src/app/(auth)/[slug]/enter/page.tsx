@@ -15,7 +15,7 @@ let consumedTicket: string | null = null;
 /**
  * Platforma operatorining "Bog'chaga kirish" havolasi: `/enter#t=<chipta>`.
  * Chipta fragmentda keladi (serverga va loglarga tushmaydi), darhol
- * manzildan olib tashlanadi va Super Admin'ning oddiy seansiga almashtiriladi.
+ * manzildan olib tashlanadi va filial adminining oddiy seansiga almashtiriladi.
  */
 export default function EnterPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);

@@ -6,7 +6,7 @@ import { requireTenantAccessSecret } from "./tenant-auth.service";
  * "Bog'chaga kirish" (impersonatsiya) chiptasi. Platforma operatori bog'cha
  * sahifasida tugmani bosadi → platforma API shu qisqa muddatli chiptani
  * beradi → brauzer bog'cha paneliga `/enter#t=<chipta>` bilan o'tadi → panel
- * chiptani `POST /app/auth/enter` ga yuborib, Super Admin seansini oladi.
+ * chiptani `POST /app/auth/enter` ga yuborib, filial admini seansini oladi.
  *
  * Chipta URL'da (fragmentda — serverga, loglarga va Referer'ga tushmaydi)
  * bo'lgani uchun juda qisqa yashaydi va faqat bir marta ishlatiladi.

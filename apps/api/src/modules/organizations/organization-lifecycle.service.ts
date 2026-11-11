@@ -134,25 +134,58 @@ export class OrganizationLifecycleService {
   }
 
   /**
-   * "Bog'chaga kirish": bog'chaning birinchi faol Super Admin hisobi nomidan
-   * 60 soniyalik bir martalik chipta. Panel uni Super Admin'ning oddiy
-   * seansiga almashtiradi (qarang: TenantAuthService.enterWithPlatformTicket).
+   * "Bog'chaga kirish" oynasi: bog'cha filiallari va har birining eng birinchi
+   * faol filial admini (yo'q bo'lsa — null, oynada kirib bo'lmaydi deb ko'rsatiladi).
    */
-  async createEntryTicket(id: string, operator: AuthenticatedUser) {
+  async entryBranches(id: string) {
+    await this.requireOrganization(id);
+    const branches = await this.prisma.branch.findMany({
+      where: { organizationId: id },
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        name: true,
+        tenantUsers: {
+          where: { role: "BRANCH_ADMIN", isActive: true },
+          orderBy: { createdAt: "asc" },
+          take: 1,
+          select: { fullName: true },
+        },
+      },
+    });
+    return branches.map((branch) => ({
+      id: branch.id,
+      name: branch.name,
+      adminName: branch.tenantUsers[0]?.fullName ?? null,
+    }));
+  }
+
+  /**
+   * "Bog'chaga kirish": tanlangan filialning faol filial admini nomidan
+   * 60 soniyalik bir martalik chipta. Panel uni o'sha adminning oddiy
+   * seansiga almashtiradi (qarang: TenantAuthService.enterWithPlatformTicket).
+   * Filial berilmasa — bog'chada filial admini bitta bo'lsagina o'sha olinadi.
+   */
+  async createEntryTicket(id: string, operator: AuthenticatedUser, branchId?: string) {
     const organization = await this.requireOrganization(id);
     if (organization.status !== "ACTIVE") {
       throw new BadRequestException("Bog'cha faol emas — kirish uchun avval faollashtiring");
     }
-    const admin = await this.prisma.tenantUser.findFirst({
-      where: { organizationId: id, role: "NETWORK_ADMIN", isActive: true },
+    const admins = await this.prisma.tenantUser.findMany({
+      where: { organizationId: id, role: "BRANCH_ADMIN", isActive: true, ...(branchId ? { branchId } : {}) },
       orderBy: { createdAt: "asc" },
-      select: { id: true },
+      select: { id: true, branchId: true },
     });
-    if (!admin) {
-      throw new BadRequestException("Bog'chada faol Super Admin hisobi yo'q");
+    if (admins.length === 0) {
+      throw new BadRequestException(
+        branchId ? "Bu filialda faol filial admini yo'q" : "Bog'chada faol filial admini yo'q",
+      );
+    }
+    if (!branchId && new Set(admins.map((admin) => admin.branchId)).size > 1) {
+      throw new BadRequestException("Qaysi filialga kirishni tanlang");
     }
     const ticket = signPlatformEntryTicket(this.jwt, {
-      sub: admin.id,
+      sub: admins[0].id,
       organizationId: id,
       operatorId: operator.id,
       operatorName: operator.fullName || operator.login,

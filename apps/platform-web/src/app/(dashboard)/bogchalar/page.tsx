@@ -71,7 +71,7 @@ function BogchalarContent() {
   const [view, setView] = useState<View>("table");
   const [createOpen, setCreateOpen] = useState(false);
   const [editOrg, setEditOrg] = useState<Organization | null>(null);
-  const { enter, mutation: enterMutation } = useEnterOrganization();
+  const { enter, modal: enterModal, error: enterError } = useEnterOrganization();
 
   // Yuqoridagi umumiy qidiruvdan kelganda (sahifa ochiq bo'lsa ham) maydon yangilanadi
   useEffect(() => {
@@ -240,9 +240,8 @@ function BogchalarContent() {
         </div>
       </div>
 
-      {enterMutation.error && (
-        <p className="text-[13px] text-[var(--color-danger)]">{(enterMutation.error as Error).message}</p>
-      )}
+      {enterModal}
+      {enterError && <p className="text-[13px] text-[var(--color-danger)]">{(enterError as Error).message}</p>}
 
       {isError ? (
         <ErrorState message={(error as Error).message} />
@@ -341,7 +340,7 @@ function BogchalarContent() {
                         <OrgStatusPill status={org.status} />
                       </td>
                       <td className="px-5 py-3.5">
-                        <RowActions org={org} onEnter={() => enter(org.id)} onEdit={() => setEditOrg(org)} />
+                        <RowActions org={org} onEnter={() => enter(org)} onEdit={() => setEditOrg(org)} />
                       </td>
                     </tr>
                   ))}
@@ -389,7 +388,7 @@ function BogchalarContent() {
                   <span className="text-[var(--color-text-muted)]">
                     {org.branches.length} filial · {formatMoney(org.wallet?.balance ?? "0")}
                   </span>
-                  <RowActions org={org} onEnter={() => enter(org.id)} onEdit={() => setEditOrg(org)} />
+                  <RowActions org={org} onEnter={() => enter(org)} onEdit={() => setEditOrg(org)} />
                 </div>
               </article>
             ))}

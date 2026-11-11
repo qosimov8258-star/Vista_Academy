@@ -8,7 +8,7 @@ import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { AuthenticatedUser } from "../auth/auth.types";
 import { OrganizationsService } from "./organizations.service";
 import { OrganizationLifecycleService } from "./organization-lifecycle.service";
-import { ArchiveOrganizationDto, SuspendOrganizationDto } from "./dto/organization-lifecycle.dto";
+import { ArchiveOrganizationDto, EnterOrganizationDto, SuspendOrganizationDto } from "./dto/organization-lifecycle.dto";
 import { CreateOrganizationDto } from "./dto/create-organization.dto";
 import { UpdateOrganizationDto } from "./dto/update-organization.dto";
 import { OrganizationQueryDto } from "./dto/organization-query.dto";
@@ -74,11 +74,18 @@ export class OrganizationsController {
     return this.lifecycle.restore(id);
   }
 
+  /** "Bog'chaga kirish" oynasi uchun: filiallar va ularning faol filial admini. */
+  @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN)
+  @Get(":id/entry-branches")
+  entryBranches(@Param("id") id: string) {
+    return this.lifecycle.entryBranches(id);
+  }
+
   /** "Bog'chaga kirish" — 60 soniyalik bir martalik chipta (qarang: platform-entry-ticket.ts). */
   @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN)
   @Post(":id/enter")
-  enter(@Param("id") id: string, @CurrentUser() user: AuthenticatedUser) {
-    return this.lifecycle.createEntryTicket(id, user);
+  enter(@Param("id") id: string, @Body() dto: EnterOrganizationDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.lifecycle.createEntryTicket(id, user, dto.branchId);
   }
 
   @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN)
