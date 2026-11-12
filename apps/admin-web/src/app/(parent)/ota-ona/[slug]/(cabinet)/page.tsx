@@ -24,6 +24,8 @@ import { NotifyTeacher } from "./notify-teacher";
 import { ChildSwitcher } from "./child-switcher";
 import { useSelectedChild } from "./use-selected-child";
 import { useCabinetTheme } from "./theme";
+import { useParentMessages } from "./use-messages";
+import { BellIcon } from "@/components/ui/icons";
 import { useTr } from "@/i18n/tr";
 
 const WEEKDAY = ["Yak", "Du", "Se", "Cho", "Pay", "Ju", "Sha"];
@@ -78,6 +80,9 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
   const tr = useTr();
   const { slug } = use(params);
   const router = useRouter();
+  // Bog'cha yuborgan yangi xabarlar — bosh sahifada eslatma
+  const messagesQuery = useParentMessages(slug);
+  const newMessages = messagesQuery.data?.filter((m) => !m.readAt) ?? [];
   const queryClient = useQueryClient();
   const [reasonDraft, setReasonDraft] = useState("");
 
@@ -158,6 +163,26 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
             {tr(parent.fullName)}
           </p>
         </header>
+
+        {newMessages.length > 0 && (
+          <Link
+            href={`/ota-ona/${slug}/xabarlar`}
+            className="mt-4 flex items-center gap-3 rounded-[var(--p-radius)] bg-[var(--p-card)] p-4 shadow-[var(--p-shadow)] transition-transform active:scale-[0.99]"
+          >
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[var(--p-coral)]/15 text-[var(--p-coral)]" aria-hidden="true">
+              <BellIcon className="h-[22px] w-[22px]" filled />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[15.5px] font-extrabold leading-snug text-[var(--p-ink)]">
+                {newMessages.length === 1 ? newMessages[0].title : tr("{0} ta yangi xabar", newMessages.length)}
+              </span>
+              <span className="block truncate text-[13.5px] text-[var(--p-muted)]">
+                {newMessages.length === 1 ? newMessages[0].body : tr("Bog'chadan xabar keldi — o'qish uchun bosing")}
+              </span>
+            </span>
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--p-coral)]" aria-hidden="true" />
+          </Link>
+        )}
 
         {/* Bir nechta bola bo'lsa — tanlangan farzand va almashtirish */}
         {multiple && child && <ChildSwitcher slug={slug} child={child} />}

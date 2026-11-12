@@ -14,6 +14,7 @@ import { EmptyRow, Group, GroupAction, LargeTitle, PrimaryButton, Row, SkeletonR
 import { TeacherReminders } from "./teacher-reminders";
 import styles from "./teacher.module.css";
 import { useTr } from "@/i18n/tr";
+import { useEmployeeInboxUnread } from "@/features/broadcasts/use-inbox";
 
 const WEEK: { key: Weekday; label: string }[] = [
   { key: "MONDAY", label: "Dushanba" },
@@ -72,7 +73,8 @@ export function TeacherHome({ slug }: { slug: string }) {
     queryFn: () => api.get<EmployeeNotification[]>("/app/employee-notifications"),
     refetchInterval: 60_000,
   });
-  const unread = notificationsQuery.data?.filter((n) => !n.isRead).length ?? 0;
+  const inboxUnread = useEmployeeInboxUnread(slug);
+  const unread = (notificationsQuery.data?.filter((n) => !n.isRead).length ?? 0) + inboxUnread;
 
   const s = summaryQuery.data;
   const total = s?.childrenCount ?? 0;

@@ -1245,6 +1245,68 @@ export interface EmployeeNotification {
   createdAt: string;
 }
 
+/** Xabar yuborish — kimga: ota-onalar yoki xodimlar (tarbiyachi, oshpaz) */
+export type BroadcastAudience = "GUARDIANS" | "EMPLOYEES";
+/** BRANCH — butun filial; GROUPS — tanlangan guruhlar; PICKED — tanlangan bolalar yoki xodimlar */
+export type BroadcastScope = "BRANCH" | "GROUPS" | "PICKED";
+
+export interface BroadcastTarget {
+  audience: BroadcastAudience;
+  scope: BroadcastScope;
+  groupIds?: string[];
+  childIds?: string[];
+  employeeIds?: string[];
+}
+
+export interface BroadcastPreview {
+  recipients: number;
+  /** Ota-onalar: kabineti hali ochilmaganlar (kirganda ko'radi) */
+  noCabinet: number;
+  /** Xodimlar: kabineti yo'q yoki «Xabarlar» sahifasi yo'q rollar */
+  skipped: number;
+  scopeLabel: string;
+  sample: string[];
+}
+
+export interface BroadcastSummary {
+  id: string;
+  audience: BroadcastAudience;
+  scopeLabel: string;
+  title: string;
+  body: string;
+  isMandatory: boolean;
+  recipientCount: number;
+  readCount: number;
+  createdAt: string;
+  sentBy: { fullName: string } | null;
+  branch: { name: string };
+}
+
+export interface BroadcastRecipientRow {
+  id: string;
+  name: string;
+  phone: string | null;
+  /** Ota-ona: bolalari; xodim: lavozimi */
+  note: string;
+  hasCabinet: boolean;
+  readAt: string | null;
+}
+
+export interface BroadcastDetail extends BroadcastSummary {
+  recipients: BroadcastRecipientRow[];
+}
+
+/** Kabinetga kelgan xabar (xodim yoki ota-ona) */
+export interface InboxMessage {
+  id: string;
+  title: string;
+  body: string;
+  isMandatory: boolean;
+  from: string;
+  readAt: string | null;
+  createdAt: string;
+}
+
 export interface TopicQuestion {
   id: string;
   topicId: string;

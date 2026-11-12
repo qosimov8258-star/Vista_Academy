@@ -54,6 +54,7 @@ import {
   PhoneIcon,
   PhoneOutgoingIcon,
   QuestionIcon,
+  SendIcon,
   SettingsIcon,
   ShopIcon,
   StarIcon,
@@ -62,6 +63,7 @@ import {
   TimetableIcon,
 } from "./nav-icons";
 import { useTr } from "@/i18n/tr";
+import { useEmployeeInboxUnread } from "@/features/broadcasts/use-inbox";
 
 const BADGE_TONE: Record<NonNullable<NavLeaf["badgeTone"]>, string> = {
   warning: "bg-[var(--color-warning-bg)] text-[var(--color-warning)]",
@@ -166,7 +168,8 @@ export function Sidebar({ slug }: { slug: string }) {
     enabled: receivesEmployeeNotifications(user?.role),
     refetchInterval: 60_000,
   });
-  const unreadNotificationsCount = notificationsQuery.data?.filter((n) => !n.isRead).length ?? 0;
+  const inboxUnread = useEmployeeInboxUnread(slug, receivesEmployeeNotifications(user?.role));
+  const unreadNotificationsCount = (notificationsQuery.data?.filter((n) => !n.isRead).length ?? 0) + inboxUnread;
   const params = useParams<{ branchSlug?: string }>();
   const { branch, branches } = useBranchContext(slug);
   // `useBranchContext` (useParams orqali) filial segmentini bitta filialdan
@@ -290,6 +293,8 @@ export function Sidebar({ slug }: { slug: string }) {
     // Filial bo'yicha to'liq hisobot. Sahifaning o'zida filial tanlanadi,
     // shuning uchun yon panelda bitta havola yetarli.
     { href: `/${slug}/report`, label: t("nav.reports"), icon: ChartIcon, show: true },
+    // Filiallar yuborgan xabarlar va kim o'qigani — faqat ko'rish (yuborish filialda)
+    { href: `/${slug}/messages`, label: tr("Xabar yuborish"), icon: SendIcon, show: true },
     // Super Admin har bir filialga admin va moliyachi tayinlaydi, shuning uchun
     // bu bo'lim uning asosiy ro'yxatida turishi shart. Filial ichiga
     // kirilganda ko'rinmaydi — u yerda filialning kundalik ishi turadi.
@@ -489,6 +494,8 @@ export function Sidebar({ slug }: { slug: string }) {
     // Filial adminida «Moliya va aloqa» ichida faqat bildirishnomalar qoladi
     // (hisob-faktura, chegirma, qarzdorlar, eslatmalar — boshqa rollarda) —
     // bitta bandli guruh o'rniga to'g'ridan-to'g'ri bo'lim.
+    // Ota-onalar va tarbiyachilarga xabar — har bir xodimning kabinetiga tushadi, kim o'qigani ko'rinadi
+    { href: `${base}/messages`, label: tr("Xabar yuborish"), icon: SendIcon, show: !isFinance },
     { href: `${base}/notifications`, label: t("nav.notifications"), icon: BellIcon, show: isBranchAdmin },
     {
       id: "moliya",

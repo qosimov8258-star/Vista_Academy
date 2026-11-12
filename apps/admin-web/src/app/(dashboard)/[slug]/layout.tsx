@@ -4,6 +4,7 @@ import { SubscriptionBanner } from "@/components/layout/subscription-banner";
 import { MainScroll } from "@/components/layout/main-scroll";
 import { ChefBottomBar } from "@/features/chef/chef-bottom-bar";
 import { TeacherTabBar } from "@/features/teacher/teacher-tab-bar";
+import { EmployeeMandatoryGate } from "@/features/broadcasts/mandatory-gate";
 import { ThemeSync } from "@/lib/theme";
 import { tenantMetadata } from "@/lib/tenant-metadata";
 import type { Metadata } from "next";
@@ -42,6 +43,8 @@ export default async function DashboardLayout({
       <ChefBottomBar slug={slug} />
       {/* Faqat tarbiyachiga, faqat telefonda — pastki tab-bar */}
       <TeacherTabBar slug={slug} />
+      {/* Tarbiyachi va oshpazga majburiy xabar kelsa — «O'qidim» bosilmaguncha yopilmaydigan oyna */}
+      <EmployeeMandatoryGate slug={slug} />
       {/* Hisobdagi tizim rangini qo'llaydi — hech narsa chizmaydi */}
       <ThemeSync />
     </div>

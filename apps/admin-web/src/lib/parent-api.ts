@@ -55,6 +55,8 @@ export const parentApi = {
   get: <T>(path: string) => request<T>(path, { method: "GET" }),
   post: <T>(path: string, data?: unknown) =>
     request<T>(path, { method: "POST", body: data !== undefined ? JSON.stringify(data) : undefined }),
+  patch: <T>(path: string, data?: unknown) =>
+    request<T>(path, { method: "PATCH", body: data !== undefined ? JSON.stringify(data) : undefined }),
 };
 
 export const PARENT_API_URL = API_URL;

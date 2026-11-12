@@ -22,6 +22,7 @@ import {
   PhoneOutgoing,
   ScanFace,
   School,
+  Send,
   Settings,
   ShieldCheck,
   Star,
@@ -69,6 +70,8 @@ export const ChartIcon = navIcon(ChartColumn, "indigo");
 export const AuditIcon = navIcon(ShieldCheck, "gray");
 export const SettingsIcon = navIcon(Settings, "gray");
 export const BellIcon = navIcon(Bell, "red");
+/** Xabar yuborish (ota-onalar va xodimlarga) */
+export const SendIcon = navIcon(Send, "blue");
 export const BookIcon = navIcon(BookOpen, "teal");
 export const BulbIcon = navIcon(Lightbulb, "green");
 export const NoteIcon = navIcon(FileText, "blue");
