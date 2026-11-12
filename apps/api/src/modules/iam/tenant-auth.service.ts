@@ -1,10 +1,19 @@
-import { ForbiddenException, Injectable, Logger, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { JwtService, JwtSignOptions } from "@nestjs/jwt";
 import * as argon2 from "argon2";
 import { createHash, randomBytes } from "crypto";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantAccessTokenPayload, TenantAuthenticatedUser } from "./tenant-auth.types";
-import { ENTRY_TICKET_PURPOSE, consumeTicketId, type PlatformEntryTicketPayload } from "./platform-entry-ticket";
+import {
+  ENTRY_TICKET_PURPOSE,
+  STAFF_ENTRY_PURPOSE,
+  STAFF_ENTRY_ROLES,
+  consumeTicketId,
+  signStaffEntryTicket,
+  type PlatformEntryTicketPayload,
+  type StaffEntryTicketPayload,
+} from "./platform-entry-ticket";
+import { AuditLogService } from "../audit-log/audit-log.service";
 import { ORGANIZATION_WITH_SUBSCRIPTION_STATUS, isOrganizationSuspended, organizationBlockedMessage } from "./organization-access";
 
 export interface IssuedTenantTokens {
@@ -28,7 +37,45 @@ export class TenantAuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
+    private readonly auditLog: AuditLogService,
   ) {}
+
+  /**
+   * Filial admini xodimlar ro'yxatidan «Xodim profiliga kirish» — o'z
+   * filialidagi tarbiyachi, oshpaz yoki administrator kabinetiga bir martalik
+   * chipta. Panel uni yangi tabda `/enter#t=` bilan ochadi (admin seansi o'z
+   * tabida qoladi). Chipta 60 soniya yashaydi va bir marta ishlatiladi.
+   */
+  async issueStaffEntryTicket(caller: TenantAuthenticatedUser, employeeId: string) {
+    if (caller.role !== "BRANCH_ADMIN" || !caller.branchId) {
+      throw new ForbiddenException("Xodim kabinetiga faqat filial admini kira oladi");
+    }
+    const employee = await this.prisma.employee.findFirst({
+      where: { id: employeeId, organizationId: caller.organizationId, branchId: caller.branchId },
+      select: { id: true, fullName: true, isActive: true, tenantUser: { select: { id: true, role: true, isActive: true, branchId: true } } },
+    });
+    if (!employee) {
+      throw new NotFoundException("Xodim topilmadi");
+    }
+    if (!employee.isActive) {
+      throw new BadRequestException("Xodim nofaol — avval faol qiling");
+    }
+    const account = employee.tenantUser;
+    if (!account || !account.isActive) {
+      throw new BadRequestException("Bu xodimning kabineti (login) yo'q");
+    }
+    if (!STAFF_ENTRY_ROLES.has(account.role) || account.branchId !== caller.branchId) {
+      throw new ForbiddenException("Bu xodimning kabinetiga kirib bo'lmaydi");
+    }
+    const ticket = signStaffEntryTicket(this.jwt, {
+      sub: account.id,
+      organizationId: caller.organizationId,
+      branchId: caller.branchId,
+      operatorId: caller.id,
+      operatorName: caller.fullName,
+    });
+    return { ticket };
+  }
 
   /**
    * Platforma operatorining bir martalik chiptasini tekshirib, chiptadagi
@@ -38,11 +85,14 @@ export class TenantAuthService {
    * Bog'cha jurnaliga ham yozilmaydi; faqat server logida iz qoladi.
    */
   async enterWithPlatformTicket(ticket: string): Promise<TenantAuthenticatedUser> {
-    let payload: PlatformEntryTicketPayload & { exp: number };
+    let payload: (PlatformEntryTicketPayload | StaffEntryTicketPayload) & { exp: number };
     try {
       payload = this.jwt.verify(ticket, { secret: requireTenantAccessSecret() });
     } catch {
-      throw new UnauthorizedException("Kirish havolasi eskirgan — platformada \"Bog'chaga kirish\"ni qaytadan bosing");
+      throw new UnauthorizedException("Kirish havolasi eskirgan — qaytadan bosing");
+    }
+    if (payload.purpose === STAFF_ENTRY_PURPOSE) {
+      return this.enterWithStaffTicket(payload);
     }
     if (payload.purpose !== ENTRY_TICKET_PURPOSE || !payload.jti || !payload.operatorName) {
       throw new UnauthorizedException("Noto'g'ri kirish havolasi");
@@ -65,6 +115,62 @@ export class TenantAuthService {
     this.logger.log(
       `Platforma operatori ${payload.operatorId} "${tenantUser.organization.slug}" bog'chasiga ${tenantUser.login} (${tenantUser.role}) sifatida kirdi`,
     );
+    return this.toAuthenticatedUser(tenantUser, tenantUser.organization);
+  }
+
+  /**
+   * «Xodim profiliga kirish» chiptasi: chipta berilgandan keyin ham hamma
+   * shart qayta tekshiriladi (xodim hali shu filialda, faol, roli mos; kirgan
+   * admin hali faol filial admini). Kirish bog'cha audit jurnaliga yoziladi.
+   */
+  private async enterWithStaffTicket(payload: StaffEntryTicketPayload & { exp: number }): Promise<TenantAuthenticatedUser> {
+    if (!payload.jti || !payload.operatorId || !payload.branchId) {
+      throw new UnauthorizedException("Noto'g'ri kirish havolasi");
+    }
+    if (!consumeTicketId(payload.jti, payload.exp * 1000)) {
+      throw new UnauthorizedException("Bu kirish havolasi allaqachon ishlatilgan");
+    }
+    const [tenantUser, operator] = await Promise.all([
+      this.prisma.tenantUser.findUnique({
+        where: { id: payload.sub },
+        include: { organization: { include: ORGANIZATION_WITH_SUBSCRIPTION_STATUS }, branch: true, employee: true },
+      }),
+      this.prisma.tenantUser.findUnique({ where: { id: payload.operatorId }, select: { role: true, isActive: true, branchId: true, organizationId: true } }),
+    ]);
+    if (
+      !tenantUser ||
+      !tenantUser.isActive ||
+      tenantUser.organizationId !== payload.organizationId ||
+      tenantUser.branchId !== payload.branchId ||
+      !STAFF_ENTRY_ROLES.has(tenantUser.role)
+    ) {
+      throw new UnauthorizedException("Xodim hisobi topilmadi yoki faol emas");
+    }
+    if (
+      !operator ||
+      !operator.isActive ||
+      operator.role !== "BRANCH_ADMIN" ||
+      operator.branchId !== payload.branchId ||
+      operator.organizationId !== payload.organizationId
+    ) {
+      throw new ForbiddenException("Kirish huquqi yo'q");
+    }
+    if (isOrganizationSuspended(tenantUser.organization, tenantUser.organization.subscription)) {
+      throw new ForbiddenException(organizationBlockedMessage(tenantUser.organization));
+    }
+
+    const name = tenantUser.employee?.fullName ?? tenantUser.fullName;
+    await this.auditLog.logFromUser(
+      { id: payload.operatorId, fullName: payload.operatorName, organizationId: payload.organizationId, branchId: payload.branchId } as TenantAuthenticatedUser,
+      {
+        action: "staff.enter",
+        entityType: "TenantUser",
+        entityId: tenantUser.id,
+        branchId: payload.branchId,
+        summary: `${payload.operatorName} xodim ${name} kabinetiga kirdi`,
+      },
+    );
+    this.logger.log(`Filial admini ${payload.operatorId} xodim ${tenantUser.login} (${tenantUser.role}) kabinetiga kirdi`);
     return this.toAuthenticatedUser(tenantUser, tenantUser.organization);
   }
 
