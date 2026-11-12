@@ -353,6 +353,38 @@ body {
  * oldida yashil chiziqcha. `data-hero` belgili sarlavhalar (to'q kartochka
  * ichidagilar) bundan mustasno.
  */
+/*
+ * Yon menyu (DirectorRail, moliyachi paneli) va telefondagi pastki panel —
+ * doim Zeeron aurora ranglarida, kirish sahifasidagidek och: iliq oq fon
+ * ichida qizil-oltin yog'du, qizil-oltin faol bo'lim. Tizim rangi (Sozlamalar) bu panellarga ta'sir qilmaydi — klass
+ * o'zgaruvchilarni element darajasida qayta belgilaydi. Panellarning
+ * portal orqali chiqadigan qismlari (tooltip, flyout, sheet) ham shu klassni oladi.
+ */
+.aurora-nav {
+  --accent-rail: #fbf6f2;
+  --accent-rail-2: #f4e9e3;
+  --accent-bright: #e0457a;
+  --accent-light: #a3143a;
+  --accent-pale: #2a1a20;
+  --accent-orb-from: #e0457a;
+  --accent-orb-to: #f0a24a;
+  --accent-orb-ink: #ffffff;
+  --accent-soft: #fdeef2;
+  --accent-soft-ink: #8a1033;
+  --accent-soft-icon: #b3123f;
+  /* Menyu ichidagi avatar, mobil menyudagi faol band — ham aurora qizilida */
+  --color-primary: #a3143a;
+}
+
+/* Moliyachi yon menyusi kartasi — ustundagidek och aurora yog'dusi */
+.aurora-nav-panel {
+  background-color: var(--accent-rail);
+  background-image:
+    radial-gradient(90% 20% at 0% 8%, rgba(163, 20, 58, 0.16), transparent 70%),
+    radial-gradient(80% 18% at 0% 50%, rgba(255, 160, 120, 0.26), transparent 70%),
+    radial-gradient(90% 20% at 0% 92%, rgba(201, 138, 5, 0.2), transparent 70%);
+}
+
 @media (max-width: 767px) {
   main h1:not([data-hero])::before {
     content: "";

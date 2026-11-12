@@ -1,6 +1,8 @@
 "use client";
 
 import { use, useState } from "react";
+import { TodayTabs } from "@/features/desk/today-tabs";
+import { useAuth } from "@/lib/use-auth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { api } from "@/lib/api";
@@ -24,6 +26,7 @@ const KINDS = ["DEBT", "ABSENT", "LEAD", "FAKE_RECEIPT"] as const;
 export default function CallsPage({ params }: { params: Promise<{ slug: string }> }) {
   const tr = useTr();
   const { slug } = use(params);
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const date = todayTashkent();
   const [filter, setFilter] = useState<CallKind | "ALL">("ALL");
@@ -50,6 +53,7 @@ export default function CallsPage({ params }: { params: Promise<{ slug: string }
     <div className="-mx-2 md:mx-0">
       <PullToRefresh onRefresh={refresh} />
       <div className="mx-auto w-full max-w-3xl space-y-5 pb-2">
+        <TodayTabs slug={slug} role={user?.role} current="calls" />
         <PageHeaderCard
           icon={PhoneIcon}
           tint="green"

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { IdCard, Send, UsersRound } from "lucide-react";
+import { IdCard, Megaphone, UsersRound } from "lucide-react";
 import { api, getPaginated } from "@/lib/api";
 import type { BroadcastDetail, BroadcastSummary } from "@/lib/types";
 import { formatDateTime } from "@/lib/format";
@@ -65,8 +65,8 @@ export function BroadcastsPage({ slug }: { slug: string }) {
     <div className="-mx-2 md:mx-0">
       <div className="mx-auto w-full max-w-4xl space-y-5 pb-2">
         <PageHeaderCard
-          icon={Send}
-          tint="blue"
+          icon={Megaphone}
+          tint="indigo"
           title={tr("Xabar yuborish")}
           count={meta ? tr("{0} ta", meta.total) : undefined}
           subtitle={tr("Ota-onalar va xodimlarga xabarlar")}
@@ -83,7 +83,7 @@ export function BroadcastsPage({ slug }: { slug: string }) {
           ) : listQuery.isError && !listQuery.data ? (
             <ErrorState message={tr((listQuery.error as Error).message)} onRetry={() => listQuery.refetch()} retrying={listQuery.isFetching} />
           ) : rows.length === 0 ? (
-            <EmptyState icon={Send} title="Hali xabar yuborilmagan" hint={canWrite ? "«Yangi xabar» tugmasini bosing — ota-onalarga yoki xodimlarga yozing" : undefined} />
+            <EmptyState icon={Megaphone} title="Hali xabar yuborilmagan" hint={canWrite ? "«Yangi xabar» tugmasini bosing — ota-onalarga yoki xodimlarga yozing" : undefined} />
           ) : (
             <div className={GROUP_BLOCK}>
               {rows.map((b) => (

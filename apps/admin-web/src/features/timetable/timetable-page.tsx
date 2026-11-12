@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { BranchSectionTabs } from "@/features/nav/branch-section-tabs";
 import clsx from "clsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarRange, ChevronLeft, Copy, NotebookPen, Plus, Printer } from "lucide-react";
@@ -77,6 +78,7 @@ export function TimetablePage({ slug }: { slug: string }) {
   return (
     <div className="-mx-2 md:mx-0">
       <div className="mx-auto w-full max-w-6xl space-y-5 pb-2">
+        <BranchSectionTabs slug={slug} section="daily" current="timetable" />
         <PageHeaderCard
           icon={CalendarRange}
           tint="teal"

@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+import { BranchSectionTabs } from "@/features/nav/branch-section-tabs";
 import { useQuery } from "@tanstack/react-query";
 import { Star } from "lucide-react";
 import { api } from "@/lib/api";
@@ -77,6 +78,7 @@ export default function CoinChildrenPage({ params }: { params: Promise<{ slug: s
   return (
     <div className="-mx-2 md:mx-0">
       <div className="mx-auto w-full max-w-3xl space-y-5 pb-2">
+        <BranchSectionTabs slug={slug} section="coin" current="children" />
         <PageHeaderCard
           icon={Star}
           tint="orange"

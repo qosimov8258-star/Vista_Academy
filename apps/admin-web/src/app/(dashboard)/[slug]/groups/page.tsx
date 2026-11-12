@@ -2,7 +2,8 @@
 
 import { use, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, UsersRound } from "lucide-react";
+import Link from "next/link";
+import { ChevronRight, ClipboardCheck, Paperclip, Plus, UsersRound } from "lucide-react";
 import { api } from "@/lib/api";
 import type { Group, Organization } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
@@ -18,8 +19,11 @@ import { StatCell, StatStrip } from "@/components/ios/stat-strip";
 import { EmptyState, ErrorState, SkeletonRows } from "@/components/ios/states";
 import { IOS } from "@/components/ios/tokens";
 import { ViewOnlyNote } from "@/components/ios/view-only-note";
-import { CapacityBar, GroupFormSheet, GroupTile } from "@/features/groups/group-sheets";
+import { CapacityBar, GroupFormSheet } from "@/features/groups/group-sheets";
+import { GroupAvatar } from "@/features/groups/group-avatar";
 import { groupDigits } from "@/features/payments/shared";
+import { IosIcon, type IosTint } from "@/features/director/ios-icon";
+import type { AnyIcon } from "@/features/director/ios-icon";
 import { useTr } from "@/i18n/tr";
 
 type StatusFilter = "ACTIVE" | "INACTIVE" | "ALL";
@@ -80,6 +84,12 @@ export default function GroupsPage({ params }: { params: Promise<{ slug: string 
           subtitle={tr("Yosh toifalari bo'yicha guruhlar")}
           actions={canWrite ? <IosButton label={tr("Yangi guruh")} icon={Plus} variant="primary" compact onClick={() => setCreateOpen(true)} /> : undefined}
         />
+
+        {/* Guruhlar bilan bog'liq sahifalar — menyuda alohida band emas, shu yerdan ochiladi */}
+        <div className="grid grid-cols-2 gap-3">
+          <ShortcutCard href={`${base}/attendance`} icon={ClipboardCheck} tint="green" title={tr("Davomat")} hint={tr("Bugun kim keldi")} />
+          <ShortcutCard href={`${base}/materials`} icon={Paperclip} tint="teal" title={tr("Guruh fayllari")} hint={tr("Vazifa va hujjatlar")} />
+        </div>
 
         {!canWrite && <ViewOnlyNote role={user?.role} />}
 
@@ -151,7 +161,7 @@ export default function GroupsPage({ params }: { params: Promise<{ slug: string 
                     <ListRow
                       key={g.id}
                       href={`${base}/groups/${g.id}`}
-                      avatar={<GroupTile name={g.name} />}
+                      avatar={<GroupAvatar group={g} />}
                       title={
                         <span className="flex items-center gap-2">
                           <span className="truncate">{tr(g.name)}</span>
@@ -185,5 +195,23 @@ export default function GroupsPage({ params }: { params: Promise<{ slug: string 
 
       {canWrite && <GroupFormSheet open={createOpen} onClose={() => setCreateOpen(false)} slug={slug} />}
     </div>
+  );
+}
+
+/** Tepadagi tezkor karta: plitka, nom va izoh; bosilsa — o'sha sahifa */
+function ShortcutCard({ href, icon, tint, title, hint }: { href: string; icon: AnyIcon; tint: IosTint; title: string; hint: string }) {
+  return (
+    <Link
+      href={href}
+      // Telefonda plitka matn ustida (nom va izoh to'liq sig'sin), kengroq ekranda yonma-yon
+      className="flex min-h-[64px] flex-col items-start gap-2 rounded-[18px] bg-white px-3.5 py-3 transition-transform active:scale-[0.97] active:bg-[#e5e5ea] sm:flex-row sm:items-center sm:gap-3"
+    >
+      <IosIcon icon={icon} tint={tint} size={36} />
+      <span className="w-full min-w-0 flex-1">
+        <span className="block truncate text-[15px] font-semibold text-[var(--color-text)]">{title}</span>
+        <span className="block truncate text-[12.5px] text-[#8e8e93]">{hint}</span>
+      </span>
+      <ChevronRight className="hidden h-[18px] w-[18px] shrink-0 text-[#c4c4c7] sm:block" strokeWidth={2.4} aria-hidden="true" />
+    </Link>
   );
 }

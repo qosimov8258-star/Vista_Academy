@@ -1,6 +1,8 @@
 "use client";
 
 import { use, useState } from "react";
+import { TodayTabs } from "@/features/desk/today-tabs";
+import { useAuth } from "@/lib/use-auth";
 import { useQueryClient } from "@tanstack/react-query";
 import { PhoneOutgoing, RefreshCw } from "lucide-react";
 import { IosButton } from "@/components/ios/button";
@@ -17,6 +19,7 @@ import { useTr } from "@/i18n/tr";
 export default function CalledLeadsPage({ params }: { params: Promise<{ slug: string }> }) {
   const tr = useTr();
   const { slug } = use(params);
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const query = useCalledLeads(slug);
   const [refreshing, setRefreshing] = useState(false);
@@ -32,6 +35,7 @@ export default function CalledLeadsPage({ params }: { params: Promise<{ slug: st
     <div className="-mx-2 md:mx-0">
       <PullToRefresh onRefresh={refresh} />
       <div className="mx-auto w-full max-w-3xl space-y-5 pb-2">
+        <TodayTabs slug={slug} role={user?.role} current="called" />
         <PageHeaderCard
           icon={PhoneOutgoing}
           tint="teal"

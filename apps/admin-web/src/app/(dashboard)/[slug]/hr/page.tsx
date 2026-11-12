@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useMemo, useState } from "react";
+import { StaffTabs } from "@/features/employees/staff-tabs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, getPaginated, ApiError } from "@/lib/api";
 import type { Employee, PayrollEntry, PayrollSummary, Shift, StaffAttendanceSummary } from "@/lib/types";
@@ -173,6 +174,7 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
     // Telefonda chetlar 16px (asosiy konteyner 24px beradi)
     <div className="-mx-2 md:mx-0">
       <div className="mx-auto w-full max-w-6xl space-y-5 pb-2">
+        <StaffTabs slug={slug} role={user?.role} current="hr" />
         <PageHeaderCard
           icon={MoneyIcon}
           tint="green"

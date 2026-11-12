@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+import { TodayTabs } from "@/features/desk/today-tabs";
 import { useQuery } from "@tanstack/react-query";
 import { Baby, CalendarDays, ChartColumn, ClipboardCheck, IdCard, Inbox, Printer, ReceiptText, UserX, Wallet } from "lucide-react";
 import { api } from "@/lib/api";
@@ -76,6 +77,7 @@ export default function WeeklyReportPage({ params }: { params: Promise<{ slug: s
     <div className="-mx-2 md:mx-0">
       <div className="mx-auto w-full max-w-5xl space-y-5 pb-2">
         <div className="space-y-5 print:hidden">
+          <TodayTabs slug={slug} role={user?.role} current="weekly" />
           <PageHeaderCard
             icon={ChartColumn}
             tint="indigo"

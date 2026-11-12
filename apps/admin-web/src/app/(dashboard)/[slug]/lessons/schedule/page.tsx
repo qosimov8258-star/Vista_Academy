@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useMemo, useState } from "react";
+import { BranchSectionTabs } from "@/features/nav/branch-section-tabs";
 import clsx from "clsx";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, DoorOpen } from "lucide-react";
@@ -95,6 +96,7 @@ export default function LessonSchedulePage({ params }: { params: Promise<{ slug:
     // Telefonda chetlar 16px (asosiy konteyner 24px beradi)
     <div className="-mx-2 md:mx-0">
       <div className="mx-auto w-full max-w-6xl space-y-5 pb-2">
+        <BranchSectionTabs slug={slug} section="daily" current="lessons" />
         <PageHeaderCard
           icon={CalendarIcon}
           tint="indigo"

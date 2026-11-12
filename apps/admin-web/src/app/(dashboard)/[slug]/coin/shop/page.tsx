@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+import { BranchSectionTabs } from "@/features/nav/branch-section-tabs";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import { Plus, Store } from "lucide-react";
@@ -78,6 +79,7 @@ export default function CoinShopPage({ params }: { params: Promise<{ slug: strin
   return (
     <div className="-mx-2 md:mx-0">
       <div className="mx-auto w-full max-w-5xl space-y-5 pb-2">
+        <BranchSectionTabs slug={slug} section="coin" current="shop" />
         <PageHeaderCard
           icon={Store}
           tint="pink"

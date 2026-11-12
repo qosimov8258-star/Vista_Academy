@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { BranchSectionTabs } from "@/features/nav/branch-section-tabs";
 import clsx from "clsx";
 import { BookOpen, Feather, Lightbulb, Minus, Pencil, Plus, Trash2 } from "lucide-react";
 import type { Group as GroupModel, UsefulStatus } from "@/lib/types";
-import { useAppPathname } from "@/lib/tenant-host-context";
 import { IosSheet, SheetSection } from "@/components/ios/sheet";
 import { FormSection, IosSwitch, Segmented } from "@/components/ios/form";
 import { Row } from "@/components/ios/group";
@@ -92,16 +91,9 @@ export function UsefulScreen({
   children?: ReactNode;
 }) {
   const tr = useTr();
-  const router = useRouter();
-  const pathname = useAppPathname();
   const k = USEFUL_KINDS[kind];
   const [search, setSearch] = useState("");
 
-  const tabs = (Object.keys(USEFUL_KINDS) as UsefulKind[]).map((key) => ({
-    value: `${base}/useful/${key}`,
-    label: tr(USEFUL_KINDS[key].label),
-  }));
-  const current = tabs.find((t) => pathname.startsWith(t.value))?.value ?? `${base}/useful/${kind}`;
 
   const q = norm(search.trim());
   const shown = q ? items.filter((it) => norm(`${it.title} ${it.detail ?? ""} ${it.searchText ?? ""}`).includes(q)) : items;
@@ -111,6 +103,7 @@ export function UsefulScreen({
     // Telefonda chetlar 16px (asosiy konteyner 24px beradi)
     <div className="-mx-2 md:mx-0">
       <div className="mx-auto w-full max-w-3xl space-y-5 pb-2">
+        <BranchSectionTabs slug={base.split("/")[1]} section="useful" current={kind} />
         <PageHeaderCard
           icon={k.icon}
           tint={k.tint}
@@ -121,7 +114,6 @@ export function UsefulScreen({
         />
 
         <div className="space-y-3">
-          <Segmented label={tr("Bo'lim")} value={current} onChange={(href) => router.push(href)} options={tabs} />
           {items.length > 3 && <SearchPill value={search} onChange={setSearch} placeholder={tr("Qidirish")} />}
           {groups.length > 1 && (
             <ChipRow label={tr("Guruh")}>
