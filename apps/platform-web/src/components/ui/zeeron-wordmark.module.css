@@ -1,0 +1,24 @@
+/* Yuklanish ekrani: ikkita "e" navbatma-navbat ozgina tepaga ko'tarilib
+   qaytadi (ikkinchisiga kechikish komponentda beriladi) — eski SVG logodagi
+   `zeeron-e-bob` bilan bir xil ritm */
+.bob {
+  animation: bob 0.9s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  will-change: transform;
+}
+
+@keyframes bob {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-9%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bob {
+    animation: none;
+  }
+}
