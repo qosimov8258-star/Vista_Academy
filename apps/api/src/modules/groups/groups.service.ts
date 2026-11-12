@@ -4,6 +4,9 @@ import { PrismaService } from "../../database/prisma.service";
 import { TenantAuthenticatedUser, TenantScope, requireOperationalScope, toTenantScope } from "../iam/tenant-auth.types";
 import { resolveTeacherGroupIds } from "../iam/teacher-scope";
 import { AuditLogService } from "../audit-log/audit-log.service";
+import { R2Service } from "../storage/r2.service";
+import { R2_CATEGORY } from "../storage/r2.constants";
+import { UpdateGroupAvatarDto } from "./dto/update-group-avatar.dto";
 import { CreateGroupDto } from "./dto/create-group.dto";
 import { UpdateGroupDto } from "./dto/update-group.dto";
 import { GroupQueryDto } from "./dto/group-query.dto";
@@ -17,6 +20,9 @@ import { GroupDayQueryDto } from "./dto/group-day-query.dto";
  * ko'rsatilganda 12 — faqat faol bolalar soni).
  */
 const ACTIVE_CHILDREN_COUNT_SELECT = { select: { children: { where: { status: "ACTIVE" as const } } } };
+
+/** Brauzerda 512x512 JPEG ga kichraytiriladi — odatda 40–120 KB. */
+const MAX_GROUP_AVATAR_BYTES = 600 * 1024;
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 /** Sana oralig'i cheksiz bo'lib ketmasin — bir yildan uzunini so'ramaymiz. */
@@ -46,7 +52,88 @@ export class GroupsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLog: AuditLogService,
+    private readonly r2: R2Service,
   ) {}
+
+  /**
+   * Guruh rasmi (profil belgisi). Rasm brauzerda kvadrat qilib kesilib,
+   * kichraytirilgan holda keladi — server faqat hajmini tekshiradi.
+   * Qo'yish va o'chirish — filial admini va administrator (operatsion
+   * rol); Super Admin faqat ko'radi. Ko'rish huquqi `findOne` bilan bir xil.
+   */
+  async updateAvatar(caller: TenantAuthenticatedUser, id: string, dto: UpdateGroupAvatarDto) {
+    const scope = toTenantScope(caller);
+    requireOperationalScope(scope);
+    const group = await this.assertAccess(scope, id);
+
+    const [header, base64] = dto.image.split(",", 2);
+    const mimeType = header.slice("data:".length, header.indexOf(";"));
+    const buffer = Buffer.from(base64, "base64");
+    if (buffer.byteLength === 0) {
+      throw new BadRequestException("Rasm bo'sh");
+    }
+    if (buffer.byteLength > MAX_GROUP_AVATAR_BYTES) {
+      throw new BadRequestException("Rasm hajmi juda katta");
+    }
+
+    let avatar: Buffer<ArrayBuffer> | null = buffer;
+    let avatarKey: string | null = null;
+    if (this.r2.enabled) {
+      avatarKey = this.r2.buildKey(scope.organizationId, R2_CATEGORY.GROUP_AVATAR);
+      await this.r2.uploadBuffer(avatarKey, buffer, mimeType);
+      avatar = null;
+    }
+
+    const updated = await this.prisma.group.update({
+      where: { id: group.id },
+      data: { avatar, avatarKey, avatarMimeType: mimeType, avatarUpdatedAt: new Date() },
+      select: { avatarUpdatedAt: true },
+    });
+    // DB yozuvi muvaffaqiyatli bo'lgandan KEYIN eskisi o'chiriladi — aks holda
+    // yozuv muvaffaqiyatsiz bo'lsa, qator o'chirilgan kalitga ishora qilib qolardi.
+    if (group.avatarKey && this.r2.enabled) {
+      await this.r2.deleteObject(group.avatarKey);
+    }
+    await this.auditLog.logFromUser(caller, {
+      action: "group.avatar",
+      entityType: "Group",
+      entityId: group.id,
+      branchId: group.branchId,
+      summary: `«${group.name}» guruhi rasmi ${group.avatarUpdatedAt ? "almashtirildi" : "qo'yildi"}`,
+    });
+    return { avatarUpdatedAt: updated.avatarUpdatedAt };
+  }
+
+  async removeAvatar(caller: TenantAuthenticatedUser, id: string) {
+    const scope = toTenantScope(caller);
+    requireOperationalScope(scope);
+    const group = await this.assertAccess(scope, id);
+    const previous = await this.prisma.group.update({
+      where: { id: group.id },
+      data: { avatar: null, avatarKey: null, avatarMimeType: null, avatarUpdatedAt: null },
+      select: { avatarKey: true },
+    });
+    if (previous.avatarKey) {
+      await this.r2.deleteObject(previous.avatarKey);
+    }
+    await this.auditLog.logFromUser(caller, {
+      action: "group.avatar",
+      entityType: "Group",
+      entityId: group.id,
+      branchId: group.branchId,
+      summary: `«${group.name}» guruhi rasmi o'chirildi`,
+    });
+    return { avatarUpdatedAt: null };
+  }
+
+  /** Binar rasm. Ko'rish huquqi `findOne` bilan bir xil. */
+  async readAvatar(scope: TenantScope, id: string) {
+    await this.assertAccess(scope, id);
+    return this.prisma.group.findUniqueOrThrow({
+      where: { id },
+      select: { avatar: true, avatarKey: true, avatarMimeType: true },
+    });
+  }
 
   async create(caller: TenantAuthenticatedUser, dto: CreateGroupDto) {
     const scope = toTenantScope(caller);
@@ -185,6 +272,7 @@ export class GroupsService {
         status: group.status,
         createdAt: group.createdAt,
         monthlyFee: hidesMoney(scope) ? null : group.monthlyFee,
+        avatarUpdatedAt: group.avatarUpdatedAt,
       },
       branch,
       teachers: teacherLinks.map((link) => link.employee),

@@ -386,6 +386,13 @@ model Group {
   /// Haftalik jadval ostidagi izoh (masalan "Shanbada mashg'ulotlar 15:00 da tugaydi").
   /// Jadvalning o'zi — `DiaryRoutineItem` (kundalik kun tartibi).
   scheduleNote String?   @map("schedule_note")
+  /// Guruh rasmi (profil belgisi) — bola suratidek: brauzerda kvadrat qilib
+  /// kichraytiriladi, R2 sozlangan bo'lsa `avatarKey`ga, aks holda bevosita
+  /// bazaga (`avatar`) yoziladi. Blob oddiy so'rovlarga tushmaydi (PrismaService omit).
+  avatar          Bytes?    @map("avatar")
+  avatarKey       String?   @map("avatar_key")
+  avatarMimeType  String?   @map("avatar_mime_type")
+  avatarUpdatedAt DateTime? @map("avatar_updated_at")
   createdAt  DateTime    @default(now()) @map("created_at")
   updatedAt  DateTime    @updatedAt @map("updated_at")
 

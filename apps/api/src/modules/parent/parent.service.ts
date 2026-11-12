@@ -41,7 +41,7 @@ export class ParentService {
             birthDate: true,
             status: true,
             avatarUpdatedAt: true,
-            group: { select: { id: true, name: true } },
+            group: { select: { id: true, name: true, avatarUpdatedAt: true } },
             // Manzil kabinetda osmon holatini (quyosh botishi) hisoblash uchun
             branch: { select: { id: true, name: true, address: true } },
           },
@@ -112,6 +112,18 @@ export class ParentService {
       menu,
       menuPhotos,
     };
+  }
+
+  /** Bolaning guruhi rasmi — kabinetda guruh nomi yonida ko'rsatiladi. */
+  async readGroupAvatar(parent: AuthenticatedParent, childId: string) {
+    const child = await this.assertOwnsChild(parent, childId);
+    if (!child.group) {
+      throw new NotFoundException("Bola guruhga biriktirilmagan");
+    }
+    return this.prisma.group.findUniqueOrThrow({
+      where: { id: child.group.id },
+      select: { avatar: true, avatarKey: true, avatarMimeType: true },
+    });
   }
 
   /** Taom surati — faqat bolaning filialiga tegishli bo'lsa beriladi */

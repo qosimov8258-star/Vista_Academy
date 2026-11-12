@@ -270,6 +270,24 @@ export class ParentController {
     );
   }
 
+  /** Bolaning guruhi rasmi — kabinetda guruh nomi yonida. */
+  @Get("children/:childId/group-avatar")
+  @Header("Cache-Control", "private, max-age=60")
+  @UseGuards(ParentJwtAuthGuard)
+  async groupAvatar(
+    @CurrentParent() parent: AuthenticatedParent,
+    @Param("childId") childId: string,
+    @Res() res: Response,
+  ) {
+    const record = await this.parentService.readGroupAvatar(parent, childId);
+    await sendMediaResponse(
+      res,
+      this.r2,
+      { key: record.avatarKey, bytes: record.avatar, mimeType: record.avatarMimeType ?? "image/jpeg" },
+      "Guruh rasmi yo'q",
+    );
+  }
+
   /** Oshpaz yuklagan taom surati — "Bugungi ovqat" bo'limida ko'rsatiladi. */
   @Get("children/:childId/menu-photos/:photoId")
   @Header("Cache-Control", "private, max-age=86400")

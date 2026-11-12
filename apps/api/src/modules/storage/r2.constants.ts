@@ -6,6 +6,7 @@ export const R2_CATEGORY = {
   TENANT_USER_AVATAR: "avatar",
   BRANCH_AVATAR: "branch-avatar",
   CHILD_AVATAR: "child-avatar",
+  GROUP_AVATAR: "group-avatar",
   EMPLOYEE_AVATAR: "employee-avatar",
   MENU_PHOTO: "menu-photo",
   PRODUCT_IMAGE: "product-image",

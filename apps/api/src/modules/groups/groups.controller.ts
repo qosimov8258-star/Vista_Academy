@@ -1,6 +1,10 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Header, Param, Patch, Post, Put, Query, Res, UseGuards } from "@nestjs/common";
+import type { Response } from "express";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { Public } from "../../common/decorators/public.decorator";
+import { sendMediaResponse } from "../../common/media-response";
+import { R2Service } from "../storage/r2.service";
+import { UpdateGroupAvatarDto } from "./dto/update-group-avatar.dto";
 import { TenantJwtAuthGuard } from "../iam/guards/tenant-jwt-auth.guard";
 import { DenyCallOperator } from "../iam/decorators/deny-call-operator.decorator";
 import { CurrentTenantUser } from "../iam/decorators/current-tenant-user.decorator";
@@ -19,7 +23,10 @@ import { GroupDayQueryDto } from "./dto/group-day-query.dto";
 @DenyCallOperator()
 @Controller("app/groups")
 export class GroupsController {
-  constructor(private readonly groupsService: GroupsService) {}
+  constructor(
+    private readonly groupsService: GroupsService,
+    private readonly r2: R2Service,
+  ) {}
 
   @Get()
   findAll(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query() query: GroupQueryDto) {
@@ -43,6 +50,41 @@ export class GroupsController {
     @Body() dto: UpdateGroupDto,
   ) {
     return this.groupsService.update(user, id, dto);
+  }
+
+  /** Guruh rasmini (profil belgisi) yuklash. */
+  @Put(":id/avatar")
+  updateAvatar(
+    @CurrentTenantUser() user: TenantAuthenticatedUser,
+    @Param("id") id: string,
+    @Body() dto: UpdateGroupAvatarDto,
+  ) {
+    return this.groupsService.updateAvatar(user, id, dto);
+  }
+
+  @Delete(":id/avatar")
+  removeAvatar(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string) {
+    return this.groupsService.removeAvatar(user, id);
+  }
+
+  /**
+   * Rasmni binar ko'rinishda qaytaradi. `<img src>` shu manzilni ishlatadi,
+   * shuning uchun javob umumiy `{ success, data }` qobig'iga o'ralmaydi.
+   */
+  @Get(":id/avatar")
+  @Header("Cache-Control", "private, max-age=60")
+  async readAvatar(
+    @CurrentTenantUser() user: TenantAuthenticatedUser,
+    @Param("id") id: string,
+    @Res() res: Response,
+  ) {
+    const record = await this.groupsService.readAvatar(toTenantScope(user), id);
+    await sendMediaResponse(
+      res,
+      this.r2,
+      { key: record.avatarKey, bytes: record.avatar, mimeType: record.avatarMimeType ?? "image/jpeg" },
+      "Guruh rasmi yo'q",
+    );
   }
 
   /** Guruh kartochkasi: tarbiyachilar, bolalar ro'yxati va jins taqsimoti. */
