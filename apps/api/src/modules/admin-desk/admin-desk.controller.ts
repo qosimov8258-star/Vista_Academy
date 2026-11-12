@@ -5,7 +5,7 @@ import { TenantJwtAuthGuard } from "../iam/guards/tenant-jwt-auth.guard";
 import { CurrentTenantUser } from "../iam/decorators/current-tenant-user.decorator";
 import { TenantAuthenticatedUser, toTenantScope } from "../iam/tenant-auth.types";
 import { AdminDeskService } from "./admin-desk.service";
-import { BroadcastDto, CallDoneDto, MarkPickupDto } from "./dto/admin-desk.dto";
+import { CallDoneDto, MarkPickupDto } from "./dto/admin-desk.dto";
 
 @ApiBearerAuth()
 @ApiTags("Tenant Admin Desk")
@@ -65,10 +65,5 @@ export class AdminDeskController {
   @Get("weekly")
   weekly(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query("from") from?: string) {
     return this.service.weekly(toTenantScope(user), from);
-  }
-
-  @Post("broadcast")
-  broadcast(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: BroadcastDto) {
-    return this.service.broadcast(toTenantScope(user), user.id, dto);
   }
 }

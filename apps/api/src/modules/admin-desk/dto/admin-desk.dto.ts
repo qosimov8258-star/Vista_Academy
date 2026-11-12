@@ -47,16 +47,3 @@ export class MarkPickupDto {
   @MaxLength(300)
   note?: string;
 }
-
-export class BroadcastDto {
-  @ApiPropertyOptional({ description: "Bo'sh — filialdagi hamma guruh" })
-  @IsOptional()
-  @IsString()
-  groupId?: string;
-
-  @ApiProperty({ example: "Ertaga bog'cha dam olish kuni." })
-  @IsString()
-  @MinLength(3)
-  @MaxLength(500)
-  message!: string;
-}
