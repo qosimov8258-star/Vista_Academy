@@ -59,6 +59,7 @@ import {
   StarIcon,
   TeacherIcon,
   WalletIcon,
+  TimetableIcon,
 } from "./nav-icons";
 import { useTr } from "@/i18n/tr";
 
@@ -325,6 +326,7 @@ export function Sidebar({ slug }: { slug: string }) {
         { href: `/${slug}/children`, label: t("nav.children"), icon: ChildIcon, show: true },
         { href: `/${slug}/materials`, label: tr("Vazifa jo'natish"), icon: DocumentIcon, show: true },
         { href: `/${slug}/my-lessons/schedule`, label: t("nav.lessonSchedule"), icon: CalendarIcon, show: true },
+        { href: `/${slug}/timetable`, label: tr("Haftalik jadval"), icon: TimetableIcon, show: true },
       ],
     },
     // Tarbiyachining vaqti bo'lmasa yordamchi she'r/maqol/ertak qo'shadi; har birida kim yozgani ko'rinadi.
@@ -353,6 +355,8 @@ export function Sidebar({ slug }: { slug: string }) {
         { href: `/${slug}/materials`, label: tr("Vazifa jo'natish"), icon: DocumentIcon, show: true },
         // Fan o'qituvchisida dars jadvali alohida "Qo'shimcha darsliklar" o'rniga shu yerda
         { href: `/${slug}/my-lessons/schedule`, label: t("nav.lessonSchedule"), icon: CalendarIcon, show: isSubjectTeacher },
+        // Guruhning kun tartibi — tarbiyachi faqat ko'radi, filial admini to'ldiradi
+        { href: `/${slug}/timetable`, label: tr("Haftalik jadval"), icon: TimetableIcon, show: !isSubjectTeacher },
       ],
     },
     {
@@ -450,6 +454,8 @@ export function Sidebar({ slug }: { slug: string }) {
         { href: `${base}/nutrition`, label: t("nav.nutrition"), icon: MealIcon, show: true },
         // O'zi bilan xonalar katalogini ham boshqaradi — alohida nav shart emas
         { href: `${base}/lessons/schedule`, label: t("nav.lessonSchedule"), icon: CalendarIcon, show: true },
+        // Guruhlarning kun tartibi (PDF ko'rinishi) — ota-onalar kabinetida ham ko'rinadi
+        { href: `${base}/timetable`, label: tr("Haftalik jadval"), icon: TimetableIcon, show: true },
       ],
     },
     {

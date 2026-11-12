@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react";
 import clsx from "clsx";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
 import type { Organization, OrganizationUsage } from "@/lib/types";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
-import { AlertIcon } from "@/components/ui/icons";
+import { AlertIcon, ChevronRightIcon } from "@/components/ui/icons";
+import { LoadingState } from "@/components/ui/states";
 import { formatDayMonth, formatNumber } from "@/lib/format";
 import { organizationAccessUrl } from "@/lib/admin-web";
 
@@ -207,28 +208,145 @@ export function NotesCard({ organization }: { organization: Organization }) {
 }
 
 /**
- * "Bog'chaga kirish": yangi tab bosish paytida (sinxron) ochiladi — so'rovdan
- * keyin ochilsa brauzer uni popup deb bloklaydi. Chipta kelgach manzil beriladi.
+ * "Bog'chaga kirish": operator tanlangan filialning filial admini bo'lib
+ * kiradi. Filial bitta bo'lsa darhol kiriladi, bir nechta bo'lsa avval
+ * filial tanlash oynasi ochiladi (`modal` ni sahifa chizadi).
+ *
+ * Yangi tab bosish paytida (sinxron) ochiladi — so'rovdan keyin ochilsa
+ * brauzer uni popup deb bloklaydi. Chipta kelgach manzil beriladi.
  */
 export function useEnterOrganization() {
+  const [picking, setPicking] = useState<Organization | null>(null);
   const mutation = useMutation({
-    mutationFn: async ({ id, tab }: { id: string; tab: Window | null }) => {
-      const { ticket, slug } = await api.post<{ ticket: string; slug: string }>(`/platform/organizations/${id}/enter`);
+    mutationFn: async ({ id, branchId, tab }: { id: string; branchId?: string; tab: Window | null }) => {
+      const { ticket, slug } = await api.post<{ ticket: string; slug: string }>(
+        `/platform/organizations/${id}/enter`,
+        branchId ? { branchId } : {},
+      );
       return { tab, url: `${organizationAccessUrl(slug)}/enter#t=${encodeURIComponent(ticket)}` };
     },
     onSuccess: ({ tab, url }) => {
+      setPicking(null);
       if (tab && !tab.closed) tab.location.href = url;
       else window.location.href = url;
     },
     onError: (_err, { tab }) => tab?.close(),
   });
-  const enter = (id: string) => {
+
+  const enterBranch = (id: string, branchId?: string) => {
     const tab = window.open("about:blank", "_blank");
     // Yangi tab platforma oynasini boshqara olmasin
     if (tab) tab.opener = null;
-    mutation.mutate({ id, tab });
+    mutation.mutate({ id, branchId, tab });
   };
-  return { enter, mutation };
+
+  const enter = (organization: Organization) => {
+    mutation.reset();
+    if (organization.branches.length > 1) setPicking(organization);
+    else enterBranch(organization.id, organization.branches[0]?.id);
+  };
+
+  const close = () => {
+    if (mutation.isPending) return;
+    setPicking(null);
+    mutation.reset();
+  };
+
+  const modal = (
+    <EnterBranchModal
+      organization={picking}
+      onClose={close}
+      onPick={(branchId) => picking && enterBranch(picking.id, branchId)}
+      pending={mutation.isPending}
+      pendingBranchId={mutation.variables?.branchId}
+      error={picking ? mutation.error : null}
+    />
+  );
+
+  // Oyna ochiq bo'lsa xato oynaning ichida ko'rsatiladi, sahifada emas
+  return { enter, mutation, modal, error: picking ? null : mutation.error };
+}
+
+interface EntryBranch {
+  id: string;
+  name: string;
+  adminName: string | null;
+}
+
+function EnterBranchModal({
+  organization,
+  onClose,
+  onPick,
+  pending,
+  pendingBranchId,
+  error,
+}: {
+  organization: Organization | null;
+  onClose: () => void;
+  onPick: (branchId: string) => void;
+  pending: boolean;
+  pendingBranchId?: string;
+  error: Error | null;
+}) {
+  const branchesQuery = useQuery({
+    queryKey: ["entry-branches", organization?.id],
+    queryFn: () => api.get<EntryBranch[]>(`/platform/organizations/${organization?.id}/entry-branches`),
+    enabled: !!organization,
+  });
+
+  return (
+    <Modal
+      open={!!organization}
+      onClose={onClose}
+      title="Qaysi filialga kirasiz?"
+      description={organization ? `${organization.name} — tanlangan filial admini bo'lib kirasiz` : undefined}
+    >
+      <div>
+        {branchesQuery.isLoading ? (
+          <LoadingState />
+        ) : branchesQuery.isError ? (
+          <p className="text-[13px] text-[var(--color-danger)]">{(branchesQuery.error as Error).message}</p>
+        ) : (
+          <div className="overflow-hidden rounded-[16px] bg-[var(--color-surface-sunken)]">
+            {(branchesQuery.data ?? []).map((branch, index) => {
+              const disabled = !branch.adminName || pending;
+              return (
+                <button
+                  key={branch.id}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => onPick(branch.id)}
+                  className={clsx(
+                    "flex min-h-[56px] w-full items-center gap-3 px-4 py-2.5 text-left transition-colors",
+                    index > 0 && "border-t border-[var(--color-separator)]",
+                    disabled ? "cursor-default" : "cursor-pointer hover:bg-[var(--color-border)]/40",
+                    !branch.adminName && "opacity-50",
+                  )}
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[15px] font-medium text-[var(--color-text)]">{branch.name}</span>
+                    <span className="block truncate text-[13px] text-[var(--color-text-muted)]">
+                      {branch.adminName ?? "Filial admini yo'q"}
+                    </span>
+                  </span>
+                  {pending && pendingBranchId === branch.id ? (
+                    <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-[var(--color-text-muted)] border-t-transparent" />
+                  ) : (
+                    branch.adminName && <ChevronRightIcon className="h-4 w-4 shrink-0 text-[var(--color-text-subtle)]" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {error && (
+          <p className="mt-3 text-[13px] text-[var(--color-danger)]">
+            {error instanceof ApiError ? error.message : "Kirib bo'lmadi"}
+          </p>
+        )}
+      </div>
+    </Modal>
+  );
 }
 
 // ─── Holat amallari ─────────────────────────────────────────────────────────

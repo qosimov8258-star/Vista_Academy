@@ -23,7 +23,7 @@ const date = (value: string) => {
  */
 export function SubscriptionBanner({ slug }: { slug: string }) {
   const { user } = useAuth();
-  const isOwner = user?.role === "NETWORK_ADMIN" && !user.impersonatedBy;
+  const isOwner = user?.role === "NETWORK_ADMIN";
   const { data: org } = useQuery({
     queryKey: ["org", slug],
     queryFn: () => api.get<Organization>("/app/organizations/me"),

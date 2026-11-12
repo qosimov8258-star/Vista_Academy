@@ -81,8 +81,7 @@ export default function BogchaDetailPage({ params }: { params: Promise<{ id: str
     onSuccess: invalidate,
   });
 
-  const { enter: enterOrganization, mutation: enterMutation } = useEnterOrganization();
-  const enter = () => enterOrganization(id);
+  const { enter: enterOrganization, mutation: enterMutation, modal: enterModal, error: enterError } = useEnterOrganization();
 
   if (orgQuery.isLoading) return <LoadingState />;
   if (orgQuery.isError) return <ErrorState message={(orgQuery.error as Error).message} />;
@@ -92,7 +91,7 @@ export default function BogchaDetailPage({ params }: { params: Promise<{ id: str
   const accessUrl = organizationAccessUrl(org.slug);
   const websiteUrl = org.website ? `https://${org.website}` : null;
   const archived = org.status === "ARCHIVED";
-  const actionError = [enterMutation.error, activateMutation.error, restoreMutation.error, subscriptionMutation.error].find(Boolean);
+  const actionError = [enterError, activateMutation.error, restoreMutation.error, subscriptionMutation.error].find(Boolean);
 
   const copyAccessUrl = async () => {
     try {
@@ -106,6 +105,7 @@ export default function BogchaDetailPage({ params }: { params: Promise<{ id: str
 
   return (
     <div className="space-y-4">
+      {enterModal}
       <Link
         href="/bogchalar"
         className="group inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
@@ -149,7 +149,7 @@ export default function BogchaDetailPage({ params }: { params: Promise<{ id: str
 
           <div className="flex flex-wrap items-center gap-2">
             {org.status === "ACTIVE" && (
-              <Button onClick={enter} loading={enterMutation.isPending}>
+              <Button onClick={() => enterOrganization(org)} loading={enterMutation.isPending}>
                 <ArrowUpRightIcon className="h-4 w-4" />
                 Bog&apos;chaga kirish
               </Button>

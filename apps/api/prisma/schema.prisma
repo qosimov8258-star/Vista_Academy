@@ -381,6 +381,9 @@ model Group {
   /// Oylik to'lov narxi — shu guruh bolalariga hisob-faktura shu summada
   /// yoziladi. Bo'sh bo'lsa filialning `defaultTuitionAmount`i olinadi.
   monthlyFee Decimal?    @map("monthly_fee") @db.Decimal(12, 2)
+  /// Haftalik jadval ostidagi izoh (masalan "Shanbada mashg'ulotlar 15:00 da tugaydi").
+  /// Jadvalning o'zi — `DiaryRoutineItem` (kundalik kun tartibi).
+  scheduleNote String?   @map("schedule_note")
   createdAt  DateTime    @default(now()) @map("created_at")
   updatedAt  DateTime    @updatedAt @map("updated_at")
 

@@ -5,48 +5,66 @@ import clsx from "clsx";
 import type { ComponentType, ReactNode } from "react";
 import type { IconProps } from "@/components/ios/icons";
 import { ChevronRightIcon } from "@/components/ios/icons";
+import { PAGE_CARD, SECTION_TITLE } from "@/components/ios/tokens";
+import { IosIcon, type AnyIcon, type IosTint } from "@/features/director/ios-icon";
 import styles from "./teacher.module.css";
 import { useTr } from "@/i18n/tr";
 
 /**
- * Tarbiyachi kabinetining iOS uslubidagi qurilish bloklari. Ikonkalar
- * rangli "squircle" ichida emas — o'zi tizim rangida chiziladi (iOS'ning
- * Eslatmalar, Pochta ilovalaridagi kabi). Shu sabab bu yerda `IosIcon`
- * ishlatilmaydi.
+ * Tarbiyachi kabinetining qurilish bloklari — panelning asosiy iOS uslubida
+ * (admin-web CLAUDE.md): soyasiz oq kartalar (18px), qatorlarda rangli
+ * plitka (`IosIcon`), sarlavha kartasi. Telefon birinchi: qatorlar ≥ 52px,
+ * asosiy tugma bosh barmoq yetadigan joyda.
  */
 
-/** Sahifa ustuni: telefonda 16px chekka (iOS), kompyuterda markazda tor ustun. */
+/** Sahifa ustuni: telefonda 16px chekka (iOS), kompyuterda markazda tor ustun. Bloklar orasi 20px. */
 export function TeacherPage({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={clsx(styles.page, "-mx-2 space-y-7 sm:mx-auto sm:max-w-[720px]", className)}>{children}</div>
+    <div className={clsx(styles.page, "-mx-2 space-y-5 sm:mx-auto sm:max-w-[720px]", className)}>{children}</div>
   );
 }
 
-/** iOS'ning katta sarlavhasi: tepada kichik izoh (sana), ostida qalin nom. */
+/**
+ * Sahifa sarlavhasi kartasi (PageHeaderCard bilan bir xil): tepada kichik
+ * izoh (sana), 20px nom — bosh sahifada `hero` bilan 28px salomlashuv,
+ * ostida izoh, o'ngda tugma/avatar. `icon` berilsa — 40px plitka
+ * (telefonda yashiriladi, joy tejaladi).
+ */
 export function LargeTitle({
   eyebrow,
   title,
   subtitle,
   trailing,
+  icon,
+  tint = "accent",
+  hero = false,
 }: {
   eyebrow?: ReactNode;
   title: ReactNode;
   subtitle?: ReactNode;
   trailing?: ReactNode;
+  icon?: AnyIcon;
+  tint?: IosTint;
+  hero?: boolean;
 }) {
   const tr = useTr();
   return (
-    <header className="flex items-end justify-between gap-3 px-2">
-      <div className="min-w-0">
-        {eyebrow && (
-          <p className="text-[13px] font-semibold uppercase tracking-[0.05em] text-[var(--color-text-muted)]">{tr(eyebrow)}</p>
-        )}
-        <h1 className="mt-0.5 text-[32px] font-bold leading-[1.1] tracking-[-0.025em] text-[var(--color-text)] sm:text-[34px]">
+    <header className={clsx(PAGE_CARD, "flex items-center gap-3 px-4 py-4")}>
+      {icon && <IosIcon icon={icon} tint={tint} size={40} className="max-sm:hidden" />}
+      <div className="min-w-0 flex-1">
+        {eyebrow && <p className="truncate text-[13px] text-[#8e8e93]">{tr(eyebrow)}</p>}
+        <h1
+          data-hero
+          className={clsx(
+            "truncate font-bold leading-tight text-[var(--color-text)]",
+            hero ? "mt-0.5 text-[28px] tracking-[-0.02em]" : "text-[20px] tracking-[-0.01em]",
+          )}
+        >
           {tr(title)}
         </h1>
-        {subtitle && <p className="mt-1.5 text-[15px] leading-snug text-[var(--color-text-muted)]">{tr(subtitle)}</p>}
+        {subtitle && <p className="mt-0.5 truncate text-[13px] text-[#8e8e93]">{tr(subtitle)}</p>}
       </div>
-      {trailing && <div className="shrink-0 pb-1">{tr(trailing)}</div>}
+      {trailing && <div className="shrink-0">{tr(trailing)}</div>}
     </header>
   );
 }
@@ -69,20 +87,20 @@ export function Group({
   return (
     <section>
       {(title || action) && (
-        <div className="mb-2 flex items-end justify-between gap-3 px-4">
-          {title && <h2 className="text-[13px] font-semibold uppercase tracking-[0.05em] text-[var(--color-text-muted)]">{tr(title)}</h2>}
-          {tr(action)}
+        <div className="flex min-h-[28px] items-end justify-between gap-3 pr-4">
+          {title ? <h2 className={SECTION_TITLE}>{tr(title)}</h2> : <span />}
+          {action && <div className="pb-1.5 text-[13.5px]">{tr(action)}</div>}
         </div>
       )}
       <div className={clsx(styles.group, "overflow-hidden", className)}>{children}</div>
-      {footer && <p className="mt-2 px-4 text-[13px] leading-relaxed text-[var(--color-text-muted)]">{tr(footer)}</p>}
+      {footer && <p className="px-4 pt-2 text-[12.5px] leading-snug text-[#8e8e93]">{tr(footer)}</p>}
     </section>
   );
 }
 
 /** Guruh sarlavhasi yonidagi matnli tugma ("Barchasi", "Tozalash" va h.k.). */
 export function GroupAction({ href, onClick, children }: { href?: string; onClick?: () => void; children: ReactNode }) {
-  const className = "text-[15px] font-medium text-[var(--color-primary)] transition-opacity active:opacity-50";
+  const className = "text-[13.5px] font-medium text-[var(--color-primary)] transition-opacity active:opacity-50";
   return href ? (
     <Link href={href} className={className}>
       {children}
@@ -95,12 +113,13 @@ export function GroupAction({ href, onClick, children }: { href?: string; onClic
 }
 
 /**
- * Ro'yxatdagi bitta qator. Chap tomonda — tizim rangidagi oddiy belgi yoki
- * ixtiyoriy `leading` (masalan bola surati). Qatorlar orasidagi chiziq
- * matndan boshlanadi (iOS kabi).
+ * Ro'yxatdagi bitta qator. Chap tomonda — rangli plitka (`icon` + `tint`)
+ * yoki ixtiyoriy `leading` (masalan 44px bola surati). Qatorlar orasidagi
+ * chiziq matndan boshlanadi (iOS kabi): plitkada 58px, suratda 72px.
  */
 export function Row({
   icon: Icon,
+  tint = "accent",
   leading,
   title,
   subtitle,
@@ -113,6 +132,8 @@ export function Row({
   tone = "default",
 }: {
   icon?: ComponentType<IconProps>;
+  /** Plitka rangi — har bo'limning o'z rangi (sukut: tizim rangi) */
+  tint?: IosTint;
   leading?: ReactNode;
   title: ReactNode;
   subtitle?: ReactNode;
@@ -132,34 +153,29 @@ export function Row({
     <>
       {!first && (
         <span
-          className={clsx("absolute right-0 top-0 h-px bg-[var(--color-separator)]", hasLeading ? (leading ? "left-[68px]" : "left-[52px]") : "left-4")}
+          className={clsx("absolute right-0 top-0 h-px bg-black/[0.08]", hasLeading ? (leading ? "left-[72px]" : "left-[58px]") : "left-4")}
           aria-hidden="true"
         />
       )}
-      {Icon && (
-        <Icon
-          className={clsx("h-[22px] w-[22px] shrink-0", tone === "danger" ? "text-[var(--color-danger)]" : "text-[var(--color-primary)]")}
-          strokeWidth={1.8}
-        />
-      )}
+      {Icon && <IosIcon icon={Icon} tint={tone === "danger" ? "red" : tint} size={30} />}
       {tr(leading)}
       <span className="min-w-0 flex-1">
         <span
           className={clsx(
-            "block truncate text-[16px] leading-snug",
-            tone === "danger" ? "font-medium text-[var(--color-danger)]" : "text-[var(--color-text)]",
+            "block truncate text-[15.5px] leading-snug",
+            tone === "danger" ? "font-medium text-[#ff3b30]" : "text-[var(--color-text)]",
           )}
         >
           {tr(title)}
         </span>
-        {subtitle && <span className="mt-0.5 block truncate text-[13.5px] leading-snug text-[var(--color-text-muted)]">{tr(subtitle)}</span>}
+        {subtitle && <span className="mt-0.5 block truncate text-[13px] leading-snug text-[#8e8e93]">{tr(subtitle)}</span>}
       </span>
-      {value != null && <span className="shrink-0 text-[15px] tabular-nums text-[var(--color-text-muted)]">{tr(value)}</span>}
+      {value != null && <span className="shrink-0 text-[15px] tabular-nums text-[#8e8e93]">{tr(value)}</span>}
       {tr(trailing)}
-      {showChevron && <ChevronRightIcon className="h-4 w-4 shrink-0 text-[#c4c4c7]" />}
+      {showChevron && <ChevronRightIcon className="h-4 w-4 shrink-0 text-[#c7c7cc]" strokeWidth={2.2} />}
     </>
   );
-  const className = clsx("relative flex min-h-[52px] w-full items-center gap-3.5 px-4 py-2.5 text-left", (href || onClick) && styles.pressable);
+  const className = clsx("relative flex min-h-[52px] w-full items-center gap-3 px-4 py-2.5 text-left", (href || onClick) && styles.pressable);
   if (href) {
     return (
       <Link href={href} className={className}>
@@ -243,7 +259,7 @@ export function PrimaryButton({
 }) {
   const cls = clsx(
     styles.cta,
-    "inline-flex h-[50px] w-full items-center justify-center gap-2 rounded-full bg-[var(--color-primary)] px-6 text-[16.5px] font-semibold text-white shadow-[var(--shadow-primary)] disabled:opacity-50",
+    "inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[var(--color-primary)] px-6 text-[16px] font-semibold text-white shadow-[0_8px_18px_-8px_color-mix(in_srgb,var(--color-primary)_55%,transparent)] disabled:opacity-50",
     className,
   );
   if (href) {
@@ -287,9 +303,13 @@ export function EmptyRow({ icon: Icon, title, description }: { icon?: ComponentT
   const tr = useTr();
   return (
     <div className="flex flex-col items-center px-6 py-9 text-center">
-      {Icon && <Icon className="h-8 w-8 text-[var(--color-text-muted)]/60" strokeWidth={1.6} />}
+      {Icon && (
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#767680]/[0.12] text-[#8e8e93]">
+          <Icon className="h-6 w-6" strokeWidth={1.9} />
+        </span>
+      )}
       <p className="mt-3 text-[16px] font-semibold text-[var(--color-text)]">{tr(title)}</p>
-      {description && <p className="mt-1 max-w-[300px] text-[14px] leading-relaxed text-[var(--color-text-muted)]">{tr(description)}</p>}
+      {description && <p className="mt-1 max-w-[300px] text-[13px] leading-snug text-[#8e8e93]">{tr(description)}</p>}
     </div>
   );
 }
@@ -301,8 +321,8 @@ export function SkeletonRows({ rows = 3 }: { rows?: number }) {
     <div aria-busy="true" aria-label={tr("Yuklanmoqda")}>
       {Array.from({ length: rows }, (_, i) => (
         <div key={i} className="relative flex items-center gap-3.5 px-4 py-3.5">
-          {i > 0 && <span className="absolute left-4 right-0 top-0 h-px bg-[var(--color-separator)]" aria-hidden="true" />}
-          <span className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-black/[0.06]" />
+          {i > 0 && <span className="absolute left-[72px] right-0 top-0 h-px bg-black/[0.08]" aria-hidden="true" />}
+          <span className="h-11 w-11 shrink-0 animate-pulse rounded-full bg-[#767680]/[0.12]" />
           <span className="flex-1 space-y-2">
             <span className="block h-3.5 w-2/5 animate-pulse rounded-full bg-black/[0.06]" />
             <span className="block h-3 w-1/4 animate-pulse rounded-full bg-black/[0.04]" />

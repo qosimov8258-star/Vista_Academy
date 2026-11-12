@@ -56,7 +56,7 @@ import { EmptyState, ErrorState, SkeletonRows } from "@/components/ios/states";
 import { IOS, ROW_PRESS, ROW_SEPARATOR } from "@/components/ios/tokens";
 import { ChildPhoto } from "@/components/ui/child-photo";
 import { initials } from "@/components/ui/avatar";
-import { ViewOnlyNote } from "@/components/ui/view-only-note";
+import { ViewOnlyNote } from "@/components/ios/view-only-note";
 import { IosIcon, type AnyIcon } from "@/features/director/ios-icon";
 import { ChildCashCard } from "@/features/cash/child-cash-card";
 import { groupDigits } from "@/features/payments/shared";

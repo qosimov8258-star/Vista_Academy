@@ -160,5 +160,9 @@ Agar siz bu loyihada ishlayotgan Claude bo'lsangiz:
 - **Migratsiyani `migrate dev` bilan yaratmang** (yuqoriga qarang).
 - **Portlarni o'zgartirmang.**
 - **Push qilishdan oldin so'rang.** Foydalanuvchi aytmaguncha push qilmang.
+- **`apps/admin-web` da har bir yangi narsa iOS uslubida va telefonda qulay
+  bo'lishi shart** (egasi Usmon qarori, 2026-11-11). Batafsil qoidalar —
+  `apps/admin-web/CLAUDE.md`, «0. Asosiy talab». `platform-web` va
+  `landing-web` o'z uslubida qoladi (egasi islombel).
 - **Tekshirmasdan "ishladi" demang.** O'zgarishni haqiqatan ishga tushirib
   ko'ring; test yiqilsa — natijani ochiq ayting.

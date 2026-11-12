@@ -97,12 +97,14 @@ export function canViewUseful(role: TenantUserRole | undefined): boolean {
 }
 
 /**
- * "Foydali" bo'limida yozish huquqi. Bu yerda faqat tarbiyachi o'z guruhi
- * uchun material (she'r/maqol/ertak) tayyorlaydi — filial admini (BRANCH_ADMIN)
- * va administrator (MANAGER) faqat kuzatib boradi, o'zlari yozmaydi.
+ * "Foydali" bo'limida yozish huquqi (API'dagi `requireTeachingScope` bilan
+ * bir xil): tarbiyachi o'z guruhi uchun, filial admini (BRANCH_ADMIN) va
+ * administrator (MANAGER) esa istalgan guruh yoki butun filial uchun
+ * she'r/maqol/ertak qo'shadi. Tarbiyachi faqat o'zi qo'shganini o'zgartiradi,
+ * admin — hammasini. Direktor, moliyachi va oshpaz faqat ko'radi.
  */
 export function canWriteUseful(role: TenantUserRole | undefined): boolean {
-  return role === "TEACHER";
+  return role === "TEACHER" || role === "BRANCH_ADMIN" || role === "MANAGER";
 }
 
 /** Foydalanuvchi (Administratorlar) bo'limini ko'rish va yaratish huquqi: faqat Super Admin. */

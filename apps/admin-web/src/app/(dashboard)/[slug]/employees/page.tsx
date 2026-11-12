@@ -47,7 +47,9 @@ export default function EmployeesPage({ params }: { params: Promise<{ slug: stri
     open: false,
     position: null,
   });
-  const [detailEmployee, setDetailEmployee] = useState<Employee | null>(null);
+  // Varaq ro'yxatdagi xodimni id bo'yicha oladi — tahrirlangach (ro'yxat
+  // qayta yuklanganda) varaqda ham yangi ma'lumot ko'rinadi
+  const [detailId, setDetailId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>(ALL_TAB);
   const { user } = useAuth();
   const canWrite = canWriteOperational(user?.role);
@@ -128,6 +130,7 @@ export default function EmployeesPage({ params }: { params: Promise<{ slug: stri
 
   const nonEmptyGroups = useMemo(() => groups.filter((group) => group.employees.length > 0), [groups]);
   const allEmployees = employeesQuery.data ?? [];
+  const detailEmployee = detailId ? (allEmployees.find((e) => e.id === detailId) ?? null) : null;
 
   const paidEmployees = useMemo(
     () => allEmployees.filter((employee) => payrollByEmployee.get(employee.id)?.status === "PAID"),
@@ -292,7 +295,7 @@ export default function EmployeesPage({ params }: { params: Promise<{ slug: stri
               <button
                 key={employee.id}
                 type="button"
-                onClick={() => (isFinance ? router.push(employeeHref(employee.id)) : setDetailEmployee(employee))}
+                onClick={() => (isFinance ? router.push(employeeHref(employee.id)) : setDetailId(employee.id))}
                 className="flex flex-col items-center gap-1.5 rounded-[var(--radius-lg)] p-2 text-center transition-colors hover:bg-[var(--color-surface-hover)]"
               >
                 <EmployeePhoto
@@ -339,7 +342,7 @@ export default function EmployeesPage({ params }: { params: Promise<{ slug: stri
       {!isFinance && (
         <EmployeeDetailModal
           open={!!detailEmployee}
-          onClose={() => setDetailEmployee(null)}
+          onClose={() => setDetailId(null)}
           slug={slug}
           employee={detailEmployee}
           canWrite={canWrite}

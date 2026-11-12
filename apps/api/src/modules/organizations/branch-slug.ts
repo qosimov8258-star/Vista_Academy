@@ -40,6 +40,7 @@ export const RESERVED_BRANCH_SLUGS = new Set([
   "notifications",
   "lessons",
   "my-lessons",
+  "timetable",
   "coin",
   "my-notifications",
   "settings",

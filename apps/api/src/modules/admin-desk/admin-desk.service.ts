@@ -391,6 +391,39 @@ export class AdminDeskService {
     };
   }
 
+  /**
+   * Bolalar surati — guruhlar kesimida nechta bolaning profil surati bor,
+   * nechtasida yo'q. Surati yo'q bolalar ro'yxati ham qaytadi, filial admini
+   * ularni bosh sahifadan topib suratini qo'yishi uchun. Faol bo'lmagan
+   * (INACTIVE) bolalar hisobga olinmaydi — "Bugungi holat" bilan bir xil.
+   */
+  async photos(scope: TenantScope) {
+    const branchId = requireOperationalScope(scope);
+    const [groups, children] = await Promise.all([
+      this.prisma.group.findMany({ where: { branchId, status: "ACTIVE" }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
+      this.prisma.child.findMany({
+        where: { branchId, status: { not: "INACTIVE" } },
+        select: { id: true, fullName: true, groupId: true, avatarUpdatedAt: true },
+        orderBy: { fullName: "asc" },
+      }),
+    ]);
+    type Row = { groupId: string | null; name: string; total: number; withPhoto: number; missing: { id: string; fullName: string }[] };
+    const rows = new Map<string | null, Row>(groups.map((g) => [g.id, { groupId: g.id, name: g.name, total: 0, withPhoto: 0, missing: [] }]));
+    rows.set(null, { groupId: null, name: "Guruhsiz", total: 0, withPhoto: 0, missing: [] });
+    for (const c of children) {
+      const row = rows.get(c.groupId && rows.has(c.groupId) ? c.groupId : null)!;
+      row.total += 1;
+      if (c.avatarUpdatedAt) row.withPhoto += 1;
+      else row.missing.push({ id: c.id, fullName: c.fullName });
+    }
+    const list = [...rows.values()].filter((r) => r.groupId !== null || r.total > 0);
+    return {
+      total: children.length,
+      withPhoto: list.reduce((s, r) => s + r.withPhoto, 0),
+      groups: list,
+    };
+  }
+
   /** Kechqurun topshirish: bugun kelgan bolalar, ruxsat etilgan olib ketuvchilar va kim olib ketgani. */
   async pickups(scope: TenantScope, dateInput: string) {
     const branchId = requireTeachingScope(scope);

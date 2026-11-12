@@ -3,18 +3,14 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
-  UnauthorizedException,
 } from "@nestjs/common";
 import { OrganizationStatus, Prisma } from "@prisma/client";
 import * as argon2 from "argon2";
-import { JwtService } from "@nestjs/jwt";
 import { PrismaService } from "../../database/prisma.service";
 import { DEFAULT_POSITIONS } from "../../common/constants/default-positions";
 import { DEFAULT_SUBJECTS } from "../../common/constants/default-subjects";
 import { TenantAuthenticatedUser } from "../iam/tenant-auth.types";
 import { AuditLogService } from "../audit-log/audit-log.service";
-import { encryptSecret, decryptSecret } from "../../common/crypto/reversible-secret";
-import { verifyPlatformRevealToken } from "../platform-webauthn/platform-reveal-token";
 import { CreateOrganizationDto } from "./dto/create-organization.dto";
 import { UpdateOrganizationDto } from "./dto/update-organization.dto";
 import { UpdateOrganizationAdminDto } from "./dto/update-organization-admin.dto";
@@ -37,7 +33,6 @@ export class OrganizationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLog: AuditLogService,
-    private readonly jwt: JwtService,
     private readonly r2: R2Service,
   ) {}
 
@@ -95,7 +90,6 @@ export class OrganizationsService {
             // Platform panelida "Login/Parol"ni keyinchalik qayta ko'rsatish
             // uchun qaytarib olinadigan shaklda ham saqlanadi (xodimlardagi
             // bilan bir xil yondashuv) — auth esa faqat `passwordHash` orqali.
-            passwordEncrypted: encryptSecret(dto.adminPassword),
             fullName: dto.adminFullName,
             role: "NETWORK_ADMIN",
           },
@@ -288,22 +282,8 @@ export class OrganizationsService {
   /** Login xavfsiz — platform panelida parolsiz ham ko'rsatilishi mumkin. */
   async getAdminAccount(organizationId: string) {
     const admin = await this.requireAdminAccount(organizationId);
-    return { login: admin.login, hasStoredPassword: admin.passwordEncrypted !== null };
-  }
-
-  /**
-   * WebAuthn bilan tasdiqlangan `revealToken` talab qilinadi — shu tokensiz
-   * parol hech qachon ochilmaydi (xodimlardagi bilan bir xil qoida).
-   */
-  async revealAdminPassword(organizationId: string, revealToken: string | undefined, platformUserId: string) {
-    if (!revealToken || !verifyPlatformRevealToken(this.jwt, revealToken, platformUserId)) {
-      throw new UnauthorizedException("Qurilma tasdiqlanmagan");
-    }
-    const admin = await this.requireAdminAccount(organizationId);
-    if (!admin.passwordEncrypted) {
-      throw new BadRequestException("Bu kabinet uchun parol saqlanmagan — yangi parol generatsiya qiling");
-    }
-    return { login: admin.login, password: decryptSecret(Buffer.from(admin.passwordEncrypted)) };
+    // Parol hech qachon qaytarilmaydi va ochiladigan nusxasi saqlanmaydi
+    return { login: admin.login };
   }
 
   /**
@@ -322,12 +302,8 @@ export class OrganizationsService {
       data.login = dto.login.toLowerCase();
     }
     if (dto.password) {
-      const [passwordHash, passwordEncrypted] = await Promise.all([
-        argon2.hash(dto.password),
-        Promise.resolve(encryptSecret(dto.password)),
-      ]);
-      data.passwordHash = passwordHash;
-      data.passwordEncrypted = passwordEncrypted;
+      data.passwordHash = await argon2.hash(dto.password);
+      data.passwordEncrypted = null;
     }
 
     try {

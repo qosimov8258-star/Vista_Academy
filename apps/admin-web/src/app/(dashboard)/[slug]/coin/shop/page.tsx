@@ -2,29 +2,45 @@
 
 import { use, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import clsx from "clsx";
+import { Plus, Store } from "lucide-react";
 import { api } from "@/lib/api";
 import type { Organization, Product } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/input";
-import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
-import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { canWriteTeaching } from "@/lib/permissions";
-import { ShopIcon, PlusIcon } from "@/components/ui/icons";
-import { CreateProductModal } from "@/features/products/create-product-modal";
-import { ProductCard } from "@/features/products/product-card";
+import { PageHeaderCard } from "@/components/ios/page-card";
+import { IosButton } from "@/components/ios/button";
+import { Group, Row } from "@/components/ios/group";
+import { Segmented } from "@/components/ios/form";
+import { IosSheet } from "@/components/ios/sheet";
+import { EmptyState, ErrorState } from "@/components/ios/states";
+import { CheckIcon } from "@/components/ios/icons";
+import { GROUP_BLOCK, ROW_SEPARATOR } from "@/components/ios/tokens";
+import { ViewOnlyNote } from "@/components/ui/view-only-note";
+import { PricePill, ProductDetailSheet, ProductFormSheet, StockPill, productImagePositions, productImageUrl } from "@/features/products/product-sheets";
 import { useTr } from "@/i18n/tr";
 
+/** Ko'p bo'lmasa filial segment bilan, aks holda ro'yxat varag'ida tanlanadi */
+const SEGMENT_MAX = 4;
+
+/**
+ * Yulduzcha — Do'kon: bolalar yulduzchalarini sarflaydigan tovarlar.
+ * Telefonda 2 ustunli kartalar; karta bosilsa tovar varag'i (suratlar
+ * surib ko'riladi), tahrirlash va o'chirish o'sha varaqdan.
+ */
 export default function CoinShopPage({ params }: { params: Promise<{ slug: string }> }) {
   const tr = useTr();
   const { slug } = use(params);
   const { branchId: forcedBranchId } = useBranchContext(slug);
   const [branchId, setBranchId] = useState("");
+  const [branchPickerOpen, setBranchPickerOpen] = useState(false);
   const { user } = useAuth();
   const canWrite = canWriteTeaching(user?.role);
-  const [createOpen, setCreateOpen] = useState(false);
+
+  // Ochiq varaq: tovar ko'rinishi yoki forma (yangi / tahrirlash)
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [view, setView] = useState<"detail" | "form" | null>(null);
 
   const orgQuery = useQuery({
     queryKey: ["org", slug],
@@ -47,69 +63,169 @@ export default function CoinShopPage({ params }: { params: Promise<{ slug: strin
     queryFn: () => api.get<Product[]>(`/app/products?branchId=${branchId}`),
     enabled: !!branchId,
   });
+  const products = productsQuery.data ?? [];
+  const selected = selectedId ? (products.find((p) => p.id === selectedId) ?? null) : null;
+  const outOfStock = products.filter((p) => p.quantity <= 0).length;
+
+  const openCreate = () => {
+    setSelectedId(null);
+    setView("form");
+  };
+
+  const showBranchPicker = !forcedBranchId && branches.length > 1;
+  const branchName = branches.find((b) => b.id === branchId)?.name ?? "";
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-3 md:flex-wrap">
-        <div className="min-w-0">
-          <h1 className="text-[22px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">{tr("Yulduzcha — Do'kon")}</h1>
-          <p className="text-[14px] text-[var(--color-text-muted)]">{tr("Bolalar yulduzchalarini sarflaydigan do'kon")}</p>
-        </div>
-        {canWrite && branchId && (
-          <Button className="shrink-0 max-md:!h-auto max-md:!py-2" onClick={() => setCreateOpen(true)}>
-            <PlusIcon className="h-4 w-4 shrink-0" />
-            <span className="max-md:text-center max-md:leading-tight max-md:whitespace-normal">
-              {tr("Tovar")}<br className="md:hidden" /> {tr("qo'shish")}
-            </span>
-          </Button>
-        )}
+    <div className="-mx-2 md:mx-0">
+      <div className="mx-auto w-full max-w-5xl space-y-5 pb-2">
+        <PageHeaderCard
+          icon={Store}
+          tint="pink"
+          title={tr("Yulduzcha — Do'kon")}
+          count={productsQuery.data ? tr("{0} ta tovar", products.length) : undefined}
+          subtitle={tr("Bolalar yulduzchalarini sarflaydigan do'kon")}
+          actions={canWrite && branchId ? <IosButton label={tr("Tovar qo'shish")} icon={Plus} variant="primary" compact onClick={openCreate} /> : undefined}
+        />
+
+        {showBranchPicker &&
+          (branches.length <= SEGMENT_MAX ? (
+            <Segmented label={tr("Filial")} value={branchId} onChange={setBranchId} options={branches.map((b) => ({ value: b.id, label: tr(b.name) }))} />
+          ) : (
+            <Group>
+              <Row title={tr("Filial")} value={tr(branchName)} onClick={() => setBranchPickerOpen(true)} />
+            </Group>
+          ))}
+
+        {!canWrite && <ViewOnlyNote role={user?.role} />}
+
+        <Group
+          title={
+            <>
+              {tr("Tovarlar")}
+              {outOfStock > 0 && <span className="font-normal normal-case tracking-normal">· {tr("{0} tasi tugagan", outOfStock)}</span>}
+            </>
+          }
+          refreshing={productsQuery.isFetching && !productsQuery.isLoading}
+          bare
+        >
+          {!branchId && !orgQuery.isLoading ? (
+            <EmptyState icon={Store} title="Filial mavjud emas" />
+          ) : !branchId || productsQuery.isLoading ? (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4" aria-busy="true">
+              {Array.from({ length: 4 }, (_, i) => (
+                <div key={i} className={GROUP_BLOCK}>
+                  <div className="aspect-square animate-pulse bg-[#767680]/[0.12]" />
+                  <div className="space-y-2 p-3">
+                    <div className="h-3.5 w-3/4 animate-pulse rounded bg-[#767680]/[0.12]" />
+                    <div className="h-3 w-1/2 animate-pulse rounded bg-[#767680]/[0.12]" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : productsQuery.isError && !productsQuery.data ? (
+            <ErrorState message={tr((productsQuery.error as Error).message)} onRetry={() => productsQuery.refetch()} retrying={productsQuery.isFetching} />
+          ) : products.length === 0 ? (
+            <div className="space-y-3">
+              <EmptyState
+                icon={Store}
+                title="Hali tovar qo'shilmagan"
+                hint={canWrite ? "\"Tovar qo'shish\" tugmasi orqali birinchi tovarni qo'shing" : "Bu filialda hali tovar yo'q"}
+              />
+              {canWrite && (
+                <button
+                  type="button"
+                  onClick={openCreate}
+                  className="mx-auto flex h-11 items-center gap-2 rounded-full bg-[var(--color-primary)] px-5 text-[15px] font-semibold text-white transition-transform active:scale-[0.96]"
+                >
+                  <Plus className="h-4 w-4" strokeWidth={2.6} />
+                  {tr("Tovar qo'shish")}
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              {products.map((product) => {
+                const first = productImagePositions(product)[0];
+                const soldOut = product.quantity <= 0;
+                return (
+                  <button
+                    key={product.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedId(product.id);
+                      setView("detail");
+                    }}
+                    className={clsx(GROUP_BLOCK, "flex flex-col text-left transition-transform active:scale-[0.98]")}
+                  >
+                    <div className="relative aspect-square w-full bg-[#f2f2f7]">
+                      {first ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- tashqi manzil
+                        <img src={productImageUrl(product, first)} alt={tr(product.name)} className={clsx("h-full w-full object-cover", soldOut && "opacity-50")} />
+                      ) : (
+                        <span className="flex h-full w-full items-center justify-center">
+                          <Store className="h-10 w-10 text-[#c7c7cc]" strokeWidth={1.6} />
+                        </span>
+                      )}
+                      <span className="absolute left-2 top-2">
+                        <StockPill quantity={product.quantity} />
+                      </span>
+                    </div>
+                    <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-3">
+                      <span className="line-clamp-2 text-[15px] font-semibold leading-snug text-[var(--color-text)]">{tr(product.name)}</span>
+                      {product.color && <span className="truncate text-[13px] text-[#8e8e93]">{tr(product.color)}</span>}
+                      <span className="mt-auto pt-1">
+                        <PricePill value={product.priceCoins} />
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </Group>
       </div>
 
-      {!forcedBranchId && branches.length > 1 && (
-        <Card className="flex flex-col gap-3 p-4 sm:flex-row">
-          <Select label={tr("Filial")} value={branchId} onChange={(e) => setBranchId(e.target.value)} className="sm:max-w-xs">
-            {branches.map((branch) => (
-              <option key={branch.id} value={branch.id}>
-                {tr(branch.name)}
-              </option>
-            ))}
-          </Select>
-        </Card>
-      )}
-
-      {!canWrite && <ViewOnlyNote role={user?.role} />}
-
-      {orgQuery.isLoading || (!branchId && branches.length > 0) ? (
-        <LoadingState rows={3} />
-      ) : !branchId ? (
-        <EmptyState title={tr("Filial mavjud emas")} />
-      ) : productsQuery.isLoading ? (
-        <LoadingState />
-      ) : productsQuery.isError ? (
-        <ErrorState message={tr((productsQuery.error as Error).message)} />
-      ) : !productsQuery.data || productsQuery.data.length === 0 ? (
-        <EmptyState
-          icon={<ShopIcon className="h-8 w-8" />}
-          title={tr("Hali tovar qo'shilmagan")}
-          description={canWrite ? tr("\"Tovar qo'shish\" tugmasi orqali birinchi tovarni qo'shing") : tr("Bu filialda hali tovar yo'q")}
-          action={
-            canWrite ? (
-              <Button onClick={() => setCreateOpen(true)}>
-                <PlusIcon className="h-4 w-4" />
-                {tr("Tovar qo'shish")}
-              </Button>
-            ) : undefined
-          }
-        />
-      ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {productsQuery.data.map((product) => (
-            <ProductCard key={product.id} slug={slug} branchId={branchId} product={product} canWrite={canWrite} />
+      {/* Filial tanlash (ko'p filial bo'lsa) */}
+      <IosSheet open={branchPickerOpen} onClose={() => setBranchPickerOpen(false)} cancelLabel="Orqaga" title={tr("Filial")}>
+        <div className={GROUP_BLOCK}>
+          {branches.map((b) => (
+            <div key={b.id} className="group/row relative">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={b.id === branchId}
+                onClick={() => {
+                  setBranchId(b.id);
+                  setBranchPickerOpen(false);
+                }}
+                className="flex min-h-[48px] w-full items-center gap-3 px-4 text-left transition-colors hover:bg-[#767680]/[0.05] active:bg-[#767680]/[0.1]"
+              >
+                <span className="min-w-0 flex-1 truncate py-3 text-[15px] text-[var(--color-text)]">{tr(b.name)}</span>
+                {b.id === branchId && <CheckIcon className="h-[18px] w-[18px] shrink-0 text-[var(--color-primary)]" strokeWidth={2.6} />}
+              </button>
+              <span className={ROW_SEPARATOR} aria-hidden="true" />
+            </div>
           ))}
         </div>
-      )}
+      </IosSheet>
 
-      {branchId && <CreateProductModal open={createOpen} onClose={() => setCreateOpen(false)} slug={slug} branchId={branchId} />}
+      {selected && (
+        <ProductDetailSheet open={view === "detail"} onClose={() => setView(null)} product={selected} onEdit={canWrite ? () => setView("form") : undefined} />
+      )}
+      {canWrite && branchId && (
+        <ProductFormSheet
+          open={view === "form"}
+          // Tahrirlashdan qaytganda tovar varag'i ochiladi, yangi tovardan keyin — ro'yxat
+          onClose={() => setView(selected ? "detail" : null)}
+          onDeleted={() => {
+            setView(null);
+            setSelectedId(null);
+          }}
+          slug={slug}
+          branchId={branchId}
+          product={selected}
+        />
+      )}
     </div>
   );
 }

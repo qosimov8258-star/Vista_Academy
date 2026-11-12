@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
-import { setTenantAccessOnly } from "@/lib/tenant-session";
+import { setTenantTokens } from "@/lib/tenant-session";
 import type { TenantAuthenticatedUser } from "@/lib/types";
 
 // Chipta bir martalik: React StrictMode effektni ikki marta ishga tushirsa
@@ -15,7 +15,7 @@ let consumedTicket: string | null = null;
 /**
  * Platforma operatorining "Bog'chaga kirish" havolasi: `/enter#t=<chipta>`.
  * Chipta fragmentda keladi (serverga va loglarga tushmaydi), darhol
- * manzildan olib tashlanadi va 30 daqiqalik seansga almashtiriladi.
+ * manzildan olib tashlanadi va filial adminining oddiy seansiga almashtiriladi.
  */
 export default function EnterPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
@@ -34,9 +34,9 @@ export default function EnterPage({ params }: { params: Promise<{ slug: string }
     consumedTicket = ticket;
 
     api
-      .post<{ user: TenantAuthenticatedUser; accessToken: string }>("/app/auth/enter", { ticket })
-      .then(({ accessToken }) => {
-        setTenantAccessOnly(accessToken);
+      .post<{ user: TenantAuthenticatedUser; accessToken: string; refreshToken: string }>("/app/auth/enter", { ticket })
+      .then(({ accessToken, refreshToken }) => {
+        setTenantTokens({ accessToken, refreshToken });
         queryClient.clear();
         router.replace(`/${slug}`);
         router.refresh();
@@ -58,7 +58,7 @@ export default function EnterPage({ params }: { params: Promise<{ slug: string }
         ) : (
           <>
             <span className="mx-auto block h-7 w-7 animate-spin rounded-full border-2 border-[var(--color-primary)] border-t-transparent" />
-            <p className="mt-4 text-[14px] text-[var(--color-text-muted)]">Platforma operatori sifatida kirilmoqda…</p>
+            <p className="mt-4 text-[14px] text-[var(--color-text-muted)]">Kirilmoqda…</p>
           </>
         )}
       </div>

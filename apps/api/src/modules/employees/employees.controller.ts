@@ -10,6 +10,7 @@ import { R2Service } from "../storage/r2.service";
 import { EmployeesService } from "./employees.service";
 import { CreateEmployeeDto, EmployeeAccountDto } from "./dto/create-employee.dto";
 import { UpdateEmployeeCredentialsDto } from "./dto/update-employee-credentials.dto";
+import { UpdateEmployeeDto } from "./dto/update-employee.dto";
 import { CreateEmployeeTopicDto } from "./dto/create-employee-topic.dto";
 import { UpdateEmployeeTopicsSettingDto } from "./dto/update-employee-topics-setting.dto";
 import { UpdateEmployeeGroupsDto } from "./dto/update-employee-groups.dto";
@@ -46,6 +47,16 @@ export class EmployeesController {
     return this.employeesService.openAccount(user, id, dto);
   }
 
+  /** Xodimni tahrirlash: ism, telefon, lavozim, fan, faol/nofaol, guruh. */
+  @Patch(":id")
+  update(
+    @CurrentTenantUser() user: TenantAuthenticatedUser,
+    @Param("id") id: string,
+    @Body() dto: UpdateEmployeeDto,
+  ) {
+    return this.employeesService.update(user, id, dto);
+  }
+
   @Patch(":id/groups")
   updateGroups(
     @CurrentTenantUser() user: TenantAuthenticatedUser,
@@ -69,23 +80,6 @@ export class EmployeesController {
     @Body() dto: UpdateEmployeeCredentialsDto,
   ) {
     return this.employeesService.updateCredentials(toTenantScope(user), id, dto);
-  }
-
-  /**
-   * Xodim kabineti parolini ko'rsatadi. `X-Reveal-Token` — admin qurilmasi
-   * WebAuthn bilan tasdiqlangandan keyin `/app/webauthn/authentication/verify`
-   * dan olinadigan qisqa umrli token.
-   */
-  @Get(":id/password")
-  revealPassword(
-    @CurrentTenantUser() user: TenantAuthenticatedUser,
-    @Param("id") id: string,
-    @Headers("x-reveal-token") revealToken?: string,
-  ) {
-    if (!revealToken) {
-      throw new BadRequestException("Reveal token kerak");
-    }
-    return this.employeesService.revealPassword(toTenantScope(user), id, revealToken);
   }
 
   /** Xodim tafsilot oynasidagi "Mavzu qo'shasizmi?" ro'yxati. */

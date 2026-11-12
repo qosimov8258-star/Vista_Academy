@@ -30,6 +30,8 @@ import { DiaryService } from "./diary.service";
 import { MarkEntryDto, UpdateEntryDto } from "./dto/mark-entry.dto";
 import { DaysQueryDto, UpdateMediaDto, UploadMediaDto } from "./dto/media.dto";
 import { ReplaceRoutineDto } from "./dto/replace-routine.dto";
+import { SaveTimetableDto } from "./dto/save-timetable.dto";
+import { TimetableService } from "./timetable.service";
 
 const author = (user: TenantAuthenticatedUser) => ({ id: user.id, fullName: user.fullName });
 
@@ -43,7 +45,26 @@ const author = (user: TenantAuthenticatedUser) => ({ id: user.id, fullName: user
 @UseGuards(TenantJwtAuthGuard)
 @Controller("app/diary")
 export class DiaryController {
-  constructor(private readonly diaryService: DiaryService) {}
+  constructor(
+    private readonly diaryService: DiaryService,
+    private readonly timetableService: TimetableService,
+  ) {}
+
+  /** Haftalik jadval — filialdagi guruhlar (tarbiyachiga faqat o'z guruhi) */
+  @Get("timetables")
+  listTimetables(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query("branchId") branchId?: string) {
+    return this.timetableService.list(toTenantScope(user), branchId);
+  }
+
+  /** Haftalik jadvalni saqlash — filial admini va administrator */
+  @Put("groups/:groupId/timetable")
+  saveTimetable(
+    @CurrentTenantUser() user: TenantAuthenticatedUser,
+    @Param("groupId", ParseUUIDPipe) groupId: string,
+    @Body() dto: SaveTimetableDto,
+  ) {
+    return this.timetableService.save(toTenantScope(user), groupId, dto);
+  }
 
   @Get("groups/:groupId/routine")
   getRoutine(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("groupId", ParseUUIDPipe) groupId: string) {

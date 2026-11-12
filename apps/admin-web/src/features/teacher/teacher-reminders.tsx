@@ -46,7 +46,7 @@ export function TeacherReminders({ slug, branchId, date }: { slug: string; branc
         const busy = doneMutation.isPending && doneMutation.variables?.id === r.id;
         return (
           <div key={r.id} className="relative flex items-start gap-3.5 px-4 py-3">
-            {i > 0 && <span className="absolute left-[58px] right-0 top-0 h-px bg-[var(--color-separator)]" aria-hidden="true" />}
+            {i > 0 && <span className="absolute left-[56px] right-0 top-0 h-px bg-black/[0.08]" aria-hidden="true" />}
             {/* iOS Eslatmalar ilovasidagidek dumaloq belgi — bosilsa "berildi" */}
             <button
               type="button"

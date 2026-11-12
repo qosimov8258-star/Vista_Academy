@@ -9,8 +9,9 @@ import type { Group as GroupModel } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { canWriteTeaching, isTeacher } from "@/lib/permissions";
-import { CheckIcon, type IconProps } from "@/components/ios/icons";
+import { CheckIcon, GroupIcon, type IconProps } from "@/components/ios/icons";
 import { IOS, SECTION_TITLE } from "@/components/ios/tokens";
+import { IOS_TINT, IosIcon, type IosTint } from "@/features/director/ios-icon";
 import { IosSheet, SheetPrimaryButton, SheetRow, SheetSecondaryButton, SheetSection } from "@/components/ios/sheet";
 import { EmptyRow, Group, LargeTitle, PrimaryButton, Row, SkeletonRows, TeacherPage, formatDayShort } from "@/features/teacher/teacher-ui";
 import { GuideRow, GuideSheet } from "@/features/teacher/guide-sheet";
@@ -35,11 +36,11 @@ const MAX_BYTES = 20 * 1024 * 1024;
 const MAX_FILES = 10;
 const ACCEPT = "image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime,audio/*,.mp3,.m4a,.ogg,.opus,.wav,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt";
 
-const KIND: Record<Material["kind"], { label: string; color: string; icon: ComponentType<IconProps> }> = {
-  IMAGE: { label: "Rasm", color: IOS.blue, icon: ImageIcon },
-  VIDEO: { label: "Video", color: "#af52de", icon: Film },
-  AUDIO: { label: "Audio", color: IOS.orange, icon: Mic },
-  DOCUMENT: { label: "Hujjat", color: IOS.gray, icon: FileText },
+const KIND: Record<Material["kind"], { label: string; tint: IosTint; icon: ComponentType<IconProps> }> = {
+  IMAGE: { label: "Rasm", tint: "blue", icon: ImageIcon },
+  VIDEO: { label: "Video", tint: "purple", icon: Film },
+  AUDIO: { label: "Audio", tint: "orange", icon: Mic },
+  DOCUMENT: { label: "Hujjat", tint: "gray", icon: FileText },
 };
 
 function fileKind(file: File): Material["kind"] {
@@ -53,14 +54,9 @@ function sizeLabel(bytes: number): string {
   return bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
-/** Ro'yxatdagi tur plitkasi — iOS uslubida tekis rang + oq belgi */
-function KindTile({ kind, size = 36 }: { kind: Material["kind"]; size?: number }) {
-  const meta = KIND[kind];
-  return (
-    <span className="flex shrink-0 items-center justify-center rounded-[10px]" style={{ width: size, height: size, backgroundColor: meta.color }} aria-hidden="true">
-      <meta.icon className="text-white" style={{ width: size / 2, height: size / 2 }} strokeWidth={2.2} />
-    </span>
-  );
+/** Tur plitkasi — panelning `IosIcon`i: tekis tizim rangi + oq belgi */
+function KindTile({ kind, size = 30 }: { kind: Material["kind"]; size?: number }) {
+  return <IosIcon icon={KIND[kind].icon} tint={KIND[kind].tint} size={size} />;
 }
 
 /**
@@ -176,6 +172,8 @@ export default function MaterialsPage({ params }: { params: Promise<{ slug: stri
   return (
     <TeacherPage className="pb-4">
       <LargeTitle
+        icon={Paperclip}
+        tint="teal"
         title={tr(teacher ? "Vazifa jo'natish" : "Guruh fayllari")}
         subtitle={tr("Rasm, video, ovoz va hujjatlarni guruh bolalarining ota-onalari kabinetda ko'radi")}
       />
@@ -191,6 +189,8 @@ export default function MaterialsPage({ params }: { params: Promise<{ slug: stri
         ) : (
           <Row
             first
+            icon={GroupIcon}
+            tint="indigo"
             title={tr("Guruh")}
             value={currentGroup ? tr(currentGroup.name) : "—"}
             onClick={groups.length > 1 ? () => setGroupPickerOpen(true) : undefined}
@@ -229,13 +229,13 @@ export default function MaterialsPage({ params }: { params: Promise<{ slug: stri
                   const url = previews.get(file);
                   return (
                     <div key={`${file.name}-${file.size}`} className="relative py-2 pl-4 pr-1">
-                      {i > 0 && <span className="absolute left-[60px] right-0 top-0 h-px bg-black/[0.08]" aria-hidden="true" />}
+                      {i > 0 && <span className="absolute left-[58px] right-0 top-0 h-px bg-black/[0.08]" aria-hidden="true" />}
                       <div className="flex min-h-[40px] items-center gap-3">
                         {kind === "IMAGE" && url && !singleImage ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={url} alt="" className="h-8 w-8 shrink-0 rounded-[8px] object-cover" />
+                          <img src={url} alt="" className="h-[30px] w-[30px] shrink-0 rounded-[8px] object-cover" />
                         ) : (
-                          <KindTile kind={kind} size={32} />
+                          <KindTile kind={kind} />
                         )}
                         <span className="min-w-0 flex-1 truncate text-[15px] text-[var(--color-text)]">{file.name}</span>
                         <span className="shrink-0 text-[13px] tabular-nums text-[#8e8e93]">{sizeLabel(file.size)}</span>
@@ -321,7 +321,8 @@ export default function MaterialsPage({ params }: { params: Promise<{ slug: stri
               <Row
                 key={item.id}
                 first={i === 0}
-                leading={<KindTile kind={item.kind} />}
+                icon={KIND[item.kind].icon}
+                tint={KIND[item.kind].tint}
                 title={item.title}
                 subtitle={`${tr(KIND[item.kind].label)} · ${item.createdByName} · ${formatDayShort(item.createdAt.slice(0, 10))} · ${sizeLabel(item.sizeBytes)}`}
                 onClick={() => setOpened(item)}
@@ -479,7 +480,7 @@ function MaterialSheet({ material, canDelete, onClose, onDeleted }: { material: 
 
           <SheetSection>
             <SheetRow label={tr("Turi")}>
-              <span style={{ color: KIND[material.kind].color }}>{tr(KIND[material.kind].label)}</span>
+              <span style={{ color: IOS_TINT[KIND[material.kind].tint] }}>{tr(KIND[material.kind].label)}</span>
             </SheetRow>
             <SheetRow label={tr("Yubordi")}>{material.createdByName}</SheetRow>
             <SheetRow label={tr("Sana")}>{formatDayShort(material.createdAt.slice(0, 10))}</SheetRow>

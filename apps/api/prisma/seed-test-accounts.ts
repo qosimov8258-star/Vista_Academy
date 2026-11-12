@@ -7,7 +7,6 @@
 import { PrismaClient, type TenantUserRole } from "@prisma/client";
 import * as argon2 from "argon2";
 import "dotenv/config";
-import { encryptSecret } from "../src/common/crypto/reversible-secret";
 import { DEFAULT_POSITIONS } from "../src/common/constants/default-positions";
 import { DEFAULT_SUBJECTS } from "../src/common/constants/default-subjects";
 import { createChildWithGuardian, withPublicIdRetry } from "../src/modules/children/child-creation";
@@ -98,7 +97,6 @@ async function main() {
           branchId: branch?.id,
           login,
           passwordHash: hash,
-          passwordEncrypted: encryptSecret(PASSWORD),
           fullName: `Test ${spec.label} ${i}`,
           role: spec.role,
         },

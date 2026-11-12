@@ -7,6 +7,7 @@ import {
   BookOpen,
   BriefcaseBusiness,
   CalendarDays,
+  CalendarRange,
   ChartColumn,
   CircleHelp,
   ClipboardCheck,
@@ -72,6 +73,8 @@ export const BookIcon = navIcon(BookOpen, "teal");
 export const BulbIcon = navIcon(Lightbulb, "green");
 export const NoteIcon = navIcon(FileText, "blue");
 export const CalendarIcon = navIcon(CalendarDays, "red");
+/** Haftalik jadval (guruh kun tartibi) */
+export const TimetableIcon = navIcon(CalendarRange, "teal");
 export const ChecklistIcon = navIcon(ClipboardCheck, "green");
 export const ClockIcon = navIcon(AlarmClock, "orange");
 export const PhoneIcon = navIcon(Phone, "green");
