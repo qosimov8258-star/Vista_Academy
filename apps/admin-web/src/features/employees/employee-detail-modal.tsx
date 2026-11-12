@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Trash2 } from "lucide-react";
+import { LogIn, Pencil, Trash2 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import type { CreateEmployeeResult, Employee, EmployeeCredentials, Group } from "@/lib/types";
 import { deleteEmployeeWithConfirmation, webauthnErrorMessage } from "@/lib/webauthn";
@@ -22,6 +22,7 @@ import { EditEmployeeSheet } from "@/features/employees/edit-employee-sheet";
 import { CopyRow } from "@/features/employees/employee-form-parts";
 import { PasswordChecklist, getPasswordRules } from "@/components/ui/password-checklist";
 import { Toast, type ToastState } from "@/components/ui/toast";
+import { useAuth } from "@/lib/use-auth";
 import { useTr } from "@/i18n/tr";
 
 const LOGIN_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{1,30}[A-Za-z0-9]$/;
@@ -62,6 +63,39 @@ export function EmployeeDetailModal({
   const [createdCredentials, setCreatedCredentials] = useState<EmployeeCredentials | null>(null);
 
   const [deleteConfirming, setDeleteConfirming] = useState(false);
+  const { user: viewer } = useAuth();
+  const [entering, setEntering] = useState(false);
+  const [enterError, setEnterError] = useState<string | null>(null);
+
+  /**
+   * «Xodim profiliga kirish» — faqat filial admini, o'z filialidagi faol
+   * tarbiyachi/oshpaz/administrator kabinetiga (server ham shuni tekshiradi).
+   * Kabinet yangi tabda ochiladi: har tabning seansi alohida (sessionStorage),
+   * shuning uchun adminning o'z seansi shu tabda saqlanib qoladi.
+   */
+  const canEnterCabinet =
+    viewer?.role === "BRANCH_ADMIN" &&
+    !!employeeProp?.isActive &&
+    !!employeeProp?.tenantUser?.isActive &&
+    ["TEACHER", "CHEF", "MANAGER"].includes(employeeProp.tenantUser.role);
+  const enterCabinet = async () => {
+    if (!employeeProp) return;
+    setEnterError(null);
+    setEntering(true);
+    // Oyna shu bosish ichida ochiladi — aks holda brauzer uni «popup» deb bloklaydi
+    const win = window.open("", "_blank");
+    try {
+      const { ticket } = await api.post<{ ticket: string }>(`/app/auth/staff-entry/${employeeProp.id}`, {});
+      const url = `/${slug}/enter#t=${encodeURIComponent(ticket)}`;
+      if (win) win.location.href = url;
+      else window.location.assign(url);
+    } catch (err) {
+      win?.close();
+      setEnterError(err instanceof ApiError ? err.message : "Kabinetga kirib bo'lmadi");
+    } finally {
+      setEntering(false);
+    }
+  };
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -466,7 +500,16 @@ export function EmployeeDetailModal({
         {topicsSaveError && <p className="px-4 text-[13px] text-[#ff3b30]">{tr(topicsSaveError)}</p>}
 
         {canWrite && (
-          <SheetSection title={tr("Amallar")}>
+          <SheetSection title={tr("Amallar")} footer={enterError ? <span className="text-[#ff3b30]">{tr(enterError)}</span> : undefined}>
+            {canEnterCabinet && (
+              <Row
+                leading={<IosIcon icon={LogIn} tint="green" size={30} />}
+                title={tr("Xodim profiliga kirish")}
+                subtitle={tr("Yangi tabda — xodim o'zi kirgandek")}
+                value={entering ? <Spinner className="h-4 w-4" /> : undefined}
+                onClick={entering ? undefined : enterCabinet}
+              />
+            )}
             <Row leading={<IosIcon icon={Pencil} tint="blue" size={30} />} title={tr("Tahrirlash")} subtitle={tr("Ism, telefon, lavozim, guruh, surat, holat")} onClick={() => setEditOpen(true)} />
             {!deleteConfirming ? (
               <Row
