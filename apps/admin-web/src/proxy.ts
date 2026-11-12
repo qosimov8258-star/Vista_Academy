@@ -224,12 +224,12 @@ export const config = {
   // `sw.js` — ota-ona push bildirishnomasining service worker'i (yo'naltirilsa
   // brauzer uni ro'yxatdan o'tkazmaydi va push umuman ishlamaydi).
   // `face-model`, `push-icon.png`/`push-badge.png`, `icon.svg`, `cursor.png`/`cursor@2x.png`,
-  // `pointer.png`/`pointer@2x.png` — public/ dagi statik fayllar (yuzni
+  // `pointer.png`/`pointer@2x.png`, `brand/zeeron-*` — public/ dagi statik fayllar (yuzni
   // aniqlash modeli, push bildirishnoma belgilari, sayt belgisi, custom kursor rasmlari — @2x
-  // Retina/HiDPI ekranlar uchun). Ular chiqarib tashlanmasa, proxy
+  // Retina/HiDPI ekranlar uchun, kirish sahifasidagi Zeeron logosi). Ular chiqarib tashlanmasa, proxy
   // birinchi bo'lakni tashkilot slug'i deb o'ylab, so'rovni login
   // sahifasiga yo'naltiradi.
   matcher: [
-    "/((?!_next/static|_next/image|api/|favicon.ico|icon.svg|sw.js|face-model|push-icon.png|push-badge.png|cursor.png|cursor@2x.png|pointer.png|pointer@2x.png).*)",
+    "/((?!_next/static|_next/image|api/|favicon.ico|icon.svg|sw.js|face-model|push-icon.png|push-badge.png|cursor.png|cursor@2x.png|pointer.png|pointer@2x.png|brand/zeeron-).*)",
   ],
 };

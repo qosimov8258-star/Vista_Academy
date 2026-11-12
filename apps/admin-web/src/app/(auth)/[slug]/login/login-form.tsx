@@ -11,15 +11,15 @@ import { useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
 import { parentApi } from "@/lib/parent-api";
 import { setTenantTokens } from "@/lib/tenant-session";
-import { Input, PasswordInput } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { LockIcon } from "@/components/ui/icons";
+import { ArrowRight, Eye, EyeOff, LockKeyhole, UserRound } from "lucide-react";
+import { Spinner } from "@/components/ios/spinner";
 import type { TenantAuthenticatedUser } from "@/lib/types";
 import { useTr } from "@/i18n/tr";
 
-/** `submitClassName` — kirish tugmasining sahifaga xos ko'rinishi (gradient) */
-export function LoginForm({ slug, submitClassName }: { slug: string; submitClassName?: string }) {
+/** `inputClassName` / `submitClassName` — maydon va tugmaning sahifaga xos ko'rinishi */
+export function LoginForm({ slug, inputClassName, submitClassName }: { slug: string; inputClassName?: string; submitClassName?: string }) {
   const tr = useTr();
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
@@ -101,42 +101,79 @@ export function LoginForm({ slug, submitClassName }: { slug: string; submitClass
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
       {serverError && (
-        <div role="alert" className="rounded-xl bg-[var(--color-danger-bg)] px-3.5 py-2.5 text-sm text-[var(--color-danger)]">
+        <div role="alert" className="rounded-[14px] bg-[#ff3b30]/[0.07] px-4 py-3 text-[14px] leading-snug text-[#d70015]">
           {tr(serverError)}
         </div>
       )}
-      <Input
-        id="login"
-        label={t("loginLabel")}
-        type="text"
-        placeholder={t("loginPlaceholder")}
-        autoComplete="username"
-        error={errors.login?.message}
-        {...register("login")}
-      />
-      <PasswordInput
-        id="password"
-        label={t("passwordLabel")}
-        placeholder="••••••••"
-        autoComplete="current-password"
-        error={errors.password?.message}
-        {...register("password")}
-      />
-      <Button
+
+      <label htmlFor="login" className="block">
+        <span className="mb-2 block text-[13px] font-medium text-[#3c3c43]">{t("loginLabel")}</span>
+        <span className="group relative block">
+          <UserRound className={iconClass} strokeWidth={2} aria-hidden="true" />
+          <input
+            id="login"
+            type="text"
+            placeholder={t("loginPlaceholder")}
+            autoComplete="username"
+            autoCapitalize="none"
+            spellCheck={false}
+            aria-invalid={errors.login ? true : undefined}
+            className={inputClassName}
+            {...register("login")}
+          />
+        </span>
+        {errors.login?.message && <span className="mt-1.5 block text-[13px] text-[#ff3b30]">{tr(errors.login.message)}</span>}
+      </label>
+
+      <label htmlFor="password" className="block">
+        <span className="mb-2 block text-[13px] font-medium text-[#3c3c43]">{t("passwordLabel")}</span>
+        <span className="group relative block">
+          <LockKeyhole className={iconClass} strokeWidth={2} aria-hidden="true" />
+          <input
+            id="password"
+            type={showPassword ? "text" : "password"}
+            placeholder="••••••••"
+            autoComplete="current-password"
+            aria-invalid={errors.password ? true : undefined}
+            className={clsx(inputClassName, "pr-12!")}
+            {...register("password")}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            aria-label={showPassword ? tr("Parolni yashirish") : tr("Parolni ko'rsatish")}
+            aria-pressed={showPassword}
+            className="absolute right-1.5 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-[11px] text-[#a1a1a6] transition-colors hover:bg-black/[0.04] hover:text-[#0c0c0c]"
+          >
+            {showPassword ? <EyeOff className="h-[18px] w-[18px]" strokeWidth={2} /> : <Eye className="h-[18px] w-[18px]" strokeWidth={2} />}
+          </button>
+        </span>
+        {errors.password?.message && <span className="mt-1.5 block text-[13px] text-[#ff3b30]">{tr(errors.password.message)}</span>}
+      </label>
+
+      <button
         type="submit"
-        size="lg"
-        fullWidth
-        className={clsx("mt-3 rounded-[16px]! text-[16px]! font-bold! text-[var(--accent-orb-ink)]!", submitClassName)}
-        loading={isSubmitting}
+        disabled={isSubmitting}
+        className={clsx("group mt-3 flex h-[52px] w-full items-center justify-center gap-2 rounded-[14px] text-[15.5px] font-semibold disabled:opacity-70", submitClassName)}
       >
-        {!isSubmitting && <LockIcon className="h-[18px] w-[18px]" />}
-        {t("submit")}
-      </Button>
+        {isSubmitting ? (
+          <Spinner className="h-5 w-5 text-white" />
+        ) : (
+          <>
+            {t("submit")}
+            <ArrowRight className="h-[18px] w-[18px] transition-transform duration-200 group-hover:translate-x-1" strokeWidth={2.2} aria-hidden="true" />
+          </>
+        )}
+      </button>
     </form>
   );
 }
+
+/** Maydon chetidagi ikonka: fokusda qorayadi */
+const iconClass =
+  "pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-[#a1a1a6] transition-colors group-focus-within:text-[#a3143a]";
 
 /**
  * `?next=` faqat shu saytdagi yo'l bo'lishi mumkin ("/..." lekin "//" yoki "/\\"
