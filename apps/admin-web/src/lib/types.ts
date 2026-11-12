@@ -90,6 +90,8 @@ export interface Group {
   createdAt: string;
   /** Oylik to'lov narxi (so'm); bo'sh — filial narxi. O'qituvchi/oshpazga `null` */
   monthlyFee?: string | null;
+  /** Guruh rasmi qo'yilgan vaqt; `null` — rasm yo'q (rangli harf plitkasi) */
+  avatarUpdatedAt?: string | null;
   _count?: { children: number };
   teachers?: GroupTeacherLink[];
 }
@@ -110,7 +112,7 @@ export interface GroupChild {
 
 /** `GET /app/groups/:id/overview` javobi. */
 export interface GroupOverview {
-  group: { id: string; name: string; capacity: number; status: GroupStatus; createdAt: string; monthlyFee: string | null };
+  group: { id: string; name: string; capacity: number; status: GroupStatus; createdAt: string; monthlyFee: string | null; avatarUpdatedAt: string | null };
   branch: { id: string; name: string };
   teachers: { id: string; fullName: string; position: string; isActive: boolean }[];
   children: {
@@ -1083,7 +1085,7 @@ export interface ParentChild {
   birthDate: string | null;
   status: ChildStatus;
   avatarUpdatedAt: string | null;
-  group: { id: string; name: string } | null;
+  group: { id: string; name: string; avatarUpdatedAt?: string | null } | null;
   /** Manzil osmon holatini (quyosh botishi) hisoblash uchun kerak — qarang: lib/sky.ts */
   branch: { id: string; name: string; address?: string | null };
   relation: GuardianRelation;

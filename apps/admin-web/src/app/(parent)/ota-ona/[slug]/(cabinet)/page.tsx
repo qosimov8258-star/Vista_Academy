@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useRef, useState } from "react";
+import { GroupLine } from "./group-line";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -210,9 +211,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
                 <h1 className="truncate text-[22px] font-bold leading-tight tracking-[-0.02em] text-[var(--p-ink)]">
                   {tr(child.fullName)}
                 </h1>
-                <p className="mt-0.5 truncate text-[14px] text-[var(--p-muted)]">
-                  {child.group?.name ?? "Guruhsiz"}
-                </p>
+                <GroupLine child={child} size={24} className="mt-1 text-[14px] text-[var(--p-muted)]" />
                 {day && <p className="mt-0.5 text-[13px] text-[var(--p-muted)]">{prettyDate(day.date)}</p>}
               </div>
             </div>

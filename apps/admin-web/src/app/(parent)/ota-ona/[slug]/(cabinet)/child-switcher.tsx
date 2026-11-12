@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ParentChild } from "@/lib/types";
 import { initials } from "@/components/ui/avatar";
+import { GroupLine } from "./group-line";
 import { useTr } from "@/i18n/tr";
 
 /**
@@ -18,7 +19,7 @@ export function ChildSwitcher({ slug, child }: { slug: string; child: ParentChil
       </span>
       <div className="min-w-0 flex-1">
         <p className="truncate text-[15px] font-bold text-[var(--p-ink)]">{tr(child.fullName)}</p>
-        {child.group && <p className="truncate text-[13px] text-[var(--p-muted)]">{tr(child.group.name)}</p>}
+        {child.group && <GroupLine child={child} size={18} className="text-[13px] text-[var(--p-muted)]" />}
       </div>
       <Link
         href={`/ota-ona/${slug}/tanlash`}
