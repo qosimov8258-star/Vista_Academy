@@ -4,6 +4,8 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Param,
+  ParseUUIDPipe,
   Post,
   Req,
   Res,
@@ -55,6 +57,18 @@ export class TenantAuthController {
     const tokens = await this.authService.issueTokens(user, requestMeta(req));
     setAuthCookies(res, tokens);
     return { user, ...tokenResponse(tokens) };
+  }
+
+  /**
+   * «Xodim profiliga kirish»: filial admini o'z filialidagi xodim kabinetiga
+   * bir martalik chipta oladi; panel uni yangi tabda `/enter#t=` bilan ochadi.
+   */
+  @ApiBearerAuth()
+  @UseGuards(TenantJwtAuthGuard)
+  @Post("staff-entry/:employeeId")
+  @HttpCode(HttpStatus.OK)
+  staffEntry(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("employeeId", ParseUUIDPipe) employeeId: string) {
+    return this.authService.issueStaffEntryTicket(user, employeeId);
   }
 
   @Post("refresh")

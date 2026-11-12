@@ -1,149 +1,100 @@
 "use client";
 
-import { useState } from "react";
 import clsx from "clsx";
 import { useTranslations } from "next-intl";
 import { initials } from "@/components/ui/avatar";
-import { ChecklistIcon, MealIcon, PhoneIcon, WalletIcon } from "@/components/ui/icons";
 import styles from "./login.module.css";
 import { useTr } from "@/i18n/tr";
 
-const FEATURES = [
-  { key: "attendance", Icon: ChecklistIcon },
-  { key: "finance", Icon: WalletIcon },
-  { key: "kitchen", Icon: MealIcon },
-  { key: "parents", Icon: PhoneIcon },
-] as const;
+/** Suzib yuruvchi aurora foni — Zeeron ranglarining och tuslari */
+function Aurora() {
+  return (
+    <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
+      <span className={styles.swirl}>
+        <span className={clsx(styles.blob, styles.blob1)} />
+        <span className={clsx(styles.blob, styles.blob2)} />
+        <span className={clsx(styles.blob, styles.blob3)} />
+        <span className={clsx(styles.blob, styles.blob4)} />
+      </span>
+      <span className={styles.veil} />
+      <span className={styles.grain} />
+    </div>
+  );
+}
 
-/** Bog'cha belgisi va nomi. Nom yuklanayotganda — joy egallovchi. */
-export function OrgBrand({ name, compact = false }: { name: string | null; compact?: boolean }) {
+/** Zeeron belgisi (Z) va yozuvi */
+function ZeeronLogo({ size = "lg" }: { size?: "lg" | "sm" }) {
+  const lg = size === "lg";
+  return (
+    <div className="flex flex-col items-center">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/brand/zeeron-icon.png"
+        alt=""
+        width={256}
+        height={256}
+        className={clsx("shadow-[0_18px_40px_-14px_rgba(12,12,12,0.45)]", lg ? "h-[76px] w-[76px] rounded-[22px]" : "h-12 w-12 rounded-[14px]")}
+      />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/brand/zeeron-wordmark.png" alt="Zeeron" width={960} height={120} className={clsx("w-auto", lg ? "mt-7 h-9 xl:h-10" : "mt-4 h-6")} />
+    </div>
+  );
+}
+
+/** Bog'cha belgisi (bosh harflar) va nomi — formaning tepasida */
+export function OrgMark({ name }: { name: string | null }) {
   const tr = useTr();
   if (name === null) {
     return (
-      <div className="flex items-center gap-3" aria-hidden="true">
-        <div className={clsx("animate-pulse rounded-[14px] bg-white/[0.07]", compact ? "h-10 w-10" : "h-11 w-11")} />
-        <div className="h-4 w-32 animate-pulse rounded-full bg-white/[0.07]" />
+      <div className="flex flex-col items-center gap-3.5" aria-hidden="true">
+        <div className="h-[68px] w-[68px] animate-pulse rounded-full bg-[#767680]/[0.12]" />
+        <div className="h-6 w-28 animate-pulse rounded-full bg-[#767680]/[0.12]" />
       </div>
     );
   }
   return (
-    <div className="flex min-w-0 items-center gap-3">
-      <span
-        className={clsx(
-          styles.brandMark,
-          "flex shrink-0 items-center justify-center rounded-[14px] font-extrabold tracking-tight",
-          compact ? "h-10 w-10 text-[15px]" : "h-11 w-11 text-[16px]",
-        )}
-        aria-hidden="true"
-      >
-        {initials(name)}
+    <div className="flex min-w-0 flex-col items-center gap-3.5">
+      <span className={clsx(styles.ring, "h-[68px] w-[68px] shrink-0")} aria-hidden="true">
+        <span className="flex h-full w-full items-center justify-center rounded-full bg-white text-[20px] font-semibold tracking-tight text-[#0c0c0c]">
+          {initials(name)}
+        </span>
       </span>
-      <span className="truncate text-[17px] font-bold tracking-[-0.01em] text-white">{tr(name)}</span>
+      <span className="max-w-full truncate rounded-full bg-[#f6f6f7] px-3.5 py-1 text-[13px] font-medium text-[#3c3c43]">{tr(name)}</span>
     </div>
   );
 }
 
 /**
- * Kirish sahifasining chap yarmi: tizim nima qilishi haqida qisqa va
- * aniq. Pastda imkoniyatlar kartasi o'zi almashib turadi (sichqoncha
- * ustida bo'lsa to'xtaydi), chiziqlarni bosib ham almashtirish mumkin.
+ * Kirish sahifasining chap yarmi (katta ekranda): aurora ustida Zeeron
+ * logosi va qisqa shior. Telefonda uning o'rniga tepada kichik aurora
+ * tasmasi (`LoginHeroCompact`).
  */
-export function LoginHero({ orgName, online }: { orgName: string | null; online: boolean }) {
+export function LoginHero({ orgName }: { orgName: string | null }) {
   const tr = useTr();
   const t = useTranslations("login.hero");
-  const [active, setActive] = useState(0);
   const year = new Date().getFullYear();
 
   return (
-    <section className={clsx(styles.hero, "relative hidden overflow-hidden lg:flex lg:flex-col")}>
-      <div className={styles.grid} aria-hidden="true" />
-      <div className={styles.orbit} aria-hidden="true">
-        <div className={styles.orbitSpin}>
-          <span className={styles.orbitDot} />
-        </div>
-      </div>
+    <section className={clsx(styles.aurora, "relative m-3 hidden overflow-hidden rounded-[28px] lg:flex lg:flex-col")}>
+      <Aurora />
 
-      <div className="relative flex flex-1 flex-col px-12 py-10 xl:px-20 xl:py-14">
-        <div className={styles.rise}>
-          <OrgBrand name={orgName} />
-        </div>
-
-        <div className="my-auto max-w-[640px] py-10 xl:py-12">
-          {online && (
-            <div
-              className={clsx(
-                styles.rise,
-                "mb-7 inline-flex items-center gap-2.5 rounded-full border border-white/[0.08] bg-white/[0.03] py-1.5 pl-3 pr-3.5 text-[13px] font-medium text-[var(--accent-pale)]/80",
-              )}
-            >
-              <span className={clsx(styles.liveDot, "h-2 w-2 rounded-full bg-[var(--accent-bright)]")} aria-hidden="true" />
-              {t("status")}
-            </div>
-          )}
-
-          <h2
-            className={clsx(styles.rise, "text-[40px] font-extrabold leading-[1.06] tracking-[-0.035em] text-white xl:text-[48px] 2xl:text-[56px]")}
-            style={{ animationDelay: "60ms" }}
-          >
-            {t("titleLine1")}
-            <br />
-            <span className={styles.accentText}>{t("titleLine2")}</span>
-          </h2>
+      <div className="relative flex flex-1 flex-col px-10 pb-9 pt-[68px] xl:px-14 xl:pb-11 xl:pt-[80px]">
+        <div className="my-auto flex flex-col items-center py-10 text-center">
+          <div className={styles.rise}>
+            <ZeeronLogo />
+          </div>
           <p
-            className={clsx(styles.rise, "mt-5 max-w-[480px] text-[16px] leading-[1.65] text-[var(--accent-pale)]/60 xl:mt-6 xl:text-[17px]")}
-            style={{ animationDelay: "120ms" }}
+            className={clsx(styles.rise, "mt-8 max-w-[480px] text-[22px] font-semibold leading-[1.3] tracking-[-0.02em] text-[#0c0c0c] xl:text-[24px]")}
+            style={{ animationDelay: "80ms" }}
           >
+            {t("titleLine1")} {t("titleLine2")}
+          </p>
+          <p className={clsx(styles.rise, "mt-3 max-w-[440px] text-[15px] leading-[1.6] text-[#3c3c43]/70")} style={{ animationDelay: "140ms" }}>
             {t("subtitle")}
           </p>
-
-          <div className={clsx(styles.rise, styles.carousel, "mt-10 max-w-[500px] xl:mt-12")} style={{ animationDelay: "180ms" }}>
-            <div className="grid">
-              {FEATURES.map(({ key, Icon }, i) => (
-                <div
-                  key={key}
-                  aria-hidden={i !== active}
-                  className={clsx(styles.slide, styles.feature, "flex gap-4 rounded-[20px] p-5", i !== active && styles.slideHidden)}
-                >
-                  <span className={clsx(styles.featureIcon, "flex h-11 w-11 shrink-0 items-center justify-center rounded-[13px]")}>
-                    <Icon className="h-[22px] w-[22px]" />
-                  </span>
-                  <div className="min-w-0 pt-0.5">
-                    <p className="text-[16px] font-bold text-white">{t(`features.${key}.title`)}</p>
-                    <p className="mt-1 text-[14.5px] leading-relaxed text-[var(--accent-pale)]/55">{t(`features.${key}.text`)}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-5 flex gap-2" role="tablist" aria-label={t("featuresLabel")}>
-              {FEATURES.map(({ key }, i) => (
-                <button
-                  key={key}
-                  type="button"
-                  role="tab"
-                  aria-selected={i === active}
-                  aria-label={t(`features.${key}.title`)}
-                  onClick={() => setActive(i)}
-                  className={clsx(
-                    "relative h-1 cursor-pointer overflow-hidden rounded-full bg-white/[0.1] transition-[width] duration-500",
-                    i === active ? "w-12" : "w-6 hover:bg-white/[0.18]",
-                  )}
-                >
-                  {i === active && (
-                    <span
-                      // key: har almashganda chiziq boshidan to'ladi
-                      key={active}
-                      className={clsx(styles.progress, "absolute inset-0 origin-left rounded-full bg-[var(--accent-bright)]")}
-                      onAnimationEnd={() => setActive((a) => (a + 1) % FEATURES.length)}
-                    />
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
 
-        <div className="flex items-center gap-2 text-[13px] text-[var(--accent-pale)]/35">
+        <div className="flex items-center justify-center gap-2 text-[12.5px] text-[#3c3c43]/60">
           <span>
             © {tr(year)} {orgName ?? ""}
           </span>
@@ -152,5 +103,19 @@ export function LoginHero({ orgName, online }: { orgName: string | null; online:
         </div>
       </div>
     </section>
+  );
+}
+
+/** Telefonda: aurora butun ekran foni bo'ladi, tepada Zeeron logosi */
+export function LoginHeroCompact() {
+  return (
+    <>
+      <div className={clsx(styles.aurora, "fixed inset-0 lg:hidden")} aria-hidden="true">
+        <Aurora />
+      </div>
+      <div className="relative flex flex-col items-center px-6 pb-1 pt-9 lg:hidden">
+        <ZeeronLogo size="sm" />
+      </div>
+    </>
   );
 }

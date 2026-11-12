@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useMemo, useState } from "react";
+import { StaffTabs } from "@/features/employees/staff-tabs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, Lock, Paperclip, UserCheck, Wand2 } from "lucide-react";
 import { api } from "@/lib/api";
@@ -213,6 +214,7 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
     // Telefonda chetlar 16px (asosiy konteyner 24px beradi)
     <div className="-mx-2 md:mx-0">
       <div className="mx-auto w-full max-w-4xl space-y-5 pb-2">
+        <StaffTabs slug={slug} role={user?.role} current="attendance" />
         <PageHeaderCard
           icon={UserCheck}
           tint="teal"

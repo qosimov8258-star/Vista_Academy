@@ -13,7 +13,9 @@ import type { TenantAuthenticatedUser } from "@/lib/types";
 let consumedTicket: string | null = null;
 
 /**
- * Platforma operatorining "Bog'chaga kirish" havolasi: `/enter#t=<chipta>`.
+ * Bir martalik kirish havolasi: `/enter#t=<chipta>`. Ikki joydan keladi —
+ * platforma operatorining "Bog'chaga kirish"i va filial adminining «Xodim
+ * profiliga kirish»i (xodim kabineti, yangi tabda).
  * Chipta fragmentda keladi (serverga va loglarga tushmaydi), darhol
  * manzildan olib tashlanadi va filial adminining oddiy seansiga almashtiriladi.
  */
@@ -27,7 +29,7 @@ export default function EnterPage({ params }: { params: Promise<{ slug: string }
     const ticket = new URLSearchParams(window.location.hash.slice(1)).get("t");
     window.history.replaceState(null, "", window.location.pathname);
     if (!ticket) {
-      if (!consumedTicket) setError("Kirish havolasi to'liq emas — platformada \"Bog'chaga kirish\"ni qaytadan bosing");
+      if (!consumedTicket) setError("Kirish havolasi to'liq emas — kirish tugmasini qaytadan bosing");
       return;
     }
     if (consumedTicket === ticket) return;

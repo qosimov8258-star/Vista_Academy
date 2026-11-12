@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useState } from "react";
+import { BranchSectionTabs } from "@/features/nav/branch-section-tabs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
 import type { FaceIdDevice } from "@/lib/types";
@@ -15,7 +16,6 @@ import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { PencilIcon, TrashIcon, FaceIdIcon } from "@/components/ui/icons";
-import { FaceIdTabs } from "@/features/face-id/face-id-tabs";
 import { DeviceFormModal } from "@/features/face-id/device-form-modal";
 import { AgentTokenModal } from "@/features/face-id/agent-token-modal";
 import { DeviceCommandsModal } from "@/features/face-id/device-commands-modal";
@@ -105,6 +105,7 @@ export default function FaceIdDevicesPage({ params }: { params: Promise<{ slug: 
 
   return (
     <div className="space-y-5">
+      <BranchSectionTabs slug={slug} section="faceId" current="devices" />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold text-[var(--color-text)]">{tr("Face ID")}</h1>
@@ -119,7 +120,6 @@ export default function FaceIdDevicesPage({ params }: { params: Promise<{ slug: 
         )}
       </div>
 
-      <FaceIdTabs base={base} />
 
       {!canWrite && <ViewOnlyNote role={user?.role} />}
 

@@ -1,6 +1,8 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+import { TodayTabs } from "@/features/desk/today-tabs";
+import { useAuth } from "@/lib/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { Baby, ChartColumn, DoorOpen, IdCard, RefreshCw, UserX, Utensils } from "lucide-react";
 import { api } from "@/lib/api";
@@ -38,6 +40,7 @@ const pct = (n: number, total: number) => (total > 0 ? Math.round((n / total) * 
 export default function BoardPage({ params }: { params: Promise<{ slug: string }> }) {
   const tr = useTr();
   const { slug } = use(params);
+  const { user } = useAuth();
   const [today, setToday] = useState("");
   const [date, setDate] = useState("");
   // Toshkent sanasi faqat brauzerda hisoblanadi (server bilan farq qilmasin)
@@ -90,6 +93,7 @@ export default function BoardPage({ params }: { params: Promise<{ slug: string }
     <div className="-mx-2 md:mx-0">
       <PullToRefresh onRefresh={refresh} />
       <div className="mx-auto w-full max-w-5xl space-y-5 pb-2">
+        <TodayTabs slug={slug} role={user?.role} current="board" />
         <PageHeaderCard
           icon={ChartColumn}
           tint="teal"

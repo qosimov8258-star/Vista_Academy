@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useMemo, useState } from "react";
+import { StaffTabs } from "@/features/employees/staff-tabs";
 import { useRouter, usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
@@ -159,6 +160,7 @@ export default function EmployeesPage({ params }: { params: Promise<{ slug: stri
 
   return (
     <div className="space-y-5">
+      <StaffTabs slug={slug} role={user?.role} current="list" />
       <div className="flex items-start justify-between gap-3 md:flex-wrap md:items-center">
         <div className="min-w-0">
           <h1 className="text-xl font-semibold text-[var(--color-text)]">{tr("Xodimlar")}</h1>

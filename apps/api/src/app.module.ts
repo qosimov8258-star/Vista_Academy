@@ -59,6 +59,7 @@ import { DiaryModule } from "./modules/diary/diary.module";
 import { GroupMaterialsModule } from "./modules/group-materials/group-materials.module";
 import { LandingModule } from "./modules/landing/landing.module";
 import { FaceIdModule } from "./modules/face-id/face-id.module";
+import { BroadcastsModule } from "./modules/broadcasts/broadcasts.module";
 
 @Module({
   imports: [
@@ -118,6 +119,7 @@ import { FaceIdModule } from "./modules/face-id/face-id.module";
     GroupMaterialsModule,
     LandingModule,
     FaceIdModule,
+    BroadcastsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

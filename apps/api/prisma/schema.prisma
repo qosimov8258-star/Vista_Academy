@@ -223,6 +223,7 @@ model TenantUser {
   leadActivities          LeadActivity[]       @relation("LeadActivityCreatedBy")
   medicationLogs          MedicationLog[]
   sentNotifications       NotificationLog[]    @relation("NotificationSentBy")
+  sentBroadcasts          Broadcast[]          @relation("BroadcastSentBy")
   employee                Employee?
   webauthnCredentials     WebAuthnCredential[]
   auditLogs               AuditLog[]
@@ -337,6 +338,7 @@ model Branch {
   lessonSchedules           LessonSchedule[]
   rooms                     Room[]
   employeeNotifications     EmployeeNotification[]
+  broadcasts                Broadcast[]
   lessonTopics              LessonTopic[]
   lessonGrades              LessonGrade[]
   lessonAttendances         LessonAttendance[]
@@ -384,6 +386,13 @@ model Group {
   /// Haftalik jadval ostidagi izoh (masalan "Shanbada mashg'ulotlar 15:00 da tugaydi").
   /// Jadvalning o'zi — `DiaryRoutineItem` (kundalik kun tartibi).
   scheduleNote String?   @map("schedule_note")
+  /// Guruh rasmi (profil belgisi) — bola suratidek: brauzerda kvadrat qilib
+  /// kichraytiriladi, R2 sozlangan bo'lsa `avatarKey`ga, aks holda bevosita
+  /// bazaga (`avatar`) yoziladi. Blob oddiy so'rovlarga tushmaydi (PrismaService omit).
+  avatar          Bytes?    @map("avatar")
+  avatarKey       String?   @map("avatar_key")
+  avatarMimeType  String?   @map("avatar_mime_type")
+  avatarUpdatedAt DateTime? @map("avatar_updated_at")
   createdAt  DateTime    @default(now()) @map("created_at")
   updatedAt  DateTime    @updatedAt @map("updated_at")
 
@@ -628,6 +637,7 @@ model Employee {
   lessonAttendances     LessonAttendance[]
   weeklyCoinAssessments WeeklyCoinAssessment[]
   notifications         EmployeeNotification[]
+  broadcastInbox        BroadcastRecipient[]
   faceEnrollments       FaceEnrollment[]
   faceIdEvents          FaceIdEvent[]
   staffAbsenceDocuments StaffAbsenceDocument[]
@@ -1005,6 +1015,65 @@ model EmployeeNotification {
   @@index([employeeId, isRead])
   @@index([branchId])
   @@map("employee_notifications")
+}
+
+// ---------------------------------------------------------------------------
+// Xabar yuborish — filial rahbariyati ota-onalarga yoki xodimlarga yozadigan
+// xabar. Bitta yuborish — bitta `Broadcast`, har bir qabul qiluvchi — bitta
+// `BroadcastRecipient` (o'qigan vaqti shu yerda). Shu sababli "yuborildi N ·
+// o'qidi M" va o'qimaganlar ro'yxati to'g'ridan-to'g'ri hisoblanadi.
+// Qabul qiluvchi ro'yxati yuborish paytida qotiriladi: keyin guruhga qo'shilgan
+// bola ota-onasiga eski xabar tushmaydi.
+// ---------------------------------------------------------------------------
+
+enum BroadcastAudience {
+  GUARDIANS
+  EMPLOYEES
+}
+
+model Broadcast {
+  id             String            @id @default(uuid())
+  organizationId String            @map("organization_id")
+  branchId       String            @map("branch_id")
+  audience       BroadcastAudience
+  // Kimga yuborilgani odam o'qiydigan ko'rinishda: "Butun filial",
+  // "Гномики, Немо guruhlari", "12 ta bola" — tarixda ko'rsatish uchun.
+  scopeLabel     String            @map("scope_label")
+  title          String
+  body           String
+  // Majburiy xabar ochilmaguncha kabinetda yopilmaydigan oyna chiqadi.
+  isMandatory    Boolean           @default(false) @map("is_mandatory")
+  recipientCount Int               @default(0) @map("recipient_count")
+  sentByUserId   String?           @map("sent_by_user_id")
+  createdAt      DateTime          @default(now()) @map("created_at")
+
+  branch     Branch               @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  sentBy     TenantUser?          @relation("BroadcastSentBy", fields: [sentByUserId], references: [id], onDelete: SetNull)
+  recipients BroadcastRecipient[]
+
+  @@index([branchId, createdAt])
+  @@index([organizationId])
+  @@map("broadcasts")
+}
+
+model BroadcastRecipient {
+  id          String    @id @default(uuid())
+  broadcastId String    @map("broadcast_id")
+  // Aynan bittasi to'ldiriladi — xabar turiga qarab
+  guardianId  String?   @map("guardian_id")
+  employeeId  String?   @map("employee_id")
+  readAt      DateTime? @map("read_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  broadcast Broadcast @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
+  guardian  Guardian? @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+  employee  Employee? @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([broadcastId, guardianId])
+  @@unique([broadcastId, employeeId])
+  @@index([guardianId, readAt])
+  @@index([employeeId, readAt])
+  @@map("broadcast_recipients")
 }
 
 model LessonTopic {
@@ -2067,6 +2136,7 @@ model Guardian {
   refreshTokens     GuardianRefreshToken[]
   paymentReceipts   PaymentReceipt[]
   pushSubscriptions GuardianPushSubscription[]
+  broadcastInbox    BroadcastRecipient[]
 
   @@unique([organizationId, phone])
   @@index([organizationId])

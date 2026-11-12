@@ -1,0 +1,205 @@
+/*
+ * Platforma kirish sahifasi — butun ekran yorug' aurora, o'rtada shisha karta.
+ * Bog'cha panelining kirishidan farqi: rang bulutlari kursor orqasidan
+ * suzadi, palitrada Zeeron qizil-oltinidan tashqari sovuq tuslar (binafsha,
+ * osmon) bor, ustida nozik nuqtali to'r.
+ */
+
+.page {
+  background: #fbf9f7;
+  color: #0c0c0c;
+  color-scheme: light;
+}
+
+.aurora {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  isolation: isolate;
+}
+
+/* ---------- Kursor ortidan suzuvchi bulutlar ---------- */
+
+.follower {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: 9999px;
+  filter: blur(40px);
+  will-change: transform;
+}
+.follow1 {
+  width: 520px;
+  height: 520px;
+  background: radial-gradient(circle, rgba(163, 20, 58, 0.5) 0%, rgba(163, 20, 58, 0) 66%);
+}
+.follow2 {
+  width: 680px;
+  height: 680px;
+  background: radial-gradient(circle, rgba(201, 138, 5, 0.42) 0%, rgba(201, 138, 5, 0) 66%);
+}
+.follow3 {
+  width: 860px;
+  height: 860px;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.26) 0%, rgba(139, 92, 246, 0) 66%);
+}
+
+/* ---------- O'zi suzib yuruvchi fon bulutlari ---------- */
+
+.ambient {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(60px);
+  will-change: transform;
+  animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+}
+.ambient1 {
+  width: 46vmax;
+  height: 46vmax;
+  right: -12vmax;
+  top: -14vmax;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.28), rgba(56, 189, 248, 0) 68%);
+  animation-name: float1;
+  animation-duration: 9s;
+}
+.ambient2 {
+  width: 50vmax;
+  height: 50vmax;
+  left: -16vmax;
+  bottom: -18vmax;
+  background: radial-gradient(circle, rgba(255, 160, 120, 0.5), rgba(255, 160, 120, 0) 68%);
+  animation-name: float2;
+  animation-duration: 11s;
+}
+.ambient3 {
+  width: 36vmax;
+  height: 36vmax;
+  right: 6vmax;
+  bottom: -10vmax;
+  background: radial-gradient(circle, rgba(232, 110, 150, 0.35), rgba(232, 110, 150, 0) 68%);
+  animation-name: float3;
+  animation-duration: 8s;
+}
+
+@keyframes float1 {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-14vmax, 10vmax, 0) scale(1.15);
+  }
+  100% {
+    transform: translate3d(-4vmax, 18vmax, 0) scale(0.9);
+  }
+}
+@keyframes float2 {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(16vmax, -8vmax, 0) scale(0.92);
+  }
+  100% {
+    transform: translate3d(8vmax, -18vmax, 0) scale(1.12);
+  }
+}
+@keyframes float3 {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.9);
+  }
+  50% {
+    transform: translate3d(-18vmax, -12vmax, 0) scale(1.1);
+  }
+  100% {
+    transform: translate3d(-6vmax, 4vmax, 0) scale(1);
+  }
+}
+
+/* ---------- Ustki qatlamlar ---------- */
+
+/* Nozik nuqtali to'r — markazda ko'rinadi, chetga qarab so'nadi */
+.dots {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(12, 12, 12, 0.13) 1px, transparent 1.4px);
+  background-size: 22px 22px;
+  background-position: center;
+  mask-image: radial-gradient(ellipse 60% 55% at 50% 50%, #000 20%, transparent 85%);
+  -webkit-mask-image: radial-gradient(ellipse 60% 55% at 50% 50%, #000 20%, transparent 85%);
+}
+
+/* Juda nozik don — rang tekis "plastik" ko'rinmasin */
+.grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.35;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.5'/></svg>");
+}
+
+/* ---------- Shisha karta ---------- */
+
+.card {
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 30px 80px -30px rgba(80, 30, 40, 0.35),
+    0 2px 6px rgba(12, 12, 12, 0.04);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  backdrop-filter: blur(28px) saturate(160%);
+}
+
+/* Karta ichidagi maydonlar — shishaga mos yarim shaffof */
+.fields {
+  --color-surface: rgba(255, 255, 255, 0.72);
+  --color-border: rgba(12, 12, 12, 0.08);
+  --color-primary: #a3143a;
+}
+.fields input {
+  height: 48px;
+  border-radius: 14px;
+  font-size: 15px;
+}
+.fields input:-webkit-autofill,
+.fields input:-webkit-autofill:hover,
+.fields input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #0c0c0c;
+  box-shadow: 0 0 0 1000px #ffffff inset;
+  transition: background-color 9999s ease-out;
+}
+
+.submit {
+  height: 48px;
+  border-radius: 14px;
+  background: #0c0c0c;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 12px 26px -14px rgba(12, 12, 12, 0.7);
+}
+
+/* ---------- Paydo bo'lish ---------- */
+
+.rise {
+  animation: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient,
+  .rise {
+    animation: none;
+  }
+}

@@ -1,4 +1,4 @@
-import { BulbIcon, CalendarIcon, DocumentIcon, HomeIcon, NoteIcon, SettingsIcon, ShopIcon, WalletIcon } from "@/components/ui/icons";
+import { BellIcon, BulbIcon, CalendarIcon, DocumentIcon, HomeIcon, NoteIcon, SettingsIcon, ShopIcon, WalletIcon } from "@/components/ui/icons";
 
 /**
  * Pastki menyu tartibi. Menyu ham, sahifa o'tishi ham shu ro'yxatdan
@@ -13,6 +13,7 @@ export const CABINET_TABS = [
   { href: "/tolov", label: "To'lov", icon: WalletIcon, hint: "Kartaga o'tkazma va chek" },
   { href: "/dokon", label: "Do'kon", icon: ShopIcon, hint: "Yulduzchalarga sovg'alar" },
   { href: "/foydali", label: "Foydali", icon: BulbIcon, hint: "She'rlar, maqollar, ertaklar" },
+  { href: "/xabarlar", label: "Xabarlar", icon: BellIcon, hint: "Bog'cha yuborgan xabarlar" },
   { href: "/sozlamalar", label: "Sozlamalar", icon: SettingsIcon, hint: "Parol, ko'rinish, chiqish" },
 ] as const;
 

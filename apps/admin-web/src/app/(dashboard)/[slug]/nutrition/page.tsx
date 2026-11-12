@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useMemo, useState } from "react";
+import { BranchSectionTabs } from "@/features/nav/branch-section-tabs";
 import { useQuery } from "@tanstack/react-query";
 import { CalendarDays, Download, TriangleAlert, Utensils } from "lucide-react";
 import { api } from "@/lib/api";
@@ -168,6 +169,7 @@ function AdminNutritionPage({ slug }: { slug: string }) {
     // Telefonda chetlar 16px (asosiy konteyner 24px beradi)
     <div className="-mx-2 md:mx-0">
       <div className="mx-auto w-full max-w-4xl space-y-5 pb-2">
+        <BranchSectionTabs slug={slug} section="daily" current="nutrition" />
         <PageHeaderCard
           icon={Utensils}
           tint="orange"

@@ -341,7 +341,7 @@ export function DirectorRail({
   return (
     <aside
       ref={asideRef}
-      className={clsx(styles.aside, open && styles.open, "relative z-20 hidden shrink-0 flex-col gap-3 py-4 md:flex")}
+      className={clsx(styles.aside, open && styles.open, "aurora-nav relative z-20 hidden shrink-0 flex-col gap-3 py-4 md:flex")}
       style={{ width: RAIL_LEFT + railWidth + (open ? 16 : 20), paddingLeft: RAIL_LEFT }}
       aria-label={tr("Asosiy menyu")}
     >
@@ -357,7 +357,7 @@ export function DirectorRail({
           {user ? (
             <span className={clsx(styles.brandText, "text-[24px] font-extrabold tracking-tight")}>{initials(orgName)}</span>
           ) : (
-            <span className="h-7 w-7 animate-pulse rounded-full bg-white/10" />
+            <span className="h-7 w-7 animate-pulse rounded-full bg-black/[0.06]" />
           )}
         </span>
         <span className={clsx(styles.brandName, "min-w-0 flex-1")} aria-hidden={!open}>
@@ -419,11 +419,11 @@ export function DirectorRail({
             className={clsx(styles.row, styles.userRow)}
             title={!open && user ? `${user.fullName} · ${tr(ROLE_LABEL[user.role])}` : undefined}
           >
-            <span className="shrink-0 rounded-full ring-2 ring-white/15">
+            <span className="shrink-0 rounded-full ring-2 ring-black/[0.06]">
               <Avatar user={user} size={36} />
             </span>
             <span className={clsx(styles.label, "leading-tight")}>
-              <span className="block truncate text-[14px] font-semibold text-white">{user?.fullName ?? ""}</span>
+              <span className="block truncate text-[14px] font-semibold text-[#0c0c0c]">{user?.fullName ?? ""}</span>
               <span className="block truncate text-[12px] font-medium">{user ? tr(ROLE_LABEL[user.role]) : ""}</span>
             </span>
           </div>
@@ -473,7 +473,7 @@ export function DirectorRail({
             role="tooltip"
             className={clsx(
               styles.tooltip,
-              "pointer-events-none fixed z-[70] -translate-y-1/2 whitespace-nowrap rounded-[10px] bg-[var(--accent-rail)] px-3 py-1.5 text-[13px] font-semibold text-white shadow-[0_8px_24px_-8px_color-mix(in_srgb,var(--accent-rail)_50%,transparent)]",
+              "aurora-nav pointer-events-none fixed z-[70] -translate-y-1/2 whitespace-nowrap rounded-[10px] bg-[#1c1c1e] px-3 py-1.5 text-[13px] font-semibold text-white shadow-[0_8px_24px_-8px_rgba(12,12,12,0.45)]",
             )}
             style={{ top: tip.top, left: tip.left }}
           >
@@ -491,7 +491,7 @@ export function DirectorRail({
             aria-label={tr(flyout.section.label)}
             className={clsx(
               styles.flyout,
-              "fixed z-[70] w-[248px] overflow-hidden rounded-[22px] border border-black/[0.04] bg-white shadow-[0_24px_48px_-16px_color-mix(in_srgb,var(--accent-rail)_28%,transparent),0_2px_6px_color-mix(in_srgb,var(--accent-rail)_6%,transparent)]",
+              "aurora-nav fixed z-[70] w-[248px] overflow-hidden rounded-[22px] border border-black/[0.04] bg-white shadow-[0_24px_48px_-16px_color-mix(in_srgb,var(--accent-rail)_28%,transparent),0_2px_6px_color-mix(in_srgb,var(--accent-rail)_6%,transparent)]",
             )}
             style={{ top: flyout.top, left: flyout.left }}
           >

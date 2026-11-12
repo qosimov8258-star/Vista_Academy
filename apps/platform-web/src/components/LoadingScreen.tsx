@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ZeeronLogo } from "@/components/ui/zeeron-logo";
+import { ZeeronWordmark } from "@/components/ui/zeeron-wordmark";
 
 /**
  * Butun sahifani qoplaydigan yuklanish ekrani.
@@ -105,7 +105,7 @@ export function LoadingScreen({
         isFadingOut ? "opacity-0" : "opacity-100"
       }`}
     >
-      <ZeeronLogo animated className="h-[clamp(44px,8vw,72px)] w-auto" />
+      <ZeeronWordmark animated className="h-[clamp(28px,5vw,44px)]" />
     </div>
   );
 }

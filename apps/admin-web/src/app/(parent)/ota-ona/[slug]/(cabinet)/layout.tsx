@@ -1,6 +1,7 @@
 import { ParentTabBar } from "./tab-bar";
 import { ParentPageTransition } from "./page-transition";
 import { CabinetThemeProvider } from "./theme";
+import { ParentMandatoryGate } from "./mandatory-gate";
 import { tenantMetadata } from "@/lib/tenant-metadata";
 import type { Metadata } from "next";
 
@@ -34,6 +35,8 @@ export default async function ParentCabinetLayout({
         <ParentPageTransition slug={slug}>{children}</ParentPageTransition>
       </div>
       <ParentTabBar slug={slug} />
+      {/* Bog'cha «majburiy» deb yuborgan xabar — o'qilmaguncha yopilmaydi */}
+      <ParentMandatoryGate slug={slug} />
     </CabinetThemeProvider>
   );
 }

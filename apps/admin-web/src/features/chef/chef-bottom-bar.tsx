@@ -14,6 +14,7 @@ import { todayTashkent } from "@/features/desk/shared";
 import { QuickPhotoSheet } from "./quick-photo-sheet";
 import styles from "./chef.module.css";
 import { useTr } from "@/i18n/tr";
+import { useEmployeeInboxUnread } from "@/features/broadcasts/use-inbox";
 
 type Tab = { href: string; label: string; Icon: (p: IconProps) => React.JSX.Element; exact?: boolean; badge?: number };
 
@@ -38,7 +39,8 @@ export function ChefBottomBar({ slug }: { slug: string }) {
     enabled: chef,
     refetchInterval: 60_000,
   });
-  const unread = notificationsQuery.data?.filter((n) => !n.isRead).length ?? 0;
+  const inboxUnread = useEmployeeInboxUnread(slug, chef);
+  const unread = (notificationsQuery.data?.filter((n) => !n.isRead).length ?? 0) + inboxUnread;
 
   if (!chef || !user) return null;
 

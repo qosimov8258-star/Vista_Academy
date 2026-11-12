@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import { Manrope } from "next/font/google";
+import { Poppins } from "next/font/google";
 import { tenantMetadata } from "@/lib/tenant-metadata";
 
-// Kirish sahifasining o'z shrifti: aniq, zamonaviy grotesk — premium ko'rinish
-// uchun. Faqat shu sahifaga yuklanadi; panelning qolgan qismi tizim shriftida.
-// Kirill ham bor — rus tilida ham bir xil ko'rinadi.
-const manrope = Manrope({
-  subsets: ["latin", "cyrillic"],
-  weight: ["400", "500", "600", "700", "800"],
+// Kirish sahifasining o'z shrifti — Poppins. Faqat shu sahifaga yuklanadi;
+// panelning qolgan qismi tizim shriftida. Poppins'da kirill yo'q — rus
+// tilida kirill harflari tizim shriftida ko'rinadi.
+const poppins = Poppins({
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
@@ -17,5 +17,5 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 }
 
 export default function LoginLayout({ children }: { children: React.ReactNode }) {
-  return <div className={manrope.className}>{children}</div>;
+  return <div className={poppins.className}>{children}</div>;
 }

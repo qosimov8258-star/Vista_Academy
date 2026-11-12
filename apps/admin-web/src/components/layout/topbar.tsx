@@ -13,6 +13,7 @@ import { BellIcon } from "@/components/ui/icons";
 import { ArrowLeftIcon } from "@/components/ui/icons";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { useTr } from "@/i18n/tr";
+import { useEmployeeInboxUnread } from "@/features/broadcasts/use-inbox";
 
 /**
  * Yuqori panel faqat kontekstni ko'rsatadi — qaysi tashkilotdasiz.
@@ -57,7 +58,8 @@ export function Topbar({ slug }: { slug: string }) {
     enabled: showNotifications,
     refetchInterval: 60_000,
   });
-  const unreadCount = notificationsQuery.data?.filter((n) => !n.isRead).length ?? 0;
+  const inboxUnread = useEmployeeInboxUnread(slug, showNotifications);
+  const unreadCount = (notificationsQuery.data?.filter((n) => !n.isRead).length ?? 0) + inboxUnread;
 
   return (
     <header className="hairline flex h-[60px] shrink-0 items-center gap-3 border-b border-[var(--color-separator)] bg-[var(--color-surface)]/80 px-4 backdrop-blur-[20px] md:px-6">

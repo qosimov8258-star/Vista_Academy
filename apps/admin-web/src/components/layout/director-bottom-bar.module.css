@@ -7,7 +7,9 @@
 .bar {
   --rail: var(--accent-rail);
   background: var(--rail);
-  box-shadow: 0 -12px 32px -14px color-mix(in srgb, var(--accent-rail) 45%, transparent);
+  box-shadow:
+    0 -1px 0 rgba(12, 12, 12, 0.05),
+    0 -12px 32px -14px rgba(120, 40, 50, 0.28);
 }
 
 .slot {
@@ -16,7 +18,7 @@
   transition: color 0.2s var(--ease-out);
 }
 .slot:active {
-  color: #ffffff;
+  color: #0c0c0c;
 }
 .slot:focus-visible {
   outline: none;

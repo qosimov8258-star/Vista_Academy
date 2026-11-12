@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import clsx from "clsx";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,7 +20,8 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
-export function LoginForm() {
+/** `submitClassName` — kirish tugmasining sahifaga xos ko'rinishi */
+export function LoginForm({ submitClassName }: { submitClassName?: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -51,10 +53,7 @@ export function LoginForm() {
   };
 
   return (
-    <form
-      onSubmit={handleSubmit(onSubmit)}
-      className="space-y-4 rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[0_1px_2px_rgba(17,17,19,0.04),0_16px_48px_-16px_rgba(17,17,19,0.18)]"
-    >
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       {serverError && (
         <div
           role="alert"
@@ -81,7 +80,7 @@ export function LoginForm() {
         error={errors.password?.message}
         {...register("password")}
       />
-      <Button type="submit" className="mt-1 w-full" loading={isSubmitting}>
+      <Button type="submit" className={clsx("mt-2 w-full", submitClassName)} loading={isSubmitting}>
         Kirish
       </Button>
     </form>

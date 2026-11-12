@@ -11,6 +11,9 @@ export interface NavLeaf {
   icon: NavIcon;
   show: boolean;
   exact?: boolean;
+  /** Menyuda alohida bandi yo'q, lekin shu bo'lim ichidan ochiladigan sahifalar —
+   *  ular ochiq bo'lganda ham shu band faol ko'rinadi (masalan Guruhlar → Davomat). */
+  alsoActive?: string[];
   /** O'ng chetdagi raqamli belgi (masalan yangi arizalar soni). */
   badge?: number;
   badgeTone?: "warning" | "success" | "danger";

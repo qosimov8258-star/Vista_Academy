@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useMemo, useState } from "react";
+import { BranchSectionTabs } from "@/features/nav/branch-section-tabs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import { api, ApiError } from "@/lib/api";
@@ -20,7 +21,6 @@ import { EmployeePhoto } from "@/components/ui/employee-photo";
 import { ChildPhoto } from "@/components/ui/child-photo";
 import { initials } from "@/components/ui/avatar";
 import { TrashIcon, FaceIdIcon } from "@/components/ui/icons";
-import { FaceIdTabs } from "@/features/face-id/face-id-tabs";
 import { CreateEnrollmentModal } from "@/features/face-id/create-enrollment-modal";
 import { useTr } from "@/i18n/tr";
 
@@ -88,6 +88,7 @@ export default function FaceIdRegistrationsPage({ params }: { params: Promise<{ 
 
   return (
     <div className="space-y-5">
+      <BranchSectionTabs slug={slug} section="faceId" current="registrations" />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold text-[var(--color-text)]">{tr("Face ID")}</h1>
@@ -107,7 +108,6 @@ export default function FaceIdRegistrationsPage({ params }: { params: Promise<{ 
         )}
       </div>
 
-      <FaceIdTabs base={base} />
 
       {!canWrite && <ViewOnlyNote role={user?.role} />}
       {canWrite && devices.length === 0 && !devicesQuery.isLoading && (

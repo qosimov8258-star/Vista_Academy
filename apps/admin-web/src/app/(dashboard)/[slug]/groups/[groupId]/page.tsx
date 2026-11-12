@@ -4,7 +4,7 @@ import { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
-import { Baby, ChevronLeft, ClipboardCheck, IdCard, Pencil, UserPlus, UsersRound } from "lucide-react";
+import { Baby, Camera, ChevronLeft, ClipboardCheck, IdCard, Pencil, UserPlus, UsersRound } from "lucide-react";
 import { api } from "@/lib/api";
 import type { AttendanceStatus, Group, GroupAttendanceDay, GroupAttendanceRange, GroupOverview } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
@@ -23,7 +23,9 @@ import { StatCell, StatStrip } from "@/components/ios/stat-strip";
 import { EmptyState, ErrorState, SkeletonRows } from "@/components/ios/states";
 import { IOS } from "@/components/ios/tokens";
 import { IosIcon } from "@/features/director/ios-icon";
-import { CapacityBar, GroupFormSheet, GroupTile, TeachersSheet } from "@/features/groups/group-sheets";
+import { CapacityBar, GroupFormSheet, TeachersSheet } from "@/features/groups/group-sheets";
+import { GroupAvatar } from "@/features/groups/group-avatar";
+import { GroupPhotoSheet } from "@/features/groups/group-photo-sheet";
 import { groupDigits } from "@/features/payments/shared";
 import { ManageChildrenSheet } from "@/features/groups/manage-children-sheet";
 import { useTr } from "@/i18n/tr";
@@ -66,6 +68,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
   const [editOpen, setEditOpen] = useState(false);
   const [teachersOpen, setTeachersOpen] = useState(false);
   const [childrenOpen, setChildrenOpen] = useState(false);
+  const [photoOpen, setPhotoOpen] = useState(false);
   const [today, setToday] = useState("");
   const [day, setDay] = useState("");
   const [rangeDays, setRangeDays] = useState<RangeDays>("14");
@@ -153,7 +156,21 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
           ) : (
             <>
               <div className="flex items-center gap-3">
-                <GroupTile name={overview.group.name} size={56} />
+                {canWrite ? (
+                  <button
+                    type="button"
+                    onClick={() => setPhotoOpen(true)}
+                    aria-label={overview.group.avatarUpdatedAt ? tr("Rasmni almashtirish") : tr("Rasm qo'yish")}
+                    className="relative shrink-0 rounded-[16px] transition-transform active:scale-[0.94]"
+                  >
+                    <GroupAvatar group={overview.group} size={56} />
+                    <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-white text-[var(--color-primary)] shadow-[0_1px_4px_rgba(0,0,0,0.18)]" aria-hidden="true">
+                      <Camera className="h-3.5 w-3.5" strokeWidth={2.4} />
+                    </span>
+                  </button>
+                ) : (
+                  <GroupAvatar group={overview.group} size={56} />
+                )}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <h1 data-hero className="truncate text-[20px] font-bold leading-tight text-[var(--color-text)]">
@@ -445,6 +462,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
       {canWrite && <GroupFormSheet open={editOpen} onClose={() => setEditOpen(false)} slug={slug} group={group} />}
       {canWrite && <TeachersSheet open={teachersOpen} onClose={() => setTeachersOpen(false)} slug={slug} group={group} />}
       {canWrite && <ManageChildrenSheet open={childrenOpen} onClose={() => setChildrenOpen(false)} slug={slug} group={group} />}
+      {canWrite && overview && <GroupPhotoSheet open={photoOpen} onClose={() => setPhotoOpen(false)} slug={slug} group={overview.group} />}
     </div>
   );
 }

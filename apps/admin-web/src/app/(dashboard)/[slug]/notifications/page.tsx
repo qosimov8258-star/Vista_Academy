@@ -18,7 +18,6 @@ import { IosSheet, SheetPrimaryButton, SheetRow, SheetSection } from "@/componen
 import { EmptyState, ErrorState, SkeletonRows } from "@/components/ios/states";
 import { GROUP_BLOCK, IOS } from "@/components/ios/tokens";
 import { IosIcon } from "@/features/director/ios-icon";
-import { BroadcastModal } from "@/features/notifications/broadcast-modal";
 import { CreateNotificationModal } from "@/features/notifications/create-notification-modal";
 import { MarkSentModal } from "@/features/notifications/mark-sent-modal";
 import { CHANNEL_LABEL, EVENT_META } from "@/features/notifications/shared";
@@ -35,7 +34,6 @@ export default function NotificationsPage({ params }: { params: Promise<{ slug: 
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<StatusFilter>("ALL");
   const [createOpen, setCreateOpen] = useState(false);
-  const [broadcastOpen, setBroadcastOpen] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
   const [markSentOpen, setMarkSentOpen] = useState(false);
   const { user } = useAuth();
@@ -75,7 +73,8 @@ export default function NotificationsPage({ params }: { params: Promise<{ slug: 
           actions={
             canWrite ? (
               <>
-                <IosButton label={tr("Ommaviy xabar")} icon={Megaphone} compact onClick={() => setBroadcastOpen(true)} />
+                {/* Ota-onalarga haqiqiy xabar — «Xabar yuborish» bo'limida (kabinetga tushadi, kim o'qigani ko'rinadi) */}
+                <IosButton label={tr("Xabar yuborish")} icon={Megaphone} compact href={`${base}/messages`} />
                 <IosButton label={tr("Yangi yozuv")} icon={PlusIcon} variant="primary" compact onClick={() => setCreateOpen(true)} />
               </>
             ) : undefined
@@ -213,7 +212,6 @@ export default function NotificationsPage({ params }: { params: Promise<{ slug: 
       </IosSheet>
 
       {canWrite && <CreateNotificationModal open={createOpen} onClose={() => setCreateOpen(false)} slug={slug} />}
-      {canWrite && <BroadcastModal open={broadcastOpen} onClose={() => setBroadcastOpen(false)} slug={slug} />}
       {canWrite && (
         <MarkSentModal open={markSentOpen} onClose={() => setMarkSentOpen(false)} slug={slug} notification={opened} onDone={() => setOpenId(null)} />
       )}

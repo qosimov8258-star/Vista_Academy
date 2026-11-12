@@ -1,6 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { todayTabs } from "@/features/desk/today-tabs";
+import { staffTabs } from "@/features/employees/staff-tabs";
+import { branchSectionLeaf } from "@/features/nav/branch-section-tabs";
 import { useParams, useRouter } from "next/navigation";
 import { useAppPathname } from "@/lib/tenant-host-context";
 import { useEffect, useRef, useState, type SyntheticEvent } from "react";
@@ -54,14 +57,20 @@ import {
   PhoneIcon,
   PhoneOutgoingIcon,
   QuestionIcon,
+  BroadcastIcon,
   SettingsIcon,
   ShopIcon,
   StarIcon,
   TeacherIcon,
   WalletIcon,
   TimetableIcon,
+  AdmissionIcon,
+  DailyWorkIcon,
+  GroupsNavIcon,
+  TodayNavIcon,
 } from "./nav-icons";
 import { useTr } from "@/i18n/tr";
+import { useEmployeeInboxUnread } from "@/features/broadcasts/use-inbox";
 
 const BADGE_TONE: Record<NonNullable<NavLeaf["badgeTone"]>, string> = {
   warning: "bg-[var(--color-warning-bg)] text-[var(--color-warning)]",
@@ -166,7 +175,8 @@ export function Sidebar({ slug }: { slug: string }) {
     enabled: receivesEmployeeNotifications(user?.role),
     refetchInterval: 60_000,
   });
-  const unreadNotificationsCount = notificationsQuery.data?.filter((n) => !n.isRead).length ?? 0;
+  const inboxUnread = useEmployeeInboxUnread(slug, receivesEmployeeNotifications(user?.role));
+  const unreadNotificationsCount = (notificationsQuery.data?.filter((n) => !n.isRead).length ?? 0) + inboxUnread;
   const params = useParams<{ branchSlug?: string }>();
   const { branch, branches } = useBranchContext(slug);
   // `useBranchContext` (useParams orqali) filial segmentini bitta filialdan
@@ -207,7 +217,8 @@ export function Sidebar({ slug }: { slug: string }) {
       : pathname;
 
   const isActive = (item: NavLeaf) =>
-    item.exact ? currentPath === item.href : currentPath.startsWith(item.href);
+    (item.exact ? currentPath === item.href : currentPath.startsWith(item.href)) ||
+    (item.alsoActive?.some((href) => currentPath.startsWith(href)) ?? false);
 
   // Moliyachi (FINANCE) uchun telefondagi pastki panel: Super Admin ustunidagi
   // bilan bir xil chiroyli suzuvchi navigatsiya, faqat ichidagi bo'limlar
@@ -290,6 +301,8 @@ export function Sidebar({ slug }: { slug: string }) {
     // Filial bo'yicha to'liq hisobot. Sahifaning o'zida filial tanlanadi,
     // shuning uchun yon panelda bitta havola yetarli.
     { href: `/${slug}/report`, label: t("nav.reports"), icon: ChartIcon, show: true },
+    // Filiallar yuborgan xabarlar va kim o'qigani — faqat ko'rish (yuborish filialda)
+    { href: `/${slug}/messages`, label: tr("Xabar yuborish"), icon: BroadcastIcon, show: true },
     // Super Admin har bir filialga admin va moliyachi tayinlaydi, shuning uchun
     // bu bo'lim uning asosiy ro'yxatida turishi shart. Filial ichiga
     // kirilganda ko'rinmaydi — u yerda filialning kundalik ishi turadi.
@@ -400,6 +413,10 @@ export function Sidebar({ slug }: { slug: string }) {
     { href: `${base}/notifications`, label: t("nav.notifications"), icon: BellIcon, show: true },
   ];
 
+  // «Bugungi ishlar» sahifalari — tanlagich bilan bir xil ro'yxat (features/desk/today-tabs)
+  const todayList = todayTabs({ base, role: user?.role, inBranchContext });
+  const staffList = staffTabs({ base, role: user?.role, inBranchContext });
+
   const operationalEntries: NavEntry[] = [
     { href: base, label: t("nav.home"), icon: HomeIcon, show: true, exact: true },
     // Administratorning kundalik ishi: qo'ng'iroqlar, olib ketish, bugungi holat.
@@ -407,88 +424,53 @@ export function Sidebar({ slug }: { slug: string }) {
     // (backendda requireBranchScope NETWORK_ADMIN'ni rad etadi) — shuning uchun
     // NETWORK_ADMIN boshqa filialni ko'rib turganda (inBranchContext) yashiriladi,
     // aks holda havola 404/403 ga olib kelardi.
+    // Bitta band: birinchi sahifa (qo'ng'iroqlar) ochiladi, qolganlariga sahifa
+    // tepasidagi tanlagich bilan o'tiladi — qaysi biri ochiq bo'lsa ham shu band faol.
     {
-      id: "bugungi-ishlar",
+      href: todayList[0]?.href ?? `${base}/board`,
       label: "Bugungi ishlar",
-      icon: PhoneIcon,
-      items: [
-        { href: `${base}/calls`, label: tr("Qo'ng'iroqlar"), icon: PhoneIcon, show: (isManager || isBranchAdmin) && !inBranchContext, exact: true },
-        { href: `${base}/calls/called`, label: tr("Qo'ng'iroq qilinganlar"), icon: PhoneOutgoingIcon, show: (isManager || isBranchAdmin) && !inBranchContext },
-        { href: `${base}/pickups`, label: "Olib ketish", icon: ChildIcon, show: !inBranchContext && !isManager && !isBranchAdmin },
-        { href: `${base}/board`, label: "Bugungi holat", icon: ChartIcon, show: !inBranchContext },
-        { href: `${base}/weekly-report`, label: "Haftalik hisobot", icon: NoteIcon, show: !inBranchContext },
-      ],
+      icon: TodayNavIcon,
+      show: todayList.length > 0,
+      alsoActive: todayList.slice(1).map((t) => t.href),
     },
+    // Qabul (arizalar), Bolalar va Guruhlar — har biri alohida band.
+    // Guruh fayllari va bolalar davomati Guruhlar sahifasining tepasidan ochiladi;
+    // ular ochiq bo'lganda «Guruhlar» faol. Davomatni filial admini va
+    // administrator belgilaydi va istalgan o'tgan kunni qayta ochib tuzatadi;
+    // Super Admin faqat ko'radi.
+    { href: `${base}/crm`, label: tr("Qabul"), icon: AdmissionIcon, show: true },
+    { href: `${base}/children`, label: t("nav.children"), icon: ChildIcon, show: true },
     {
-      id: "qabul",
-      label: t("nav.admissionAndChildren"),
-      icon: ChildIcon,
-      items: [
-        { href: `${base}/crm`, label: t("nav.crm"), icon: PhoneIcon, show: true },
-        { href: `${base}/children`, label: t("nav.children"), icon: ChildIcon, show: true },
-        { href: `${base}/groups`, label: t("nav.groups"), icon: GroupIcon, show: true },
-        { href: `${base}/materials`, label: tr("Guruh fayllari"), icon: DocumentIcon, show: true },
-        // Bolalar davomati — filial admini va administrator belgilaydi va
-        // istalgan o'tgan kunni qayta ochib tuzatadi; Super Admin faqat ko'radi
-        { href: `${base}/attendance`, label: t("nav.attendance"), icon: ChecklistIcon, show: true },
-      ],
+      href: `${base}/groups`,
+      label: t("nav.groups"),
+      icon: GroupsNavIcon,
+      show: true,
+      alsoActive: [`${base}/materials`, `${base}/attendance`],
     },
+    // Bitta band: xodimlar ro'yxati ochiladi, ish haqi (HR) va xodimlar
+    // davomatiga sahifa tepasidagi tanlagich bilan o'tiladi (features/employees/staff-tabs).
+    // HR administratorga ko'rinmaydi — ro'yxat shu qoidani o'zi hisobga oladi.
     {
-      id: "xodimlar",
+      href: staffList[0]?.href ?? `${base}/employees`,
       label: t("nav.employees"),
       icon: TeacherIcon,
-      // Pastki panelda "Xodimlar" bosilganda ro'yxat emas, bugungi davomat ochiladi
-      mainHref: `${base}/staff-attendance`,
-      items: [
-        { href: `${base}/employees`, label: t("nav.employeeList"), icon: TeacherIcon, show: true },
-        // Maosh kassirda; administratorga ko'rinmaydi
-        { href: `${base}/hr`, label: t("nav.hr"), icon: BriefcaseIcon, show: !isManager },
-        { href: `${base}/staff-attendance`, label: t("nav.staffAttendance"), icon: CalendarIcon, show: true },
-      ],
+      show: staffList.length > 0,
+      alsoActive: staffList.slice(1).map((t) => t.href),
     },
-    {
-      id: "kundalik",
-      label: t("nav.dailyWork"),
-      icon: ChecklistIcon,
-      items: [
-        { href: `${base}/nutrition`, label: t("nav.nutrition"), icon: MealIcon, show: true },
-        // O'zi bilan xonalar katalogini ham boshqaradi — alohida nav shart emas
-        { href: `${base}/lessons/schedule`, label: t("nav.lessonSchedule"), icon: CalendarIcon, show: true },
-        // Guruhlarning kun tartibi (PDF ko'rinishi) — ota-onalar kabinetida ham ko'rinadi
-        { href: `${base}/timetable`, label: tr("Haftalik jadval"), icon: TimetableIcon, show: true },
-      ],
-    },
-    {
-      id: "face-id",
-      label: t("nav.faceId"),
-      icon: FaceIdIcon,
-      items: [
-        { href: `${base}/face-id/devices`, label: t("nav.devices"), icon: FaceIdIcon, show: true },
-        { href: `${base}/face-id/registrations`, label: t("nav.faceRegistry"), icon: ChildIcon, show: true },
-      ],
-    },
-    {
-      id: "coin",
-      label: t("nav.coin"),
-      icon: CoinIcon,
-      items: [
-        { href: `${base}/coin/children`, label: t("nav.children"), icon: ChildIcon, show: true },
-        { href: `${base}/coin/shop`, label: t("nav.shop"), icon: ShopIcon, show: true },
-      ],
-    },
-    {
-      id: "foydali",
-      label: t("nav.useful"),
-      icon: BulbIcon,
-      items: [
-        { href: `${base}/useful/poems`, label: t("nav.poems"), icon: NoteIcon, show: showUseful },
-        { href: `${base}/useful/proverbs`, label: t("nav.proverbs"), icon: BulbIcon, show: showUseful },
-        { href: `${base}/useful/tales`, label: t("nav.tales"), icon: BookIcon, show: showUseful },
-      ],
-    },
+    // Kundalik ish, Face ID, Yulduzcha, Foydali — har biri bitta band: birinchi
+    // sahifa ochiladi, qolganlariga sahifa tepasidagi tanlagich bilan o'tiladi
+    // (features/nav/branch-section-tabs). Kundalik ish: «Haftalik jadval» —
+    // guruhlarning kun tartibi (ota-onalar kabinetida ham ko'rinadi), «Dars jadvali»
+    // o'zi bilan xonalar katalogini ham boshqaradi.
+    { ...branchSectionLeaf("daily", base), label: t("nav.dailyWork"), icon: DailyWorkIcon, show: true },
+    { ...branchSectionLeaf("faceId", base), label: t("nav.faceId"), icon: FaceIdIcon, show: true },
+    { ...branchSectionLeaf("coin", base), label: t("nav.coin"), icon: CoinIcon, show: true },
+    { ...branchSectionLeaf("useful", base), label: t("nav.useful"), icon: BulbIcon, show: showUseful },
     // Filial adminida «Moliya va aloqa» ichida faqat bildirishnomalar qoladi
     // (hisob-faktura, chegirma, qarzdorlar, eslatmalar — boshqa rollarda) —
     // bitta bandli guruh o'rniga to'g'ridan-to'g'ri bo'lim.
+    // Ota-onalar va tarbiyachilarga xabar — har bir xodimning kabinetiga tushadi, kim o'qigani ko'rinadi
+    { href: `${base}/messages`, label: tr("Xabar yuborish"), icon: BroadcastIcon, show: !isFinance },
     { href: `${base}/notifications`, label: t("nav.notifications"), icon: BellIcon, show: isBranchAdmin },
     {
       id: "moliya",
@@ -595,10 +577,10 @@ export function Sidebar({ slug }: { slug: string }) {
   const rowBase =
     "group relative z-10 flex items-center rounded-[16px] text-[15px] transition-colors duration-150 motion-reduce:transition-none";
   const activeRow = dark
-    ? "bg-gradient-to-br from-[var(--accent-orb-from)] to-[var(--accent-orb-to)] text-[var(--accent-orb-ink)] font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.5),0_8px_20px_-8px_rgba(0,0,0,0.4)]"
+    ? "bg-gradient-to-br from-[var(--accent-orb-from)] to-[var(--accent-orb-to)] text-[var(--accent-orb-ink)] font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_8px_20px_-8px_rgba(163,20,58,0.45)]"
     : "bg-white text-[var(--color-text)] font-semibold shadow-[var(--shadow-card)]";
   const idleRow = dark
-    ? "font-medium text-white/65 hover:text-white"
+    ? "font-medium text-[#2a1a20]/60 hover:text-[#0c0c0c]"
     : "font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text)]";
 
   return (
@@ -623,7 +605,7 @@ export function Sidebar({ slug }: { slug: string }) {
         // Moliyachi panelida "Yulduzlar" nomi Super Admin ustunidagi kabi
         // menyu kartasidan tashqarida, sahifa foni ustida alohida turadi —
         // ikkovi orasida bo'shliq bilan (DirectorRail'dagi brend belgisi kabi).
-        dark ? "gap-3 m-3" : "bg-[var(--color-sidebar)]",
+        dark ? "aurora-nav gap-3 m-3" : "bg-[var(--color-sidebar)]",
         // Kenglik o'zgarishi silliq bo'lsin, lekin harakat sozlamasi
         // o'chirilgan bo'lsa darhol almashsin
         "transition-[width] duration-300 ease-[var(--ease-out)] motion-reduce:transition-none",
@@ -650,22 +632,14 @@ export function Sidebar({ slug }: { slug: string }) {
               className={clsx(
                 "flex h-9 w-9 shrink-0 items-center justify-center text-[14px] font-extrabold",
                 dark
-                  ? "rounded-full shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_10px_24px_-12px_rgba(0,0,0,0.55)]"
+                  ? "rounded-full bg-white shadow-[0_0_0_1px_rgba(12,12,12,0.04),0_10px_24px_-12px_rgba(163,20,58,0.45)]"
                   : "rounded-[11px] bg-gradient-to-br from-[#14b8a6] to-[var(--color-primary)] text-white shadow-[var(--shadow-primary)]",
               )}
-              style={
-                dark
-                  ? {
-                      background:
-                        "radial-gradient(circle at 30% 25%, color-mix(in srgb, var(--accent-light) 22%, transparent), transparent 60%), var(--accent-rail)",
-                    }
-                  : undefined
-              }
               title={collapsed ? user.organizationName : undefined}
               aria-hidden="true"
             >
               {dark ? (
-                <span className="bg-gradient-to-br from-[var(--accent-pale)] via-[var(--accent-light)] to-[var(--accent-bright)] bg-clip-text text-transparent">
+                <span className="bg-gradient-to-br from-[#a3143a] via-[#e0457a] to-[#c98a05] bg-clip-text text-transparent">
                   {initials(user.organizationName)}
                 </span>
               ) : (
@@ -706,7 +680,7 @@ export function Sidebar({ slug }: { slug: string }) {
       <div
         className={clsx(
           "flex min-h-0 flex-1 flex-col",
-          dark && "overflow-hidden rounded-[32px] bg-[var(--accent-rail)] shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_18px_40px_-18px_rgba(0,0,0,0.55)]",
+          dark && "aurora-nav-panel overflow-hidden rounded-[32px] shadow-[0_0_0_1px_rgba(12,12,12,0.035),0_18px_40px_-20px_rgba(120,40,50,0.3)]",
         )}
       >
       {/* Filial ichidagi Super Admin uchun: qaysi filialda ekani va orqaga yo'l */}
@@ -741,7 +715,7 @@ export function Sidebar({ slug }: { slug: string }) {
           aria-hidden
           className={clsx(
             "pointer-events-none absolute left-0 top-0 z-0 transition-[transform,width,height,opacity] duration-200 ease-out motion-reduce:transition-none",
-            dark ? "bg-white/10" : "bg-black/[0.045]",
+            "bg-black/[0.045]",
             collapsed ? "rounded-full" : "rounded-[16px]",
           )}
           style={{
@@ -755,7 +729,7 @@ export function Sidebar({ slug }: { slug: string }) {
           ? collapsedGroups.map((group, groupIndex) => (
               <div key={group[0]?.href ?? groupIndex}>
                 {groupIndex > 0 && (
-                  <div className={clsx("mx-2 my-2 border-t", dark ? "border-white/10" : "border-[var(--color-sidebar-line)]")} aria-hidden />
+                  <div className={clsx("mx-2 my-2 border-t", dark ? "border-black/[0.08]" : "border-[var(--color-sidebar-line)]")} aria-hidden />
                 )}
                 {group.map((item) => {
                   const active = isActive(item);
@@ -928,10 +902,10 @@ export function Sidebar({ slug }: { slug: string }) {
                       <div className="relative">
                         <span
                           aria-hidden
-                          className="absolute left-[21px] top-0 h-1/2 w-[15px] rounded-bl-[11px] border-b border-l border-white/10"
+                          className="absolute left-[21px] top-0 h-1/2 w-[15px] rounded-bl-[11px] border-b border-l border-black/[0.1]"
                         />
                         {!(last && !selected) && (
-                          <span aria-hidden className="absolute left-[21px] top-1/2 h-1/2 w-px bg-white/10" />
+                          <span aria-hidden className="absolute left-[21px] top-1/2 h-1/2 w-px bg-black/[0.1]" />
                         )}
                         <button
                           type="button"
@@ -991,7 +965,7 @@ export function Sidebar({ slug }: { slug: string }) {
 
         {!collapsed && (
           <>
-            <div className={clsx("mx-2 my-2 border-t", dark ? "border-white/10" : "border-[var(--color-sidebar-line)]")} aria-hidden />
+            <div className={clsx("mx-2 my-2 border-t", dark ? "border-black/[0.08]" : "border-[var(--color-sidebar-line)]")} aria-hidden />
             <Link
               href={settingsItem.href}
               aria-current={isActive(settingsItem) ? "page" : undefined}
@@ -1018,7 +992,7 @@ export function Sidebar({ slug }: { slug: string }) {
       <div
         className={clsx(
           "mt-auto border-t pb-3 pt-3",
-          dark ? "border-white/10" : "border-[var(--color-sidebar-line)]",
+          dark ? "border-black/[0.08]" : "border-[var(--color-sidebar-line)]",
           collapsed ? "px-3" : "px-3",
         )}
       >
@@ -1028,7 +1002,7 @@ export function Sidebar({ slug }: { slug: string }) {
           </div>
         )}
         <div className={clsx("mb-1 flex", collapsed ? "justify-center" : "justify-end")}>
-          <LanguageSwitcher collapsed={collapsed} dropUp appearance={dark ? "onDark" : "default"} />
+          <LanguageSwitcher collapsed={collapsed} dropUp />
         </div>
         <button
           type="button"
@@ -1040,9 +1014,7 @@ export function Sidebar({ slug }: { slug: string }) {
             "group flex h-11 w-full cursor-pointer items-center rounded-[16px] text-[15px] font-medium",
             "transition-colors duration-[var(--dur-fast)] ease-[var(--ease-out)]",
             "disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none",
-            dark
-              ? "text-white/55 hover:bg-[rgba(248,113,113,0.14)] hover:text-[#fecaca]"
-              : "text-[var(--color-text-muted)] hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]",
+            "text-[var(--color-text-muted)] hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]",
             collapsed ? "justify-center" : "gap-3 px-3",
           )}
         >

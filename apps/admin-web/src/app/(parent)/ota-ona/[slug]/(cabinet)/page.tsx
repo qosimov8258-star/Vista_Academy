@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useRef, useState } from "react";
+import { GroupLine } from "./group-line";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -24,6 +25,8 @@ import { NotifyTeacher } from "./notify-teacher";
 import { ChildSwitcher } from "./child-switcher";
 import { useSelectedChild } from "./use-selected-child";
 import { useCabinetTheme } from "./theme";
+import { useParentMessages } from "./use-messages";
+import { BellIcon } from "@/components/ui/icons";
 import { useTr } from "@/i18n/tr";
 
 const WEEKDAY = ["Yak", "Du", "Se", "Cho", "Pay", "Ju", "Sha"];
@@ -78,6 +81,9 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
   const tr = useTr();
   const { slug } = use(params);
   const router = useRouter();
+  // Bog'cha yuborgan yangi xabarlar — bosh sahifada eslatma
+  const messagesQuery = useParentMessages(slug);
+  const newMessages = messagesQuery.data?.filter((m) => !m.readAt) ?? [];
   const queryClient = useQueryClient();
   const [reasonDraft, setReasonDraft] = useState("");
 
@@ -159,6 +165,26 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
           </p>
         </header>
 
+        {newMessages.length > 0 && (
+          <Link
+            href={`/ota-ona/${slug}/xabarlar`}
+            className="mt-4 flex items-center gap-3 rounded-[var(--p-radius)] bg-[var(--p-card)] p-4 shadow-[var(--p-shadow)] transition-transform active:scale-[0.99]"
+          >
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[var(--p-coral)]/15 text-[var(--p-coral)]" aria-hidden="true">
+              <BellIcon className="h-[22px] w-[22px]" filled />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[15.5px] font-extrabold leading-snug text-[var(--p-ink)]">
+                {newMessages.length === 1 ? newMessages[0].title : tr("{0} ta yangi xabar", newMessages.length)}
+              </span>
+              <span className="block truncate text-[13.5px] text-[var(--p-muted)]">
+                {newMessages.length === 1 ? newMessages[0].body : tr("Bog'chadan xabar keldi — o'qish uchun bosing")}
+              </span>
+            </span>
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--p-coral)]" aria-hidden="true" />
+          </Link>
+        )}
+
         {/* Bir nechta bola bo'lsa — tanlangan farzand va almashtirish */}
         {multiple && child && <ChildSwitcher slug={slug} child={child} />}
 
@@ -185,9 +211,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
                 <h1 className="truncate text-[22px] font-bold leading-tight tracking-[-0.02em] text-[var(--p-ink)]">
                   {tr(child.fullName)}
                 </h1>
-                <p className="mt-0.5 truncate text-[14px] text-[var(--p-muted)]">
-                  {child.group?.name ?? "Guruhsiz"}
-                </p>
+                <GroupLine child={child} size={24} className="mt-1 text-[14px] text-[var(--p-muted)]" />
                 {day && <p className="mt-0.5 text-[13px] text-[var(--p-muted)]">{prettyDate(day.date)}</p>}
               </div>
             </div>

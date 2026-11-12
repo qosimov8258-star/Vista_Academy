@@ -163,7 +163,7 @@ export function DirectorBottomBar({
 
   return (
     <>
-      <div className="fixed inset-x-0 bottom-0 z-40 overflow-x-clip md:hidden">
+      <div className="aurora-nav fixed inset-x-0 bottom-0 z-40 overflow-x-clip md:hidden">
         <nav
           ref={barRef}
           aria-label={tr("Asosiy menyu")}
@@ -251,7 +251,7 @@ export function DirectorBottomBar({
       {typeof document !== "undefined" &&
         sheet &&
         createPortal(
-          <div className="fixed inset-0 z-[65] md:hidden" role="dialog" aria-modal="true" aria-label={sheet.kind === "menu" ? tr("Barcha bo'limlar") : sheet.section.label}>
+          <div className="aurora-nav fixed inset-0 z-[65] md:hidden" role="dialog" aria-modal="true" aria-label={sheet.kind === "menu" ? tr("Barcha bo'limlar") : sheet.section.label}>
             <div className={clsx(styles.scrim, "absolute inset-0 bg-black/40 backdrop-blur-[3px]")} onClick={() => setSheet(null)} aria-hidden="true" />
             <div
               className={clsx(

@@ -13,12 +13,12 @@ export const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
  * Server tomonga tayyor, kichik rasm boradi: telefonda olingan surat bir
  * necha megabayt bo'ladi, belgi uchun esa 256px yetarli.
  */
-export async function resizeToSquare(file: File): Promise<string> {
+export async function resizeToSquare(file: File, size: number = AVATAR_SIZE): Promise<string> {
   const bitmap = await createImageBitmap(file);
   const side = Math.min(bitmap.width, bitmap.height);
   const canvas = document.createElement("canvas");
-  canvas.width = AVATAR_SIZE;
-  canvas.height = AVATAR_SIZE;
+  canvas.width = size;
+  canvas.height = size;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Rasmni qayta ishlash imkoni bo'lmadi");
   ctx.drawImage(
@@ -29,8 +29,8 @@ export async function resizeToSquare(file: File): Promise<string> {
     side,
     0,
     0,
-    AVATAR_SIZE,
-    AVATAR_SIZE,
+    size,
+    size,
   );
   bitmap.close();
   return canvas.toDataURL("image/jpeg", 0.85);

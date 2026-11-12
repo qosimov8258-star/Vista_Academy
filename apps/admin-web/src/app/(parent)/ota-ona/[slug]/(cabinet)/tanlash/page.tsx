@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect } from "react";
+import { GroupLine } from "../group-line";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ApiError } from "@/lib/api";
@@ -71,9 +72,7 @@ export default function ChooseChildPage({ params }: { params: Promise<{ slug: st
             )}
             <span className="min-w-0 flex-1">
               <span className="block truncate text-[17px] font-bold text-[var(--p-ink)]">{tr(c.fullName)}</span>
-              <span className="block truncate text-[14px] text-[var(--p-muted)]">
-                {c.group ? tr(c.group.name) : tr("Guruhsiz")}
-              </span>
+              <GroupLine child={c} className="mt-0.5 text-[14px] text-[var(--p-muted)]" />
             </span>
           </button>
         ))}

@@ -18,6 +18,7 @@ import {
   IdCard,
   KeyRound,
   Lightbulb,
+  Megaphone,
   Phone,
   PhoneOutgoing,
   ScanFace,
@@ -26,6 +27,7 @@ import {
   ShieldCheck,
   Star,
   Store,
+  UserPlus,
   UsersRound,
   Utensils,
   Wallet,
@@ -69,6 +71,15 @@ export const ChartIcon = navIcon(ChartColumn, "indigo");
 export const AuditIcon = navIcon(ShieldCheck, "gray");
 export const SettingsIcon = navIcon(Settings, "gray");
 export const BellIcon = navIcon(Bell, "red");
+/** Xabar yuborish (ota-onalar va xodimlarga) */
+// Xabar yuborish (ommaviy xabar) — karnay; ko'k emas: u Bosh sahifa va Bugungi ishlarda band
+export const BroadcastIcon = navIcon(Megaphone, "indigo");
+// Filial menyusidagi bitta bandli bo'limlar — har birining o'z rangi
+// (avval ochiladigan bo'lim bo'lganda rang SECTION_TINT dan kelardi).
+export const TodayNavIcon = navIcon(Phone, "blue");
+export const DailyWorkIcon = navIcon(ClipboardCheck, "teal");
+export const AdmissionIcon = navIcon(UserPlus, "pink");
+export const GroupsNavIcon = navIcon(UsersRound, "emerald");
 export const BookIcon = navIcon(BookOpen, "teal");
 export const BulbIcon = navIcon(Lightbulb, "green");
 export const NoteIcon = navIcon(FileText, "blue");

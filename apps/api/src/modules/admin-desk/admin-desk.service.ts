@@ -4,7 +4,7 @@ import { TenantScope, requireBranchScope, requireOperationalScope, requireTeachi
 import { assertNotAssistant, assertTeacherOwnsChild, resolveTeacherGroupIds } from "../iam/teacher-scope";
 import { CashDeskService } from "../cash-desk/cash-desk.service";
 import { phoneKey } from "../landing/landing.service";
-import { BroadcastDto, CallDoneDto, MarkPickupDto } from "./dto/admin-desk.dto";
+import { CallDoneDto, MarkPickupDto } from "./dto/admin-desk.dto";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -598,43 +598,5 @@ export class AdminDeskService {
       wonLeads: leadsWon,
       staffAbsences: staffAbs,
     };
-  }
-
-  /** Ommaviy xabar: guruh (yoki butun filial) bolalarining ota-onalariga bildirishnoma jurnaliga yoziladi. */
-  async broadcast(scope: TenantScope, userId: string, dto: BroadcastDto) {
-    const branchId = requireOperationalScope(scope);
-    if (dto.groupId) {
-      const group = await this.prisma.group.findFirst({ where: { id: dto.groupId, branchId } });
-      if (!group) {
-        throw new NotFoundException("Guruh topilmadi");
-      }
-    }
-    const children = await this.prisma.child.findMany({
-      where: { branchId, status: { not: "INACTIVE" }, ...(dto.groupId ? { groupId: dto.groupId } : {}) },
-      select: { id: true, guardians: { where: { canReceiveNotifications: true }, ...GUARDIAN_SELECT, take: 1 } },
-    });
-    // Bir ota-onaning bir nechta bolasi bo'lsa xabar bir marta boradi
-    const seen = new Set<string>();
-    const rows = [];
-    for (const c of children) {
-      const g = c.guardians[0]?.guardian;
-      if (!g || seen.has(g.id)) continue;
-      seen.add(g.id);
-      rows.push({
-        organizationId: scope.organizationId,
-        branchId,
-        childId: c.id,
-        eventType: "CUSTOM" as const,
-        channel: "SMS" as const,
-        recipientName: g.fullName,
-        recipientContact: g.phone,
-        message: dto.message.trim(),
-        sentByUserId: userId,
-      });
-    }
-    if (rows.length > 0) {
-      await this.prisma.notificationLog.createMany({ data: rows });
-    }
-    return { recipients: rows.length, skipped: children.length - rows.length };
   }
 }

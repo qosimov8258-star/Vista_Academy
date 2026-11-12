@@ -90,6 +90,8 @@ export interface Group {
   createdAt: string;
   /** Oylik to'lov narxi (so'm); bo'sh — filial narxi. O'qituvchi/oshpazga `null` */
   monthlyFee?: string | null;
+  /** Guruh rasmi qo'yilgan vaqt; `null` — rasm yo'q (rangli harf plitkasi) */
+  avatarUpdatedAt?: string | null;
   _count?: { children: number };
   teachers?: GroupTeacherLink[];
 }
@@ -110,7 +112,7 @@ export interface GroupChild {
 
 /** `GET /app/groups/:id/overview` javobi. */
 export interface GroupOverview {
-  group: { id: string; name: string; capacity: number; status: GroupStatus; createdAt: string; monthlyFee: string | null };
+  group: { id: string; name: string; capacity: number; status: GroupStatus; createdAt: string; monthlyFee: string | null; avatarUpdatedAt: string | null };
   branch: { id: string; name: string };
   teachers: { id: string; fullName: string; position: string; isActive: boolean }[];
   children: {
@@ -1083,7 +1085,7 @@ export interface ParentChild {
   birthDate: string | null;
   status: ChildStatus;
   avatarUpdatedAt: string | null;
-  group: { id: string; name: string } | null;
+  group: { id: string; name: string; avatarUpdatedAt?: string | null } | null;
   /** Manzil osmon holatini (quyosh botishi) hisoblash uchun kerak — qarang: lib/sky.ts */
   branch: { id: string; name: string; address?: string | null };
   relation: GuardianRelation;
@@ -1242,6 +1244,68 @@ export interface EmployeeNotification {
   employeeId: string;
   message: string;
   isRead: boolean;
+  createdAt: string;
+}
+
+/** Xabar yuborish — kimga: ota-onalar yoki xodimlar (tarbiyachi, oshpaz) */
+export type BroadcastAudience = "GUARDIANS" | "EMPLOYEES";
+/** BRANCH — butun filial; GROUPS — tanlangan guruhlar; PICKED — tanlangan bolalar yoki xodimlar */
+export type BroadcastScope = "BRANCH" | "GROUPS" | "PICKED";
+
+export interface BroadcastTarget {
+  audience: BroadcastAudience;
+  scope: BroadcastScope;
+  groupIds?: string[];
+  childIds?: string[];
+  employeeIds?: string[];
+}
+
+export interface BroadcastPreview {
+  recipients: number;
+  /** Ota-onalar: kabineti hali ochilmaganlar (kirganda ko'radi) */
+  noCabinet: number;
+  /** Xodimlar: kabineti yo'q yoki «Xabarlar» sahifasi yo'q rollar */
+  skipped: number;
+  scopeLabel: string;
+  sample: string[];
+}
+
+export interface BroadcastSummary {
+  id: string;
+  audience: BroadcastAudience;
+  scopeLabel: string;
+  title: string;
+  body: string;
+  isMandatory: boolean;
+  recipientCount: number;
+  readCount: number;
+  createdAt: string;
+  sentBy: { fullName: string } | null;
+  branch: { name: string };
+}
+
+export interface BroadcastRecipientRow {
+  id: string;
+  name: string;
+  phone: string | null;
+  /** Ota-ona: bolalari; xodim: lavozimi */
+  note: string;
+  hasCabinet: boolean;
+  readAt: string | null;
+}
+
+export interface BroadcastDetail extends BroadcastSummary {
+  recipients: BroadcastRecipientRow[];
+}
+
+/** Kabinetga kelgan xabar (xodim yoki ota-ona) */
+export interface InboxMessage {
+  id: string;
+  title: string;
+  body: string;
+  isMandatory: boolean;
+  from: string;
+  readAt: string | null;
   createdAt: string;
 }
 
