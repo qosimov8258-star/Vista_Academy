@@ -195,7 +195,7 @@ export function Sidebar() {
               <ZeeronMark className="h-11 w-11" />
             ) : (
               <>
-                <ZeeronLogo className="h-[26px] w-auto" />
+                <ZeeronLogo className="h-[19px]" />
                 <span className="pl-0.5 text-[10px] font-semibold uppercase leading-none tracking-[0.14em] text-[var(--color-text-subtle)]">Platforma</span>
               </>
             )}
