@@ -6,6 +6,7 @@ import { PrismaService } from "../../../database/prisma.service";
 import { requireParentAccessSecret } from "../parent-auth.service";
 import { AuthenticatedParent, ParentAccessTokenPayload } from "../parent-auth.types";
 import { disabledFeatureKeys } from "../../../common/features/feature-catalog";
+import { PARENT_CABINET_DISABLED_MESSAGE, isParentCabinetEnabled } from "../parent-cabinet-access";
 import { ORGANIZATION_SUSPENDED_MESSAGE, ORGANIZATION_WITH_SUBSCRIPTION_FEATURES, isOrganizationSuspended } from "../../iam/organization-access";
 
 function extractFromCookie(req: Request): string | null {
@@ -46,6 +47,10 @@ export class ParentJwtStrategy extends PassportStrategy(Strategy, "parent-jwt") 
     }
     if (isOrganizationSuspended(guardian.organization, guardian.organization.subscription)) {
       throw new UnauthorizedException(ORGANIZATION_SUSPENDED_MESSAGE);
+    }
+    // Kabinet o'chirilsa ochiq seans ham darhol yopiladi — ota-ona kirish sahifasiga qaytadi
+    if (!isParentCabinetEnabled(guardian.organization)) {
+      throw new UnauthorizedException(PARENT_CABINET_DISABLED_MESSAGE);
     }
     return {
       id: guardian.id,

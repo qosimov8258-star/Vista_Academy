@@ -7,6 +7,7 @@ import clsx from "clsx";
 import styles from "../parent.module.css";
 import { CABINET_TABS, TAB_BAR_SLOTS, tabIndexOf } from "./tabs";
 import { useTr } from "@/i18n/tr";
+import { useParentFeatures } from "./use-parent-features";
 
 /**
  * Pastdagi suzuvchi menyu. Telefonda bosh barmoq yetadigan joyda turadi,
@@ -25,17 +26,20 @@ export function ParentTabBar({ slug }: { slug: string }) {
   const tr = useTr();
   const pathname = useAppPathname();
   const base = `/ota-ona/${slug}`;
+  // Platforma o'chirgan bo'limlar menyuda ko'rinmaydi
+  const { isOn } = useParentFeatures(slug);
+  const tabs = CABINET_TABS.filter((tab) => isOn("feature" in tab ? tab.feature : undefined));
 
-  const overflowing = CABINET_TABS.length > TAB_BAR_SLOTS;
-  const visibleCount = overflowing ? TAB_BAR_SLOTS - 1 : CABINET_TABS.length;
-  const visible = CABINET_TABS.slice(0, visibleCount);
-  const more = CABINET_TABS.slice(visibleCount);
+  const overflowing = tabs.length > TAB_BAR_SLOTS;
+  const visibleCount = overflowing ? TAB_BAR_SLOTS - 1 : tabs.length;
+  const visible = tabs.slice(0, visibleCount);
+  const more = tabs.slice(visibleCount);
   const moreSlot = visibleCount; // "Yana" tugmasining o'rni
 
   // Bo'lim indeksini menyudagi joyga aylantiradi: sig'maganlari — "Yana"
   const slotOf = (tabIndex: number) => (tabIndex < 0 ? -1 : tabIndex < visibleCount ? tabIndex : moreSlot);
 
-  const routeIndex = tabIndexOf(pathname, base);
+  const routeIndex = tabIndexOf(pathname, base, tabs);
   // Bosilgan bo'lim darhol faol ko'rinadi — sahifa yuklanishini kutmaydi.
   // Manzil o'zgargach (yoki boshqa yo'l bilan kelinganda) haqiqiy holatga qaytadi.
   const [tapped, setTapped] = useState<number | null>(null);

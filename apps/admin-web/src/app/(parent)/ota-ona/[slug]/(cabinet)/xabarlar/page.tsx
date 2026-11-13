@@ -10,6 +10,7 @@ import { BellIcon } from "@/components/ui/icons";
 import styles from "../../parent.module.css";
 import { EmptyCard, ListSkeleton, LoadErrorCard, formatUzDate } from "../foydali/ui";
 import { useMarkParentMessageRead, useParentMessages } from "../use-messages";
+import { useParentFeatures } from "../use-parent-features";
 import { useTr } from "@/i18n/tr";
 
 function timeLabel(iso: string, tr: (s: string) => string): string {
@@ -33,7 +34,7 @@ export default function ParentMessagesPage({ params }: { params: Promise<{ slug:
   const { slug } = use(params);
   const router = useRouter();
   const queryClient = useQueryClient();
-  const query = useParentMessages(slug);
+  const query = useParentMessages(slug, useParentFeatures(slug).isOn("notifications"));
   const read = useMarkParentMessageRead(slug);
   const [openId, setOpenId] = useState<string | null>(null);
 

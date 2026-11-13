@@ -5,10 +5,12 @@ import { parentApi } from "@/lib/parent-api";
 import type { InboxMessage } from "@/lib/types";
 
 /** Bog'cha yuborgan xabarlar — bosh sahifa, «Xabarlar» va majburiy oyna bitta keshdan o'qiydi */
-export function useParentMessages(slug: string) {
+export function useParentMessages(slug: string, enabled = true) {
   return useQuery({
     queryKey: ["parent-messages", slug],
     queryFn: () => parentApi.get<InboxMessage[]>("/app/parent/messages"),
+    // «Bildirishnomalar» o'chirilgan bo'lsa so'rov yuborilmaydi
+    enabled,
     retry: false,
     refetchInterval: 120_000,
     refetchOnWindowFocus: true,

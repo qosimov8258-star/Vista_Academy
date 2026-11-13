@@ -7,13 +7,13 @@ import { BellIcon, BulbIcon, CalendarIcon, DocumentIcon, HomeIcon, NoteIcon, Set
  */
 export const CABINET_TABS = [
   { href: "", label: "Bosh menu", icon: HomeIcon, hint: "Bugungi kun" },
-  { href: "/kundalik", label: "Kundalik", icon: NoteIcon, hint: "Ovqat tartibi va kun" },
-  { href: "/jadval", label: "Jadval", icon: CalendarIcon, hint: "Haftalik kun tartibi" },
-  { href: "/fayllar", label: "Fayllar", icon: DocumentIcon, hint: "Guruhga yuklangan rasm va hujjatlar" },
-  { href: "/tolov", label: "To'lov", icon: WalletIcon, hint: "Kartaga o'tkazma va chek" },
-  { href: "/dokon", label: "Do'kon", icon: ShopIcon, hint: "Yulduzchalarga sovg'alar" },
-  { href: "/foydali", label: "Foydali", icon: BulbIcon, hint: "She'rlar, maqollar, ertaklar" },
-  { href: "/xabarlar", label: "Xabarlar", icon: BellIcon, hint: "Bog'cha yuborgan xabarlar" },
+  { href: "/kundalik", label: "Kundalik", icon: NoteIcon, hint: "Ovqat tartibi va kun", feature: "diary" },
+  { href: "/jadval", label: "Jadval", icon: CalendarIcon, hint: "Haftalik kun tartibi", feature: "lessons" },
+  { href: "/fayllar", label: "Fayllar", icon: DocumentIcon, hint: "Guruhga yuklangan rasm va hujjatlar", feature: "groupMaterials" },
+  { href: "/tolov", label: "To'lov", icon: WalletIcon, hint: "Kartaga o'tkazma va chek", feature: "paymentReceipts" },
+  { href: "/dokon", label: "Do'kon", icon: ShopIcon, hint: "Yulduzchalarga sovg'alar", feature: "products" },
+  { href: "/foydali", label: "Foydali", icon: BulbIcon, hint: "She'rlar, maqollar, ertaklar", feature: "useful" },
+  { href: "/xabarlar", label: "Xabarlar", icon: BellIcon, hint: "Bog'cha yuborgan xabarlar", feature: "notifications" },
   { href: "/sozlamalar", label: "Sozlamalar", icon: SettingsIcon, hint: "Parol, ko'rinish, chiqish" },
 ] as const;
 
@@ -28,9 +28,13 @@ export const TAB_BAR_SLOTS = 4;
  * Manzil qaysi bo'limga tegishli. Topilmasa -1 — bunda o'tish yo'nalishi
  * emas, oddiy yumshoq paydo bo'lish ishlatiladi.
  */
-export function tabIndexOf(pathname: string, base: string): number {
+export function tabIndexOf(
+  pathname: string,
+  base: string,
+  tabs: ReadonlyArray<{ href: string }> = CABINET_TABS,
+): number {
   if (pathname === base || pathname === `${base}/`) {
-    return 0;
+    return tabs.findIndex((tab) => tab.href === "");
   }
-  return CABINET_TABS.findIndex((tab) => tab.href !== "" && pathname.startsWith(`${base}${tab.href}`));
+  return tabs.findIndex((tab) => tab.href !== "" && pathname.startsWith(`${base}${tab.href}`));
 }

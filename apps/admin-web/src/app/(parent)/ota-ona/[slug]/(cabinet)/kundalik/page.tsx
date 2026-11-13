@@ -15,6 +15,7 @@ import { MediaViewer } from "./media-viewer";
 import { MealsSection } from "./meals-section";
 import { ChildSwitcher } from "../child-switcher";
 import { useSelectedChild } from "../use-selected-child";
+import { useParentFeatures } from "../use-parent-features";
 import { useTr } from "@/i18n/tr";
 
 /** Har 30 soniyada yangilanadigan soat — "hozir" belgisi siljib borsin */
@@ -57,6 +58,7 @@ export default function ParentDiaryPage({ params }: { params: Promise<{ slug: st
   const dayQuery = useDiaryDay(childId, selectedDate);
   const day = dayQuery.data;
   const now = useNowMinutes();
+  const nutritionOn = useParentFeatures(slug).isOn("nutrition");
 
   return (
     <div className="mx-auto w-full max-w-[520px] px-4 pt-5">
@@ -106,7 +108,7 @@ export default function ParentDiaryPage({ params }: { params: Promise<{ slug: st
             onOpenMedia={(items, index) => setViewer({ items, index })}
           />
           {/* Shu kungi ovqat tartibi va oshpaz yuklagan taom suratlari */}
-          {childId && <MealsSection childId={childId} date={day.date} isFuture={day.date > day.today} />}
+          {childId && nutritionOn && <MealsSection childId={childId} date={day.date} isFuture={day.date > day.today} />}
         </>
       )}
 

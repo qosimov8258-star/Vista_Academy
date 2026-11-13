@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useInfiniteQuery, useQueries, useQuery } from "@tanstack/react-query";
 import { api, getPaginated } from "@/lib/api";
 import type { Child, ChildAllergy, Group } from "@/lib/types";
-import { useAuth } from "@/lib/use-auth";
+import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
 import { ChevronRightIcon, ChildIcon, DocumentIcon, PhoneIcon, PlusIcon, SearchIcon } from "@/components/ios/icons";
 import { ViewOnlyNote } from "@/components/ios/view-only-note";
 import { ChildPhoto } from "@/components/ui/child-photo";
@@ -98,6 +98,7 @@ function BranchChildren({ slug }: { slug: string }) {
   // to'lovlar va moliyaviy tarix ko'rinadigan alohida sahifaga o'tadi —
   // rivojlanish, sog'liq va shu kabi bo'limlar moliyachiga aloqasi yo'q.
   const isFinance = user?.role === "FINANCE";
+  const isOn = useFeatureEnabled();
   const childHref = (childId: string) =>
     isFinance ? (branchSlug ? `/${slug}/${branchSlug}/finance/${childId}` : `/${slug}/finance/${childId}`) : `${base}/children/${childId}`;
 
@@ -123,7 +124,8 @@ function BranchChildren({ slug }: { slug: string }) {
   const financeStatsQuery = useQuery({
     queryKey: ["children-finance-stats", slug, forcedBranchId],
     queryFn: () => api.get<ChildrenFinanceStats>(`/app/children/finance-stats${forcedBranchId ? `?branchId=${forcedBranchId}` : ""}`),
-    enabled: isFinance,
+    // «To'lovlar» o'chirilgan bo'lsa statistika so'ralmaydi
+    enabled: isFinance && isOn("billing"),
   });
 
   const childrenQuery = useInfiniteQuery({
@@ -165,7 +167,7 @@ function BranchChildren({ slug }: { slug: string }) {
   };
 
   const refresh = async () => {
-    await Promise.all([childrenQuery.refetch(), allergiesQuery.refetch(), ...(isFinance ? [financeStatsQuery.refetch()] : [])]);
+    await Promise.all([childrenQuery.refetch(), allergiesQuery.refetch(), ...(isFinance && isOn("billing") ? [financeStatsQuery.refetch()] : [])]);
   };
 
   const handleExport = async () => {
@@ -208,6 +210,7 @@ function BranchChildren({ slug }: { slug: string }) {
 
         {!canWrite &&
           (isFinance ? (
+            isOn("billing") &&
             <StatStrip>
               <StatCell label={tr("To'lagan")} value={stats?.paid ?? "—"} color={IOS.green} loading={financeStatsQuery.isLoading} />
               <StatCell label={tr("Yarim to'lagan")} value={stats?.partial ?? "—"} color={IOS.orange} loading={financeStatsQuery.isLoading} />

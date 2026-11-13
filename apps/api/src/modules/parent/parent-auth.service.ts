@@ -4,7 +4,8 @@ import * as argon2 from "argon2";
 import { createHash, randomBytes, randomInt } from "crypto";
 import { PrismaService } from "../../database/prisma.service";
 import { AuthenticatedParent, ParentAccessTokenPayload } from "./parent-auth.types";
-import { ORGANIZATION_SUSPENDED_MESSAGE, ORGANIZATION_WITH_SUBSCRIPTION_STATUS, isOrganizationSuspended } from "../iam/organization-access";
+import { ORGANIZATION_SUSPENDED_MESSAGE, ORGANIZATION_WITH_SUBSCRIPTION_FEATURES, isOrganizationSuspended } from "../iam/organization-access";
+import { PARENT_CABINET_DISABLED_MESSAGE, isParentCabinetEnabled } from "./parent-cabinet-access";
 import { ChangeParentPasswordDto } from "./dto/change-parent-password.dto";
 
 export interface IssuedParentTokens {
@@ -59,13 +60,18 @@ export class ParentAuthService {
   async validateCredentials(orgSlug: string, phone: string, password: string): Promise<AuthenticatedParent> {
     const organization = await this.prisma.organization.findUnique({
       where: { slug: orgSlug },
-      include: ORGANIZATION_WITH_SUBSCRIPTION_STATUS,
+      include: ORGANIZATION_WITH_SUBSCRIPTION_FEATURES,
     });
     if (!organization) {
       throw new UnauthorizedException("Tashkilot topilmadi");
     }
     if (isOrganizationSuspended(organization, organization.subscription)) {
       throw new ForbiddenException(ORGANIZATION_SUSPENDED_MESSAGE);
+    }
+    // Platforma «Ota-ona kabineti»ni o'chirgan bo'lsa — kirishga ham yo'l yo'q
+    // (aks holda ota-ona kirib, har sahifada «Yuklab bo'lmadi»ni ko'rardi).
+    if (!isParentCabinetEnabled(organization)) {
+      throw new ForbiddenException(PARENT_CABINET_DISABLED_MESSAGE);
     }
 
     const guardian = await this.prisma.guardian.findUnique({
@@ -134,13 +140,16 @@ export class ParentAuthService {
     const tokenHash = hashToken(rawRefreshToken);
     const existing = await this.prisma.guardianRefreshToken.findUnique({
       where: { tokenHash },
-      include: { guardian: { omit: { passwordHash: false }, include: { organization: true } } },
+      include: { guardian: { omit: { passwordHash: false }, include: { organization: { include: ORGANIZATION_WITH_SUBSCRIPTION_FEATURES } } } },
     });
     if (!existing || existing.revokedAt || existing.expiresAt < new Date()) {
       throw new UnauthorizedException("Seans muddati tugagan");
     }
     if (!existing.guardian.isActive || !existing.guardian.passwordHash) {
       throw new UnauthorizedException("Kabinet yopilgan");
+    }
+    if (!isParentCabinetEnabled(existing.guardian.organization)) {
+      throw new UnauthorizedException(PARENT_CABINET_DISABLED_MESSAGE);
     }
 
     const parent: AuthenticatedParent = {

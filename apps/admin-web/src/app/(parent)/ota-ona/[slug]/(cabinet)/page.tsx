@@ -26,6 +26,7 @@ import { ChildSwitcher } from "./child-switcher";
 import { useSelectedChild } from "./use-selected-child";
 import { useCabinetTheme } from "./theme";
 import { useParentMessages } from "./use-messages";
+import { useParentFeatures } from "./use-parent-features";
 import { BellIcon } from "@/components/ui/icons";
 import { useTr } from "@/i18n/tr";
 
@@ -82,7 +83,9 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
   const { slug } = use(params);
   const router = useRouter();
   // Bog'cha yuborgan yangi xabarlar — bosh sahifada eslatma
-  const messagesQuery = useParentMessages(slug);
+  // Platforma o'chirgan funksiyalarga so'rov yuborilmaydi — bo'limlar shunchaki ko'rinmaydi
+  const { ready: featuresReady, isOn } = useParentFeatures(slug);
+  const messagesQuery = useParentMessages(slug, featuresReady && isOn("notifications"));
   const newMessages = messagesQuery.data?.filter((m) => !m.readAt) ?? [];
   const queryClient = useQueryClient();
   const [reasonDraft, setReasonDraft] = useState("");
@@ -111,19 +114,19 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
   const stripQuery = useQuery({
     queryKey: ["parent-strip", childId],
     queryFn: () => parentApi.get<ParentAttendanceStrip>(`/app/parent/children/${childId}/attendance`),
-    enabled: !!childId,
+    enabled: !!childId && featuresReady && isOn("attendance"),
   });
 
   const reminderQuery = useQuery({
     queryKey: ["parent-payment-reminder", childId],
     queryFn: () => parentApi.get<ParentPaymentReminder>(`/app/parent/children/${childId}/payment-reminder`),
-    enabled: !!childId,
+    enabled: !!childId && featuresReady && isOn("billing"),
   });
 
   const receiptsQuery = useQuery({
     queryKey: ["parent-payment-receipts", childId],
     queryFn: () => parentApi.get<ParentPaymentReceipt[]>(`/app/parent/children/${childId}/payment-receipts`),
-    enabled: !!childId,
+    enabled: !!childId && featuresReady && isOn("paymentReceipts"),
     retry: false,
   });
 
@@ -286,7 +289,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
           </section>
         )}
 
-        {childId && <NotifyTeacher childId={childId} />}
+        {childId && <NotifyTeacher childId={childId} departureEnabled={isOn("pickups")} />}
 
         {/* To'lov eslatmasi — bog'cha sozlagan kunlar oynasida to'lanmagan
             hisob-faktura bo'lsa chiqadi, to'lov qilingach o'zi yo'qoladi. */}
@@ -295,7 +298,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
         {/* Chek yuklash — faqat to'lov kutilayotganda ochiladi (aks holda
             tasdiqlash uchun ochiq hisob-faktura topilmaydi). Oldingi
             cheklarning holati esa har doim ko'rinadi. */}
-        {childId && (reminderQuery.data?.visible || (receiptsQuery.data && receiptsQuery.data.length > 0)) && (
+        {childId && isOn("paymentReceipts") && (reminderQuery.data?.visible || (receiptsQuery.data && receiptsQuery.data.length > 0)) && (
           <PaymentReceiptSection
             childId={childId}
             canSubmit={!!reminderQuery.data?.visible}

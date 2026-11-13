@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { useAuth } from "@/lib/use-auth";
+import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
 import { CallsList } from "./calls-list";
 import { CALL_KIND_LABEL, todayTashkent, type CallKind, type CallsResult } from "./shared";
 import { useTr } from "@/i18n/tr";
@@ -22,6 +22,14 @@ const ACTIONS = [
   { label: "Qo'ng'iroqlar", suffix: "calls" },
 ];
 
+/** Tez o'tish tugmasi qaysi funksiyaga tegishli — o'chirilganlari ko'rsatilmaydi */
+const ACTION_FEATURE: Record<string, string> = {
+  crm: "crm",
+  debtors: "billing",
+  notifications: "notifications",
+  calls: "pickups",
+};
+
 function todayLabel() {
   return new Intl.DateTimeFormat("uz-UZ", { day: "numeric", month: "long", weekday: "long", timeZone: "Asia/Tashkent" }).format(new Date());
 }
@@ -35,12 +43,18 @@ export function OperatorHome({ slug }: { slug: string }) {
   const tr = useTr();
   const { user } = useAuth();
   const date = todayTashkent();
+  const isOn = useFeatureEnabled();
+  // Qo'ng'iroqlar «Olib ketish va qo'ng'iroqlar» funksiyasiga kiradi — o'chirilgan
+  // bo'lsa so'rov yuborilmaydi, bosh sahifada faqat tez o'tish qoladi.
+  const callsOn = isOn("pickups");
   // CallsList bilan bir xil kalit — so'rov bir marta yuboriladi
   const calls = useQuery({
     queryKey: ["desk-calls", slug, date],
     queryFn: () => api.get<CallsResult>(`/app/desk/calls?date=${date}`),
     refetchInterval: 60_000,
+    enabled: callsOn,
   });
+  const actions = ACTIONS.filter((a) => isOn(ACTION_FEATURE[a.suffix]));
 
   const items = calls.data?.items ?? [];
   const open = calls.data?.open ?? 0;
@@ -57,6 +71,8 @@ export function OperatorHome({ slug }: { slug: string }) {
         <p className="text-[13px] font-medium text-[var(--accent-pale)]/80">{todayLabel()}</p>
         <h1 data-hero className="mt-0.5 text-[24px] font-bold tracking-[-0.02em]">{tr("Salom")}{firstName ? `, ${firstName}` : ""}</h1>
 
+        {callsOn && (
+        <>
         <div className="mt-5 flex items-end justify-between gap-3">
           <div>
             <p className="text-[44px] font-extrabold leading-none tracking-[-0.03em] tabular-nums">{calls.isLoading ? "–" : open}</p>
@@ -89,8 +105,11 @@ export function OperatorHome({ slug }: { slug: string }) {
             </Link>
           ))}
         </div>
+        </>
+        )}
       </section>
 
+      {callsOn && (
       <section>
         <div className="mb-3 flex items-baseline justify-between px-0.5">
           <h2 className="text-[16px] font-semibold tracking-[-0.01em] text-[var(--color-text)]">{tr("Qo'ng'iroqlar")}</h2>
@@ -100,11 +119,12 @@ export function OperatorHome({ slug }: { slug: string }) {
         </div>
         <CallsList slug={slug} limit={6} />
       </section>
+      )}
 
       <section>
         <h2 className="mb-3 px-0.5 text-[16px] font-semibold tracking-[-0.01em] text-[var(--color-text)]">{tr("Tez o'tish")}</h2>
         <div className="grid grid-cols-2 gap-3">
-          {ACTIONS.map((a) => (
+          {actions.map((a) => (
             <Link
               key={a.suffix}
               href={`/${slug}/${a.suffix}`}

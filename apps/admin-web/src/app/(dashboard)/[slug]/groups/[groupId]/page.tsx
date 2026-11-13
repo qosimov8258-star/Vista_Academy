@@ -7,7 +7,7 @@ import clsx from "clsx";
 import { Baby, Camera, ChevronLeft, ClipboardCheck, IdCard, Pencil, UserPlus, UsersRound } from "lucide-react";
 import { api } from "@/lib/api";
 import type { AttendanceStatus, Group, GroupAttendanceDay, GroupAttendanceRange, GroupOverview } from "@/lib/types";
-import { useAuth } from "@/lib/use-auth";
+import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { canWriteOperational, canWriteTeaching } from "@/lib/permissions";
 import { formatAge, formatChildId, formatDate } from "@/lib/format";
@@ -63,8 +63,10 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
   const { slug, groupId } = use(params);
   const { base } = useBranchContext(slug);
   const { user } = useAuth();
+  // «Bolalar davomati» o'chirilgan bo'lsa davomat bo'limlari umuman ko'rinmaydi
+  const attendanceOn = useFeatureEnabled()("attendance");
   const canWrite = canWriteOperational(user?.role);
-  const canMark = canWriteTeaching(user?.role);
+  const canMark = canWriteTeaching(user?.role) && attendanceOn;
   const [editOpen, setEditOpen] = useState(false);
   const [teachersOpen, setTeachersOpen] = useState(false);
   const [childrenOpen, setChildrenOpen] = useState(false);
@@ -73,7 +75,8 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
   const [day, setDay] = useState("");
   const [rangeDays, setRangeDays] = useState<RangeDays>("14");
   const [childSearch, setChildSearch] = useState("");
-  const [tab, setTab] = useState<Tab>("day");
+  const [tabChoice, setTab] = useState<Tab>("day");
+  const tab: Tab = attendanceOn ? tabChoice : "children";
 
   // Sana mijoz soatiga bog'liq — server va brauzer HTML'i mos kelsin
   useEffect(() => {
@@ -89,13 +92,13 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
   const rosterQuery = useQuery({
     queryKey: ["group-day", slug, groupId, day],
     queryFn: () => api.get<GroupAttendanceDay>(`/app/groups/${groupId}/attendance/day?date=${day}`),
-    enabled: !!day,
+    enabled: !!day && attendanceOn,
   });
   const from = today ? shiftDays(today, -(Number(rangeDays) - 1)) : "";
   const rangeQuery = useQuery({
     queryKey: ["group-attendance-range", slug, groupId, from, today],
     queryFn: () => api.get<GroupAttendanceRange>(`/app/groups/${groupId}/attendance?from=${from}&to=${today}`),
-    enabled: !!today,
+    enabled: !!today && attendanceOn,
   });
 
   const overview = overviewQuery.data;
@@ -135,7 +138,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
 
   return (
     <div className="-mx-2 md:mx-0">
-      <PullToRefresh onRefresh={() => Promise.all([overviewQuery.refetch(), rosterQuery.refetch(), rangeQuery.refetch()])} />
+      <PullToRefresh onRefresh={() => Promise.all([overviewQuery.refetch(), ...(attendanceOn ? [rosterQuery.refetch(), rangeQuery.refetch()] : [])])} />
       <div className="mx-auto w-full max-w-3xl space-y-5 pb-2">
         {/* Telefonda yuqori panelning o'z "←" tugmasi bor */}
         <Link href={`${base}/groups`} className="hidden h-9 items-center md:inline-flex gap-0.5 rounded-full pr-3 text-[15px] font-medium text-[var(--color-primary)] active:opacity-50">
@@ -210,7 +213,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
         </PageCard>
 
         <StatStrip tone="white">
-          <StatCell label={tr("Bugun keldi")} value={rosterQuery.data && day === today ? rosterQuery.data.counts.present : "—"} color={IOS.green} hint={rosterQuery.data && day === today ? tr("{0} tadan", rosterQuery.data.total) : undefined} loading={!overview} />
+          {attendanceOn && <StatCell label={tr("Bugun keldi")} value={rosterQuery.data && day === today ? rosterQuery.data.counts.present : "—"} color={IOS.green} hint={rosterQuery.data && day === today ? tr("{0} tadan", rosterQuery.data.total) : undefined} loading={!overview} />}
           <StatCell label={tr("O'g'il bolalar")} value={overview?.children.boys ?? 0} loading={!overview} />
           <StatCell label={tr("Qiz bolalar")} value={overview?.children.girls ?? 0} loading={!overview} />
           <StatCell label={tr("Tarbiyachilar")} value={overview?.teachers.length ?? 0} color={overview && overview.teachers.length === 0 ? IOS.orange : undefined} loading={!overview} />
@@ -268,7 +271,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
         </IosGroup>
 
         {/* Bitta ro'yxat ko'rinadi — telefonda sahifa cheksiz cho'zilmasin */}
-        <Segmented<Tab>
+        {attendanceOn && <Segmented<Tab>
           value={tab}
           onChange={setTab}
           label={tr("Bo'lim")}
@@ -277,7 +280,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
             { value: "children", label: overview ? tr("Bolalar · {0}", overview.children.items.length) : tr("Bolalar") },
             { value: "stats", label: tr("Statistika") },
           ]}
-        />
+        />}
 
         {/* Kim keldi */}
         {tab === "day" && (

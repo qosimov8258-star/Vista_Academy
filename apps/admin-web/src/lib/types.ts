@@ -1079,6 +1079,8 @@ export interface ParentAccount {
   organizationName: string;
   fullName: string;
   phone: string;
+  /** Platforma ota-onalar paneli uchun o'chirgan funksiyalar kalitlari */
+  disabledFeatures?: string[];
 }
 
 export interface ParentChild {

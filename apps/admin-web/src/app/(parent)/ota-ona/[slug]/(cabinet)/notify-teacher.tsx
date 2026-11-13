@@ -15,10 +15,12 @@ type Mode = "departure" | "note";
  * "Xabar berish" — ota-ona tarbiyachiga ikki xil xabar yuboradi:
  * yo'lga chiqqani (necha daqiqada yetib kelishi) va eslatma (dori, ukol...).
  */
-export function NotifyTeacher({ childId }: { childId: string }) {
+export function NotifyTeacher({ childId, departureEnabled = true }: { childId: string; departureEnabled?: boolean }) {
   const tr = useTr();
   const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<Mode>("departure");
+  const [modeChoice, setMode] = useState<Mode>("departure");
+  // «Olib ketish» o'chirilgan bo'lsa faqat eslatma qoladi
+  const mode: Mode = departureEnabled ? modeChoice : "note";
   const [minutes, setMinutes] = useState(20);
   const [text, setText] = useState("");
   const [done, setDone] = useState<string | null>(null);
@@ -54,7 +56,7 @@ export function NotifyTeacher({ childId }: { childId: string }) {
 
       {open && (
         <div className="mt-3 space-y-3">
-          <div className="grid grid-cols-2 gap-2">
+          <div className={clsx("grid gap-2", departureEnabled ? "grid-cols-2" : "hidden")}>
             {(
               [
                 ["departure", "Yo'lga chiqdim"],
