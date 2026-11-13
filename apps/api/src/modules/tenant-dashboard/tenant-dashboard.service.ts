@@ -48,8 +48,8 @@ export class TenantDashboardService {
       }
     }
     // Bildirishnomalar sahifasida ko'rinishidan oldin, hozirgi holatga mos
-    // ravishda yetishmayotganlarini to'ldirib qo'yamiz.
-    if (on("billing")) {
+    // ravishda yetishmayotganlarini to'ldirib qo'yamiz (bildirishnomalar o'chiq bo'lsa — yo'q).
+    if (on("billing") && on("notifications")) {
       await this.billingService.syncOverdueNotifications(scope);
       await this.billingService.syncPaymentDueNotifications(scope);
     }

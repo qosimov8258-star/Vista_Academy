@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { api, getPaginated } from "@/lib/api";
 import type { FinanceChildren, FinanceChildStatus, FinanceSummary, Organization, Payment } from "@/lib/types";
-import { useAuth } from "@/lib/use-auth";
+import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
 import { Card } from "@/components/ui/card";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { formatMoney, formatChildId, formatDateTime } from "@/lib/format";
@@ -293,8 +293,19 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
   const tr = useTr();
   const { slug } = use(params);
   const { user } = useAuth();
+  const isOn = useFeatureEnabled();
   const isNetworkAdmin = user?.role === "NETWORK_ADMIN";
   const teacher = isTeacher(user?.role);
+  // Moliya ko'rinishi faqat o'z bosh sahifasi yo'q rollarga (moliyachi) chiziladi;
+  // boshqalarda bu so'rovlar bekorga ketardi. Platforma «To'lovlar»ni o'chirgan bo'lsa ham.
+  const billingOn = isOn("billing");
+  const financeView =
+    !!user &&
+    !isChef(user.role) &&
+    !isTeacher(user.role) &&
+    !isCallOperatorUser(user) &&
+    !["BRANCH_ADMIN", "MANAGER", "NETWORK_ADMIN"].includes(user.role) &&
+    billingOn;
 
   const orgQuery = useQuery({
     queryKey: ["org", slug],
@@ -309,15 +320,15 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
   const financeQuery = useQuery({
     queryKey: ["dashboard-finance-children", slug, period],
     queryFn: () => api.get<FinanceChildren>(`/app/finance/children?period=${period}`),
-    // Oshpaz va tarbiyachiga moliya yopiq — ularning sahifasi o'z ma'lumotini oladi
-    enabled: !!user && !!period && !isChef(user.role) && !isTeacher(user.role) && user.role !== "BRANCH_ADMIN",
+    // Oshpaz, tarbiyachi va boshqalarning sahifasi o'z ma'lumotini oladi
+    enabled: financeView && !!period,
   });
 
   // Haftalik to'lov grafigi uchun — o'sha bola ro'yxati bilan bir xil davr.
   const summaryQuery = useQuery({
     queryKey: ["dashboard-finance-summary", slug, period],
     queryFn: () => api.get<FinanceSummary>(`/app/finance/summary?period=${period}`),
-    enabled: !!user && !!period && !isChef(user.role) && !isTeacher(user.role) && user.role !== "BRANCH_ADMIN",
+    enabled: financeView && !!period,
   });
 
   // Bosh sahifadagi "So'nggi to'lovlar" — davrga bog'liq emas, doim eng oxirgisi.
@@ -326,7 +337,7 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
     // Bir nechtasi qaytarilgan (REFUNDED) bo'lishi mumkin — filtrlagandan keyin
     // 5 tasi qolishi uchun zaxira bilan ko'proq so'raladi.
     queryFn: () => getPaginated<Payment>("/app/payments?limit=10"),
-    enabled: !!user && !isChef(user.role) && !isTeacher(user.role),
+    enabled: financeView,
   });
 
   const [openStatus, setOpenStatus] = useState<FinanceChildStatus | null>(null);
@@ -397,7 +408,9 @@ export default function DashboardPage({ params }: { params: Promise<{ slug: stri
         <p className="text-[13px] text-[var(--color-text-muted)]">{tr("Bugun ·")}{" "}{todayLabel()}</p>
       </div>
 
-      {!period || financeQuery.isLoading ? (
+      {!billingOn ? (
+        <EmptyState title={tr("Bu bo'lim o'chirilgan")} />
+      ) : !period || financeQuery.isLoading ? (
         <LoadingState rows={4} />
       ) : financeQuery.isError ? (
         <ErrorState message={tr((financeQuery.error as Error).message)} />

@@ -11,6 +11,7 @@ import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { PlanFeaturesField } from "@/features/feature-flags/plan-features-field";
+import { useFeatureCatalog } from "@/features/feature-flags/use-feature-catalog";
 
 const schema = z.object({
   name: z.string().min(2, "Nomi kamida 2 belgi"),
@@ -39,6 +40,13 @@ export function PlanFormModal({
   const [serverError, setServerError] = useState<string | null>(null);
   const [features, setFeatures] = useState<Record<string, boolean>>({});
   const isEdit = Boolean(plan);
+  const catalog = useFeatureCatalog();
+
+  /** Server noma'lum kalit va boolean bo'lmagan qiymatni rad etadi — eski kalitlar yuborilmaydi */
+  const cleanFeatures = () => {
+    const keys = new Set((catalog.data ?? []).map((f) => f.key));
+    return Object.fromEntries(Object.entries(features).filter(([k, v]) => typeof v === "boolean" && (keys.size === 0 || keys.has(k))));
+  };
 
   const {
     register,
@@ -70,8 +78,8 @@ export function PlanFormModal({
   const mutation = useMutation({
     mutationFn: (values: FormValues) =>
       isEdit
-        ? api.patch<Plan>(`/platform/plans/${plan!.id}`, { ...values, features })
-        : api.post<Plan>("/platform/plans", { ...values, features }),
+        ? api.patch<Plan>(`/platform/plans/${plan!.id}`, { ...values, features: cleanFeatures() })
+        : api.post<Plan>("/platform/plans", { ...values, features: cleanFeatures() }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["plans"] });
       onClose();

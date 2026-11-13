@@ -332,7 +332,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
         {/* ---------------- Umumiy ---------------- */}
         {tab === "overview" && (
           <>
-            {showCash && child && <ChildCashCard slug={slug} childId={childId} childName={child.fullName} />}
+            {showCash && isOn("billing") && isOn("cash") && child && <ChildCashCard slug={slug} childId={childId} childName={child.fullName} />}
 
             {guardiansOn && (
             <Group

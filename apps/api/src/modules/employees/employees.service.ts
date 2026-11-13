@@ -27,6 +27,7 @@ import { UpdateEmployeeTopicsSettingDto } from "./dto/update-employee-topics-set
 import { UpdateEmployeeGroupsDto } from "./dto/update-employee-groups.dto";
 import { UpdateEmployeeAvatarDto } from "./dto/update-employee-avatar.dto";
 import { EmployeeQueryDto } from "./dto/employee-query.dto";
+import { allOn } from "../../common/features/feature-access";
 
 /** 512px JPEG shu hajmdan oshmasligi kerak. */
 const MAX_EMPLOYEE_AVATAR_BYTES = 600 * 1024;
@@ -103,6 +104,27 @@ function assertCanManageCredentials(callerRole: TenantUserRole, targetRole: Tena
 /** O'qituvchi va oshpaz xodimlar ro'yxatida hamkasblarining oyligi va loginini ko'rmaydi. */
 const ROLES_WITHOUT_STAFF_DETAILS: TenantUserRole[] = ["TEACHER", "CHEF"];
 
+/**
+ * Javobdagi xodimdan chaqiruvchi ko'rmasligi kerak bo'lgan qismlar olib
+ * tashlanadi (shakl o'zgarmaydi): oylik — HR o'chiq bo'lsa null, login —
+ * "Kirish akkaunti" o'chiq bo'lsa "". O'qituvchi/oshpaz ikkalasini ham ko'rmaydi.
+ */
+function redactEmployee<T extends { salaryScheme: unknown; tenantUser: { login: string } | null }>(
+  row: T,
+  role: TenantUserRole,
+  disabled: readonly string[],
+): T {
+  const limitedRole = ROLES_WITHOUT_STAFF_DETAILS.includes(role);
+  const hideSalary = limitedRole || !allOn(disabled, "hr");
+  const hideLogin = limitedRole || !allOn(disabled, "employeeAccount");
+  if (!hideSalary && !hideLogin) return row;
+  return {
+    ...row,
+    salaryScheme: hideSalary ? null : row.salaryScheme,
+    tenantUser: row.tenantUser && hideLogin ? { ...row.tenantUser, login: "" } : row.tenantUser,
+  };
+}
+
 @Injectable()
 export class EmployeesService {
   constructor(
@@ -165,7 +187,7 @@ export class EmployeesService {
       );
       // Filialdagi yuz tanish terminallariga xodimni qo'shish buyrug'i (agent bajaradi)
       await this.faceIdCommands.enqueueEmployeeSync(employee.id);
-      return { employee, credentials: null };
+      return { employee: redactEmployee(employee, scope.role, caller.disabledFeatures), credentials: null };
     }
 
     const accountGroupIds = requireGroupsFor(dto.position, dto.account.groupIds);
@@ -221,7 +243,7 @@ export class EmployeesService {
       );
       // Filialdagi yuz tanish terminallariga xodimni qo'shish buyrug'i (agent bajaradi)
       await this.faceIdCommands.enqueueEmployeeSync(employee.id);
-      return { employee, credentials: { login, password } };
+      return { employee: redactEmployee(employee, scope.role, caller.disabledFeatures), credentials: { login, password } };
     } catch (err) {
       throw this.translateLoginConflict(err);
     }
@@ -255,7 +277,7 @@ export class EmployeesService {
     return { login, password, passwordHash };
   }
 
-  async findAll(scope: TenantScope, query: EmployeeQueryDto) {
+  async findAll(scope: TenantScope, query: EmployeeQueryDto, disabled: readonly string[] = []) {
     const where: Prisma.EmployeeWhereInput = {
       organizationId: scope.organizationId,
       branchId: resolveReadBranchFilter(scope, query.branchId),
@@ -266,18 +288,11 @@ export class EmployeesService {
       include: employeeInclude,
       orderBy: { createdAt: "desc" },
     });
-    if (!ROLES_WITHOUT_STAFF_DETAILS.includes(scope.role)) {
-      return rows;
-    }
-    return rows.map(({ salaryScheme: _salary, tenantUser, ...rest }) => ({
-      ...rest,
-      salaryScheme: null,
-      tenantUser: tenantUser ? { ...tenantUser, login: "" } : null,
-    }));
+    return rows.map((row) => redactEmployee(row, scope.role, disabled));
   }
 
   /** Tarbiyachining guruhlarini almashtiradi (qo'shish/olib tashlash bitta amalda). */
-  async updateGroups(scope: TenantScope, employeeId: string, dto: UpdateEmployeeGroupsDto) {
+  async updateGroups(scope: TenantScope, employeeId: string, dto: UpdateEmployeeGroupsDto, disabled: readonly string[] = []) {
     const branchId = requireOperationalScope(scope);
     const employee = await this.prisma.employee.findFirst({
       where: { id: employeeId, organizationId: scope.organizationId, branchId },
@@ -287,7 +302,7 @@ export class EmployeesService {
     }
     await this.assertGroupsBelongToBranch(branchId, dto.groupIds);
 
-    return this.prisma.$transaction(async (tx) => {
+    const updated = await this.prisma.$transaction(async (tx) => {
       await tx.groupTeacher.deleteMany({ where: { employeeId } });
       if (dto.groupIds.length > 0) {
         await tx.groupTeacher.createMany({
@@ -296,6 +311,7 @@ export class EmployeesService {
       }
       return tx.employee.findUniqueOrThrow({ where: { id: employeeId }, include: employeeInclude });
     });
+    return redactEmployee(updated, scope.role, disabled);
   }
 
   /**
@@ -438,7 +454,7 @@ export class EmployeesService {
       await this.faceIdCommands.enqueueEmployeeSync(id);
       if (activeChanged) await this.faceIdCommands.enqueueFace(id);
     }
-    return updated;
+    return redactEmployee(updated, scope.role, caller.disabledFeatures);
   }
 
   /** Kabineti bo'lmagan xodimga keyinchalik login ochish. Login/parol avtomatik generatsiya qilinadi. */
@@ -496,7 +512,7 @@ export class EmployeesService {
         branchId,
         summary: `${employee.fullName} uchun kabinet ochildi (${login})`,
       });
-      return { employee: updated, credentials: { login, password } };
+      return { employee: redactEmployee(updated, scope.role, caller.disabledFeatures), credentials: { login, password } };
     } catch (err) {
       throw this.translateLoginConflict(err);
     }

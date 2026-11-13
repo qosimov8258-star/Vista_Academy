@@ -4,8 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import { ArrowRightLeft, Check, TriangleAlert, UserMinus } from "lucide-react";
-import { api, ApiError } from "@/lib/api";
-import type { Group } from "@/lib/types";
+import { api, ApiError, getPaginated } from "@/lib/api";
+import type { Child, Group } from "@/lib/types";
+import { useFeatureEnabled } from "@/lib/use-auth";
 import { currentMonth } from "@/features/cash/shared";
 import { groupDigits, type PeriodChild } from "@/features/payments/shared";
 import { ChipRow, IosChip, SearchPill } from "@/components/ios/filters";
@@ -24,7 +25,8 @@ type Tab = "in" | "add";
  * boshqa guruhga o'tkazish; qarzi bo'lsa avval ogohlantiriladi) va
  * qo'shish (filialdagi guruhsiz bolalar, bir nechtasini birdan tanlash;
  * sig'im oshsa ogohlantiriladi). Bolalar va ularning qarzi bitta so'rovda
- * (`/app/cash/children`) olinadi.
+ * (`/app/cash/children`) olinadi. «Kassa» o'chirilgan bo'lsa — filialdagi
+ * bolalar oddiy ro'yxatdan, qarz ogohlantirishisiz.
  */
 export function ManageChildrenSheet({ open, onClose, slug, group }: { open: boolean; onClose: () => void; slug: string; group: Group | null }) {
   const tr = useTr();
@@ -37,6 +39,7 @@ export function ManageChildrenSheet({ open, onClose, slug, group }: { open: bool
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
   const [period, setPeriod] = useState("");
+  const cashOn = useFeatureEnabled()("cash");
 
   useEffect(() => {
     if (!open) return;
@@ -50,8 +53,11 @@ export function ManageChildrenSheet({ open, onClose, slug, group }: { open: bool
   }, [open]);
 
   const childrenQuery = useQuery({
-    queryKey: ["pay-children", slug, period],
-    queryFn: () => api.get<{ children: PeriodChild[] }>(`/app/cash/children?period=${period}`),
+    queryKey: ["pay-children", slug, period, cashOn ? "cash" : group?.branchId],
+    queryFn: () =>
+      cashOn
+        ? api.get<{ children: PeriodChild[] }>(`/app/cash/children?period=${period}`)
+        : activeBranchChildren(group?.branchId).then((children) => ({ children })),
     enabled: open && !!period,
   });
   const groupsQuery = useQuery({
@@ -293,4 +299,30 @@ export function ManageChildrenSheet({ open, onClose, slug, group }: { open: bool
       </SheetSection>
     </IosSheet>
   );
+}
+
+/** Kassasiz holat: filialdagi faol bolalar (sahifalab), qarz ma'lumotisiz */
+async function activeBranchChildren(branchId: string | undefined): Promise<PeriodChild[]> {
+  const LIMIT = 100;
+  const rows: Child[] = [];
+  for (let page = 1; ; page++) {
+    const res = await getPaginated<Child>(
+      `/app/children?page=${page}&limit=${LIMIT}&status=ACTIVE${branchId ? `&branchId=${branchId}` : ""}`,
+    );
+    rows.push(...res.data);
+    if (res.data.length < LIMIT || rows.length >= res.meta.total) break;
+  }
+  return rows.map((c) => ({
+    childId: c.id,
+    childName: c.fullName,
+    publicId: c.publicId,
+    groupId: c.groupId,
+    groupName: c.group?.name ?? null,
+    state: "NONE",
+    billed: 0,
+    paid: 0,
+    remaining: 0,
+    totalDebt: 0,
+    monthlyFee: null,
+  }));
 }

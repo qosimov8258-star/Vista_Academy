@@ -120,7 +120,8 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
   const reminderQuery = useQuery({
     queryKey: ["parent-payment-reminder", childId],
     queryFn: () => parentApi.get<ParentPaymentReminder>(`/app/parent/children/${childId}/payment-reminder`),
-    enabled: !!childId && featuresReady && isOn("billing"),
+    // Eslatma «To'lov eslatmalari»ga ham kiradi — o'chirilgan bo'lsa API 403 beradi
+    enabled: !!childId && featuresReady && isOn("billing") && isOn("paymentReminders"),
   });
 
   const receiptsQuery = useQuery({
@@ -157,6 +158,10 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
   const day = dayQuery.data;
   const present = day?.attendance?.status === "PRESENT";
   const absent = day?.attendance?.status === "ABSENT";
+  // O'chirilgan funksiyalarning bloklari ko'rinmaydi (API ham ularni null qaytaradi)
+  const attendanceOn = isOn("attendance");
+  const reportsOn = isOn("dailyReports");
+  const nutritionOn = isOn("nutrition");
 
   return (
     <div className="mx-auto w-full max-w-[520px] px-4 pt-5">
@@ -220,6 +225,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
             </div>
 
             {/* Bugun keldimi */}
+            {attendanceOn && (
             <div
               className={clsx(
                 "mt-4 flex items-center gap-3 rounded-[18px] px-4 py-3.5",
@@ -250,10 +256,11 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
                 </p>
               </div>
             </div>
+            )}
 
             {/* Kelmagan kun uchun sabab — bir marta yozilgach o'zgartirilmaydi,
                 tarbiyachi buni ko'radi va aloqaga chiqishga hojat qolmaydi. */}
-            {absent && !day?.attendance?.parentReason && (
+            {attendanceOn && absent && !day?.attendance?.parentReason && (
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -285,7 +292,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
               </form>
             )}
 
-            {stripQuery.data && <AttendanceCalendar strip={stripQuery.data} />}
+            {attendanceOn && stripQuery.data && <AttendanceCalendar strip={stripQuery.data} />}
           </section>
         )}
 
@@ -293,7 +300,10 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
 
         {/* To'lov eslatmasi — bog'cha sozlagan kunlar oynasida to'lanmagan
             hisob-faktura bo'lsa chiqadi, to'lov qilingach o'zi yo'qoladi. */}
-        {reminderQuery.data?.visible && <PaymentReminderCard reminder={reminderQuery.data} payHref={`/ota-ona/${slug}/tolov`} />}
+        {/* «To'lov cheklari» o'chirilgan bo'lsa To'lov sahifasi yo'q — tugma ham yo'q */}
+        {reminderQuery.data?.visible && (
+          <PaymentReminderCard reminder={reminderQuery.data} payHref={isOn("paymentReceipts") ? `/ota-ona/${slug}/tolov` : undefined} />
+        )}
 
         {/* Chek yuklash — faqat to'lov kutilayotganda ochiladi (aks holda
             tasdiqlash uchun ochiq hisob-faktura topilmaydi). Oldingi
@@ -317,6 +327,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
           day && (
             <div className="mt-4 space-y-3">
               {/* Kayfiyat, ovqat, uyqu */}
+              {reportsOn && (
               <div className="grid grid-cols-3 gap-3">
                 <MiniCard
                   label={tr("Kayfiyat")}
@@ -334,8 +345,10 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
                   tone="sky"
                 />
               </div>
+              )}
 
               {/* Nima bilan shug'ullandi */}
+              {reportsOn && (
               <Panel title={tr("Bugun nima qildik")} accent="lilac">
                 {day.report?.activityNotes ? (
                   <p className="text-[15px] leading-relaxed text-[var(--p-ink)]">{tr(day.report.activityNotes)}</p>
@@ -343,11 +356,13 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
                   <Empty text={tr("Tarbiyachi hali yozmadi")} />
                 )}
               </Panel>
+              )}
 
-              {/* Ovqat tartibi to'liq — Kundalik bo'limida; bu yerda qisqacha va havola */}
-              <TodayMealsLink slug={slug} day={day} />
+              {/* Ovqat tartibi to'liq — Kundalik bo'limida; bu yerda qisqacha va havola
+                  («Kundalik» o'chirilgan bo'lsa havolasiz) */}
+              {nutritionOn && <TodayMealsLink slug={slug} day={day} linked={isOn("diary")} />}
 
-              {day.report?.toiletNotes && (
+              {reportsOn && day.report?.toiletNotes && (
                 <Panel title={tr("Qo'shimcha")} accent="mint">
                   <p className="text-[15px] leading-relaxed text-[var(--p-ink)]">{tr(day.report.toiletNotes)}</p>
                 </Panel>
@@ -483,16 +498,13 @@ function Panel({ title, accent, children }: { title: string; accent: string; chi
 }
 
 /** Bugungi ovqat — qisqacha; bosilsa Kundalik'dagi to'liq ovqat tartibiga o'tadi */
-function TodayMealsLink({ slug, day }: { slug: string; day: ParentDay }) {
+function TodayMealsLink({ slug, day, linked }: { slug: string; day: ParentDay; linked: boolean }) {
   const tr = useTr();
   const photos = day.menuPhotos ?? [];
   const main = day.menu?.lunch || day.menu?.breakfast || day.menu?.snack || null;
   const firstPhoto = photos[0];
-  return (
-    <Link
-      href={`/ota-ona/${slug}/kundalik`}
-      className="flex items-center gap-3.5 rounded-[var(--p-radius)] bg-[var(--p-card)] p-4 shadow-[var(--p-shadow)] transition-transform active:scale-[0.99]"
-    >
+  const body = (
+    <>
       {firstPhoto ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -514,9 +526,18 @@ function TodayMealsLink({ slug, day }: { slug: string; day: ParentDay }) {
           {photos.length > 0 ? tr(" · {0} ta surat", photos.length) : ""}
         </span>
       </span>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 shrink-0 text-[var(--p-muted)]" aria-hidden>
-        <path d="m9 6 6 6-6 6" />
-      </svg>
+      {linked && (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 shrink-0 text-[var(--p-muted)]" aria-hidden>
+          <path d="m9 6 6 6-6 6" />
+        </svg>
+      )}
+    </>
+  );
+  const className = "flex items-center gap-3.5 rounded-[var(--p-radius)] bg-[var(--p-card)] p-4 shadow-[var(--p-shadow)]";
+  if (!linked) return <div className={className}>{body}</div>;
+  return (
+    <Link href={`/ota-ona/${slug}/kundalik`} className={`${className} transition-transform active:scale-[0.99]`}>
+      {body}
     </Link>
   );
 }
@@ -531,7 +552,7 @@ function Empty({ text }: { text: string }) {
  * bo'lsa qizil — bola to'lov qilinguncha (invoice PAID bo'lguncha) ko'rinib
  * turadi, buni backend har safar jonli hisoblab beradi.
  */
-function PaymentReminderCard({ reminder, payHref }: { reminder: ParentPaymentReminder; payHref: string }) {
+function PaymentReminderCard({ reminder, payHref }: { reminder: ParentPaymentReminder; payHref?: string }) {
   const tr = useTr();
   const overdue = !!reminder.overdue;
   return (
@@ -558,15 +579,17 @@ function PaymentReminderCard({ reminder, payHref }: { reminder: ParentPaymentRem
           {reminder.amount && (
             <p className="mt-2 text-[15px] font-bold text-[var(--p-ink)]">{formatMoney(reminder.amount)}</p>
           )}
-          <Link
-            href={payHref}
-            className={clsx(
-              "mt-3 inline-flex rounded-full px-4 py-2 text-[13.5px] font-bold text-white",
-              overdue ? "bg-[var(--p-coral)]" : "bg-[var(--p-sun)] text-[#3a2a00]",
-            )}
-          >
-            {tr("To'lov qilish")}
-          </Link>
+          {payHref && (
+            <Link
+              href={payHref}
+              className={clsx(
+                "mt-3 inline-flex rounded-full px-4 py-2 text-[13.5px] font-bold text-white",
+                overdue ? "bg-[var(--p-coral)]" : "bg-[var(--p-sun)] text-[#3a2a00]",
+              )}
+            >
+              {tr("To'lov qilish")}
+            </Link>
+          )}
         </div>
       </div>
     </section>

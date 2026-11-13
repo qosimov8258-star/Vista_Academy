@@ -3050,5 +3050,8 @@
  "Logoni o'chirib bo'lmadi": "Не удалось удалить логотип",
  "Logo o'chiriladi, o'rniga bog'cha nomining bosh harflari ko'rinadi.": "Логотип будет удалён, вместо него появятся первые буквы названия садика.",
  "Yon menyuda va kirish sahifasida bog'cha nomining bosh harflari o'rnida ko'rinadi. Shaffof fonli PNG eng chiroyli chiqadi.": "Показывается в боковом меню и на странице входа вместо первых букв названия. Лучше всего выглядит PNG с прозрачным фоном.",
- "Nom va logo butun panelda — yon menyu, kirish sahifasi, xodim va bola qo'shish oynalarida ko'rinadi.": "Название и логотип видны по всей панели — в боковом меню, на странице входа, в окнах добавления сотрудника и ребёнка."
+ "Nom va logo butun panelda — yon menyu, kirish sahifasi, xodim va bola qo'shish oynalarida ko'rinadi.": "Название и логотип видны по всей панели — в боковом меню, на странице входа, в окнах добавления сотрудника и ребёнка.",
+ "Bu bo'lim o'chirilgan": "Этот раздел отключён",
+ "Bu funksiya bog'changiz uchun yoqilmagan. Kerak bo'lsa, platforma operatoriga murojaat qiling.": "Эта функция не включена для вашего садика. При необходимости обратитесь к оператору платформы.",
+ "Bosh sahifaga": "На главную"
 }

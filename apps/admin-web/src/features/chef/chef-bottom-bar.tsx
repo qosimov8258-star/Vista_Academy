@@ -7,7 +7,7 @@ import clsx from "clsx";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { EmployeeNotification } from "@/lib/types";
-import { useAuth } from "@/lib/use-auth";
+import { useAuth, useFeatureFlags } from "@/lib/use-auth";
 import { isChef } from "@/lib/permissions";
 import { BellIcon, CameraIcon, HomeIcon, MealIcon, UserIcon, type IconProps } from "@/components/ui/icons";
 import { todayTashkent } from "@/features/desk/shared";
@@ -33,15 +33,20 @@ export function ChefBottomBar({ slug }: { slug: string }) {
   const pathname = useAppPathname();
   const [sheetOpen, setSheetOpen] = useState(false);
   const chef = isChef(user?.role);
+  const features = useFeatureFlags();
+  // Ovqat surati «Ovqatlanish» funksiyasiga kiradi
+  const cameraOn = features.isOn("nutrition");
+  // «Xodim bildirishnomalari» o'chirilgan bo'lsa «Xabarlar» bandi ham, so'rov ham yo'q
+  const bellOn = chef && features.ready && features.isOn("employeeNotifications");
 
   // Yon panel va yuqori panel bilan bir xil kesh — qo'shimcha so'rov ketmaydi
   const notificationsQuery = useQuery({
     queryKey: ["employee-notifications", slug],
     queryFn: () => api.get<EmployeeNotification[]>("/app/employee-notifications"),
-    enabled: chef,
+    enabled: bellOn,
     refetchInterval: 60_000,
   });
-  const inboxUnread = useEmployeeInboxUnread(slug, chef);
+  const inboxUnread = useEmployeeInboxUnread(slug, bellOn);
   const unread = (notificationsQuery.data?.filter((n) => !n.isRead).length ?? 0) + inboxUnread;
 
   if (!chef || !user) return null;
@@ -94,6 +99,7 @@ export function ChefBottomBar({ slug }: { slug: string }) {
       >
         <div className="mx-auto flex max-w-[480px] items-end gap-1 rounded-[26px] border border-black/[0.06] bg-white/90 px-2 pb-2 pt-2 shadow-[0_10px_30px_-10px_rgba(16,24,40,0.25)] backdrop-blur-xl">
           {left.map(renderTab)}
+          {cameraOn && (
           <div className="flex flex-1 justify-center">
             <button
               type="button"
@@ -104,10 +110,11 @@ export function ChefBottomBar({ slug }: { slug: string }) {
               <CameraIcon className="h-7 w-7" />
             </button>
           </div>
+          )}
           {right.map(renderTab)}
         </div>
       </nav>
-      {user.branchId && (
+      {user.branchId && cameraOn && (
         <QuickPhotoSheet
           open={sheetOpen}
           onClose={() => setSheetOpen(false)}

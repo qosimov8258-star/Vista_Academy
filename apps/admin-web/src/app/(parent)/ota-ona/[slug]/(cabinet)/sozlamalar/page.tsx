@@ -12,6 +12,7 @@ import clsx from "clsx";
 import { CardFx } from "../card-fx";
 import { useCabinetTheme, type ThemeMode } from "../theme";
 import { PasswordSheet } from "./password-sheet";
+import { useParentFeatures } from "../use-parent-features";
 import { useLocale } from "next-intl";
 import { locales, type Locale } from "@/i18n/config";
 import { applyLocale } from "@/components/ui/language-switcher";
@@ -76,6 +77,9 @@ export default function ParentSettingsPage({ params }: { params: Promise<{ slug:
   const [pushStatus, setPushStatus] = useState<PushStatus>("unsubscribed");
   const [pushBusy, setPushBusy] = useState(false);
   const [pushError, setPushError] = useState<string | null>(null);
+  // Push — «Bildirishnomalar» funksiyasi; o'chirilgan bo'lsa tugma ko'rinmaydi
+  const features = useParentFeatures(slug);
+  const pushOn = features.ready && features.isOn("notifications");
 
   useEffect(() => {
     getPushStatus().then(setPushStatus);
@@ -272,7 +276,7 @@ export default function ParentSettingsPage({ params }: { params: Promise<{ slug:
       </section>
 
       {/* To'lov eslatmasi kabi voqealar endi panel yopiq bo'lsa ham brauzer orqali kelishi mumkin */}
-      {pushStatus !== "unsupported" && (
+      {pushOn && pushStatus !== "unsupported" && (
         <section className="mt-3 rounded-[var(--p-radius)] bg-[var(--p-card)] p-5 shadow-[var(--p-shadow)]">
           <div className="flex items-center gap-3.5">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--p-sun)]/14 text-[var(--p-sun-ink)]">

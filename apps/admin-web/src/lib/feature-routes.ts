@@ -10,8 +10,9 @@ import { useFeatureEnabled } from "./use-auth";
  *
  * API'dagi `apps/api/src/common/features/feature-catalog.ts` bilan mos
  * bo'lishi kerak (u yerda — so'rov yo'llari, bu yerda — sahifalar).
+ * Ro'yxat berilsa — sahifa hammasi yoqilgandagina ochiladi.
  */
-const ROUTE_FEATURES: Record<string, string> = {
+const ROUTE_FEATURES: Record<string, string | string[]> = {
   attendance: "attendance",
   "audit-logs": "auditLogs",
   calls: "pickups",
@@ -22,10 +23,11 @@ const ROUTE_FEATURES: Record<string, string> = {
   coin: "coins",
   crm: "crm",
   "daily-reports": "dailyReports",
-  debtors: "billing",
+  // Qarzdorlar va to'lovlar ro'yxati /cash/* dan o'qiladi — kassa ham kerak
+  debtors: ["billing", "cash"],
   finance: "billing",
-  payments: "billing",
-  "group-payments": "billing",
+  payments: ["billing", "cash"],
+  "group-payments": ["billing", "cash"],
   discounts: "discounts",
   employees: "employees",
   "face-id": "faceId",
@@ -47,18 +49,17 @@ const ROUTE_FEATURES: Record<string, string> = {
   useful: "useful",
 };
 
-/** Sahifa manzili qaysi funksiyaga tegishli (`/test-bogcha/filial-1/nutrition` → "nutrition"); yo'q bo'lsa null. */
-export function featureForPath(path: string): string | null {
+/** Sahifa manzili qaysi funksiyalarga tegishli (`/test-bogcha/filial-1/nutrition` → ["nutrition"]); yo'q bo'lsa bo'sh. */
+export function featureForPath(path: string): string[] {
   const segs = path.split(/[?#]/)[0].split("/").filter(Boolean).slice(1);
   // Birinchi bo'lak — sahifa; topilmasa ikkinchisi (birinchisi filial yoki «network» bo'lishi mumkin)
-  return ROUTE_FEATURES[segs[0]] ?? ROUTE_FEATURES[segs[1]] ?? null;
+  const value = ROUTE_FEATURES[segs[0]] ?? ROUTE_FEATURES[segs[1]];
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
 }
 
 /** Menyu va tanlagichlar uchun: `(href) => ko'rsatilsinmi`. */
 export function useRouteFeatureOn() {
   const isOn = useFeatureEnabled();
-  return (href: string) => {
-    const feature = featureForPath(href);
-    return !feature || isOn(feature);
-  };
+  return (href: string) => featureForPath(href).every(isOn);
 }

@@ -26,7 +26,11 @@ export class ParentJwtAuthGuard extends AuthGuard("parent-jwt") {
     if (request.user?.disabledFeatures.length) {
       const feature = blockedFeatureForRequest(request.originalUrl ?? request.url, request.method, request.user.disabledFeatures);
       if (feature) {
-        throw new ForbiddenException(`"${feature.label}" funksiyasi bu bog'cha uchun yoqilmagan`);
+        // `code` — kabinet shu 403 ni tanib, funksiyalar ro'yxatini yangilaydi
+        throw new ForbiddenException({
+          code: "FEATURE_DISABLED",
+          message: `"${feature.label}" funksiyasi bu bog'cha uchun yoqilmagan`,
+        });
       }
     }
     return true;

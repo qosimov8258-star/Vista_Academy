@@ -56,18 +56,18 @@ export class AttendanceController {
   /** Ketma-ket 3+ kun kelmagan yoki to'lov muddati o'tgan-va-bugun kelmagan bolalar. */
   @Get("attendance/chronic-absences")
   chronicAbsences(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query("branchId") branchId: string | undefined) {
-    return this.attendanceService.chronicAbsenceFlags(toTenantScope(user), branchId);
+    return this.attendanceService.chronicAbsenceFlags(toTenantScope(user), branchId, user.disabledFeatures);
   }
 
   @Post("attendance")
   mark(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: MarkAttendanceDto) {
-    return this.attendanceService.mark(toTenantScope(user), dto);
+    return this.attendanceService.mark(toTenantScope(user), dto, user.disabledFeatures);
   }
 
   /** Bir kunning davomati bitta so'rovda (faqat o'zgargan bolalar) */
   @Post("attendance/bulk")
   markMany(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: BulkMarkAttendanceDto) {
-    return this.attendanceService.markMany(toTenantScope(user), dto);
+    return this.attendanceService.markMany(toTenantScope(user), dto, user.disabledFeatures);
   }
 
   /** Tarbiyachi "Aloqaga chiqish" bosganda — administratorga bildirishnoma yaratadi. */

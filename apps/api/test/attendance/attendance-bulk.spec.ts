@@ -184,6 +184,8 @@ describe("davomat — sana va coin", () => {
       childGuardian: { findMany: async () => [{ guardianId: "g1", guardian: { fullName: "Ota" } }] },
       employee: { findUnique: async () => ({ teachingGroups: [{ groupId: "g-a" }], position: "Tarbiyachi" }) },
       tenantUser: { findUnique: async () => ({ employee: { position: "Tarbiyachi" } }) },
+      // Funksiyalar tekshiruvi — topilmasa hammasi yoqilgan hisoblanadi
+      organization: { findUnique: async () => null },
       $transaction: async (run: (client: typeof tx) => Promise<unknown>) => run(tx),
     };
     const notifications = { logSystemEvent: async (args: { message: string }) => logs.push(args.message) };
@@ -307,7 +309,7 @@ describe("guruh", () => {
       child: { count: async () => activeChildren },
     };
     const audit = { logFromUser: async () => undefined };
-    return { service: new GroupsService(prisma as never, audit as never), updated: () => updated };
+    return { service: new GroupsService(prisma as never, audit as never, {} as never), updated: () => updated };
   }
 
   it("faol bolali guruh nofaol qilinmaydi", async () => {

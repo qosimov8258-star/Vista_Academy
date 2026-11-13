@@ -1,9 +1,11 @@
-import { Body, Controller, Get, Param, Patch, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { PlatformUserRole } from "@prisma/client";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 import { RolesGuard } from "../../common/guards/roles.guard";
 import { Roles } from "../../common/decorators/roles.decorator";
+import { CurrentUser } from "../../common/decorators/current-user.decorator";
+import { AuthenticatedUser } from "../auth/auth.types";
 import { OrganizationFeaturesService } from "./organization-features.service";
 import { UpdateOrganizationFeaturesDto } from "./dto/update-organization-features.dto";
 
@@ -31,13 +33,18 @@ export class FeaturesController {
   /** `?panel=TEACHER` — shu panel uchun; bo'sh bo'lsa butun bog'cha. */
   @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN, PlatformUserRole.PLATFORM_SUPPORT)
   @Get("organizations/:id/features")
-  get(@Param("id") id: string, @Query("panel") panel?: string) {
+  get(@Param("id", ParseUUIDPipe) id: string, @Query("panel") panel?: string) {
     return this.features.get(id, panel || undefined);
   }
 
   @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN)
   @Patch("organizations/:id/features")
-  update(@Param("id") id: string, @Body() dto: UpdateOrganizationFeaturesDto, @Query("panel") panel?: string) {
-    return this.features.setOverrides(id, dto.overrides, panel || undefined);
+  update(
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body() dto: UpdateOrganizationFeaturesDto,
+    @CurrentUser() user: AuthenticatedUser,
+    @Query("panel") panel?: string,
+  ) {
+    return this.features.setOverrides(id, dto.overrides, panel || undefined, user);
   }
 }

@@ -13,9 +13,12 @@ export const initials = (name: string) =>
     .map((w) => w[0]?.toUpperCase())
     .join("");
 
-/** Bog'cha tanlagich — qidiruvli ochiluvchi ro'yxat (SaaS'lardagi «workspace» almashtirgich kabi). */
+/**
+ * Bog'cha tanlagich — qidiruvli ochiluvchi ro'yxat (SaaS'lardagi «workspace» almashtirgich kabi).
+ * Qidiruv serverda bajariladi: `filtered` — serverdan kelgan natija, `total` — umumiy son.
+ */
 export function OrgPicker({
-  organizations,
+  total,
   selected,
   open,
   onOpenChange,
@@ -24,8 +27,9 @@ export function OrgPicker({
   filtered,
   onChoose,
   disabled,
+  searching,
 }: {
-  organizations: Organization[];
+  total: number;
   selected: Organization | undefined;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -34,6 +38,7 @@ export function OrgPicker({
   filtered: Organization[];
   onChoose: (id: string) => void;
   disabled?: boolean;
+  searching?: boolean;
 }) {
   useEffect(() => {
     if (!open) return;
@@ -58,7 +63,7 @@ export function OrgPicker({
         </span>
         <span className="min-w-0">
           <span className="block truncate text-[15px] font-medium leading-tight text-[var(--color-text)]">{selected?.name ?? "Bog'cha tanlang"}</span>
-          <span className="block truncate text-[11.5px] text-[var(--color-text-muted)]">{selected?.slug ?? `${organizations.length} ta bog'cha`}</span>
+          <span className="block truncate text-[11.5px] text-[var(--color-text-muted)]">{selected?.slug ?? `${total} ta bog'cha`}</span>
         </span>
         <ChevronDownIcon className={clsx("h-4 w-4 shrink-0 text-[var(--color-text-muted)] transition-transform", open && "rotate-180")} />
       </button>
@@ -72,7 +77,7 @@ export function OrgPicker({
                 autoFocus
                 value={search}
                 onChange={(e) => onSearch(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && filtered[0] && onChoose(filtered[0].id)}
+                onKeyDown={(e) => e.key === "Enter" && !searching && filtered[0] && onChoose(filtered[0].id)}
                 placeholder="Bog'cha nomi yoki manzili"
                 aria-label="Bog'cha qidirish"
                 className="min-w-0 flex-1 bg-transparent text-[13px] text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-subtle)]"
@@ -107,7 +112,14 @@ export function OrgPicker({
                   </li>
                 );
               })}
-              {filtered.length === 0 && <li className="px-3 py-6 text-center text-[12.5px] text-[var(--color-text-muted)]">Topilmadi</li>}
+              {filtered.length === 0 && (
+                <li className="px-3 py-6 text-center text-[12.5px] text-[var(--color-text-muted)]">{searching ? "Qidirilmoqda…" : "Topilmadi"}</li>
+              )}
+              {filtered.length > 0 && total > filtered.length && (
+                <li className="px-3 py-2 text-center text-[11.5px] text-[var(--color-text-subtle)]">
+                  {filtered.length} / {total} ko&apos;rsatildi — aniqroq qidiring
+                </li>
+              )}
             </ul>
           </div>
         </>

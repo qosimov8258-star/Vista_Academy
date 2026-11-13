@@ -7,6 +7,7 @@ import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { DashboardSummary, FinanceSummary, Organization, PaymentMethod } from "@/lib/types";
 import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
+import { useRouteFeatureOn } from "@/lib/feature-routes";
 // Ikonkalar — lucide, Sabot veb paneli bilan bir xil to'plam
 import {
   Baby,
@@ -118,7 +119,9 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
   const firstName = user?.fullName.split(" ")[0] ?? "";
   const periods = lastPeriods(date, TREND_MONTHS);
   // «To'lovlar» o'chirilgan bo'lsa pul kartalari ko'rinmaydi va moliya so'ralmaydi
-  const billingOn = useFeatureEnabled()("billing");
+  const isOn = useFeatureEnabled();
+  const routeOn = useRouteFeatureOn();
+  const billingOn = isOn("billing");
   const currentPeriod = periods[periods.length - 1];
 
   // Bosh sahifadagi umumiy so'rov bilan bir xil kalit — qayta yuklanmaydi
@@ -218,7 +221,8 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
   };
 
   // Har bo'limning o'z tizim rangi — iOS Sozlamalaridagidek (filial admini bilan mos)
-  const sections: { label: string; href: string; icon: AnyIcon; tint: IosTint }[] = [
+  // Platforma o'chirgan bo'limlar ro'yxatda ko'rinmaydi
+  const sections = ([
     { label: "Filiallar", href: `/${slug}/branches`, icon: School, tint: "orange" },
     { label: "Guruhlar", href: `/${slug}/network/groups`, icon: UsersRound, tint: "indigo" },
     { label: "Bolalar", href: `/${slug}/network/children`, icon: Baby, tint: "blue" },
@@ -227,7 +231,7 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
     { label: "Xodimlar", href: `/${slug}/users`, icon: IdCard, tint: "purple" },
     { label: "Audit", href: `/${slug}/audit-logs`, icon: ShieldCheck, tint: "red" },
     { label: "Sozlamalar", href: `/${slug}/settings`, icon: Settings, tint: "gray" },
-  ];
+  ] satisfies { label: string; href: string; icon: AnyIcon; tint: IosTint }[]).filter((section) => routeOn(section.href));
 
   const unmarkedTotal = sumOf(attention.unmarked);
   const reportsTotal = sumOf(attention.reports);
@@ -353,12 +357,14 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
                 <RingStat label={tr("Bolalar")} present={childrenPresent} absent={childrenAbsent} total={children} color={IOS.green} />
                 <RingStat label={tr("Xodimlar")} present={staffPresent} absent={staffAbsent} total={employees} color={IOS.blue} />
               </div>
+              {isOn("dailyReports") && (
               <div className="mt-3 flex items-center justify-between gap-3 px-1 text-[13px]">
                 <span className="text-[#8e8e93]">{tr("Kundalik hisobot to'ldirildi")}</span>
                 <span className="font-semibold tabular-nums text-[var(--color-text)]">
                   {s?.todayDailyReportsFilled ?? 0} / {children}
                 </span>
               </div>
+              )}
             </PageCard>
           </Group>
         </div>
@@ -366,6 +372,8 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
         {/* ══ E'tibor + qarzdorlar ══ */}
         <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-2 lg:items-start">
           <Group title={tr("E'tibor talab qiladi")} refreshing={branchesLoading && !loading}>
+            {/* Har qator o'z funksiyasi yoqilganda ko'rinadi */}
+            {isOn("attendance") && (
             <AttentionRow
               icon={CalendarX2}
               tint="orange"
@@ -375,6 +383,8 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
               loading={branchesLoading}
               href={`/${slug}/network/children`}
             />
+            )}
+            {isOn("dailyReports") && (
             <AttentionRow
               icon={ClipboardPen}
               tint="teal"
@@ -384,6 +394,8 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
               loading={branchesLoading}
               href={`/${slug}/network/children`}
             />
+            )}
+            {isOn("health") && (
             <AttentionRow
               icon={Syringe}
               tint="pink"
@@ -397,6 +409,8 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
               loading={branchesLoading}
               href={`/${slug}/network/children`}
             />
+            )}
+            {billingOn && (
             <AttentionRow
               icon={FileClock}
               tint="red"
@@ -406,6 +420,8 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
               loading={loading}
               href={`/${slug}/network/finance`}
             />
+            )}
+            {isOn("crm") && (
             <AttentionRow
               icon={Inbox}
               tint="green"
@@ -415,6 +431,7 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
               loading={loading}
               countColor={IOS.blue}
             />
+            )}
           </Group>
 
           {billingOn && (

@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma, Weekday } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
+import { loadDisabledFeatures } from "../../common/features/feature-access";
 import { TenantScope, requireOperationalScope } from "../iam/tenant-auth.types";
 import { resolveTeacherGroupIds } from "../iam/teacher-scope";
 import { CheckLessonScheduleDto, CreateLessonScheduleDto } from "./dto/create-lesson-schedule.dto";
@@ -104,7 +105,7 @@ export class LessonScheduleService {
       return rows;
     });
     // Bir nechta kun tanlangan bo'lsa ham o'qituvchiga bitta xabar boradi.
-    await this.notifyEmployee(created[0], created.map((row) => row.weekday));
+    await this.notifyEmployee(scope.organizationId, created[0], created.map((row) => row.weekday));
     return created;
   }
 
@@ -160,7 +161,7 @@ export class LessonScheduleService {
       weekdays.length !== 1 ||
       weekdays[0] !== existing.weekday;
     if (changed) {
-      await this.notifyEmployee(saved[0], saved.map((row) => row.weekday));
+      await this.notifyEmployee(scope.organizationId, saved[0], saved.map((row) => row.weekday));
     }
     return dto.weekdays ? saved : saved[0];
   }
@@ -216,6 +217,7 @@ export class LessonScheduleService {
 
   /** Dars belgilangani/o'zgargani haqida xodimga ko'rinadigan bildirishnoma yozadi. */
   private async notifyEmployee(
+    organizationId: string,
     schedule: {
       branchId: string;
       employeeId: string;
@@ -226,6 +228,8 @@ export class LessonScheduleService {
     },
     weekdays: Weekday[],
   ) {
+    // Bog'chada xodim bildirishnomalari o'chiq — yozuv yaratilmaydi
+    if ((await loadDisabledFeatures(this.prisma, organizationId)).includes("employeeNotifications")) return;
     const days = weekdays.map((day) => WEEKDAY_LABEL[day]).join(", ");
     const room = schedule.room ? ` «${schedule.room.name}» xonasida` : "";
     await this.prisma.employeeNotification.create({

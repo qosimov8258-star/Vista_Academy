@@ -91,38 +91,38 @@ export class CashDeskController {
 
   @Get("debtors")
   debtors(@CurrentTenantUser() user: TenantAuthenticatedUser) {
-    return this.service.debtors(toTenantScope(user));
+    return this.service.debtors(toTenantScope(user), user.disabledFeatures);
   }
 
   @Post("debtors/:childId/remind")
   remind(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("childId") childId: string) {
-    return this.service.remind(toTenantScope(user), user.id, childId);
+    return this.service.remind(toTenantScope(user), user.id, childId, user.disabledFeatures);
   }
 
   @Get("payables/:groupId")
   payables(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("groupId") groupId: string) {
-    return this.service.payables(toTenantScope(user), groupId);
+    return this.service.payables(toTenantScope(user), groupId, user.disabledFeatures);
   }
 
   @Get("groups")
   groups(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query("period") period: string) {
-    return this.service.groups(toTenantScope(user), period);
+    return this.service.groups(toTenantScope(user), period, user.disabledFeatures);
   }
 
   /** Tanlangan oy bo'yicha filialdagi barcha bolalar holati (To'lovlar sahifasi va qidiruv uchun). */
   @Get("children")
   periodChildren(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query("period") period: string) {
-    return this.service.periodChildren(toTenantScope(user), period);
+    return this.service.periodChildren(toTenantScope(user), period, user.disabledFeatures);
   }
 
   @Get("groups/:groupId")
   groupChildren(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("groupId") groupId: string, @Query("period") period: string) {
-    return this.service.groupChildren(toTenantScope(user), groupId, period);
+    return this.service.groupChildren(toTenantScope(user), groupId, period, user.disabledFeatures);
   }
 
   @Get("report")
   report(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query("month") month: string) {
-    return this.service.report(toTenantScope(user), month);
+    return this.service.report(toTenantScope(user), month, user.disabledFeatures);
   }
 }
 

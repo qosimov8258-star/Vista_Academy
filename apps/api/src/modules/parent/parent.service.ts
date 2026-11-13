@@ -3,6 +3,7 @@ import { InvoiceStatus, type AttendanceStatus } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
 import { AuthenticatedParent } from "./parent-auth.types";
 import { PaymentRemindersService, daysBetween, tashkentTodayUtcMidnight } from "../payment-reminders/payment-reminders.service";
+import { allOn, loadDisabledFeatures } from "../../common/features/feature-access";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 
@@ -60,13 +61,18 @@ export class ParentService {
     const child = await this.assertOwnsChild(parent, childId);
     const date = dateInput ?? todayDateString();
     const dateOnly = toDateOnly(date);
+    // O'chirilgan funksiyalar ma'lumoti umuman o'qilmaydi — javobda null / []
+    const disabled = parent.disabledFeatures ?? [];
+    const attendanceOn = allOn(disabled, "attendance");
+    const reportsOn = allOn(disabled, "dailyReports");
+    const nutritionOn = allOn(disabled, "nutrition");
 
     const [attendance, report, menu, menuPhotos] = await Promise.all([
-      this.prisma.attendance.findUnique({
+      !attendanceOn ? null : this.prisma.attendance.findUnique({
         where: { childId_date: { childId: child.id, date: dateOnly } },
         select: { status: true, note: true, parentReason: true, checkInTime: true, checkOutTime: true },
       }),
-      this.prisma.dailyReport.findUnique({
+      !reportsOn ? null : this.prisma.dailyReport.findUnique({
         where: { childId_date: { childId: child.id, date: dateOnly } },
         select: {
           eatingQuality: true,
@@ -78,12 +84,12 @@ export class ParentService {
         },
       }),
       // Ovqat menyusi filial bo'yicha, bola bo'yicha emas
-      this.prisma.menuEntry.findUnique({
+      !nutritionOn ? null : this.prisma.menuEntry.findUnique({
         where: { branchId_date: { branchId: child.branchId, date: dateOnly } },
         select: { breakfast: true, lunch: true, snack: true },
       }),
       // Oshpaz yuklagan taom suratlari — faqat ro'yxat, surat alohida so'raladi
-      this.prisma.menuPhoto.findMany({
+      !nutritionOn ? [] : this.prisma.menuPhoto.findMany({
         where: { branchId: child.branchId, date: dateOnly },
         select: { id: true, meal: true },
         orderBy: { createdAt: "asc" },
@@ -218,18 +224,24 @@ export class ParentService {
   }
 
   private async notifyGroupTeachers(
-    child: { branchId: string; group: { id: string } | null },
+    child: { branchId: string; organizationId: string; group: { id: string } | null },
     message: string,
   ): Promise<number> {
     if (!child.group) {
       throw new BadRequestException("Bola hali guruhga biriktirilmagan");
     }
+    const organizationId = child.organizationId;
     const teachers = await this.prisma.groupTeacher.findMany({
       where: { groupId: child.group.id },
       select: { employeeId: true },
     });
     if (teachers.length === 0) {
       throw new BadRequestException("Guruhga tarbiyachi biriktirilmagan");
+    }
+    // Bog'chada xodim bildirishnomalari o'chiq — yozuv yaratilmaydi, so'rov baribir muvaffaqiyatli
+    const disabled = await loadDisabledFeatures(this.prisma, organizationId);
+    if (!allOn(disabled, "employeeNotifications")) {
+      return 0;
     }
     await this.prisma.employeeNotification.createMany({
       data: teachers.map((t) => ({ branchId: child.branchId, employeeId: t.employeeId, message })),
@@ -333,6 +345,10 @@ export class ParentService {
    * oynasidan (`daysAfterDue`) uzoq chiqib ketgan qarzdorlik uchun ham.
    */
   async paymentReminder(parent: AuthenticatedParent, childId: string) {
+    // Ota-onalar panelida to'lov eslatmalari (yoki to'lovlar) o'chiq — karta ko'rinmaydi
+    if (!allOn(parent.disabledFeatures ?? [], "billing", "paymentReminders")) {
+      return { visible: false as const };
+    }
     const link = await this.prisma.childGuardian.findFirst({
       where: { guardianId: parent.id, childId },
       select: {

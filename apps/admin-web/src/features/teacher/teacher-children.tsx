@@ -7,6 +7,8 @@ import { Camera, Paperclip, Star, UserRound } from "lucide-react";
 import { api, getPaginated } from "@/lib/api";
 import type { Child, ChildAllergy, CoinChildBalance } from "@/lib/types";
 import { useBranchContext } from "@/lib/use-branch-context";
+import { useFeatureEnabled } from "@/lib/use-auth";
+import { useRouteFeatureOn } from "@/lib/feature-routes";
 import { ChildPhoto } from "@/components/ui/child-photo";
 import { initials } from "@/components/ui/avatar";
 import { ChildIcon, CloseIcon, PhoneIcon, SearchIcon } from "@/components/ios/icons";
@@ -39,6 +41,13 @@ export function TeacherChildren({ slug }: { slug: string }) {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<"" | "ACTIVE" | "INACTIVE">("ACTIVE");
   const [onlyNoPhoto, setOnlyNoPhoto] = useState(false);
+  // Platforma o'chirgan funksiyalar — so'rov ketmaydi, tugma ko'rinmaydi
+  const isOn = useFeatureEnabled();
+  const routeOn = useRouteFeatureOn();
+  const healthOn = isOn("health");
+  const coinsOn = isOn("coins");
+  const photoOn = isOn("childAvatar");
+  const materialsOn = routeOn(`/${slug}/materials`);
 
   // Ochiq varaq: bola varag'i, surat yoki yulduzcha
   const [current, setCurrent] = useState<Child | null>(null);
@@ -58,12 +67,14 @@ export function TeacherChildren({ slug }: { slug: string }) {
   const allergiesQuery = useQuery({
     queryKey: ["child-allergies", slug, forcedBranchId],
     queryFn: () => api.get<ChildAllergy[]>(`/app/health/allergies${forcedBranchId ? `?branchId=${forcedBranchId}` : ""}`),
+    enabled: healthOn,
   });
   const allergyIds = new Set((allergiesQuery.data ?? []).map((a) => a.child.id));
   // Har bir bolaning yulduzcha balansi — qatorda ⭐ kapsulasida ko'rinadi
   const starsQuery = useQuery({
     queryKey: ["coin-children", slug, forcedBranchId ?? "mine"],
     queryFn: () => api.get<CoinChildBalance[]>(`/app/coins/children${forcedBranchId ? `?branchId=${forcedBranchId}` : ""}`),
+    enabled: coinsOn,
   });
   const starsByChild = new Map((starsQuery.data ?? []).map((row) => [row.childId, row.balance]));
 
@@ -127,10 +138,14 @@ export function TeacherChildren({ slug }: { slug: string }) {
       </div>
 
       {/* Guruh fayllari telefondagi pastki menyuda yo'q — ota-onalarga yuborish shu yerdan ham */}
+      {(materialsOn || (photoOn && (noPhotoCount > 0 || onlyNoPhoto))) && (
       <Group>
-        <Row first icon={Paperclip} tint="teal" title={tr("Vazifa jo'natish")} subtitle={tr("Vazifa, rasm, video yoki hujjat")} href={`/${slug}/materials`} />
-        {(noPhotoCount > 0 || onlyNoPhoto) && (
+        {materialsOn && (
+          <Row first icon={Paperclip} tint="teal" title={tr("Vazifa jo'natish")} subtitle={tr("Vazifa, rasm, video yoki hujjat")} href={`/${slug}/materials`} />
+        )}
+        {photoOn && (noPhotoCount > 0 || onlyNoPhoto) && (
           <Row
+            first={!materialsOn}
             icon={Camera}
             tint="orange"
             title={onlyNoPhoto ? tr("Faqat surati yo'qlar ko'rsatilmoqda") : tr("Surati yo'q bolalar")}
@@ -140,6 +155,7 @@ export function TeacherChildren({ slug }: { slug: string }) {
           />
         )}
       </Group>
+      )}
 
       <Group
         title={
@@ -181,7 +197,7 @@ export function TeacherChildren({ slug }: { slug: string }) {
                 >
                   <span className="relative shrink-0">
                     <ChildPhoto child={child} size={44} fallback={initials(child.fullName)} />
-                    {!child.avatarUpdatedAt && (
+                    {photoOn && !child.avatarUpdatedAt && (
                       <span className="absolute -bottom-0.5 -right-0.5 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-[#ff9500] text-white ring-2 ring-white">
                         <Camera className="h-2.5 w-2.5" strokeWidth={2.6} />
                       </span>
@@ -201,7 +217,7 @@ export function TeacherChildren({ slug }: { slug: string }) {
                       {!active && ` · ${tr("Nofaol")}`}
                     </span>
                   </span>
-                  {active && (
+                  {active && coinsOn && (
                     <span
                       className="inline-flex h-7 shrink-0 items-center gap-1 rounded-full px-2.5 text-[13.5px] font-semibold tabular-nums"
                       style={{ backgroundColor: `${IOS.orange}1f`, color: IOS.orange }}
@@ -236,34 +252,40 @@ export function TeacherChildren({ slug }: { slug: string }) {
         {shown && (
           <>
             <div className="flex flex-col items-center gap-2 pt-1 text-center">
-              <button
-                type="button"
-                onClick={() => setView("photo")}
-                aria-label={tr("{0} surati", shown.fullName)}
-                className="relative rounded-full transition-transform active:scale-[0.97]"
-              >
+              {photoOn ? (
+                <button
+                  type="button"
+                  onClick={() => setView("photo")}
+                  aria-label={tr("{0} surati", shown.fullName)}
+                  className="relative rounded-full transition-transform active:scale-[0.97]"
+                >
+                  <ChildPhoto child={shown} size={88} fallback={initials(shown.fullName)} className="text-[30px]" />
+                  <span className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full border-2 border-[#f2f2f7] bg-[var(--color-primary)] text-white">
+                    <Camera className="h-3.5 w-3.5" strokeWidth={2.4} />
+                  </span>
+                </button>
+              ) : (
                 <ChildPhoto child={shown} size={88} fallback={initials(shown.fullName)} className="text-[30px]" />
-                <span className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full border-2 border-[#f2f2f7] bg-[var(--color-primary)] text-white">
-                  <Camera className="h-3.5 w-3.5" strokeWidth={2.4} />
-                </span>
-              </button>
+              )}
               <p className="px-6 text-[20px] font-bold leading-tight text-[var(--color-text)]">{tr(shown.fullName)}</p>
               <div className="flex flex-wrap justify-center gap-1.5">
                 {shown.group?.name && <Pill color={IOS.blue}>{tr(shown.group.name)}</Pill>}
                 {allergyIds.has(shown.id) && <Pill color={IOS.red}>{tr("Allergiya")}</Pill>}
                 {shown.status !== "ACTIVE" && <Pill>{tr("Nofaol")}</Pill>}
-                {!shown.avatarUpdatedAt && <Pill color={IOS.orange}>{tr("Surati yo'q")}</Pill>}
+                {photoOn && !shown.avatarUpdatedAt && <Pill color={IOS.orange}>{tr("Surati yo'q")}</Pill>}
               </div>
             </div>
 
             <SheetSection>
-              <IosRow
-                leading={<IosIcon icon={Camera} tint="orange" size={30} />}
-                title={shown.avatarUpdatedAt ? tr("Suratni almashtirish") : tr("Surat qo'yish")}
-                subtitle={tr("Surat Face ID uchun kerak")}
-                onClick={() => setView("photo")}
-              />
-              {shown.status === "ACTIVE" && (
+              {photoOn && (
+                <IosRow
+                  leading={<IosIcon icon={Camera} tint="orange" size={30} />}
+                  title={shown.avatarUpdatedAt ? tr("Suratni almashtirish") : tr("Surat qo'yish")}
+                  subtitle={tr("Surat Face ID uchun kerak")}
+                  onClick={() => setView("photo")}
+                />
+              )}
+              {shown.status === "ACTIVE" && coinsOn && (
                 <IosRow
                   leading={<IosIcon icon={Star} tint="orange" size={30} />}
                   title={tr("Yulduzcha berish")}
@@ -305,8 +327,8 @@ export function TeacherChildren({ slug }: { slug: string }) {
 
       {shown && (
         <>
-          <AwardStarsSheet open={view === "star"} onClose={() => setView("child")} slug={slug} child={shown} balance={starsByChild.get(shown.id)} />
-          <ChildPhotoSheet open={view === "photo"} onClose={() => setView("child")} slug={slug} child={shown} canRemove={false} />
+          {coinsOn && <AwardStarsSheet open={view === "star"} onClose={() => setView("child")} slug={slug} child={shown} balance={starsByChild.get(shown.id)} />}
+          {photoOn && <ChildPhotoSheet open={view === "photo"} onClose={() => setView("child")} slug={slug} child={shown} canRemove={false} />}
         </>
       )}
     </TeacherPage>

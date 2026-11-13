@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
+import { loadDisabledFeatures } from "../../common/features/feature-access";
 import { decryptSecret } from "../../common/crypto/reversible-secret";
 import type { AgentDevice } from "./agent/agent-token.guard";
 import type { AgentEventDto } from "./dto/agent-events.dto";
@@ -131,11 +132,18 @@ export class FaceIdAgentService {
       this.logger.warn(`Qurilma "${device.name}": noma'lum raqamlar ${unknown.join(", ")}`);
     }
 
+    // Voqealar saqlanadi, lekin davomat/coin faqat yoqilgan funksiyalar uchun
+    const disabled = device.disabledFeatures ?? (await loadDisabledFeatures(this.prisma, device.organizationId));
+    const staffAttendanceOn = !disabled.includes("staffAttendance");
+    const childAttendanceOn = !disabled.includes("attendance");
+    const coinsOn = !disabled.includes("coins");
+
     // Tegishli (xodim, kun) juftliklari uchun davomat qayta hisoblanadi —
     // takror yuborilgan paket natijani o'zgartirmaydi (hisob barcha voqealardan).
     const timezone = await this.branchTimezone(device.branchId);
     const pairs = new Map<string, { employeeId: string; branchId: string; dateKey: string }>();
     for (const r of rows) {
+      if (!staffAttendanceOn) break;
       const employee = r.employeeNo ? byNo.get(r.employeeNo) : undefined;
       if (!employee) continue;
       const dateKey = localDateKey(r.time, timezone);
@@ -147,13 +155,14 @@ export class FaceIdAgentService {
     }
     const childPairs = new Map<string, { child: (typeof children)[number]; dateKey: string }>();
     for (const r of rows) {
+      if (!childAttendanceOn) break;
       const child = r.employeeNo ? childByNo.get(r.employeeNo) : undefined;
       if (!child) continue;
       const dateKey = localDateKey(r.time, timezone);
       childPairs.set(`${child.id}|${dateKey}`, { child, dateKey });
     }
     for (const pair of childPairs.values()) {
-      if (await this.recomputeChildAttendance(pair.child, pair.dateKey)) attendanceUpdated++;
+      if (await this.recomputeChildAttendance(pair.child, pair.dateKey, coinsOn)) attendanceUpdated++;
     }
 
     return { received: events.length, inserted: created.count, attendanceUpdated };
@@ -224,6 +233,8 @@ export class FaceIdAgentService {
   async recomputeChildAttendance(
     child: { id: string; branchId: string; organizationId: string },
     dateKey: string,
+    /** Koin tizimi o'chiq bo'lsa davomat coinsiz yoziladi */
+    coinsOn = true,
   ): Promise<boolean> {
     const branch = await this.prisma.branch.findUniqueOrThrow({ where: { id: child.branchId }, select: { timezone: true } });
     const window = utcWindowAround(dateKey);
@@ -246,19 +257,21 @@ export class FaceIdAgentService {
     }
     try {
       await this.prisma.$transaction(async (tx) => {
-        const coin = await tx.coinTransaction.create({
-          data: {
-            organizationId: child.organizationId,
-            branchId: child.branchId,
-            childId: child.id,
-            amount: ATTENDANCE_COINS,
-            source: "ATTENDANCE",
-            reason: `Kunlik davomat — ${dateKey}`,
-          },
-        });
+        const coin = coinsOn
+          ? await tx.coinTransaction.create({
+              data: {
+                organizationId: child.organizationId,
+                branchId: child.branchId,
+                childId: child.id,
+                amount: ATTENDANCE_COINS,
+                source: "ATTENDANCE",
+                reason: `Kunlik davomat — ${dateKey}`,
+              },
+            })
+          : null;
         await tx.attendance.create({
           // Izoh bo'sh qoladi — u tarbiyachiniki; terminal yozgani vaqtlardan ko'rinadi
-          data: { childId: child.id, branchId: child.branchId, date, status: "PRESENT", coinTransactionId: coin.id, ...timeFields },
+          data: { childId: child.id, branchId: child.branchId, date, status: "PRESENT", coinTransactionId: coin?.id ?? null, ...timeFields },
         });
       });
     } catch (err) {

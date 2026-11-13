@@ -5,6 +5,7 @@ import { Lock } from "lucide-react";
 import { useAppPathname } from "@/lib/tenant-host-context";
 import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
 import { featureForPath } from "@/lib/feature-routes";
+import { Spinner } from "@/components/ios/spinner";
 import { useTr } from "@/i18n/tr";
 
 /**
@@ -15,11 +16,20 @@ import { useTr } from "@/i18n/tr";
 export function FeatureRouteGate({ slug, children }: { slug: string; children: React.ReactNode }) {
   const tr = useTr();
   const pathname = useAppPathname();
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const isOn = useFeatureEnabled();
-  const feature = featureForPath(pathname);
+  const features = featureForPath(pathname);
 
-  if (!user || !feature || isOn(feature)) return <>{children}</>;
+  // `me` kelmaguncha sahifa chizilmaydi — aks holda o'chirilgan bo'lim
+  // so'rovlari ketib, bir lahzaga ko'rinib qolardi
+  if (isLoading) {
+    return (
+      <div className="flex justify-center pt-24 text-[#8e8e93]">
+        <Spinner className="h-6 w-6" />
+      </div>
+    );
+  }
+  if (!user || features.every(isOn)) return <>{children}</>;
 
   return (
     <div className="mx-auto flex max-w-[420px] flex-col items-center px-6 pt-20 text-center">

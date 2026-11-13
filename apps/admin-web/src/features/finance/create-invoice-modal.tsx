@@ -5,10 +5,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { api, ApiError } from "@/lib/api";
-import type { Branch, Invoice } from "@/lib/types";
+import { api, ApiError, getPaginated } from "@/lib/api";
+import type { Branch, Child, Group, Invoice } from "@/lib/types";
 import type { GroupChildRow, GroupPaymentSummary } from "@/features/cash/shared";
-import { useAuth } from "@/lib/use-auth";
+import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
 import { Modal } from "@/components/ui/modal";
 import { Input, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,9 @@ export function CreateInvoiceModal({ open, onClose, slug }: { open: boolean; onC
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
   const { user } = useAuth();
+  // Guruh/bola holati «Kassa»dan (/cash/*) olinadi; kassa o'chirilgan bo'lsa —
+  // oddiy guruh va bolalar ro'yxati (to'lov belgisisiz)
+  const cashOn = useFeatureEnabled()("cash");
 
   const { data: branch } = useQuery({
     queryKey: ["branch", slug, user?.branchId],
@@ -65,13 +68,28 @@ export function CreateInvoiceModal({ open, onClose, slug }: { open: boolean; onC
   const [groupId, setGroupId] = useState("");
   const validPeriod = /^\d{4}-\d{2}$/.test(period ?? "");
   const { data: groups } = useQuery({
-    queryKey: ["cash-groups", slug, period],
-    queryFn: () => api.get<{ groups: GroupPaymentSummary[] }>(`/app/cash/groups?period=${period}`),
+    queryKey: ["cash-groups", slug, period, cashOn],
+    queryFn: async (): Promise<{ groups: Pick<GroupPaymentSummary, "groupId" | "name" | "total" | "monthlyFee">[] }> => {
+      if (cashOn) return api.get<{ groups: GroupPaymentSummary[] }>(`/app/cash/groups?period=${period}`);
+      const list = await api.get<Group[]>("/app/groups");
+      return {
+        groups: list.map((g) => ({
+          groupId: g.id,
+          name: g.name,
+          total: g._count?.children ?? 0,
+          monthlyFee: g.monthlyFee ? Number(g.monthlyFee) : null,
+        })),
+      };
+    },
     enabled: open && validPeriod,
   });
   const { data: groupChildren } = useQuery({
-    queryKey: ["cash-group-children", slug, groupId, period],
-    queryFn: () => api.get<{ children: GroupChildRow[] }>(`/app/cash/groups/${groupId}?period=${period}`),
+    queryKey: ["cash-group-children", slug, groupId, period, cashOn],
+    queryFn: async (): Promise<{ children: Pick<GroupChildRow, "childId" | "childName" | "state">[] }> => {
+      if (cashOn) return api.get<{ children: GroupChildRow[] }>(`/app/cash/groups/${groupId}?period=${period}`);
+      const page = await getPaginated<Child>(`/app/children?page=1&limit=100&status=ACTIVE&groupId=${groupId}`);
+      return { children: page.data.map((c) => ({ childId: c.id, childName: c.fullName, state: "NONE" as const })) };
+    },
     enabled: open && validPeriod && !!groupId,
   });
 

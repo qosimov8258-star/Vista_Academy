@@ -6,6 +6,7 @@ import { TenantScope } from "../iam/tenant-auth.types";
 import { formatChildPublicId } from "../children/child-creation";
 import { assertMoneyReader } from "../billing/billing.service";
 import { resolveTeacherGroupIds, teacherChildWhere } from "../iam/teacher-scope";
+import { allOn } from "../../common/features/feature-access";
 
 /** Bolalar ro'yxati (ota-ona telefonlari bilan) va lidlar eksporti — o'qituvchiga emas. */
 function assertNotTeacher(scope: TenantScope) {
@@ -62,8 +63,10 @@ function toDateOnly(value: string): Date {
 export class ExportsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async childrenCsv(scope: TenantScope, branchId?: string): Promise<string> {
+  async childrenCsv(scope: TenantScope, branchId?: string, disabled: readonly string[] = []): Promise<string> {
     assertNotTeacher(scope);
+    // Vasiylar o'chiq — ota-ona ismi va telefoni ustunlari umuman chiqmaydi
+    const guardiansOn = allOn(disabled, "guardians");
     const children = await this.prisma.child.findMany({
       where: { organizationId: scope.organizationId, branchId: scope.branchId ?? branchId },
       include: {
@@ -71,7 +74,7 @@ export class ExportsService {
         group: { select: { name: true } },
         guardians: {
           orderBy: { isPrimary: "desc" },
-          take: 1,
+          take: guardiansOn ? 1 : 0,
           include: { guardian: { select: { fullName: true, phone: true } } },
         },
       },
@@ -82,8 +85,7 @@ export class ExportsService {
         "ID",
         "To'liq ism",
         "Tug'ilgan sana",
-        "Ota-ona",
-        "Telefon",
+        ...(guardiansOn ? ["Ota-ona", "Telefon"] : []),
         "Filial",
         "Guruh",
         "Holat",
@@ -93,8 +95,7 @@ export class ExportsService {
         formatChildPublicId(c.publicId),
         c.fullName,
         c.birthDate ? c.birthDate.toISOString().slice(0, 10) : "",
-        c.guardians[0]?.guardian.fullName ?? "",
-        c.guardians[0]?.guardian.phone ?? "",
+        ...(guardiansOn ? [c.guardians[0]?.guardian.fullName ?? "", c.guardians[0]?.guardian.phone ?? ""] : []),
         c.branch?.name ?? "",
         c.group?.name ?? "",
         c.status,
@@ -377,7 +378,12 @@ export class ExportsService {
    * Bola uchun hujjat: shartnoma (`contract`) yoki ma'lumotnoma (`certificate`).
    * Matn qisqa shablon — tashkilot o'z shartlarini keyinchalik shu yerdan o'zgartiradi.
    */
-  async childDocumentPdf(scope: TenantScope, childId: string, kind: "contract" | "certificate"): Promise<Buffer> {
+  async childDocumentPdf(
+    scope: TenantScope,
+    childId: string,
+    kind: "contract" | "certificate",
+    disabled: readonly string[] = [],
+  ): Promise<Buffer> {
     if (scope.role === "TEACHER" || scope.role === "FINANCE") {
       throw new ForbiddenException("Hujjatlarni administrator yoki filial admini chiqaradi");
     }
@@ -389,7 +395,8 @@ export class ExportsService {
         group: { select: { name: true } },
         guardians: {
           orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
-          take: 1,
+          // Vasiylar o'chiq — ota-ona ismi/telefoni hujjatga yozilmaydi (bo'sh chiziq qoladi)
+          take: allOn(disabled, "guardians") ? 1 : 0,
           select: { guardian: { select: { fullName: true, phone: true } } },
         },
       },

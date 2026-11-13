@@ -15,7 +15,7 @@ import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import type { EmployeeNotification } from "@/lib/types";
 import { clearTenantTokens, getTenantRefreshToken } from "@/lib/tenant-session";
 import clsx from "clsx";
-import { useAuth } from "@/lib/use-auth";
+import { useAuth, useFeatureFlags } from "@/lib/use-auth";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { useSidebarCollapsed } from "@/lib/use-sidebar-collapsed";
 import { useSidebarSections } from "@/lib/use-sidebar-sections";
@@ -173,13 +173,16 @@ export function Sidebar({ slug }: { slug: string }) {
   const isManager = user?.role === "MANAGER";
   const isFinance = user?.role === "FINANCE";
   // Yon paneldagi "Bildirishnomalarim" belgisi uchun — daqiqada bir marta yangilanadi.
+  // «Xodim bildirishnomalari» o'chirilgan bo'lsa so'rov ketmaydi (band routeOn bilan yashirinadi)
+  const features = useFeatureFlags();
+  const bellOn = receivesEmployeeNotifications(user?.role) && features.ready && features.isOn("employeeNotifications");
   const notificationsQuery = useQuery({
     queryKey: ["employee-notifications", slug],
     queryFn: () => api.get<EmployeeNotification[]>("/app/employee-notifications"),
-    enabled: receivesEmployeeNotifications(user?.role),
+    enabled: bellOn,
     refetchInterval: 60_000,
   });
-  const inboxUnread = useEmployeeInboxUnread(slug, receivesEmployeeNotifications(user?.role));
+  const inboxUnread = useEmployeeInboxUnread(slug, bellOn);
   const unreadNotificationsCount = (notificationsQuery.data?.filter((n) => !n.isRead).length ?? 0) + inboxUnread;
   const params = useParams<{ branchSlug?: string }>();
   const { branch, branches } = useBranchContext(slug);

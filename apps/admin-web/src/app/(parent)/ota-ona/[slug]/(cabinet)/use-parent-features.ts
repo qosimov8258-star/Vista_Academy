@@ -15,10 +15,15 @@ export function useParentFeatures(slug: string) {
     queryKey: ["parent-me", slug],
     queryFn: () => parentApi.get<{ parent: ParentAccount; children: ParentChild[] }>("/app/parent/me"),
     retry: false,
+    // Platforma bo'limni o'chirsa/yoqsa — kabinet bir daqiqada sezadi
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
   });
   const disabled = me.data?.parent.disabledFeatures ?? [];
   return {
     ready: !!me.data,
+    /** `me` olinmadi (seans tugagan, kabinet o'chirilgan) — xato, aks holda null */
+    error: me.error,
     isOn: (key: string | undefined) => !key || !disabled.includes(key),
   };
 }

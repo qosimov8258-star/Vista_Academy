@@ -27,8 +27,12 @@ export function ParentTabBar({ slug }: { slug: string }) {
   const pathname = useAppPathname();
   const base = `/ota-ona/${slug}`;
   // Platforma o'chirgan bo'limlar menyuda ko'rinmaydi
-  const { isOn } = useParentFeatures(slug);
-  const tabs = CABINET_TABS.filter((tab) => isOn("feature" in tab ? tab.feature : undefined));
+  // `me` kelmaguncha faqat doim bor bo'limlar — hammasi chiqib, keyin yo'qolmasin
+  const { ready, isOn } = useParentFeatures(slug);
+  const tabs = CABINET_TABS.filter((tab) => {
+    const feature = "feature" in tab ? tab.feature : undefined;
+    return feature ? ready && isOn(feature) : true;
+  });
 
   const overflowing = tabs.length > TAB_BAR_SLOTS;
   const visibleCount = overflowing ? TAB_BAR_SLOTS - 1 : tabs.length;

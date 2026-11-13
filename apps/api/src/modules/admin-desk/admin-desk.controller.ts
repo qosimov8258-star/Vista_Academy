@@ -17,7 +17,7 @@ export class AdminDeskController {
 
   @Get("calls")
   calls(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query("date") date: string) {
-    return this.service.calls(toTenantScope(user), date);
+    return this.service.calls(toTenantScope(user), date, user.disabledFeatures);
   }
 
   /** Oxirgi 30 kunda qo'ng'iroq qilingan (javob olingan) arizalar */
@@ -28,17 +28,17 @@ export class AdminDeskController {
 
   @Post("calls/done")
   callDone(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: CallDoneDto) {
-    return this.service.callDone(toTenantScope(user), user.fullName, dto);
+    return this.service.callDone(toTenantScope(user), user.fullName, dto, user.disabledFeatures);
   }
 
   @Post("calls/undo")
   callUndo(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: CallDoneDto) {
-    return this.service.callUndo(toTenantScope(user), dto);
+    return this.service.callUndo(toTenantScope(user), dto, user.disabledFeatures);
   }
 
   @Get("board")
   board(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query("date") date: string) {
-    return this.service.board(toTenantScope(user), date);
+    return this.service.board(toTenantScope(user), date, user.disabledFeatures);
   }
 
   @Get("pickups")
@@ -64,6 +64,6 @@ export class AdminDeskController {
 
   @Get("weekly")
   weekly(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query("from") from?: string) {
-    return this.service.weekly(toTenantScope(user), from);
+    return this.service.weekly(toTenantScope(user), from, user.disabledFeatures);
   }
 }

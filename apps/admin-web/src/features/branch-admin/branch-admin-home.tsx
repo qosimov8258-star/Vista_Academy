@@ -4,6 +4,7 @@ import { useCallback, useState, type ComponentType, type ReactNode } from "react
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/use-auth";
+import { useRouteFeatureOn } from "@/lib/feature-routes";
 import type { IconProps } from "@/components/ios/icons";
 import { RefreshCw as RefreshIcon } from "lucide-react";
 import {
@@ -80,6 +81,11 @@ export function BranchAdminHome({ slug, branchName }: { slug: string; branchName
   const { hour, date: now } = tashkentNow();
   const date = todayTashkent();
   const firstName = user?.fullName.split(" ")[0] ?? "";
+  // Platforma o'chirgan bo'limlarga havola va ko'rsatkich ko'rinmaydi
+  const routeOn = useRouteFeatureOn();
+  const nutritionOn = routeOn(`/${slug}/nutrition`);
+  const staffOn = routeOn(`/${slug}/staff-attendance`);
+  const crmOn = routeOn(`/${slug}/crm`);
 
   const board = useQuery({
     queryKey: ["desk-board", slug, date],
@@ -135,7 +141,7 @@ export function BranchAdminHome({ slug, branchName }: { slug: string; branchName
 
   const percentOf = (n: number) => (t && t.total > 0 ? `${Math.round((n / t.total) * 100)}%` : undefined);
 
-  const sections: { label: string; href: string; icon: ComponentType<IconProps>; tint: IosTint }[] = [
+  const sections = ([
     { label: "Bolalar", href: `/${slug}/children`, icon: ChildIcon, tint: "blue" },
     { label: "Guruhlar", href: `/${slug}/groups`, icon: GroupIcon, tint: "indigo" },
     { label: "Xodimlar", href: `/${slug}/employees`, icon: TeacherIcon, tint: "purple" },
@@ -144,7 +150,7 @@ export function BranchAdminHome({ slug, branchName }: { slug: string; branchName
     { label: "Arizalar (CRM)", href: `/${slug}/crm`, icon: PhoneIcon, tint: "green" },
     { label: "Xabarlar", href: `/${slug}/notifications`, icon: BellIcon, tint: "red" },
     { label: "Haftalik hisobot", href: `/${slug}/weekly-report`, icon: NoteIcon, tint: "gray" },
-  ];
+  ] satisfies { label: string; href: string; icon: ComponentType<IconProps>; tint: IosTint }[]).filter((section) => routeOn(section.href));
 
   return (
     // Telefonda chetlar 16px (asosiy konteyner 24px beradi)
@@ -267,6 +273,7 @@ export function BranchAdminHome({ slug, branchName }: { slug: string; branchName
                 subtitle={b ? tr("{0} tasi olib ketilgan", b.totals.pickedUp) : undefined}
                 value={<Value loading={board.isLoading}>{b?.stillHere ?? 0}</Value>}
               />
+              {nutritionOn && (
               <Row
                 href={`/${slug}/nutrition`}
                 leading={<IosIcon icon={MealIcon} tint="orange" size={30} />}
@@ -274,6 +281,8 @@ export function BranchAdminHome({ slug, branchName }: { slug: string; branchName
                 subtitle={tr("kelgan + kechikkanlar")}
                 value={<Value loading={board.isLoading}>{b?.mealCount ?? 0}</Value>}
               />
+              )}
+              {staffOn && (
               <Row
                 href={`/${slug}/staff-attendance`}
                 leading={<IosIcon icon={TeacherIcon} tint="purple" size={30} />}
@@ -284,6 +293,8 @@ export function BranchAdminHome({ slug, branchName }: { slug: string; branchName
                   </Value>
                 }
               />
+              )}
+              {crmOn && (
               <Row
                 href={`/${slug}/crm`}
                 leading={<IosIcon icon={PhoneIcon} tint="green" size={30} />}
@@ -291,9 +302,11 @@ export function BranchAdminHome({ slug, branchName }: { slug: string; branchName
                 subtitle={tr("shu hafta landing sahifadan kelgan")}
                 value={<Value loading={weekly.isLoading}>{weekly.data?.newLeads ?? 0}</Value>}
               />
+              )}
             </Group>
 
-            {/* Ishda yo'q xodimlar */}
+            {/* Ishda yo'q xodimlar — «Xodimlar davomati» yoqilgan bo'lsa */}
+            {staffOn && (
             <Group title={tr("Bugun ishda yo'q")} bare={board.isLoading}>
               {board.isLoading ? (
                 <SkeletonRows rows={2} />
@@ -324,6 +337,7 @@ export function BranchAdminHome({ slug, branchName }: { slug: string; branchName
                 })
               )}
             </Group>
+            )}
 
             {/* Bo'limlar */}
             <Group title={tr("Bo'limlar")}>
@@ -373,7 +387,7 @@ export function BranchAdminHome({ slug, branchName }: { slug: string; branchName
         onClose={() => setOpenStaff(null)}
         cancelLabel="Yopish"
         title={openStaff?.fullName ?? ""}
-        footer={<SheetPrimaryButton href={`/${slug}/staff-attendance`}>{tr("Xodimlar davomati")}</SheetPrimaryButton>}
+        footer={staffOn ? <SheetPrimaryButton href={`/${slug}/staff-attendance`}>{tr("Xodimlar davomati")}</SheetPrimaryButton> : undefined}
       >
         {openStaff && (
           <SheetSection title={tr("Bugun")}>

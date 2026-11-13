@@ -3050,5 +3050,8 @@
  "Logoni o'chirib bo'lmadi": "Could not remove the logo",
  "Logo o'chiriladi, o'rniga bog'cha nomining bosh harflari ko'rinadi.": "The logo will be removed and the kindergarten's initials will show instead.",
  "Yon menyuda va kirish sahifasida bog'cha nomining bosh harflari o'rnida ko'rinadi. Shaffof fonli PNG eng chiroyli chiqadi.": "Shown in the side menu and on the sign-in page instead of the initials. A PNG with a transparent background looks best.",
- "Nom va logo butun panelda — yon menyu, kirish sahifasi, xodim va bola qo'shish oynalarida ko'rinadi.": "The name and logo are shown across the panel — in the side menu, on the sign-in page and in the add-employee and add-child windows."
+ "Nom va logo butun panelda — yon menyu, kirish sahifasi, xodim va bola qo'shish oynalarida ko'rinadi.": "The name and logo are shown across the panel — in the side menu, on the sign-in page and in the add-employee and add-child windows.",
+ "Bu bo'lim o'chirilgan": "This section is turned off",
+ "Bu funksiya bog'changiz uchun yoqilmagan. Kerak bo'lsa, platforma operatoriga murojaat qiling.": "This feature isn't enabled for your kindergarten. If you need it, contact the platform operator.",
+ "Bosh sahifaga": "Go to home"
 }

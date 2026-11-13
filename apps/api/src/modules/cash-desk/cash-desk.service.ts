@@ -3,6 +3,7 @@ import { monthlyFeeOf } from "../billing/monthly-fee";
 import { discountFor } from "../discounts/discount-rules";
 import { discountRuleSelect } from "../discounts/discount-invoices";
 import { PrismaService } from "../../database/prisma.service";
+import { canNotifyParents } from "../../common/features/feature-access";
 import { TenantAuthenticatedUser, TenantScope, requireMoneyScope, toTenantScope } from "../iam/tenant-auth.types";
 import { AuditLogService } from "../audit-log/audit-log.service";
 import { PushService } from "../push/push.service";
@@ -16,6 +17,11 @@ const MONTH_RE = /^\d{4}-\d{2}$/;
 const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const OPEN_INVOICE = ["PENDING", "PARTIALLY_PAID", "OVERDUE"] as const;
+
+/** Chaqiruvchida «To'lovlar va hisob-fakturalar» yoqilganmi — o'chiq bo'lsa qarz ma'lumoti berilmaydi. */
+function billingOn(disabledFeatures: readonly string[]): boolean {
+  return !disabledFeatures.includes("billing");
+}
 // To'lov cheki tasdiqlanganda paydo bo'ladigan raqamli usullar ham shu yerga
 // kiritilgan — aks holda o'sha kunning kassa hisobotida `income[method]`
 // aniqlanmagan bo'lib, hisobot butunlay yiqiladi (payment-receipts moduliga qarang).
@@ -391,8 +397,11 @@ export class CashDeskService {
   }
 
   /** Qarzdorlar: bola bo'yicha jami qarz, muddati o'tgan qismi va ota-ona telefoni. */
-  async debtors(scope: TenantScope) {
+  async debtors(scope: TenantScope, disabledFeatures: readonly string[] = []) {
     const branchId = requireMoneyScope(scope);
+    if (!billingOn(disabledFeatures)) {
+      return { totalDebt: 0, totalOverdue: 0, rows: [] };
+    }
     const invoices = await this.prisma.invoice.findMany({
       where: { branchId, status: { in: [...OPEN_INVOICE] } },
       select: {
@@ -452,11 +461,15 @@ export class CashDeskService {
   }
 
   /** Ota-onaga qarz eslatmasi — bildirishnoma jurnaliga yoziladi (SMS provayder ulanmagan, shuning uchun PENDING). */
-  async remind(scope: TenantScope, userId: string, childId: string) {
+  async remind(scope: TenantScope, userId: string, childId: string, disabledFeatures: readonly string[] = []) {
     const branchId = requireMoneyScope(scope);
     // Ota-onaga qo'ng'iroq qilib eslatish administratorning ishi; kassir to'lov qabul qiladi.
     if (scope.role === "FINANCE") {
       throw new ForbiddenException("Qarz eslatmasini administrator yuboradi");
+    }
+    // Ota-onalar panelida kabinet yoki bildirishnomalar o'chiq — eslatma yetib bormaydi
+    if (!(await canNotifyParents(this.prisma, scope.organizationId))) {
+      throw new BadRequestException("Ota-ona kabineti yoki bildirishnomalar o'chirilgan — eslatma yuborib bo'lmaydi");
     }
     const child = await this.prisma.child.findFirst({
       where: { id: childId, branchId, organizationId: scope.organizationId },
@@ -473,7 +486,7 @@ export class CashDeskService {
     if (!child) {
       throw new NotFoundException("Bola topilmadi");
     }
-    const { rows } = await this.debtors(scope);
+    const { rows } = await this.debtors(scope, disabledFeatures);
     const debt = rows.find((r) => r.childId === childId);
     if (!debt) {
       throw new BadRequestException("Bu bolaning qarzi yo'q");
@@ -500,7 +513,7 @@ export class CashDeskService {
   }
 
   /** Oylik hisobot: kunlar bo'yicha kirim, usullar, hisoblangan/yig'ilgan/qarz va xarajatlar. */
-  async report(scope: TenantScope, month: string) {
+  async report(scope: TenantScope, month: string, disabledFeatures: readonly string[] = []) {
     const branchId = requireMoneyScope(scope);
     if (!month || !MONTH_RE.test(month)) {
       throw new BadRequestException("Oy noto'g'ri (YYYY-MM)");
@@ -515,7 +528,10 @@ export class CashDeskService {
       this.prisma.payment.findMany({ where: { branchId, paidAt: range }, select: { amount: true, method: true, paidAt: true } }),
       this.prisma.payment.findMany({ where: { branchId, refundedAt: range }, select: { amount: true } }),
       this.prisma.expense.findMany({ where: { branchId, date: { gte: toDateOnly(first), lte: toDateOnly(last) } }, select: { amount: true, category: true } }),
-      this.prisma.invoice.findMany({ where: { branchId, period: month, status: { not: "CANCELLED" } }, select: { amount: true, discountAmount: true, paidAmount: true } }),
+      // To'lovlar o'chiq bo'lsa hisoblangan/qarz ko'rsatilmaydi
+      billingOn(disabledFeatures)
+        ? this.prisma.invoice.findMany({ where: { branchId, period: month, status: { not: "CANCELLED" } }, select: { amount: true, discountAmount: true, paidAmount: true } })
+        : Promise.resolve([]),
       this.prisma.payrollEntry.findMany({ where: { branchId, period: month }, select: { totalAmount: true, status: true } }),
     ]);
 
@@ -560,7 +576,7 @@ export class CashDeskService {
    * To'lov qabul qilish uchun: guruhdagi bolalar va ularning ochiq (to'lanmagan) hisob-fakturalari.
    * Barcha davrlar bo'yicha — o'tgan oylardan qolgan qarz ham ko'rinadi.
    */
-  async payables(scope: TenantScope, groupId: string) {
+  async payables(scope: TenantScope, groupId: string, disabledFeatures: readonly string[] = []) {
     const branchId = requireMoneyScope(scope);
     const children = await this.prisma.child.findMany({
       where: { branchId, status: { not: "INACTIVE" }, ...(groupId === "none" ? { groupId: null } : { groupId }) },
@@ -568,7 +584,8 @@ export class CashDeskService {
         id: true,
         fullName: true,
         invoices: {
-          where: { status: { in: [...OPEN_INVOICE] } },
+          // To'lovlar o'chiq bo'lsa ochiq hisob-fakturalar berilmaydi
+          where: billingOn(disabledFeatures) ? { status: { in: [...OPEN_INVOICE] } } : { id: { in: [] } },
           select: { id: true, period: true, amount: true, discountAmount: true, paidAmount: true, dueDate: true },
           orderBy: { period: "asc" },
         },
@@ -594,9 +611,9 @@ export class CashDeskService {
    * Guruhlar bo'yicha to'lov holati (tanlangan davr uchun): har guruhda nechta bola
    * to'lagan, qisman, muddati o'tgan yoki hisob-fakturasi yo'q.
    */
-  async groups(scope: TenantScope, period: string) {
+  async groups(scope: TenantScope, period: string, disabledFeatures: readonly string[] = []) {
     const branchId = requireMoneyScope(scope);
-    const rows = await this.childPaymentRows(branchId, period);
+    const rows = await this.childPaymentRows(branchId, period, billingOn(disabledFeatures));
     const [groups, branch] = await Promise.all([
       this.prisma.group.findMany({ where: { branchId, status: "ACTIVE" }, select: { id: true, name: true, monthlyFee: true }, orderBy: { name: "asc" } }),
       this.prisma.branch.findUniqueOrThrow({ where: { id: branchId }, select: { defaultTuitionAmount: true } }),
@@ -620,9 +637,9 @@ export class CashDeskService {
   }
 
   /** Bitta guruhdagi bolalar va ularning to'lov holati (yashil/sariq/qizil) tanlangan davr uchun. */
-  async groupChildren(scope: TenantScope, groupId: string, period: string) {
+  async groupChildren(scope: TenantScope, groupId: string, period: string, disabledFeatures: readonly string[] = []) {
     const branchId = requireMoneyScope(scope);
-    const rows = (await this.childPaymentRows(branchId, period)).filter((r) => (groupId === "none" ? !r.groupId : r.groupId === groupId));
+    const rows = (await this.childPaymentRows(branchId, period, billingOn(disabledFeatures))).filter((r) => (groupId === "none" ? !r.groupId : r.groupId === groupId));
     let name = "Guruhsiz";
     if (groupId !== "none") {
       const group = await this.prisma.group.findFirst({ where: { id: groupId, branchId }, select: { name: true } });
@@ -639,16 +656,19 @@ export class CashDeskService {
    * oylardagi umumiy qarzi bilan) — guruhlar ro'yxati, guruh ichi va qidiruv
    * bitta so'rovdan quriladi.
    */
-  async periodChildren(scope: TenantScope, period: string) {
+  async periodChildren(scope: TenantScope, period: string, disabledFeatures: readonly string[] = []) {
     const branchId = requireMoneyScope(scope);
+    const withBilling = billingOn(disabledFeatures);
     const [rows, children, groups, open] = await Promise.all([
-      this.childPaymentRows(branchId, period),
+      this.childPaymentRows(branchId, period, withBilling),
       this.prisma.child.findMany({ where: { branchId }, select: { id: true, publicId: true } }),
       this.prisma.group.findMany({ where: { branchId }, select: { id: true, name: true } }),
-      this.prisma.invoice.findMany({
-        where: { branchId, status: { in: [...OPEN_INVOICE] } },
-        select: { childId: true, amount: true, discountAmount: true, paidAmount: true },
-      }),
+      withBilling
+        ? this.prisma.invoice.findMany({
+            where: { branchId, status: { in: [...OPEN_INVOICE] } },
+            select: { childId: true, amount: true, discountAmount: true, paidAmount: true },
+          })
+        : Promise.resolve([]),
     ]);
     const publicIds = new Map(children.map((c) => [c.id, c.publicId]));
     const groupNames = new Map(groups.map((g) => [g.id, g.name]));
@@ -675,7 +695,7 @@ export class CashDeskService {
    *  NONE — hisob-faktura yo'q; PAID — to'liq to'langan; OVERDUE — muddati o'tgan qarz bor;
    *  PARTIAL — qisman to'langan yoki muddati hali o'tmagan.
    */
-  private async childPaymentRows(branchId: string, period: string) {
+  private async childPaymentRows(branchId: string, period: string, withBilling = true) {
     if (!MONTH_RE.test(period ?? "")) {
       throw new BadRequestException("Davr noto'g'ri (YYYY-MM)");
     }
@@ -694,10 +714,13 @@ export class CashDeskService {
           childDiscounts: { select: discountRuleSelect },
         },
       }),
-      this.prisma.invoice.findMany({
-        where: { branchId, period, status: { not: "CANCELLED" } },
-        select: { childId: true, amount: true, discountAmount: true, paidAmount: true, dueDate: true },
-      }),
+      // To'lovlar o'chiq bo'lsa hisob-faktura o'qilmaydi — hamma bola "NONE", qarz 0
+      withBilling
+        ? this.prisma.invoice.findMany({
+            where: { branchId, period, status: { not: "CANCELLED" } },
+            select: { childId: true, amount: true, discountAmount: true, paidAmount: true, dueDate: true },
+          })
+        : Promise.resolve([]),
       this.prisma.branch.findUniqueOrThrow({ where: { id: branchId }, select: { defaultTuitionAmount: true } }),
     ]);
     const now = Date.now();

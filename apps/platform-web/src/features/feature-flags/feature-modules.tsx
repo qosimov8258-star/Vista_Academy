@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, getPaginated } from "@/lib/api";
 import { useAuth } from "@/lib/use-auth";
+import { useDebounced } from "@/lib/use-debounced";
 import type { FeatureDefinition, FeaturePanel, Organization, OrganizationFeatures } from "@/lib/types";
 import { ErrorState, LoadingState } from "@/components/ui/states";
 import { RefreshIcon, SearchIcon, ShieldIcon } from "@/components/ui/icons";
@@ -12,24 +13,34 @@ import { groupFeatures, useFeatureCatalog } from "./use-feature-catalog";
 import { OrgPicker } from "./org-picker";
 
 const STORAGE_KEY = "zeeron.dashboard.features-org";
+const LEAVE_WARNING = "Saqlanmagan o'zgarishlar yo'qoladi. Davom etilsinmi?";
 
 /** Saqlanmagan o'zgarishlar: doira ("" — butun bog'cha, aks holda panel) → funksiya → qiymat (null — tarifga/umumiyga qaytarish). */
 type Drafts = Record<string, Record<string, boolean | null>>;
+
+const featuresUrl = (orgId: string, panel: string) =>
+  `/platform/organizations/${orgId}/features${panel ? `?panel=${encodeURIComponent(panel)}` : ""}`;
 
 /**
  * Funksiyalar («Modullar»): yuqorida bog'cha va sozlash doirasi (butun
  * bog'cha yoki bitta panel), chapda bo'limlar, o'ngda shu bo'lim
  * funksiyalari kartalarda. O'zgarishlar avval yig'iladi va pastdagi
  * «Saqlash» bilan birga yoziladi; «Bekor» ularni tashlab yuboradi.
+ *
+ * Tarif — yuqori chegara: tarifda o'chirilgan funksiya bu yerda yoqilmaydi.
+ * Qiymatlar xom xaritalardan (tarif, bog'cha + saqlanmagan o'zgarishlar,
+ * panel) hisoblanadi — ekrandagi holat aynan saqlanadigan holat.
  */
 export function FeatureModules() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const canEdit = user?.role === "PLATFORM_SUPER_ADMIN";
 
-  const [orgId, setOrgId] = useState("");
+  const [org, setOrg] = useState<Organization | null>(null);
+  const orgId = org?.id ?? "";
   const [pickerOpen, setPickerOpen] = useState(false);
   const [orgSearch, setOrgSearch] = useState("");
+  const debouncedOrgSearch = useDebounced(orgSearch.trim(), 300);
   const [scope, setScope] = useState("");
   const [group, setGroup] = useState("");
   const [search, setSearch] = useState("");
@@ -43,28 +54,44 @@ export function FeatureModules() {
     queryFn: () => api.get<FeaturePanel[]>("/platform/feature-panels"),
     staleTime: 5 * 60 * 1000,
   });
+  // Qidiruv serverda — 100 tadan ko'p bog'cha bo'lsa ham topiladi
   const orgsQuery = useQuery({
-    queryKey: ["organizations", "features-picker"],
-    queryFn: () => getPaginated<Organization>("/platform/organizations?limit=100&sort=name"),
+    queryKey: ["organizations", "features-picker", debouncedOrgSearch],
+    queryFn: () =>
+      getPaginated<Organization>(
+        `/platform/organizations?limit=100&sort=name${debouncedOrgSearch ? `&search=${encodeURIComponent(debouncedOrgSearch)}` : ""}`,
+      ),
+    placeholderData: keepPreviousData,
   });
   const organizations = useMemo(() => (orgsQuery.data?.data ?? []).filter((o) => o.status !== "ARCHIVED"), [orgsQuery.data]);
   const scopes = useMemo(() => [{ key: "", label: "Butun bog'cha" }, ...(panelsQuery.data ?? [])], [panelsQuery.data]);
 
+  // Birinchi ochilishda: oxirgi tanlangan bog'cha (ro'yxatda bo'lmasa — alohida so'raladi)
+  const initialized = useRef(false);
   useEffect(() => {
-    if (orgId || organizations.length === 0) return;
+    if (initialized.current || !orgsQuery.data) return;
+    initialized.current = true;
     let saved: string | null = null;
     try {
       saved = localStorage.getItem(STORAGE_KEY);
     } catch {
       // Maxfiy rejim — birinchi bog'cha tanlanadi
     }
-    setOrgId(organizations.find((o) => o.id === saved)?.id ?? organizations[0].id);
-  }, [organizations, orgId]);
+    const first = organizations[0] ?? null;
+    const hit = organizations.find((o) => o.id === saved);
+    if (hit || !saved) {
+      setOrg(hit ?? first);
+      return;
+    }
+    api
+      .get<Organization>(`/platform/organizations/${saved}`)
+      .then((o) => setOrg(o.status !== "ARCHIVED" ? o : first))
+      .catch(() => setOrg(first));
+  }, [orgsQuery.data, organizations]);
 
-  const urlFor = (panel: string) => `/platform/organizations/${orgId}/features${panel ? `?panel=${encodeURIComponent(panel)}` : ""}`;
   const state = useQuery({
     queryKey: ["organization-features", orgId, scope],
-    queryFn: () => api.get<OrganizationFeatures>(urlFor(scope)),
+    queryFn: () => api.get<OrganizationFeatures>(featuresUrl(orgId, scope)),
     enabled: !!orgId,
   });
 
@@ -72,33 +99,84 @@ export function FeatureModules() {
   useEffect(() => {
     if (!group && groups.length) setGroup(groups[0][0]);
   }, [groups, group]);
+  const byKey = useMemo(() => new Map((catalog.data ?? []).map((f) => [f.key, f])), [catalog.data]);
 
   const dirtyCount = Object.values(drafts).reduce((n, d) => n + Object.keys(d).length, 0);
+  const dirty = dirtyCount > 0;
+
+  // Saqlanmagan o'zgarish bilan sahifani yopish/yangilash yoki boshqa bo'limga o'tishdan oldin ogohlantirish
+  useEffect(() => {
+    if (!dirty) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    const onLinkClick = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const link = (e.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
+      if (!link || link.target === "_blank" || link.origin !== window.location.origin) return;
+      if (link.pathname === window.location.pathname) return;
+      if (!window.confirm(LEAVE_WARNING)) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    document.addEventListener("click", onLinkClick, true);
+    return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      document.removeEventListener("click", onLinkClick, true);
+    };
+  }, [dirty]);
+
   const draft = drafts[scope] ?? {};
+  const orgDraft = drafts[""] ?? {};
   const s = state.data;
   const fromPlan = scope === "";
-  const fallbackOf = (key: string) => (s ? ((fromPlan ? s.planFeatures[key] : s.base[key]) ?? true) : true);
+  const blocked = new Set(s?.planBlocked ?? []);
+  const isBlocked = (key: string) => blocked.has(key);
+  const parentKeysOf = (key: string) => byKey.get(key)?.parents ?? [];
+  /** Bog'cha darajasidagi qo'lda qiymat (saqlanmagani bilan); undefined — qo'lda emas */
+  const orgManualOf = (key: string): boolean | undefined => {
+    if (key in orgDraft) return orgDraft[key] ?? undefined;
+    return s?.orgRaw[key];
+  };
+  /** Shu doirada qo'lda qiymat bo'lmasa olinadigan xom qiymat (ota-ona bo'yicha tarqatilmagan) */
+  const fallbackOf = (key: string) => {
+    if (isBlocked(key)) return false;
+    return fromPlan ? true : (orgManualOf(key) ?? true);
+  };
   /** Qo'lda qo'yilgan qiymat (saqlanmagani bilan); undefined — qo'lda emas */
   const manualOf = (key: string): boolean | undefined => {
     if (key in draft) return draft[key] ?? undefined;
     return s && key in s.overrides ? s.overrides[key] : undefined;
   };
-  const valueOf = (key: string) => manualOf(key) ?? fallbackOf(key);
-  const enabledOf = (f: FeatureDefinition) => valueOf(f.key) && (!f.parent || valueOf(f.parent));
+  const valueOf = (key: string) => !isBlocked(key) && (manualOf(key) ?? fallbackOf(key));
+  /** Asosiy bo'limlarning birortasi o'chiq bo'lsa ichki funksiya ham ishlamaydi (zanjir bo'yicha) */
+  const enabledKey = (key: string, depth = 0): boolean =>
+    valueOf(key) && (depth > 8 || parentKeysOf(key).every((p) => enabledKey(p, depth + 1)));
+  const enabledOf = (f: FeatureDefinition) => enabledKey(f.key);
   const differs = (key: string) => {
+    if (isBlocked(key)) return false;
     const m = manualOf(key);
     return m !== undefined && m !== fallbackOf(key);
   };
 
-  /** Yangi qiymat odatiy qiymatga teng bo'lsa — qo'lda sozlama olib tashlanadi */
+  /**
+   * Qoralama saqlangan qiymatga nisbatan normallashtiriladi: saqlangan
+   * qiymatga qaytarilsa — o'zgarish yo'q (mavjud sozlama o'chib ketmaydi);
+   * odatiy qiymatga teng bo'lsa — qo'lda sozlama olib tashlanadi.
+   * Tarifda yo'q funksiyaga hech qachon true yuborilmaydi.
+   */
   const setValues = (values: Record<string, boolean | null>) => {
-    if (!s) return;
+    if (!s || saving) return;
     setSaveError(null);
     setDrafts((all) => {
       const next = { ...(all[scope] ?? {}) };
       for (const [key, value] of Object.entries(values)) {
-        const wanted = value === null || value === fallbackOf(key) ? null : value;
+        if (value === true && isBlocked(key)) continue;
         const saved = key in s.overrides ? s.overrides[key] : null;
+        const wanted = value === null || value === saved ? value : value === fallbackOf(key) ? null : value;
         if (wanted === saved) delete next[key];
         else next[key] = wanted;
       }
@@ -110,36 +188,54 @@ export function FeatureModules() {
   };
 
   const save = async () => {
+    if (!orgId || saving) return;
+    const target = orgId;
+    const pending = drafts;
     setSaving(true);
     setSaveError(null);
     try {
       // Avval butun bog'cha — panellarning meros qiymati shunga bog'liq
-      const order = Object.keys(drafts).sort((a, b) => (a === "" ? -1 : b === "" ? 1 : 0));
+      const order = Object.keys(pending).sort((a, b) => (a === "" ? -1 : b === "" ? 1 : 0));
       for (const panel of order) {
-        await api.patch<OrganizationFeatures>(urlFor(panel), { overrides: drafts[panel] });
+        const res = await api.patch<OrganizationFeatures>(featuresUrl(target, panel), { overrides: pending[panel] });
+        // Muvaffaqiyatli qism darhol keshga — keyingisi yiqilsa ham eski qiymat ko'rinmaydi
+        queryClient.setQueryData(["organization-features", target, panel], res);
         setDrafts((all) => {
           const out = { ...all };
           delete out[panel];
           return out;
         });
       }
-      await queryClient.invalidateQueries({ queryKey: ["organization-features", orgId] });
     } catch (err) {
       setSaveError(err instanceof ApiError ? err.message : "Saqlab bo'lmadi");
     } finally {
       setSaving(false);
+      void queryClient.invalidateQueries({ queryKey: ["organization-features", target] });
+    }
+  };
+
+  const chooseOrg = (id: string) => {
+    const next = organizations.find((o) => o.id === id);
+    if (!next) return;
+    if (id !== orgId && dirty && !window.confirm(LEAVE_WARNING)) return;
+    if (id !== orgId) {
+      setDrafts({});
+      setSaveError(null);
+    }
+    setOrg(next);
+    setPickerOpen(false);
+    setOrgSearch("");
+    try {
+      localStorage.setItem(STORAGE_KEY, id);
+    } catch {
+      // e'tiborsiz
     }
   };
 
   if (catalog.isLoading || panelsQuery.isLoading || orgsQuery.isLoading) return <LoadingState />;
-  if (catalog.isError || panelsQuery.isError || orgsQuery.isError) return <ErrorState message="Funksiyalarni yuklab bo'lmadi" />;
+  if (catalog.isError || panelsQuery.isError || (orgsQuery.isError && !orgsQuery.data)) return <ErrorState message="Funksiyalarni yuklab bo'lmadi" />;
 
-  const org = organizations.find((o) => o.id === orgId);
   const scopeLabel = scopes.find((x) => x.key === scope)?.label ?? "";
-  const filteredOrgs = organizations.filter((o) => {
-    const q = orgSearch.trim().toLowerCase();
-    return !q || o.name.toLowerCase().includes(q) || o.slug.toLowerCase().includes(q);
-  });
   const q = search.trim().toLowerCase();
   const matches = (f: FeatureDefinition) => `${f.label} ${f.description} ${f.group}`.toLowerCase().includes(q);
   const current = groups.find(([g]) => g === group)?.[1] ?? [];
@@ -154,27 +250,19 @@ export function FeatureModules() {
       {/* Sarlavha: bog'cha tanlagichi va tarifi */}
       <div className="flex flex-wrap items-center justify-between gap-3 px-6 pb-4 pt-6">
         <OrgPicker
-          organizations={organizations}
-          selected={org}
+          total={orgsQuery.data?.meta.total ?? organizations.length}
+          selected={org ?? undefined}
           open={pickerOpen}
-          disabled={dirtyCount > 0}
+          disabled={dirty || saving}
           onOpenChange={(v) => {
             setPickerOpen(v);
             if (!v) setOrgSearch("");
           }}
           search={orgSearch}
           onSearch={setOrgSearch}
-          filtered={filteredOrgs}
-          onChoose={(id) => {
-            setOrgId(id);
-            setPickerOpen(false);
-            setOrgSearch("");
-            try {
-              localStorage.setItem(STORAGE_KEY, id);
-            } catch {
-              // e'tiborsiz
-            }
-          }}
+          searching={orgsQuery.isFetching || orgSearch.trim() !== debouncedOrgSearch}
+          filtered={organizations}
+          onChoose={chooseOrg}
         />
         {s && (
           <span className="rounded-full bg-[var(--color-surface-sunken)] px-3.5 py-1.5 text-[12.5px] font-medium text-[var(--color-text-muted)]">
@@ -203,9 +291,10 @@ export function FeatureModules() {
                   key={x.key || "org"}
                   type="button"
                   aria-pressed={scope === x.key}
+                  disabled={saving}
                   onClick={() => setScope(x.key)}
                   className={clsx(
-                    "inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap rounded-full px-4 text-[13px] font-medium transition-colors",
+                    "inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap rounded-full px-4 text-[13px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60",
                     scope === x.key ? "bg-[var(--color-ink)] text-white" : "bg-[var(--color-surface-sunken)] text-[var(--color-text)] hover:bg-[var(--color-border)]",
                   )}
                 >
@@ -277,13 +366,25 @@ export function FeatureModules() {
                   <h3 className="text-[20px] font-medium text-[var(--color-text)]">{g}</h3>
                   {canEdit && !q && (
                     <div className="flex flex-wrap gap-2">
-                      <ActionButton onClick={() => setValues(Object.fromEntries(fs.map((f) => [f.key, true])))} icon={<ToggleGlyph on />}>
+                      <ActionButton
+                        disabled={saving}
+                        onClick={() => setValues(Object.fromEntries(fs.filter((f) => !isBlocked(f.key)).map((f) => [f.key, true])))}
+                        icon={<ToggleGlyph on />}
+                      >
                         Bo&apos;limni yoqish
                       </ActionButton>
-                      <ActionButton onClick={() => setValues(Object.fromEntries(fs.map((f) => [f.key, false])))} icon={<ToggleGlyph on={false} />}>
+                      <ActionButton
+                        disabled={saving}
+                        onClick={() => setValues(Object.fromEntries(fs.filter((f) => !isBlocked(f.key)).map((f) => [f.key, false])))}
+                        icon={<ToggleGlyph on={false} />}
+                      >
                         Bo&apos;limni o&apos;chirish
                       </ActionButton>
-                      <ActionButton onClick={() => setValues(Object.fromEntries(fs.map((f) => [f.key, null])))} icon={<RefreshIcon className="h-4 w-4" />}>
+                      <ActionButton
+                        disabled={saving}
+                        onClick={() => setValues(Object.fromEntries(fs.map((f) => [f.key, null])))}
+                        icon={<RefreshIcon className="h-4 w-4" />}
+                      >
                         {fromPlan ? "Tarifga qaytarish" : "Umumiyga qaytarish"}
                       </ActionButton>
                     </div>
@@ -292,8 +393,10 @@ export function FeatureModules() {
                 <div className="mt-4 grid gap-3 lg:grid-cols-2">
                   {fs.map((f) => {
                     const own = valueOf(f.key);
-                    const parent = f.parent ? catalog.data?.find((x) => x.key === f.parent) : undefined;
-                    const parentOff = !!f.parent && !valueOf(f.parent);
+                    const planOff = isBlocked(f.key);
+                    const offParents = f.parents.filter((p) => !enabledKey(p));
+                    const parentOff = offParents.length > 0;
+                    const offParentLabels = offParents.map((p) => `«${byKey.get(p)?.label ?? "Asosiy bo'lim"}»`).join(", ");
                     const fallback = fallbackOf(f.key);
                     const manual = differs(f.key);
                     const unsaved = f.key in draft;
@@ -312,8 +415,10 @@ export function FeatureModules() {
                           </div>
                           <p className="mt-0.5 text-[13.5px] leading-snug text-[var(--color-text-muted)]">{f.description}</p>
                           <p className="mt-1 text-[12.5px] text-[var(--color-text-subtle)]">
-                            {parentOff
-                              ? `«${parent?.label ?? "Asosiy bo'lim"}» o'chiq — bu ham ishlamaydi`
+                            {planOff
+                              ? "Tarifda yo'q"
+                              : parentOff
+                              ? `${offParentLabels} o'chiq — bu ham ishlamaydi`
                               : manual
                                 ? `Qo'lda o'zgartirilgan · ${sourceWord}: ${fallback ? "yoqilgan" : "o'chirilgan"}`
                                 : fromPlan
@@ -326,7 +431,7 @@ export function FeatureModules() {
                         <BigSwitch
                           checked={own && !parentOff}
                           label={f.label}
-                          disabled={!canEdit || parentOff || saving}
+                          disabled={!canEdit || planOff || parentOff || saving}
                           onChange={() => setValues({ [f.key]: !own })}
                         />
                       </div>
@@ -381,12 +486,23 @@ export function FeatureModules() {
   );
 }
 
-function ActionButton({ onClick, icon, children }: { onClick: () => void; icon: React.ReactNode; children: React.ReactNode }) {
+function ActionButton({
+  onClick,
+  icon,
+  children,
+  disabled,
+}: {
+  onClick: () => void;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+  disabled?: boolean;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-full border border-[var(--color-border)] px-4 text-[13.5px] font-medium text-[var(--color-text)] transition-colors hover:bg-[var(--color-surface-hover)]"
+      disabled={disabled}
+      className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-full border border-[var(--color-border)] px-4 text-[13.5px] font-medium text-[var(--color-text)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
     >
       {icon}
       {children}

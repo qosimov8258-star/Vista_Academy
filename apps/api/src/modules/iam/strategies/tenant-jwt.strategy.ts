@@ -50,6 +50,22 @@ export class TenantJwtStrategy extends PassportStrategy(Strategy, "tenant-jwt") 
     if (isOrganizationSuspended(tenantUser.organization, tenantUser.organization.subscription)) {
       throw new UnauthorizedException(organizationBlockedMessage(tenantUser.organization));
     }
+    const organization = tenantUser.organization;
+    const disabledFor = (panel: string) =>
+      disabledFeatureKeys(organization.subscription?.plan.features, organization.featureOverrides, panel, organization.panelFeatureOverrides);
+    let disabledFeatures = disabledFor(tenantUser.role);
+    // «Xodim profiliga kirish» seansi: kirgan filial admini o'z panelida o'chiq
+    // funksiyani xodim kabineti orqali ishlata olmasin — ikkala panel birlashtiriladi
+    if (payload.issuerId) {
+      const issuer = await this.prisma.tenantUser.findUnique({
+        where: { id: payload.issuerId },
+        select: { role: true, isActive: true, organizationId: true, branchId: true },
+      });
+      if (!issuer || !issuer.isActive || issuer.organizationId !== tenantUser.organizationId || issuer.branchId !== tenantUser.branchId) {
+        throw new UnauthorizedException("Kirish huquqi yo'q");
+      }
+      disabledFeatures = [...new Set([...disabledFeatures, ...disabledFor(issuer.role)])];
+    }
     return {
       id: tenantUser.id,
       organizationId: tenantUser.organizationId,
@@ -67,12 +83,8 @@ export class TenantJwtStrategy extends PassportStrategy(Strategy, "tenant-jwt") 
       position: tenantUser.employee?.position ?? null,
       subjects: tenantUser.employee?.subjects ?? [],
       topicsManagedByAdmin: tenantUser.employee?.topicsManagedByAdmin ?? false,
-      disabledFeatures: disabledFeatureKeys(
-        tenantUser.organization.subscription?.plan.features,
-        tenantUser.organization.featureOverrides,
-        tenantUser.role,
-        tenantUser.organization.panelFeatureOverrides,
-      ),
+      disabledFeatures,
+      staffEntryIssuerId: payload.issuerId ?? null,
     };
   }
 }

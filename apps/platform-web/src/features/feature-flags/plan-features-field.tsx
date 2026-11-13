@@ -4,7 +4,11 @@ import { LoadingState, ErrorState } from "@/components/ui/states";
 import { groupFeatures, useFeatureCatalog } from "./use-feature-catalog";
 import { Switch } from "./switch";
 
-/** Tarif uchun funksiyalar: kalit yo'q bo'lsa — yoqilgan hisoblanadi. */
+/**
+ * Tarif uchun funksiyalar: kalit yo'q bo'lsa — yoqilgan hisoblanadi. Tarif —
+ * yuqori chegara: bu yerda o'chirilgan funksiyani bog'cha yoqa olmaydi.
+ * Asosiy bo'limi o'chiq ichki funksiya ham o'chiq ko'rinadi (qiymati saqlanadi).
+ */
 export function PlanFeaturesField({
   value,
   onChange,
@@ -16,8 +20,12 @@ export function PlanFeaturesField({
   if (catalog.isLoading) return <LoadingState />;
   if (catalog.isError || !catalog.data) return <ErrorState message="Funksiyalar ro'yxatini yuklab bo'lmadi" />;
 
+  const data = catalog.data;
   const isOn = (key: string) => value[key] ?? true;
-  const setAll = (on: boolean) => onChange(Object.fromEntries(catalog.data.map((f) => [f.key, on])));
+  const byKey = new Map(data.map((f) => [f.key, f]));
+  const enabled = (key: string, depth = 0): boolean =>
+    isOn(key) && (depth > 8 || (byKey.get(key)?.parents ?? []).every((p) => enabled(p, depth + 1)));
+  const setAll = (on: boolean) => onChange(Object.fromEntries(data.map((f) => [f.key, on])));
 
   return (
     <div className="space-y-3">
@@ -33,22 +41,33 @@ export function PlanFeaturesField({
         </span>
       </div>
       <div className="max-h-[320px] space-y-3 overflow-y-auto rounded-[var(--radius-lg)] bg-[var(--color-surface-sunken)] p-3">
-        {groupFeatures(catalog.data).map(([group, features]) => (
+        {groupFeatures(data).map(([group, features]) => (
           <div key={group}>
             <div className="mb-1 text-[11.5px] font-medium uppercase tracking-wide text-[var(--color-text-subtle)]">{group}</div>
-            {features.map((feature) => (
-              <div key={feature.key} className={`flex items-center justify-between gap-3 py-1.5 ${feature.parent ? "ml-4 border-l-2 border-[var(--color-border)] pl-3" : ""}`}>
-                <div className="min-w-0">
-                  <div className="text-[13.5px] text-[var(--color-text)]">{feature.label}</div>
-                  <div className="truncate text-[12px] text-[var(--color-text-muted)]">{feature.description}</div>
+            {features.map((feature) => {
+              const offParents = feature.parents.filter((p) => !enabled(p));
+              return (
+                <div
+                  key={feature.key}
+                  className={`flex items-center justify-between gap-3 py-1.5 ${feature.parents.length ? "ml-4 border-l-2 border-[var(--color-border)] pl-3" : ""}`}
+                >
+                  <div className="min-w-0">
+                    <div className="text-[13.5px] text-[var(--color-text)]">{feature.label}</div>
+                    <div className="truncate text-[12px] text-[var(--color-text-muted)]">
+                      {offParents.length
+                        ? `${offParents.map((p) => `«${byKey.get(p)?.label ?? p}»`).join(", ")} o'chiq — bu ham ishlamaydi`
+                        : feature.description}
+                    </div>
+                  </div>
+                  <Switch
+                    checked={isOn(feature.key) && offParents.length === 0}
+                    disabled={offParents.length > 0}
+                    label={feature.label}
+                    onChange={(on) => onChange({ ...value, [feature.key]: on })}
+                  />
                 </div>
-                <Switch
-                  checked={isOn(feature.key)}
-                  label={feature.label}
-                  onChange={(on) => onChange({ ...value, [feature.key]: on })}
-                />
-              </div>
-            ))}
+              );
+            })}
           </div>
         ))}
       </div>

@@ -30,6 +30,20 @@ export interface RequestMeta {
 
 const REFRESH_TTL_DAYS = Number(process.env.JWT_TENANT_REFRESH_TTL_DAYS ?? process.env.JWT_REFRESH_TTL_DAYS ?? 30);
 
+/**
+ * «Xodim profiliga kirish» seansining refresh tokeniga qo'shiladigan imzolangan
+ * belgi: `<tasodifiy hex>.<jwt>`. Bazada faqat butun satr xeshi saqlanadi —
+ * belgini boshqa tokenga ko'chirib bo'lmaydi. Shu orqali yangilangan seansda
+ * ham kirgan filial admini (issuerId) yo'qolmaydi (sxema o'zgarishisiz).
+ */
+const STAFF_SESSION_PURPOSE = "staff-entry-session";
+
+interface StaffSessionMarker {
+  purpose: typeof STAFF_SESSION_PURPOSE;
+  sub: string;
+  issuerId: string;
+}
+
 @Injectable()
 export class TenantAuthService {
   private readonly logger = new Logger(TenantAuthService.name);
@@ -171,7 +185,8 @@ export class TenantAuthService {
       },
     );
     this.logger.log(`Filial admini ${payload.operatorId} xodim ${tenantUser.login} (${tenantUser.role}) kabinetiga kirdi`);
-    return this.toAuthenticatedUser(tenantUser, tenantUser.organization);
+    // Kirgan admin seansga yoziladi — o'chiq funksiyalar ikkala panel bo'yicha hisoblanadi
+    return { ...this.toAuthenticatedUser(tenantUser, tenantUser.organization), staffEntryIssuerId: payload.operatorId };
   }
 
   async validateCredentials(orgSlug: string, login: string, password: string): Promise<TenantAuthenticatedUser> {
@@ -216,6 +231,7 @@ export class TenantAuthService {
       branchId: user.branchId,
       login: user.login,
       role: user.role,
+      ...(user.staffEntryIssuerId ? { issuerId: user.staffEntryIssuerId } : {}),
     };
     const accessTtl = process.env.JWT_TENANT_ACCESS_TTL ?? process.env.JWT_ACCESS_TTL ?? "15m";
     const accessToken = this.jwt.sign(payload, {
@@ -223,9 +239,13 @@ export class TenantAuthService {
       expiresIn: accessTtl as JwtSignOptions["expiresIn"],
     });
 
-    const refreshToken = randomBytes(48).toString("hex");
-    const refreshTokenHash = hashToken(refreshToken);
     const refreshTokenTtlMs = REFRESH_TTL_DAYS * 24 * 60 * 60 * 1000;
+    let refreshToken = randomBytes(48).toString("hex");
+    if (user.staffEntryIssuerId) {
+      const marker: StaffSessionMarker = { purpose: STAFF_SESSION_PURPOSE, sub: user.id, issuerId: user.staffEntryIssuerId };
+      refreshToken += `.${this.jwt.sign(marker, { secret: requireTenantAccessSecret(), expiresIn: Math.ceil(refreshTokenTtlMs / 1000) })}`;
+    }
+    const refreshTokenHash = hashToken(refreshToken);
     const expiresAt = new Date(Date.now() + refreshTokenTtlMs);
 
     await this.prisma.tenantRefreshToken.create({
@@ -261,7 +281,8 @@ export class TenantAuthService {
     }
 
     const user = this.toAuthenticatedUser(existing.tenantUser, existing.tenantUser.organization);
-    const issued = await this.issueTokens(user, meta);
+    const issuerId = await this.staffSessionIssuer(rawRefreshToken, existing.tenantUser);
+    const issued = await this.issueTokens(issuerId ? { ...user, staffEntryIssuerId: issuerId } : user, meta);
 
     await this.prisma.tenantRefreshToken.update({
       where: { id: existing.id },
@@ -269,6 +290,41 @@ export class TenantAuthService {
     });
 
     return issued;
+  }
+
+  /**
+   * Refresh tokendagi «Xodim profiliga kirish» belgisi: kirgan admin id'si
+   * (belgi bo'lmasa — null). Admin endi faol filial admini bo'lmasa seans yangilanmaydi.
+   */
+  private async staffSessionIssuer(
+    rawRefreshToken: string,
+    tenantUser: { id: string; organizationId: string; branchId: string | null },
+  ): Promise<string | null> {
+    const dot = rawRefreshToken.indexOf(".");
+    if (dot < 0) return null;
+    let marker: StaffSessionMarker;
+    try {
+      marker = this.jwt.verify(rawRefreshToken.slice(dot + 1), { secret: requireTenantAccessSecret() });
+    } catch {
+      throw new UnauthorizedException("Sessiya tugagan, qaytadan tizimga kiring");
+    }
+    if (marker.purpose !== STAFF_SESSION_PURPOSE || marker.sub !== tenantUser.id || !marker.issuerId) {
+      throw new UnauthorizedException("Sessiya tugagan, qaytadan tizimga kiring");
+    }
+    const issuer = await this.prisma.tenantUser.findUnique({
+      where: { id: marker.issuerId },
+      select: { role: true, isActive: true, organizationId: true, branchId: true },
+    });
+    if (
+      !issuer ||
+      !issuer.isActive ||
+      issuer.role !== "BRANCH_ADMIN" ||
+      issuer.organizationId !== tenantUser.organizationId ||
+      issuer.branchId !== tenantUser.branchId
+    ) {
+      throw new UnauthorizedException("Kirish huquqi yo'q");
+    }
+    return marker.issuerId;
   }
 
   async revokeRefreshToken(rawRefreshToken: string): Promise<void> {

@@ -45,8 +45,10 @@ export interface FeatureDefinition {
   label: string;
   group: string;
   description: string;
-  /** Ichki funksiya bo'lsa — asosiy bo'lim kaliti (u o'chsa, bu ham o'chadi). */
+  /** Eski maydon: birinchi asosiy bo'lim (yoki null). Yangi kod `parents` ishlatadi. */
   parent: string | null;
+  /** Ichki funksiya bo'lsa — asosiy bo'limlar (birortasi o'chsa, bu ham o'chadi). */
+  parents: string[];
 }
 
 export interface FeaturePanel {
@@ -58,6 +60,12 @@ export interface OrganizationFeatures {
   /** null — butun bog'cha; aks holda panel kaliti (masalan "TEACHER"). */
   panel: string | null;
   planName: string | null;
+  /** Tarifning xom xaritasi (ota-ona bo'yicha tarqatilmagan). */
+  planRaw: Record<string, boolean>;
+  /** Bog'chaning xom sozlamalari (panel tanlanganda ham — meros uchun). */
+  orgRaw: Record<string, boolean>;
+  /** Tarifda o'chirilgan kalitlar — ularni yoqib bo'lmaydi (tarif — yuqori chegara). */
+  planBlocked: string[];
   /** Tarifdagi qiymatlar (kalit yo'q bo'lsa — yoqilgan). */
   planFeatures: Record<string, boolean>;
   /** Panel sozlamasiz holat (bog'cha va tarif bo'yicha) — panelda "Umumiy" tanlanganda shu amal qiladi. */

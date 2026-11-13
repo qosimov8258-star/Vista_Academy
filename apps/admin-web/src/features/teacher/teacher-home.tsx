@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { DashboardSummary, EmployeeNotification, Group as GroupModel, LessonSchedule, Weekday } from "@/lib/types";
-import { useAuth } from "@/lib/use-auth";
+import { useAuth, useFeatureFlags } from "@/lib/use-auth";
+import { useRouteFeatureOn } from "@/lib/feature-routes";
 import { canWriteTeaching } from "@/lib/permissions";
 import { isAssistantPosition, isSubjectTeacherPosition } from "@/lib/employee-position";
 import { Avatar } from "@/components/ui/avatar";
@@ -53,6 +54,11 @@ export function TeacherHome({ slug }: { slug: string }) {
   const subjectTeacher = !!user?.position && isSubjectTeacherPosition(user.position);
   // Yordamchi davomatni faqat ko'radi — belgilash tarbiyachiniki
   const canMark = canWriteTeaching(user?.role) && !(user?.position && isAssistantPosition(user.position));
+  // Platforma o'chirgan bo'limlar: so'rov ketmaydi, havola ko'rinmaydi
+  const features = useFeatureFlags();
+  const routeOn = useRouteFeatureOn();
+  const lessonsOn = features.isOn("lessons");
+  const bellOn = features.ready && features.isOn("employeeNotifications");
 
   const summaryQuery = useQuery({
     queryKey: ["dashboard-summary", slug],
@@ -66,14 +72,16 @@ export function TeacherHome({ slug }: { slug: string }) {
   const lessonsQuery = useQuery({
     queryKey: ["lesson-schedules", slug, "dashboard"],
     queryFn: () => api.get<LessonSchedule[]>("/app/lesson-schedules"),
+    enabled: lessonsOn,
   });
   // Yuqori panel bilan bir xil kalit — qo'shimcha so'rov ketmaydi
   const notificationsQuery = useQuery({
     queryKey: ["employee-notifications", slug],
     queryFn: () => api.get<EmployeeNotification[]>("/app/employee-notifications"),
     refetchInterval: 60_000,
+    enabled: bellOn,
   });
-  const inboxUnread = useEmployeeInboxUnread(slug);
+  const inboxUnread = useEmployeeInboxUnread(slug, bellOn);
   const unread = (notificationsQuery.data?.filter((n) => !n.isRead).length ?? 0) + inboxUnread;
 
   const s = summaryQuery.data;
@@ -95,6 +103,9 @@ export function TeacherHome({ slug }: { slug: string }) {
     );
 
   const attendanceHref = subjectTeacher ? `/${slug}/lesson-attendance` : `/${slug}/attendance`;
+  const attendanceOn = routeOn(attendanceHref);
+  const materialsOn = routeOn(`/${slug}/materials`);
+  const scheduleRowOn = !subjectTeacher && lessonsOn;
 
   return (
     <TeacherPage>
@@ -111,7 +122,7 @@ export function TeacherHome({ slug }: { slug: string }) {
       />
 
       {/* Bugungi davomat — asosiy ish */}
-      {!subjectTeacher && (
+      {!subjectTeacher && attendanceOn && (
         <section className={`${styles.group} p-5`}>
           {summaryQuery.isLoading ? (
             <div className="flex items-center gap-5">
@@ -150,9 +161,9 @@ export function TeacherHome({ slug }: { slug: string }) {
         </section>
       )}
 
-      {user?.branchId && <TeacherReminders slug={slug} branchId={user.branchId} date={today} />}
+      {user?.branchId && features.isOn("childReminders") && <TeacherReminders slug={slug} branchId={user.branchId} date={today} />}
 
-      {subjectTeacher && (
+      {subjectTeacher && attendanceOn && (
         <PrimaryButton href={attendanceHref}>{tr("Dars davomatini belgilash")}</PrimaryButton>
       )}
 
@@ -177,10 +188,13 @@ export function TeacherHome({ slug }: { slug: string }) {
       </Group>
 
       {/* Guruh fayllari telefondagi pastki menyuda yo'q — shu yerdan bir bosishda */}
-      <Group>
-        <Row first icon={Paperclip} tint="teal" title={tr("Vazifa jo'natish")} subtitle={tr("Vazifa, rasm, video yoki hujjat")} href={`/${slug}/materials`} />
-      </Group>
+      {materialsOn && (
+        <Group>
+          <Row first icon={Paperclip} tint="teal" title={tr("Vazifa jo'natish")} subtitle={tr("Vazifa, rasm, video yoki hujjat")} href={`/${slug}/materials`} />
+        </Group>
+      )}
 
+      {lessonsOn && (
       <Group
         title={subjectTeacher ? "Darslarim" : "Bu haftaki darslar"}
         action={lessons.length > 0 ? <GroupAction href={`/${slug}/my-lessons/schedule`}>{tr("Jadval")}</GroupAction> : undefined}
@@ -219,8 +233,11 @@ export function TeacherHome({ slug }: { slug: string }) {
           <Row icon={CalendarIcon} tint="orange" title={tr("Yana {0} ta dars", lessons.length - LESSONS_PREVIEW)} href={`/${slug}/my-lessons/schedule`} />
         )}
       </Group>
+      )}
 
+      {(bellOn || scheduleRowOn) && (
       <Group>
+        {bellOn && (
         <Row
           first
           icon={BellIcon}
@@ -235,8 +252,10 @@ export function TeacherHome({ slug }: { slug: string }) {
             ) : undefined
           }
         />
-        {!subjectTeacher && <Row icon={CalendarIcon} tint="orange" title={tr("Dars jadvali")} href={`/${slug}/my-lessons/schedule`} />}
+        )}
+        {scheduleRowOn && <Row first={!bellOn} icon={CalendarIcon} tint="orange" title={tr("Dars jadvali")} href={`/${slug}/my-lessons/schedule`} />}
       </Group>
+      )}
     </TeacherPage>
   );
 }

@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { FaceIdCommandType, Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
+import { loadDisabledFeatures } from "../../common/features/feature-access";
 import { R2Service } from "../storage/r2.service";
 import type { AgentDevice } from "./agent/agent-token.guard";
 import type { AgentCommandAckDto } from "./dto/agent-command-ack.dto";
@@ -67,7 +68,7 @@ export class FaceIdCommandsService {
         select: { id: true, organizationId: true, branchId: true, employeeNo: true, fullName: true, isActive: true, avatarUpdatedAt: true },
       });
       if (!employee || !employee.isActive) return;
-      const devices = await this.activeDeviceIds(employee.branchId);
+      const devices = await this.activeDeviceIds(employee.organizationId, employee.branchId);
       for (const deviceId of devices) {
         await this.upsertPersonCommands(deviceId, this.employeeTarget(employee), employee.fullName, employee.avatarUpdatedAt);
       }
@@ -82,7 +83,7 @@ export class FaceIdCommandsService {
         select: { id: true, organizationId: true, branchId: true, employeeNo: true, isActive: true, avatarUpdatedAt: true },
       });
       if (!employee || !employee.isActive || !employee.avatarUpdatedAt) return;
-      for (const deviceId of await this.activeDeviceIds(employee.branchId)) {
+      for (const deviceId of await this.activeDeviceIds(employee.organizationId, employee.branchId)) {
         await this.upsertPending(deviceId, this.employeeTarget(employee), "SET_FACE", {
           employeeNo: employee.employeeNo,
           avatarUpdatedAt: employee.avatarUpdatedAt.toISOString(),
@@ -119,7 +120,7 @@ export class FaceIdCommandsService {
         await this.enqueueDeleteFor(target);
         return;
       }
-      for (const deviceId of await this.activeDeviceIds(child.branchId)) {
+      for (const deviceId of await this.activeDeviceIds(child.organizationId, child.branchId)) {
         await this.upsertPersonCommands(deviceId, target, child.fullName, child.avatarUpdatedAt);
       }
     });
@@ -134,7 +135,7 @@ export class FaceIdCommandsService {
       });
       if (!child || child.status === "INACTIVE" || !child.avatarUpdatedAt) return;
       const target = this.childTarget(child);
-      for (const deviceId of await this.activeDeviceIds(child.branchId)) {
+      for (const deviceId of await this.activeDeviceIds(child.organizationId, child.branchId)) {
         await this.upsertPending(deviceId, target, "SET_FACE", { employeeNo: target.employeeNo, avatarUpdatedAt: child.avatarUpdatedAt.toISOString() });
       }
     });
@@ -145,7 +146,10 @@ export class FaceIdCommandsService {
    * buyruqlar. Qurilma almashtirilganda yoki tozalanganda ishlatiladi.
    * Qaytaradi: nechta xodim va bola navbatga qo'yildi.
    */
-  async enqueueFullSync(device: { id: string; branchId: string }): Promise<{ employees: number; children: number }> {
+  async enqueueFullSync(device: { id: string; organizationId: string; branchId: string }): Promise<{ employees: number; children: number }> {
+    if ((await loadDisabledFeatures(this.prisma, device.organizationId)).includes("faceId")) {
+      return { employees: 0, children: 0 };
+    }
     const employees = await this.prisma.employee.findMany({
       where: { branchId: device.branchId, isActive: true },
       select: { id: true, organizationId: true, branchId: true, employeeNo: true, fullName: true, avatarUpdatedAt: true },
@@ -273,7 +277,9 @@ export class FaceIdCommandsService {
   // Ichki yordamchilar
   // ---------------------------------------------------------------------
 
-  private async activeDeviceIds(branchId: string): Promise<string[]> {
+  /** Filialdagi faol qurilmalar; Face ID o'chiq bog'chada — hech biri (buyruq navbatga qo'yilmaydi). */
+  private async activeDeviceIds(organizationId: string, branchId: string): Promise<string[]> {
+    if ((await loadDisabledFeatures(this.prisma, organizationId)).includes("faceId")) return [];
     const devices = await this.prisma.faceIdDevice.findMany({
       where: { branchId, status: "ACTIVE" },
       select: { id: true },
@@ -300,7 +306,7 @@ export class FaceIdCommandsService {
 
   /** Navbatdagi qo'shish/yuz buyruqlarini bekor qilib, DELETE_USER qo'yadi. */
   private async enqueueDeleteFor(target: EnqueueTarget) {
-    const devices = await this.activeDeviceIds(target.branchId);
+    const devices = await this.activeDeviceIds(target.organizationId, target.branchId);
     if (devices.length === 0) return;
     await this.prisma.faceIdCommand.updateMany({
       where: { deviceId: { in: devices }, employeeNo: target.employeeNo, status: { in: ["PENDING", "SENT"] }, type: { not: "DELETE_USER" } },

@@ -121,6 +121,8 @@ class Table {
 
 export function createFakePrisma() {
   const prisma = {
+    // Funksiyalar tekshiruvi (Face ID, davomat, koin) — topilmasa hammasi yoqilgan hisoblanadi
+    organization: new Table(),
     branch: new Table(),
     employee: new Table(() => ({ isActive: true, avatar: null, avatarMimeType: null, avatarUpdatedAt: null })),
     faceIdDevice: new Table(() => ({ status: "ACTIVE", lastSeenAt: null })),
