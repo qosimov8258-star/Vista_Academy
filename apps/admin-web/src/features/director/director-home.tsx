@@ -6,7 +6,7 @@ import { useState, type ReactNode } from "react";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { DashboardSummary, FinanceSummary, Organization, PaymentMethod } from "@/lib/types";
-import { useAuth } from "@/lib/use-auth";
+import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
 // Ikonkalar — lucide, Sabot veb paneli bilan bir xil to'plam
 import {
   Baby,
@@ -117,6 +117,8 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
   const { hour, date } = tashkentNow();
   const firstName = user?.fullName.split(" ")[0] ?? "";
   const periods = lastPeriods(date, TREND_MONTHS);
+  // «To'lovlar» o'chirilgan bo'lsa pul kartalari ko'rinmaydi va moliya so'ralmaydi
+  const billingOn = useFeatureEnabled()("billing");
   const currentPeriod = periods[periods.length - 1];
 
   // Bosh sahifadagi umumiy so'rov bilan bir xil kalit — qayta yuklanmaydi
@@ -136,6 +138,7 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
     queries: periods.map((period) => ({
       queryKey: ["finance-summary", slug, period],
       queryFn: () => api.get<FinanceSummary>(`/app/finance/summary?period=${period}`),
+      enabled: billingOn,
     })),
   });
 
@@ -281,6 +284,7 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
             progress={pctOf(staffPresent, employees)}
             progressColor={IOS.blue}
           />
+          {billingOn && (
           <KpiCard
             href={`/${slug}/network/finance`}
             icon={Wallet}
@@ -291,6 +295,8 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
             pill={change !== null && <Pill color={change >= 0 ? IOS.green : IOS.red}>{change >= 0 ? "▲" : "▼"} {Math.abs(change)}%</Pill>}
             hint={change === null ? tr("O'tgan oy ma'lumoti yo'q") : tr("O'tgan oy: {0}", compactMoney(prevRevenue, tr))}
           />
+          )}
+          {billingOn && (
           <KpiCard
             href={`/${slug}/network/finance`}
             icon={ReceiptText}
@@ -301,10 +307,12 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
             valueColor={debt > 0 ? IOS.red : undefined}
             hint={(s?.overdueInvoicesCount ?? 0) > 0 ? tr("{0} ta hisob muddati o'tgan", s?.overdueInvoicesCount ?? 0) : tr("Muddati o'tgan hisob yo'q")}
           />
+          )}
         </div>
 
         {/* ══ Tushum dinamikasi + bugungi davomat ══ */}
         <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:items-start">
+          {billingOn && (
           <Group
             title={tr("Tushum — oxirgi 6 oy")}
             refreshing={financeQueries.some((q) => q.isFetching) && !financeLoading}
@@ -330,6 +338,7 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
               </div>
             </PageCard>
           </Group>
+          )}
 
           <Group title={tr("Bugun bog'chada")} refreshing={summaryQuery.isFetching && !loading} bare>
             <PageCard className="p-4 md:p-5">
@@ -408,6 +417,7 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
             />
           </Group>
 
+          {billingOn && (
           <Group
             title={tr("Eng katta qarzdorlar")}
             action={<GroupLink href={`/${slug}/network/finance`}>{tr("Barchasi")}</GroupLink>}
@@ -433,6 +443,7 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
               </div>
             )}
           </Group>
+          )}
         </div>
 
         {/* ══ Filiallar + guruhlar to'lishi ══ */}
@@ -562,6 +573,7 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
             )}
           </Group>
 
+          {billingOn && (
           <Group title={tr("To'lov usullari")} footer={methodsMonth ? periodLabel(methodsMonth.period) : undefined} bare>
             {financeLoading ? (
               <SkeletonBlock rows={3} avatar={false} />
@@ -593,6 +605,7 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
               </PageCard>
             )}
           </Group>
+          )}
 
           <Group title={tr("Bo'limlar")} className="md:col-span-2 xl:col-span-1">
             {sections.map((section) => (

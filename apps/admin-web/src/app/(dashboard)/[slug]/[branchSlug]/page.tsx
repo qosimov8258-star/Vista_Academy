@@ -24,7 +24,7 @@ import {
 import { IosIcon } from "@/features/director/ios-icon";
 import { compactMoney, fullMoney } from "@/features/director/money";
 import { useTr } from "@/i18n/tr";
-import { useAuth } from "@/lib/use-auth";
+import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
 import OrgHomePage from "../page";
 
 type Tone = "primary" | "success" | "danger";
@@ -132,6 +132,8 @@ export default function BranchEntryPage({ params }: { params: Promise<{ slug: st
 
 function BranchDashboardPage({ params }: { params: Promise<{ slug: string; branchSlug: string }> }) {
   const tr = useTr();
+  // «To'lovlar» o'chirilgan bo'lsa pul ko'rsatkichlari yashiriladi
+  const billingOn = useFeatureEnabled()("billing");
   const { slug, branchSlug } = use(params);
 
   const orgQuery = useQuery({
@@ -192,6 +194,7 @@ function BranchDashboardPage({ params }: { params: Promise<{ slug: string; branc
             <StatTile icon={TeacherIcon} value={summary?.employeesCount ?? 0} label={tr("Xodimlar soni")} />
           </div>
 
+          {billingOn && (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Link
               href={`/${slug}/${branchSlug}/finance`}
@@ -251,6 +254,7 @@ function BranchDashboardPage({ params }: { params: Promise<{ slug: string; branc
               </p>
             </Link>
           </div>
+          )}
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <AttendanceTile

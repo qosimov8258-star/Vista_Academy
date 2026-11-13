@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { api, getPaginated } from "@/lib/api";
 import type { FinanceSummary, Invoice } from "@/lib/types";
-import { useAuth } from "@/lib/use-auth";
+import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DataTable, THead, TBody, Tr, Th, Td } from "@/components/ui/table";
@@ -47,6 +47,8 @@ const STATUS_TONE: Record<Invoice["status"], "success" | "warning" | "danger" | 
 
 export default function FinancePage({ params }: { params: Promise<{ slug: string }> }) {
   const tr = useTr();
+  // «Eksport» o'chirilgan bo'lsa yuklab olish tugmalari ko'rinmaydi
+  const exportsOn = useFeatureEnabled()("exports");
   const { slug } = use(params);
   const [page, setPage] = useState(1);
   const [overdueOnly, setOverdueOnly] = useState(false);
@@ -134,11 +136,13 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
             </div>
           )}
         </div>
+        {exportsOn && (
         <TopbarAction>
           <Button variant="outline" loading={exporting} onClick={handleExport}>
             {tr("Eksport (CSV)")}
           </Button>
         </TopbarAction>
+        )}
         <div className="flex flex-wrap gap-2">
           <Button
             variant={overdueOnly ? "danger" : "outline"}
@@ -149,7 +153,7 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
           >
             {tr("Muddati o'tganlar")}
           </Button>
-          <div className="hidden md:block">
+          <div className={exportsOn ? "hidden md:block" : "hidden"}>
             <Button variant="outline" loading={exporting} onClick={handleExport}>
               {tr("Eksport (CSV)")}
             </Button>
@@ -287,6 +291,7 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
                     </Td>
                     <Td className="text-right">
                       <div className="flex justify-end gap-2">
+                        {exportsOn && (
                         <Button
                           size="sm"
                           variant="outline"
@@ -295,6 +300,7 @@ export default function FinancePage({ params }: { params: Promise<{ slug: string
                         >
                           {tr("PDF")}
                         </Button>
+                        )}
                         {canWrite && (invoice.status === "PENDING" || invoice.status === "PARTIALLY_PAID" || invoice.status === "OVERDUE") && (
                           <Button size="sm" variant="outline" onClick={() => setPayInvoice(invoice)}>
                             {tr("To'lov qabul qilish")}

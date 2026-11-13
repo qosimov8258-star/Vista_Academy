@@ -15,6 +15,7 @@ import { QuickPhotoSheet } from "./quick-photo-sheet";
 import styles from "./chef.module.css";
 import { useTr } from "@/i18n/tr";
 import { useEmployeeInboxUnread } from "@/features/broadcasts/use-inbox";
+import { useRouteFeatureOn } from "@/lib/feature-routes";
 
 type Tab = { href: string; label: string; Icon: (p: IconProps) => React.JSX.Element; exact?: boolean; badge?: number };
 
@@ -28,6 +29,7 @@ type Tab = { href: string; label: string; Icon: (p: IconProps) => React.JSX.Elem
 export function ChefBottomBar({ slug }: { slug: string }) {
   const tr = useTr();
   const { user } = useAuth();
+  const routeOn = useRouteFeatureOn();
   const pathname = useAppPathname();
   const [sheetOpen, setSheetOpen] = useState(false);
   const chef = isChef(user?.role);
@@ -51,10 +53,10 @@ export function ChefBottomBar({ slug }: { slug: string }) {
 
   const left: Tab[] = [
     { href: `/${slug}`, label: "Bugun", Icon: HomeIcon, exact: true },
-    { href: `/${slug}/nutrition`, label: "Menyu", Icon: MealIcon },
+    ...(routeOn(`/${slug}/nutrition`) ? [{ href: `/${slug}/nutrition`, label: "Menyu", Icon: MealIcon }] : []),
   ];
   const right: Tab[] = [
-    { href: `/${slug}/my-notifications`, label: "Xabarlar", Icon: BellIcon, badge: unread },
+    ...(routeOn(`/${slug}/my-notifications`) ? [{ href: `/${slug}/my-notifications`, label: "Xabarlar", Icon: BellIcon, badge: unread }] : []),
     { href: `/${slug}/settings`, label: "Profil", Icon: UserIcon },
   ];
 

@@ -57,7 +57,10 @@ export const FEATURE_CATALOG: readonly FeatureDefinition[] = [
   { key: "products", label: "Mahsulotlar (do'kon)", group: "Moliya", description: "Mahsulot va sotuvlar", paths: [/^products(\/|$)/, /^parent\/products(\/|$)/, /^parent\/children\/[^/]+\/products/] },
 
   // Xodimlar
-  { key: "employees", label: "Xodimlar bo'limi", group: "Xodimlar", description: "Xodimlar ro'yxati va kartochkasi — o'chirilsa ichidagi hamma amal ham o'chadi", paths: [/^employees(?:\/(?![^/]+\/(?:payroll|salary-scheme))|$)/] },
+  // Ro'yxatni o'qish (GET employees) ochiq qoladi: dars jadvali, xodimlar davomati,
+  // guruh sahifasi o'qituvchi tanlash uchun shunga tayanadi. Bo'limning o'zi
+  // (sahifa, kartochka, amallar) o'chadi.
+  { key: "employees", label: "Xodimlar bo'limi", group: "Xodimlar", description: "Xodimlar sahifasi va kartochkasi — o'chirilsa ichidagi hamma amal ham o'chadi (boshqa bo'limlardagi xodim tanlash ishlayveradi)", paths: [only(["POST", "PUT", "PATCH", "DELETE"], /^employees\/?$/), /^employees\/(?![^/]+\/(?:payroll|salary-scheme))/] },
   { key: "employeeCreate", label: "Xodim qo'shish", group: "Xodimlar", description: "Yangi xodim kartochkasi yaratish", parent: "employees", paths: [only(["POST"], /^employees\/?$/)] },
   { key: "employeeDelete", label: "Xodimni o'chirish", group: "Xodimlar", description: "Xodimni butunlay olib tashlash", parent: "employees", paths: [only(["DELETE"], /^employees\/[^/]+\/?$/)] },
   { key: "employeeAvatar", label: "Xodim rasmi", group: "Xodimlar", description: "Rasm joylash va olib tashlash (ko'rish ochiq qoladi)", parent: "employees", paths: [only(["PUT", "POST", "PATCH", "DELETE"], /^employees\/[^/]+\/avatar/)] },

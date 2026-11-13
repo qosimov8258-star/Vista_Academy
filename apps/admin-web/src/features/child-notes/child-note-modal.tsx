@@ -7,6 +7,7 @@ import { Modal } from "@/components/ui/modal";
 import { Input, Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useTr } from "@/i18n/tr";
+import { useFeatureEnabled } from "@/lib/use-auth";
 
 export interface ChildReminder {
   id: string;
@@ -52,6 +53,10 @@ export function ChildNoteModal({
 }) {
   const tr = useTr();
   const queryClient = useQueryClient();
+  // Eslatma — «Bola eslatmalari», allergiya — «Sog'liq»: o'chirilgani ko'rinmaydi
+  const isOn = useFeatureEnabled();
+  const remindersOn = isOn("childReminders");
+  const healthOn = isOn("health");
   const [allergies, setAllergies] = useState("");
   const [time, setTime] = useState("");
   const [text, setText] = useState("");
@@ -61,12 +66,12 @@ export function ChildNoteModal({
   const healthQuery = useQuery({
     queryKey: ["child-health", slug, childId],
     queryFn: () => api.get<HealthProfile | null>(`/app/children/${childId}/health`),
-    enabled: open,
+    enabled: open && healthOn,
   });
   const remindersQuery = useQuery({
     queryKey: ["child-reminders", slug, branchId, date, childId],
     queryFn: () => api.get<ChildReminder[]>(`/app/reminders?date=${date}&branchId=${branchId}&childId=${childId}`),
-    enabled: open,
+    enabled: open && remindersOn,
   });
 
   useEffect(() => {
@@ -130,6 +135,7 @@ export function ChildNoteModal({
           <div className="rounded-lg bg-[var(--color-success-bg)] px-3 py-2 text-sm text-[var(--color-success)]">{tr(message)}</div>
         )}
 
+        {remindersOn && (
         <section className="space-y-2">
           <p className={sectionTitle}>{tr("Bugungi eslatma — ota-ona aytgan dori yoki alohida e'tibor (yozgan xodim ismi ko'rinadi)")}</p>
           {remindersQuery.data && remindersQuery.data.length > 0 && (
@@ -171,8 +177,10 @@ export function ChildNoteModal({
             </Button>
           </div>
         </section>
+        )}
 
-        <section className="space-y-2 border-t border-[var(--color-separator)] pt-4">
+        {healthOn && (
+        <section className={remindersOn ? "space-y-2 border-t border-[var(--color-separator)] pt-4" : "space-y-2"}>
           <p className={sectionTitle}>{tr("Allergiya")}</p>
           <Input value={allergies} onChange={(e) => setAllergies(e.target.value)} placeholder={tr("sut, yong'oq (bo'sh — allergiya yo'q)")} />
           <div className="flex justify-end">
@@ -181,6 +189,7 @@ export function ChildNoteModal({
             </Button>
           </div>
         </section>
+        )}
       </div>
     </Modal>
   );

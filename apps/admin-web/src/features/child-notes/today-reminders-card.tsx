@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlarmClock } from "lucide-react";
 import { api } from "@/lib/api";
-import { useAuth } from "@/lib/use-auth";
+import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
 import { canWriteTeaching } from "@/lib/permissions";
 import { Group, Row } from "@/components/ios/group";
 import { Pill } from "@/components/ios/pill";
@@ -18,7 +18,7 @@ import { useTr } from "@/i18n/tr";
 const timeOf = (iso: string) => new Date(iso).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" });
 
 /** Bugungi eslatmalar (dori vaqti va h.k.) — filial bo'yicha, tarbiyachida faqat o'z guruhi. */
-export function TodayRemindersCard({ slug, branchId, today }: { slug: string; branchId: string; today: string }) {
+function TodayRemindersCardInner({ slug, branchId, today }: { slug: string; branchId: string; today: string }) {
   const tr = useTr();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -114,4 +114,10 @@ export function TodayRemindersCard({ slug, branchId, today }: { slug: string; br
       </IosSheet>
     </>
   );
+}
+
+/** «Bola eslatmalari» o'chirilgan bo'lsa karta ham, so'rov ham yo'q */
+export function TodayRemindersCard(props: { slug: string; branchId: string; today: string }) {
+  const on = useFeatureEnabled()("childReminders");
+  return on ? <TodayRemindersCardInner {...props} /> : null;
 }

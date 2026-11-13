@@ -4,6 +4,7 @@ import Link from "next/link";
 import { todayTabs } from "@/features/desk/today-tabs";
 import { staffTabs } from "@/features/employees/staff-tabs";
 import { branchSectionLeaf } from "@/features/nav/branch-section-tabs";
+import { useRouteFeatureOn } from "@/lib/feature-routes";
 import { useParams, useRouter } from "next/navigation";
 import { useAppPathname } from "@/lib/tenant-host-context";
 import { useEffect, useRef, useState, type SyntheticEvent } from "react";
@@ -103,6 +104,8 @@ export function Sidebar({ slug }: { slug: string }) {
   const queryClient = useQueryClient();
   const [loggingOut, setLoggingOut] = useState(false);
   const { user } = useAuth();
+  // Platforma o'chirgan funksiyalarning menyu bandlari ko'rinmaydi
+  const routeOn = useRouteFeatureOn();
   const [collapsed, toggleCollapsed] = useSidebarCollapsed();
   const [openSections, toggleSection] = useSidebarSections();
   // Mobilda (<768px) tepadagi "uch chiziq" tugmasi ochadigan to'liq menyu (barcha rollar uchun).
@@ -280,7 +283,7 @@ export function Sidebar({ slug }: { slug: string }) {
     { href: financeBase ? `${financeBase}/employees` : `/${slug}`, label: "Xodimlar", icon: TeacherIcon, show: true },
     { href: financeBase ? `${financeBase}/children` : `/${slug}`, label: tr("O'quvchilar"), icon: ChildIcon, show: true },
     { href: financeBase ? `${financeBase}/reminders` : `/${slug}`, label: "Eslatmalar", icon: ClockIcon, show: true },
-  ];
+  ].filter((l) => routeOn(l.href));
   const financeMobileEntries: NavEntry[] = [
     { href: `/${slug}`, label: "Bosh sahifa", icon: HomeIcon, show: true, exact: true },
     // Moliyachining kundalik ishi pastda; qolganlari "Menyu" ichida
@@ -288,7 +291,7 @@ export function Sidebar({ slug }: { slug: string }) {
     { href: `/${slug}/expenses`, label: tr("Xarajatlar"), icon: CoinIcon, show: true },
     { href: `/${slug}/discounts`, label: tr("Chegirmalar"), icon: PercentIcon, show: true },
     ...financeMenuLinks,
-  ];
+  ].filter((e) => isSection(e) || routeOn(e.href));
 
   const rootEntries: NavEntry[] = [
     { href: `/${slug}`, label: t("nav.home"), icon: HomeIcon, show: true, exact: true },
@@ -415,8 +418,12 @@ export function Sidebar({ slug }: { slug: string }) {
   ];
 
   // «Bugungi ishlar» sahifalari — tanlagich bilan bir xil ro'yxat (features/desk/today-tabs)
-  const todayList = todayTabs({ base, role: user?.role, inBranchContext });
-  const staffList = staffTabs({ base, role: user?.role, inBranchContext });
+  const todayList = todayTabs({ base, role: user?.role, inBranchContext }).filter((t) => routeOn(t.href));
+  const staffList = staffTabs({ base, role: user?.role, inBranchContext }).filter((t) => routeOn(t.href));
+  const dailyLeaf = branchSectionLeaf("daily", base, routeOn);
+  const faceIdLeaf = branchSectionLeaf("faceId", base, routeOn);
+  const coinLeaf = branchSectionLeaf("coin", base, routeOn);
+  const usefulLeaf = branchSectionLeaf("useful", base, routeOn);
 
   const operationalEntries: NavEntry[] = [
     { href: base, label: t("nav.home"), icon: HomeIcon, show: true, exact: true },
@@ -463,10 +470,10 @@ export function Sidebar({ slug }: { slug: string }) {
     // (features/nav/branch-section-tabs). Kundalik ish: «Haftalik jadval» —
     // guruhlarning kun tartibi (ota-onalar kabinetida ham ko'rinadi), «Dars jadvali»
     // o'zi bilan xonalar katalogini ham boshqaradi.
-    { ...branchSectionLeaf("daily", base), label: t("nav.dailyWork"), icon: DailyWorkIcon, show: true },
-    { ...branchSectionLeaf("faceId", base), label: t("nav.faceId"), icon: FaceIdIcon, show: true },
-    { ...branchSectionLeaf("coin", base), label: t("nav.coin"), icon: CoinIcon, show: true },
-    { ...branchSectionLeaf("useful", base), label: t("nav.useful"), icon: BulbIcon, show: showUseful },
+    { href: dailyLeaf.href, alsoActive: dailyLeaf.alsoActive, label: t("nav.dailyWork"), icon: DailyWorkIcon, show: dailyLeaf.visible },
+    { href: faceIdLeaf.href, alsoActive: faceIdLeaf.alsoActive, label: t("nav.faceId"), icon: FaceIdIcon, show: faceIdLeaf.visible },
+    { href: coinLeaf.href, alsoActive: coinLeaf.alsoActive, label: t("nav.coin"), icon: CoinIcon, show: coinLeaf.visible },
+    { href: usefulLeaf.href, alsoActive: usefulLeaf.alsoActive, label: t("nav.useful"), icon: BulbIcon, show: showUseful && usefulLeaf.visible },
     // Filial adminida «Moliya va aloqa» ichida faqat bildirishnomalar qoladi
     // (hisob-faktura, chegirma, qarzdorlar, eslatmalar — boshqa rollarda) —
     // bitta bandli guruh o'rniga to'g'ridan-to'g'ri bo'lim.
@@ -534,9 +541,9 @@ export function Sidebar({ slug }: { slug: string }) {
 
   const entries = (chef ? chefEntries : teacher ? (isAssistant ? assistantEntries : teacherEntries) : isNetworkAdmin && !inBranchContext ? rootEntries : isFinance ? financeEntries : isCallOperatorUser(user) ? callOperatorEntries : operationalEntries)
     .map((entry) =>
-      isSection(entry) ? { ...entry, items: entry.items.filter((item) => item.show) } : entry,
+      isSection(entry) ? { ...entry, items: entry.items.filter((item) => item.show && routeOn(item.href)) } : entry,
     )
-    .filter((entry) => (isSection(entry) ? entry.items.length > 0 : entry.show));
+    .filter((entry) => (isSection(entry) ? entry.items.length > 0 : entry.show && routeOn(entry.href)));
 
   useEffect(() => {
     setDrawerOpen(false);
@@ -904,7 +911,7 @@ export function Sidebar({ slug }: { slug: string }) {
                     { href: `/${slug}/${b.slug}/children`, label: tr("O'quvchilar"), icon: ChildIcon },
                     { href: `/${slug}/${b.slug}/employees`, label: "Xodimlar", icon: TeacherIcon },
                     { href: `/${slug}/${b.slug}/reminders`, label: "Eslatmalar", icon: ClockIcon },
-                  ];
+                  ].filter((l) => routeOn(l.href));
                   return (
                     <div key={b.id}>
                       <div className="relative">

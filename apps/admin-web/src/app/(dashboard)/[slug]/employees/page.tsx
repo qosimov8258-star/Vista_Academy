@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import { api, getPaginated } from "@/lib/api";
 import type { Employee, PayrollEntry, Position } from "@/lib/types";
-import { useAuth } from "@/lib/use-auth";
+import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -54,7 +54,10 @@ export default function EmployeesPage({ params }: { params: Promise<{ slug: stri
   const [activeTab, setActiveTab] = useState<string>(ALL_TAB);
   const { user } = useAuth();
   const canWrite = canWriteOperational(user?.role);
-  const canViewPayroll = canReadPayroll(user?.role);
+  // Ish haqi — «Ish haqi (HR)» funksiyasi; o'chirilgan bo'lsa so'ralmaydi va ko'rinmaydi
+  const isOn = useFeatureEnabled();
+  const canViewPayroll = canReadPayroll(user?.role) && isOn("hr");
+  const canCreate = canWrite && isOn("employeeCreate");
   const { branches } = useBranchContext(slug);
   const router = useRouter();
   // Moliyachi login/parolga tegmaydi — u xodim ustiga bossa, bola moliya
@@ -166,7 +169,7 @@ export default function EmployeesPage({ params }: { params: Promise<{ slug: stri
           <h1 className="text-xl font-semibold text-[var(--color-text)]">{tr("Xodimlar")}</h1>
           <p className="text-sm text-[var(--color-text-muted)]">{tr("Lavozimlar bo'yicha guruhlangan xodimlar ro'yxati")}</p>
         </div>
-        {canWrite && (
+        {canCreate && (
           <Button variant="outline" className="shrink-0" onClick={() => setEmployeeModal({ open: true, position: null })}>
             {tr("+ Yangi xodim")}
           </Button>
@@ -333,7 +336,7 @@ export default function EmployeesPage({ params }: { params: Promise<{ slug: stri
         </Card>
       )}
 
-      {canWrite && (
+      {canCreate && (
         <CreateEmployeeModal
           open={employeeModal.open}
           onClose={() => setEmployeeModal({ open: false, position: null })}

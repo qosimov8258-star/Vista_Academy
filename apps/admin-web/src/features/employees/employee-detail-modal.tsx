@@ -22,7 +22,7 @@ import { EditEmployeeSheet } from "@/features/employees/edit-employee-sheet";
 import { CopyRow } from "@/features/employees/employee-form-parts";
 import { PasswordChecklist, getPasswordRules } from "@/components/ui/password-checklist";
 import { Toast, type ToastState } from "@/components/ui/toast";
-import { useAuth } from "@/lib/use-auth";
+import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
 import { useTr } from "@/i18n/tr";
 
 const LOGIN_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{1,30}[A-Za-z0-9]$/;
@@ -64,6 +64,10 @@ export function EmployeeDetailModal({
 
   const [deleteConfirming, setDeleteConfirming] = useState(false);
   const { user: viewer } = useAuth();
+  // Platforma o'chirgan funksiyalar amallari ko'rinmaydi
+  const isOn = useFeatureEnabled();
+  const accountOn = isOn("employeeAccount");
+  const canDelete = isOn("employeeDelete");
   const [entering, setEntering] = useState(false);
   const [enterError, setEnterError] = useState<string | null>(null);
 
@@ -352,7 +356,7 @@ export function EmployeeDetailModal({
         </SheetSection>
 
         {/* Kabinet: login va parol */}
-        {employee.tenantUser ? (
+        {!accountOn ? null : employee.tenantUser ? (
           <FormSection
             title={tr("Kabinet")}
             footer={
@@ -494,7 +498,7 @@ export function EmployeeDetailModal({
           </SheetSection>
         )}
 
-        {isSubjectTeacherPosition(employee.position) && (
+        {isSubjectTeacherPosition(employee.position) && isOn("employeeTopics") && (
           <EmployeeTopics slug={slug} employeeId={employee.id} managedByAdmin={topicsManagedByAdmin} onManagedByAdminChange={setTopicsManagedByAdmin} />
         )}
         {topicsSaveError && <p className="px-4 text-[13px] text-[#ff3b30]">{tr(topicsSaveError)}</p>}
@@ -511,7 +515,7 @@ export function EmployeeDetailModal({
               />
             )}
             <Row leading={<IosIcon icon={Pencil} tint="blue" size={30} />} title={tr("Tahrirlash")} subtitle={tr("Ism, telefon, lavozim, guruh, surat, holat")} onClick={() => setEditOpen(true)} />
-            {!deleteConfirming ? (
+            {!canDelete ? null : !deleteConfirming ? (
               <Row
                 leading={<IosIcon icon={Trash2} tint="red" size={30} />}
                 title={<span className="text-[#ff3b30]">{tr("O'chirish")}</span>}

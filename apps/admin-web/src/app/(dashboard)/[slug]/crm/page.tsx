@@ -17,6 +17,7 @@ import { EmptyState, ErrorState, SkeletonRows } from "@/components/ios/states";
 import { PhoneIcon } from "@/components/ios/icons";
 import { AGE_GROUP_LABEL, STAGE_COLOR, STAGE_LABEL } from "@/features/crm/labels";
 import { useTr } from "@/i18n/tr";
+import { useFeatureEnabled } from "@/lib/use-auth";
 
 /**
  * Arizalar (CRM) — landing sahifadan kelgan xabarlar.
@@ -25,6 +26,8 @@ import { useTr } from "@/i18n/tr";
  */
 export default function CrmPage({ params }: { params: Promise<{ slug: string }> }) {
   const tr = useTr();
+  // «Eksport» o'chirilgan bo'lsa yuklab olish tugmalari ko'rinmaydi
+  const exportsOn = useFeatureEnabled()("exports");
   const { slug } = use(params);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -61,7 +64,7 @@ export default function CrmPage({ params }: { params: Promise<{ slug: string }> 
           title={tr("Arizalar (CRM)")}
           count={leadsQuery.data ? tr("{0} ta xabar", totalLeads) : undefined}
           subtitle={tr("Landing sahifadan kelgan xabarlar")}
-          actions={<IosButton label={tr("Eksport (CSV)")} icon={Download} compact loading={exporting} onClick={handleExport} />}
+          actions={exportsOn ? <IosButton label={tr("Eksport (CSV)")} icon={Download} compact loading={exporting} onClick={handleExport} /> : undefined}
         />
 
         {exportError && (

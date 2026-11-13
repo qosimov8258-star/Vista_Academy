@@ -38,9 +38,10 @@ export function branchSectionTabs(section: BranchSection, base: string) {
 }
 
 /** Menyu bandi: birinchi sahifa ochiladi, qolganlari ochiq bo'lganda ham band faol */
-export function branchSectionLeaf(section: BranchSection, base: string) {
-  const tabs = branchSectionTabs(section, base);
-  return { href: tabs[0].href, alsoActive: tabs.slice(1).map((t) => t.href) };
+export function branchSectionLeaf(section: BranchSection, base: string, isOn: (href: string) => boolean = () => true) {
+  // O'chirilgan funksiya sahifalari tashlab ketiladi; hammasi o'chiq bo'lsa band ko'rinmaydi
+  const tabs = branchSectionTabs(section, base).filter((t) => isOn(t.href));
+  return { href: tabs[0]?.href ?? base, alsoActive: tabs.slice(1).map((t) => t.href), visible: tabs.length > 0 };
 }
 
 /**

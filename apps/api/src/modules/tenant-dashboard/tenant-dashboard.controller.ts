@@ -21,12 +21,12 @@ export class TenantDashboardController {
     // numbers explicitly (e.g. from a per-branch dashboard view). Branch-scoped
     // roles already have a fixed scope.branchId and this param is ignored for them.
     const effectiveScope = user.role === "NETWORK_ADMIN" && branchId ? { ...scope, branchId } : scope;
-    return this.tenantDashboardService.summary(effectiveScope);
+    return this.tenantDashboardService.summary(effectiveScope, user.disabledFeatures);
   }
 
   /** Bitta filial bo'yicha to'liq hisobot — Super Adminning filiallar sahifasidan ochiladi. */
   @Get("branch-report")
   branchReport(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query("branchId") branchId: string) {
-    return this.tenantDashboardService.branchReport(toTenantScope(user), branchId);
+    return this.tenantDashboardService.branchReport(toTenantScope(user), branchId, user.disabledFeatures);
   }
 }

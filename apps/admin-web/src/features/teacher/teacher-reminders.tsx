@@ -3,7 +3,7 @@
 import clsx from "clsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { useAuth } from "@/lib/use-auth";
+import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
 import { canWriteTeaching } from "@/lib/permissions";
 import { CheckIcon } from "@/components/ios/icons";
 import type { ChildReminder } from "@/features/child-notes/child-note-modal";
@@ -16,7 +16,7 @@ import { useTr } from "@/i18n/tr";
  * kalitlar: bir joyda belgilansa, ikkinchisida ham yangilanadi.
  * Eslatma bo'lmasa hech narsa chizilmaydi.
  */
-export function TeacherReminders({ slug, branchId, date }: { slug: string; branchId: string; date: string }) {
+function TeacherRemindersInner({ slug, branchId, date }: { slug: string; branchId: string; date: string }) {
   const tr = useTr();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -82,4 +82,10 @@ export function TeacherReminders({ slug, branchId, date }: { slug: string; branc
       })}
     </Group>
   );
+}
+
+/** «Bola eslatmalari» o'chirilgan bo'lsa ro'yxat ham, so'rov ham yo'q */
+export function TeacherReminders(props: { slug: string; branchId: string; date: string }) {
+  const on = useFeatureEnabled()("childReminders");
+  return on ? <TeacherRemindersInner {...props} /> : null;
 }

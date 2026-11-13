@@ -64,7 +64,11 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
   const { base } = useBranchContext(slug);
   const { user } = useAuth();
   // «Bolalar davomati» o'chirilgan bo'lsa davomat bo'limlari umuman ko'rinmaydi
-  const attendanceOn = useFeatureEnabled()("attendance");
+  const isOn = useFeatureEnabled();
+  const attendanceOn = isOn("attendance");
+  const canEditGroup = canWriteOperational(user?.role) && isOn("groupEdit");
+  // Tarbiyachi biriktirish xodimlar ro'yxati va «Guruhga biriktirish»ga tayanadi
+  const canAssignTeachers = canWriteOperational(user?.role) && isOn("employees") && isOn("employeeGroups");
   const canWrite = canWriteOperational(user?.role);
   const canMark = canWriteTeaching(user?.role) && attendanceOn;
   const [editOpen, setEditOpen] = useState(false);
@@ -194,7 +198,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
                     )}
                   </p>
                 </div>
-                {canWrite && <IosButton label={tr("Tahrirlash")} icon={Pencil} compact onClick={() => setEditOpen(true)} />}
+                {canEditGroup && <IosButton label={tr("Tahrirlash")} icon={Pencil} compact onClick={() => setEditOpen(true)} />}
               </div>
               <div className="mt-4">
                 <div className="mb-1.5 flex items-baseline justify-between text-[13px]">
@@ -240,13 +244,13 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
         {/* Tarbiyachilar */}
         <IosGroup
           title={tr("Tarbiyachilar")}
-          action={canWrite && overview && overview.teachers.length > 0 ? <button type="button" className="text-[var(--color-primary)] active:opacity-50" onClick={() => setTeachersOpen(true)}>{tr("O'zgartirish")}</button> : undefined}
-          bare={!overview || (overview.teachers.length === 0 && !canWrite)}
+          action={canAssignTeachers && overview && overview.teachers.length > 0 ? <button type="button" className="text-[var(--color-primary)] active:opacity-50" onClick={() => setTeachersOpen(true)}>{tr("O'zgartirish")}</button> : undefined}
+          bare={!overview || (overview.teachers.length === 0 && !canAssignTeachers)}
         >
           {!overview ? (
             <SkeletonRows rows={1} />
           ) : overview.teachers.length === 0 ? (
-            canWrite ? (
+            canAssignTeachers ? (
               <Row
                 onClick={() => setTeachersOpen(true)}
                 leading={<IosIcon icon={UserPlus} tint="orange" size={30} />}
@@ -462,8 +466,8 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
         )}
       </div>
 
-      {canWrite && <GroupFormSheet open={editOpen} onClose={() => setEditOpen(false)} slug={slug} group={group} />}
-      {canWrite && <TeachersSheet open={teachersOpen} onClose={() => setTeachersOpen(false)} slug={slug} group={group} />}
+      {canEditGroup && <GroupFormSheet open={editOpen} onClose={() => setEditOpen(false)} slug={slug} group={group} />}
+      {canAssignTeachers && <TeachersSheet open={teachersOpen} onClose={() => setTeachersOpen(false)} slug={slug} group={group} />}
       {canWrite && <ManageChildrenSheet open={childrenOpen} onClose={() => setChildrenOpen(false)} slug={slug} group={group} />}
       {canWrite && overview && <GroupPhotoSheet open={photoOpen} onClose={() => setPhotoOpen(false)} slug={slug} group={overview.group} />}
     </div>

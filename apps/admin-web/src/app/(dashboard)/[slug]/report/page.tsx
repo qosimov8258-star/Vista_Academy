@@ -23,6 +23,7 @@ import {
   WalletIcon,
 } from "@/components/ui/icons";
 import { useTr } from "@/i18n/tr";
+import { useFeatureEnabled } from "@/lib/use-auth";
 
 const INVOICE_STATUS_LABEL: Record<InvoiceStatus, string> = {
   PENDING: "Kutilmoqda",
@@ -199,6 +200,8 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 
 export default function BranchReportPage({ params }: { params: Promise<{ slug: string }> }) {
   const tr = useTr();
+  // «To'lovlar» o'chirilgan bo'lsa pul ko'rsatkichlari yashiriladi
+  const billingOn = useFeatureEnabled()("billing");
   const { slug } = use(params);
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
 
@@ -472,6 +475,7 @@ export default function BranchReportPage({ params }: { params: Promise<{ slug: s
         )}
       </section>
 
+      {billingOn && (
       <section>
         <SectionTitle>{tr("To'lovlar")}</SectionTitle>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -530,6 +534,7 @@ export default function BranchReportPage({ params }: { params: Promise<{ slug: s
           </CardBody>
         </Card>
       </section>
+      )}
     </div>
   );
 }

@@ -116,6 +116,7 @@ function BranchChildren({ slug }: { slug: string }) {
   const allergiesQuery = useQuery({
     queryKey: ["child-allergies", slug, forcedBranchId],
     queryFn: () => api.get<ChildAllergy[]>(`/app/health/allergies${forcedBranchId ? `?branchId=${forcedBranchId}` : ""}`),
+    enabled: isOn("health"),
   });
   const allergyChildIds = new Set((allergiesQuery.data ?? []).map((a) => a.child.id));
 
@@ -167,7 +168,7 @@ function BranchChildren({ slug }: { slug: string }) {
   };
 
   const refresh = async () => {
-    await Promise.all([childrenQuery.refetch(), allergiesQuery.refetch(), ...(isFinance && isOn("billing") ? [financeStatsQuery.refetch()] : [])]);
+    await Promise.all([childrenQuery.refetch(), ...(isOn("health") ? [allergiesQuery.refetch()] : []), ...(isFinance && isOn("billing") ? [financeStatsQuery.refetch()] : [])]);
   };
 
   const handleExport = async () => {
@@ -202,8 +203,8 @@ function BranchChildren({ slug }: { slug: string }) {
           subtitle={tr("Tarmoqqa ro'yxatga olingan bolalar")}
           actions={
             <>
-              <IosButton label={tr("Eksport (CSV)")} icon={DocumentIcon} compact onClick={handleExport} loading={exporting} />
-              {canWrite && <IosButton label={tr("Yangi bola")} icon={PlusIcon} variant="primary" compact onClick={() => setCreateOpen(true)} />}
+              {isOn("exports") && <IosButton label={tr("Eksport (CSV)")} icon={DocumentIcon} compact onClick={handleExport} loading={exporting} />}
+              {canWrite && isOn("childCreate") && <IosButton label={tr("Yangi bola")} icon={PlusIcon} variant="primary" compact onClick={() => setCreateOpen(true)} />}
             </>
           }
         />
@@ -386,7 +387,7 @@ function BranchChildren({ slug }: { slug: string }) {
           openChild && (
             <>
               <SheetPrimaryButton href={childHref(openChild.id)}>{isFinance ? tr("To'lovlarni ochish") : tr("Profilni ochish")}</SheetPrimaryButton>
-              {canWrite && <SheetSecondaryButton onClick={() => startEdit(openChild)}>{tr("Tahrirlash")}</SheetSecondaryButton>}
+              {canWrite && isOn("childEdit") && <SheetSecondaryButton onClick={() => startEdit(openChild)}>{tr("Tahrirlash")}</SheetSecondaryButton>}
             </>
           )
         }

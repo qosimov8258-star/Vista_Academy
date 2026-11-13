@@ -28,7 +28,13 @@ export class TenantDashboardService {
     private readonly prisma: PrismaService,
   ) {}
 
-  async summary(scope: TenantScope) {
+  /**
+   * `disabled` — platforma shu panel uchun o'chirgan funksiyalar: ularning
+   * raqamlari hisoblanmaydi va bo'sh (0 / []) qaytadi — o'chirilgan bo'lim
+   * ma'lumoti bosh sahifa orqali ham sizib chiqmaydi.
+   */
+  async summary(scope: TenantScope, disabled: readonly string[] = []) {
+    const on = (feature: string) => !disabled.includes(feature);
     // Super Admin filialni so'rovda beradi — boshqa tashkilot filiali bo'lmasin.
     // Ilgari bu tekshiruv faqat tasodifan (pastdagi davomat chaqiruvida) bor edi,
     // undan oldin esa eslatmalar sinxronlanib, filial bo'yicha yozuvlar yaratilardi.
@@ -43,8 +49,11 @@ export class TenantDashboardService {
     }
     // Bildirishnomalar sahifasida ko'rinishidan oldin, hozirgi holatga mos
     // ravishda yetishmayotganlarini to'ldirib qo'yamiz.
-    await this.billingService.syncOverdueNotifications(scope);
-    await this.billingService.syncPaymentDueNotifications(scope);
+    if (on("billing")) {
+      await this.billingService.syncOverdueNotifications(scope);
+      await this.billingService.syncPaymentDueNotifications(scope);
+    }
+    const none = { present: 0, absent: 0 };
 
     // Filial darajasidagi vidjetlar (diqqat, tug'ilgan kun, guruh
     // to'lganligi, qarzdorlar) faqat bitta filialga biriktirilgan
@@ -72,15 +81,15 @@ export class TenantDashboardService {
       this.childrenService.countActive(scope),
       this.groupsService.countActive(scope),
       this.employeesService.countActive(scope),
-      this.billingService.monthRevenue(scope),
-      this.billingService.previousMonthRevenue(scope),
-      this.billingService.outstandingDebt(scope),
-      this.billingService.overdueInvoicesCount(scope),
-      this.attendanceService.todaySummary(scope),
-      this.staffAttendanceService.todaySummary(scope),
-      this.dailyReportsService.todayFilledCount(scope),
-      this.crmService.countActive(scope),
-      this.notificationsService.countPending(scope),
+      on("billing") ? this.billingService.monthRevenue(scope) : 0,
+      on("billing") ? this.billingService.previousMonthRevenue(scope) : 0,
+      on("billing") ? this.billingService.outstandingDebt(scope) : 0,
+      on("billing") ? this.billingService.overdueInvoicesCount(scope) : 0,
+      on("attendance") ? this.attendanceService.todaySummary(scope) : none,
+      on("staffAttendance") ? this.staffAttendanceService.todaySummary(scope) : none,
+      on("dailyReports") ? this.dailyReportsService.todayFilledCount(scope) : 0,
+      on("crm") ? this.crmService.countActive(scope) : 0,
+      on("notifications") ? this.notificationsService.countPending(scope) : 0,
       scope.branchId
         ? this.attentionList(scope)
         : Promise.resolve({ unmarkedAttendance: [], missingDailyReport: [], overdueVaccinations: [] }),
@@ -88,7 +97,7 @@ export class TenantDashboardService {
       scope.branchId
         ? this.groupsService.capacityOverview(scope)
         : Promise.resolve({ totalCapacity: 0, totalActive: 0, groups: [] }),
-      scope.branchId ? this.billingService.topDebtors(scope) : Promise.resolve([]),
+      scope.branchId && on("billing") ? this.billingService.topDebtors(scope) : Promise.resolve([]),
     ]);
 
     return {
@@ -104,7 +113,11 @@ export class TenantDashboardService {
       todayDailyReportsFilled,
       activeLeadsCount,
       pendingNotificationsCount,
-      attention,
+      attention: {
+        unmarkedAttendance: on("attendance") ? attention.unmarkedAttendance : [],
+        missingDailyReport: on("dailyReports") ? attention.missingDailyReport : [],
+        overdueVaccinations: on("health") ? attention.overdueVaccinations : [],
+      },
       upcomingBirthdays,
       groupCapacity,
       topDebtors,
@@ -177,7 +190,8 @@ export class TenantDashboardService {
    * `summary()` dan farqi — bu sahifa bir filialni chuqurroq ko'rsatadi,
    * shuning uchun raqamlar bo'linmalarga ajratilgan holda qaytadi.
    */
-  async branchReport(scope: TenantScope, branchId: string) {
+  async branchReport(scope: TenantScope, branchId: string, disabled: readonly string[] = []) {
+    const billingOn = !disabled.includes("billing");
     // Hisobotda butun filialning moliyasi bor, shuning uchun uni faqat
     // filialni boshqaradiganlar ko'radi. O'qituvchi o'z filialida bo'lsa ham
     // bu sahifaga kira olmaydi — u faqat o'z guruhlarini yuritadi.
@@ -226,12 +240,13 @@ export class TenantDashboardService {
         }),
         this.prisma.invoice.groupBy({
           by: ["status"],
-          where: { branchId, status: { not: "CANCELLED" } },
+          // «To'lovlar» o'chirilgan bo'lsa moliya bo'limi bo'sh qaytadi
+          where: billingOn ? { branchId, status: { not: "CANCELLED" } } : { branchId, id: { in: [] } },
           _count: { _all: true },
           _sum: { amount: true, discountAmount: true, paidAmount: true },
         }),
-        this.billingService.monthRevenue({ ...scope, branchId }),
-        this.billingService.outstandingDebt({ ...scope, branchId }),
+        billingOn ? this.billingService.monthRevenue({ ...scope, branchId }) : 0,
+        billingOn ? this.billingService.outstandingDebt({ ...scope, branchId }) : 0,
       ]);
 
     const genderCount = (value: "MALE" | "FEMALE" | null) =>
