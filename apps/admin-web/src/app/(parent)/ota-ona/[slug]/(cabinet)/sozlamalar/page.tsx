@@ -43,7 +43,8 @@ function initialsOf(name: string): string {
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
+    // Birinchi harf ([SINOV] kabi belgilar tashlab ketiladi)
+    .map((part) => part.match(/\p{L}/u)?.[0]?.toUpperCase() ?? "")
     .join("");
 }
 
@@ -127,7 +128,7 @@ function Switch({ checked, disabled, onChange, label }: { checked: boolean; disa
     >
       <span
         className={clsx(
-          "absolute top-[2px] h-[27px] w-[27px] rounded-full bg-white shadow-[0_3px_8px_rgba(0,0,0,0.15),0_3px_1px_rgba(0,0,0,0.06)] transition-transform duration-200",
+          "absolute left-0 top-[2px] h-[27px] w-[27px] rounded-full bg-white shadow-[0_3px_8px_rgba(0,0,0,0.15),0_3px_1px_rgba(0,0,0,0.06)] transition-transform duration-200",
           checked ? "translate-x-[22px]" : "translate-x-[2px]",
         )}
       />
