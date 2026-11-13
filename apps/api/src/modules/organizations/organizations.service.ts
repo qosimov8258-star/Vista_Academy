@@ -27,6 +27,8 @@ import { R2_CATEGORY } from "../storage/r2.constants";
 
 /** Rasm brauzerda 256x256 gacha kichraytirilgani uchun bundan oshmasligi kerak. */
 const MAX_BRANCH_AVATAR_BYTES = 300 * 1024;
+/** Logo brauzerda 512x512 PNG gacha kichraytiriladi; shaffof fon tufayli JPEG dan kattaroq. */
+const MAX_ORGANIZATION_LOGO_BYTES = 600 * 1024;
 
 @Injectable()
 export class OrganizationsService {
@@ -191,7 +193,7 @@ export class OrganizationsService {
 
   /** Kirish sahifasi uchun: faqat nom va slug, boshqa maydonlar ochilmaydi. */
   findPublicBySlug(slug: string) {
-    return this.prisma.organization.findUnique({ where: { slug }, select: { name: true, slug: true } });
+    return this.prisma.organization.findUnique({ where: { slug }, select: { name: true, slug: true, logoUpdatedAt: true } });
   }
 
   async findOne(id: string) {
@@ -265,6 +267,79 @@ export class OrganizationsService {
       where: { id: organizationId },
       data: { name },
       select: { id: true, name: true },
+    });
+  }
+
+  /**
+   * Bog'cha logosini yuklash (Sozlamalar). Rasm brauzerda kvadratga
+   * sig'diriladi; R2 sozlangan bo'lsa u yerga, aks holda bazaga yoziladi.
+   */
+  async updateLogo(caller: TenantAuthenticatedUser, image: string) {
+    const [header, base64] = image.split(",", 2);
+    const mimeType = header.slice("data:".length, header.indexOf(";"));
+    const buffer = Buffer.from(base64, "base64");
+    if (buffer.byteLength === 0) {
+      throw new BadRequestException("Rasm bo'sh");
+    }
+    if (buffer.byteLength > MAX_ORGANIZATION_LOGO_BYTES) {
+      throw new BadRequestException("Rasm hajmi juda katta");
+    }
+    const current = await this.prisma.organization.findUniqueOrThrow({
+      where: { id: caller.organizationId },
+      select: { logoKey: true },
+    });
+
+    let logo: Buffer<ArrayBuffer> | null = buffer;
+    let logoKey: string | null = null;
+    if (this.r2.enabled) {
+      logoKey = this.r2.buildKey(caller.organizationId, R2_CATEGORY.ORGANIZATION_LOGO);
+      await this.r2.uploadBuffer(logoKey, buffer, mimeType);
+      logo = null;
+    }
+    const updated = await this.prisma.organization.update({
+      where: { id: caller.organizationId },
+      data: { logo, logoKey, logoMimeType: mimeType, logoUpdatedAt: new Date() },
+      select: { logoUpdatedAt: true },
+    });
+    // Eski fayl DB yozuvi muvaffaqiyatli bo'lgandan KEYIN o'chiriladi
+    if (current.logoKey && this.r2.enabled) {
+      await this.r2.deleteObject(current.logoKey);
+    }
+    await this.auditLog.logFromUser(caller, {
+      action: "organization.logo",
+      entityType: "Organization",
+      entityId: caller.organizationId,
+      summary: "Bog'cha logosi yangilandi",
+    });
+    return { logoUpdatedAt: updated.logoUpdatedAt };
+  }
+
+  async removeLogo(caller: TenantAuthenticatedUser) {
+    const previous = await this.prisma.organization.findUniqueOrThrow({
+      where: { id: caller.organizationId },
+      select: { logoKey: true },
+    });
+    await this.prisma.organization.update({
+      where: { id: caller.organizationId },
+      data: { logo: null, logoKey: null, logoMimeType: null, logoUpdatedAt: null },
+    });
+    if (previous.logoKey) {
+      await this.r2.deleteObject(previous.logoKey);
+    }
+    await this.auditLog.logFromUser(caller, {
+      action: "organization.logo",
+      entityType: "Organization",
+      entityId: caller.organizationId,
+      summary: "Bog'cha logosi olib tashlandi",
+    });
+    return { logoUpdatedAt: null };
+  }
+
+  /** Logo binar ko'rinishda — kirish sahifasida ham kerak, shuning uchun slug bo'yicha. */
+  readLogoBySlug(slug: string) {
+    return this.prisma.organization.findUnique({
+      where: { slug },
+      select: { logo: true, logoKey: true, logoMimeType: true },
     });
   }
 

@@ -55,6 +55,7 @@ export class TenantJwtStrategy extends PassportStrategy(Strategy, "tenant-jwt") 
       organizationId: tenantUser.organizationId,
       organizationSlug: tenantUser.organization.slug,
       organizationName: tenantUser.organization.name,
+      organizationLogoUpdatedAt: tenantUser.organization.logoUpdatedAt?.toISOString() ?? null,
       branchId: tenantUser.branchId,
       branchSlug: tenantUser.branch?.slug ?? null,
       branchName: tenantUser.branch?.name ?? null,

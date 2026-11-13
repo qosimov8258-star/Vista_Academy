@@ -20,6 +20,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         child: { avatar: true, monthlyFee: true },
         employee: { avatar: true },
         group: { avatar: true },
+        organization: { logo: true },
         product: { image1: true, image2: true, image3: true },
         // Ota-ona paroli xeshi javoblarga tushmasin (`include: { guardian: true }` ko'p joyda);
         // kerak bo'lgan kirish joylari uni `omit: { passwordHash: false }` bilan so'raydi.

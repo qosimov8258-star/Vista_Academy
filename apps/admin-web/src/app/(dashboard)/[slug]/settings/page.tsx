@@ -21,6 +21,7 @@ import {
   CameraIcon,
   CheckIcon,
   CopyIcon,
+  ImageIcon,
   KeyIcon,
   LockIcon,
   LogoutIcon,
@@ -30,6 +31,7 @@ import { ROLE_LABEL, isTeacher } from "@/lib/permissions";
 import { MAX_UPLOAD_BYTES, resizeToSquare } from "@/lib/resize-image";
 import { ThemePickerCard } from "@/features/settings/theme-picker-card";
 import { SettingsGroup, SettingsPlainIcons, SettingsRow, SettingsSheet } from "@/features/settings/settings-ui";
+import { OrgLogoBadge, OrgLogoSheet } from "@/features/organization/org-logo-sheet";
 import { useTr } from "@/i18n/tr";
 
 const profileSchema = z.object({
@@ -67,7 +69,7 @@ type ProfileValues = z.infer<typeof profileSchema>;
 type OrgNameValues = z.infer<typeof orgNameSchema>;
 type LoginValues = z.infer<typeof loginSchema>;
 type PasswordValues = z.infer<typeof passwordSchema>;
-type Sheet = "name" | "orgName" | "security" | null;
+type Sheet = "name" | "orgName" | "orgLogo" | "security" | null;
 
 const errorText = (err: unknown, fallback = "Kutilmagan xatolik") => (err instanceof ApiError ? err.message : fallback);
 
@@ -335,9 +337,21 @@ export default function SettingsPage({ params }: { params: Promise<{ slug: strin
         {(user.role === "NETWORK_ADMIN" || user.role === "BRANCH_ADMIN") && (
           <SettingsGroup
             title={tr("Logo")}
-            footer={tr("Bu nom butun panelda — yon menyu, kirish sahifasi, xodim va bola qo'shish oynalarida ko'rinadi.")}
+            footer={tr("Nom va logo butun panelda — yon menyu, kirish sahifasi, xodim va bola qo'shish oynalarida ko'rinadi.")}
           >
             <SettingsRow first icon={BuildingIcon} label={tr("Bog'cha nomi")} value={user.organizationName} onClick={() => setSheet("orgName")} />
+            <SettingsRow
+              icon={ImageIcon}
+              tint="pink"
+              label={tr("Bog'cha logosi")}
+              value={user.organizationLogoUpdatedAt ? undefined : tr("Yuklanmagan")}
+              trailing={
+                user.organizationLogoUpdatedAt ? (
+                  <OrgLogoBadge slug={slug} name={user.organizationName} updatedAt={user.organizationLogoUpdatedAt} size={32} />
+                ) : undefined
+              }
+              onClick={() => setSheet("orgLogo")}
+            />
           </SettingsGroup>
         )}
 
@@ -410,6 +424,14 @@ export default function SettingsPage({ params }: { params: Promise<{ slug: strin
             </Button>
           </form>
         </SettingsSheet>
+
+        <OrgLogoSheet
+          open={sheet === "orgLogo"}
+          onClose={closeSheet}
+          slug={slug}
+          name={user.organizationName}
+          updatedAt={user.organizationLogoUpdatedAt ?? null}
+        />
 
         {/* Login va parol */}
         <SettingsSheet open={sheet === "security"} onClose={closeSheet} title={tr("Login va parolni o'zgartirish")}>

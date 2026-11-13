@@ -119,6 +119,13 @@ model Organization {
   /// Xuddi shunday, lekin alohida panel (rol) uchun: {"TEACHER": {"crm": false}}.
   /// Panel sozlamasi bog'cha sozlamasidan ustun turadi.
   panelFeatureOverrides Json       @default("{}") @map("panel_feature_overrides")
+  /// Bog'cha logosi (Sozlamalarda yuklanadi; yon menyu va kirish sahifasida
+  /// harflar o'rnida). R2 sozlangan bo'lsa `logoKey`, aks holda bevosita
+  /// bazada (`logo`). Blob oddiy so'rovlarga tushmaydi (PrismaService omit).
+  logo          Bytes?             @map("logo")
+  logoKey       String?            @map("logo_key")
+  logoMimeType  String?            @map("logo_mime_type")
+  logoUpdatedAt DateTime?          @map("logo_updated_at")
   createdAt     DateTime           @default(now()) @map("created_at")
   updatedAt     DateTime           @updatedAt @map("updated_at")
 

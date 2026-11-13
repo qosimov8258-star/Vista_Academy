@@ -3040,5 +3040,15 @@
  "Bu kirish havolasi allaqachon ishlatilgan": "Эта ссылка для входа уже использована",
  "O'qidim": "Прочитал(а)",
  "Keyinroq": "Позже",
- "{0} daq oldin": "{0} мин назад"
+ "{0} daq oldin": "{0} мин назад",
+ "Bog'cha logosi": "Логотип садика",
+ "Yuklanmagan": "Не загружен",
+ "Logoni almashtirish": "Заменить логотип",
+ "Logo yuklash": "Загрузить логотип",
+ "Logoni o'chirish": "Удалить логотип",
+ "Logoni saqlab bo'lmadi": "Не удалось сохранить логотип",
+ "Logoni o'chirib bo'lmadi": "Не удалось удалить логотип",
+ "Logo o'chiriladi, o'rniga bog'cha nomining bosh harflari ko'rinadi.": "Логотип будет удалён, вместо него появятся первые буквы названия садика.",
+ "Yon menyuda va kirish sahifasida bog'cha nomining bosh harflari o'rnida ko'rinadi. Shaffof fonli PNG eng chiroyli chiqadi.": "Показывается в боковом меню и на странице входа вместо первых букв названия. Лучше всего выглядит PNG с прозрачным фоном.",
+ "Nom va logo butun panelda — yon menyu, kirish sahifasi, xodim va bola qo'shish oynalarida ko'rinadi.": "Название и логотип видны по всей панели — в боковом меню, на странице входа, в окнах добавления сотрудника и ребёнка."
 }

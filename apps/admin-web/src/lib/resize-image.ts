@@ -35,3 +35,24 @@ export async function resizeToSquare(file: File, size: number = AVATAR_SIZE): Pr
   bitmap.close();
   return canvas.toDataURL("image/jpeg", 0.85);
 }
+
+/**
+ * Logo uchun: rasm kesilmaydi — kvadrat ichiga to'liq sig'diriladi (atrofi
+ * shaffof) va PNG qaytariladi. Logolar ko'pincha keng va shaffof fonli,
+ * markazdan kesish ularni buzib qo'yardi.
+ */
+export async function fitToSquarePng(file: File, size: number): Promise<string> {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(size / bitmap.width, size / bitmap.height, 1);
+  const w = Math.round(bitmap.width * scale);
+  const h = Math.round(bitmap.height * scale);
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Rasmni qayta ishlash imkoni bo'lmadi");
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(bitmap, (size - w) / 2, (size - h) / 2, w, h);
+  bitmap.close();
+  return canvas.toDataURL("image/png");
+}

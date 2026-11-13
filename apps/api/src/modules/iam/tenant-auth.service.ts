@@ -292,13 +292,14 @@ export class TenantAuthService {
       themeColor: string | null;
       employee: { position: string; subjects: string[]; topicsManagedByAdmin: boolean } | null;
     },
-    organization: { slug: string; name: string },
+    organization: { slug: string; name: string; logoUpdatedAt?: Date | null },
   ): TenantAuthenticatedUser {
     return {
       id: tenantUser.id,
       organizationId: tenantUser.organizationId,
       organizationSlug: organization.slug,
       organizationName: organization.name,
+      organizationLogoUpdatedAt: organization.logoUpdatedAt?.toISOString() ?? null,
       branchId: tenantUser.branchId,
       branchSlug: tenantUser.branch?.slug ?? null,
       branchName: tenantUser.branch?.name ?? null,

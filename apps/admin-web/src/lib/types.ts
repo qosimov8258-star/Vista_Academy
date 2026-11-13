@@ -4,6 +4,8 @@ export type TenantUserRole = "NETWORK_ADMIN" | "BRANCH_ADMIN" | "FINANCE" | "MAN
 export interface PublicOrganization {
   name: string;
   slug: string;
+  /** Bog'cha logosi yuklangan vaqt; null — logo yo'q. */
+  logoUpdatedAt?: string | null;
 }
 
 export interface TenantAuthenticatedUser {
@@ -11,6 +13,8 @@ export interface TenantAuthenticatedUser {
   organizationId: string;
   organizationSlug: string;
   organizationName: string;
+  /** Bog'cha logosi yuklangan vaqt (rasm manziliga `?v=`); null — logo yo'q. */
+  organizationLogoUpdatedAt?: string | null;
   branchId: string | null;
   branchSlug: string | null;
   branchName: string | null;

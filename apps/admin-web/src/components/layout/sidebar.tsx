@@ -25,6 +25,7 @@ import { isSection, type NavEntry, type NavLeaf, type NavSection } from "./nav-t
 import { DirectorRail } from "./director-rail";
 import { DirectorBottomBar } from "./director-bottom-bar";
 import { ArrowLeftIcon, ChevronRightIcon, CloseIcon, DocumentIcon, LogoutIcon, SidebarIcon } from "@/components/ui/icons";
+import { OrgLogo } from "@/features/organization/org-logo";
 import { ReceiptText } from "lucide-react";
 import type { IconProps } from "@/components/ui/icons";
 
@@ -638,13 +639,20 @@ export function Sidebar({ slug }: { slug: string }) {
               title={collapsed ? user.organizationName : undefined}
               aria-hidden="true"
             >
-              {dark ? (
-                <span className="bg-gradient-to-br from-[#a3143a] via-[#e0457a] to-[#c98a05] bg-clip-text text-transparent">
-                  {initials(user.organizationName)}
-                </span>
-              ) : (
-                initials(user.organizationName)
-              )}
+              <OrgLogo
+                slug={user.organizationSlug}
+                updatedAt={user.organizationLogoUpdatedAt}
+                className={clsx("h-[78%] w-[78%]", !dark && "rounded-[6px] bg-white p-[2px]")}
+                fallback={
+                  dark ? (
+                    <span className="bg-gradient-to-br from-[#a3143a] via-[#e0457a] to-[#c98a05] bg-clip-text text-transparent">
+                      {initials(user.organizationName)}
+                    </span>
+                  ) : (
+                    initials(user.organizationName)
+                  )
+                }
+              />
             </span>
           ) : (
             <span className="h-9 w-9 shrink-0 animate-pulse rounded-[11px] bg-black/[0.06]" aria-hidden="true" />

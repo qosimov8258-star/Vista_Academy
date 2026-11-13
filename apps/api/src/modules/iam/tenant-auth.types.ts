@@ -6,6 +6,8 @@ export interface TenantAuthenticatedUser {
   organizationId: string;
   organizationSlug: string;
   organizationName: string;
+  /** Bog'cha logosi yuklangan vaqt (rasm manziliga `?v=`); null — logo yo'q, harflar ko'rsatiladi. */
+  organizationLogoUpdatedAt: string | null;
   branchId: string | null;
   branchSlug: string | null;
   branchName: string | null;
