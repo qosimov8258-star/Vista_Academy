@@ -14,6 +14,7 @@ import {
   Coins,
   FileText,
   Globe,
+  HeartHandshake,
   House,
   Images,
   IdCard,
@@ -76,6 +77,8 @@ export const BellIcon = navIcon(Bell, "red");
 /** Xabar yuborish (ota-onalar va xodimlarga) */
 // Xabar yuborish (ommaviy xabar) — karnay; ko'k emas: u Bosh sahifa va Bugungi ishlarda band
 export const BroadcastIcon = navIcon(Megaphone, "indigo");
+/** Ota-onalar — kabinetdan qanchalik foydalanayotgani (faollik statistikasi) */
+export const ParentsNavIcon = navIcon(HeartHandshake, "purple");
 // Filial menyusidagi bitta bandli bo'limlar — har birining o'z rangi
 // (avval ochiladigan bo'lim bo'lganda rang SECTION_TINT dan kelardi).
 export const TodayNavIcon = navIcon(Phone, "blue");

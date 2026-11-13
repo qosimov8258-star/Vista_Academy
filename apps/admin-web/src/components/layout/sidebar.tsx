@@ -62,6 +62,7 @@ import {
   PhoneOutgoingIcon,
   QuestionIcon,
   BroadcastIcon,
+  ParentsNavIcon,
   SettingsIcon,
   ShopIcon,
   StarIcon,
@@ -306,6 +307,8 @@ export function Sidebar({ slug }: { slug: string }) {
     // bulardan alohida — ular filial xodimlarining kundalik ish joyi.
     { href: `/${slug}/network/groups`, label: t("nav.groups"), icon: GroupIcon, show: true },
     { href: `/${slug}/network/children`, label: t("nav.students"), icon: ChildIcon, show: true },
+    // Ota-onalar kabinetdan qanchalik foydalanayotgani — butun tarmoq (filial tanlovi sahifada)
+    { href: `/${slug}/parents`, label: tr("Ota-onalar"), icon: ParentsNavIcon, show: true },
     { href: `/${slug}/network/finance`, label: t("nav.finance"), icon: MoneyIcon, show: true },
     // Filial bo'yicha to'liq hisobot. Sahifaning o'zida filial tanlanadi,
     // shuning uchun yon panelda bitta havola yetarli.
@@ -457,6 +460,8 @@ export function Sidebar({ slug }: { slug: string }) {
     // Super Admin faqat ko'radi.
     { href: `${base}/crm`, label: tr("Qabul"), icon: AdmissionIcon, show: true },
     { href: `${base}/children`, label: t("nav.children"), icon: ChildIcon, show: true },
+    // Ota-onalar faolligi: kabinetga kiryaptimi, nimani ko'ryapti, qancha vaqt (moliyachiga emas)
+    { href: `${base}/parents`, label: tr("Ota-onalar"), icon: ParentsNavIcon, show: !isFinance },
     {
       href: `${base}/groups`,
       label: t("nav.groups"),
