@@ -54,6 +54,7 @@ import { HrModule } from "./modules/hr/hr.module";
 import { NotificationsModule } from "./modules/notifications/notifications.module";
 import { ExportsModule } from "./modules/exports/exports.module";
 import { ParentModule } from "./modules/parent/parent.module";
+import { ParentEngagementModule } from "./modules/parent-engagement/parent-engagement.module";
 import { UsefulModule } from "./modules/useful/useful.module";
 import { ArticlesModule } from "./modules/articles/articles.module";
 import { GalleryModule } from "./modules/gallery/gallery.module";
@@ -116,6 +117,7 @@ import { BroadcastsModule } from "./modules/broadcasts/broadcasts.module";
     NotificationsModule,
     ExportsModule,
     ParentModule,
+    ParentEngagementModule,
     UsefulModule,
     ArticlesModule,
     GalleryModule,

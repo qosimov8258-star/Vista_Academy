@@ -504,6 +504,7 @@ model Child {
   faceIdCommands            FaceIdCommand[]
   paymentReminderDispatches PaymentReminderDispatch[]
   paymentReceipts           PaymentReceipt[]
+  guardianPageViews         GuardianPageView[]
 
   @@unique([organizationId, publicId])
   @@index([organizationId, branchId])
@@ -2156,6 +2157,7 @@ model Guardian {
   paymentReceipts   PaymentReceipt[]
   pushSubscriptions GuardianPushSubscription[]
   broadcastInbox    BroadcastRecipient[]
+  pageViews         GuardianPageView[]
 
   @@unique([organizationId, phone])
   @@index([organizationId])
@@ -2167,6 +2169,31 @@ model Guardian {
  * (telefon + kompyuter) obuna bo'lishi mumkin — shuning uchun guardianId
  * emas, `endpoint` unikal: har bir qurilma/brauzer alohida obuna yaratadi.
  */
+/// Ota-ona kabinetidagi sahifa ko'rishlari — panelning «Ota-onalar» bo'limidagi
+/// faollik statistikasi (kim, qachon, nimani, qancha vaqt ko'rgani) shundan olinadi.
+/// Sahifa ochilganda bitta yozuv; kabinet ekranda ochiq turganda brauzer har
+/// 30 soniyada «ping» yuboradi va `durationSec` server vaqti bo'yicha oshadi
+/// (bitta ping ko'pi bilan 75 soniya qo'shadi — yopiq turgan vaqt hisoblanmaydi).
+model GuardianPageView {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  guardianId     String   @map("guardian_id")
+  /// Ko'rilayotgan farzand (kabinetda tanlangani); bolaga bog'liq bo'lmagan sahifada null
+  childId        String?  @map("child_id")
+  /// Kabinet bo'limi: home, kundalik, jadval, fayllar, tolov, dokon, foydali, xabarlar, sozlamalar, tanlash
+  page           String
+  startedAt      DateTime @default(now()) @map("started_at")
+  lastSeenAt     DateTime @default(now()) @map("last_seen_at")
+  durationSec    Int      @default(0) @map("duration_sec")
+
+  guardian Guardian @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+  child    Child?   @relation(fields: [childId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, startedAt])
+  @@index([guardianId, startedAt])
+  @@map("guardian_page_views")
+}
+
 model GuardianPushSubscription {
   id         String   @id @default(uuid())
   guardianId String   @map("guardian_id")
