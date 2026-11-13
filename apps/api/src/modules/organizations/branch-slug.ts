@@ -52,6 +52,8 @@ export const RESERVED_BRANCH_SLUGS = new Set([
   "network",
   "reminders",
   "report",
+  "messages",
+  "parents",
 ]);
 
 export function isUsableBranchSlug(candidate: string, organizationSlug: string): boolean {

@@ -48,6 +48,8 @@ const KNOWN_ORG_PAGES = new Set([
   "reminders",
   "report",
   "enter",
+  "messages",
+  "parents",
 ]);
 
 // app/(dashboard)/[slug]/[branchSlug]/ ostidagi bo'limlar — Super Adminning
@@ -73,6 +75,8 @@ const BRANCH_DRILL_PAGES = new Set([
   "staff-attendance",
   "timetable",
   "useful",
+  "messages",
+  "parents",
 ]);
 
 function base64UrlDecode(input: string): string {
