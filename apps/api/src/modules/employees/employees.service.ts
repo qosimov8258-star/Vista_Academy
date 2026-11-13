@@ -711,12 +711,22 @@ export class EmployeesService {
   }
 
   /** Binar surat. */
+  /**
+   * Rasmni ko'rish — o'qish huquqi yetarli. Ilgari yozish tekshiruvi
+   * (requireWritableEmployee) ishlatilardi, shuning uchun moliyachi va
+   * o'qituvchi xodimlar ro'yxatida rasmlarni ko'ra olmasdi (403). Moliyachi
+   * butun tarmoqni ko'radi, filialga biriktirilgan boshqa rollar — o'z filialini.
+   */
   async readAvatar(scope: TenantScope, id: string) {
-    await this.requireWritableEmployee(scope, id);
-    return this.prisma.employee.findUniqueOrThrow({
-      where: { id },
+    const ownBranchOnly = scope.branchId && scope.role !== "FINANCE";
+    const employee = await this.prisma.employee.findFirst({
+      where: { id, organizationId: scope.organizationId, ...(ownBranchOnly ? { branchId: scope.branchId! } : {}) },
       select: { avatar: true, avatarKey: true, avatarMimeType: true },
     });
+    if (!employee) {
+      throw new NotFoundException("Xodim topilmadi");
+    }
+    return employee;
   }
 
   /**
