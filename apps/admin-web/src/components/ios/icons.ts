@@ -47,6 +47,7 @@ export {
   Plus as PlusIcon,
   Search as SearchIcon,
   Settings as SettingsIcon,
+  Download as DownloadIcon,
   IdCard as TeacherIcon,
   Image as ImageIcon,
   Trash2 as TrashIcon,

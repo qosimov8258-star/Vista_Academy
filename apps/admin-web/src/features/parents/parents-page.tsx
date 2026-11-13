@@ -6,9 +6,10 @@ import clsx from "clsx";
 import { useQuery } from "@tanstack/react-query";
 import { BellRing, Clock, Eye, HeartHandshake, MessageSquareText, UserRoundCheck, UsersRound } from "lucide-react";
 import { api } from "@/lib/api";
+import { downloadCsv } from "@/lib/download";
 import { useAuth } from "@/lib/use-auth";
 import { useBranchContext } from "@/lib/use-branch-context";
-import { ChevronRightIcon } from "@/components/ios/icons";
+import { ChevronRightIcon, DownloadIcon } from "@/components/ios/icons";
 import { ChipRow, IosChip, SearchPill } from "@/components/ios/filters";
 import { Group as IosGroup } from "@/components/ios/group";
 import { IosButton } from "@/components/ios/button";
@@ -104,6 +105,20 @@ export function ParentsPage({ slug }: { slug: string }) {
   }, [data, search, level, sort]);
 
   const loading = query.isLoading;
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const exportExcel = async () => {
+    setExporting(true);
+    setExportError(null);
+    try {
+      const today = new Date(Date.now() + 5 * 3600_000).toISOString().slice(0, 10);
+      await downloadCsv(`/app/parent-engagement/report${branchId ? `?branchId=${branchId}` : ""}`, `ota-onalar-faolligi-${today}.xlsx`);
+    } catch {
+      setExportError(tr("Hisobotni yuklab bo'lmadi — qayta urinib ko'ring"));
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <div className="mx-auto max-w-[1180px] space-y-5">
@@ -113,7 +128,13 @@ export function ParentsPage({ slug }: { slug: string }) {
         title={tr("Ota-onalar")}
         count={s ? s.total : undefined}
         subtitle={tr("Kabinetdan qanchalik foydalanishyapti")}
+        actions={<IosButton label={tr("Yuklab olish")} icon={DownloadIcon} compact onClick={exportExcel} loading={exporting} disabled={!data} />}
       />
+      {exportError && (
+        <p role="alert" className="rounded-[14px] bg-[#ff3b30]/[0.08] px-4 py-3 text-[14px] text-[#d70015]">
+          {exportError}
+        </p>
+      )}
 
       {canPickBranch && branches.length > 1 && (
         <ChipRow label={tr("Filial")}>

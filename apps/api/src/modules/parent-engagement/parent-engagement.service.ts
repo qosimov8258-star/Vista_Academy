@@ -2,7 +2,38 @@ import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/commo
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantAuthenticatedUser } from "../iam/tenant-auth.types";
+import ExcelJS from "exceljs";
 import { CHILD_RESULT_PAGES, PARENT_PAGES } from "../parent/parent-activity.constants";
+import { dayLabel, dayOf, excelKit, generatedStamp, reportFile, timeOf, weekday, type ReportHead, type ReportTheme } from "../cash-desk/report-kit";
+
+const REPORT_THEME: ReportTheme = { accent: "#8944ab", light: "#f3e8fa" };
+const LEVEL_UZ: Record<EngagementLevel, string> = {
+  ACTIVE: "Faol",
+  LOW: "Kam faol",
+  INACTIVE: "Nofaol",
+  UNCONNECTED: "Kabinet ochilmagan",
+};
+const LEVEL_COLOR: Record<EngagementLevel, string> = {
+  ACTIVE: "FF248A3D",
+  LOW: "FFC93400",
+  INACTIVE: "FFD70015",
+  UNCONNECTED: "FF8E8E93",
+};
+const PAGE_UZ: Record<string, string> = {
+  home: "Bosh sahifa (bolaning kuni)",
+  kundalik: "Kundalik",
+  jadval: "Jadval",
+  fayllar: "Fayllar",
+  tolov: "To'lov",
+  dokon: "Do'kon",
+  foydali: "Foydali",
+  xabarlar: "Xabarlar",
+  sozlamalar: "Sozlamalar",
+  tanlash: "Farzand tanlash",
+};
+const RELATION_UZ: Record<string, string> = { MOTHER: "onasi", FATHER: "otasi", GRANDPARENT: "buvi/bobo", OTHER: "vasiy" };
+const minutes = (sec: number) => Math.round(sec / 60);
+const pct = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 100) : 0);
 
 /** O'zbekiston vaqti (UTC+5, yozgi vaqt yo'q) — «bugun» va kunlik grafik shu bo'yicha. */
 const TZ_OFFSET_MS = 5 * 60 * 60 * 1000;
@@ -225,6 +256,153 @@ export class ParentEngagementService {
         .sort((a, b) => b.seconds - a.seconds || (pageOrder.get(a.page) ?? 99) - (pageOrder.get(b.page) ?? 99)),
       guardians: items,
     };
+  }
+
+  /**
+   * Excel hisobot — ekrandagi ma'lumotning o'zi (oxirgi 30 kun): umumiy
+   * ko'rsatkichlar va har ota-ona bo'yicha bitta qator, bo'limlar, kunlar.
+   * Boshqa hisobotlar bilan bir xil ko'rinishda (cash-desk/report-kit).
+   */
+  async report(user: TenantAuthenticatedUser, branchId?: string) {
+    const data = await this.overview(user, branchId);
+    const effectiveBranchId = user.branchId ?? (branchId || null);
+    const [org, branch] = await Promise.all([
+      this.prisma.organization.findUniqueOrThrow({ where: { id: user.organizationId }, select: { name: true } }),
+      effectiveBranchId ? this.prisma.branch.findFirst({ where: { id: effectiveBranchId, organizationId: user.organizationId }, select: { name: true } }) : null,
+    ]);
+    const today = dayOf(new Date());
+    const monthStart = dayOf(new Date(Date.now() - 29 * DAY_MS));
+    const d: ReportHead = {
+      organization: org.name,
+      branch: branch?.name ?? "Barcha filiallar",
+      periodLabel: `Oxirgi 30 kun: ${dayLabel(monthStart, false)} — ${dayLabel(today)}`,
+      generatedAt: generatedStamp(),
+      generatedBy: user.fullName,
+    };
+
+    const wb = new ExcelJS.Workbook();
+    wb.creator = d.generatedBy;
+    wb.created = new Date();
+    const { head, totalRow, titleBlock, section, zebra } = excelKit(d, REPORT_THEME);
+    const s = data.summary;
+    const g = data.guardians;
+    const sumOf = (k: "secondsToday" | "secondsWeek" | "secondsMonth") => g.reduce((acc, x) => acc + x[k], 0);
+
+    // 1. Umumiy
+    const ws = wb.addWorksheet("Umumiy");
+    const cols = ["№", "Ota-ona", "Telefon", "Farzandi", "Holati", "Oxirgi faollik", "Bugun (daq)", "7 kun (daq)", "30 kun (daq)", "Faol kunlar", "Bolasini ko'rdi", "Bildirishnoma", "O'qilmagan xabar"];
+    ws.columns = [5, 28, 16, 34, 18, 17, 11, 11, 12, 11, 13, 13, 13].map((width) => ({ width }));
+    titleBlock(ws, "Ota-onalar faolligi", cols.length);
+    const info = (items: [string, string][], big: string) => {
+      for (const [k, v] of items) {
+        const r = ws.addRow([k, "", "", v]);
+        ws.mergeCells(r.number, 1, r.number, 3);
+        ws.mergeCells(r.number, 4, r.number, cols.length);
+        r.getCell(1).font = { color: { argb: "FF6D6D72" } };
+        r.getCell(4).font = { bold: true, size: k === big ? 14 : 11 };
+        r.getCell(4).alignment = { horizontal: "left" };
+      }
+    };
+    info(
+      [
+        ["Davr", d.periodLabel],
+        ["Ota-onalar", `${s.total} ta`],
+        ["Kabinet ochilgan", `${s.connected} ta (${pct(s.connected, s.total)}%)`],
+        ["Bu hafta kirgan", `${s.active7} ta (ulanganlarning ${pct(s.active7, s.connected)}%)`],
+        ["Bugun kirgan", `${s.activeToday} ta`],
+        ["Faol / kam faol / nofaol / ochilmagan", `${s.levels.ACTIVE} / ${s.levels.LOW} / ${s.levels.INACTIVE} / ${s.levels.UNCONNECTED}`],
+        ["Bildirishnoma yoqilgan", `${s.pushEnabled} ta`],
+        ["Bolasini kuzatadi (30 kun)", `${s.followingChild30} ta`],
+        ["Xabarlar o'qilishi (30 kun)", `${s.messagesRead30} / ${s.messagesReceived30} (${pct(s.messagesRead30, s.messagesReceived30)}%)`],
+        ["Kabinetda jami vaqt (30 kun)", `${minutes(s.secondsMonth)} daqiqa`],
+        ["O'rtacha vaqt", `haftasiga ${minutes(s.avgSecondsPerActiveWeek)} daqiqa (bitta faol ota-ona)`],
+        ["Tuzildi", `${d.generatedAt} · ${d.generatedBy}`],
+      ],
+      "Bu hafta kirgan",
+    );
+    ws.addRow([]);
+    section(ws, "Ota-onalar bo'yicha");
+    const headerRow = ws.addRow(cols);
+    head(headerRow);
+    const order: Record<EngagementLevel, number> = { ACTIVE: 0, LOW: 1, INACTIVE: 2, UNCONNECTED: 3 };
+    const sorted = [...g].sort(
+      (a, b) =>
+        order[a.level] - order[b.level] ||
+        (b.lastActivityAt?.getTime() ?? 0) - (a.lastActivityAt?.getTime() ?? 0) ||
+        a.fullName.localeCompare(b.fullName),
+    );
+    sorted.forEach((x, i) => {
+      const kids = x.children
+        .map((c) => `${c.fullName}${c.groupName ? ` (${c.groupName})` : ""}`)
+        .join(", ");
+      const relation = x.children[0] ? `${RELATION_UZ[x.children[0].relation] ?? ""}: ` : "";
+      const row = ws.addRow([
+        i + 1,
+        x.fullName,
+        x.phone,
+        `${relation}${kids}`,
+        LEVEL_UZ[x.level],
+        x.lastActivityAt ? `${dayOf(x.lastActivityAt).split("-").reverse().join(".")} ${timeOf(x.lastActivityAt)}` : "—",
+        minutes(x.secondsToday) || null,
+        minutes(x.secondsWeek) || null,
+        minutes(x.secondsMonth) || null,
+        x.activeDays30 || null,
+        x.resultViews30 || null,
+        x.connected ? (x.pushEnabled ? "Yoqilgan" : "O'chiq") : "—",
+        x.unreadMessages || null,
+      ]);
+      row.getCell(5).font = { bold: true, color: { argb: LEVEL_COLOR[x.level] } };
+      [5, 6, 7, 8, 9, 10, 11, 12, 13].forEach((c) => (row.getCell(c).alignment = { horizontal: "center" }));
+      zebra(row, i);
+    });
+    const tr = ws.addRow([
+      "",
+      "Jami",
+      `${g.length} ta`,
+      "",
+      `${s.levels.ACTIVE} ta faol`,
+      "",
+      minutes(sumOf("secondsToday")),
+      minutes(sumOf("secondsWeek")),
+      minutes(sumOf("secondsMonth")),
+      "",
+      g.reduce((acc, x) => acc + x.resultViews30, 0),
+      `${s.pushEnabled} ta`,
+      g.reduce((acc, x) => acc + x.unreadMessages, 0),
+    ]);
+    [5, 7, 8, 9, 11, 12, 13].forEach((c) => (tr.getCell(c).alignment = { horizontal: "center" }));
+    totalRow(tr);
+    ws.autoFilter = { from: { row: headerRow.number, column: 1 }, to: { row: headerRow.number, column: cols.length } };
+
+    // 2. Bo'limlar — kabinetda nimalar ko'riladi
+    const wp = wb.addWorksheet("Bo'limlar");
+    const pcols = ["№", "Bo'lim", "Ota-onalar", "Ochilgan (marta)", "Vaqt (daq)"];
+    wp.columns = [5, 30, 12, 16, 12].map((width) => ({ width }));
+    titleBlock(wp, "Kabinetda nimalar ko'riladi", pcols.length);
+    head(wp.addRow(pcols));
+    data.pages.forEach((p, i) => {
+      const row = wp.addRow([i + 1, PAGE_UZ[p.page] ?? p.page, p.guardians, p.views, minutes(p.seconds)]);
+      [3, 4, 5].forEach((c) => (row.getCell(c).alignment = { horizontal: "center" }));
+      zebra(row, i);
+    });
+    const pt = wp.addRow(["", "Jami", "", data.pages.reduce((a, p) => a + p.views, 0), minutes(data.pages.reduce((a, p) => a + p.seconds, 0))]);
+    [4, 5].forEach((c) => (pt.getCell(c).alignment = { horizontal: "center" }));
+    totalRow(pt);
+
+    // 3. Kunlar — oxirgi 14 kun
+    const wd = wb.addWorksheet("Kunlar");
+    const dcols = ["Sana", "Hafta kuni", "Kirgan ota-onalar", "Vaqt (daq)"];
+    wd.columns = [18, 14, 18, 12].map((width) => ({ width }));
+    titleBlock(wd, "Kunlik faollik (14 kun)", dcols.length);
+    head(wd.addRow(dcols));
+    data.daily.forEach((x, i) => {
+      const row = wd.addRow([dayLabel(x.date), weekday(x.date), x.guardians, minutes(x.seconds)]);
+      [3, 4].forEach((c) => (row.getCell(c).alignment = { horizontal: "center" }));
+      zebra(row, i);
+    });
+
+    const buffer = Buffer.from(await wb.xlsx.writeBuffer());
+    return reportFile(buffer, "ota-onalar-faolligi", today, "xlsx");
   }
 
   /** Bitta ota-ona: kunlik daqiqalar, bo'limlar, oxirgi ko'rganlari, qurilmalar, xabarlar. */

@@ -1,4 +1,5 @@
-import { Controller, Get, Param, ParseUUIDPipe, Query, UseGuards } from "@nestjs/common";
+import { Controller, Get, Param, ParseUUIDPipe, Query, Res, UseGuards } from "@nestjs/common";
+import type { Response } from "express";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { Public } from "../../common/decorators/public.decorator";
 import { TenantJwtAuthGuard } from "../iam/guards/tenant-jwt-auth.guard";
@@ -22,6 +23,16 @@ export class ParentEngagementController {
   @Get()
   overview(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query("branchId") branchId?: string) {
     return this.service.overview(user, branchId);
+  }
+
+  /** Excel hisobot (oxirgi 30 kun) — ekrandagi ma'lumot bilan bir xil */
+  @Get("report")
+  async report(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query("branchId") branchId: string | undefined, @Res() res: Response) {
+    const file = await this.service.report(user, branchId);
+    res.setHeader("Content-Type", file.contentType);
+    res.setHeader("Content-Disposition", `attachment; filename="${file.filename}"`);
+    res.setHeader("Cache-Control", "no-store");
+    res.send(file.buffer);
   }
 
   @Get(":guardianId")
