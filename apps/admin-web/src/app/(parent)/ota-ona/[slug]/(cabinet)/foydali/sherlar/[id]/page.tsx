@@ -2,6 +2,7 @@
 
 import { use, useMemo, useState } from "react";
 import clsx from "clsx";
+import { useSegmentThumb } from "@/components/ios/segment-thumb";
 import styles from "../../../../parent.module.css";
 import { isGone, usePoem, type Poem } from "../../content";
 import { useLearned, useTextSize } from "../../store";
@@ -312,10 +313,12 @@ function WordGame({ poem, fontSize }: { poem: Poem; fontSize: number }) {
     [stanzas],
   );
   const allOpen = hiddenKeys.length > 0 && hiddenKeys.every((key) => revealed.has(key));
+  const { containerRef: levelRef, thumbStyle: levelThumb } = useSegmentThumb(LEVELS.findIndex((o) => o.key === level));
 
   return (
     <div className="mt-4 rounded-[var(--p-radius)] bg-[var(--p-card)] px-4 py-5 shadow-[var(--p-shadow)]">
-      <div role="radiogroup" aria-label={tr("Qiyinlik")} className="grid grid-cols-3 gap-1 rounded-full bg-[var(--p-sunken)] p-1">
+      <div ref={levelRef} role="radiogroup" aria-label={tr("Qiyinlik")} className="relative grid grid-cols-3 gap-1 rounded-full bg-[var(--p-sunken)] p-1">
+        <span aria-hidden="true" className="pointer-events-none bottom-1 top-1 rounded-full bg-[var(--p-lilac)]" style={levelThumb} />
         {LEVELS.map((option) => {
           const active = option.key === level;
           return (
@@ -323,14 +326,15 @@ function WordGame({ poem, fontSize }: { poem: Poem; fontSize: number }) {
               key={option.key}
               type="button"
               role="radio"
+              data-seg=""
               aria-checked={active}
               onClick={() => {
                 setLevel(option.key);
                 setRevealed(new Set());
               }}
               className={clsx(
-                "cursor-pointer rounded-full px-1 py-2 text-[clamp(11px,3.4vw,13px)] font-bold transition-colors",
-                active ? "bg-[var(--p-lilac)] text-white" : "text-[var(--p-muted)]",
+                "relative z-[1] cursor-pointer rounded-full px-1 py-2 text-[clamp(11px,3.4vw,13px)] font-bold transition-colors duration-200",
+                active ? "text-white" : "text-[var(--p-muted)]",
               )}
             >
               {tr(option.label)}

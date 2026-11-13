@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
+import { useSegmentThumb } from "@/components/ios/segment-thumb";
 import { Star } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import type { CoinChildBalance, WeeklyAssessmentQuestionGroup } from "@/lib/types";
@@ -123,14 +124,7 @@ export function WeeklyAssessmentModal({
               return (
                 <div key={q.id} className="group/row relative flex min-h-[52px] items-center gap-3 px-4 py-2">
                   <span className="min-w-0 flex-1 text-[15px] leading-snug text-[var(--color-text)]">{tr(q.question)}</span>
-                  <div className="flex shrink-0 rounded-full bg-[#767680]/[0.12] p-[3px]" role="radiogroup" aria-label={tr(q.question)}>
-                    <AnswerButton active={state === "correct"} color={IOS.green} onClick={() => setAnswer(q.id, "correct")}>
-                      {tr("To'g'ri")}
-                    </AnswerButton>
-                    <AnswerButton active={state === "incorrect"} color={IOS.red} onClick={() => setAnswer(q.id, "incorrect")}>
-                      {tr("Noto'g'ri")}
-                    </AnswerButton>
-                  </div>
+                  <AnswerPicker label={tr(q.question)} state={state} onChange={(v) => setAnswer(q.id, v)} />
                   <span className={ROW_SEPARATOR} aria-hidden="true" />
                 </div>
               );
@@ -168,17 +162,38 @@ export function WeeklyAssessmentModal({
   );
 }
 
-function AnswerButton({ active, color, onClick, children }: { active: boolean; color: string; onClick: () => void; children: React.ReactNode }) {
+/** To'g'ri / Noto'g'ri — rangli tabletka tanlanganiga suriladi; hali so'ralmagan bo'lsa ko'rinmaydi */
+function AnswerPicker({ label, state, onChange }: { label: string; state: string; onChange: (v: "correct" | "incorrect") => void }) {
+  const tr = useTr();
+  const options = [
+    { value: "correct" as const, label: tr("To'g'ri"), color: IOS.green },
+    { value: "incorrect" as const, label: tr("Noto'g'ri"), color: IOS.red },
+  ];
+  const index = options.findIndex((o) => o.value === state);
+  const { containerRef, thumbStyle } = useSegmentThumb(index);
   return (
-    <button
-      type="button"
-      role="radio"
-      aria-checked={active}
-      onClick={onClick}
-      className={clsx("h-8 rounded-full px-3 text-[13px] font-semibold transition-colors", active ? "text-white shadow-sm" : "text-[#8e8e93]")}
-      style={active ? { backgroundColor: color } : undefined}
-    >
-      {children}
-    </button>
+    <div ref={containerRef} className="relative flex shrink-0 rounded-full bg-[#767680]/[0.12] p-[3px]" role="radiogroup" aria-label={label}>
+      <span
+        aria-hidden="true"
+        className="pointer-events-none bottom-[3px] top-[3px] rounded-full shadow-sm"
+        style={{ ...thumbStyle, backgroundColor: index >= 0 ? options[index].color : undefined }}
+      />
+      {options.map((o, i) => (
+        <button
+          key={o.value}
+          type="button"
+          role="radio"
+          data-seg=""
+          aria-checked={i === index}
+          onClick={() => onChange(o.value)}
+          className={clsx(
+            "relative z-[1] h-8 rounded-full px-3 text-[13px] font-semibold transition-colors duration-200",
+            i === index ? "text-white" : "text-[#8e8e93]",
+          )}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
   );
 }

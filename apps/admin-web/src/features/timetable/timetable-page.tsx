@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { BranchSectionTabs } from "@/features/nav/branch-section-tabs";
 import clsx from "clsx";
+import { useSegmentThumb } from "@/components/ios/segment-thumb";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarRange, ChevronLeft, Copy, NotebookPen, Plus, Printer } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
@@ -321,25 +322,7 @@ function GroupTimetableView({
 
           {/* Telefon: kun tanlanadi, shu kunning qatorlari */}
           <div className="space-y-3 md:hidden print:hidden">
-            <div role="radiogroup" aria-label={tr("Hafta kuni")} className="grid gap-1 rounded-full bg-[#767680]/[0.12] p-[3px]" style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` }}>
-              {days.map((d) => (
-                <button
-                  key={d}
-                  type="button"
-                  role="radio"
-                  aria-checked={day === d}
-                  aria-label={tr(DAY_LONG[d])}
-                  onClick={() => setDay(d)}
-                  className={clsx(
-                    "relative h-9 rounded-full text-[13.5px] font-semibold transition-colors",
-                    day === d ? "bg-white text-[var(--color-text)] shadow-[0_3px_8px_rgba(0,0,0,0.12)]" : "text-[#8e8e93]",
-                  )}
-                >
-                  {tr(DAY_SHORT[d])}
-                  {d === today && <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-[var(--color-primary)]" aria-hidden="true" />}
-                </button>
-              ))}
-            </div>
+            <DayPicker days={days} day={day} today={today} onChange={setDay} />
             <Group title={tr(DAY_LONG[day]) + (day === today ? ` · ${tr("bugun")}` : "")}>
               {rows.map((row, index) => (
                 <div key={`${row.startTime}-${row.endTime}`} className="group/row relative">
@@ -533,5 +516,40 @@ function CopySheet({
       )}
       {error && <p className="px-4 text-[13px] text-[#ff3b30]">{tr(error)}</p>}
     </IosSheet>
+  );
+}
+
+/** Telefonda hafta kuni tanlagichi — oq tabletka tanlangan kunga suriladi */
+function DayPicker({ days, day, today, onChange }: { days: number[]; day: number; today: number | null; onChange: (d: number) => void }) {
+  const tr = useTr();
+  const { containerRef, thumbStyle } = useSegmentThumb(days.indexOf(day));
+  return (
+    <div
+      ref={containerRef}
+      role="radiogroup"
+      aria-label={tr("Hafta kuni")}
+      className="relative grid gap-1 rounded-full bg-[#767680]/[0.12] p-[3px]"
+      style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` }}
+    >
+      <span aria-hidden="true" className="pointer-events-none bottom-[3px] top-[3px] rounded-full bg-white shadow-[0_3px_8px_rgba(0,0,0,0.12)]" style={thumbStyle} />
+      {days.map((d) => (
+        <button
+          key={d}
+          type="button"
+          role="radio"
+          data-seg=""
+          aria-checked={day === d}
+          aria-label={tr(DAY_LONG[d])}
+          onClick={() => onChange(d)}
+          className={clsx(
+            "relative z-[1] h-9 rounded-full text-[13.5px] font-semibold transition-colors duration-200",
+            day === d ? "text-[var(--color-text)]" : "text-[#8e8e93]",
+          )}
+        >
+          {tr(DAY_SHORT[d])}
+          {d === today && <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-[var(--color-primary)]" aria-hidden="true" />}
+        </button>
+      ))}
+    </div>
   );
 }

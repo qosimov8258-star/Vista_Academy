@@ -2,6 +2,7 @@
 
 import { use, useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
+import { useSegmentThumb } from "@/components/ios/segment-thumb";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { api, getPaginated } from "@/lib/api";
 import type { AuditActor, AuditLogEntry } from "@/lib/types";
@@ -282,23 +283,7 @@ export default function AuditLogsPage({ params }: { params: Promise<{ slug: stri
             ))}
           </div>
 
-          <div className="flex shrink-0 rounded-full bg-[var(--color-surface-sunken)] p-1" role="radiogroup" aria-label={tr("Davr")}>
-            {PERIODS.map((p) => (
-              <button
-                key={p.key}
-                type="button"
-                role="radio"
-                aria-checked={period === p.key}
-                onClick={() => setPeriod(p.key)}
-                className={clsx(
-                  "h-8 flex-1 cursor-pointer whitespace-nowrap rounded-full px-3.5 text-[13px] font-semibold transition-colors",
-                  period === p.key ? "bg-white text-[var(--color-text)] shadow-[var(--shadow-xs)]" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
-                )}
-              >
-                {tr(p.label)}
-              </button>
-            ))}
-          </div>
+          <PeriodPicker period={period} onChange={setPeriod} />
         </div>
       </div>
 
@@ -405,6 +390,33 @@ export default function AuditLogsPage({ params }: { params: Promise<{ slug: stri
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+/** Davr tanlagichi — oq tabletka tanlangan davrga suriladi */
+function PeriodPicker({ period, onChange }: { period: (typeof PERIODS)[number]["key"]; onChange: (p: (typeof PERIODS)[number]["key"]) => void }) {
+  const tr = useTr();
+  const { containerRef, thumbStyle } = useSegmentThumb(PERIODS.findIndex((p) => p.key === period));
+  return (
+    <div ref={containerRef} className="relative flex shrink-0 rounded-full bg-[var(--color-surface-sunken)] p-1" role="radiogroup" aria-label={tr("Davr")}>
+      <span aria-hidden="true" className="pointer-events-none bottom-1 top-1 rounded-full bg-white shadow-[var(--shadow-xs)]" style={thumbStyle} />
+      {PERIODS.map((p) => (
+        <button
+          key={p.key}
+          type="button"
+          role="radio"
+          data-seg=""
+          aria-checked={period === p.key}
+          onClick={() => onChange(p.key)}
+          className={clsx(
+            "relative z-[1] h-8 flex-1 cursor-pointer whitespace-nowrap rounded-full px-3.5 text-[13px] font-semibold transition-colors duration-200",
+            period === p.key ? "text-[var(--color-text)]" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
+          )}
+        >
+          {tr(p.label)}
+        </button>
+      ))}
     </div>
   );
 }

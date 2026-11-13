@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
+import { useSegmentThumb } from "@/components/ios/segment-thumb";
 import { CheckCheck, ClipboardCheck, Download, MessageCircle, PhoneCall, ScanFace, TriangleAlert } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import type { AttendanceChild, AttendanceDay, AttendanceRangeSummary, AttendanceStatus, ChronicAbsenceFlag, Organization } from "@/lib/types";
@@ -53,8 +54,15 @@ const initials = (name: string) =>
 /** Bola holati: 4 ta kapsula (telefonda qatorning to'liq kengligida) */
 function StatusPicker({ value, onChange, size = "row" }: { value: AttendanceStatus; onChange: (s: AttendanceStatus) => void; size?: "row" | "sheet" }) {
   const tr = useTr();
+  const index = STATUSES.findIndex((s) => s.value === value);
+  const { containerRef, thumbStyle } = useSegmentThumb(index);
   return (
-    <div role="radiogroup" aria-label={tr("Holat")} className={clsx("grid grid-cols-4 gap-[3px] rounded-full bg-[#767680]/[0.12] p-[3px]", size === "row" ? "w-full sm:w-[300px]" : "w-full")}>
+    <div ref={containerRef} role="radiogroup" aria-label={tr("Holat")} className={clsx("relative grid grid-cols-4 gap-[3px] rounded-full bg-[#767680]/[0.12] p-[3px]", size === "row" ? "w-full sm:w-[300px]" : "w-full")}>
+      <span
+        aria-hidden="true"
+        className="pointer-events-none bottom-[3px] top-[3px] rounded-full shadow-sm"
+        style={{ ...thumbStyle, backgroundColor: index >= 0 ? STATUSES[index].color : undefined }}
+      />
       {STATUSES.map((s) => {
         const active = value === s.value;
         return (
@@ -62,14 +70,14 @@ function StatusPicker({ value, onChange, size = "row" }: { value: AttendanceStat
             key={s.value}
             type="button"
             role="radio"
+            data-seg=""
             aria-checked={active}
             onClick={() => onChange(s.value)}
             className={clsx(
-              "flex items-center justify-center rounded-full font-semibold transition-[background-color,color,transform] duration-150 active:scale-[0.95]",
+              "relative z-[1] flex items-center justify-center rounded-full font-semibold transition-[color,transform] duration-200 active:scale-[0.95]",
               size === "row" ? "h-9 text-[13px]" : "h-11 text-[15px]",
-              active ? "text-white shadow-sm" : "text-[#6d6d72] hover:text-[var(--color-text)]",
+              active ? "text-white" : "text-[#6d6d72] hover:text-[var(--color-text)]",
             )}
-            style={active ? { backgroundColor: s.color } : undefined}
           >
             {tr(size === "row" ? s.short : s.label)}
           </button>

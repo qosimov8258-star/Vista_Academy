@@ -4,6 +4,7 @@ import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
+import { useSegmentThumb } from "@/components/ios/segment-thumb";
 import { ApiError } from "@/lib/api";
 import { parentApi } from "@/lib/parent-api";
 import type { ParentAccount, ParentChild } from "@/lib/types";
@@ -117,23 +118,7 @@ export default function ParentTimetablePage({ params }: { params: Promise<{ slug
       ) : (
         <div className="space-y-4 pb-6 pt-5">
           {/* Kun / Hafta */}
-          <div className="flex rounded-full bg-[var(--p-sunken)] p-1" role="radiogroup" aria-label={tr("Ko'rinish")}>
-            {(["day", "week"] as const).map((m) => (
-              <button
-                key={m}
-                type="button"
-                role="radio"
-                aria-checked={mode === m}
-                onClick={() => setMode(m)}
-                className={clsx(
-                  "h-9 flex-1 rounded-full text-[14.5px] font-bold transition-colors",
-                  mode === m ? "bg-[var(--p-card)] text-[var(--p-ink)] shadow-[var(--p-shadow)]" : "text-[var(--p-muted)]",
-                )}
-              >
-                {m === "day" ? tr("Kun") : tr("Hafta")}
-              </button>
-            ))}
-          </div>
+          <ModePicker mode={mode} onChange={setMode} />
 
           {mode === "day" ? (
             <>
@@ -225,6 +210,34 @@ export default function ParentTimetablePage({ params }: { params: Promise<{ slug
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+/** Kun / Hafta — tabletka tanlanganiga suriladi */
+function ModePicker({ mode, onChange }: { mode: "day" | "week"; onChange: (m: "day" | "week") => void }) {
+  const tr = useTr();
+  const modes = ["day", "week"] as const;
+  const { containerRef, thumbStyle } = useSegmentThumb(modes.indexOf(mode));
+  return (
+    <div ref={containerRef} className="relative flex rounded-full bg-[var(--p-sunken)] p-1" role="radiogroup" aria-label={tr("Ko'rinish")}>
+      <span aria-hidden="true" className="pointer-events-none bottom-1 top-1 rounded-full bg-[var(--p-card)] shadow-[var(--p-shadow)]" style={thumbStyle} />
+      {modes.map((m) => (
+        <button
+          key={m}
+          type="button"
+          role="radio"
+          data-seg=""
+          aria-checked={mode === m}
+          onClick={() => onChange(m)}
+          className={clsx(
+            "relative z-[1] h-9 flex-1 rounded-full text-[14.5px] font-bold transition-colors duration-200",
+            mode === m ? "text-[var(--p-ink)]" : "text-[var(--p-muted)]",
+          )}
+        >
+          {m === "day" ? tr("Kun") : tr("Hafta")}
+        </button>
+      ))}
     </div>
   );
 }
