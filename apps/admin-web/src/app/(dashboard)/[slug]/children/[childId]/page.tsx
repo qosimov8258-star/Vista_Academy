@@ -315,7 +315,8 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
 
         {!canWrite && <ViewOnlyNote role={user?.role} />}
 
-        <Segmented<Tab>
+        {/* Faqat «Umumiy» qolsa tanlagich kerak emas */}
+        {Object.values(tabOn).filter(Boolean).length > 1 && <Segmented<Tab>
           value={tab}
           onChange={switchTab}
           label={tr("Bo'lim")}
@@ -327,7 +328,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
               { value: "development", label: tr("Rivojlanish") },
             ] as { value: Tab; label: string }[]
           ).filter((o) => tabOn[o.value])}
-        />
+        />}
 
         {/* ---------------- Umumiy ---------------- */}
         {tab === "overview" && (

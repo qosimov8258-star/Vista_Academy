@@ -3,7 +3,7 @@
 import { useCallback, useState, type ComponentType, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { useAuth } from "@/lib/use-auth";
+import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
 import { useRouteFeatureOn } from "@/lib/feature-routes";
 import type { IconProps } from "@/components/ios/icons";
 import { RefreshCw as RefreshIcon } from "lucide-react";
@@ -86,6 +86,10 @@ export function BranchAdminHome({ slug, branchName }: { slug: string; branchName
   const nutritionOn = routeOn(`/${slug}/nutrition`);
   const staffOn = routeOn(`/${slug}/staff-attendance`);
   const crmOn = routeOn(`/${slug}/crm`);
+  const isOn = useFeatureEnabled();
+  // Davomat o'chiq bo'lsa «0/25 keldi, hammasi belgilangan» kabi chalg'ituvchi raqamlar ko'rinmaydi
+  const attendanceOn = isOn("attendance");
+  const pickupsOn = isOn("pickups");
 
   const board = useQuery({
     queryKey: ["desk-board", slug, date],
@@ -176,6 +180,7 @@ export function BranchAdminHome({ slug, branchName }: { slug: string; branchName
         />
 
         {/* Bugungi davomat */}
+        {attendanceOn && (
         <Group
           title={tr("Bugungi davomat")}
           refreshing={board.isFetching && !board.isLoading && !manualRefresh}
@@ -218,6 +223,7 @@ export function BranchAdminHome({ slug, branchName }: { slug: string; branchName
             </PageCard>
           )}
         </Group>
+        )}
 
         <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)] lg:items-start">
           <div className="min-w-0 space-y-5">
@@ -248,7 +254,7 @@ export function BranchAdminHome({ slug, branchName }: { slug: string; branchName
                       avatar={<IosAvatar name={g.name} letters={1} />}
                       title={tr(g.name)}
                       subtitle={`${tr("{0} ta bola", g.total)} · ${g.teachers.length > 0 ? g.teachers.join(", ") : tr("Tarbiyachi biriktirilmagan")}`}
-                      meta={<GroupPill g={g} />}
+                      meta={attendanceOn ? <GroupPill g={g} /> : undefined}
                       chevron
                     />
                   ))}
@@ -265,15 +271,19 @@ export function BranchAdminHome({ slug, branchName }: { slug: string; branchName
 
           <div className="min-w-0 space-y-5">
             {/* Bugun — ko'rsatkichlar */}
+            {(attendanceOn || staffOn || crmOn) && (
             <Group title={tr("Bugun")}>
+              {attendanceOn && (
               <Row
                 href={`/${slug}/board`}
                 leading={<IosIcon icon={DoorIcon} tint="teal" size={30} />}
                 title={tr("Hozir bog'chada")}
-                subtitle={b ? tr("{0} tasi olib ketilgan", b.totals.pickedUp) : undefined}
+                subtitle={b && pickupsOn ? tr("{0} tasi olib ketilgan", b.totals.pickedUp) : undefined}
                 value={<Value loading={board.isLoading}>{b?.stillHere ?? 0}</Value>}
               />
-              {nutritionOn && (
+              )}
+              {/* Porsiya kelganlar soniga qarab hisoblanadi — davomatsiz ma'nosiz */}
+              {nutritionOn && attendanceOn && (
               <Row
                 href={`/${slug}/nutrition`}
                 leading={<IosIcon icon={MealIcon} tint="orange" size={30} />}
@@ -304,6 +314,7 @@ export function BranchAdminHome({ slug, branchName }: { slug: string; branchName
               />
               )}
             </Group>
+            )}
 
             {/* Ishda yo'q xodimlar — «Xodimlar davomati» yoqilgan bo'lsa */}
             {staffOn && (
