@@ -1,30 +1,29 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import clsx from "clsx";
+import { Bell, Check, ChevronRight, KeyRound, Languages, LogOut, SunMoon } from "lucide-react";
+import { useLocale } from "next-intl";
 import { parentApi } from "@/lib/parent-api";
 import { getPushStatus, subscribeToPush, unsubscribeFromPush, type PushStatus } from "@/lib/push";
 import type { ParentAccount, ParentChild } from "@/lib/types";
-import { BellIcon, KeyIcon, LogoutIcon } from "@/components/ui/icons";
-import styles from "../../parent.module.css";
-import clsx from "clsx";
-import { CardFx } from "../card-fx";
-import { useCabinetTheme, type ThemeMode } from "../theme";
-import { PasswordSheet } from "./password-sheet";
-import { useParentFeatures } from "../use-parent-features";
-import { useLocale } from "next-intl";
 import { locales, type Locale } from "@/i18n/config";
 import { applyLocale } from "@/components/ui/language-switcher";
 import { useTr } from "@/i18n/tr";
+import styles from "../../parent.module.css";
+import { useCabinetTheme, type ThemeMode } from "../theme";
+import { PasswordSheet } from "./password-sheet";
+import { useParentFeatures } from "../use-parent-features";
 
 /**
- * Sozlamalar: ko'rinish, parolni almashtirish va kabinetdan chiqish.
- *
- * Chiqish tugmasi ilgari bosh sahifaning tepasida turardi: ota-ona uni
- * kunda bir marta ham bosmaydi, ammo bolasining kartochkasi yonida doim
- * ko'rinib turardi. Uning o'rni shu yer.
+ * Sozlamalar — iOS «Sozlamalar» ilovasi uslubida: tepada kabinet egasi,
+ * pastda guruhlangan ro'yxatlar (rangli belgi, qiymat, `›`). Til va
+ * ko'rinish pastdan chiqadigan tanlov varag'ida, chiqish — tasdiqlash
+ * varag'i bilan. Ranglar kabinet mavzusidan (yorug'/qorong'i) olinadi.
  */
+
 /** Telefonning o'z vaqt mintaqasida: ota-ona qayerda bo'lsa, o'sha soat */
 function clock(ms: number): string {
   return new Date(ms).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" });
@@ -33,57 +32,216 @@ function clock(ms: number): string {
 /** Til nomlari o'z tilida yoziladi — qaysi til tanlangan bo'lsa ham tanish bo'lsin */
 const LOCALE_NAMES: Record<Locale, string> = { uz: "O'zbekcha", ru: "Русский", en: "English" };
 
-function SunIcon({ className }: { className?: string }) {
+const THEME_LABELS: Record<ThemeMode, string> = { avto: "Avtomatik", yorug: "Yorug'", qorongi: "Qorong'i" };
+const THEME_ORDER: ThemeMode[] = ["avto", "yorug", "qorongi"];
+
+/** iOS tizim ranglari — belgilar plitkasi uchun */
+const TINT = { blue: "#007aff", indigo: "#5856d6", red: "#ff3b30", gray: "#8e8e93" } as const;
+
+function initialsOf(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
+/* ───────────────────────── iOS bo'laklari ───────────────────────── */
+
+function Section({ title, footer, children }: { title?: string; footer?: ReactNode; children: ReactNode }) {
   return (
-    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="4" />
-      <path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" />
-    </svg>
+    <section className="mt-7 first:mt-5">
+      {title && <p className="mb-1.5 px-4 text-[13px] uppercase tracking-wide text-[var(--p-muted)]">{title}</p>}
+      <div className="overflow-hidden rounded-[18px] bg-[var(--p-card)]">{children}</div>
+      {footer && <div className="mt-1.5 px-4 text-[13px] leading-snug text-[var(--p-muted)]">{footer}</div>}
+    </section>
   );
 }
 
-function MoonIcon({ className }: { className?: string }) {
+/** Rangli kvadrat belgi — iOS sozlamalaridagidek */
+function Tile({ icon: Icon, tint }: { icon: ComponentType<{ className?: string; strokeWidth?: number }>; tint: string }) {
   return (
-    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z" />
-    </svg>
+    <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[8px] text-white" style={{ backgroundColor: tint }} aria-hidden="true">
+      <Icon className="h-[17px] w-[17px]" strokeWidth={2} />
+    </span>
   );
 }
 
-/** Yarmi quyosh, yarmi oy — o'zi almashadi */
-function AutoIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="7" />
-      <path d="M12 5a7 7 0 0 1 0 14z" fill="currentColor" stroke="none" />
-    </svg>
+/**
+ * Bitta qator. Ajratuvchi chiziq belgidan keyin boshlanadi (iOS'dagidek),
+ * oxirgi qatorda yo'q. `onClick` bo'lsa — bosiladigan, `›` bilan.
+ */
+function Row({
+  icon,
+  tint,
+  title,
+  value,
+  onClick,
+  trailing,
+  chevron = !!onClick,
+}: {
+  icon: ComponentType<{ className?: string; strokeWidth?: number }>;
+  tint: string;
+  title: string;
+  value?: string;
+  onClick?: () => void;
+  trailing?: ReactNode;
+  chevron?: boolean;
+}) {
+  const content = (
+    <>
+      <Tile icon={icon} tint={tint} />
+      <span className="flex min-h-[50px] min-w-0 flex-1 items-center gap-2 border-b border-[var(--p-line)] py-2.5 pr-4 group-last/row:border-b-0">
+        <span className="min-w-0 flex-1 truncate text-[16px] text-[var(--p-ink)]">{title}</span>
+        {value && <span className="shrink-0 truncate text-[16px] text-[var(--p-muted)]">{value}</span>}
+        {trailing}
+        {chevron && <ChevronRight className="h-[18px] w-[18px] shrink-0 text-[var(--p-muted)]/60" strokeWidth={2.4} aria-hidden="true" />}
+      </span>
+    </>
+  );
+  const rowClass = "group/row flex w-full items-center gap-3 pl-4 text-left";
+  return onClick ? (
+    <button type="button" onClick={onClick} className={clsx(rowClass, "cursor-pointer transition-colors active:bg-[var(--p-sunken)]")}>
+      {content}
+    </button>
+  ) : (
+    <div className={rowClass}>{content}</div>
   );
 }
 
-const THEME_OPTIONS: Array<{ mode: ThemeMode; label: string; Icon: (props: { className?: string }) => React.JSX.Element }> = [
-  { mode: "avto", label: "Avtomatik", Icon: AutoIcon },
-  { mode: "yorug", label: "Yorug'", Icon: SunIcon },
-  { mode: "qorongi", label: "Qorong'i", Icon: MoonIcon },
-];
+/** iOS kaliti (51×31, yashil) */
+function Switch({ checked, disabled, onChange, label }: { checked: boolean; disabled?: boolean; onChange: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={onChange}
+      disabled={disabled}
+      className={clsx(
+        "relative h-[31px] w-[51px] shrink-0 cursor-pointer rounded-full transition-colors duration-200 disabled:opacity-60",
+        checked ? "bg-[#34c759]" : "bg-[var(--p-muted)]/25",
+      )}
+    >
+      <span
+        className={clsx(
+          "absolute top-[2px] h-[27px] w-[27px] rounded-full bg-white shadow-[0_3px_8px_rgba(0,0,0,0.15),0_3px_1px_rgba(0,0,0,0.06)] transition-transform duration-200",
+          checked ? "translate-x-[22px]" : "translate-x-[2px]",
+        )}
+      />
+    </button>
+  );
+}
+
+/** Pastdan chiqadigan varaq — orqa fon bosilsa yopiladi */
+function BottomSheet({ label, onClose, children }: { label: string; onClose: () => void; children: ReactNode }) {
+  const tr = useTr();
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center" role="dialog" aria-modal="true" aria-label={label}>
+      <button type="button" aria-label={tr("Yopish")} onClick={onClose} className={`${styles.fadeIn} absolute inset-0 cursor-default bg-black/40`} />
+      <div
+        className={`${styles.sheetIn} relative w-full max-w-[520px] px-2`}
+        style={{ paddingBottom: "max(8px, env(safe-area-inset-bottom))" }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/** Belgichali tanlov ro'yxati (til, ko'rinish) */
+function ChoiceSheet<T extends string>({
+  title,
+  footer,
+  options,
+  value,
+  onPick,
+  onClose,
+}: {
+  title: string;
+  footer?: ReactNode;
+  options: Array<{ value: T; label: string }>;
+  value: T;
+  onPick: (value: T) => void;
+  onClose: () => void;
+}) {
+  const tr = useTr();
+  return (
+    <BottomSheet label={title} onClose={onClose}>
+      <div className="overflow-hidden rounded-[18px] bg-[var(--p-card)]">
+        <p className="border-b border-[var(--p-line)] px-4 py-3 text-center text-[13px] font-semibold text-[var(--p-muted)]">{title}</p>
+        <div role="radiogroup" aria-label={title}>
+          {options.map((option) => {
+            const active = option.value === value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => {
+                  onPick(option.value);
+                  onClose();
+                }}
+                className="group/row flex w-full cursor-pointer items-center pl-4 text-left transition-colors active:bg-[var(--p-sunken)]"
+              >
+                <span className="flex min-h-[52px] flex-1 items-center border-b border-[var(--p-line)] pr-4 group-last/row:border-b-0">
+                  <span className="flex-1 text-[16px] text-[var(--p-ink)]">{option.label}</span>
+                  {active && <Check className="h-5 w-5 text-[#007aff]" strokeWidth={2.6} aria-hidden="true" />}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        {footer && <div className="border-t border-[var(--p-line)] px-4 py-3 text-[13px] leading-snug text-[var(--p-muted)]">{footer}</div>}
+      </div>
+      <button
+        type="button"
+        onClick={onClose}
+        className="mt-2 flex h-[56px] w-full cursor-pointer items-center justify-center rounded-[18px] bg-[var(--p-card)] text-[16px] font-semibold text-[#007aff] transition-colors active:bg-[var(--p-sunken)]"
+      >
+        {tr("Bekor qilish")}
+      </button>
+    </BottomSheet>
+  );
+}
+
+/* ───────────────────────── sahifa ───────────────────────── */
 
 export default function ParentSettingsPage({ params }: { params: Promise<{ slug: string }> }) {
   const tr = useTr();
   const locale = useLocale() as Locale;
   const { slug } = use(params);
   const router = useRouter();
-  const [leaving, setLeaving] = useState(false);
-  const [confirming, setConfirming] = useState(false);
+  const queryClient = useQueryClient();
+  const [sheet, setSheet] = useState<"language" | "theme" | "logout" | null>(null);
   const [passwordOpen, setPasswordOpen] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const [pushStatus, setPushStatus] = useState<PushStatus>("unsubscribed");
   const [pushBusy, setPushBusy] = useState(false);
   const [pushError, setPushError] = useState<string | null>(null);
-  // Push — «Bildirishnomalar» funksiyasi; o'chirilgan bo'lsa tugma ko'rinmaydi
+  // Push — «Bildirishnomalar» funksiyasi; o'chirilgan bo'lsa qator ko'rinmaydi
   const features = useParentFeatures(slug);
   const pushOn = features.ready && features.isOn("notifications");
+  const { mode, setMode, dark, sky } = useCabinetTheme();
 
   useEffect(() => {
     getPushStatus().then(setPushStatus);
   }, []);
+
+  const meQuery = useQuery({
+    queryKey: ["parent-me", slug],
+    queryFn: () => parentApi.get<{ parent: ParentAccount; children: ParentChild[] }>("/app/parent/me"),
+    retry: false,
+  });
+  const parent = meQuery.data?.parent;
 
   const togglePush = async () => {
     setPushBusy(true);
@@ -103,15 +261,6 @@ export default function ParentSettingsPage({ params }: { params: Promise<{ slug:
     }
   };
 
-  const meQuery = useQuery({
-    queryKey: ["parent-me", slug],
-    queryFn: () => parentApi.get<{ parent: ParentAccount; children: ParentChild[] }>("/app/parent/me"),
-    retry: false,
-  });
-  const parent = meQuery.data?.parent;
-  const { mode, setMode, dark, sky } = useCabinetTheme();
-  const queryClient = useQueryClient();
-
   const logout = async () => {
     setLeaving(true);
     // Ota-ona seansi cookie'da — logout uni server tomonda bekor qiladi
@@ -122,202 +271,144 @@ export default function ParentSettingsPage({ params }: { params: Promise<{ slug:
     router.replace(`/ota-ona/${slug}/kirish`);
   };
 
+  const themeNote =
+    mode === "avto" && sky
+      ? dark
+        ? tr("Hozir tun — qorong'i ko'rinish yoqilgan{0}.", sky.sunrise ? `, tong ${clock(sky.sunrise)} da yorishadi` : "")
+        : tr("Hozir kunduz — qorong'i ko'rinish quyosh botganda{0} yonadi.", sky.sunset ? ` (${clock(sky.sunset)})` : "")
+      : null;
+
   return (
-    <div className="mx-auto w-full max-w-[520px] px-4 pt-5">
-      <h1 className="text-[26px] font-extrabold leading-tight tracking-[-0.02em] text-[var(--p-ink)]">
-        {tr("Sozlamalar")}
-      </h1>
+    <div className="mx-auto w-full max-w-[520px] px-4 pb-6 pt-5">
+      <h1 className="px-1 text-[28px] font-bold leading-tight tracking-[-0.01em] text-[var(--p-ink)]">{tr("Sozlamalar")}</h1>
 
-      {parent && (
-        <section className={`${styles.childCard} mt-4 rounded-[var(--p-radius)] p-5 shadow-[var(--p-shadow)]`}>
-          <CardFx sky={sky} />
-          <p className="text-[12px] font-semibold uppercase tracking-[0.06em] text-[var(--p-muted)]">
-            {tr("Kabinet egasi")}
-          </p>
-          <p className="mt-1 text-[19px] font-bold tracking-[-0.01em] text-[var(--p-ink)]">{tr(parent.fullName)}</p>
-          <p className="mt-0.5 text-[15px] tabular-nums text-[var(--p-muted)]">{tr(parent.phone)}</p>
-          <p className="mt-3 text-[13.5px] leading-relaxed text-[var(--p-muted)]">
-            {tr("Shu raqam — kabinetning logini. Ota va ona bitta kabinetdan foydalanadi.")}
-          </p>
-        </section>
-      )}
-
-      {/* Til: tanlov cookie'da saqlanadi va butun kabinetga ta'sir qiladi */}
-      <section className="mt-3 rounded-[var(--p-radius)] bg-[var(--p-card)] p-5 shadow-[var(--p-shadow)]">
-        <p className="text-[15.5px] font-bold text-[var(--p-ink)]">{tr("Til")}</p>
-        <p className="mt-1 text-[13.5px] leading-relaxed text-[var(--p-muted)]">
-          {tr("Kabinetdagi barcha matnlar tanlangan tilda chiqadi.")}
-        </p>
-        <div className="mt-3.5 grid grid-cols-3 gap-2" role="radiogroup" aria-label={tr("Til")}>
-          {locales.map((code) => {
-            const active = code === locale;
-            return (
-              <button
-                key={code}
-                type="button"
-                role="radio"
-                aria-checked={active}
-                onClick={() => !active && applyLocale(code)}
-                className={clsx(
-                  "cursor-pointer rounded-[18px] border-2 px-2 py-3 text-[13.5px] font-bold transition-colors",
-                  active
-                    ? "border-[var(--p-sun)] bg-[var(--p-sun)]/14 text-[var(--p-sun-ink)]"
-                    : "border-[var(--p-line)] text-[var(--p-muted)] active:bg-[var(--p-sunken)]",
-                )}
-              >
-                {LOCALE_NAMES[code]}
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Ko'rinish: avto (quyosh botganda qorong'i), yorug', qorong'i */}
-      <section className="mt-3 rounded-[var(--p-radius)] bg-[var(--p-card)] p-5 shadow-[var(--p-shadow)]">
-        <p className="text-[15.5px] font-bold text-[var(--p-ink)]">{tr("Ko'rinish")}</p>
-        <p className="mt-1 text-[13.5px] leading-relaxed text-[var(--p-muted)]">
-          {tr("Avtomatik rejimda quyosh botganda qorong'i ko'rinish o'zi yonadi, tongda o'chadi.")}
-        </p>
-        <div className="mt-3.5 grid grid-cols-3 gap-2" role="radiogroup" aria-label={tr("Ko'rinish")}>
-          {THEME_OPTIONS.map((option) => {
-            const active = option.mode === mode;
-            return (
-              <button
-                key={option.mode}
-                type="button"
-                role="radio"
-                aria-checked={active}
-                onClick={() => setMode(option.mode)}
-                className={clsx(
-                  "flex cursor-pointer flex-col items-center gap-1.5 rounded-[18px] border-2 px-2 py-3 text-[13px] font-bold transition-colors",
-                  active
-                    ? "border-[var(--p-sun)] bg-[var(--p-sun)]/14 text-[var(--p-sun-ink)]"
-                    : "border-[var(--p-line)] text-[var(--p-muted)] active:bg-[var(--p-sunken)]",
-                )}
-              >
-                <option.Icon className="h-6 w-6" />
-                {tr(option.label)}
-              </button>
-            );
-          })}
-        </div>
-        {mode === "avto" && sky && (
-          <p className="mt-3 text-[12.5px] text-[var(--p-muted)]">
-            {dark
-              ? tr("Hozir tun — qorong'i ko'rinish yoqilgan{0}.", sky.sunrise ? `, tong ${clock(sky.sunrise)} da yorishadi` : "")
-              : tr("Hozir kunduz — qorong'i ko'rinish quyosh botganda{0} yonadi.", sky.sunset ? ` (${clock(sky.sunset)})` : "")}
-          </p>
-        )}
-      </section>
-
-      {/* Parol — ota va ona bittasini ishlatadi */}
-      {parent && (
-        <section className="mt-3 overflow-hidden rounded-[var(--p-radius)] bg-[var(--p-card)] shadow-[var(--p-shadow)]">
-          <button
-            type="button"
-            onClick={() => setPasswordOpen(true)}
-            className="flex w-full cursor-pointer items-center gap-3.5 px-5 py-4 text-left transition-colors active:bg-[var(--p-sunken)]"
-          >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--p-sky)]/14 text-[var(--p-sky-ink)]">
-              <KeyIcon className="h-[18px] w-[18px]" />
+      {/* Kabinet egasi — iOS'dagi profil qatori kabi */}
+      {parent ? (
+        <Section footer={tr("Shu raqam — kabinetning logini. Ota va ona bitta kabinetdan foydalanadi.")}>
+          <div className="flex items-center gap-3.5 px-4 py-3">
+            <span
+              className="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full text-[22px] font-semibold"
+              style={{ backgroundColor: "#007aff24", color: "#007aff" }}
+              aria-hidden="true"
+            >
+              {initialsOf(parent.fullName)}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[15.5px] font-bold text-[var(--p-ink)]">{tr("Parolni almashtirish")}</span>
-              <span className="block text-[13px] text-[var(--p-muted)]">{tr("Bog'cha bergan parol o'rniga o'zingiznikini qo'ying")}</span>
-            </span>
-            <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 text-[var(--p-muted)]/70" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="m9 6 6 6-6 6" />
-            </svg>
-          </button>
-        </section>
-      )}
-
-      {/* Chiqish */}
-      <section className="mt-3 overflow-hidden rounded-[var(--p-radius)] bg-[var(--p-card)] shadow-[var(--p-shadow)]">
-        {confirming ? (
-          <div className="p-5">
-            <p className="text-[15.5px] font-semibold text-[var(--p-ink)]">{tr("Kabinetdan chiqasizmi?")}</p>
-            <p className="mt-1 text-[13.5px] leading-relaxed text-[var(--p-muted)]">
-              {tr("Keyingi safar telefon raqamingiz va parolingiz bilan qayta kirasiz.")}
-            </p>
-            <div className="mt-4 flex gap-2.5">
-              <button
-                type="button"
-                onClick={() => setConfirming(false)}
-                className="flex-1 cursor-pointer rounded-full bg-[var(--p-sunken)] py-3 text-[15px] font-bold text-[var(--p-ink)] transition-colors active:bg-[var(--p-sunken)]"
-              >
-                {tr("Qolaman")}
-              </button>
-              <button
-                type="button"
-                onClick={logout}
-                disabled={leaving}
-                className="flex-1 cursor-pointer rounded-full bg-[var(--p-coral)] py-3 text-[15px] font-bold text-white transition-opacity active:opacity-90 disabled:opacity-60"
-              >
-                {leaving ? "Chiqilmoqda…" : "Chiqaman"}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setConfirming(true)}
-            className="flex w-full cursor-pointer items-center gap-3.5 px-5 py-4 text-left transition-colors active:bg-[var(--p-sunken)]"
-          >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--p-coral)]/12 text-[var(--p-coral)]">
-              <LogoutIcon className="h-[18px] w-[18px]" />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-[15.5px] font-bold text-[var(--p-ink)]">{tr("Kabinetdan chiqish")}</span>
-              <span className="block text-[13px] text-[var(--p-muted)]">{tr("Telefoningizda boshqa hech kim ko'rmaydi")}</span>
-            </span>
-          </button>
-        )}
-      </section>
-
-      {/* To'lov eslatmasi kabi voqealar endi panel yopiq bo'lsa ham brauzer orqali kelishi mumkin */}
-      {pushOn && pushStatus !== "unsupported" && (
-        <section className="mt-3 rounded-[var(--p-radius)] bg-[var(--p-card)] p-5 shadow-[var(--p-shadow)]">
-          <div className="flex items-center gap-3.5">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--p-sun)]/14 text-[var(--p-sun-ink)]">
-              <BellIcon filled={pushStatus === "subscribed"} className="h-[18px] w-[18px]" />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-[15.5px] font-bold text-[var(--p-ink)]">{tr("Bildirishnomalar")}</span>
-              <span className="block text-[13px] text-[var(--p-muted)]">
-                {tr("To'lov eslatmasi kabi xabarlarni brauzer orqali, kabinetni ochmasdan ham oling")}
+              <span className="block truncate text-[20px] font-semibold leading-tight text-[var(--p-ink)]">{tr(parent.fullName)}</span>
+              <span className="mt-0.5 block truncate text-[15px] tabular-nums text-[var(--p-muted)]">
+                {tr("Kabinet egasi")} · {parent.phone}
               </span>
             </span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={pushStatus === "subscribed"}
-              onClick={togglePush}
-              disabled={pushBusy}
-              className={`relative h-7 w-12 shrink-0 cursor-pointer rounded-full transition-colors disabled:opacity-60 ${
-                pushStatus === "subscribed" ? "bg-[var(--p-sun)]" : "bg-[var(--p-sunken)]"
-              }`}
-            >
-              <span
-                className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${
-                  pushStatus === "subscribed" ? "translate-x-[22px]" : "translate-x-0.5"
-                }`}
-              />
-            </button>
           </div>
-          {pushError && <p className="mt-3 text-[13px] text-[var(--p-coral)]">{pushError}</p>}
-        </section>
+        </Section>
+      ) : (
+        <div className="mt-5 h-[84px] animate-pulse rounded-[18px] bg-[var(--p-card)]/70" />
       )}
 
-      {/* Hali tayyor bo'lmagan qism — bo'sh sahifa qoldirmaymiz (bildirishnomalar yuqorida) */}
-      <section className="mt-3 rounded-[var(--p-radius)] bg-[var(--p-card)]/60 px-5 py-4">
-        <span className="inline-flex items-center rounded-full bg-[var(--p-sun)]/18 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--p-sun-ink)]">
-          {tr("Tez orada")}
-        </span>
-        <p className="mt-2.5 text-[14px] leading-relaxed text-[var(--p-muted)]">
-          {tr("Aloqa ma'lumotlari shu yerda bo'ladi.")}
-        </p>
+      {/* Umumiy: til va ko'rinish */}
+      <Section title={tr("Umumiy")} footer={themeNote}>
+        <Row icon={Languages} tint={TINT.blue} title={tr("Til")} value={LOCALE_NAMES[locale]} onClick={() => setSheet("language")} />
+        <Row icon={SunMoon} tint={TINT.indigo} title={tr("Ko'rinish")} value={tr(THEME_LABELS[mode])} onClick={() => setSheet("theme")} />
+      </Section>
+
+      {/* Xavfsizlik — ota va ona bitta parolni ishlatadi */}
+      {parent && (
+        <Section title={tr("Xavfsizlik")} footer={tr("Bog'cha bergan parol o'rniga o'zingiznikini qo'ying")}>
+          <Row icon={KeyRound} tint={TINT.gray} title={tr("Parolni almashtirish")} onClick={() => setPasswordOpen(true)} />
+        </Section>
+      )}
+
+      {/* Chiqish — iOS'dagidek qizil, markazda */}
+      <section className="mt-7">
+        <button
+          type="button"
+          onClick={() => setSheet("logout")}
+          className="flex min-h-[50px] w-full cursor-pointer items-center justify-center gap-2 rounded-[18px] bg-[var(--p-card)] text-[16px] text-[#ff3b30] transition-colors active:bg-[var(--p-sunken)]"
+        >
+          <LogOut className="h-[18px] w-[18px]" strokeWidth={2.2} aria-hidden="true" />
+          {tr("Kabinetdan chiqish")}
+        </button>
       </section>
+
+      {/* Bildirishnomalar — to'lov eslatmasi kabi xabarlar kabinet yopiq bo'lsa ham keladi */}
+      {pushOn && pushStatus !== "unsupported" && (
+        <Section
+          footer={
+            pushError ? (
+              <span className="text-[#ff3b30]">{pushError}</span>
+            ) : (
+              tr("To'lov eslatmasi kabi xabarlarni brauzer orqali, kabinetni ochmasdan ham oling")
+            )
+          }
+        >
+          <Row
+            icon={Bell}
+            tint={TINT.red}
+            title={tr("Bildirishnomalar")}
+            trailing={<Switch checked={pushStatus === "subscribed"} disabled={pushBusy} onChange={togglePush} label={tr("Bildirishnomalar")} />}
+          />
+        </Section>
+      )}
+
+      {/* Hali tayyor bo'lmagan qism — bo'sh joy qoldirmaymiz */}
+      <Section>
+        <div className="flex min-h-[50px] items-center gap-3 px-4 py-3">
+          <span className="shrink-0 rounded-full bg-[#ff9500]/[0.14] px-2.5 py-1 text-[12px] font-semibold text-[#ff9500]">{tr("Tez orada")}</span>
+          <span className="min-w-0 flex-1 text-[15px] text-[var(--p-muted)]">{tr("Aloqa ma'lumotlari shu yerda bo'ladi.")}</span>
+        </div>
+      </Section>
+
+      {sheet === "language" && (
+        <ChoiceSheet<Locale>
+          title={tr("Til")}
+          footer={tr("Kabinetdagi barcha matnlar tanlangan tilda chiqadi.")}
+          options={locales.map((code) => ({ value: code, label: LOCALE_NAMES[code] }))}
+          value={locale}
+          onPick={(code) => code !== locale && applyLocale(code)}
+          onClose={() => setSheet(null)}
+        />
+      )}
+
+      {sheet === "theme" && (
+        <ChoiceSheet<ThemeMode>
+          title={tr("Ko'rinish")}
+          footer={tr("Avtomatik rejimda quyosh botganda qorong'i ko'rinish o'zi yonadi, tongda o'chadi.")}
+          options={THEME_ORDER.map((m) => ({ value: m, label: tr(THEME_LABELS[m]) }))}
+          value={mode}
+          onPick={setMode}
+          onClose={() => setSheet(null)}
+        />
+      )}
+
+      {/* Chiqishni tasdiqlash — iOS harakat varag'i */}
+      {sheet === "logout" && (
+        <BottomSheet label={tr("Kabinetdan chiqasizmi?")} onClose={() => !leaving && setSheet(null)}>
+          <div className="overflow-hidden rounded-[18px] bg-[var(--p-card)]">
+            <div className="border-b border-[var(--p-line)] px-6 py-4 text-center">
+              <p className="text-[13px] font-semibold text-[var(--p-muted)]">{tr("Kabinetdan chiqasizmi?")}</p>
+              <p className="mt-1 text-[13px] leading-snug text-[var(--p-muted)]">
+                {tr("Keyingi safar telefon raqamingiz va parolingiz bilan qayta kirasiz.")}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={logout}
+              disabled={leaving}
+              className="flex h-[56px] w-full cursor-pointer items-center justify-center text-[16px] text-[#ff3b30] transition-colors active:bg-[var(--p-sunken)] disabled:opacity-60"
+            >
+              {leaving ? tr("Chiqilmoqda…") : tr("Chiqish")}
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSheet(null)}
+            disabled={leaving}
+            className="mt-2 flex h-[56px] w-full cursor-pointer items-center justify-center rounded-[18px] bg-[var(--p-card)] text-[16px] font-semibold text-[#007aff] transition-colors active:bg-[var(--p-sunken)]"
+          >
+            {tr("Bekor qilish")}
+          </button>
+        </BottomSheet>
+      )}
 
       {passwordOpen && parent && (
         <PasswordSheet
