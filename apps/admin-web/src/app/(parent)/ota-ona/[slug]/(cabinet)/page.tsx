@@ -296,7 +296,8 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
           </section>
         )}
 
-        {childId && <NotifyTeacher childId={childId} departureEnabled={isOn("pickups")} />}
+        {/* Xabar tarbiyachiga xodim bildirishnomasi bo'lib boradi — u o'chiq bo'lsa blok ham yo'q */}
+        {childId && isOn("employeeNotifications") && <NotifyTeacher childId={childId} departureEnabled={isOn("pickups")} />}
 
         {/* To'lov eslatmasi — bog'cha sozlagan kunlar oynasida to'lanmagan
             hisob-faktura bo'lsa chiqadi, to'lov qilingach o'zi yo'qoladi. */}

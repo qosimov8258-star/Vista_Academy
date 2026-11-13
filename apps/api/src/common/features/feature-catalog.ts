@@ -71,7 +71,7 @@ export const FEATURE_CATALOG: readonly FeatureDefinition[] = [
   { key: "hr", label: "Ish haqi (HR)", group: "Xodimlar", description: "Ish haqi, smenalar, to'lovlar", paths: [/^payroll(\/|$)/, /^shifts(\/|$)/, /^employees\/[^/]+\/(payroll|salary-scheme)/] },
   { key: "staffAttendance", label: "Xodimlar davomati", group: "Xodimlar", description: "Xodimlarning kelish-ketishi", paths: [/^staff-attendance(\/|$)/] },
   { key: "faceId", label: "Face ID", group: "Xodimlar", description: "Qurilmalar va yuz ro'yxati", paths: [/^face-id(\/|$)/] },
-  { key: "employeeNotifications", label: "Xodim bildirishnomalari", group: "Xodimlar", description: "Xodimlarga ichki bildirishnoma", paths: [/^employee-notifications(\/|$)/] },
+  { key: "employeeNotifications", label: "Xodim bildirishnomalari", group: "Xodimlar", description: "Xodimlarga ichki bildirishnoma (ota-onaning «Tarbiyachiga xabar berish»i ham shu orqali)", paths: [/^employee-notifications(\/|$)/, only(["POST"], /^parent\/children\/[^/]+\/(note|departure)/)] },
 
   // Kundalik ish
   { key: "nutrition", label: "Ovqatlanish", group: "Kundalik ish", description: "Menyu va taomlar", paths: [/^menu(\/|$)/, /^dishes(\/|$)/, /^parent\/children\/[^/]+\/menu-photos/, /^exports\/menu/] },
