@@ -47,6 +47,8 @@ const ROUTE_FEATURES: Record<string, string | string[]> = {
   "staff-absences": "staffAttendance",
   timetable: "diary",
   useful: "useful",
+  // Ota-onalar faolligi (feature/ota-ona-faolligi) — kabinet bo'lmasa ma'nosiz
+  parents: "parentCabinet",
 };
 
 /** Sahifa manzili qaysi funksiyalarga tegishli (`/test-bogcha/filial-1/nutrition` → ["nutrition"]); yo'q bo'lsa bo'sh. */
