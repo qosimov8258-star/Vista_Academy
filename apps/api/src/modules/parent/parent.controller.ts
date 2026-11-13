@@ -21,6 +21,8 @@ import { PrismaService } from "../../database/prisma.service";
 import { ParentAuthService, IssuedParentTokens } from "./parent-auth.service";
 import { ParentService } from "./parent.service";
 import { ParentLoginDto } from "./dto/parent-login.dto";
+import { ParentEnterDto } from "./dto/parent-enter.dto";
+import { ParentEntryService } from "./parent-entry.service";
 import { ChangeParentPasswordDto } from "./dto/change-parent-password.dto";
 import { SubmitAbsenceReasonDto } from "./dto/submit-absence-reason.dto";
 import { NotifyDepartureDto } from "./dto/notify-departure.dto";
@@ -50,6 +52,7 @@ export class ParentController {
     private readonly paymentReceiptsService: PaymentReceiptsService,
     private readonly prisma: PrismaService,
     private readonly r2: R2Service,
+    private readonly entryService: ParentEntryService,
   ) {}
 
   @LoginThrottle()
@@ -57,6 +60,19 @@ export class ParentController {
   @HttpCode(HttpStatus.OK)
   async login(@Body() dto: ParentLoginDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const parent = await this.authService.validateCredentials(dto.orgSlug, dto.phone, dto.password);
+    const tokens = await this.authService.issueTokens(parent, requestMeta(req));
+    setAuthCookies(res, tokens);
+    return { parent };
+  }
+
+  /**
+   * «Ota-ona profiliga kirish»: bog'cha panelidan berilgan bir martalik
+   * chipta → shu ota-ona seansi (cookie). Panel uni yangi tabda ochadi.
+   */
+  @Post("enter")
+  @HttpCode(HttpStatus.OK)
+  async enter(@Body() dto: ParentEnterDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const parent = await this.entryService.enter(dto.ticket);
     const tokens = await this.authService.issueTokens(parent, requestMeta(req));
     setAuthCookies(res, tokens);
     return { parent };

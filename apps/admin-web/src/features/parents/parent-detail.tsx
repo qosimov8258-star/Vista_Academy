@@ -5,8 +5,9 @@ import Link from "next/link";
 import clsx from "clsx";
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { BellRing, ChevronLeft, Eye, Info, MessageSquareText, Phone, ReceiptText, Smartphone } from "lucide-react";
-import { api } from "@/lib/api";
+import { BellRing, ChevronLeft, Eye, Info, LogIn, MessageSquareText, Phone, ReceiptText, Smartphone } from "lucide-react";
+import { api, ApiError } from "@/lib/api";
+import { useAuth } from "@/lib/use-auth";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { formatChildId } from "@/lib/format";
 import { ChevronRightIcon } from "@/components/ios/icons";
@@ -45,6 +46,29 @@ export function ParentDetail({ slug, guardianId }: { slug: string; guardianId: s
   });
   const d = query.data;
   const [allRecent, setAllRecent] = useState(false);
+
+  // «Ota-ona profiliga kirish» — xodimnikidek: kabinet yangi tabda, ota-ona o'zi kirgandek ochiladi
+  const { user } = useAuth();
+  const canEnter = user?.role === "NETWORK_ADMIN" || user?.role === "BRANCH_ADMIN";
+  const [entering, setEntering] = useState(false);
+  const [enterError, setEnterError] = useState<string | null>(null);
+  const enterCabinet = async () => {
+    setEnterError(null);
+    setEntering(true);
+    // Oyna shu bosish ichida ochiladi — aks holda brauzer uni «popup» deb bloklaydi
+    const win = window.open("", "_blank");
+    try {
+      const { ticket } = await api.post<{ ticket: string }>(`/app/parent-engagement/${guardianId}/enter`, {});
+      const url = `/ota-ona/${slug}/enter#t=${encodeURIComponent(ticket)}`;
+      if (win) win.location.href = url;
+      else window.location.assign(url);
+    } catch (err) {
+      win?.close();
+      setEnterError(err instanceof ApiError ? err.message : tr("Kabinetga kirib bo'lmadi"));
+    } finally {
+      setEntering(false);
+    }
+  };
 
   return (
     <div className="mx-auto max-w-[1180px] space-y-5">
@@ -88,6 +112,23 @@ export function ParentDetail({ slug, guardianId }: { slug: string; guardianId: s
                 )}
               </div>
             </div>
+            {canEnter && d.guardian.connected && (
+              <button
+                type="button"
+                onClick={enterCabinet}
+                disabled={entering}
+                aria-label={tr("{0} kabinetiga kirish", d.guardian.fullName)}
+                title={tr("Ota-ona profiliga kirish — yangi tabda, ota-ona o'zi kirgandek")}
+                className="flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-full bg-[var(--color-primary)]/[0.12] px-3.5 text-[14px] font-semibold text-[var(--color-primary)] active:scale-95 disabled:opacity-60 max-sm:w-11 max-sm:px-0"
+              >
+                {entering ? (
+                  <span className="h-[18px] w-[18px] animate-spin rounded-full border-2 border-current border-t-transparent" />
+                ) : (
+                  <LogIn className="h-[18px] w-[18px]" strokeWidth={2.2} />
+                )}
+                <span className="max-sm:hidden">{tr("Profiliga kirish")}</span>
+              </button>
+            )}
             <a
               href={`tel:${d.guardian.phone}`}
               aria-label={tr("{0} ga qo'ng'iroq: {1}", d.guardian.fullName, d.guardian.phone)}
@@ -96,6 +137,12 @@ export function ParentDetail({ slug, guardianId }: { slug: string; guardianId: s
               <Phone className="h-5 w-5" strokeWidth={2.2} />
             </a>
           </div>
+
+          {enterError && (
+            <p role="alert" className="rounded-[12px] bg-[#ff3b30]/[0.1] px-4 py-2.5 text-[13.5px] text-[#ff3b30]">
+              {tr(enterError)}
+            </p>
+          )}
 
           {!d.guardian.connected && (
             <div className={clsx(PAGE_CARD, "flex items-start gap-3 p-4")}>

@@ -16,11 +16,12 @@ import { DiaryModule } from "../diary/diary.module";
 import { PaymentRemindersModule } from "../payment-reminders/payment-reminders.module";
 import { PaymentReceiptsModule } from "../payment-receipts/payment-receipts.module";
 import { PushModule } from "../push/push.module";
+import { ParentEntryService } from "./parent-entry.service";
 
 @Module({
   imports: [PassportModule, JwtModule.register({}), DiaryModule, PaymentRemindersModule, PaymentReceiptsModule, PushModule],
   controllers: [ParentController, ParentUsefulController, ParentDiaryController, ParentPushController, ParentActivityController],
-  providers: [ParentAuthService, ParentService, ParentJwtStrategy, ParentUsefulService, ParentDiaryService, ParentActivityService],
-  exports: [ParentAuthService],
+  providers: [ParentAuthService, ParentService, ParentJwtStrategy, ParentUsefulService, ParentDiaryService, ParentActivityService, ParentEntryService],
+  exports: [ParentAuthService, ParentEntryService],
 })
 export class ParentModule {}

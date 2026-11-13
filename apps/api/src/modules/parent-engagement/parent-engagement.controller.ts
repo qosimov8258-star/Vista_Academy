@@ -1,4 +1,4 @@
-import { Controller, Get, Param, ParseUUIDPipe, Query, Res, UseGuards } from "@nestjs/common";
+import { Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, Query, Res, UseGuards } from "@nestjs/common";
 import type { Response } from "express";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { Public } from "../../common/decorators/public.decorator";
@@ -6,6 +6,7 @@ import { TenantJwtAuthGuard } from "../iam/guards/tenant-jwt-auth.guard";
 import { CurrentTenantUser } from "../iam/decorators/current-tenant-user.decorator";
 import { TenantAuthenticatedUser } from "../iam/tenant-auth.types";
 import { ParentEngagementService } from "./parent-engagement.service";
+import { ParentEntryService } from "../parent/parent-entry.service";
 
 /**
  * «Ota-onalar» bo'limi: ota-onalar kabinetdan qanchalik foydalanayotgani.
@@ -18,7 +19,10 @@ import { ParentEngagementService } from "./parent-engagement.service";
 @UseGuards(TenantJwtAuthGuard)
 @Controller("app/parent-engagement")
 export class ParentEngagementController {
-  constructor(private readonly service: ParentEngagementService) {}
+  constructor(
+    private readonly service: ParentEngagementService,
+    private readonly entryService: ParentEntryService,
+  ) {}
 
   @Get()
   overview(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query("branchId") branchId?: string) {
@@ -33,6 +37,13 @@ export class ParentEngagementController {
     res.setHeader("Content-Disposition", `attachment; filename="${file.filename}"`);
     res.setHeader("Cache-Control", "no-store");
     res.send(file.buffer);
+  }
+
+  /** «Ota-ona profiliga kirish» — kabinetga bir martalik chipta (Super Admin, filial admini) */
+  @Post(":guardianId/enter")
+  @HttpCode(HttpStatus.OK)
+  enter(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("guardianId", ParseUUIDPipe) guardianId: string) {
+    return this.entryService.issueTicket(user, guardianId);
   }
 
   @Get(":guardianId")

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { PARENT_API_URL, parentApi } from "@/lib/parent-api";
+import { isParentEntrySession } from "@/lib/parent-entry";
 
 /** API dagi PARENT_PAGES bilan bir xil */
 const PAGES = new Set(["kundalik", "jadval", "fayllar", "tolov", "dokon", "foydali", "xabarlar", "sozlamalar", "tanlash"]);
@@ -47,7 +48,8 @@ export function ActivityTracker({ slug }: { slug: string }) {
   const page = pageOf(pathname, slug);
 
   useEffect(() => {
-    if (!page) return;
+    // Bog'cha xodimi «Ota-ona profiliga kirish» bilan ochgan tab — statistikaga yozilmaydi
+    if (!page || isParentEntrySession()) return;
     let id: string | null = null;
     let cancelled = false;
     let timer: ReturnType<typeof setInterval> | null = null;
