@@ -119,27 +119,31 @@ export function HoldToExit({ onExit }: { onExit: () => void }) {
   const exitRef = useRef(onExit);
   exitRef.current = onExit;
 
+  const timer = useRef<number | null>(null);
+
+  // Chiqish oddiy taymer bilan: requestAnimationFrame ilova fonda bo'lsa
+  // to'xtaydi, shuning uchun u faqat halqani chizish uchun ishlatiladi.
   const stop = (showHint: boolean) => {
     if (frame.current !== null) cancelAnimationFrame(frame.current);
+    if (timer.current !== null) window.clearTimeout(timer.current);
     frame.current = null;
+    timer.current = null;
     startedAt.current = null;
     setProgress(0);
     if (showHint) setHint(true);
   };
 
   const start = () => {
+    if (startedAt.current !== null) return;
     setHint(false);
     startedAt.current = performance.now();
+    timer.current = window.setTimeout(() => {
+      stop(false);
+      exitRef.current();
+    }, HOLD_MS);
     const tick = (now: number) => {
       if (startedAt.current === null) return;
-      const value = Math.min(1, (now - startedAt.current) / HOLD_MS);
-      setProgress(value);
-      if (value >= 1) {
-        frame.current = null;
-        startedAt.current = null;
-        exitRef.current();
-        return;
-      }
+      setProgress(Math.min(1, (now - startedAt.current) / HOLD_MS));
       frame.current = requestAnimationFrame(tick);
     };
     frame.current = requestAnimationFrame(tick);
@@ -159,6 +163,7 @@ export function HoldToExit({ onExit }: { onExit: () => void }) {
     return () => {
       window.removeEventListener("keydown", onKey);
       if (frame.current !== null) cancelAnimationFrame(frame.current);
+      if (timer.current !== null) window.clearTimeout(timer.current);
     };
   }, []);
 
