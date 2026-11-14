@@ -3,7 +3,7 @@
  * va o'yinlar ro'yxati.
  *
  * Rasmlar — Microsoft Fluent Emoji (3D), MIT litsenziyasi:
- * https://github.com/microsoft/fluentui-emoji. `public/oyinlar/<mavzu>/`
+ * https://github.com/microsoft/fluentui-emoji. `public/_oyinlar/<mavzu>/`
  * ichida saqlanadi — tashqi saytga so'rov ketmaydi, internet sekin bo'lsa
  * ham o'yin ishlaydi. Keyinchalik o'zimizning rasmlar bilan almashtirish
  * uchun faqat shu fayldagi `image` yo'llarini o'zgartirish kifoya.
@@ -31,8 +31,8 @@ export type Topic = {
   items: GameItem[];
 };
 
-const animal = (id: string, name: string): GameItem => ({ id, name, image: `/oyinlar/hayvonlar/${id}.png` });
-const fruit = (id: string, name: string): GameItem => ({ id, name, image: `/oyinlar/mevalar/${id}.png` });
+const animal = (id: string, name: string): GameItem => ({ id, name, image: `/_oyinlar/hayvonlar/${id}.png` });
+const fruit = (id: string, name: string): GameItem => ({ id, name, image: `/_oyinlar/mevalar/${id}.png` });
 
 export const TOPICS: Topic[] = [
   {

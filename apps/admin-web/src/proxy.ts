@@ -226,10 +226,11 @@ export const config = {
   // `face-model`, `push-icon.png`/`push-badge.png`, `icon.png`/`apple-icon.png`, `cursor.png`/`cursor@2x.png`,
   // `pointer.png`/`pointer@2x.png`, `brand/zeeron-*` — public/ dagi statik fayllar (yuzni
   // aniqlash modeli, push bildirishnoma belgilari, sayt belgisi, custom kursor rasmlari — @2x
-  // Retina/HiDPI ekranlar uchun, kirish sahifasidagi Zeeron logosi). Ular chiqarib tashlanmasa, proxy
+  // Retina/HiDPI ekranlar uchun, kirish sahifasidagi Zeeron logosi), `_oyinlar/` — ota-ona
+  // kabinetidagi o'yin rasmlari (pastki chiziq bilan: slug undan boshlana olmaydi). Ular chiqarib tashlanmasa, proxy
   // birinchi bo'lakni tashkilot slug'i deb o'ylab, so'rovni login
   // sahifasiga yo'naltiradi.
   matcher: [
-    "/((?!_next/static|_next/image|api/|favicon.ico|icon.png|apple-icon.png|sw.js|face-model|push-icon.png|push-badge.png|cursor.png|cursor@2x.png|pointer.png|pointer@2x.png|brand/zeeron-).*)",
+    "/((?!_next/static|_next/image|api/|favicon.ico|icon.png|apple-icon.png|sw.js|face-model|push-icon.png|push-badge.png|cursor.png|cursor@2x.png|pointer.png|pointer@2x.png|brand/zeeron-|_oyinlar/).*)",
   ],
 };
