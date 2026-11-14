@@ -175,3 +175,102 @@
     transition-duration: 0.01s;
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * «Kim qichqirdi?»
+ * ------------------------------------------------------------------------ */
+
+/* Ovoz ijro etilayotganda karnay atrofida to'lqinlar tarqaladi */
+.speaker {
+  position: relative;
+}
+.speaker::before,
+.speaker::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  border: 3px solid var(--wave, var(--p-sun));
+  opacity: 0;
+  pointer-events: none;
+}
+.speaking::before {
+  animation: gWave 1.3s ease-out infinite;
+}
+.speaking::after {
+  animation: gWave 1.3s ease-out 0.45s infinite;
+}
+@keyframes gWave {
+  0% { opacity: 0.7; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.45); }
+}
+/* Boshlash tugmasi — bolani o'ziga chaqirib, yengil «nafas oladi» */
+.breathe {
+  animation: gBreathe 2.2s ease-in-out infinite;
+}
+@keyframes gBreathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
+/* Javob kartasi */
+.choice {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 22%;
+  background: var(--p-card);
+  box-shadow: var(--p-shadow);
+  cursor: pointer;
+  transition: opacity 0.3s ease, filter 0.3s ease, scale 0.15s ease;
+  animation: gChoiceIn 0.45s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+.choice:active:not(:disabled) {
+  scale: 0.95;
+}
+.choice:focus-visible {
+  outline: 3px solid var(--p-sky);
+  outline-offset: 3px;
+}
+.choice img {
+  width: 74%;
+  height: 74%;
+  object-fit: contain;
+  pointer-events: none;
+}
+@keyframes gChoiceIn {
+  from { opacity: 0; transform: scale(0.6) translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+/* Noto'g'ri tanlangan — xiralashadi, qayta bosilmaydi */
+.wrong {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+/* To'g'ri javob — yashil halqa, rasm sakraydi */
+.right {
+  box-shadow: inset 0 0 0 4px var(--p-mint), var(--p-shadow);
+}
+/*
+ * Sakrash va chayqalish rasmning o'ziga beriladi: tugmaning kirish
+ * animatsiyasi almashsa, u qaytadan boshlanib ketardi.
+ */
+.right img {
+  animation: gFound 0.55s cubic-bezier(0.34, 1.5, 0.64, 1) both;
+}
+.shake img {
+  animation: gMiss 0.42s ease-in-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .speaking::before,
+  .speaking::after,
+  .breathe,
+  .choice,
+  .right img,
+  .shake img {
+    animation: none;
+  }
+}

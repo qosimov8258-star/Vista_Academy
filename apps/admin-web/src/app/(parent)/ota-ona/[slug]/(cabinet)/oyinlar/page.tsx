@@ -3,11 +3,11 @@
 import { use } from "react";
 import Link from "next/link";
 import clsx from "clsx";
-import { Ear, Hash, Hand, Timer } from "lucide-react";
+import { Hash, Hand, Timer } from "lucide-react";
 import { ChevronRightIcon } from "@/components/ui/icons";
 import parentStyles from "../../parent.module.css";
 import styles from "./oyinlar.module.css";
-import { GAMES, TOPICS, topicCover } from "./data";
+import { GAMES, SOUND_ANIMALS, TOPICS, topicCover, type GameItem } from "./data";
 import { FoydaliHeader, SectionLabel } from "../foydali/ui";
 import { TONE } from "./ui";
 import { useTr } from "@/i18n/tr";
@@ -23,8 +23,13 @@ export default function GamesPage({ params }: { params: Promise<{ slug: string }
   const base = `/ota-ona/${slug}`;
   const ready = GAMES.filter((game) => game.href);
   const soon = GAMES.filter((game) => !game.href);
-  const soonIcon: Record<string, typeof Ear> = { "kim-qichqirdi": Ear, nechta: Hash };
-  const collage = TOPICS.flatMap((topic) => topicCover(topic)).slice(0, 4);
+  const soonIcon: Record<string, typeof Hash> = { nechta: Hash };
+  // Har o'yin kartasida o'z rasmlari va «nimasi bor» yorlig'i
+  const pick = (ids: string[]): GameItem[] => SOUND_ANIMALS.filter((animal) => ids.includes(animal.id));
+  const cards: Record<string, { images: GameItem[]; chip: string }> = {
+    "juftini-top": { images: TOPICS.flatMap((topic) => topicCover(topic)).slice(0, 4), chip: tr("{0} mavzu", TOPICS.length) },
+    "kim-qichqirdi": { images: pick(["rooster", "cow", "duck", "sheep"]), chip: tr("{0} ta hayvon", SOUND_ANIMALS.length) },
+  };
 
   return (
     <div className="mx-auto w-full max-w-[520px] px-4">
@@ -33,6 +38,7 @@ export default function GamesPage({ params }: { params: Promise<{ slug: string }
       <ul className="mt-5 space-y-3">
         {ready.map((game) => {
           const tone = TONE[game.tone];
+          const card = cards[game.id];
           return (
             <li key={game.id}>
               <Link
@@ -40,7 +46,7 @@ export default function GamesPage({ params }: { params: Promise<{ slug: string }
                 className="block overflow-hidden rounded-[var(--p-radius)] bg-[var(--p-card)] shadow-[var(--p-shadow)] transition-transform active:scale-[0.99]"
               >
                 <div className="relative flex h-[132px] items-center justify-center gap-3" style={{ background: tone.soft }}>
-                  {collage.map((item, i) => (
+                  {card?.images.map((item, i) => (
                     <span
                       key={item.id}
                       className={clsx(
@@ -65,9 +71,11 @@ export default function GamesPage({ params }: { params: Promise<{ slug: string }
                       <span className="rounded-full bg-[var(--p-sunken)] px-2.5 py-1 text-[12px] font-semibold text-[var(--p-muted)]">
                         {tr(game.skill)}
                       </span>
-                      <span className="rounded-full bg-[var(--p-sunken)] px-2.5 py-1 text-[12px] font-semibold text-[var(--p-muted)]">
-                        {tr("{0} mavzu", TOPICS.length)}
-                      </span>
+                      {card && (
+                        <span className="rounded-full bg-[var(--p-sunken)] px-2.5 py-1 text-[12px] font-semibold text-[var(--p-muted)]">
+                          {card.chip}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <span

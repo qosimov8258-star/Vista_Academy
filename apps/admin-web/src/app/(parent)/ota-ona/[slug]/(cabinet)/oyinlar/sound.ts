@@ -63,3 +63,87 @@ export function buzz(ms: number) {
     // qo'llanmaydi
   }
 }
+
+/* ------------------------------------------------------------------------ */
+/* Ovoz yozuvlari («Kim qichqirdi?»)                                          */
+/* ------------------------------------------------------------------------ */
+
+const buffers = new Map<string, Promise<AudioBuffer | null>>();
+let current: AudioBufferSourceNode | null = null;
+
+/**
+ * Brauzer ovozga ruxsat berishi uchun bosish ichida chaqiriladi (iPhone
+ * Safari AudioContext'ni faqat foydalanuvchi bosganda yoqadi).
+ */
+export function unlockAudio(): boolean {
+  // iPhone'da Web Audio «jim» tugmasi yoqilgan bo'lsa eshitilmaydi. Bu o'yinda
+  // ovoz — o'yinning o'zi, shuning uchun iOS 17+ da ijro rejimiga o'tamiz
+  // (eski qurilmalarda bu xususiyat yo'q — jim o'tadi).
+  try {
+    const session = (navigator as unknown as { audioSession?: { type: string } }).audioSession;
+    if (session) session.type = "playback";
+  } catch {
+    // qo'llanmaydi
+  }
+  return !!audio();
+}
+
+/** Ovoz holati: `running` — ijro etsa bo'ladi; aks holda avval bosish kerak */
+export function audioReady(): boolean {
+  return ctx?.state === "running";
+}
+
+/** Yozuvni oldindan yuklab, ochib qo'yadi — bosilganda kechikmasin */
+export function loadClip(url: string): Promise<AudioBuffer | null> {
+  let pending = buffers.get(url);
+  if (!pending) {
+    const c = audio();
+    pending = c
+      ? fetch(url)
+          .then((res) => (res.ok ? res.arrayBuffer() : Promise.reject(new Error(String(res.status)))))
+          .then((data) => c.decodeAudioData(data))
+          .catch(() => {
+            buffers.delete(url); // keyingi safar qayta urinib ko'radi
+            return null;
+          })
+      : Promise.resolve(null);
+    buffers.set(url, pending);
+  }
+  return pending;
+}
+
+/**
+ * Yozuvni ijro etadi; avvalgisi to'xtatiladi (ovozlar ustma-ust tushmaydi).
+ * Ijro tugaganda (yoki ijro etib bo'lmasa) promise bajariladi; qaytgan
+ * qiymat — yozuv uzunligi, soniyada (0 — ijro etilmadi).
+ */
+export async function playClip(url: string): Promise<number> {
+  const c = audio();
+  const buffer = await loadClip(url);
+  if (!c || !buffer) return 0;
+  stopClip();
+  const source = c.createBufferSource();
+  const gain = c.createGain();
+  gain.gain.value = 0.9;
+  source.buffer = buffer;
+  source.connect(gain).connect(c.destination);
+  current = source;
+  return new Promise((resolve) => {
+    source.onended = () => {
+      if (current === source) current = null;
+      resolve(buffer.duration);
+    };
+    source.start();
+  });
+}
+
+export function stopClip() {
+  if (!current) return;
+  try {
+    current.onended = null;
+    current.stop();
+  } catch {
+    // allaqachon tugagan
+  }
+  current = null;
+}

@@ -15,11 +15,14 @@ type Result = { best: 0 | 1 | 2 | 3; plays: number };
 type State = {
   /** «Juftini top»: `${mavzu}:${daraja}` → natija */
   memory: Record<string, Result>;
+  /** «Kim qichqirdi?»: daraja → natija */
+  sounds: Record<string, Result>;
   level: LevelId;
+  soundLevel: LevelId;
   sound: boolean;
 };
 
-const DEFAULT: State = { memory: {}, level: "oson", sound: true };
+const DEFAULT: State = { memory: {}, sounds: {}, level: "oson", soundLevel: "oson", sound: true };
 
 let cache: State | null = null;
 const listeners = new Set<() => void>();
@@ -29,7 +32,7 @@ function read(): State {
   try {
     const raw = localStorage.getItem(KEY);
     const parsed = raw ? (JSON.parse(raw) as Partial<State>) : {};
-    cache = { ...DEFAULT, ...parsed, memory: { ...(parsed.memory ?? {}) } };
+    cache = { ...DEFAULT, ...parsed, memory: { ...(parsed.memory ?? {}) }, sounds: { ...(parsed.sounds ?? {}) } };
   } catch {
     cache = DEFAULT;
   }
@@ -67,8 +70,22 @@ export function useGamesStore() {
     });
   }, []);
 
+  const setSoundLevel = useCallback((soundLevel: LevelId) => write({ ...read(), soundLevel }), []);
+  const saveSoundResult = useCallback((level: LevelId, stars: 1 | 2 | 3) => {
+    const current = read();
+    const prev = current.sounds[level] ?? { best: 0, plays: 0 };
+    write({
+      ...current,
+      sounds: { ...current.sounds, [level]: { best: Math.max(prev.best, stars) as Result["best"], plays: prev.plays + 1 } },
+    });
+  }, []);
+
   return {
     level: state.level,
+    soundLevel: state.soundLevel,
+    soundResult: (level: LevelId): Result => state.sounds[level] ?? { best: 0, plays: 0 },
+    setSoundLevel,
+    saveSoundResult,
     sound: state.sound,
     memoryResult: (topic: string, level: LevelId): Result => state.memory[`${topic}:${level}`] ?? { best: 0, plays: 0 },
     setLevel,

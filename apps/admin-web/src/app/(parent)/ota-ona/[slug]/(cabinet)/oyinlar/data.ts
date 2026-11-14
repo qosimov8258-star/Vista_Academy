@@ -138,6 +138,86 @@ export function starsFor(pairs: number, moves: number): 1 | 2 | 3 {
 }
 
 /* ------------------------------------------------------------------------ */
+/* «Kim qichqirdi?» — hayvon ovozlari                                        */
+/* ------------------------------------------------------------------------ */
+
+/**
+ * Ovozlar — BigSoundBank (https://bigsoundbank.com), CC0 (jamoat mulki).
+ * Asl yozuvlardan hayvon ovozi bor 1,5–2,5 soniya kesib olingan, balandligi
+ * tenglashtirilgan, juda qisqalari (qo'y, echki, boyqush) ikki marta
+ * takrorlangan; AAC (.m4a) — iPhone va Android'da birdek ishlaydi.
+ */
+export type SoundAnimal = GameItem & { sound: string };
+
+const voiced = (id: string, name: string): SoundAnimal => ({
+  id,
+  name,
+  image: `/_oyinlar/hayvonlar/${id}.png`,
+  sound: `/_oyinlar/ovozlar/${id}.m4a`,
+});
+
+export const SOUND_ANIMALS: SoundAnimal[] = [
+  voiced("cow", "Sigir"),
+  voiced("cat", "Mushuk"),
+  voiced("dog", "Kuchukcha"),
+  voiced("rooster", "Xo'roz"),
+  voiced("duck", "O'rdak"),
+  voiced("sheep", "Qo'y"),
+  voiced("horse", "Ot"),
+  voiced("goat", "Echki"),
+  voiced("chicken", "Tovuq"),
+  voiced("donkey", "Eshak"),
+  voiced("owl", "Boyqush"),
+  voiced("bee", "Ari"),
+];
+
+/**
+ * Ovozi o'xshash juftlar bitta savolda birga chiqmaydi — kichkintoy
+ * ularni ajrata olmaydi va o'yin adolatsiz bo'lib qoladi.
+ */
+export const CONFUSABLE: ReadonlyArray<readonly [string, string]> = [
+  ["rooster", "chicken"],
+  ["sheep", "goat"],
+];
+
+export type SoundLevel = {
+  id: LevelId;
+  title: string;
+  age: string;
+  /** Har savolda nechta hayvon ko'rsatiladi */
+  choices: number;
+  /** O'yindagi savollar soni */
+  rounds: number;
+};
+
+export const SOUND_LEVELS: SoundLevel[] = [
+  { id: "oson", title: "Oson", age: "2–3 yosh", choices: 2, rounds: 5 },
+  { id: "orta", title: "O'rtacha", age: "3–4 yosh", choices: 3, rounds: 6 },
+  { id: "qiyin", title: "Qiyin", age: "4–5 yosh", choices: 4, rounds: 8 },
+];
+
+export function findSoundLevel(id: string | null | undefined): SoundLevel {
+  return SOUND_LEVELS.find((level) => level.id === id) ?? SOUND_LEVELS[0];
+}
+
+export function nextSoundLevel(level: SoundLevel): SoundLevel | null {
+  const index = SOUND_LEVELS.findIndex((item) => item.id === level.id);
+  return SOUND_LEVELS[index + 1] ?? null;
+}
+
+/**
+ * Yulduzchalar — birinchi urinishda topilgan savollar ulushi bo'yicha.
+ * Xato qilsa ham o'yin davom etadi, kamida bitta yulduz.
+ *   3★ — 80% va undan ko'p, 2★ — 50% va undan ko'p
+ */
+export function soundStarsFor(firstTry: number, rounds: number): 1 | 2 | 3 {
+  const share = firstTry / rounds;
+  if (share >= 0.8) return 3;
+  if (share >= 0.5) return 2;
+  return 1;
+}
+
+/* ------------------------------------------------------------------------ */
 /* O'yinlar ro'yxati                                                         */
 /* ------------------------------------------------------------------------ */
 
@@ -169,7 +249,7 @@ export const GAMES: GameInfo[] = [
     age: "2–4 yosh",
     skill: "Eshitish",
     tone: "sun",
-    href: null,
+    href: "/oyinlar/kim-qichqirdi",
   },
   {
     id: "nechta",
