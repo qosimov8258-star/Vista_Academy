@@ -171,7 +171,12 @@ export function HoldToExit({ onExit }: { onExit: () => void }) {
         type="button"
         aria-label={tr("Chiqish uchun bosib turing")}
         onPointerDown={(event) => {
-          event.currentTarget.setPointerCapture(event.pointerId);
+          try {
+            // Barmoq tugmadan biroz siljisa ham bosish uzilmasin
+            event.currentTarget.setPointerCapture(event.pointerId);
+          } catch {
+            // ba'zi brauzerlarda qo'llanmaydi — bosib turish baribir ishlaydi
+          }
           start();
         }}
         onPointerUp={() => stop(startedAt.current !== null)}

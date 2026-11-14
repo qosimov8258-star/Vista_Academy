@@ -237,16 +237,27 @@ export function MemoryGame({
       </header>
 
       {/* Topilgan juftlar — raqamsiz, rasm bilan to'lib boradi */}
-      <div className="mt-4 flex justify-center gap-2 px-4" aria-label={tr("{0} / {1} juft topildi", found.length, level.pairs)}>
+      {/* 8 ta joy ham 375px ga chetlarga tegmay sig'adi */}
+      <div
+        className={clsx("mt-4 flex justify-center px-4", level.pairs > 6 ? "gap-1.5" : "gap-2")}
+        aria-label={tr("{0} / {1} juft topildi", found.length, level.pairs)}
+      >
         {Array.from({ length: level.pairs }, (_, i) => {
           const item = found[i];
           return (
             <span
               key={i}
-              className="flex h-9 w-9 items-center justify-center rounded-full"
+              className={clsx("flex items-center justify-center rounded-full", level.pairs > 6 ? "h-8 w-8" : "h-9 w-9")}
               style={{ background: item ? tone.soft : "var(--p-sunken)" }}
             >
-              {item && <img src={item.image} alt="" draggable={false} className={clsx(styles.slotIn, "h-7 w-7 object-contain")} />}
+              {item && (
+                <img
+                  src={item.image}
+                  alt=""
+                  draggable={false}
+                  className={clsx(styles.slotIn, "object-contain", level.pairs > 6 ? "h-6 w-6" : "h-7 w-7")}
+                />
+              )}
             </span>
           );
         })}
