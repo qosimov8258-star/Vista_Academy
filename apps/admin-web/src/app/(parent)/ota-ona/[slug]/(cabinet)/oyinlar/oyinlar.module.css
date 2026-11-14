@@ -1,0 +1,177 @@
+/* ---------------------------------------------------------------------------
+ * O'yin ekrani — bolalar rejimi
+ *
+ * Ekranni to'liq egallaydi (pastki menyu ham yopiladi). Bosib turish,
+ * matn belgilash, rasmni «saqlash» menyusi va ikki marta bosib kattalashtirish
+ * o'chirilgan — kichkintoy tasodifan boshqa joyga chiqib ketmasin.
+ * ------------------------------------------------------------------------ */
+.stage {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  background: var(--p-bg);
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  animation: gStageIn 0.32s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+@keyframes gStageIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ---------------------------------------------------------------------------
+ * Karta: ikki tomonli, Y o'qi atrofida aylanadi
+ * ------------------------------------------------------------------------ */
+.card {
+  position: relative;
+  perspective: 900px;
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+}
+.card:focus-visible {
+  outline: 3px solid var(--p-sky);
+  outline-offset: 3px;
+  border-radius: 22%;
+}
+.inner {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transition: transform 0.42s cubic-bezier(0.3, 0.75, 0.3, 1.15);
+}
+.up .inner {
+  transform: rotateY(180deg);
+}
+.face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 20%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  overflow: hidden;
+}
+.back {
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.35), 0 6px 14px -8px rgba(60, 40, 30, 0.45);
+}
+.front {
+  transform: rotateY(180deg);
+  background: var(--p-card);
+  box-shadow: var(--p-shadow);
+}
+.front img {
+  width: 76%;
+  height: 76%;
+  object-fit: contain;
+  pointer-events: none;
+}
+/* Topilgan juft — yashil halqa bilan ochiq qoladi */
+.matched .front {
+  box-shadow: inset 0 0 0 3px var(--p-mint), var(--p-shadow);
+}
+
+/* Bosilganda biroz cho'kadi — barmoq ostida «tugma» his qilinsin */
+.card:active:not(:disabled) .inner {
+  scale: 0.96;
+}
+
+/* Juft topildi — sakrab quvonadi */
+.found {
+  animation: gFound 0.55s cubic-bezier(0.34, 1.5, 0.64, 1) both;
+}
+@keyframes gFound {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.12) rotate(-3deg); }
+  100% { transform: none; }
+}
+
+/* Mos kelmadi — yumshoq chayqaladi */
+.miss {
+  animation: gMiss 0.42s ease-in-out both;
+}
+@keyframes gMiss {
+  0%, 100% { transform: none; }
+  25% { transform: translateX(-5px) rotate(-2deg); }
+  75% { transform: translateX(5px) rotate(2deg); }
+}
+
+/* Topilgan rasm pastda nomi bilan chiqadi */
+.bubble {
+  animation: gBubble 1.7s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+@keyframes gBubble {
+  0% { opacity: 0; transform: translateY(14px) scale(0.9); }
+  14% { opacity: 1; transform: none; }
+  80% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateY(-6px); }
+}
+
+/* Yuqoridagi to'planayotgan juftlar */
+.slotIn {
+  animation: gSlotIn 0.5s cubic-bezier(0.34, 1.5, 0.64, 1) both;
+}
+@keyframes gSlotIn {
+  from { opacity: 0; transform: scale(0.3); }
+  to { opacity: 1; transform: none; }
+}
+
+/* G'alaba oynasi */
+.winBackdrop {
+  animation: gFade 0.3s ease-out both;
+}
+.winCard {
+  animation: gWinIn 0.5s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+@keyframes gFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes gWinIn {
+  from { opacity: 0; transform: translateY(24px) scale(0.92); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Chiqish tugmasi atrofidagi to'lib boruvchi halqa */
+.holdRing {
+  transition: stroke-dashoffset 0.12s linear;
+}
+
+/* Mavzu kartasidagi rasmlar — yengil tebranadi */
+.bob {
+  animation: gBob 3.2s ease-in-out infinite;
+}
+@keyframes gBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage,
+  .found,
+  .miss,
+  .slotIn,
+  .winBackdrop,
+  .winCard,
+  .bob {
+    animation: none;
+  }
+  .bubble {
+    animation-duration: 0.01s;
+    animation-delay: 1.6s;
+  }
+  .inner {
+    transition-duration: 0.01s;
+  }
+}
