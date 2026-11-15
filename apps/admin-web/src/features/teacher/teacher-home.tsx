@@ -286,7 +286,7 @@ export function TeacherHome({ slug }: { slug: string }) {
                     </span>
                   }
                   title={<span className="font-semibold">{lesson.subject || tr("Dars")}</span>}
-                  subtitle={`${lesson.group.name} ${tr("guruhi")}${lesson.room ? ` · ${lesson.room.name}` : ""}`}
+                  subtitle={`${groupLabel(lesson.group.name, tr("guruhi"))}${lesson.room ? ` · ${lesson.room.name}` : ""}`}
                   trailing={
                     isToday ? (
                       <span className="inline-flex h-6 shrink-0 items-center rounded-full px-2.5 text-[12.5px] font-semibold text-[var(--color-primary)]" style={{ background: "color-mix(in srgb, var(--color-primary) 12%, transparent)" }}>
@@ -307,6 +307,11 @@ export function TeacherHome({ slug }: { slug: string }) {
       )}
     </TeacherPage>
   );
+}
+
+/** «2-guruh» → «2-guruh», «Quyoshcha» → «Quyoshcha guruhi» (nomda «guruh» bo'lsa takrorlanmaydi) */
+function groupLabel(name: string, suffix: string): string {
+  return /guruh|групп|group/i.test(name) ? name : `${name} ${suffix}`;
 }
 
 type Shortcut = { key: string; label: string; icon: AnyIcon; tint: IosTint; href: string; badge?: number };
