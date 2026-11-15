@@ -3246,5 +3246,13 @@
  "Bu guruhda hali rasm yo'q": "No photos in this group yet",
  "«Rasm qo'shish» tugmasi bilan bolalarning birinchi ishini yuklang — ota-onalar kabinetida darhol ko'radi.": "Upload the children's first work with \"Add photo\" — parents will see it in their cabinet right away.",
  "Maslahat": "Tips",
- "Xush kelibsiz": "Welcome"
+ "Xush kelibsiz": "Welcome",
+ "Yo'lga chiqdim yoki eslatma": "\"On my way\" or a note",
+ "Eslatma yuborish": "Send a note",
+ "Xotira va eshitish uchun": "For memory and listening",
+ "{0} bolalari ijodi": "Creativity of {0} kids",
+ "Kam": "Little",
+ "Tarbiyachiga xabar yuborildi": "Message sent to the teacher",
+ "Eslatma tarbiyachiga yuborildi": "Note sent to the teacher",
+ "Yuborib bo'lmadi": "Could not send"
 }

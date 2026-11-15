@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import clsx from "clsx";
+import { CheckCircle2, ChevronDown, Send } from "lucide-react";
 import { ApiError } from "@/lib/api";
 import { parentApi } from "@/lib/parent-api";
+import { IosIcon } from "@/features/director/ios-icon";
 import { useTr } from "@/i18n/tr";
 
 const MINUTES = [10, 15, 20, 30, 45, 60];
@@ -14,6 +16,9 @@ type Mode = "departure" | "note";
 /**
  * "Xabar berish" — ota-ona tarbiyachiga ikki xil xabar yuboradi:
  * yo'lga chiqqani (necha daqiqada yetib kelishi) va eslatma (dori, ukol...).
+ *
+ * Ko'rinishi — bosh sahifaning iOS uslubida: plitkali qator, bosilganda
+ * ichida segment, kapsula tugmalar va ko'k asosiy tugma ochiladi.
  */
 export function NotifyTeacher({ childId, departureEnabled = true }: { childId: string; departureEnabled?: boolean }) {
   const tr = useTr();
@@ -40,63 +45,77 @@ export function NotifyTeacher({ childId, departureEnabled = true }: { childId: s
   const canSend = mode === "departure" || text.trim().length > 0;
 
   return (
-    <section className="mt-4 rounded-[var(--p-radius)] bg-[var(--p-card)] p-4 shadow-[var(--p-shadow)]">
+    <section className="mt-4 rounded-[var(--p-radius)] bg-[var(--p-card)] shadow-[var(--p-shadow)]">
       <button
         type="button"
+        aria-expanded={open}
         onClick={() => {
           setOpen((v) => !v);
           setDone(null);
           send.reset();
         }}
-        className="flex w-full items-center justify-between text-left"
+        className="flex min-h-[64px] w-full items-center gap-3 px-4 py-3 text-left"
       >
-        <span className="text-[15px] font-bold text-[var(--p-ink)]">{tr("Tarbiyachiga xabar berish")}</span>
-        <span className="text-[var(--p-muted)]">{open ? "−" : "+"}</span>
+        <IosIcon icon={Send} tint="blue" size={40} />
+        <span className="min-w-0 flex-1">
+          <span className="block text-[16px] font-semibold leading-snug text-[var(--p-ink)]">{tr("Tarbiyachiga xabar berish")}</span>
+          <span className="block truncate text-[13.5px] text-[var(--p-muted)]">
+            {departureEnabled ? tr("Yo'lga chiqdim yoki eslatma") : tr("Eslatma yuborish")}
+          </span>
+        </span>
+        <ChevronDown
+          className={clsx("h-5 w-5 shrink-0 text-[#c7c7cc] transition-transform duration-200", open && "rotate-180")}
+          strokeWidth={2.4}
+          aria-hidden="true"
+        />
       </button>
 
       {open && (
-        <div className="mt-3 space-y-3">
-          <div className={clsx("grid gap-2", departureEnabled ? "grid-cols-2" : "hidden")}>
-            {(
-              [
-                ["departure", "Yo'lga chiqdim"],
-                ["note", "Eslatma"],
-              ] as const
-            ).map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => {
-                  setMode(key);
-                  setDone(null);
-                  send.reset();
-                }}
-                className={clsx(
-                  "rounded-[var(--p-radius)] px-3 py-2.5 text-[14px] font-bold",
-                  mode === key
-                    ? "bg-[var(--p-coral)] text-white"
-                    : "bg-[var(--p-ink)]/8 text-[var(--p-ink)]",
-                )}
-              >
-                {tr(label)}
-              </button>
-            ))}
-          </div>
+        <div className="space-y-3.5 px-4 pb-4">
+          {/* iOS segmenti */}
+          {departureEnabled && (
+            <div role="radiogroup" className="flex rounded-full bg-[#767680]/[0.12] p-[3px]">
+              {(
+                [
+                  ["departure", "Yo'lga chiqdim"],
+                  ["note", "Eslatma"],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  role="radio"
+                  aria-checked={mode === key}
+                  onClick={() => {
+                    setMode(key);
+                    setDone(null);
+                    send.reset();
+                  }}
+                  className={clsx(
+                    "h-9 flex-1 rounded-full text-[14.5px] font-semibold transition-colors",
+                    mode === key ? "bg-white text-[var(--p-ink)] shadow-sm" : "text-[var(--p-muted)]",
+                  )}
+                >
+                  {tr(label)}
+                </button>
+              ))}
+            </div>
+          )}
 
           {mode === "departure" ? (
             <div>
-              <p className="mb-2 text-[13px] text-[var(--p-muted)]">{tr("Necha daqiqada yetib borasiz?")}</p>
-              <div className="grid grid-cols-3 gap-2">
+              <p className="mb-2 px-1 text-[13px] font-medium text-[var(--p-muted)]">{tr("Necha daqiqada yetib borasiz?")}</p>
+              <div className="grid grid-cols-3 gap-2" role="radiogroup">
                 {MINUTES.map((m) => (
                   <button
                     key={m}
                     type="button"
+                    role="radio"
+                    aria-checked={minutes === m}
                     onClick={() => setMinutes(m)}
                     className={clsx(
-                      "rounded-[var(--p-radius)] px-2 py-2 text-[14px] font-bold",
-                      minutes === m
-                        ? "bg-[var(--p-mint)] text-white"
-                        : "bg-[var(--p-ink)]/8 text-[var(--p-ink)]",
+                      "h-11 rounded-full text-[15px] font-semibold tabular-nums transition-colors",
+                      minutes === m ? "bg-[#007aff] text-white" : "bg-[var(--p-sunken)] text-[var(--p-ink)]",
                     )}
                   >
                     {m} {tr("daqiqa")}
@@ -110,13 +129,19 @@ export function NotifyTeacher({ childId, departureEnabled = true }: { childId: s
               onChange={(e) => setText(e.target.value)}
               maxLength={500}
               rows={3}
+              aria-label={tr("Eslatma")}
               placeholder={tr("Masalan: ertaga soat 12:00 da dori berish kerak")}
-              className="w-full rounded-[var(--p-radius)] bg-[var(--p-ink)]/8 p-3 text-[15px] text-[var(--p-ink)] outline-none placeholder:text-[var(--p-muted)]"
+              className="w-full resize-none rounded-[14px] bg-[var(--p-sunken)] px-3.5 py-3 text-[16px] text-[var(--p-ink)] outline-none placeholder:text-[var(--p-muted)] focus:ring-2 focus:ring-[#007aff]/40"
             />
           )}
 
-          {error && <p className="text-[13px] text-[var(--p-coral)]">{tr(error)}</p>}
-          {done && <p className="text-[13px] font-bold text-[var(--p-mint)]">{tr(done)}</p>}
+          {error && <p className="px-1 text-[13px] text-[#ff3b30]">{tr(error)}</p>}
+          {done && (
+            <p className="flex items-center gap-1.5 px-1 text-[14px] font-semibold text-[#34c759]">
+              <CheckCircle2 className="h-[18px] w-[18px]" strokeWidth={2.2} />
+              {tr(done)}
+            </p>
+          )}
 
           <button
             type="button"
@@ -125,7 +150,7 @@ export function NotifyTeacher({ childId, departureEnabled = true }: { childId: s
               setDone(null);
               send.mutate();
             }}
-            className="w-full rounded-[var(--p-radius)] bg-[var(--p-coral)] py-3 text-[15px] font-bold text-white disabled:opacity-50"
+            className="h-12 w-full rounded-full bg-[#007aff] text-[16px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-40"
           >
             {send.isPending ? "…" : mode === "departure" ? tr("Yo'lga chiqdim") : tr("Yuborish")}
           </button>
