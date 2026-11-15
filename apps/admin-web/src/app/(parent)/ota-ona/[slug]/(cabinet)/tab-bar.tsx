@@ -89,7 +89,7 @@ export function ParentTabBar({ slug }: { slug: string }) {
     clsx(
       // `basis-0 min-w-0` — bo'limlar uzun nomiga qarab emas, teng
       // bo'linadi; uzun nom o'z katagiga sig'adi.
-      "relative z-10 flex min-w-0 flex-1 basis-0 flex-col items-center justify-center gap-1 rounded-full py-2 transition-colors duration-200",
+      "relative z-10 flex min-w-0 flex-1 basis-0 flex-col items-center justify-center gap-1 rounded-full py-2 transition-colors duration-200 outline-none focus-visible:ring-2 focus-visible:ring-[var(--p-sky)]",
       active ? "text-[var(--p-sky-ink)]" : "text-[var(--p-muted)] active:bg-black/[0.04]",
     );
   const labelClass = "w-full truncate text-center text-[clamp(10px,3vw,11.5px)] font-semibold leading-none";
@@ -117,7 +117,7 @@ export function ParentTabBar({ slug }: { slug: string }) {
 
       <div
         ref={barRef}
-        className={clsx(styles.glass, "flex w-full max-w-[420px] items-stretch gap-1 rounded-full p-2")}
+        className={clsx(styles.glass, "relative flex w-full max-w-[420px] items-stretch gap-1 rounded-full p-2")}
       >
         {/* Suriluvchi tamg'a. Bo'lim tanilmasa ko'rsatilmaydi. */}
         {pill && (
