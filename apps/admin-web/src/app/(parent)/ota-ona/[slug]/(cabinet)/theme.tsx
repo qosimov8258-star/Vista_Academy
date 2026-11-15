@@ -6,6 +6,7 @@ import { parentApi } from "@/lib/parent-api";
 import type { ParentAccount, ParentChild } from "@/lib/types";
 import type { SkyState } from "@/lib/sky";
 import { useSky } from "./use-sky";
+import { useAppPathname } from "@/lib/tenant-host-context";
 import styles from "../parent.module.css";
 
 /**
@@ -85,6 +86,9 @@ export function CabinetThemeProvider({ slug, children }: { slug: string; childre
   const [mounted, setMounted] = useState(false);
   const [cachedDark, setCachedDark] = useState(false);
   const serverRendered = useIsServerRendered();
+  // Bosh sahifa iOS uslubida — oq, tekis fon (qolgan bo'limlarda iliq osmon)
+  const pathname = useAppPathname();
+  const home = pathname === `/ota-ona/${slug}` || pathname === `/ota-ona/${slug}/`;
 
   useEffect(() => {
     setModeState(readMode());
@@ -126,7 +130,7 @@ export function CabinetThemeProvider({ slug, children }: { slug: string; childre
   return (
     <ThemeContext.Provider value={value}>
       <div
-        className={`${styles.shell} ${styles.sky} min-h-[100dvh]`}
+        className={`${styles.shell} ${home ? styles.plain : styles.sky} min-h-[100dvh]`}
         data-theme={mounted ? (dark ? "dark" : "light") : undefined}
         suppressHydrationWarning
       >

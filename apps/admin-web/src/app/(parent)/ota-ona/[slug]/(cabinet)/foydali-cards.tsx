@@ -34,13 +34,13 @@ export function FoydaliCards({
   const photos = (gallery.data ?? []).slice(0, 2);
 
   return (
-    <section className="mt-8">
-      <h2 className={`${styles.roundedFont} text-[24px] font-extrabold leading-tight text-[var(--p-ink)]`}>{tr("Foydali")}</h2>
-      <p className="mt-1 text-[14px] leading-relaxed text-[var(--p-muted)]">
+    <section className="mt-9">
+      <h2 className="px-1 text-[22px] font-bold leading-tight tracking-[-0.02em] text-[var(--p-ink)]">{tr("Foydali")}</h2>
+      <p className="mt-1 px-1 text-[14px] leading-relaxed text-[var(--p-muted)]">
         {tr("Maqolalar, rivojlantiruvchi o'yinlar va bolalar ijodi — bir joyda")}
       </p>
 
-      <div className="mt-4 space-y-3.5">
+      <div className="mt-4 space-y-4">
         {articlesOn && (
           <FoydaliCard
             href={`${base}/maqolalar`}
@@ -140,12 +140,15 @@ function FoydaliCard({
       href={href}
       className="block overflow-hidden rounded-[var(--p-radius)] bg-[var(--p-card)] shadow-[var(--p-shadow)] transition-transform active:scale-[0.99]"
     >
-      <div className={clsx("flex h-[136px] items-center justify-center overflow-hidden", TONE_BG[tone])}>{media}</div>
-      <div className="p-4">
-        <span className={clsx("inline-flex rounded-full px-2.5 py-1 text-[12px] font-bold", TONE_CHIP[tone])}>{chip}</span>
-        <p className={`${styles.roundedFont} mt-2 text-[20px] font-extrabold leading-snug text-[var(--p-ink)]`}>{title}</p>
-        <p className="mt-1 line-clamp-2 text-[14px] leading-relaxed text-[var(--p-muted)]">{text}</p>
-        <span className="mt-3 inline-flex items-center gap-1 rounded-full bg-[var(--p-sunken)] px-3.5 py-2 text-[14px] font-bold text-[var(--p-ink)]">
+      {/* Rasm qismi kartaning ichida, o'z burchagi bilan — iOS «widget» hissi */}
+      <div className="p-2 pb-0">
+        <div className={clsx("flex h-[140px] items-center justify-center overflow-hidden rounded-[18px]", TONE_BG[tone])}>{media}</div>
+      </div>
+      <div className="px-4 pb-4 pt-3.5">
+        <span className={clsx("inline-flex rounded-full px-2.5 py-1 text-[12px] font-semibold", TONE_CHIP[tone])}>{chip}</span>
+        <p className="mt-2 text-[19px] font-bold leading-snug tracking-[-0.015em] text-[var(--p-ink)]">{title}</p>
+        <p className="mt-1 line-clamp-2 text-[14.5px] leading-relaxed text-[var(--p-muted)]">{text}</p>
+        <span className="mt-3 inline-flex min-h-[36px] items-center gap-0.5 text-[15px] font-semibold text-[var(--p-sky-ink)]">
           {action}
           <ChevronRight className="h-4 w-4" strokeWidth={2.4} />
         </span>

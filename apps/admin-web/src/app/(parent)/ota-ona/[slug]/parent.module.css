@@ -67,6 +67,41 @@
     var(--p-bg);
 }
 
+/* ---------------------------------------------------------------------------
+ * Bosh sahifa — iOS uslubi: oq fon, tizim ranglari, yumshoq («soft UI») soyalar.
+ * Faqat yorug' rejimda; qorong'ida kabinetning qorong'i tokenlari qoladi.
+ * ------------------------------------------------------------------------ */
+.plain {
+  background: var(--p-bg);
+}
+.shell:not([data-theme="dark"]).plain {
+  background: #ffffff;
+}
+.shell:not([data-theme="dark"]) .iosHome {
+  --p-bg: #ffffff;
+  --p-card: #ffffff;
+  --p-ink: #1c1c1e;
+  --p-muted: #8e8e93;
+  --p-line: rgba(60, 60, 67, 0.12);
+  --p-sunken: #f2f2f7;
+  --p-panel: #f7f7fa;
+  --p-radius: 24px;
+  --p-card-border: rgba(0, 0, 0, 0.035);
+  /* Uch qatlam: ingichka chegara, yaqin soya, keng yumshoq tuman */
+  --p-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(17, 24, 39, 0.05), 0 12px 32px -14px rgba(17, 24, 39, 0.16);
+  --p-mint: #34c759;
+  --p-sky: #007aff;
+  --p-sky-ink: #007aff;
+  --p-lilac: #af52de;
+  --p-lilac-ink: #9b3fc9;
+  --p-sun: #ff9500;
+  --p-sun-ink: #c96f00;
+  --p-coral: #ff6b5b;
+}
+.shell[data-theme="dark"] .iosHome {
+  --p-radius: 24px;
+}
+
 @keyframes pFloat {
   from { transform: translateY(0); }
   to { transform: translateY(-6px); }

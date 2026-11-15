@@ -165,11 +165,12 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
   const nutritionOn = isOn("nutrition");
 
   return (
-    <div className="mx-auto w-full max-w-[520px] px-4 pt-5">
-        {/* Sarlavha. Chiqish tugmasi Sozlamalar bo'limida — ota-ona uni
+    <div className={`${styles.iosHome} mx-auto w-full max-w-[520px] px-4 pt-6`}>
+        {/* Sarlavha — iOS «katta sarlavha» uslubida. Chiqish tugmasi Sozlamalar bo'limida — ota-ona uni
             kunda bir marta ham bosmaydi, tepada turishi shart emas. */}
         <header className="min-w-0">
-          <p className="truncate text-[17px] font-bold tracking-[-0.01em] text-[var(--p-ink)]">
+          <p className="text-[13px] font-semibold uppercase tracking-wide text-[var(--p-muted)]">{tr("Xush kelibsiz")}</p>
+          <p className="mt-0.5 truncate text-[28px] font-bold leading-tight tracking-[-0.025em] text-[var(--p-ink)]">
             {tr(parent.fullName)}
           </p>
         </header>
@@ -322,15 +323,18 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
         {dayQuery.isLoading ? (
           <div className="mt-4 space-y-3">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="h-28 animate-pulse rounded-[var(--p-radius)] bg-[var(--p-card)]/60" />
+              <div key={i} className="h-28 animate-pulse rounded-[var(--p-radius)] bg-[var(--p-sunken)] motion-reduce:animate-none" />
             ))}
           </div>
         ) : (
           day && (
-            <div className="mt-4 space-y-3">
+            <div className="mt-7 space-y-4">
+              {(reportsOn || nutritionOn) && (
+                <h2 className="px-1 text-[13px] font-semibold uppercase tracking-wide text-[var(--p-muted)]">{tr("Bugun")}</h2>
+              )}
               {/* Kayfiyat, ovqat, uyqu */}
               {reportsOn && (
-              <div className="grid grid-cols-3 gap-3">
+              <div className="!mt-2.5 grid grid-cols-3 gap-3">
                 <MiniCard
                   label={tr("Kayfiyat")}
                   value={day.report?.mood ? MOOD[day.report.mood].label : "—"}
@@ -478,12 +482,12 @@ function Tally({ count, label, dot }: { count: number; label: string; dot: strin
 function MiniCard({ label, value, tone }: { label: string; value: string; tone: string }) {
   const tr = useTr();
   return (
-    <div className="rounded-[20px] bg-[var(--p-card)] p-3 text-center shadow-[var(--p-shadow)] min-[360px]:p-3.5">
+    <div className="rounded-[var(--p-radius)] bg-[var(--p-card)] px-2.5 py-3.5 text-center shadow-[var(--p-shadow)] min-[360px]:px-3">
       <span className={clsx("mx-auto flex h-9 w-9 items-center justify-center rounded-full text-[13px] font-bold", TONE_BG[tone])}>
         {tr(label[0])}
       </span>
-      <p className="mt-2 text-[clamp(10px,3vw,11.5px)] font-semibold uppercase tracking-[0.04em] text-[var(--p-muted)]">{tr(label)}</p>
-      <p className="mt-0.5 text-[clamp(12.5px,3.7vw,14px)] font-bold leading-tight text-[var(--p-ink)]">{tr(value)}</p>
+      <p className="mt-2 text-[12.5px] font-medium text-[var(--p-muted)]">{tr(label)}</p>
+      <p className="mt-0.5 text-[clamp(13px,3.8vw,15px)] font-semibold leading-tight text-[var(--p-ink)]">{tr(value)}</p>
     </div>
   );
 }
@@ -493,8 +497,8 @@ function Panel({ title, accent, children }: { title: string; accent: string; chi
   return (
     <section className="overflow-hidden rounded-[var(--p-radius)] bg-[var(--p-card)] shadow-[var(--p-shadow)]">
       <div className="flex items-center gap-2.5 px-5 pt-4">
-        <span className={clsx("h-2.5 w-2.5 shrink-0 rounded-full", TONE_DOT[accent])} />
-        <h2 className="text-[15px] font-bold tracking-[-0.01em] text-[var(--p-ink)]">{tr(title)}</h2>
+        <span className={clsx("h-2 w-2 shrink-0 rounded-full", TONE_DOT[accent])} />
+        <h2 className="text-[17px] font-semibold tracking-[-0.01em] text-[var(--p-ink)]">{tr(title)}</h2>
       </div>
       <div className="px-5 pb-5 pt-3">{children}</div>
     </section>
