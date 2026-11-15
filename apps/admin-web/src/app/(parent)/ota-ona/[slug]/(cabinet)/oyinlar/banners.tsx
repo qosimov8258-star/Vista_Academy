@@ -99,11 +99,11 @@ export function MemoryBanner() {
           </span>
           <span className="text-[13px] font-extrabold text-[var(--p-ink)]">Sher!</span>
         </span>
-        <span className="flex -space-x-2">
+        <span className="flex gap-1.5">
           {TOPICS.map((topic) => (
             <span
               key={topic.id}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--p-card)] ring-2 ring-[var(--p-sunken)]"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--p-card)] shadow-[var(--p-shadow)]"
             >
               <img src={topicCover(topic)[0]?.image} alt="" draggable={false} className="h-6 w-6 object-contain" />
             </span>
@@ -138,7 +138,7 @@ export function SoundBanner() {
   return (
     <Backdrop tone="sun">
       {/* To'lqinlar — statik halqalar, karnay atrofida kengayib boradi */}
-      <div className="absolute left-[72px] top-1/2 -translate-x-1/2 -translate-y-1/2" aria-hidden="true">
+      <div className="absolute left-[76px] top-[62px] -translate-x-1/2 -translate-y-1/2" aria-hidden="true">
         {[1, 2, 3].map((ring) => (
           <span
             key={ring}
@@ -172,7 +172,7 @@ export function SoundBanner() {
       </div>
 
       {/* «Sigir!» — topilgan javob nomi, o'yindagi pufakcha kabi */}
-      <span className={clsx(styles.bob, "absolute bottom-3 left-4 flex items-center gap-1.5 rounded-full bg-[var(--p-card)] py-1.5 pl-1.5 pr-3 shadow-[var(--p-shadow)]")} style={{ animationDuration: "3s" }}>
+      <span className={clsx(styles.bob, "absolute bottom-3 left-4 flex items-center gap-1.5 rounded-full bg-[var(--p-card)] py-1 pl-1 pr-3 shadow-[var(--p-shadow)]")} style={{ animationDuration: "3s" }}>
         <span className="flex h-7 w-7 items-center justify-center rounded-full" style={{ background: TONE.sun.soft }}>
           <img src={cow.image} alt="" draggable={false} className="h-5 w-5 object-contain" />
         </span>
