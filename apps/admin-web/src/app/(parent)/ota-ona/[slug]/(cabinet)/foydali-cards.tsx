@@ -20,12 +20,10 @@ const CARD = "rounded-[var(--p-radius)] bg-[var(--p-card)] shadow-[var(--p-shado
  */
 export function FoydaliCards({
   slug,
-  orgName,
   articlesOn,
   galleryOn,
 }: {
   slug: string;
-  orgName: string | undefined;
   articlesOn: boolean;
   galleryOn: boolean;
 }) {
@@ -74,7 +72,7 @@ export function FoydaliCards({
             icon={Gamepad2}
             tint="green"
             title={tr("O'yinlar")}
-            text={tr("Xotira va eshitish uchun")}
+            text={tr("Xotira va diqqat")}
             media={
               <span className="flex h-full items-end justify-center gap-1 pb-1.5">
                 {GAME_PICS.map((src, i) => (
@@ -90,7 +88,7 @@ export function FoydaliCards({
               icon={Images}
               tint="pink"
               title={tr("Galereya")}
-              text={orgName ? tr("{0} bolalari ijodi", orgName) : tr("Bolalar ishlari")}
+              text={tr("Bolalar ishlari")}
               media={
                 photos.length > 0 ? (
                   <span className="grid h-full w-full gap-0.5" style={{ gridTemplateColumns: `repeat(${photos.length}, 1fr)` }}>

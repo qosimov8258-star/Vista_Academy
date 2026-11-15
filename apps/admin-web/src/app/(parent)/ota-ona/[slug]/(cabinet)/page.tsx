@@ -393,12 +393,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
 
       {/* Maqolalar, o'yinlar, galereya — platforma o'chirganlari chiqmaydi */}
       {featuresReady && (
-        <FoydaliCards
-          slug={slug}
-          orgName={meQuery.data?.parent.organizationName}
-          articlesOn={isOn("articles")}
-          galleryOn={isOn("gallery")}
-        />
+        <FoydaliCards slug={slug} articlesOn={isOn("articles")} galleryOn={isOn("gallery")} />
       )}
 
       <p className="mt-9 px-6 text-center text-[13px] leading-relaxed text-[var(--p-muted)]">
