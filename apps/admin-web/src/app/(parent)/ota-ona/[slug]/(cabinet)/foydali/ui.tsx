@@ -251,7 +251,7 @@ export function EmptyCard({
   const tr = useTr();
   return (
     <div className="mt-5 flex flex-col items-center rounded-[var(--p-radius)] bg-[var(--p-card)] px-6 py-8 text-center shadow-[var(--p-shadow)]">
-      <span className={clsx("flex h-16 w-16 items-center justify-center rounded-[22px]", TONES[tone].soft, TONES[tone].ink)}>
+      <span className={clsx("flex h-16 w-16 items-center justify-center rounded-[18px] text-white", TONES[tone].solid)}>
         <Icon className="h-9 w-9" />
       </span>
       <p className={`${styles.roundedFont} mt-4 text-[19px] font-extrabold text-[var(--p-ink)]`}>{tr(title)}</p>

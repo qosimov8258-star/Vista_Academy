@@ -77,7 +77,7 @@ export default function ProverbsPage({ params }: { params: Promise<{ slug: strin
           return (
             <li key={proverb.id} className="overflow-hidden rounded-[24px] bg-[var(--p-card)] shadow-[var(--p-shadow)]">
               <div className="flex items-start gap-3 p-4">
-                <span className={clsx("flex h-10 w-10 shrink-0 items-center justify-center rounded-full", tone.soft, tone.ink)}>
+                <span className={clsx("flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] text-white", tone.solid)}>
                   <ProverbIcon className="h-6 w-6" />
                 </span>
                 <p className={`${styles.roundedFont} flex-1 pt-1 text-[18px] font-bold leading-snug text-[var(--p-ink)]`}>

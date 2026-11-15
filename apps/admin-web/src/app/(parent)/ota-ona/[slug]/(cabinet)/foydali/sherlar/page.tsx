@@ -62,12 +62,11 @@ export default function PoemsPage({ params }: { params: Promise<{ slug: string }
                 >
                   <span
                     className={clsx(
-                      "relative flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px]",
-                      tone.soft,
-                      tone.ink,
+                      "relative flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-[14px] text-white",
+                      tone.solid,
                     )}
                   >
-                    <PoemIcon className="h-8 w-8" />
+                    <PoemIcon className="h-7 w-7" />
                     {learned && (
                       <span className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--p-mint)] text-white ring-2 ring-[var(--p-card)]">
                         <StarIcon filled className="h-3.5 w-3.5" />

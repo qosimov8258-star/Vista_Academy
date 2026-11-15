@@ -147,8 +147,8 @@ export default function UsefulPage({ params }: { params: Promise<{ slug: string 
                   href={section.href}
                   className="flex items-center gap-4 rounded-[24px] bg-[var(--p-card)] p-4 shadow-[var(--p-shadow)] transition-transform active:scale-[0.99]"
                 >
-                  <span className={clsx("flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-[20px]", tone.soft, tone.ink)}>
-                    <section.Icon className="h-9 w-9" />
+                  <span className={clsx("flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-[14px] text-white", tone.solid)}>
+                    <section.Icon className="h-7 w-7" />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className={`${styles.roundedFont} block text-[18px] font-extrabold text-[var(--p-ink)]`}>
