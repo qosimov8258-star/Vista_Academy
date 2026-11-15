@@ -75,6 +75,8 @@
   background: var(--p-bg);
 }
 .shell:not([data-theme="dark"]).plain {
+  /* Fon rangi o'zgaruvchisi ham oq — menyu ostidagi tuman shu rangga eriydi */
+  --p-bg: #ffffff;
   background: #ffffff;
 }
 .shell:not([data-theme="dark"]) .iosHome {
@@ -283,7 +285,8 @@
  */
 .navFade {
   position: fixed;
-  inset-x: 0;
+  left: 0;
+  right: 0;
   bottom: 0;
   z-index: 39;
   height: calc(max(12px, env(safe-area-inset-bottom)) + 112px);
