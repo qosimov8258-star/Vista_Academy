@@ -54,7 +54,7 @@ function Section({ title, footer, children }: { title?: string; footer?: ReactNo
   return (
     <section className="mt-7 first:mt-5">
       {title && <p className="mb-1.5 px-4 text-[13px] uppercase tracking-wide text-[var(--p-muted)]">{title}</p>}
-      <div className="overflow-hidden rounded-[18px] bg-[var(--p-card)]">{children}</div>
+      <div className="overflow-hidden rounded-[18px] bg-[var(--p-card)] shadow-[var(--p-shadow)]">{children}</div>
       {footer && <div className="mt-1.5 px-4 text-[13px] leading-snug text-[var(--p-muted)]">{footer}</div>}
     </section>
   );
@@ -123,7 +123,7 @@ function Switch({ checked, disabled, onChange, label }: { checked: boolean; disa
       disabled={disabled}
       className={clsx(
         "relative h-[31px] w-[51px] shrink-0 cursor-pointer rounded-full transition-colors duration-200 disabled:opacity-60",
-        checked ? "bg-[#34c759]" : "bg-[var(--p-muted)]/25",
+        checked ? "bg-[var(--p-mint)]" : "bg-[var(--p-muted)]/25",
       )}
     >
       <span
@@ -195,7 +195,7 @@ function ChoiceSheet<T extends string>({
               >
                 <span className="flex min-h-[52px] flex-1 items-center border-b border-[var(--p-line)] pr-4 group-last/row:border-b-0">
                   <span className="flex-1 text-[16px] text-[var(--p-ink)]">{option.label}</span>
-                  {active && <Check className="h-5 w-5 text-[#007aff]" strokeWidth={2.6} aria-hidden="true" />}
+                  {active && <Check className="h-5 w-5 text-[var(--p-accent)]" strokeWidth={2.6} aria-hidden="true" />}
                 </span>
               </button>
             );
@@ -206,7 +206,7 @@ function ChoiceSheet<T extends string>({
       <button
         type="button"
         onClick={onClose}
-        className="mt-2 flex h-[56px] w-full cursor-pointer items-center justify-center rounded-[18px] bg-[var(--p-card)] text-[16px] font-semibold text-[#007aff] transition-colors active:bg-[var(--p-sunken)]"
+        className="mt-2 flex h-[56px] w-full cursor-pointer items-center justify-center rounded-[18px] bg-[var(--p-card)] text-[16px] font-semibold text-[var(--p-accent)] transition-colors active:bg-[var(--p-sunken)]"
       >
         {tr("Bekor qilish")}
       </button>
@@ -289,7 +289,7 @@ export default function ParentSettingsPage({ params }: { params: Promise<{ slug:
           <div className="flex items-center gap-3.5 px-4 py-3">
             <span
               className="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full text-[22px] font-semibold"
-              style={{ backgroundColor: "#007aff24", color: "#007aff" }}
+              style={{ backgroundColor: "color-mix(in srgb, var(--p-accent) 14%, transparent)", color: "var(--p-accent)" }}
               aria-hidden="true"
             >
               {initialsOf(parent.fullName)}
@@ -303,7 +303,7 @@ export default function ParentSettingsPage({ params }: { params: Promise<{ slug:
           </div>
         </Section>
       ) : (
-        <div className="mt-5 h-[84px] animate-pulse rounded-[18px] bg-[var(--p-card)]/70" />
+        <div className="mt-5 h-[84px] animate-pulse rounded-[18px] bg-[var(--p-sunken)]" />
       )}
 
       {/* Umumiy: til va ko'rinish */}
@@ -324,7 +324,7 @@ export default function ParentSettingsPage({ params }: { params: Promise<{ slug:
         <button
           type="button"
           onClick={() => setSheet("logout")}
-          className="flex min-h-[50px] w-full cursor-pointer items-center justify-center gap-2 rounded-[18px] bg-[var(--p-card)] text-[16px] text-[#ff3b30] transition-colors active:bg-[var(--p-sunken)]"
+          className="flex min-h-[50px] w-full cursor-pointer items-center justify-center gap-2 rounded-[18px] bg-[var(--p-card)] text-[16px] text-[var(--p-red)] shadow-[var(--p-shadow)] transition-colors active:bg-[var(--p-sunken)]"
         >
           <LogOut className="h-[18px] w-[18px]" strokeWidth={2.2} aria-hidden="true" />
           {tr("Kabinetdan chiqish")}
@@ -336,7 +336,7 @@ export default function ParentSettingsPage({ params }: { params: Promise<{ slug:
         <Section
           footer={
             pushError ? (
-              <span className="text-[#ff3b30]">{pushError}</span>
+              <span className="text-[var(--p-red)]">{pushError}</span>
             ) : (
               tr("To'lov eslatmasi kabi xabarlarni brauzer orqali, kabinetni ochmasdan ham oling")
             )
@@ -395,7 +395,7 @@ export default function ParentSettingsPage({ params }: { params: Promise<{ slug:
               type="button"
               onClick={logout}
               disabled={leaving}
-              className="flex h-[56px] w-full cursor-pointer items-center justify-center text-[16px] text-[#ff3b30] transition-colors active:bg-[var(--p-sunken)] disabled:opacity-60"
+              className="flex h-[56px] w-full cursor-pointer items-center justify-center text-[16px] text-[var(--p-red)] transition-colors active:bg-[var(--p-sunken)] disabled:opacity-60"
             >
               {leaving ? tr("Chiqilmoqda…") : tr("Chiqish")}
             </button>
@@ -404,7 +404,7 @@ export default function ParentSettingsPage({ params }: { params: Promise<{ slug:
             type="button"
             onClick={() => setSheet(null)}
             disabled={leaving}
-            className="mt-2 flex h-[56px] w-full cursor-pointer items-center justify-center rounded-[18px] bg-[var(--p-card)] text-[16px] font-semibold text-[#007aff] transition-colors active:bg-[var(--p-sunken)]"
+            className="mt-2 flex h-[56px] w-full cursor-pointer items-center justify-center rounded-[18px] bg-[var(--p-card)] text-[16px] font-semibold text-[var(--p-accent)] transition-colors active:bg-[var(--p-sunken)]"
           >
             {tr("Bekor qilish")}
           </button>
