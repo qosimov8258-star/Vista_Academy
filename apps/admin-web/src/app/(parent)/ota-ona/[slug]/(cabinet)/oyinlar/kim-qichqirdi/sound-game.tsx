@@ -3,13 +3,13 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { Play, RotateCcw, Volume2 } from "lucide-react";
+import { Check, Play, RotateCcw, Volume2 } from "lucide-react";
 import parentStyles from "../../../parent.module.css";
 import styles from "../oyinlar.module.css";
 import { CONFUSABLE, SOUND_ANIMALS, nextSoundLevel, soundStarsFor, type SoundAnimal, type SoundLevel } from "../data";
 import { useGamesStore } from "../store";
 import { buzz, loadClip, playClip, sfx, stopClip, unlockAudio } from "../sound";
-import { HoldToExit, KidStage, TONE } from "../ui";
+import { KidStage, NameBubble, ProgressTray, StageButton, StageHeader } from "../ui";
 import { WinOverlay } from "../win-overlay";
 import { useTr } from "@/i18n/tr";
 
@@ -33,6 +33,13 @@ type Round = { target: SoundAnimal; options: SoundAnimal[] };
 type Phase = "ready" | "play" | "correct" | "won";
 
 const NEXT_DELAY_MS = 1500;
+/** Boshlash tugmasi atrofidagi hayvonlar (faqat bezak) */
+const READY_PICS = [
+  { id: "rooster", left: "-52px", top: "-14px" },
+  { id: "cow", left: "146px", top: "-8px" },
+  { id: "duck", left: "-44px", top: "104px" },
+  { id: "sheep", left: "150px", top: "110px" },
+];
 
 function shuffle<T>(list: readonly T[]): T[] {
   const result = [...list];
@@ -63,7 +70,6 @@ export function SoundGame({ slug, level }: { slug: string; level: SoundLevel }) 
   const tr = useTr();
   const router = useRouter();
   const store = useGamesStore();
-  const tone = TONE.sun;
   const homeHref = `/ota-ona/${slug}/oyinlar/kim-qichqirdi`;
 
   const [game, setGame] = useState(0);
@@ -196,61 +202,53 @@ export function SoundGame({ slug, level }: { slug: string; level: SoundLevel }) 
   };
 
   return (
-    <KidStage label={tr("Kim qichqirdi?")}>
-      <header className="flex items-center gap-3 px-4 pt-3">
-        <HoldToExit onExit={exit} />
-        <div className="min-w-0 flex-1 text-center">
-          <p className={clsx(parentStyles.roundedFont, "truncate text-[19px] font-extrabold leading-tight text-[var(--p-ink)]")}>
-            {tr("Kim qichqirdi?")}
-          </p>
-          <p className="truncate text-[12.5px] font-semibold text-[var(--p-muted)]">
-            {tr(level.title)} · {Math.min(index + 1, level.rounds)}/{level.rounds}
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setGame((value) => value + 1)}
-          aria-label={tr("Qaytadan boshlash")}
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--p-card)] text-[var(--p-muted)] shadow-[var(--p-shadow)] active:scale-95"
-        >
+    <KidStage label={tr("Kim qichqirdi?")} tone="sun">
+      <StageHeader
+        title={tr("Kim qichqirdi?")}
+        subtitle={`${tr(level.title)} · ${Math.min(index + 1, level.rounds)}/${level.rounds}`}
+        onExit={exit}
+      >
+        <StageButton label={tr("Qaytadan boshlash")} onClick={() => setGame((value) => value + 1)}>
           <RotateCcw className="h-5 w-5" strokeWidth={2.2} />
-        </button>
-      </header>
+        </StageButton>
+      </StageHeader>
 
       {/* Topilgan hayvonlar */}
-      <div className="mt-4 flex justify-center gap-1.5 px-4" aria-label={tr("{0} / {1} topildi", found.length, level.rounds)}>
-        {Array.from({ length: level.rounds }, (_, i) => {
-          const animal = found[i];
-          return (
-            <span
-              key={i}
-              className={clsx("flex items-center justify-center rounded-full", level.rounds > 6 ? "h-8 w-8" : "h-9 w-9")}
-              style={{ background: animal ? tone.soft : "var(--p-sunken)" }}
-            >
-              {animal && <img src={animal.image} alt="" draggable={false} className={clsx(styles.slotIn, "h-[72%] w-[72%] object-contain")} />}
-            </span>
-          );
-        })}
-      </div>
+      <ProgressTray
+        total={level.rounds}
+        images={found.map((animal) => animal.image)}
+        label={tr("{0} / {1} topildi", found.length, level.rounds)}
+      />
 
       {phase === "ready" ? (
-        // Boshlash — katta tugma
-        <div className="flex flex-1 flex-col items-center justify-center gap-6 px-6 text-center">
-          <button
-            type="button"
-            onClick={start}
-            disabled={rounds.length === 0}
-            aria-label={tr("Boshlash")}
-            className={clsx(styles.breathe, "flex h-40 w-40 items-center justify-center rounded-full text-white shadow-[var(--p-shadow)]")}
-            style={{ background: tone.solid }}
-          >
-            <Play className="ml-2 h-20 w-20" strokeWidth={2} fill="currentColor" />
-          </button>
+        // Boshlash — katta hajmli tugma, atrofida hayvonlar
+        <div className="flex flex-1 flex-col items-center justify-center gap-7 px-6 text-center">
+          <div className="relative">
+            {READY_PICS.map((pic, i) => (
+              <img
+                key={pic.id}
+                src={SOUND_ANIMALS.find((animal) => animal.id === pic.id)?.image}
+                alt=""
+                draggable={false}
+                className={clsx(styles.bob, "absolute h-14 w-14 object-contain")}
+                style={{ left: pic.left, top: pic.top, animationDelay: `${i * 0.45}s` }}
+              />
+            ))}
+            <button
+              type="button"
+              onClick={start}
+              disabled={rounds.length === 0}
+              aria-label={tr("Boshlash")}
+              className={clsx(styles.bigBtn, styles.breathe, "relative flex h-40 w-40 items-center justify-center rounded-full text-white")}
+            >
+              <Play className="ml-2 h-[76px] w-[76px]" strokeWidth={2} fill="currentColor" />
+            </button>
+          </div>
           <div>
-            <p className={clsx(parentStyles.roundedFont, "text-[24px] font-extrabold text-[var(--p-ink)]")}>
+            <p className={clsx(parentStyles.roundedFont, "text-[26px] leading-tight text-[var(--p-ink)]")}>
               {tr("Ovozni eshit va hayvonni top!")}
             </p>
-            <p className="mx-auto mt-2 max-w-[280px] text-[13.5px] leading-snug text-[var(--p-muted)]">
+            <p className="mx-auto mt-2 max-w-[280px] text-[14px] leading-snug text-[var(--p-ink)]/55">
               {tr("Telefon ovozi yoqilganini tekshiring.")}
             </p>
           </div>
@@ -258,27 +256,28 @@ export function SoundGame({ slug, level }: { slug: string; level: SoundLevel }) 
       ) : (
         <>
           {/* Karnay — bosilsa ovoz qayta yangraydi */}
-          <div className="flex flex-col items-center pt-5">
+          <div className="flex flex-col items-center pt-6">
             <button
               type="button"
               onClick={replay}
               aria-label={tr("Ovozni qayta eshitish")}
               className={clsx(
                 styles.speaker,
+                styles.bigBtn,
                 playing && styles.speaking,
-                "flex h-[104px] w-[104px] items-center justify-center rounded-full text-white shadow-[var(--p-shadow)] active:scale-95",
+                "flex h-[108px] w-[108px] items-center justify-center rounded-full text-white",
               )}
-              style={{ background: tone.solid }}
+              style={{ "--wave": "var(--g)" } as React.CSSProperties}
             >
               <Volume2 className="h-12 w-12" strokeWidth={2.2} />
             </button>
-            <p className={clsx(parentStyles.roundedFont, "mt-3 h-6 text-[16px] font-bold text-[var(--p-muted)]")}>
+            <p className={clsx(parentStyles.roundedFont, "mt-5 h-7 text-[19px] text-[var(--p-ink)]/75")}>
               {phase === "correct" ? "" : playing ? tr("Tinglang…") : tr("Kim qichqirdi?")}
             </p>
           </div>
 
           {/* Javoblar */}
-          <div ref={setBoard} className="mx-4 my-4 flex min-h-0 flex-1 items-center justify-center">
+          <div ref={setBoard} className="mx-4 mb-2 mt-3 flex min-h-0 flex-1 items-center justify-center">
             {layout && round && (
               <div
                 key={`${game}-${index}`}
@@ -299,11 +298,15 @@ export function SoundGame({ slug, level }: { slug: string; level: SoundLevel }) 
                         styles.choice,
                         isWrong && styles.wrong,
                         isRight && styles.right,
+                        isRight && styles.matched,
                         shaking === animal.id && styles.shake,
                       )}
                       style={{ width: layout.size, height: layout.size, animationDelay: `${i * 0.07}s` }}
                     >
                       <img src={animal.image} alt="" draggable={false} />
+                      <span className={styles.check} aria-hidden="true">
+                        <Check className="h-[62%] w-[62%]" strokeWidth={3.4} />
+                      </span>
                     </button>
                   );
                 })}
@@ -312,19 +315,9 @@ export function SoundGame({ slug, level }: { slug: string; level: SoundLevel }) 
           </div>
 
           {/* Topilganda nomi */}
-          <div className="flex h-[76px] items-start justify-center px-4 pb-3">
+          <div className="flex h-[84px] items-start justify-center px-4 pb-3">
             {phase === "correct" && round && (
-              <div
-                key={`${game}-${index}`}
-                className={clsx(styles.bubble, "flex items-center gap-2.5 rounded-full bg-[var(--p-card)] py-2 pl-2 pr-5 shadow-[var(--p-shadow)]")}
-              >
-                <span className="flex h-11 w-11 items-center justify-center rounded-full" style={{ background: tone.soft }}>
-                  <img src={round.target.image} alt="" draggable={false} className="h-8 w-8 object-contain" />
-                </span>
-                <span className={clsx(parentStyles.roundedFont, "text-[22px] font-extrabold text-[var(--p-ink)]")}>
-                  {tr(round.target.name)}!
-                </span>
-              </div>
+              <NameBubble key={`${game}-${index}`} image={round.target.image} name={tr(round.target.name)} />
             )}
           </div>
         </>
@@ -334,7 +327,6 @@ export function SoundGame({ slug, level }: { slug: string; level: SoundLevel }) 
         <WinOverlay
           stars={stars}
           subtitle={tr("{0} ta hayvondan {1} tasini birinchi urinishda topding", level.rounds, firstTry)}
-          toneSolid={tone.solid}
           onAgain={() => setGame((value) => value + 1)}
           onNext={
             following

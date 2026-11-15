@@ -3,13 +3,13 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { RotateCcw, Volume2, VolumeX } from "lucide-react";
+import { Check, Eye, Pointer, RotateCcw, Volume2, VolumeX } from "lucide-react";
 import parentStyles from "../../../parent.module.css";
 import styles from "../oyinlar.module.css";
 import { nextLevel, starsFor, topicTone, type GameItem, type Level, type Topic } from "../data";
 import { useGamesStore } from "../store";
 import { buzz, sfx } from "../sound";
-import { HoldToExit, KidStage, TONE } from "../ui";
+import { KidStage, NameBubble, ProgressTray, StageButton, StageHeader } from "../ui";
 import { WinOverlay } from "../win-overlay";
 import { useTr } from "@/i18n/tr";
 
@@ -73,7 +73,7 @@ export function MemoryGame({
   const tr = useTr();
   const router = useRouter();
   const store = useGamesStore();
-  const tone = TONE[topicTone(topic)];
+  const toneId = topicTone(topic);
   const topicsHref = `/ota-ona/${slug}/oyinlar/juftini-top`;
 
   const [round, setRound] = useState(0);
@@ -207,65 +207,26 @@ export function MemoryGame({
   const exit = () => router.push(topicsHref);
 
   return (
-    <KidStage label={tr("Juftini top")}>
+    <KidStage label={tr("Juftini top")} tone={toneId}>
       {/* Tepada: chiqish, mavzu nomi, tovush va qaytadan boshlash */}
-      <header className="flex items-center gap-3 px-4 pt-3">
-        <HoldToExit onExit={exit} />
-        <div className="min-w-0 flex-1 text-center">
-          <p className={clsx(parentStyles.roundedFont, "truncate text-[19px] font-extrabold leading-tight text-[var(--p-ink)]")}>
-            {tr(topic.title)}
-          </p>
-          <p className="truncate text-[12.5px] font-semibold text-[var(--p-muted)]">
-            {tr(level.title)} · {tr("{0} urinish", moves)}
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => store.setSound(!store.sound)}
-          aria-label={store.sound ? tr("Ovozni o'chirish") : tr("Ovozni yoqish")}
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--p-card)] text-[var(--p-muted)] shadow-[var(--p-shadow)] active:scale-95"
-        >
+      <StageHeader title={tr(topic.title)} subtitle={`${tr(level.title)} · ${tr("{0} urinish", moves)}`} onExit={exit}>
+        <StageButton label={store.sound ? tr("Ovozni o'chirish") : tr("Ovozni yoqish")} onClick={() => store.setSound(!store.sound)}>
           {store.sound ? <Volume2 className="h-5 w-5" strokeWidth={2.2} /> : <VolumeX className="h-5 w-5" strokeWidth={2.2} />}
-        </button>
-        <button
-          type="button"
-          onClick={() => setRound((value) => value + 1)}
-          aria-label={tr("Qaytadan boshlash")}
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--p-card)] text-[var(--p-muted)] shadow-[var(--p-shadow)] active:scale-95"
-        >
+        </StageButton>
+        <StageButton label={tr("Qaytadan boshlash")} onClick={() => setRound((value) => value + 1)}>
           <RotateCcw className="h-5 w-5" strokeWidth={2.2} />
-        </button>
-      </header>
+        </StageButton>
+      </StageHeader>
 
-      {/* Topilgan juftlar — raqamsiz, rasm bilan to'lib boradi */}
-      {/* 8 ta joy ham 375px ga chetlarga tegmay sig'adi */}
-      <div
-        className={clsx("mt-4 flex justify-center px-4", level.pairs > 6 ? "gap-1.5" : "gap-2")}
-        aria-label={tr("{0} / {1} juft topildi", found.length, level.pairs)}
-      >
-        {Array.from({ length: level.pairs }, (_, i) => {
-          const item = found[i];
-          return (
-            <span
-              key={i}
-              className={clsx("flex items-center justify-center rounded-full", level.pairs > 6 ? "h-8 w-8" : "h-9 w-9")}
-              style={{ background: item ? tone.soft : "var(--p-sunken)" }}
-            >
-              {item && (
-                <img
-                  src={item.image}
-                  alt=""
-                  draggable={false}
-                  className={clsx(styles.slotIn, "object-contain", level.pairs > 6 ? "h-6 w-6" : "h-7 w-7")}
-                />
-              )}
-            </span>
-          );
-        })}
-      </div>
+      {/* Topilgan juftlar — rasm bilan to'lib boradi, yonida hisob */}
+      <ProgressTray
+        total={level.pairs}
+        images={found.map((item) => item.image)}
+        label={tr("{0} / {1} juft topildi", found.length, level.pairs)}
+      />
 
       {/* Kartalar taxtasi */}
-      <div ref={setBoard} className="relative mx-4 my-4 flex min-h-0 flex-1 items-center justify-center">
+      <div ref={setBoard} className="relative mx-4 mb-2 mt-4 flex min-h-0 flex-1 items-center justify-center">
         {layout && deck.length > 0 && (
           <div
             className="grid"
@@ -295,11 +256,14 @@ export function MemoryGame({
                   style={{ width: layout.size, height: layout.size }}
                 >
                   <span className={styles.inner}>
-                    <span className={clsx(styles.face, styles.back)} style={{ background: tone.solid }}>
+                    <span className={clsx(styles.face, styles.back)}>
                       <CardBackMark size={layout.size} />
                     </span>
                     <span className={clsx(styles.face, styles.front)}>
                       <img src={card.item.image} alt="" draggable={false} />
+                      <span className={styles.check} aria-hidden="true">
+                        <Check className="h-[62%] w-[62%]" strokeWidth={3.4} />
+                      </span>
                     </span>
                   </span>
                 </button>
@@ -308,30 +272,28 @@ export function MemoryGame({
           </div>
         )}
         {phase === "loading" && (
-          <p className="absolute text-[15px] font-semibold text-[var(--p-muted)]">{tr("Kartalar tarqatilmoqda…")}</p>
+          <p className={clsx(parentStyles.roundedFont, "absolute text-[17px] text-[var(--p-ink)]/55")}>{tr("Kartalar tarqatilmoqda…")}</p>
         )}
       </div>
 
       {/* Pastda: topilgan rasm nomi yoki holat izohi. Joy oldindan ajratilgan — taxta sakramaydi */}
-      <div className="flex h-[76px] items-start justify-center px-4 pb-3">
+      <div className="flex h-[84px] items-start justify-center px-4 pb-3">
         {justFound && phase !== "won" ? (
-          <div
-            key={justFound.key}
-            className={clsx(styles.bubble, "flex items-center gap-2.5 rounded-full bg-[var(--p-card)] py-2 pl-2 pr-5 shadow-[var(--p-shadow)]")}
-          >
-            <span className="flex h-11 w-11 items-center justify-center rounded-full" style={{ background: tone.soft }}>
-              <img src={justFound.item.image} alt="" draggable={false} className="h-8 w-8 object-contain" />
-            </span>
-            <span className={clsx(parentStyles.roundedFont, "text-[22px] font-extrabold text-[var(--p-ink)]")}>
-              {tr(justFound.item.name)}!
+          <NameBubble key={justFound.key} image={justFound.item.image} name={tr(justFound.item.name)} />
+        ) : phase === "peek" ? (
+          // Eslab qolish vaqti: chiziq qisqarib boradi — qancha qolgani ko'rinadi
+          <div className={clsx(styles.chip, "mt-1 flex w-full max-w-[280px] flex-col gap-2 rounded-[20px] px-4 py-3")}>
+            <p className={clsx(parentStyles.roundedFont, "flex items-center justify-center gap-2 text-[17px] text-[var(--p-ink)]")}>
+              <Eye className="h-5 w-5" strokeWidth={2.4} aria-hidden="true" />
+              {tr("Rasmlarni eslab qoling…")}
+            </p>
+            <span className="block h-1.5 overflow-hidden rounded-full bg-[var(--p-ink)]/10">
+              <span className={styles.peekBar} style={{ animationDuration: `${level.peekMs}ms` }} />
             </span>
           </div>
-        ) : phase === "peek" ? (
-          <p className={clsx(parentStyles.roundedFont, "pt-3 text-[17px] font-bold text-[var(--p-muted)]")}>
-            {tr("Rasmlarni eslab qoling…")}
-          </p>
         ) : phase === "play" && found.length === 0 && open.length === 0 && moves === 0 ? (
-          <p className={clsx(parentStyles.roundedFont, "pt-3 text-[17px] font-bold text-[var(--p-muted)]")}>
+          <p className={clsx(parentStyles.roundedFont, "flex items-center gap-2 pt-3 text-[18px] text-[var(--p-ink)]/70")}>
+            <Pointer className={clsx(styles.tapHint, "h-5 w-5")} strokeWidth={2.4} aria-hidden="true" />
             {tr("Kartani bosing!")}
           </p>
         ) : null}
@@ -341,7 +303,6 @@ export function MemoryGame({
         <WinOverlay
           stars={stars}
           subtitle={tr("{0} ta juftni {1} urinishda topding", level.pairs, moves)}
-          toneSolid={tone.solid}
           onAgain={() => setRound((value) => value + 1)}
           onNext={
             following

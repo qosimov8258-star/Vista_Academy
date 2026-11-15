@@ -72,7 +72,7 @@ export function GameStar({ filled, size, className }: { filled: boolean; size: n
  * `position: fixed` ni buzib qo'ymasin va mavzu ranglari saqlanib qolsin.
  * Ochiq turganda sahifa aylanmaydi (iOS'da «tortib yangilash» ham yo'q).
  */
-export function KidStage({ children, label }: { children: React.ReactNode; label: string }) {
+export function KidStage({ children, label, tone = "mint" }: { children: React.ReactNode; label: string; tone?: TopicTone }) {
   const anchor = useRef<HTMLSpanElement>(null);
   const [host, setHost] = useState<HTMLElement | null>(null);
 
@@ -93,12 +93,127 @@ export function KidStage({ children, label }: { children: React.ReactNode; label
       <span ref={anchor} hidden />
       {host &&
         createPortal(
-          <div className={styles.stage} data-kid-stage="" role="application" aria-label={label} onContextMenu={(event) => event.preventDefault()}>
+          <div
+            className={styles.stage}
+            data-kid-stage=""
+            role="application"
+            aria-label={label}
+            onContextMenu={(event) => event.preventDefault()}
+            // Mavzu rangi — fon, kartalar va tugmalar shundan oladi (oyinlar.module.css)
+            style={{ "--g": TONE[tone].solid } as React.CSSProperties}
+          >
+            <StageDecor />
             {children}
           </div>,
           host,
         )}
     </>
+  );
+}
+
+/** Fon bezagi: sekin suzuvchi doira va halqalar (faqat ko'rinish uchun) */
+const DECOR: Array<{ left: string; top: string; size: number; ring?: boolean; delay: number }> = [
+  { left: "-6%", top: "14%", size: 120, delay: 0 },
+  { left: "78%", top: "8%", size: 84, ring: true, delay: -3 },
+  { left: "86%", top: "46%", size: 56, delay: -6 },
+  { left: "6%", top: "62%", size: 44, ring: true, delay: -2 },
+  { left: "62%", top: "84%", size: 150, delay: -8 },
+  { left: "22%", top: "90%", size: 30, delay: -5 },
+];
+
+function StageDecor() {
+  return (
+    <div className={styles.decor} aria-hidden="true">
+      {DECOR.map((shape, i) => (
+        <span
+          key={i}
+          data-ring={shape.ring ? "" : undefined}
+          style={{ left: shape.left, top: shape.top, width: shape.size, height: shape.size, animationDelay: `${shape.delay}s` }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/** Tepa qatordagi dumaloq shisha tugma (tovush, qaytadan boshlash) */
+export function StageButton({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      className={clsx(styles.chip, "flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-transform active:scale-90")}
+    >
+      {children}
+    </button>
+  );
+}
+
+/** O'yin tepasi: chapda chiqish (bosib turish), o'rtada nom va izoh, o'ngda amallar */
+export function StageHeader({
+  title,
+  subtitle,
+  onExit,
+  children,
+}: {
+  title: string;
+  subtitle: string;
+  onExit: () => void;
+  children?: React.ReactNode;
+}) {
+  return (
+    <header className="flex items-center gap-2.5 px-4 pt-3">
+      <HoldToExit onExit={onExit} />
+      <div className="min-w-0 flex-1 text-center">
+        <p className={clsx(parentStyles.roundedFont, "truncate text-[20px] leading-tight text-[var(--p-ink)]")}>{title}</p>
+        <p className="truncate text-[12.5px] font-semibold text-[var(--p-ink)]/55">{subtitle}</p>
+      </div>
+      {children}
+    </header>
+  );
+}
+
+/**
+ * Topilganlar «patnisi»: shisha kapsula ichida joylar — har topilgan narsa
+ * rasmi bilan to'ladi (raqamsiz ham tushunarli), o'ngda hisob.
+ */
+export function ProgressTray({ total, images, label }: { total: number; images: string[]; label: string }) {
+  const small = total > 6;
+  return (
+    <div className="mt-3.5 flex justify-center px-4">
+      <div className={clsx(styles.chip, "flex max-w-full items-center rounded-full py-1.5 pl-2 pr-3", small ? "gap-1" : "gap-1.5")} aria-label={label}>
+        {Array.from({ length: total }, (_, i) => {
+          const src = images[i];
+          return (
+            <span
+              key={i}
+              className={clsx("flex shrink-0 items-center justify-center rounded-full", small ? "h-7 w-7" : "h-8 w-8")}
+              style={{ background: src ? "color-mix(in srgb, var(--g) 22%, transparent)" : "color-mix(in srgb, var(--p-ink) 7%, transparent)" }}
+            >
+              {src && <img src={src} alt="" draggable={false} className={clsx(styles.slotIn, "h-[74%] w-[74%] object-contain")} />}
+            </span>
+          );
+        })}
+        <span className="ml-1.5 shrink-0 text-[13px] font-bold tabular-nums text-[var(--p-ink)]/70">
+          {images.length}/{total}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** Topilgan narsa nomi — pastda sakrab chiqadigan shisha pufakcha */
+export function NameBubble({ image, name }: { image: string; name: string }) {
+  return (
+    <div className={clsx(styles.bubble, styles.chip, "flex items-center gap-3 rounded-full py-2 pl-2 pr-6")}>
+      <span
+        className="flex h-12 w-12 items-center justify-center rounded-full"
+        style={{ background: "color-mix(in srgb, var(--g) 22%, transparent)" }}
+      >
+        <img src={image} alt="" draggable={false} className="h-9 w-9 object-contain" />
+      </span>
+      <span className={clsx(parentStyles.roundedFont, "text-[24px] text-[var(--p-ink)]")}>{name}!</span>
+    </div>
   );
 }
 
@@ -192,7 +307,7 @@ export function HoldToExit({ onExit }: { onExit: () => void }) {
         onKeyUp={(event) => {
           if (event.key === "Enter" || event.key === " ") stop(startedAt.current !== null);
         }}
-        className="relative flex h-11 w-11 items-center justify-center rounded-full bg-[var(--p-card)] text-[var(--p-muted)] shadow-[var(--p-shadow)]"
+        className={clsx(styles.chip, "relative flex h-11 w-11 items-center justify-center rounded-full")}
       >
         <svg viewBox="0 0 44 44" className="absolute inset-0 h-11 w-11 -rotate-90" aria-hidden="true">
           <circle
@@ -200,7 +315,7 @@ export function HoldToExit({ onExit }: { onExit: () => void }) {
             cy="22"
             r={R}
             fill="none"
-            stroke="var(--p-coral)"
+            stroke="var(--p-red)"
             strokeWidth="3"
             strokeLinecap="round"
             strokeDasharray={C}
