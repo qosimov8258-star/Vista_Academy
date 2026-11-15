@@ -19,7 +19,6 @@ import {
   PencilLine,
   ReceiptText,
   Send,
-  ShoppingBag,
   Smile,
   Soup,
   StickyNote,
@@ -210,7 +209,10 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
         : null,
       isOn("paymentReceipts") ? { key: "tolov", label: tr("To'lov"), icon: Wallet, tint: "green", href: `${base}/tolov` } : null,
       isOn("groupMaterials") ? { key: "fayllar", label: tr("Fayllar"), icon: FolderOpen, tint: "orange", href: `${base}/fayllar` } : null,
-      isOn("products") ? { key: "dokon", label: tr("Do'kon"), icon: ShoppingBag, tint: "pink", href: `${base}/dokon` } : null,
+      // Do'kon «Yana» ichida qoladi; bu yerda — bog'cha xabarlari, o'qilmaganlar soni bilan
+      isOn("notifications")
+        ? { key: "xabarlar", label: tr("Bildirishnomalar"), icon: Bell, tint: "indigo", href: `${base}/xabarlar`, badge: newMessages.length }
+        : null,
       isOn("diary") ? { key: "kundalik", label: tr("Kundalik"), icon: NotebookPen, tint: "purple", href: `${base}/kundalik` } : null,
       isOn("lessons") ? { key: "jadval", label: tr("Jadval"), icon: CalendarDays, tint: "red", href: `${base}/jadval` } : null,
     ] as Array<QuickAction | null>
@@ -383,21 +385,33 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
           style={{ gridTemplateColumns: `repeat(${actions.length}, minmax(0, 1fr))` }}
         >
           {actions.map((action) => {
+            const badge = action.badge ?? 0;
             const inner = (
               <>
-                <IosIcon icon={action.icon} tint={action.tint} size={54} />
-                <span className="mt-2 line-clamp-2 text-center text-[12.5px] font-medium leading-tight text-[var(--p-ink)]">
+                <span className="relative">
+                  <IosIcon icon={action.icon} tint={action.tint} size={54} />
+                  {badge > 0 && (
+                    <span
+                      aria-hidden="true"
+                      className="absolute -right-2 -top-2 flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-[var(--p-red)] px-1.5 text-[12.5px] font-bold tabular-nums text-white ring-2 ring-[var(--p-bg)]"
+                    >
+                      {badge > 99 ? "99+" : badge}
+                    </span>
+                  )}
+                </span>
+                <span className="mt-2 line-clamp-2 max-w-full break-words text-center text-[12.5px] font-medium leading-tight text-[var(--p-ink)]">
                   {action.label}
                 </span>
               </>
             );
+            const label = badge > 0 ? `${action.label}, ${tr("{0} ta yangi", badge)}` : undefined;
             const className = "flex min-w-0 flex-col items-center rounded-[18px] px-1 py-1.5 transition-transform active:scale-95";
             return action.href ? (
-              <Link key={action.key} href={action.href} className={className}>
+              <Link key={action.key} href={action.href} aria-label={label} className={className}>
                 {inner}
               </Link>
             ) : (
-              <button key={action.key} type="button" onClick={action.onClick} className={className}>
+              <button key={action.key} type="button" onClick={action.onClick} aria-label={label} className={className}>
                 {inner}
               </button>
             );
@@ -493,7 +507,16 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
   );
 }
 
-type QuickAction = { key: string; label: string; icon: AnyIcon; tint: IosTint; href?: string; onClick?: () => void };
+type QuickAction = {
+  key: string;
+  label: string;
+  icon: AnyIcon;
+  tint: IosTint;
+  href?: string;
+  onClick?: () => void;
+  /** Ikonka burchagidagi qizil son (iOS ilova belgisidek); 0 bo'lsa chiqmaydi */
+  badge?: number;
+};
 
 /** Bosh harflar — faqat harflardan («[SINOV] Ali Vali» → «AV»); harf topilmasa umumiy `initials` */
 function lettersOf(name: string): string {
