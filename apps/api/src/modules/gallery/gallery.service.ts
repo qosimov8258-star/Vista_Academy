@@ -1,6 +1,8 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
+import { canNotifyParents } from "../../common/features/feature-access";
+import { PushService } from "../push/push.service";
 import { TenantScope, requireTeachingScope } from "../iam/tenant-auth.types";
 import { AuthenticatedParent } from "../parent/parent-auth.types";
 import { R2Service } from "../storage/r2.service";
@@ -15,6 +17,12 @@ import {
 import { CreateGalleryItemDto, GalleryQueryDto, UpdateGalleryItemDto } from "./dto/gallery.dto";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
+
+/**
+ * Tarbiyachi odatda bir nechta ishni ketma-ket yuklaydi — shu oraliqda bitta
+ * guruhga ikkinchi push yuborilmaydi (ota-ona telefoni 5 marta jiringlamasin).
+ */
+const PUSH_QUIET_MS = 10 * 60_000;
 
 const ITEM_SELECT = {
   id: true,
@@ -40,6 +48,7 @@ export class GalleryService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly r2: R2Service,
+    private readonly push: PushService,
   ) {}
 
   // ---------------------------------------------------------------------
@@ -73,6 +82,9 @@ export class GalleryService {
       await this.r2.uploadBuffer(imageKey, buffer, mimeType);
       image = null;
     }
+    const recent = await this.prisma.galleryItem.count({
+      where: { groupId, createdById: scope.userId, createdAt: { gte: new Date(Date.now() - PUSH_QUIET_MS) } },
+    });
     const { branch: _branch, ...row } = await this.prisma.galleryItem.create({
       data: {
         organizationId: scope.organizationId,
@@ -86,7 +98,35 @@ export class GalleryService {
       },
       select: ITEM_SELECT,
     });
+    if (recent === 0) {
+      // Push xatosi yuklashni to'xtatmaydi
+      void this.notifyParents(scope.organizationId, groupId, row.group.name).catch(() => undefined);
+    }
     return row;
+  }
+
+  /**
+   * Shu guruh bolalarining ota-onalariga: «galereyaga yangi ish qo'shildi».
+   * Galereyani butun filial ko'radi, lekin push faqat o'z guruhiga — boshqa
+   * guruhlarning har bir rasmi uchun hammani bezovta qilmaslik uchun.
+   */
+  private async notifyParents(organizationId: string, groupId: string, groupName: string) {
+    // Ota-onada kabinet, bildirishnomalar yoki galereya o'chiq bo'lsa push yo'q
+    if (!(await canNotifyParents(this.prisma, organizationId, "gallery"))) return;
+    const [links, organization] = await Promise.all([
+      this.prisma.childGuardian.findMany({
+        where: { canReceiveNotifications: true, child: { groupId, status: "ACTIVE" } },
+        select: { guardianId: true },
+        distinct: ["guardianId"],
+      }),
+      this.prisma.organization.findUnique({ where: { id: organizationId }, select: { slug: true } }),
+    ]);
+    if (links.length === 0 || !organization) return;
+    await this.push.sendToGuardians(links.map((link) => link.guardianId), {
+      title: "Galereyada yangi ish",
+      body: `«${groupName}» guruhi bolalarining yangi ishi qo'shildi. Ko'rib, «Yoqdi» bosing!`,
+      url: `/ota-ona/${organization.slug}/galereya`,
+    });
   }
 
   async update(scope: TenantScope, id: string, dto: UpdateGalleryItemDto) {
