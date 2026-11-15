@@ -405,8 +405,9 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
         </nav>
       )}
 
-      {/* Davomat — foiz halqasi va oxirgi 2 hafta kalendari */}
-      {attendanceOn && stripQuery.data && <AttendanceCard strip={stripQuery.data} />}
+      {/* Maqolalar, o'yinlar, galereya — tezkor amallardan keyin, ko'zga birinchi tashlanadi.
+          Platforma o'chirganlari chiqmaydi */}
+      {featuresReady && <FoydaliCards slug={slug} articlesOn={isOn("articles")} galleryOn={isOn("gallery")} />}
 
       {/* To'lov eslatmasi — bog'cha sozlagan kunlar oynasida to'lanmagan
           hisob-faktura bo'lsa chiqadi, to'lov qilingach o'zi yo'qoladi.
@@ -475,8 +476,8 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
         )
       )}
 
-      {/* Maqolalar, o'yinlar, galereya — platforma o'chirganlari chiqmaydi */}
-      {featuresReady && <FoydaliCards slug={slug} articlesOn={isOn("articles")} galleryOn={isOn("gallery")} />}
+      {/* Davomat — foiz halqasi va oxirgi 2 hafta kalendari; sahifaning eng pastida */}
+      {attendanceOn && stripQuery.data && <AttendanceCard strip={stripQuery.data} />}
 
       <p className="mt-6 px-6 text-center text-[13px] leading-relaxed text-[var(--p-muted)]">
         {tr("Savolingiz bo'lsa — tarbiyachi yoki bog'cha ma'muriyatiga murojaat qiling")}
@@ -574,7 +575,7 @@ function AttendanceCard({ strip }: { strip: ParentAttendanceStrip }) {
   ];
 
   return (
-    <section className={`${CARD} mt-5 p-4`}>
+    <section className={`${CARD} mt-8 p-4`}>
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="text-[17px] font-semibold tracking-[-0.01em] text-[var(--p-ink)]">{tr("Davomat")}</h2>
         <span className="shrink-0 text-[13px] text-[var(--p-muted)]">{tr("Oxirgi 2 hafta")}</span>
