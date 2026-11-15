@@ -3252,5 +3252,8 @@
  "Kam": "Little",
  "Tarbiyachiga xabar yuborildi": "Message sent to the teacher",
  "Eslatma tarbiyachiga yuborildi": "Note sent to the teacher",
- "Yuborib bo'lmadi": "Could not send"
+ "Yuborib bo'lmadi": "Could not send",
+ "Xabar berish": "Notify",
+ "Tarbiyachiga xabar": "Message the teacher",
+ "Tezkor amallar": "Quick actions"
 }

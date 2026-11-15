@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useRef, useState } from "react";
+import { use, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -8,18 +8,25 @@ import clsx from "clsx";
 import {
   ArrowLeftRight,
   Bell,
+  CalendarDays,
   Check,
   ChevronRight,
   Clock3,
+  FolderOpen,
   ImagePlus,
   Moon,
+  NotebookPen,
+  PencilLine,
   ReceiptText,
+  Send,
+  ShoppingBag,
   Smile,
   Soup,
   StickyNote,
   Utensils,
   Wallet,
   X,
+  type LucideIcon,
 } from "lucide-react";
 import { ApiError } from "@/lib/api";
 import { PARENT_API_URL, parentApi } from "@/lib/parent-api";
@@ -37,7 +44,8 @@ import { initials } from "@/components/ui/avatar";
 import { IosIcon, type AnyIcon, type IosTint } from "@/features/director/ios-icon";
 import styles from "../parent.module.css";
 import { GroupLine } from "./group-line";
-import { NotifyTeacher } from "./notify-teacher";
+import { NotifyTeacherForm } from "./notify-teacher";
+import { HomeSheet } from "./home-sheet";
 import { useSelectedChild } from "./use-selected-child";
 import { useParentMessages } from "./use-messages";
 import { useParentFeatures } from "./use-parent-features";
@@ -45,13 +53,14 @@ import { FoydaliCards } from "./foydali-cards";
 import { useTr } from "@/i18n/tr";
 
 /**
- * Ota-ona kabinetining bosh sahifasi — iOS «soft UI» uslubida (egasining
- * qarori, 2026-11-16): oq fon, yumshoq soyali oq kartalar, iOS Sozlamalaridagi
- * kabi rangli plitkali belgilar (IosIcon), tizim ranglari. Ranglar kabinet
- * tokenlaridan (parent.module.css) — qorong'i rejimda ham ishlaydi.
+ * Ota-ona kabinetining bosh sahifasi — zamonaviy mobil ilova ko'rinishida
+ * (egasining qarori, 2026-11-16): salomlashuv, rangli asosiy karta, tezkor
+ * amallar, davomat halqasi, rangli plitkalar va yonga suriladigan «Foydali».
+ * Ranglar kabinet tokenlaridan (parent.module.css) — qorong'i rejimda ham
+ * ishlaydi; gradient faqat asosiy kartada.
  *
- * Tartib: sarlavha → yangi xabar → bola va bugungi holat → davomat →
- * tarbiyachiga xabar → to'lov → bugungi kun → Foydali.
+ * Tartib: tepa → yangi xabar → asosiy karta → (sabab) → tezkor amallar →
+ * davomat → to'lov → bugungi kun → Foydali.
  */
 
 const WEEKDAY = ["Yak", "Du", "Se", "Cho", "Pay", "Ju", "Sha"];
@@ -72,6 +81,8 @@ const RED = "var(--p-red)";
 const ORANGE = "var(--p-sun)";
 
 const CARD = "rounded-[var(--p-radius)] bg-[var(--p-card)] shadow-[var(--p-shadow)]";
+/** Asosiy karta va avatar gradienti — ilovaning urg'u ranglari (ko'k → binafsha) */
+const HERO_GRADIENT = "linear-gradient(135deg, #0a84ff 0%, #5e5ce6 58%, #a45cf0 118%)";
 
 function prettyDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00.000Z`);
@@ -96,6 +107,8 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
   const newMessages = messagesQuery.data?.filter((m) => !m.readAt) ?? [];
   const queryClient = useQueryClient();
   const [reasonDraft, setReasonDraft] = useState("");
+  const [notifyOpen, setNotifyOpen] = useState(false);
+  const closeNotify = useCallback(() => setNotifyOpen(false), []);
 
   const meQuery = useQuery({
     queryKey: ["parent-me", slug],
@@ -173,10 +186,11 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
   const longDate = `${tr(WEEKDAY_FULL[todayDate.getUTCDay()])}, ${todayDate.getUTCDate()}-${tr(MONTH[todayDate.getUTCMonth()])}`;
 
   const status = present
-    ? { icon: Check, tint: "green" as const, bg: "rgba(52,199,89,0.1)", title: tr("Bugun bog'chada") }
+    ? { dot: "#30d158", pill: tr("Bog'chada"), icon: Check, title: tr("Bugun bog'chada") }
     : absent
-      ? { icon: X, tint: "red" as const, bg: "rgba(255,59,48,0.08)", title: tr("Bugun kelmadi") }
-      : { icon: Clock3, tint: "gray" as const, bg: "var(--p-sunken)", title: tr("Hali belgilanmagan") };
+      ? { dot: "#ff6b61", pill: tr("Kelmadi"), icon: X, title: tr("Bugun kelmadi") }
+      : { dot: "rgba(255,255,255,0.65)", pill: tr("Kutilmoqda"), icon: Clock3, title: tr("Hali belgilanmagan") };
+  const StatusIcon = status.icon;
   const statusNote = present
     ? day?.attendance?.checkInTime
       ? // Yuz tanish terminali yozgan vaqt
@@ -186,22 +200,46 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
       ? day?.attendance?.parentReason || day?.attendance?.note || tr("Sabab ko'rsatilmagan")
       : tr("Tarbiyachi hali davomat qilmadi");
 
+  // Tezkor amallar — pastki menyuda «Yana» ichida qolgan bo'limlarga bir bosishda.
+  // Platforma o'chirgan bo'lim chiqmaydi; eng ko'pi to'rtta.
+  const base = `/ota-ona/${slug}`;
+  const actions = (
+    [
+      childId && isOn("employeeNotifications")
+        ? { key: "notify", label: tr("Xabar berish"), icon: Send, tint: "blue", onClick: () => setNotifyOpen(true) }
+        : null,
+      isOn("paymentReceipts") ? { key: "tolov", label: tr("To'lov"), icon: Wallet, tint: "green", href: `${base}/tolov` } : null,
+      isOn("groupMaterials") ? { key: "fayllar", label: tr("Fayllar"), icon: FolderOpen, tint: "orange", href: `${base}/fayllar` } : null,
+      isOn("products") ? { key: "dokon", label: tr("Do'kon"), icon: ShoppingBag, tint: "pink", href: `${base}/dokon` } : null,
+      isOn("diary") ? { key: "kundalik", label: tr("Kundalik"), icon: NotebookPen, tint: "purple", href: `${base}/kundalik` } : null,
+      isOn("lessons") ? { key: "jadval", label: tr("Jadval"), icon: CalendarDays, tint: "red", href: `${base}/jadval` } : null,
+    ] as Array<QuickAction | null>
+  )
+    .filter((action): action is QuickAction => !!action)
+    .slice(0, 4);
+
   return (
-    <div className={`mx-auto w-full max-w-[520px] px-4 pt-6`}>
-      {/* Sarlavha — iOS «katta sarlavha»: tepada sana, ostida ism; o'ngda xabarlar.
-          Chiqish tugmasi Sozlamalar bo'limida. */}
-      <header className="flex items-end justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[13px] font-semibold uppercase tracking-wide text-[var(--p-muted)]">{longDate}</p>
-          <p className="mt-0.5 truncate text-[30px] font-bold leading-tight tracking-[-0.025em] text-[var(--p-ink)]">
+    <div className="mx-auto w-full max-w-[520px] px-4 pt-5">
+      {/* Tepa: avatar, salomlashuv va xabarlar. Chiqish tugmasi Sozlamalar bo'limida. */}
+      <header className="flex items-center gap-3">
+        <span
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[15px] font-semibold text-white"
+          style={{ background: HERO_GRADIENT }}
+          aria-hidden="true"
+        >
+          {initials(parent.fullName)}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[13px] leading-tight text-[var(--p-muted)]">{tr(greetingKey())}</p>
+          <p className="mt-0.5 truncate text-[19px] font-bold leading-tight tracking-[-0.02em] text-[var(--p-ink)]">
             {tr(parent.fullName)}
           </p>
         </div>
         {featuresReady && isOn("notifications") && (
           <Link
-            href={`/ota-ona/${slug}/xabarlar`}
+            href={`${base}/xabarlar`}
             aria-label={newMessages.length > 0 ? tr("{0} ta yangi xabar", newMessages.length) : tr("Xabarlar")}
-            className="relative mb-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--p-card)] text-[var(--p-ink)] shadow-[var(--p-shadow)] transition-transform active:scale-95"
+            className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--p-sunken)] text-[var(--p-ink)] transition-transform active:scale-95"
           >
             <Bell className="h-[21px] w-[21px]" strokeWidth={2} />
             {newMessages.length > 0 && (
@@ -213,12 +251,9 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
         )}
       </header>
 
-      {/* Yangi xabar — iOS bildirishnomasi ko'rinishida */}
+      {/* Yangi xabar — bildirishnoma ko'rinishida */}
       {newMessages.length > 0 && (
-        <Link
-          href={`/ota-ona/${slug}/xabarlar`}
-          className={`${CARD} mt-5 flex items-start gap-3 p-3.5 transition-transform active:scale-[0.99]`}
-        >
+        <Link href={`${base}/xabarlar`} className={`${CARD} mt-4 flex items-start gap-3 p-3.5 transition-transform active:scale-[0.99]`}>
           <IosIcon icon={Bell} tint="red" size={40} />
           <span className="min-w-0 flex-1">
             <span className="flex items-baseline justify-between gap-2">
@@ -234,100 +269,150 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
         </Link>
       )}
 
-      {/* Bola va bugungi holat */}
+      {/* Asosiy karta: bola va bugungi holat — rangli, ilovaning «yuzi» */}
       {child && (
-        <section className={`${styles.pop} ${CARD} mt-5 p-4`}>
-          <div className="flex items-center gap-3.5">
+        <section
+          className={`${styles.pop} relative mt-5 overflow-hidden rounded-[28px] p-5 text-white`}
+          style={{ background: HERO_GRADIENT, boxShadow: "0 22px 44px -22px rgba(88, 86, 214, 0.65)" }}
+        >
+          <span aria-hidden="true" className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-white/10" />
+          <span aria-hidden="true" className="pointer-events-none absolute -bottom-20 -left-12 h-44 w-44 rounded-full bg-white/[0.07]" />
+
+          <div className="relative flex items-center justify-between gap-3">
+            <p className="min-w-0 truncate text-[13px] font-medium text-white/75">{longDate}</p>
+            {attendanceOn && (
+              <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/20 px-2.5 py-1 text-[12.5px] font-semibold">
+                <span className="h-2 w-2 rounded-full" style={{ background: status.dot }} />
+                {status.pill}
+              </span>
+            )}
+          </div>
+
+          <div className="relative mt-4 flex items-center gap-3.5">
             {child.avatarUpdatedAt ? (
               // eslint-disable-next-line @next/next/no-img-element -- tashqi manzil
               <img
                 src={`${PARENT_API_URL}/app/parent/children/${child.id}/avatar?v=${encodeURIComponent(child.avatarUpdatedAt)}`}
                 alt={tr(child.fullName)}
-                className="h-[60px] w-[60px] shrink-0 rounded-full bg-[var(--p-sunken)] object-cover"
+                className="h-16 w-16 shrink-0 rounded-full bg-white/20 object-cover ring-2 ring-white/60"
               />
             ) : (
-              <span className="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full bg-[var(--p-accent)]/12 text-[20px] font-semibold text-[var(--p-accent)]">
+              <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-white/20 text-[21px] font-semibold ring-2 ring-white/40">
                 {initials(child.fullName)}
               </span>
             )}
             <div className="min-w-0 flex-1">
-              <h1 className="truncate text-[20px] font-bold leading-tight tracking-[-0.02em] text-[var(--p-ink)]">
-                {tr(child.fullName)}
-              </h1>
-              <GroupLine child={child} size={20} className="mt-1 text-[14.5px] text-[var(--p-muted)]" />
+              <h1 className="truncate text-[23px] font-bold leading-tight tracking-[-0.02em]">{tr(child.fullName)}</h1>
+              <GroupLine child={child} size={20} className="mt-1 text-[14.5px] text-white/80" />
             </div>
-            {/* Bir nechta farzand bo'lsa — almashtirish */}
-            {multiple && (
-              <Link
-                href={`/ota-ona/${slug}/tanlash`}
-                aria-label={tr("Farzandni almashtirish")}
-                className="flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-[var(--p-sunken)] px-3 text-[13.5px] font-semibold text-[var(--p-accent)] transition-transform active:scale-95"
-              >
-                <ArrowLeftRight className="h-4 w-4" strokeWidth={2.2} />
-                <span className="max-[359px]:hidden">{tr("Almashtirish")}</span>
-              </Link>
-            )}
           </div>
 
-          {/* Bugun keldimi */}
-          {attendanceOn && (
-            <div className="mt-4 flex items-center gap-3 rounded-[18px] p-3" style={{ background: status.bg }}>
-              <IosIcon icon={status.icon} tint={status.tint} size={40} />
-              <div className="min-w-0">
-                <p className="text-[16px] font-semibold leading-snug text-[var(--p-ink)]">{status.title}</p>
-                <p className="text-[13.5px] leading-snug text-[var(--p-muted)]">{statusNote}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Kelmagan kun uchun sabab — bir marta yozilgach o'zgartirilmaydi,
-              tarbiyachi buni ko'radi va aloqaga chiqishga hojat qolmaydi. */}
-          {attendanceOn && absent && !day?.attendance?.parentReason && (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const reason = reasonDraft.trim();
-                if (reason) reasonMutation.mutate(reason);
-              }}
-              className="mt-3.5"
-            >
-              <label htmlFor="absence-reason" className="block px-1 text-[13px] font-medium text-[var(--p-muted)]">
-                {tr("Nega kelmadi? Sababini yozing")}
-              </label>
-              <textarea
-                id="absence-reason"
-                value={reasonDraft}
-                onChange={(e) => setReasonDraft(e.target.value)}
-                rows={2}
-                placeholder={tr("Masalan: shifokorga bordik")}
-                className="mt-1.5 w-full resize-none rounded-[14px] bg-[var(--p-sunken)] px-3.5 py-2.5 text-[16px] text-[var(--p-ink)] outline-none placeholder:text-[var(--p-muted)] focus:ring-2 focus:ring-[var(--p-accent)]/40"
-              />
-              <button
-                type="submit"
-                disabled={!reasonDraft.trim() || reasonMutation.isPending}
-                className="mt-2 h-11 w-full rounded-full bg-[var(--p-accent)] text-[15.5px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-40"
-              >
-                {reasonMutation.isPending ? tr("Yuborilmoqda...") : tr("Yuborish")}
-              </button>
-              {reasonMutation.isError && (
-                <p className="mt-2 px-1 text-[13px] text-[var(--p-red)]">{tr("Yuborib bo'lmadi — qayta urinib ko'ring")}</p>
+          {(attendanceOn || multiple) && (
+            <div className="relative mt-4 flex items-center gap-3 rounded-[18px] bg-white/[0.16] p-3">
+              {attendanceOn ? (
+                <>
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/25">
+                    <StatusIcon className="h-5 w-5" strokeWidth={2.6} aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[15.5px] font-semibold leading-snug">{status.title}</p>
+                    <p className="line-clamp-2 text-[13px] leading-snug text-white/75">{statusNote}</p>
+                  </div>
+                </>
+              ) : (
+                <span className="min-w-0 flex-1 truncate text-[14px] text-white/85">{tr("Farzandni almashtirish")}</span>
               )}
-            </form>
+              {/* Bir nechta farzand bo'lsa — almashtirish */}
+              {multiple && (
+                <Link
+                  href={`${base}/tanlash`}
+                  aria-label={tr("Farzandni almashtirish")}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/25 transition-transform active:scale-95"
+                >
+                  <ArrowLeftRight className="h-[18px] w-[18px]" strokeWidth={2.2} />
+                </Link>
+              )}
+            </div>
           )}
         </section>
       )}
 
-      {/* Davomat — oxirgi 2 hafta */}
-      {attendanceOn && stripQuery.data && <AttendanceCard strip={stripQuery.data} />}
+      {/* Kelmagan kun uchun sabab — bir marta yozilgach o'zgartirilmaydi,
+          tarbiyachi buni ko'radi va aloqaga chiqishga hojat qolmaydi. */}
+      {attendanceOn && absent && !day?.attendance?.parentReason && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const reason = reasonDraft.trim();
+            if (reason) reasonMutation.mutate(reason);
+          }}
+          className={`${CARD} mt-3 p-4`}
+        >
+          <div className="flex items-center gap-3">
+            <IosIcon icon={PencilLine} tint="red" size={32} />
+            <label htmlFor="absence-reason" className="min-w-0 flex-1 text-[16px] font-semibold leading-snug text-[var(--p-ink)]">
+              {tr("Nega kelmadi? Sababini yozing")}
+            </label>
+          </div>
+          <textarea
+            id="absence-reason"
+            value={reasonDraft}
+            onChange={(e) => setReasonDraft(e.target.value)}
+            rows={2}
+            placeholder={tr("Masalan: shifokorga bordik")}
+            className="mt-3 w-full resize-none rounded-[14px] bg-[var(--p-sunken)] px-3.5 py-2.5 text-[16px] text-[var(--p-ink)] outline-none placeholder:text-[var(--p-muted)] focus:ring-2 focus:ring-[var(--p-accent)]/40"
+          />
+          <button
+            type="submit"
+            disabled={!reasonDraft.trim() || reasonMutation.isPending}
+            className="mt-2 h-11 w-full rounded-full bg-[var(--p-accent)] text-[15.5px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-40"
+          >
+            {reasonMutation.isPending ? tr("Yuborilmoqda...") : tr("Yuborish")}
+          </button>
+          {reasonMutation.isError && (
+            <p className="mt-2 px-1 text-[13px] text-[var(--p-red)]">{tr("Yuborib bo'lmadi — qayta urinib ko'ring")}</p>
+          )}
+        </form>
+      )}
 
-      {/* Xabar tarbiyachiga xodim bildirishnomasi bo'lib boradi — u o'chiq bo'lsa blok ham yo'q */}
-      {childId && isOn("employeeNotifications") && <NotifyTeacher childId={childId} departureEnabled={isOn("pickups")} />}
+      {/* Tezkor amallar — ilova yorliqlari kabi */}
+      {featuresReady && actions.length > 0 && (
+        <nav
+          aria-label={tr("Tezkor amallar")}
+          className="mt-5 grid gap-1"
+          style={{ gridTemplateColumns: `repeat(${actions.length}, minmax(0, 1fr))` }}
+        >
+          {actions.map((action) => {
+            const inner = (
+              <>
+                <IosIcon icon={action.icon} tint={action.tint} size={54} />
+                <span className="mt-2 line-clamp-2 text-center text-[12.5px] font-medium leading-tight text-[var(--p-ink)]">
+                  {action.label}
+                </span>
+              </>
+            );
+            const className = "flex min-w-0 flex-col items-center rounded-[18px] px-1 py-1.5 transition-transform active:scale-95";
+            return action.href ? (
+              <Link key={action.key} href={action.href} className={className}>
+                {inner}
+              </Link>
+            ) : (
+              <button key={action.key} type="button" onClick={action.onClick} className={className}>
+                {inner}
+              </button>
+            );
+          })}
+        </nav>
+      )}
+
+      {/* Davomat — foiz halqasi va oxirgi 2 hafta kalendari */}
+      {attendanceOn && stripQuery.data && <AttendanceCard strip={stripQuery.data} />}
 
       {/* To'lov eslatmasi — bog'cha sozlagan kunlar oynasida to'lanmagan
           hisob-faktura bo'lsa chiqadi, to'lov qilingach o'zi yo'qoladi.
           «To'lov cheklari» o'chirilgan bo'lsa To'lov sahifasi yo'q — tugma ham yo'q */}
       {reminderQuery.data?.visible && (
-        <PaymentReminderCard reminder={reminderQuery.data} payHref={isOn("paymentReceipts") ? `/ota-ona/${slug}/tolov` : undefined} />
+        <PaymentReminderCard reminder={reminderQuery.data} payHref={isOn("paymentReceipts") ? `${base}/tolov` : undefined} />
       )}
 
       {/* Chek yuklash — faqat to'lov kutilayotganda ochiladi (aks holda
@@ -342,7 +427,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
         <div className="mt-8">
           <div className="grid grid-cols-3 gap-3">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="h-[112px] animate-pulse rounded-[var(--p-radius)] bg-[var(--p-sunken)] motion-reduce:animate-none" />
+              <div key={i} className="h-[112px] animate-pulse rounded-[22px] bg-[var(--p-sunken)] motion-reduce:animate-none" />
             ))}
           </div>
           <div className="mt-3 h-[76px] animate-pulse rounded-[var(--p-radius)] bg-[var(--p-sunken)] motion-reduce:animate-none" />
@@ -353,19 +438,19 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
           <section className="mt-8">
             <SectionTitle>{tr("Bugun")}</SectionTitle>
 
-            {/* Kayfiyat, ovqat, uyqu — vidjetlar */}
+            {/* Kayfiyat, ovqat, uyqu — rangli plitkalar */}
             {reportsOn && (
               <div className="grid grid-cols-3 gap-3">
-                <Widget icon={Smile} tint="pink" label={tr("Kayfiyat")} value={day.report?.mood ? tr(MOOD[day.report.mood]) : "—"} />
-                <Widget
+                <StatTile icon={Smile} color="#ff2d55" label={tr("Kayfiyat")} value={day.report?.mood ? tr(MOOD[day.report.mood]) : "—"} />
+                <StatTile
                   icon={Utensils}
-                  tint="orange"
+                  color="#ff9500"
                   label={tr("Ovqat")}
                   value={day.report?.eatingQuality ? tr(EATING[day.report.eatingQuality]) : "—"}
                 />
-                <Widget
+                <StatTile
                   icon={Moon}
-                  tint="indigo"
+                  color="#5856d6"
                   label={tr("Uyqu")}
                   value={day.report?.sleepMinutes != null ? tr(sleepLabel(day.report.sleepMinutes)) : "—"}
                 />
@@ -391,18 +476,34 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
       )}
 
       {/* Maqolalar, o'yinlar, galereya — platforma o'chirganlari chiqmaydi */}
-      {featuresReady && (
-        <FoydaliCards slug={slug} articlesOn={isOn("articles")} galleryOn={isOn("gallery")} />
-      )}
+      {featuresReady && <FoydaliCards slug={slug} articlesOn={isOn("articles")} galleryOn={isOn("gallery")} />}
 
-      <p className="mt-9 px-6 text-center text-[13px] leading-relaxed text-[var(--p-muted)]">
+      <p className="mt-6 px-6 text-center text-[13px] leading-relaxed text-[var(--p-muted)]">
         {tr("Savolingiz bo'lsa — tarbiyachi yoki bog'cha ma'muriyatiga murojaat qiling")}
       </p>
+
+      {/* Tarbiyachiga xabar — pastki oynada. Xabar xodim bildirishnomasi bo'lib boradi. */}
+      {notifyOpen && childId && (
+        <HomeSheet title={tr("Tarbiyachiga xabar")} onClose={closeNotify}>
+          <NotifyTeacherForm childId={childId} departureEnabled={isOn("pickups")} />
+        </HomeSheet>
+      )}
     </div>
   );
 }
 
-/** Bo'lim sarlavhasi — kartadan tashqarida, iOS'dagi kabi yirik va qalin */
+type QuickAction = { key: string; label: string; icon: AnyIcon; tint: IosTint; href?: string; onClick?: () => void };
+
+/** Vaqtga qarab salomlashuv (qurilma soati bo'yicha) */
+function greetingKey(): string {
+  const hour = new Date().getHours();
+  if (hour < 5 || hour >= 22) return "Xayrli tun";
+  if (hour < 11) return "Xayrli tong";
+  if (hour < 17) return "Xayrli kun";
+  return "Xayrli kech";
+}
+
+/** Bo'lim sarlavhasi — kartadan tashqarida, yirik va qalin */
 function SectionTitle({ children, trailing }: { children: React.ReactNode; trailing?: React.ReactNode }) {
   return (
     <div className="mb-2.5 flex items-baseline justify-between gap-3 px-1">
@@ -412,13 +513,15 @@ function SectionTitle({ children, trailing }: { children: React.ReactNode; trail
   );
 }
 
-/** Kichik vidjet: plitka belgi, nomi va qiymati — «Salomatlik» ilovasidagi kabi */
-function Widget({ icon, tint, label, value }: { icon: AnyIcon; tint: IosTint; label: string; value: string }) {
+/** Rangli plitka: o'z rangining och tusi fonda, dumaloq belgi, nom va qiymat */
+function StatTile({ icon: Icon, color, label, value }: { icon: LucideIcon; color: string; label: string; value: string }) {
   return (
-    <div className={`${CARD} p-3.5`}>
-      <IosIcon icon={icon} tint={tint} size={32} />
-      <p className="mt-3 truncate text-[13px] font-medium text-[var(--p-muted)]">{label}</p>
-      <p className="mt-0.5 text-[16px] font-semibold leading-tight text-[var(--p-ink)] [overflow-wrap:anywhere]">{value}</p>
+    <div className="rounded-[22px] p-3.5" style={{ background: `color-mix(in srgb, ${color} 11%, var(--p-card))` }}>
+      <span className="flex h-8 w-8 items-center justify-center rounded-full text-white" style={{ background: color }}>
+        <Icon className="h-[17px] w-[17px]" strokeWidth={2.3} aria-hidden="true" />
+      </span>
+      <p className="mt-3 truncate text-[12.5px] font-medium text-[var(--p-ink)]/60">{label}</p>
+      <p className="mt-0.5 text-[16px] font-bold leading-tight text-[var(--p-ink)] [overflow-wrap:anywhere]">{value}</p>
     </div>
   );
 }
@@ -426,8 +529,9 @@ function Widget({ icon, tint, label, value }: { icon: AnyIcon; tint: IosTint; la
 /**
  * Davomat — oxirgi 2 hafta.
  *
- * Avval son bilan javob (eng ko'p so'raladigan savol shu), keyin kalendar:
- * har bir kun o'z hafta kuni ustunida, doiracha rangi — holati.
+ * Chapda halqa: belgilangan kunlarning necha foizida kelgani (eng ko'p
+ * so'raladigan savolga bir qarashda javob). O'ngda kalendar: har bir kun
+ * o'z hafta kuni ustunida, doiracha rangi — holati. Pastda sonlar.
  */
 function AttendanceCard({ strip }: { strip: ParentAttendanceStrip }) {
   const tr = useTr();
@@ -447,31 +551,54 @@ function AttendanceCard({ strip }: { strip: ParentAttendanceStrip }) {
     return wd === 0 || wd === 6;
   };
   const unmarked = strip.items.filter((item) => !item.status && !isRestDay(item)).length;
-  const stats = [
-    { count: strip.present, label: "Keldi", color: GREEN },
-    { count: strip.absent, label: "Kelmadi", color: RED },
-    ...(unmarked > 0 ? [{ count: unmarked, label: "Belgilanmagan", color: "var(--p-muted)" }] : []),
+  const marked = strip.present + strip.absent;
+  const rate = marked > 0 ? strip.present / marked : null;
+  const R = 38;
+  const C = 2 * Math.PI * R;
+  const legend = [
+    { count: strip.present, label: "kun keldi", color: GREEN },
+    { count: strip.absent, label: "kun kelmadi", color: RED },
+    ...(unmarked > 0 ? [{ count: unmarked, label: "kun belgilanmagan", color: "var(--p-chevron)" }] : []),
   ];
 
   return (
-    <section className="mt-8">
-      <SectionTitle trailing={tr("Oxirgi 2 hafta")}>{tr("Davomat")}</SectionTitle>
-      <div className={`${CARD} p-4`}>
-        {/* Sonlar — ingichka chiziq bilan ajratilgan */}
-        <div className="flex divide-x divide-[var(--p-line)]">
-          {stats.map((stat) => (
-            <div key={stat.label} className="min-w-0 flex-1 px-2 text-center first:pl-0 last:pr-0">
-              <p className="text-[26px] font-bold leading-none tabular-nums" style={{ color: stat.color }}>
-                {stat.count}
-              </p>
-              <p className="mt-1.5 truncate text-[12.5px] text-[var(--p-muted)]">{tr(stat.label)}</p>
-            </div>
-          ))}
+    <section className={`${CARD} mt-5 p-4`}>
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="text-[17px] font-semibold tracking-[-0.01em] text-[var(--p-ink)]">{tr("Davomat")}</h2>
+        <span className="shrink-0 text-[13px] text-[var(--p-muted)]">{tr("Oxirgi 2 hafta")}</span>
+      </div>
+
+      <div className="mt-3.5 flex items-center gap-4">
+        {/* Halqa */}
+        <div className="relative h-[92px] w-[92px] shrink-0">
+          <svg viewBox="0 0 92 92" className="h-full w-full -rotate-90" aria-hidden="true">
+            <circle cx="46" cy="46" r={R} fill="none" stroke="var(--p-sunken)" strokeWidth="9" />
+            {rate !== null && rate > 0 && (
+              <circle
+                cx="46"
+                cy="46"
+                r={R}
+                fill="none"
+                stroke="var(--p-mint)"
+                strokeWidth="9"
+                strokeLinecap="round"
+                strokeDasharray={C}
+                strokeDashoffset={C * (1 - rate)}
+              />
+            )}
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-[21px] font-bold leading-none tabular-nums text-[var(--p-ink)]">
+              {rate === null ? "—" : `${Math.round(rate * 100)}%`}
+            </span>
+            <span className="mt-1 text-[11px] text-[var(--p-muted)]">{tr("keldi")}</span>
+          </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-7 gap-y-1.5 border-t border-[var(--p-line)] pt-3.5">
+        {/* Kalendar */}
+        <div className="grid min-w-0 flex-1 grid-cols-7 gap-x-1 gap-y-1.5">
           {WEEKDAY_SHORT.map((d) => (
-            <span key={d} className="pb-0.5 text-center text-[12px] font-medium text-[var(--p-muted)]">
+            <span key={d} className="truncate text-center text-[10.5px] font-medium text-[var(--p-muted)]">
               {tr(d)}
             </span>
           ))}
@@ -487,7 +614,7 @@ function AttendanceCard({ strip }: { strip: ParentAttendanceStrip }) {
                   item.status === "PRESENT" ? "keldi" : item.status === "ABSENT" ? "kelmadi" : rest ? "dam olish kuni" : "belgilanmagan"
                 }`}
                 className={clsx(
-                  "mx-auto flex h-9 w-9 items-center justify-center rounded-full text-[14px] font-semibold tabular-nums",
+                  "mx-auto flex aspect-square w-full max-w-[28px] items-center justify-center rounded-full text-[11.5px] font-semibold tabular-nums",
                   item.status === "PRESENT"
                     ? "bg-[var(--p-mint)] text-white"
                     : item.status === "ABSENT"
@@ -496,7 +623,7 @@ function AttendanceCard({ strip }: { strip: ParentAttendanceStrip }) {
                         ? "text-[var(--p-chevron)]"
                         : "bg-[var(--p-sunken)] text-[var(--p-muted)]",
                   // Bugungi kun — ko'k halqa
-                  item.date === today && "ring-2 ring-[var(--p-accent)] ring-offset-2 ring-offset-[var(--p-card)]",
+                  item.date === today && "ring-2 ring-[var(--p-accent)] ring-offset-1 ring-offset-[var(--p-card)]",
                 )}
               >
                 {Number(item.date.slice(8, 10))}
@@ -504,6 +631,15 @@ function AttendanceCard({ strip }: { strip: ParentAttendanceStrip }) {
             );
           })}
         </div>
+      </div>
+
+      <div className="mt-3.5 flex flex-wrap gap-x-4 gap-y-1 border-t border-[var(--p-line)] pt-3">
+        {legend.map((entry) => (
+          <span key={entry.label} className="flex items-center gap-1.5 text-[13px] text-[var(--p-muted)]">
+            <span className="h-2 w-2 rounded-full" style={{ background: entry.color }} />
+            <b className="font-semibold tabular-nums text-[var(--p-ink)]">{entry.count}</b> {tr(entry.label)}
+          </span>
+        ))}
       </div>
     </section>
   );
