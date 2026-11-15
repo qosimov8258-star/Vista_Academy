@@ -6,8 +6,8 @@ import clsx from "clsx";
 import { Hash, Hand, Timer } from "lucide-react";
 import { ChevronRightIcon } from "@/components/ui/icons";
 import parentStyles from "../../parent.module.css";
-import styles from "./oyinlar.module.css";
-import { GAMES, SOUND_ANIMALS, TOPICS, topicCover, type GameItem } from "./data";
+import { GAMES, SOUND_ANIMALS, TOPICS } from "./data";
+import { GAME_BANNERS } from "./banners";
 import { FoydaliHeader, SectionLabel } from "../foydali/ui";
 import { TONE } from "./ui";
 import { useTr } from "@/i18n/tr";
@@ -24,11 +24,10 @@ export default function GamesPage({ params }: { params: Promise<{ slug: string }
   const ready = GAMES.filter((game) => game.href);
   const soon = GAMES.filter((game) => !game.href);
   const soonIcon: Record<string, typeof Hash> = { nechta: Hash };
-  // Har o'yin kartasida o'z rasmlari va «nimasi bor» yorlig'i
-  const pick = (ids: string[]): GameItem[] => SOUND_ANIMALS.filter((animal) => ids.includes(animal.id));
-  const cards: Record<string, { images: GameItem[]; chip: string }> = {
-    "juftini-top": { images: TOPICS.flatMap((topic) => topicCover(topic)).slice(0, 4), chip: tr("{0} mavzu", TOPICS.length) },
-    "kim-qichqirdi": { images: pick(["rooster", "cow", "duck", "sheep"]), chip: tr("{0} ta hayvon", SOUND_ANIMALS.length) },
+  // Har o'yin kartasida «nimasi bor» yorlig'i; banner — banners.tsx
+  const chips: Record<string, string> = {
+    "juftini-top": tr("{0} mavzu", TOPICS.length),
+    "kim-qichqirdi": tr("{0} ta hayvon", SOUND_ANIMALS.length),
   };
 
   return (
@@ -38,28 +37,15 @@ export default function GamesPage({ params }: { params: Promise<{ slug: string }
       <ul className="mt-5 space-y-3">
         {ready.map((game) => {
           const tone = TONE[game.tone];
-          const card = cards[game.id];
+          const Banner = GAME_BANNERS[game.id];
+          const chip = chips[game.id];
           return (
             <li key={game.id}>
               <Link
                 href={`${base}${game.href}`}
                 className="block overflow-hidden rounded-[var(--p-radius)] bg-[var(--p-card)] shadow-[var(--p-shadow)] transition-transform active:scale-[0.99]"
               >
-                <div className="relative flex h-[132px] items-center justify-center gap-3" style={{ background: tone.soft }}>
-                  {card?.images.map((item, i) => (
-                    <span
-                      key={item.id}
-                      className={clsx(
-                        styles.bob,
-                        "flex h-[68px] w-[68px] items-center justify-center rounded-[18px] bg-[var(--p-card)] shadow-[var(--p-shadow)]",
-                        i % 2 ? "translate-y-2 -rotate-6" : "-translate-y-1 rotate-6",
-                      )}
-                      style={{ animationDelay: `${i * 0.4}s` }}
-                    >
-                      <img src={item.image} alt="" draggable={false} className="h-12 w-12 object-contain" />
-                    </span>
-                  ))}
-                </div>
+                {Banner && <Banner />}
                 <div className="flex items-center gap-3 p-4">
                   <div className="min-w-0 flex-1">
                     <p className={clsx(parentStyles.roundedFont, "text-[21px] font-extrabold text-[var(--p-ink)]")}>{tr(game.title)}</p>
@@ -71,9 +57,9 @@ export default function GamesPage({ params }: { params: Promise<{ slug: string }
                       <span className="rounded-full bg-[var(--p-sunken)] px-2.5 py-1 text-[12px] font-semibold text-[var(--p-muted)]">
                         {tr(game.skill)}
                       </span>
-                      {card && (
+                      {chip && (
                         <span className="rounded-full bg-[var(--p-sunken)] px-2.5 py-1 text-[12px] font-semibold text-[var(--p-muted)]">
-                          {card.chip}
+                          {chip}
                         </span>
                       )}
                     </div>
