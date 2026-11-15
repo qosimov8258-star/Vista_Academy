@@ -227,7 +227,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
           style={{ background: HERO_GRADIENT }}
           aria-hidden="true"
         >
-          {initials(parent.fullName)}
+          {lettersOf(parent.fullName)}
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-[13px] leading-tight text-[var(--p-muted)]">{tr(greetingKey())}</p>
@@ -298,7 +298,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
               />
             ) : (
               <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-white/20 text-[21px] font-semibold ring-2 ring-white/40">
-                {initials(child.fullName)}
+                {lettersOf(child.fullName)}
               </span>
             )}
             <div className="min-w-0 flex-1">
@@ -494,6 +494,18 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
 
 type QuickAction = { key: string; label: string; icon: AnyIcon; tint: IosTint; href?: string; onClick?: () => void };
 
+/** Bosh harflar — faqat harflardan («[SINOV] Ali Vali» → «AV»); harf topilmasa umumiy `initials` */
+function lettersOf(name: string): string {
+  const letters = name
+    .split(/\s+/)
+    .map((word) => word.match(/\p{L}/u)?.[0] ?? "")
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+  return letters || initials(name);
+}
+
 /** Vaqtga qarab salomlashuv (qurilma soati bo'yicha) */
 function greetingKey(): string {
   const hour = new Date().getHours();
@@ -591,7 +603,7 @@ function AttendanceCard({ strip }: { strip: ParentAttendanceStrip }) {
             <span className="text-[21px] font-bold leading-none tabular-nums text-[var(--p-ink)]">
               {rate === null ? "—" : `${Math.round(rate * 100)}%`}
             </span>
-            <span className="mt-1 text-[11px] text-[var(--p-muted)]">{tr("keldi")}</span>
+            {rate !== null && <span className="mt-1 text-[11px] text-[var(--p-muted)]">{tr("keldi")}</span>}
           </div>
         </div>
 
