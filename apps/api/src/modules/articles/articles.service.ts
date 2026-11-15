@@ -177,9 +177,19 @@ export class ArticlesService {
   }
 
   async coverForParent(parent: AuthenticatedParent, id: string) {
+    await this.assertVisibleToParent(parent, id);
+    return this.coverMedia(id);
+  }
+
+  /** Ota-ona shu maqolani ko'ra oladimi (filial/guruh, e'lon qilingan, o'chirilmagan) */
+  async assertVisibleToParent(parent: AuthenticatedParent, id: string) {
     const visible = await this.prisma.article.count({ where: { AND: [{ id }, await this.parentWhere(parent)] } });
     if (!visible) throw new NotFoundException("Maqola topilmadi");
-    return this.coverMedia(id);
+  }
+
+  /** Xodim shu maqolani ko'ra oladimi — ro'yxatdagi qoidalar bilan bir xil */
+  async assertVisibleToStaff(scope: TenantScope, id: string) {
+    await this.requireVisible(scope, id);
   }
 
   // ---------------------------------------------------------------------

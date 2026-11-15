@@ -13,13 +13,15 @@ import { ChipRow, IosChip } from "@/components/ios/filters";
 import { UsefulScreen, UsefulViewSheet } from "@/features/useful/useful-parts";
 import { ArticleReading, ArticleSheet, ArticleThumb, articleCoverUrl, articleParagraphs } from "@/features/articles/article-sheet";
 import { ARTICLE_CATEGORIES, ARTICLE_CATEGORY_ORDER } from "@/features/articles/categories";
+import { StaffArticleFeedback } from "@/features/articles/staff-feedback";
 import { useTr } from "@/i18n/tr";
 
 /**
  * Foydali → Maqolalar («Ota-onalarga eslatma»). Xodimlar ota-onalar uchun
  * qisqa maqola yozadi; qator bosilsa ota-onalar ko'radigan ko'rinish
  * ochiladi, tahrirlash va o'chirish o'sha varaqda (tarbiyachi — faqat o'zi
- * yozganini, filial admini va administrator — hammasini).
+ * yozganini, filial admini va administrator — hammasini). Varaqda —
+ * ota-onalar fikri: anonim baho soni va izohlar (javob, o'chirish).
  */
 export default function ArticlesPage({ params }: { params: Promise<{ slug: string }> }) {
   const tr = useTr();
@@ -105,7 +107,12 @@ export default function ArticlesPage({ params }: { params: Promise<{ slug: strin
       items={articles.map((a) => ({
         id: a.id,
         title: a.title,
-        meta: [tr(ARTICLE_CATEGORIES[a.category].label), tr("{0} daqiqa", a.readMinutes), tr(a.group?.name ?? "Butun filial")].join(" · "),
+        meta: [
+          tr(ARTICLE_CATEGORIES[a.category].label),
+          tr("{0} daqiqa", a.readMinutes),
+          tr(a.group?.name ?? "Butun filial"),
+          ...(a.feedback?.comments ? [tr("{0} izoh", a.feedback.comments)] : []),
+        ].join(" · "),
         draft: a.status === "DRAFT",
         searchText: `${a.summary} ${a.body} ${a.tips.map((t) => `${t.title} ${t.text}`).join(" ")}`,
         leading: <ArticleThumb article={a} />,
@@ -147,6 +154,7 @@ export default function ArticlesPage({ params }: { params: Promise<{ slug: strin
             tips={viewing.tips}
             memo={viewing.memo}
           />
+          {viewing.status === "PUBLISHED" && <StaffArticleFeedback key={viewing.id} articleId={viewing.id} slug={slug} />}
         </UsefulViewSheet>
       )}
 

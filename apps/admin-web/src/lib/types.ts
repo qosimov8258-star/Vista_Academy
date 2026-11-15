@@ -1509,6 +1509,8 @@ export interface Article {
   group: UsefulGroupRef | null;
   hasCover: boolean;
   readMinutes: number;
+  /** Ota-onalar bahosi (anonim, faqat son) va izohlar soni */
+  feedback?: { likes: number; dislikes: number; comments: number };
 }
 
 /** `GET/POST/PATCH /app/gallery` — bolalar ishlari (xodim tomoni). */

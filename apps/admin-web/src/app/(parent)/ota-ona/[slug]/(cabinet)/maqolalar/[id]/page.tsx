@@ -6,13 +6,14 @@ import { Bookmark, Check, Clock, Share2 } from "lucide-react";
 import parentStyles from "../../../parent.module.css";
 import { articleCoverUrl, categoryLabel, useParentArticle } from "../../foydali-content";
 import { FoydaliHeader, ListSkeleton, LoadErrorCard, NotFoundCard } from "../../foydali/ui";
+import { ArticleFeedbackSection } from "./article-feedback";
 import { ApiError } from "@/lib/api";
 import { useTr } from "@/i18n/tr";
 
 /**
  * Bitta maqola: muqova, matn, «Hozir nima qilish mumkin» ro'yxati va
  * pastda «Eslatma» — uni oila a'zolariga ulashish mumkin (bitta yondashuv
- * butun oilada ishlasin).
+ * butun oilada ishlasin). Ostida — anonim baho va izohlar.
  */
 export default function ArticlePage({ params }: { params: Promise<{ slug: string; id: string }> }) {
   const tr = useTr();
@@ -127,6 +128,8 @@ export default function ArticlePage({ params }: { params: Promise<{ slug: string
           </div>
         </article>
       )}
+
+      {article && <ArticleFeedbackSection article={article} />}
     </div>
   );
 }

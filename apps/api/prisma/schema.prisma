@@ -241,6 +241,7 @@ model TenantUser {
   proverbs                Proverb[]
   tales                   Tale[]
   articles                Article[]
+  articleComments         ArticleComment[]
   galleryItems            GalleryItem[]
   reviewedPaymentReceipts PaymentReceipt[]     @relation("PaymentReceiptReviewer")
   updatedPaymentCards     PaymentCard[]        @relation("PaymentCardUpdater")
@@ -2149,6 +2150,8 @@ model Guardian {
   organization      Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   children          ChildGuardian[]
   galleryLikes      GalleryLike[]
+  articleReactions  ArticleReaction[]
+  articleComments   ArticleComment[]
   refreshTokens     GuardianRefreshToken[]
   paymentReceipts   PaymentReceipt[]
   pushSubscriptions GuardianPushSubscription[]
@@ -2954,9 +2957,55 @@ model Article {
   branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
   group        Group?       @relation(fields: [groupId], references: [id], onDelete: SetNull)
   createdBy    TenantUser   @relation(fields: [createdById], references: [id])
+  reactions    ArticleReaction[]
+  comments     ArticleComment[]
 
   @@index([branchId, status])
   @@map("articles")
+}
+
+enum ArticleReactionKind {
+  LIKE
+  DISLIKE
+}
+
+/// Ota-onaning maqolaga bahosi — anonim: boshqalar faqat sonini ko'radi
+model ArticleReaction {
+  articleId  String              @map("article_id")
+  guardianId String              @map("guardian_id")
+  kind       ArticleReactionKind
+  createdAt  DateTime            @default(now()) @map("created_at")
+  updatedAt  DateTime            @updatedAt @map("updated_at")
+
+  article  Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  guardian Guardian @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+
+  @@id([articleId, guardianId])
+  @@index([guardianId])
+  @@map("article_reactions")
+}
+
+/// Maqola ostidagi izoh — anonim emas. Ota-ona yoki xodim (bog'cha nomidan) yozadi;
+/// maqolani ko'ra oladigan hamma ko'radi. Javob faqat bir daraja (parentId — yuqori izoh).
+model ArticleComment {
+  id          String    @id @default(uuid())
+  articleId   String    @map("article_id")
+  parentId    String?   @map("parent_id")
+  guardianId  String?   @map("guardian_id")
+  staffUserId String?   @map("staff_user_id")
+  body        String
+  createdAt   DateTime  @default(now()) @map("created_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  article   Article          @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  parent    ArticleComment?  @relation("ArticleCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   ArticleComment[] @relation("ArticleCommentReplies")
+  guardian  Guardian?        @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+  staffUser TenantUser?      @relation(fields: [staffUserId], references: [id], onDelete: SetNull)
+
+  @@index([articleId, createdAt])
+  @@index([parentId])
+  @@map("article_comments")
 }
 
 /// Bolalar ishi (rasm, kardon, loy ishi) surati — filialdagi hamma ota-onalar ko'radi

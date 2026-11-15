@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { IconProps } from "@/components/ui/icons";
 import { PARENT_API_URL, parentApi } from "@/lib/parent-api";
+import type { ArticleCommentItem, ArticleReactionKind } from "@/features/articles/comment-thread";
 
 /**
  * Ota-onalar uchun «Maqolalar» va «Galereya» — umumiy turlar, so'rovlar va
@@ -11,6 +12,10 @@ import { PARENT_API_URL, parentApi } from "@/lib/parent-api";
  *   GET  /app/parent/articles            → ParentArticleSummary[]
  *   GET  /app/parent/articles/:id        → ParentArticle
  *   GET  /app/parent/articles/:id/cover  → rasm
+ *   PUT  /app/parent/articles/:id/reaction            → ArticleFeedback (anonim)
+ *   GET  /app/parent/articles/:id/comments            → ArticleCommentItem[]
+ *   POST /app/parent/articles/:id/comments            → ArticleCommentItem
+ *   DELETE /app/parent/articles/:id/comments/:cid     → { id } (faqat o'ziniki)
  *   GET  /app/parent/gallery             → ParentGalleryItem[]
  *   POST /app/parent/gallery/:id/like    → { liked, likesCount }
  *   GET  /app/parent/gallery/:id/image   → rasm
@@ -44,10 +49,19 @@ export interface ParentArticleSummary {
   addedAt: string;
 }
 
+/** Baho anonim: faqat sonlar va o'z bahosi keladi */
+export interface ArticleFeedback {
+  likes: number;
+  dislikes: number;
+  comments: number;
+  myReaction: ArticleReactionKind | null;
+}
+
 export interface ParentArticle extends ParentArticleSummary {
   paragraphs: string[];
   tips: Array<{ title: string; text: string }>;
   memo: string | null;
+  feedback?: ArticleFeedback;
 }
 
 export interface ParentGalleryItem {
@@ -159,4 +173,70 @@ export function GalleryIcon(props: IconProps) {
       <path d="m4.4 17.6 3.9-4 2.6 2.6 4.4-4.9 4.6 5" />
     </svg>
   );
+}
+
+// ---------------------------------------------------------------------
+// Maqolaga fikr: layk/dizlayk (anonim) va izohlar (ism bilan)
+// ---------------------------------------------------------------------
+
+const EMPTY_FEEDBACK: ArticleFeedback = { likes: 0, dislikes: 0, comments: 0, myReaction: null };
+
+/** Baho darhol ekranda o'zgaradi; server javobi bilan tekshiriladi, xato bo'lsa qaytadi */
+export function useArticleReaction(articleId: string) {
+  const queryClient = useQueryClient();
+  const key = ["parent-article", articleId];
+  return useMutation({
+    mutationFn: (kind: ArticleReactionKind | null) =>
+      parentApi.put<ArticleFeedback>(`/app/parent/articles/${articleId}/reaction`, { kind }),
+    onMutate: async (kind) => {
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<ParentArticle>(key);
+      queryClient.setQueryData<ParentArticle>(key, (article) => {
+        if (!article) return article;
+        const feedback = { ...(article.feedback ?? EMPTY_FEEDBACK) };
+        if (feedback.myReaction === "LIKE") feedback.likes = Math.max(0, feedback.likes - 1);
+        if (feedback.myReaction === "DISLIKE") feedback.dislikes = Math.max(0, feedback.dislikes - 1);
+        if (kind === "LIKE") feedback.likes += 1;
+        if (kind === "DISLIKE") feedback.dislikes += 1;
+        feedback.myReaction = kind;
+        return { ...article, feedback };
+      });
+      return { previous };
+    },
+    onError: (_error, _kind, context) => {
+      if (context?.previous) queryClient.setQueryData(key, context.previous);
+    },
+    onSuccess: (feedback) => {
+      queryClient.setQueryData<ParentArticle>(key, (article) => (article ? { ...article, feedback } : article));
+    },
+  });
+}
+
+/** Izohlar — sahifa ochiq turganda boshqalarning yangi izohlari ham kelib turadi */
+export function useArticleComments(articleId: string) {
+  return useQuery({
+    queryKey: ["parent-article-comments", articleId],
+    queryFn: () => parentApi.get<ArticleCommentItem[]>(`/app/parent/articles/${articleId}/comments`),
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
+    retry: false,
+  });
+}
+
+export function useArticleCommentActions(articleId: string) {
+  const queryClient = useQueryClient();
+  const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: ["parent-article-comments", articleId] });
+    void queryClient.invalidateQueries({ queryKey: ["parent-article", articleId] });
+  };
+  const create = useMutation({
+    mutationFn: (input: { body: string; parentId?: string }) =>
+      parentApi.post<ArticleCommentItem>(`/app/parent/articles/${articleId}/comments`, input),
+    onSuccess: refresh,
+  });
+  const remove = useMutation({
+    mutationFn: (commentId: string) => parentApi.delete<{ id: string }>(`/app/parent/articles/${articleId}/comments/${commentId}`),
+    onSuccess: refresh,
+  });
+  return { create, remove };
 }
