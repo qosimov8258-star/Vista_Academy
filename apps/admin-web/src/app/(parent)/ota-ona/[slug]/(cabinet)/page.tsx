@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
+import { Moon, Smile, Utensils, type LucideIcon } from "lucide-react";
 import { ApiError } from "@/lib/api";
 import { PARENT_API_URL, parentApi } from "@/lib/parent-api";
 import type {
@@ -336,16 +337,19 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
               {reportsOn && (
               <div className="!mt-2.5 grid grid-cols-3 gap-3">
                 <MiniCard
+                  icon={Smile}
                   label={tr("Kayfiyat")}
                   value={day.report?.mood ? MOOD[day.report.mood].label : "—"}
                   tone={day.report?.mood ? MOOD[day.report.mood].tone : "lilac"}
                 />
                 <MiniCard
+                  icon={Utensils}
                   label={tr("Ovqat")}
                   value={day.report?.eatingQuality ? EATING[day.report.eatingQuality].label.split(" ")[0] : "—"}
                   tone={day.report?.eatingQuality ? EATING[day.report.eatingQuality].tone : "lilac"}
                 />
                 <MiniCard
+                  icon={Moon}
                   label={tr("Uyqu")}
                   value={day.report?.sleepMinutes != null ? sleepLabel(day.report.sleepMinutes) : "—"}
                   tone="sky"
@@ -479,12 +483,12 @@ function Tally({ count, label, dot }: { count: number; label: string; dot: strin
   );
 }
 
-function MiniCard({ label, value, tone }: { label: string; value: string; tone: string }) {
+function MiniCard({ label, value, tone, icon: Icon }: { label: string; value: string; tone: string; icon: LucideIcon }) {
   const tr = useTr();
   return (
     <div className="rounded-[var(--p-radius)] bg-[var(--p-card)] px-2.5 py-3.5 text-center shadow-[var(--p-shadow)] min-[360px]:px-3">
-      <span className={clsx("mx-auto flex h-9 w-9 items-center justify-center rounded-full text-[13px] font-bold", TONE_BG[tone])}>
-        {tr(label[0])}
+      <span className={clsx("mx-auto flex h-9 w-9 items-center justify-center rounded-full", TONE_BG[tone])}>
+        <Icon className="h-[18px] w-[18px]" strokeWidth={2.2} aria-hidden="true" />
       </span>
       <p className="mt-2 text-[12.5px] font-medium text-[var(--p-muted)]">{tr(label)}</p>
       <p className="mt-0.5 text-[clamp(13px,3.8vw,15px)] font-semibold leading-tight text-[var(--p-ink)]">{tr(value)}</p>
