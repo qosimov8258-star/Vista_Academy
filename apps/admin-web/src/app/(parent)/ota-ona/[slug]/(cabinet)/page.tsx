@@ -211,7 +211,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
       isOn("groupMaterials") ? { key: "fayllar", label: tr("Fayllar"), icon: FolderOpen, tint: "orange", href: `${base}/fayllar` } : null,
       // Do'kon «Yana» ichida qoladi; bu yerda — bog'cha xabarlari, o'qilmaganlar soni bilan
       isOn("notifications")
-        ? { key: "xabarlar", label: tr("Bildirishnomalar"), icon: Bell, tint: "indigo", href: `${base}/xabarlar`, badge: newMessages.length }
+        ? { key: "xabarlar", label: softHyphen(tr("Bildirishnomalar")), icon: Bell, tint: "indigo", href: `${base}/xabarlar`, badge: newMessages.length }
         : null,
       isOn("diary") ? { key: "kundalik", label: tr("Kundalik"), icon: NotebookPen, tint: "purple", href: `${base}/kundalik` } : null,
       isOn("lessons") ? { key: "jadval", label: tr("Jadval"), icon: CalendarDays, tint: "red", href: `${base}/jadval` } : null,
@@ -517,6 +517,15 @@ type QuickAction = {
   /** Ikonka burchagidagi qizil son (iOS ilova belgisidek); 0 bo'lsa chiqmaydi */
   badge?: number;
 };
+
+/**
+ * Uzun so'z ikonka ostiga sig'masa, harfma-harf emas, bo'g'in chegarasida
+ * chiziqcha bilan bo'linsin («Bildirish-nomalar»). Brauzerda o'zbekcha
+ * avtomatik bo'g'in lug'ati yo'q — shuning uchun yumshoq chiziqcha (U+00AD).
+ */
+function softHyphen(label: string): string {
+  return label.replace("Bildirishnomalar", "Bildirish\u00ADnomalar");
+}
 
 /** Bosh harflar — faqat harflardan («[SINOV] Ali Vali» → «AV»); harf topilmasa umumiy `initials` */
 function lettersOf(name: string): string {
