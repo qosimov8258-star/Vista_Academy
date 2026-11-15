@@ -64,7 +64,7 @@ function readCachedDark(): boolean {
  * oq bo'lib chaqnab, keyin qorayib ketmasin. Qobiqda `suppressHydrationWarning`
  * bor — React shu atributni gidratsiyada nomuvofiq deb hisoblamaydi.
  */
-const BOOT_SCRIPT = `try{if(localStorage.getItem("${EFFECTIVE_KEY}")==="dark")document.currentScript.parentElement.setAttribute("data-theme","dark")}catch(e){}`;
+const BOOT_SCRIPT = `try{if(localStorage.getItem("${EFFECTIVE_KEY}")==="dark"&&!/^(\\/ota-ona\\/[^/]+)?\\/?$/.test(location.pathname))document.currentScript.parentElement.setAttribute("data-theme","dark")}catch(e){}`;
 
 const noopSubscribe = () => () => undefined;
 
@@ -86,7 +86,8 @@ export function CabinetThemeProvider({ slug, children }: { slug: string; childre
   const [mounted, setMounted] = useState(false);
   const [cachedDark, setCachedDark] = useState(false);
   const serverRendered = useIsServerRendered();
-  // Bosh sahifa iOS uslubida — oq, tekis fon (qolgan bo'limlarda iliq osmon)
+  // Bosh sahifa iOS uslubida — doim yorug', oq tekis fon (egasining qarori,
+  // 2026-11-16). Qolgan bo'limlarda iliq osmon va tanlangan ko'rinish rejimi.
   const pathname = useAppPathname();
   const home = pathname === `/ota-ona/${slug}` || pathname === `/ota-ona/${slug}/`;
 
@@ -125,13 +126,15 @@ export function CabinetThemeProvider({ slug, children }: { slug: string; childre
     }
   }, []);
 
-  const value = useMemo<CabinetTheme>(() => ({ mode, setMode, dark, sky }), [mode, setMode, dark, sky]);
+  // Saqlanadigan holat (`dark`) — tanlangan rejim bo'yicha; ekranda esa bosh sahifa doim yorug'
+  const shownDark = dark && !home;
+  const value = useMemo<CabinetTheme>(() => ({ mode, setMode, dark: shownDark, sky }), [mode, setMode, shownDark, sky]);
 
   return (
     <ThemeContext.Provider value={value}>
       <div
         className={`${styles.shell} ${home ? styles.plain : styles.sky} min-h-[100dvh]`}
-        data-theme={mounted ? (dark ? "dark" : "light") : undefined}
+        data-theme={mounted ? (shownDark ? "dark" : "light") : undefined}
         suppressHydrationWarning
       >
         {serverRendered && <script dangerouslySetInnerHTML={{ __html: BOOT_SCRIPT }} />}

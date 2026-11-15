@@ -21,11 +21,9 @@ import { formatMoney } from "@/lib/format";
 import { prepareReceiptPhoto } from "@/lib/receipt-photo";
 import { initials } from "@/components/ui/avatar";
 import styles from "../parent.module.css";
-import { CardFx } from "./card-fx";
 import { NotifyTeacher } from "./notify-teacher";
 import { ChildSwitcher } from "./child-switcher";
 import { useSelectedChild } from "./use-selected-child";
-import { useCabinetTheme } from "./theme";
 import { useParentMessages } from "./use-messages";
 import { useParentFeatures } from "./use-parent-features";
 import { FoydaliCards } from "./foydali-cards";
@@ -144,9 +142,6 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
     },
   });
 
-  // Osmon holati qobiqda hisoblanadi — karta ham, ko'rinish rejimi ham shundan
-  const { sky } = useCabinetTheme();
-
   if (meQuery.isLoading) {
     return (
       <div className="flex min-h-[60dvh] items-center justify-center">
@@ -201,8 +196,8 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
 
         {/* Bola kartochkasi */}
         {child && (
-          <section className={`${styles.pop} ${styles.childCard} mt-5 rounded-[var(--p-radius)] p-5 shadow-[var(--p-shadow)]`}>
-            <CardFx rainbow sky={sky} />
+          // Toza oq iOS kartasi — osmon effektlari (CardFx) bosh sahifada ishlatilmaydi
+          <section className={`${styles.pop} mt-6 rounded-[var(--p-radius)] bg-[var(--p-card)] p-5 shadow-[var(--p-shadow)]`}>
             <div className="flex items-center gap-4">
               <div className={styles.float}>
                 {child.avatarUpdatedAt ? (
@@ -210,10 +205,10 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
                   <img
                     src={`${PARENT_API_URL}/app/parent/children/${child.id}/avatar?v=${encodeURIComponent(child.avatarUpdatedAt)}`}
                     alt={tr(child.fullName)}
-                    className="h-[72px] w-[72px] rounded-full object-cover ring-4 ring-[var(--p-sun)]/25"
+                    className="h-[72px] w-[72px] rounded-full object-cover ring-4 ring-[var(--p-sunken)]"
                   />
                 ) : (
-                  <span className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-[var(--p-sun)]/20 text-[22px] font-bold text-[var(--p-sun-ink)] ring-4 ring-[var(--p-sun)]/15">
+                  <span className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-[var(--p-sky)]/12 text-[22px] font-bold text-[var(--p-sky-ink)] ring-4 ring-[var(--p-sunken)]">
                     {initials(child.fullName)}
                   </span>
                 )}
