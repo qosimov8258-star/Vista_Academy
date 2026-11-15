@@ -3522,5 +3522,9 @@
  "Tasodifiy": "Random",
  "Budilnik": "Alarm clock",
  "Yangi oy": "Crescent moon",
- "{0} ta yangi": "{0} new"
+ "{0} ta yangi": "{0} new",
+ "Dars davomati": "Lesson attendance",
+ "Bugun {0} ta dars": "{0} lessons today",
+ "Bugun dars yo'q": "No lessons today",
+ "Vazifa": "Task"
 }

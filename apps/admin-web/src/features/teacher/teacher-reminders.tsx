@@ -16,7 +16,7 @@ import { useTr } from "@/i18n/tr";
  * kalitlar: bir joyda belgilansa, ikkinchisida ham yangilanadi.
  * Eslatma bo'lmasa hech narsa chizilmaydi.
  */
-function TeacherRemindersInner({ slug, branchId, date }: { slug: string; branchId: string; date: string }) {
+function TeacherRemindersInner({ slug, branchId, date, large }: { slug: string; branchId: string; date: string; large?: boolean }) {
   const tr = useTr();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -40,7 +40,7 @@ function TeacherRemindersInner({ slug, branchId, date }: { slug: string; branchI
   const pending = reminders.filter((r) => !r.doneAt).length;
 
   return (
-    <Group title={tr("Bugungi eslatmalar")} action={pending > 0 ? <span className="text-[13px] font-semibold text-[var(--color-warning)]">{tr(pending)} {tr("ta kutilmoqda")}</span> : undefined}>
+    <Group large={large} title={tr("Bugungi eslatmalar")} action={pending > 0 ? <span className="text-[13px] font-semibold text-[var(--color-warning)]">{tr(pending)} {tr("ta kutilmoqda")}</span> : undefined}>
       {reminders.map((r, i) => {
         const done = !!r.doneAt;
         const busy = doneMutation.isPending && doneMutation.variables?.id === r.id;
@@ -85,7 +85,7 @@ function TeacherRemindersInner({ slug, branchId, date }: { slug: string; branchI
 }
 
 /** «Bola eslatmalari» o'chirilgan bo'lsa ro'yxat ham, so'rov ham yo'q */
-export function TeacherReminders(props: { slug: string; branchId: string; date: string }) {
+export function TeacherReminders(props: { slug: string; branchId: string; date: string; large?: boolean }) {
   const on = useFeatureEnabled()("childReminders");
   return on ? <TeacherRemindersInner {...props} /> : null;
 }
