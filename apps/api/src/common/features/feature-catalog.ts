@@ -78,6 +78,8 @@ export const FEATURE_CATALOG: readonly FeatureDefinition[] = [
   { key: "lessons", label: "Qo'shimcha darslar", group: "Kundalik ish", description: "Dars jadvali, xonalar, mavzu, davomat, baholar, fanlar", paths: [/^lesson-/, /^rooms(\/|$)/, /^subjects(\/|$)/, /^children\/[^/]+\/lesson-grades/, /^parent\/children\/[^/]+\/timetable/] },
   { key: "useful", label: "Foydali bo'lim", group: "Kundalik ish", description: "She'r, maqol va ertaklar", paths: [/^useful(\/|$)/, /^parent\/useful/] },
   { key: "diary", label: "Kundalik (diary)", group: "Kundalik ish", description: "Bola kundaligi", paths: [/^diary(\/|$)/, /^parent\/diary/, /^parent\/children\/[^/]+\/diary/] },
+  { key: "articles", label: "Maqolalar", group: "Kundalik ish", description: "Ota-onalarga eslatma: maslahatlar va maqolalar", paths: [/^articles(\/|$)/, /^parent\/articles/] },
+  { key: "gallery", label: "Galereya", group: "Kundalik ish", description: "Bolalar ishlari muzeyi: rasm, kardon va loy ishlari", paths: [/^gallery(\/|$)/, /^parent\/gallery/] },
   { key: "groupMaterials", label: "Guruh materiallari", group: "Kundalik ish", description: "Guruhga yuklangan rasm, ovoz va hujjatlar (ota-onada «Fayllar»)", paths: [/^group-materials(\/|$)/, /^parent\/materials(\/|$)/, /^parent\/children\/[^/]+\/materials/] },
   { key: "notifications", label: "Bildirishnomalar", group: "Kundalik ish", description: "Ota-onalarga xabar yuborish", paths: [/^notifications(\/|$)/, /^broadcasts(\/|$)/, /^parent\/push/, /^parent\/messages/, only(["POST"], /^cash\/debtors\/[^/]+\/remind/)] },
 

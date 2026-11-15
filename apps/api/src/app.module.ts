@@ -55,6 +55,8 @@ import { NotificationsModule } from "./modules/notifications/notifications.modul
 import { ExportsModule } from "./modules/exports/exports.module";
 import { ParentModule } from "./modules/parent/parent.module";
 import { UsefulModule } from "./modules/useful/useful.module";
+import { ArticlesModule } from "./modules/articles/articles.module";
+import { GalleryModule } from "./modules/gallery/gallery.module";
 import { DiaryModule } from "./modules/diary/diary.module";
 import { GroupMaterialsModule } from "./modules/group-materials/group-materials.module";
 import { LandingModule } from "./modules/landing/landing.module";
@@ -115,6 +117,8 @@ import { BroadcastsModule } from "./modules/broadcasts/broadcasts.module";
     ExportsModule,
     ParentModule,
     UsefulModule,
+    ArticlesModule,
+    GalleryModule,
     DiaryModule,
     GroupMaterialsModule,
     LandingModule,

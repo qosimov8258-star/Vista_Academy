@@ -16,4 +16,6 @@ export const R2_CATEGORY = {
   DIARY_POSTER: "diary-poster",
   STAFF_DOCUMENT: "staff-document",
   GROUP_MATERIAL: "group-material",
+  ARTICLE_COVER: "article-cover",
+  GALLERY_IMAGE: "gallery-image",
 } as const;

@@ -158,6 +158,8 @@ model Organization {
   poems                     Poem[]
   proverbs                  Proverb[]
   tales                     Tale[]
+  articles                  Article[]
+  galleryItems              GalleryItem[]
   faceIdDevices             FaceIdDevice[]
   faceIdAgents              FaceIdAgent[]
   faceIdAgentPairingCodes   FaceIdAgentPairingCode[]
@@ -238,6 +240,8 @@ model TenantUser {
   poems                   Poem[]
   proverbs                Proverb[]
   tales                   Tale[]
+  articles                Article[]
+  galleryItems            GalleryItem[]
   reviewedPaymentReceipts PaymentReceipt[]     @relation("PaymentReceiptReviewer")
   updatedPaymentCards     PaymentCard[]        @relation("PaymentCardUpdater")
 
@@ -353,6 +357,8 @@ model Branch {
   poems                     Poem[]
   proverbs                  Proverb[]
   tales                     Tale[]
+  articles                  Article[]
+  galleryItems              GalleryItem[]
   faceIdDevices             FaceIdDevice[]
   faceIdAgents              FaceIdAgent[]
   faceIdAgentPairingCodes   FaceIdAgentPairingCode[]
@@ -414,6 +420,8 @@ model Group {
   poems             Poem[]
   proverbs          Proverb[]
   tales             Tale[]
+  articles          Article[]
+  galleryItems      GalleryItem[]
   diaryRoutine      DiaryRoutineItem[]
   diaryEntries      DiaryEntry[]
   diaryMedia        DiaryMedia[]
@@ -2140,6 +2148,7 @@ model Guardian {
 
   organization      Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   children          ChildGuardian[]
+  galleryLikes      GalleryLike[]
   refreshTokens     GuardianRefreshToken[]
   paymentReceipts   PaymentReceipt[]
   pushSubscriptions GuardianPushSubscription[]
@@ -2898,4 +2907,94 @@ model GroupMaterial {
 
   @@index([groupId, createdAt])
   @@map("group_materials")
+}
+
+// ---------------------------------------------------------------------------
+// Ota-onalar uchun maqolalar va bolalar ishlari galereyasi
+// ---------------------------------------------------------------------------
+
+/// Maqola mavzusi — ota-ona kabinetida filtr sifatida chiqadi
+enum ArticleCategory {
+  PSYCHOLOGY
+  DEVELOPMENT
+  HEALTH
+  NUTRITION
+  FAMILY
+  ADAPTATION
+  HOME_GAMES
+}
+
+/// «Ota-onalarga eslatma» — bog'cha (admin, tarbiyachi) yozadigan maqola
+model Article {
+  id             String          @id @default(uuid())
+  organizationId String          @map("organization_id")
+  branchId       String          @map("branch_id")
+  /// null — filialdagi barcha guruhlar uchun
+  groupId        String?         @map("group_id")
+  category       ArticleCategory
+  title          String
+  /// Ro'yxatda chiqadigan qisqa izoh (1–2 jumla)
+  summary        String
+  /// Asosiy matn; xatboshilar bo'sh qator bilan ajratiladi
+  body           String
+  /// «Hozir nima qilish mumkin» — [{ title, text }]
+  tips           Json            @default("[]")
+  /// Pastdagi «Eslatma» bloki
+  memo           String?
+  cover          Bytes?
+  coverKey       String?         @map("cover_key")
+  coverMimeType  String?         @map("cover_mime_type")
+  status         UsefulStatus    @default(PUBLISHED)
+  createdById    String          @map("created_by_id")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+  deletedAt      DateTime?       @map("deleted_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  group        Group?       @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  createdBy    TenantUser   @relation(fields: [createdById], references: [id])
+
+  @@index([branchId, status])
+  @@map("articles")
+}
+
+/// Bolalar ishi (rasm, kardon, loy ishi) surati — filialdagi hamma ota-onalar ko'radi
+model GalleryItem {
+  id             String    @id @default(uuid())
+  organizationId String    @map("organization_id")
+  branchId       String    @map("branch_id")
+  groupId        String    @map("group_id")
+  /// Ixtiyoriy nom: «Quyoshli uy», «Tipratikan»
+  title          String?
+  image          Bytes?
+  imageKey       String?   @map("image_key")
+  imageMimeType  String    @map("image_mime_type")
+  likesCount     Int       @default(0) @map("likes_count")
+  createdById    String    @map("created_by_id")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch        @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  group        Group         @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  createdBy    TenantUser    @relation(fields: [createdById], references: [id])
+  likes        GalleryLike[]
+
+  @@index([branchId, createdAt])
+  @@map("gallery_items")
+}
+
+/// Ota-onaning «Yoqdi» belgisi — bitta ishga bittadan
+model GalleryLike {
+  itemId     String   @map("item_id")
+  guardianId String   @map("guardian_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  item     GalleryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  guardian Guardian    @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+
+  @@id([itemId, guardianId])
+  @@index([guardianId])
+  @@map("gallery_likes")
 }
