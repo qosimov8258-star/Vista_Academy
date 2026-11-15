@@ -6,7 +6,7 @@ import clsx from "clsx";
 import { RotateCcw, Volume2, VolumeX } from "lucide-react";
 import parentStyles from "../../../parent.module.css";
 import styles from "../oyinlar.module.css";
-import { nextLevel, starsFor, type GameItem, type Level, type Topic } from "../data";
+import { nextLevel, starsFor, topicTone, type GameItem, type Level, type Topic } from "../data";
 import { useGamesStore } from "../store";
 import { buzz, sfx } from "../sound";
 import { HoldToExit, KidStage, TONE } from "../ui";
@@ -73,7 +73,7 @@ export function MemoryGame({
   const tr = useTr();
   const router = useRouter();
   const store = useGamesStore();
-  const tone = TONE[topic.tone];
+  const tone = TONE[topicTone(topic)];
   const topicsHref = `/ota-ona/${slug}/oyinlar/juftini-top`;
 
   const [round, setRound] = useState(0);

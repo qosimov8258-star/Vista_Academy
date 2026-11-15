@@ -3,7 +3,7 @@
 import clsx from "clsx";
 import { Volume2 } from "lucide-react";
 import styles from "./oyinlar.module.css";
-import { SOUND_ANIMALS, TOPICS, topicCover } from "./data";
+import { SOUND_ANIMALS, TOPICS, findItem } from "./data";
 import { TONE } from "./ui";
 
 /**
@@ -77,8 +77,9 @@ function CardFace({ src, matched, className, style }: { src: string; matched?: b
  * halqa), bittasi hozir ochilgan, qolganlari yopiq. Yonida mavzular yorlig'i.
  */
 export function MemoryBanner() {
-  const [cat, lion] = ["cat", "lion"].map((id) => TOPICS[0].items.find((item) => item.id === id)!);
-  const apple = TOPICS[1].items.find((item) => item.id === "apple")!;
+  const [cat, lion, apple] = ["cat", "lion", "apple"].map((id) => findItem(id)!);
+  // Mavzular ko'p — bannerda bir nechtasining birinchi rasmi va «+N»
+  const shownTopics = TOPICS.filter((topic) => ["yovvoyi", "mevalar", "transport"].includes(topic.id));
   const size = "h-[46px] w-[46px]";
   return (
     <Backdrop tone="mint">
@@ -99,15 +100,20 @@ export function MemoryBanner() {
           </span>
           <span className="text-[13px] font-extrabold text-[var(--p-ink)]">Sher!</span>
         </span>
-        <span className="flex gap-1.5">
-          {TOPICS.map((topic) => (
+        <span className="flex items-center gap-1.5">
+          {shownTopics.map((topic) => (
             <span
               key={topic.id}
               className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--p-card)] shadow-[var(--p-shadow)]"
             >
-              <img src={topicCover(topic)[0]?.image} alt="" draggable={false} className="h-6 w-6 object-contain" />
+              <img src={topic.items[0]?.image} alt="" draggable={false} className="h-6 w-6 object-contain" />
             </span>
           ))}
+          {TOPICS.length > shownTopics.length && (
+            <span className="flex h-9 items-center justify-center rounded-full bg-[var(--p-card)] px-2.5 text-[12.5px] font-bold tabular-nums text-[var(--p-ink)] shadow-[var(--p-shadow)]">
+              +{TOPICS.length - shownTopics.length}
+            </span>
+          )}
         </span>
       </div>
       {/* Pastda yulduzchalar — natija */}

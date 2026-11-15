@@ -5,8 +5,7 @@
  * Rasmlar — Microsoft Fluent Emoji (3D), MIT litsenziyasi:
  * https://github.com/microsoft/fluentui-emoji. `public/_oyinlar/<mavzu>/`
  * ichida saqlanadi — tashqi saytga so'rov ketmaydi, internet sekin bo'lsa
- * ham o'yin ishlaydi. Keyinchalik o'zimizning rasmlar bilan almashtirish
- * uchun faqat shu fayldagi `image` yo'llarini o'zgartirish kifoya.
+ * ham o'yin ishlaydi. Mavzular ro'yxati — topics.ts da.
  *
  * Mavzular boshqa o'yinlarda ham ishlatiladi («Kim qichqirdi?» — hayvonlar,
  * «Nechta?» — mevalar), shuning uchun ular o'yinga bog'lanmagan.
@@ -21,71 +20,46 @@ export type GameItem = {
 
 export type TopicTone = "mint" | "coral" | "sky" | "lilac" | "sun";
 
-export type Topic = {
+/** Mavzular guruhi — mavzu tanlash sahifasida bo'lim sarlavhasi va rang */
+export type TopicGroup = {
   id: string;
   title: string;
-  /** Karta orqa tomonining rangi va mavzu kartasi tusi */
   tone: TopicTone;
-  /** Mavzu kartasida ko'rinadigan 3 ta rasm */
-  cover: [string, string, string];
+};
+
+export type Topic = {
+  id: string;
+  /** Qaysi guruhga kiradi (`TOPIC_GROUPS`) */
+  group: string;
+  title: string;
   items: GameItem[];
 };
 
-const animal = (id: string, name: string): GameItem => ({ id, name, image: `/_oyinlar/hayvonlar/${id}.png` });
-const fruit = (id: string, name: string): GameItem => ({ id, name, image: `/_oyinlar/mevalar/${id}.png` });
-
-export const TOPICS: Topic[] = [
-  {
-    id: "hayvonlar",
-    title: "Hayvonlar",
-    tone: "mint",
-    cover: ["lion", "cat", "rabbit"],
-    items: [
-      animal("cat", "Mushuk"),
-      animal("dog", "Kuchukcha"),
-      animal("cow", "Sigir"),
-      animal("horse", "Ot"),
-      animal("sheep", "Qo'y"),
-      animal("chicken", "Tovuq"),
-      animal("duck", "O'rdak"),
-      animal("rabbit", "Quyon"),
-      animal("elephant", "Fil"),
-      animal("lion", "Sher"),
-      animal("monkey", "Maymun"),
-      animal("bear", "Ayiq"),
-    ],
-  },
-  {
-    id: "mevalar",
-    title: "Mevalar",
-    tone: "coral",
-    cover: ["strawberry", "apple", "banana"],
-    items: [
-      fruit("apple", "Olma"),
-      fruit("pear", "Nok"),
-      fruit("banana", "Banan"),
-      fruit("grapes", "Uzum"),
-      fruit("tangerine", "Mandarin"),
-      fruit("lemon", "Limon"),
-      fruit("strawberry", "Qulupnay"),
-      fruit("cherries", "Gilos"),
-      fruit("watermelon", "Tarvuz"),
-      fruit("peach", "Shaftoli"),
-      fruit("pineapple", "Ananas"),
-      fruit("kiwi", "Kivi"),
-    ],
-  },
-];
-
-/** Hali qo'shilmagan mavzular — ota-ona nima kutayotganini bilsin */
-export const SOON_TOPICS = ["Sabzavotlar", "Transport", "Kasblar", "Ranglar"] as const;
+// Mavzular ko'p bo'lgani uchun alohida faylda (topics.ts)
+import { TOPICS, TOPIC_GROUPS } from "./topics";
+export { TOPICS, TOPIC_GROUPS };
 
 export function findTopic(id: string): Topic | undefined {
   return TOPICS.find((topic) => topic.id === id);
 }
 
+/** Mavzu kartasida ko'rinadigan rasmlar — birinchi uchtasi */
 export function topicCover(topic: Topic): GameItem[] {
-  return topic.cover.map((id) => topic.items.find((item) => item.id === id)).filter((item): item is GameItem => !!item);
+  return topic.items.slice(0, 3);
+}
+
+/** Karta orqa tomonining rangi va mavzu kartasi tusi — guruhnikidan */
+export function topicTone(topic: Topic): TopicTone {
+  return TOPIC_GROUPS.find((group) => group.id === topic.group)?.tone ?? "mint";
+}
+
+/** Rasmni id bo'yicha barcha mavzulardan topadi (bannerlar uchun) */
+export function findItem(id: string): GameItem | undefined {
+  for (const topic of TOPICS) {
+    const item = topic.items.find((entry) => entry.id === id);
+    if (item) return item;
+  }
+  return undefined;
 }
 
 /* ------------------------------------------------------------------------ */

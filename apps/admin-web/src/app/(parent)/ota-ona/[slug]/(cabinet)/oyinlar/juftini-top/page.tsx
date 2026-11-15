@@ -2,17 +2,14 @@
 
 import { use } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { Bus, Carrot, Lightbulb, Palette, Stethoscope } from "lucide-react";
-import parentStyles from "../../../parent.module.css";
-import styles from "../oyinlar.module.css";
-import { LEVELS, SOON_TOPICS, TOPICS, findLevel, topicCover } from "../data";
+import { Lightbulb, Shuffle } from "lucide-react";
+import { LEVELS, TOPICS, TOPIC_GROUPS, findLevel, topicCover } from "../data";
 import { useGamesStore } from "../store";
 import { StarRow, TONE } from "../ui";
 import { FoydaliHeader, SectionLabel } from "../../foydali/ui";
 import { useTr } from "@/i18n/tr";
-
-const SOON_ICONS = { Sabzavotlar: Carrot, Transport: Bus, Kasblar: Stethoscope, Ranglar: Palette } as const;
 
 /**
  * «Juftini top» — daraja va mavzu tanlash. Daraja yuqorida (oxirgi tanlov
@@ -23,6 +20,7 @@ export default function MemoryTopicsPage({ params }: { params: Promise<{ slug: s
   const tr = useTr();
   const { slug } = use(params);
   const base = `/ota-ona/${slug}/oyinlar`;
+  const router = useRouter();
   const store = useGamesStore();
   const level = findLevel(store.level);
 
@@ -63,57 +61,56 @@ export default function MemoryTopicsPage({ params }: { params: Promise<{ slug: s
         </p>
       </section>
 
-      {/* Mavzular */}
+      {/* Mavzular — guruhlarga bo'lingan; bosilishi bilan o'yin boshlanadi */}
       <section className="mt-7">
-        <SectionLabel>{tr("Mavzular")}</SectionLabel>
-        <div className="mt-3 grid grid-cols-2 gap-3">
-          {TOPICS.map((topic) => {
-            const tone = TONE[topic.tone];
-            const result = store.memoryResult(topic.id, level.id);
-            return (
-              <Link
-                key={topic.id}
-                href={`${base}/juftini-top/${topic.id}?daraja=${level.id}`}
-                className="overflow-hidden rounded-[24px] bg-[var(--p-card)] shadow-[var(--p-shadow)] transition-transform active:scale-[0.97]"
-              >
-                <div className="flex h-[104px] items-center justify-center" style={{ background: tone.soft }}>
-                  {topicCover(topic).map((item, i) => (
-                    <img
-                      key={item.id}
-                      src={item.image}
-                      alt=""
-                      draggable={false}
-                      className={clsx(styles.bob, "object-contain", i === 1 ? "z-10 -mx-2 h-[72px] w-[72px]" : "h-[52px] w-[52px]")}
-                      style={{ animationDelay: `${i * 0.5}s` }}
-                    />
-                  ))}
-                </div>
-                <div className="px-3.5 pb-3.5 pt-3">
-                  <p className={clsx(parentStyles.roundedFont, "truncate text-[18px] font-extrabold text-[var(--p-ink)]")}>{tr(topic.title)}</p>
-                  <div className="mt-1 flex items-center justify-between gap-2">
-                    <span className="truncate text-[12.5px] text-[var(--p-muted)]">
-                      {result.plays > 0 ? tr("{0} marta o'ynaldi", result.plays) : tr("{0} ta rasm", topic.items.length)}
-                    </span>
-                    <StarRow count={result.best} size={15} />
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
-          {SOON_TOPICS.map((title) => {
-            const Icon = SOON_ICONS[title];
-            return (
-              <div
-                key={title}
-                className="flex min-h-[96px] flex-col items-center justify-center gap-2 rounded-[24px] border border-dashed border-[var(--p-line)] px-2 py-4 text-center"
-              >
-                <Icon className="h-6 w-6 text-[var(--p-muted)] opacity-70" strokeWidth={2} />
-                <span className="text-[13px] font-semibold leading-tight text-[var(--p-muted)]">{tr(title)}</span>
-                <span className="text-[11.5px] text-[var(--p-muted)] opacity-80">{tr("Tez orada")}</span>
-              </div>
-            );
-          })}
+        <div className="flex items-center justify-between gap-3">
+          <SectionLabel>{tr("Mavzular · {0} ta", TOPICS.length)}</SectionLabel>
+          <button
+            type="button"
+            onClick={() => {
+              const topic = TOPICS[Math.floor(Math.random() * TOPICS.length)];
+              router.push(`${base}/juftini-top/${topic.id}?daraja=${level.id}`);
+            }}
+            className="flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-[var(--p-accent)]/12 px-3.5 text-[13.5px] font-semibold text-[var(--p-accent)] transition-transform active:scale-95"
+          >
+            <Shuffle className="h-4 w-4" strokeWidth={2.3} />
+            {tr("Tasodifiy")}
+          </button>
         </div>
+
+        {TOPIC_GROUPS.map((group) => {
+          const tone = TONE[group.tone];
+          const topics = TOPICS.filter((topic) => topic.group === group.id);
+          if (topics.length === 0) return null;
+          return (
+            <div key={group.id} className="mt-5">
+              <h3 className="px-1 text-[17px] font-semibold tracking-[-0.01em] text-[var(--p-ink)]">{tr(group.title)}</h3>
+              <div className="mt-2.5 grid grid-cols-3 gap-2.5">
+                {topics.map((topic) => {
+                  const result = store.memoryResult(topic.id, level.id);
+                  const cover = topicCover(topic)[0];
+                  return (
+                    <Link
+                      key={topic.id}
+                      href={`${base}/juftini-top/${topic.id}?daraja=${level.id}`}
+                      className="flex min-w-0 flex-col rounded-[20px] bg-[var(--p-card)] p-1.5 shadow-[var(--p-shadow)] transition-transform active:scale-[0.96]"
+                    >
+                      <span className="flex aspect-[4/3] items-center justify-center rounded-[15px]" style={{ background: tone.soft }}>
+                        {cover && <img src={cover.image} alt="" draggable={false} loading="lazy" className="h-[70%] w-auto object-contain" />}
+                      </span>
+                      <span className="flex min-h-[34px] items-center justify-center px-0.5 pt-1.5 text-center text-[12.5px] font-semibold leading-[1.2] text-[var(--p-ink)]">
+                        <span className="line-clamp-2">{tr(topic.title)}</span>
+                      </span>
+                      <span className="flex justify-center pb-1 pt-1">
+                        <StarRow count={result.best} size={12} />
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
       </section>
 
       {/* Qanday o'ynaladi */}
