@@ -35,10 +35,10 @@ type Phase = "ready" | "play" | "correct" | "won";
 const NEXT_DELAY_MS = 1500;
 /** Boshlash tugmasi atrofidagi hayvonlar (faqat bezak) */
 const READY_PICS = [
-  { id: "rooster", left: "-52px", top: "-14px" },
-  { id: "cow", left: "146px", top: "-8px" },
-  { id: "duck", left: "-44px", top: "104px" },
-  { id: "sheep", left: "150px", top: "110px" },
+  { id: "rooster", left: "-66px", top: "-24px" },
+  { id: "cow", left: "170px", top: "-18px" },
+  { id: "duck", left: "-60px", top: "120px" },
+  { id: "sheep", left: "166px", top: "126px" },
 ];
 
 function shuffle<T>(list: readonly T[]): T[] {
