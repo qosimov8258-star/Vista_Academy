@@ -12,6 +12,12 @@ import { parentApi } from "@/lib/parent-api";
 import type { ParentAccount, ParentChild } from "@/lib/types";
 import { useTr } from "@/i18n/tr";
 
+/** «2-guruh», «Группа Солнышко» kabi nomlarga «Guruh» qayta qo'shilmaydi */
+function useGroupLabel() {
+  const tr = useTr();
+  return (name: string) => (/guruh|групп|group/i.test(name) ? name : tr("Guruh «{0}»", name));
+}
+
 /**
  * Bog'cha galereyasi — bolalar ishlari muzeyi. Filialdagi hamma guruhlar
  * ishlari guruh nomi bilan; ota-ona «Yoqdi» bosadi (bitta ishga bitta).
@@ -22,6 +28,7 @@ export default function GalleryPage({ params }: { params: Promise<{ slug: string
   const { slug } = use(params);
   const query = useParentGallery();
   const like = useToggleLike();
+  const groupLabel = useGroupLabel();
   const me = useQuery({
     queryKey: ["parent-me", slug],
     queryFn: () => parentApi.get<{ parent: ParentAccount; children: ParentChild[] }>("/app/parent/me"),
@@ -78,7 +85,7 @@ export default function GalleryPage({ params }: { params: Promise<{ slug: string
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className={clsx(parentStyles.roundedFont, "truncate text-[17px] font-extrabold text-[var(--p-ink)]")}>
-                      {tr("Guruh «{0}»", item.groupName)}
+                      {groupLabel(item.groupName)}
                     </p>
                     <p className="truncate text-[12.5px] text-[var(--p-muted)]">{formatUzDate(item.addedAt)}</p>
                   </div>
@@ -151,6 +158,7 @@ function GroupChip({ active, onClick, children }: { active: boolean; onClick: ()
 /** Butun ekranda ko'rish: qora fon, rasm sig'adi, pastda nomi va «Yoqdi» */
 function Viewer({ item, onClose, onLike }: { item: ParentGalleryItem; onClose: () => void; onLike: (id: string) => void }) {
   const tr = useTr();
+  const groupLabel = useGroupLabel();
   const [host, setHost] = useState<HTMLElement | null>(null);
   useEffect(() => {
     setHost(document.body);
@@ -167,7 +175,7 @@ function Viewer({ item, onClose, onLike }: { item: ParentGalleryItem; onClose: (
   if (!host) return null;
   return createPortal(
     <div
-      className={clsx(parentStyles.fadeIn, "fixed inset-0 z-[60] flex flex-col bg-black/92")}
+      className={clsx(parentStyles.fadeIn, "fixed inset-0 z-[60] flex flex-col bg-black")}
       role="dialog"
       aria-modal="true"
       aria-label={item.title ?? tr("Rasm")}
@@ -184,9 +192,9 @@ function Viewer({ item, onClose, onLike }: { item: ParentGalleryItem; onClose: (
       </div>
       <div className="flex items-center gap-3 px-5 py-4" onClick={(event) => event.stopPropagation()}>
         <div className="min-w-0 flex-1 text-white">
-          <p className="truncate text-[16px] font-bold">{item.title ?? tr("Guruh «{0}»", item.groupName)}</p>
+          <p className="truncate text-[16px] font-bold">{item.title ?? groupLabel(item.groupName)}</p>
           <p className="truncate text-[13px] text-white/60">
-            {item.title ? `${tr("Guruh «{0}»", item.groupName)} · ` : ""}
+            {item.title ? `${groupLabel(item.groupName)} · ` : ""}
             {formatUzDate(item.addedAt)}
           </p>
         </div>
