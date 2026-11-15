@@ -32,7 +32,7 @@ export default async function ParentCabinetLayout({
         iPhone'ning pastki chizig'i ham hisobga olinadi — aks holda oxirgi
         karta menyu ostida qolardi.
       */}
-      <div style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 100px)" }}>
+      <div style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 116px)" }}>
         <ParentPageTransition slug={slug}>
           <ParentFeatureGate slug={slug}>{children}</ParentFeatureGate>
         </ParentPageTransition>

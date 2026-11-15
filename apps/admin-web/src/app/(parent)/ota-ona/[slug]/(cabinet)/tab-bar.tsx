@@ -96,6 +96,9 @@ export function ParentTabBar({ slug }: { slug: string }) {
   const iconClass = (active: boolean) => clsx("h-[22px] w-[22px] shrink-0", active && styles.tabIconActive);
 
   return (
+    <>
+    {/* Menyu ostidagi tuman — kontent menyu ostida yumshoq yo'qoladi */}
+    <div className={styles.navFade} aria-hidden="true" />
     <nav
       aria-label={tr("Asosiy menyu")}
       className="fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 min-[380px]:px-4"
@@ -169,6 +172,7 @@ export function ParentTabBar({ slug }: { slug: string }) {
         )}
       </div>
     </nav>
+    </>
   );
 }
 
