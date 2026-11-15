@@ -137,17 +137,23 @@ function CommentRow({
   );
 }
 
-/** Izohlar ro'yxati. `openThreads` — javob yozilgan iplar ochiq tursin */
+/**
+ * Izohlar ro'yxati. `openThreads` — javob yozilgan iplar ochiq tursin;
+ * `renderAfter` — izoh ostiga qo'shimcha blok (masalan, o'chirishni tasdiqlash
+ * aynan bosilgan izohning o'zi ostida chiqsin).
+ */
 export function CommentThread({
   items,
   onReply,
   onDelete,
   openThreads = [],
+  renderAfter,
 }: {
   items: ArticleCommentItem[];
   onReply?: (item: ArticleCommentItem) => void;
   onDelete?: (item: ArticleCommentItem) => void;
   openThreads?: string[];
+  renderAfter?: (item: ArticleCommentItem) => React.ReactNode;
 }) {
   const tr = useTr();
   const [expanded, setExpanded] = useState<string[]>([]);
@@ -159,6 +165,7 @@ export function CommentThread({
         return (
           <li key={item.id}>
             <CommentRow item={item} onReply={onReply} onDelete={onDelete} />
+            {renderAfter?.(item)}
             {replies.length > 0 && (
               <div className="ml-12 mt-3">
                 {open ? (
@@ -166,6 +173,7 @@ export function CommentThread({
                     {replies.map((reply) => (
                       <li key={reply.id}>
                         <CommentRow item={reply} small onReply={onReply} onDelete={onDelete} />
+                        {renderAfter?.(reply)}
                       </li>
                     ))}
                   </ul>

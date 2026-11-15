@@ -75,6 +75,35 @@ export function StaffArticleFeedback({ articleId, slug }: { articleId: string; s
     { icon: MessageCircle, color: IOS.blue, value: data?.comments ?? 0, label: tr("Fikrlar") },
   ];
 
+  // O'chirish — ikkinchi bosqich, bosilgan izohning o'zi ostida
+  const confirmBox = confirm ? (
+    <div className="mt-3 space-y-3 rounded-[14px] bg-[#ff3b30]/[0.07] p-3.5">
+      <p className="text-[14px] leading-snug text-[#ff3b30]">
+        {tr("{0} izohi o'chiriladi va ota-onalarga ko'rinmay qoladi.", authorName(confirm, tr))}
+        {confirm.replies?.length ? ` ${tr("Unga yozilgan javoblar ham o'chadi.")}` : ""}
+      </p>
+      {remove.isError && <p className="text-[13px] text-[#ff3b30]">{(remove.error as Error)?.message ?? tr("Xatolik yuz berdi")}</p>}
+      <div className="flex gap-2">
+        <button
+          type="button"
+          disabled={remove.isPending}
+          onClick={() => setConfirm(null)}
+          className="h-11 flex-1 rounded-full bg-white text-[15px] font-semibold text-[var(--color-text)] transition-transform active:scale-[0.97]"
+        >
+          {tr("Qoldirish")}
+        </button>
+        <button
+          type="button"
+          disabled={remove.isPending}
+          onClick={() => remove.mutate(confirm.id)}
+          className="flex h-11 flex-1 items-center justify-center rounded-full bg-[#ff3b30] text-[15px] font-semibold text-white transition-transform active:scale-[0.97] disabled:opacity-60"
+        >
+          {remove.isPending ? <Spinner className="h-4 w-4 text-white" /> : tr("O'chirish")}
+        </button>
+      </div>
+    </div>
+  ) : null;
+
   return (
     <SheetSection title={tr("Ota-onalar fikri")} footer={canModerate ? tr("Javobingiz «Bog'cha» belgisi bilan chiqadi.") : undefined}>
       {/* Baho — faqat son */}
@@ -124,39 +153,10 @@ export function StaffArticleFeedback({ articleId, slug }: { articleId: string; s
             }
             onDelete={canModerate ? (item) => (remove.reset(), setConfirm(item)) : undefined}
             openThreads={openThreads}
+            renderAfter={(item) => (confirm?.id === item.id ? confirmBox : null)}
           />
         )}
       </div>
-
-      {/* O'chirish — ikkinchi bosqich */}
-      {confirm && (
-        <div className="space-y-3 bg-[#ff3b30]/[0.06] px-4 py-3.5">
-          <p className="text-[14px] leading-snug text-[#ff3b30]">
-            {tr("{0} izohi o'chiriladi va ota-onalarga ko'rinmay qoladi.", authorName(confirm, tr))}
-            {confirm.replies?.length ? ` ${tr("Unga yozilgan javoblar ham o'chadi.")}` : ""}
-          </p>
-          <p className="line-clamp-2 text-[13px] text-[#8e8e93]">«{confirm.body}»</p>
-          {remove.isError && <p className="text-[13px] text-[#ff3b30]">{(remove.error as Error)?.message ?? tr("Xatolik yuz berdi")}</p>}
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={remove.isPending}
-              onClick={() => setConfirm(null)}
-              className="h-11 flex-1 rounded-full bg-white text-[15px] font-semibold text-[var(--color-text)] transition-transform active:scale-[0.97]"
-            >
-              {tr("Qoldirish")}
-            </button>
-            <button
-              type="button"
-              disabled={remove.isPending}
-              onClick={() => remove.mutate(confirm.id)}
-              className="flex h-11 flex-1 items-center justify-center rounded-full bg-[#ff3b30] text-[15px] font-semibold text-white transition-transform active:scale-[0.97] disabled:opacity-60"
-            >
-              {remove.isPending ? <Spinner className="h-4 w-4 text-white" /> : tr("O'chirish")}
-            </button>
-          </div>
-        </div>
-      )}
 
       {canModerate && (
         <div className="border-t border-black/[0.08] px-4 py-3">
