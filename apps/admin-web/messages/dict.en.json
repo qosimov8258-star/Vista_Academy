@@ -3526,5 +3526,7 @@
  "Dars davomati": "Lesson attendance",
  "Bugun {0} ta dars": "{0} lessons today",
  "Bugun dars yo'q": "No lessons today",
- "Vazifa": "Task"
+ "Vazifa": "Task",
+ "O'z rangi": "Custom colour",
+ "Boshqa rang tanlash": "Choose another colour"
 }

@@ -5,21 +5,39 @@ import { useQueryClient } from "@tanstack/react-query";
 import { api } from "./api";
 import { useAuth } from "./use-auth";
 import type { TenantAuthenticatedUser } from "./types";
-import { DEFAULT_THEME, THEME_STORAGE_KEY, isThemeKey, type ThemeKey } from "./theme-config";
+import {
+  CUSTOM_THEME_VARS,
+  DEFAULT_THEME,
+  THEME_STORAGE_KEY,
+  THEME_VARS_STORAGE_KEY,
+  customThemeVars,
+  isCustomColor,
+  isThemeValue,
+  type ThemeValue,
+} from "./theme-config";
 
-export { THEMES, type ThemeKey } from "./theme-config";
+export { THEMES, isCustomColor, type ThemeKey, type ThemeValue } from "./theme-config";
 
 /**
  * Rangni sahifaga qo'yadi va brauzerga ham yozadi. Brauzerdagi nusxa faqat
  * keyingi ochilishda birinchi chizishdan oldin qo'llash uchun (sahifa
  * yashil bo'lib "sakramasin") — asl manba foydalanuvchi hisobi.
  */
-function applyTheme(theme: ThemeKey) {
+export function applyTheme(theme: ThemeValue) {
   const root = document.documentElement;
-  if (theme === DEFAULT_THEME) delete root.dataset.theme;
+  // Oldingi o'z rangining o'zgaruvchilari tozalanadi — tayyor to'plam ularni bosib ketmasin
+  CUSTOM_THEME_VARS.forEach((name) => root.style.removeProperty(name));
+  let vars: Record<string, string> | null = null;
+  if (isCustomColor(theme)) {
+    vars = customThemeVars(theme);
+    Object.entries(vars).forEach(([name, value]) => root.style.setProperty(name, value));
+    root.dataset.theme = "custom";
+  } else if (theme === DEFAULT_THEME) delete root.dataset.theme;
   else root.dataset.theme = theme;
   try {
     window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+    if (vars) window.localStorage.setItem(THEME_VARS_STORAGE_KEY, JSON.stringify(vars));
+    else window.localStorage.removeItem(THEME_VARS_STORAGE_KEY);
   } catch {
     // Shaxsiy rejimda localStorage yopiq — rang baribir hisobdan keladi
   }
@@ -31,14 +49,14 @@ function applyTheme(theme: ThemeKey) {
  * tanlanganda darhol qo'llanib, serverga yoziladi (xato bo'lsa — qaytadi).
  */
 export function useTheme(): {
-  theme: ThemeKey;
-  setTheme: (theme: ThemeKey) => Promise<void>;
+  theme: ThemeValue;
+  setTheme: (theme: ThemeValue) => Promise<void>;
   saving: boolean;
   error: string | null;
 } {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [theme, setThemeState] = useState<ThemeKey>(DEFAULT_THEME);
+  const [theme, setThemeState] = useState<ThemeValue>(DEFAULT_THEME);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,14 +64,14 @@ export function useTheme(): {
   useEffect(() => {
     try {
       const saved = window.localStorage.getItem(THEME_STORAGE_KEY);
-      if (isThemeKey(saved)) setThemeState(saved);
+      if (isThemeValue(saved)) setThemeState(saved);
     } catch {
       // yuqoridagi kabi
     }
   }, []);
 
   // Hisobdagi rang asosiy: boshqa qurilmada tanlangan bo'lsa ham shu yerda qo'llanadi
-  const accountTheme = user ? (isThemeKey(user.themeColor) ? user.themeColor : DEFAULT_THEME) : null;
+  const accountTheme = user ? (isThemeValue(user.themeColor) ? user.themeColor : DEFAULT_THEME) : null;
   useEffect(() => {
     if (!accountTheme) return;
     setThemeState(accountTheme);
@@ -61,7 +79,7 @@ export function useTheme(): {
   }, [accountTheme]);
 
   const setTheme = useCallback(
-    async (next: ThemeKey) => {
+    async (next: ThemeValue) => {
       const previous = theme;
       setError(null);
       setThemeState(next);
