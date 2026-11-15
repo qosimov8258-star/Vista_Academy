@@ -93,7 +93,7 @@ export function KidStage({ children, label }: { children: React.ReactNode; label
       <span ref={anchor} hidden />
       {host &&
         createPortal(
-          <div className={styles.stage} role="application" aria-label={label} onContextMenu={(event) => event.preventDefault()}>
+          <div className={styles.stage} data-kid-stage="" role="application" aria-label={label} onContextMenu={(event) => event.preventDefault()}>
             {children}
           </div>,
           host,

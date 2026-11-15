@@ -134,10 +134,6 @@ function ReadView({ poem, fontSize }: { poem: Poem; fontSize: number }) {
   const tr = useTr();
   return (
     <div className="relative mt-4 overflow-hidden rounded-[var(--p-radius)] bg-[var(--p-card)] px-5 py-8 shadow-[var(--p-shadow)]">
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-[linear-gradient(180deg,rgba(167,139,250,0.16),transparent)]"
-      />
       <div className={`${styles.roundedFont} relative text-center`} style={{ fontSize }}>
         {poem.stanzas.map((stanza, i) => (
           <div key={i}>
@@ -249,7 +245,7 @@ function LineByLine({ poem, fontSize }: { poem: Poem; fontSize: number }) {
         <button
           type="button"
           onClick={() => (last ? setFinished(true) : setIndex((i) => i + 1))}
-          className="cursor-pointer rounded-full bg-[var(--p-lilac)] py-3.5 text-[15px] font-bold text-white shadow-[0_8px_20px_-10px_rgba(167,139,250,0.9)] transition-transform active:scale-[0.98]"
+          className="cursor-pointer rounded-full bg-[var(--p-lilac)] py-3.5 text-[15px] font-bold text-white transition-transform active:scale-[0.98]"
         >
           {last ? "Tugatish" : "Keyingi qator"}
         </button>

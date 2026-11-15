@@ -41,7 +41,7 @@ function Backdrop({ tone, children }: { tone: keyof typeof TONE; children: React
 function CardBack({ tone, className, style }: { tone: keyof typeof TONE; className?: string; style?: React.CSSProperties }) {
   return (
     <span
-      className={clsx("flex items-center justify-center rounded-[16px] shadow-[0_6px_14px_-8px_rgba(60,40,30,0.5)]", className)}
+      className={clsx("flex items-center justify-center rounded-[16px]", className)}
       style={{ background: TONE[tone].solid, boxShadow: "inset 0 0 0 2.5px rgba(255,255,255,0.35), 0 6px 14px -8px rgba(60,40,30,0.5)", ...style }}
     >
       <svg viewBox="0 0 100 100" className="h-[58%] w-[58%]" aria-hidden="true">

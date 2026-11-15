@@ -102,7 +102,7 @@ export default function ParentMessagesPage({ params }: { params: Promise<{ slug:
                     <span
                       className={clsx(
                         "grid h-11 w-11 shrink-0 place-items-center rounded-2xl",
-                        m.isMandatory ? "bg-[var(--p-coral)]/15 text-[var(--p-coral)]" : "bg-[var(--p-sky)]/15 text-[var(--p-sky-ink)]",
+                        m.isMandatory ? "bg-[var(--p-red)]/15 text-[var(--p-red)]" : "bg-[var(--p-sky)]/15 text-[var(--p-sky-ink)]",
                       )}
                       aria-hidden="true"
                     >
@@ -116,7 +116,7 @@ export default function ParentMessagesPage({ params }: { params: Promise<{ slug:
                       <p className={clsx("mt-1 whitespace-pre-line break-words text-[14.5px] leading-relaxed text-[var(--p-muted)]", !open && "line-clamp-2")}>{m.body}</p>
                       <p className="mt-1.5 flex items-center gap-2 text-[12.5px] text-[var(--p-muted)]">
                         <span className="truncate">{m.from}</span>
-                        {m.isMandatory && <span className="shrink-0 font-bold text-[var(--p-coral)]">{tr("Muhim")}</span>}
+                        {m.isMandatory && <span className="shrink-0 font-bold text-[var(--p-red)]">{tr("Muhim")}</span>}
                         {!isRead && <span className="ml-auto h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--p-coral)]" aria-label={tr("Yangi")} />}
                       </p>
                     </div>

@@ -64,7 +64,7 @@ export function NotifyTeacher({ childId, departureEnabled = true }: { childId: s
           </span>
         </span>
         <ChevronDown
-          className={clsx("h-5 w-5 shrink-0 text-[#c7c7cc] transition-transform duration-200", open && "rotate-180")}
+          className={clsx("h-5 w-5 shrink-0 text-[var(--p-chevron)] transition-transform duration-200", open && "rotate-180")}
           strokeWidth={2.4}
           aria-hidden="true"
         />
@@ -93,7 +93,7 @@ export function NotifyTeacher({ childId, departureEnabled = true }: { childId: s
                   }}
                   className={clsx(
                     "h-9 flex-1 rounded-full text-[14.5px] font-semibold transition-colors",
-                    mode === key ? "bg-white text-[var(--p-ink)] shadow-sm" : "text-[var(--p-muted)]",
+                    mode === key ? "bg-[var(--p-segment)] text-[var(--p-ink)] shadow-sm" : "text-[var(--p-muted)]",
                   )}
                 >
                   {tr(label)}
@@ -115,7 +115,7 @@ export function NotifyTeacher({ childId, departureEnabled = true }: { childId: s
                     onClick={() => setMinutes(m)}
                     className={clsx(
                       "h-11 rounded-full text-[15px] font-semibold tabular-nums transition-colors",
-                      minutes === m ? "bg-[#007aff] text-white" : "bg-[var(--p-sunken)] text-[var(--p-ink)]",
+                      minutes === m ? "bg-[var(--p-accent)] text-white" : "bg-[var(--p-sunken)] text-[var(--p-ink)]",
                     )}
                   >
                     {m} {tr("daqiqa")}
@@ -131,13 +131,13 @@ export function NotifyTeacher({ childId, departureEnabled = true }: { childId: s
               rows={3}
               aria-label={tr("Eslatma")}
               placeholder={tr("Masalan: ertaga soat 12:00 da dori berish kerak")}
-              className="w-full resize-none rounded-[14px] bg-[var(--p-sunken)] px-3.5 py-3 text-[16px] text-[var(--p-ink)] outline-none placeholder:text-[var(--p-muted)] focus:ring-2 focus:ring-[#007aff]/40"
+              className="w-full resize-none rounded-[14px] bg-[var(--p-sunken)] px-3.5 py-3 text-[16px] text-[var(--p-ink)] outline-none placeholder:text-[var(--p-muted)] focus:ring-2 focus:ring-[var(--p-accent)]/40"
             />
           )}
 
-          {error && <p className="px-1 text-[13px] text-[#ff3b30]">{tr(error)}</p>}
+          {error && <p className="px-1 text-[13px] text-[var(--p-red)]">{tr(error)}</p>}
           {done && (
-            <p className="flex items-center gap-1.5 px-1 text-[14px] font-semibold text-[#34c759]">
+            <p className="flex items-center gap-1.5 px-1 text-[14px] font-semibold text-[var(--p-mint)]">
               <CheckCircle2 className="h-[18px] w-[18px]" strokeWidth={2.2} />
               {tr(done)}
             </p>
@@ -150,7 +150,7 @@ export function NotifyTeacher({ childId, departureEnabled = true }: { childId: s
               setDone(null);
               send.mutate();
             }}
-            className="h-12 w-full rounded-full bg-[#007aff] text-[16px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-40"
+            className="h-12 w-full rounded-full bg-[var(--p-accent)] text-[16px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-40"
           >
             {send.isPending ? "…" : mode === "departure" ? tr("Yo'lga chiqdim") : tr("Yuborish")}
           </button>

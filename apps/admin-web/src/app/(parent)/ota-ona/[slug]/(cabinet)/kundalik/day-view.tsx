@@ -67,7 +67,7 @@ export function DayStrip({
             className={clsx(
               "flex w-[54px] shrink-0 snap-end cursor-pointer flex-col items-center gap-0.5 rounded-[18px] py-2.5 transition-colors",
               active
-                ? "bg-[var(--p-coral)] text-white shadow-[0_8px_18px_-8px_rgba(255,122,102,0.8)]"
+                ? "bg-[var(--p-coral)] text-white"
                 : "bg-[var(--p-card)] text-[var(--p-ink)] shadow-[var(--p-shadow)]",
               !active && weekend && "opacity-60",
             )}
@@ -195,10 +195,6 @@ function DayHero({ day, phases, isToday }: { day: DiaryDay; phases: ItemPhase[];
 
   return (
     <section className="relative mt-5 overflow-hidden rounded-[var(--p-radius)] bg-[var(--p-card)] p-5 shadow-[var(--p-shadow)]">
-      <span
-        aria-hidden="true"
-        className="absolute inset-0 bg-[radial-gradient(110%_90%_at_100%_0%,rgba(255,183,3,0.18),transparent_60%),radial-gradient(90%_80%_at_0%_100%,rgba(86,180,245,0.14),transparent_60%)]"
-      />
       <div className="relative flex items-center gap-4">
         <div className="relative h-[68px] w-[68px] shrink-0">
           <svg viewBox="0 0 64 64" className="h-full w-full -rotate-90" aria-hidden="true">

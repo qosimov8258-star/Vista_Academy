@@ -63,7 +63,7 @@ export default function SoundGameHomePage({ params }: { params: Promise<{ slug: 
                 onClick={() => store.setSoundLevel(item.id)}
                 className={clsx(
                   "flex min-h-[44px] flex-1 flex-col items-center justify-center rounded-full px-2 py-1",
-                  active && "bg-[var(--p-card)] shadow-sm",
+                  active && "bg-[var(--p-segment)] shadow-sm",
                 )}
               >
                 <span className={clsx("text-[14.5px] font-bold", active ? "text-[var(--p-ink)]" : "text-[var(--p-muted)]")}>

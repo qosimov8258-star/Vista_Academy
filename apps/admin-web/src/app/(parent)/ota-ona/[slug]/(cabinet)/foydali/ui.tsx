@@ -183,8 +183,8 @@ export function LearnedButton({
         className={clsx(
           "relative flex w-full cursor-pointer items-center justify-center gap-2 rounded-full py-4 text-[16.5px] font-extrabold transition-[background-color,transform] duration-200 active:scale-[0.98]",
           learned
-            ? "bg-[var(--p-mint)] text-white shadow-[0_10px_24px_-10px_rgba(63,191,155,0.8)]"
-            : "bg-[var(--p-sun)] text-[#4a3200] shadow-[0_10px_24px_-10px_rgba(255,183,3,0.9)]",
+            ? "bg-[var(--p-mint)] text-white"
+            : "bg-[var(--p-accent)] text-white",
         )}
       >
         <StarIcon

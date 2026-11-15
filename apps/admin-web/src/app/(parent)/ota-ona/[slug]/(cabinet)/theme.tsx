@@ -6,15 +6,15 @@ import { parentApi } from "@/lib/parent-api";
 import type { ParentAccount, ParentChild } from "@/lib/types";
 import type { SkyState } from "@/lib/sky";
 import { useSky } from "./use-sky";
-import { useAppPathname } from "@/lib/tenant-host-context";
 import styles from "../parent.module.css";
 
 /**
  * Kabinet ko'rinishi: yorug' yoki qorong'i.
  *
- * Sukut bo'yicha "avto" — osmon holatiga ergashadi (qarang: use-sky.ts):
- * quyosh botganda qorong'i ko'rinish o'zi yonadi, tongda o'chadi. Ota-ona
- * Sozlamalarda uni doimiy yorug' yoki doimiy qorong'i qilib qo'yishi mumkin.
+ * Sukut bo'yicha yorug' (oq fonli iOS ko'rinishi). Ota-ona Sozlamalarda
+ * «Avto»ni tanlasa — osmon holatiga ergashadi (qarang: use-sky.ts): quyosh
+ * botganda qorong'i ko'rinish o'zi yonadi, tongda o'chadi; yoki doimiy
+ * qorong'i qilib qo'yishi mumkin.
  * Tanlov telefonning o'zida (localStorage) saqlanadi — kabinet bitta, lekin
  * ota bilan ona har biri o'z telefonida o'ziga qulayini tanlaydi.
  *
@@ -24,9 +24,14 @@ import styles from "../parent.module.css";
 
 export type ThemeMode = "avto" | "yorug" | "qorongi";
 
-const MODE_KEY = "bogcha_parent_theme";
+/**
+ * Kalitlar `_v2`: iOS uslubiga o'tishda sukut «avto»dan «yorug'»ga o'zgardi
+ * (egasining qarori — kabinet oq fonda ko'rinsin). Eski kalitdagi tanlov
+ * o'qilmaydi: hamma yorug'dan boshlaydi, xohlagan Sozlamalarda o'zgartiradi.
+ */
+const MODE_KEY = "bogcha_parent_theme_v2";
 /** Oxirgi qo'llangan ko'rinish — sahifa yuklanishida chaqnash bo'lmasligi uchun */
-const EFFECTIVE_KEY = "bogcha_parent_theme_effective";
+const EFFECTIVE_KEY = "bogcha_parent_theme_effective_v2";
 const MODES: ThemeMode[] = ["avto", "yorug", "qorongi"];
 
 interface CabinetTheme {
@@ -38,16 +43,16 @@ interface CabinetTheme {
   sky: SkyState | null;
 }
 
-const ThemeContext = createContext<CabinetTheme>({ mode: "avto", setMode: () => undefined, dark: false, sky: null });
+const ThemeContext = createContext<CabinetTheme>({ mode: "yorug", setMode: () => undefined, dark: false, sky: null });
 
 export const useCabinetTheme = () => useContext(ThemeContext);
 
 function readMode(): ThemeMode {
   try {
     const value = localStorage.getItem(MODE_KEY);
-    return MODES.find((mode) => mode === value) ?? "avto";
+    return MODES.find((mode) => mode === value) ?? "yorug";
   } catch {
-    return "avto";
+    return "yorug";
   }
 }
 
@@ -64,7 +69,7 @@ function readCachedDark(): boolean {
  * oq bo'lib chaqnab, keyin qorayib ketmasin. Qobiqda `suppressHydrationWarning`
  * bor — React shu atributni gidratsiyada nomuvofiq deb hisoblamaydi.
  */
-const BOOT_SCRIPT = `try{if(localStorage.getItem("${EFFECTIVE_KEY}")==="dark"&&!/^(\\/ota-ona\\/[^/]+)?\\/?$/.test(location.pathname))document.currentScript.parentElement.setAttribute("data-theme","dark")}catch(e){}`;
+const BOOT_SCRIPT = `try{if(localStorage.getItem("${EFFECTIVE_KEY}")==="dark")document.currentScript.parentElement.setAttribute("data-theme","dark")}catch(e){}`;
 
 const noopSubscribe = () => () => undefined;
 
@@ -82,14 +87,10 @@ function useIsServerRendered(): boolean {
 }
 
 export function CabinetThemeProvider({ slug, children }: { slug: string; children: React.ReactNode }) {
-  const [mode, setModeState] = useState<ThemeMode>("avto");
+  const [mode, setModeState] = useState<ThemeMode>("yorug");
   const [mounted, setMounted] = useState(false);
   const [cachedDark, setCachedDark] = useState(false);
   const serverRendered = useIsServerRendered();
-  // Bosh sahifa iOS uslubida — doim yorug', oq tekis fon (egasining qarori,
-  // 2026-11-16). Qolgan bo'limlarda iliq osmon va tanlangan ko'rinish rejimi.
-  const pathname = useAppPathname();
-  const home = pathname === `/ota-ona/${slug}` || pathname === `/ota-ona/${slug}/`;
 
   useEffect(() => {
     setModeState(readMode());
@@ -126,15 +127,13 @@ export function CabinetThemeProvider({ slug, children }: { slug: string; childre
     }
   }, []);
 
-  // Saqlanadigan holat (`dark`) — tanlangan rejim bo'yicha; ekranda esa bosh sahifa doim yorug'
-  const shownDark = dark && !home;
-  const value = useMemo<CabinetTheme>(() => ({ mode, setMode, dark: shownDark, sky }), [mode, setMode, shownDark, sky]);
+  const value = useMemo<CabinetTheme>(() => ({ mode, setMode, dark, sky }), [mode, setMode, dark, sky]);
 
   return (
     <ThemeContext.Provider value={value}>
       <div
-        className={`${styles.shell} ${home ? styles.plain : styles.sky} min-h-[100dvh]`}
-        data-theme={mounted ? (shownDark ? "dark" : "light") : undefined}
+        className={`${styles.shell} min-h-[100dvh]`}
+        data-theme={mounted ? (dark ? "dark" : "light") : undefined}
         suppressHydrationWarning
       >
         {serverRendered && <script dangerouslySetInnerHTML={{ __html: BOOT_SCRIPT }} />}

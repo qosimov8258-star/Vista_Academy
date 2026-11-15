@@ -47,9 +47,8 @@ import { useTr } from "@/i18n/tr";
 /**
  * Ota-ona kabinetining bosh sahifasi — iOS «soft UI» uslubida (egasining
  * qarori, 2026-11-16): oq fon, yumshoq soyali oq kartalar, iOS Sozlamalaridagi
- * kabi rangli plitkali belgilar (IosIcon), tizim ranglari. Sahifa doim yorug'
- * (qarang: theme.tsx) — shuning uchun bu yerda ranglar to'g'ridan-to'g'ri
- * iOS qiymatlari bilan yoziladi.
+ * kabi rangli plitkali belgilar (IosIcon), tizim ranglari. Ranglar kabinet
+ * tokenlaridan (parent.module.css) — qorong'i rejimda ham ishlaydi.
  *
  * Tartib: sarlavha → yangi xabar → bola va bugungi holat → davomat →
  * tarbiyachiga xabar → to'lov → bugungi kun → Foydali.
@@ -68,9 +67,9 @@ const EATING = { GOOD: "Yaxshi", AVERAGE: "O'rtacha", POOR: "Kam" } as const;
 const MOOD = { HAPPY: "Xursand", NEUTRAL: "Oddiy", UPSET: "Xafa" } as const;
 
 /** iOS tizim ranglari — shu sahifada ko'p ishlatiladiganlari */
-const GREEN = "#34c759";
-const RED = "#ff3b30";
-const ORANGE = "#ff9500";
+const GREEN = "var(--p-mint)";
+const RED = "var(--p-red)";
+const ORANGE = "var(--p-sun)";
 
 const CARD = "rounded-[var(--p-radius)] bg-[var(--p-card)] shadow-[var(--p-shadow)]";
 
@@ -153,7 +152,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
   if (meQuery.isLoading) {
     return (
       <div className="flex min-h-[60dvh] items-center justify-center">
-        <span className="h-8 w-8 animate-spin rounded-full border-[3px] border-[#007aff] border-t-transparent" />
+        <span className="h-8 w-8 animate-spin rounded-full border-[3px] border-[var(--p-accent)] border-t-transparent" />
       </div>
     );
   }
@@ -188,7 +187,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
       : tr("Tarbiyachi hali davomat qilmadi");
 
   return (
-    <div className={`${styles.iosHome} mx-auto w-full max-w-[520px] px-4 pt-6`}>
+    <div className={`mx-auto w-full max-w-[520px] px-4 pt-6`}>
       {/* Sarlavha — iOS «katta sarlavha»: tepada sana, ostida ism; o'ngda xabarlar.
           Chiqish tugmasi Sozlamalar bo'limida. */}
       <header className="flex items-end justify-between gap-3">
@@ -206,7 +205,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
           >
             <Bell className="h-[21px] w-[21px]" strokeWidth={2} />
             {newMessages.length > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-[19px] min-w-[19px] items-center justify-center rounded-full bg-[#ff3b30] px-1 text-[11.5px] font-bold tabular-nums text-white ring-2 ring-white">
+              <span className="absolute -right-0.5 -top-0.5 flex h-[19px] min-w-[19px] items-center justify-center rounded-full bg-[var(--p-red)] px-1 text-[11.5px] font-bold tabular-nums text-white ring-2 ring-[var(--p-bg)]">
                 {newMessages.length > 9 ? "9+" : newMessages.length}
               </span>
             )}
@@ -247,7 +246,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
                 className="h-[60px] w-[60px] shrink-0 rounded-full bg-[var(--p-sunken)] object-cover"
               />
             ) : (
-              <span className="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full bg-[#007aff]/12 text-[20px] font-semibold text-[#007aff]">
+              <span className="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full bg-[var(--p-accent)]/12 text-[20px] font-semibold text-[var(--p-accent)]">
                 {initials(child.fullName)}
               </span>
             )}
@@ -262,7 +261,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
               <Link
                 href={`/ota-ona/${slug}/tanlash`}
                 aria-label={tr("Farzandni almashtirish")}
-                className="flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-[var(--p-sunken)] px-3 text-[13.5px] font-semibold text-[#007aff] transition-transform active:scale-95"
+                className="flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-[var(--p-sunken)] px-3 text-[13.5px] font-semibold text-[var(--p-accent)] transition-transform active:scale-95"
               >
                 <ArrowLeftRight className="h-4 w-4" strokeWidth={2.2} />
                 <span className="max-[359px]:hidden">{tr("Almashtirish")}</span>
@@ -301,17 +300,17 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
                 onChange={(e) => setReasonDraft(e.target.value)}
                 rows={2}
                 placeholder={tr("Masalan: shifokorga bordik")}
-                className="mt-1.5 w-full resize-none rounded-[14px] bg-[var(--p-sunken)] px-3.5 py-2.5 text-[16px] text-[var(--p-ink)] outline-none placeholder:text-[var(--p-muted)] focus:ring-2 focus:ring-[#007aff]/40"
+                className="mt-1.5 w-full resize-none rounded-[14px] bg-[var(--p-sunken)] px-3.5 py-2.5 text-[16px] text-[var(--p-ink)] outline-none placeholder:text-[var(--p-muted)] focus:ring-2 focus:ring-[var(--p-accent)]/40"
               />
               <button
                 type="submit"
                 disabled={!reasonDraft.trim() || reasonMutation.isPending}
-                className="mt-2 h-11 w-full rounded-full bg-[#007aff] text-[15.5px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-40"
+                className="mt-2 h-11 w-full rounded-full bg-[var(--p-accent)] text-[15.5px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-40"
               >
                 {reasonMutation.isPending ? tr("Yuborilmoqda...") : tr("Yuborish")}
               </button>
               {reasonMutation.isError && (
-                <p className="mt-2 px-1 text-[13px] text-[#ff3b30]">{tr("Yuborib bo'lmadi — qayta urinib ko'ring")}</p>
+                <p className="mt-2 px-1 text-[13px] text-[var(--p-red)]">{tr("Yuborib bo'lmadi — qayta urinib ko'ring")}</p>
               )}
             </form>
           )}
@@ -451,7 +450,7 @@ function AttendanceCard({ strip }: { strip: ParentAttendanceStrip }) {
   const stats = [
     { count: strip.present, label: "Keldi", color: GREEN },
     { count: strip.absent, label: "Kelmadi", color: RED },
-    ...(unmarked > 0 ? [{ count: unmarked, label: "Belgilanmagan", color: "#8e8e93" }] : []),
+    ...(unmarked > 0 ? [{ count: unmarked, label: "Belgilanmagan", color: "var(--p-muted)" }] : []),
   ];
 
   return (
@@ -490,14 +489,14 @@ function AttendanceCard({ strip }: { strip: ParentAttendanceStrip }) {
                 className={clsx(
                   "mx-auto flex h-9 w-9 items-center justify-center rounded-full text-[14px] font-semibold tabular-nums",
                   item.status === "PRESENT"
-                    ? "bg-[#34c759] text-white"
+                    ? "bg-[var(--p-mint)] text-white"
                     : item.status === "ABSENT"
-                      ? "bg-[#ff3b30] text-white"
+                      ? "bg-[var(--p-red)] text-white"
                       : rest
-                        ? "text-[#c7c7cc]"
+                        ? "text-[var(--p-chevron)]"
                         : "bg-[var(--p-sunken)] text-[var(--p-muted)]",
                   // Bugungi kun — ko'k halqa
-                  item.date === today && "ring-2 ring-[#007aff] ring-offset-2 ring-offset-white",
+                  item.date === today && "ring-2 ring-[var(--p-accent)] ring-offset-2 ring-offset-[var(--p-card)]",
                 )}
               >
                 {Number(item.date.slice(8, 10))}
@@ -535,7 +534,7 @@ function TodayMealsRow({ slug, day, linked, className }: { slug: string; day: Pa
           {photos.length > 0 ? tr(" · {0} ta surat", photos.length) : ""}
         </span>
       </span>
-      {linked && <ChevronRight className="h-5 w-5 shrink-0 text-[#c7c7cc]" strokeWidth={2.4} aria-hidden="true" />}
+      {linked && <ChevronRight className="h-5 w-5 shrink-0 text-[var(--p-chevron)]" strokeWidth={2.4} aria-hidden="true" />}
     </>
   );
   const rowClass = clsx(CARD, "flex min-h-[68px] items-center gap-3 px-4 py-3", className);
@@ -658,7 +657,7 @@ function PaymentReceiptSection({
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="h-9 shrink-0 rounded-full bg-[#007aff]/12 px-3.5 text-[14px] font-semibold text-[#007aff] transition-transform active:scale-95"
+            className="h-9 shrink-0 rounded-full bg-[var(--p-accent)]/12 px-3.5 text-[14px] font-semibold text-[var(--p-accent)] transition-transform active:scale-95"
           >
             {tr("Chek yuklash")}
           </button>
@@ -690,7 +689,7 @@ function PaymentReceiptSection({
             onChange={(e) => setAmount(e.target.value)}
             placeholder={tr("To'lov summasi (so'm)")}
             aria-label={tr("To'lov summasi (so'm)")}
-            className="h-12 w-full rounded-[14px] bg-[var(--p-sunken)] px-4 text-[17px] font-semibold tabular-nums text-[var(--p-ink)] outline-none placeholder:font-normal placeholder:text-[var(--p-muted)] focus:ring-2 focus:ring-[#007aff]/40"
+            className="h-12 w-full rounded-[14px] bg-[var(--p-sunken)] px-4 text-[17px] font-semibold tabular-nums text-[var(--p-ink)] outline-none placeholder:font-normal placeholder:text-[var(--p-muted)] focus:ring-2 focus:ring-[var(--p-accent)]/40"
           />
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePick} />
           {image ? (
@@ -706,13 +705,13 @@ function PaymentReceiptSection({
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={preparing}
-              className="flex h-[72px] w-full items-center justify-center gap-2 rounded-[14px] bg-[var(--p-sunken)] text-[15px] font-medium text-[#007aff] disabled:opacity-60"
+              className="flex h-[72px] w-full items-center justify-center gap-2 rounded-[14px] bg-[var(--p-sunken)] text-[15px] font-medium text-[var(--p-accent)] disabled:opacity-60"
             >
               <ImagePlus className="h-5 w-5" strokeWidth={2} />
               {preparing ? tr("Tayyorlanmoqda...") : tr("Chek suratini tanlash")}
             </button>
           )}
-          {formError && <p className="px-1 text-[13px] text-[#ff3b30]">{tr(formError)}</p>}
+          {formError && <p className="px-1 text-[13px] text-[var(--p-red)]">{tr(formError)}</p>}
           <div className="flex gap-2.5 pt-1">
             <button
               type="button"
@@ -724,7 +723,7 @@ function PaymentReceiptSection({
             <button
               type="submit"
               disabled={submitMutation.isPending || preparing}
-              className="h-11 flex-1 rounded-full bg-[#007aff] text-[15.5px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-40"
+              className="h-11 flex-1 rounded-full bg-[var(--p-accent)] text-[15.5px] font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-40"
             >
               {submitMutation.isPending ? tr("Yuborilmoqda...") : tr("Yuborish")}
             </button>

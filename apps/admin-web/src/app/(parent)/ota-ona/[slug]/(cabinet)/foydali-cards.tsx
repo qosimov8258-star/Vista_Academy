@@ -60,7 +60,7 @@ export function FoydaliCards({
                   {latest ? latest.title : tr("Pedagog maslahatlari va uyda mashg'ulot g'oyalari")}
                 </p>
               </div>
-              <ChevronRight className="h-5 w-5 shrink-0 text-[#c7c7cc]" strokeWidth={2.4} aria-hidden="true" />
+              <ChevronRight className="h-5 w-5 shrink-0 text-[var(--p-chevron)]" strokeWidth={2.4} aria-hidden="true" />
             </div>
           </Link>
         )}
@@ -98,7 +98,7 @@ export function FoydaliCards({
                   </span>
                 ) : (
                   <span className="flex h-full items-center justify-center">
-                    <Images className="h-9 w-9 text-[#ff2d55] opacity-60" strokeWidth={1.7} />
+                    <Images className="h-9 w-9 text-[var(--p-red)] opacity-60" strokeWidth={1.7} />
                   </span>
                 )
               }
@@ -133,7 +133,7 @@ function MiniWidget({
     <Link href={href} className={`${CARD} flex min-w-0 flex-col p-3.5 transition-transform active:scale-[0.98]`}>
       <span className="flex items-center justify-between">
         <IosIcon icon={icon} tint={tint} size={32} />
-        <ChevronRight className="h-5 w-5 text-[#c7c7cc]" strokeWidth={2.4} aria-hidden="true" />
+        <ChevronRight className="h-5 w-5 text-[var(--p-chevron)]" strokeWidth={2.4} aria-hidden="true" />
       </span>
       <span className="mt-2.5 block truncate text-[16px] font-semibold text-[var(--p-ink)]">{title}</span>
       <span className="block truncate text-[13px] text-[var(--p-muted)]">{text}</span>
