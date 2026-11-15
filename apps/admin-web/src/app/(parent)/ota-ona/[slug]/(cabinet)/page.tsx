@@ -27,6 +27,7 @@ import { useSelectedChild } from "./use-selected-child";
 import { useCabinetTheme } from "./theme";
 import { useParentMessages } from "./use-messages";
 import { useParentFeatures } from "./use-parent-features";
+import { FoydaliCards } from "./foydali-cards";
 import { BellIcon } from "@/components/ui/icons";
 import { useTr } from "@/i18n/tr";
 
@@ -348,16 +349,8 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
               </div>
               )}
 
-              {/* Nima bilan shug'ullandi */}
-              {reportsOn && (
-              <Panel title={tr("Bugun nima qildik")} accent="lilac">
-                {day.report?.activityNotes ? (
-                  <p className="text-[15px] leading-relaxed text-[var(--p-ink)]">{tr(day.report.activityNotes)}</p>
-                ) : (
-                  <Empty text={tr("Tarbiyachi hali yozmadi")} />
-                )}
-              </Panel>
-              )}
+              {/* «Bugun nima qildik» (tarbiyachining uzun yozuvi) — Kundalik bo'limida.
+                  Bosh sahifada uning o'rnida pastdagi «Foydali» bloki. */}
 
               {/* Ovqat tartibi to'liq — Kundalik bo'limida; bu yerda qisqacha va havola
                   («Kundalik» o'chirilgan bo'lsa havolasiz) */}
@@ -371,6 +364,16 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
             </div>
           )
         )}
+
+      {/* Maqolalar, o'yinlar, galereya — platforma o'chirganlari chiqmaydi */}
+      {featuresReady && (
+        <FoydaliCards
+          slug={slug}
+          orgName={meQuery.data?.parent.organizationName}
+          articlesOn={isOn("articles")}
+          galleryOn={isOn("gallery")}
+        />
+      )}
 
       <p className="mt-8 text-center text-[13px] text-[var(--p-muted)]">
         {tr("Savolingiz bo'lsa — tarbiyachi yoki bog'cha ma'muriyatiga murojaat qiling")}

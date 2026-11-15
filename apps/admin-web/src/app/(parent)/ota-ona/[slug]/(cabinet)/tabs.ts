@@ -1,5 +1,6 @@
 import { BellIcon, BulbIcon, CalendarIcon, DocumentIcon, HomeIcon, NoteIcon, SettingsIcon, ShopIcon, WalletIcon } from "@/components/ui/icons";
 import { GamesIcon } from "./oyinlar/ui";
+import { ArticlesIcon, GalleryIcon } from "./foydali-content";
 
 /**
  * Pastki menyu tartibi. Menyu ham, sahifa o'tishi ham shu ro'yxatdan
@@ -14,6 +15,8 @@ export const CABINET_TABS = [
   { href: "/tolov", label: "To'lov", icon: WalletIcon, hint: "Kartaga o'tkazma va chek", feature: "paymentReceipts" },
   { href: "/dokon", label: "Do'kon", icon: ShopIcon, hint: "Yulduzchalarga sovg'alar", feature: "products" },
   { href: "/foydali", label: "Foydali", icon: BulbIcon, hint: "She'rlar, maqollar, ertaklar", feature: "useful" },
+  { href: "/maqolalar", label: "Maqolalar", icon: ArticlesIcon, hint: "Ota-onalarga eslatma", feature: "articles" },
+  { href: "/galereya", label: "Galereya", icon: GalleryIcon, hint: "Bolalar ishlari", feature: "gallery" },
   { href: "/oyinlar", label: "O'yinlar", icon: GamesIcon, hint: "Bolalar uchun o'yinlar" },
   { href: "/xabarlar", label: "Xabarlar", icon: BellIcon, hint: "Bog'cha yuborgan xabarlar", feature: "notifications" },
   { href: "/sozlamalar", label: "Sozlamalar", icon: SettingsIcon, hint: "Parol, ko'rinish, chiqish" },
