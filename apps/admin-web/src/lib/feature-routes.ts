@@ -51,13 +51,25 @@ const ROUTE_FEATURES: Record<string, string | string[]> = {
   parents: "parentCabinet",
 };
 
+/**
+ * Bo'lim ichidagi sahifa o'z funksiyasiga ega bo'lsa (`useful/articles`) —
+ * bo'limniki ustiga qo'shiladi: ikkalasi ham yoqilgan bo'lishi kerak.
+ */
+const SUB_ROUTE_FEATURES: Record<string, string> = {
+  "useful/articles": "articles",
+  "useful/gallery": "gallery",
+};
+
 /** Sahifa manzili qaysi funksiyalarga tegishli (`/test-bogcha/filial-1/nutrition` → ["nutrition"]); yo'q bo'lsa bo'sh. */
 export function featureForPath(path: string): string[] {
   const segs = path.split(/[?#]/)[0].split("/").filter(Boolean).slice(1);
   // Birinchi bo'lak — sahifa; topilmasa ikkinchisi (birinchisi filial yoki «network» bo'lishi mumkin)
-  const value = ROUTE_FEATURES[segs[0]] ?? ROUTE_FEATURES[segs[1]];
-  if (!value) return [];
-  return Array.isArray(value) ? value : [value];
+  const at = ROUTE_FEATURES[segs[0]] ? 0 : ROUTE_FEATURES[segs[1]] ? 1 : -1;
+  if (at < 0) return [];
+  const value = ROUTE_FEATURES[segs[at]];
+  const features = Array.isArray(value) ? value : [value];
+  const sub = SUB_ROUTE_FEATURES[`${segs[at]}/${segs[at + 1] ?? ""}`];
+  return sub ? [...features, sub] : features;
 }
 
 /** Menyu va tanlagichlar uchun: `(href) => ko'rsatilsinmi`. */

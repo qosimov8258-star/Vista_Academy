@@ -30,6 +30,9 @@ const SECTIONS: Record<BranchSection, { key: string; path: string; label: string
     { key: "poems", path: "/useful/poems", label: "She'rlar", short: "She'rlar" },
     { key: "proverbs", path: "/useful/proverbs", label: "Maqollar", short: "Maqollar" },
     { key: "tales", path: "/useful/tales", label: "Ertaklar", short: "Ertaklar" },
+    // O'z funksiyasi bor (`articles`, `gallery`) — o'chirilsa tanlagichda ko'rinmaydi (feature-routes)
+    { key: "articles", path: "/useful/articles", label: "Maqolalar", short: "Maqola" },
+    { key: "gallery", path: "/useful/gallery", label: "Galereya", short: "Galereya" },
   ],
 };
 

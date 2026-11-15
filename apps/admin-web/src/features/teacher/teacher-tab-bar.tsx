@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState, type ComponentType } from "react";
 import clsx from "clsx";
-import { BookOpen, LayoutGrid, MessageSquareQuote, Paperclip, ScrollText } from "lucide-react";
+import { BookOpen, Images, LayoutGrid, MessageSquareQuote, Newspaper, Paperclip, ScrollText } from "lucide-react";
 import { useAppPathname } from "@/lib/tenant-host-context";
 import { useAuth } from "@/lib/use-auth";
 import { useRouteFeatureOn } from "@/lib/feature-routes";
@@ -69,7 +69,9 @@ export function TeacherTabBar({ slug }: { slug: string }) {
         { href: `/${slug}/useful/poems`, label: "She'rlar", icon: ScrollText },
         { href: `/${slug}/useful/proverbs`, label: "Maqollar", icon: MessageSquareQuote },
         { href: `/${slug}/useful/tales`, label: "Ertaklar", icon: BookOpen },
-      ]
+        { href: `/${slug}/useful/articles`, label: "Maqolalar", icon: Newspaper },
+        { href: `/${slug}/useful/gallery`, label: "Galereya", icon: Images },
+      ].filter((item) => routeOn(item.href))
     : [];
   const other: MoreItem[] = [
     ...(subjectTeacher ? [] : [{ href: `/${slug}/my-lessons/schedule`, label: "Dars jadvali", icon: RowCalendarIcon }]),

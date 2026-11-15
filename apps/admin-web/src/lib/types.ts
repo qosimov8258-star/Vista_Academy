@@ -1476,6 +1476,54 @@ export interface Tale {
   updatedAt: string;
 }
 
+/* ------------------------------------------------------------------ */
+/* Maqolalar (ota-onalarga eslatma) va bolalar ishlari galereyasi      */
+/* ------------------------------------------------------------------ */
+
+export type ArticleCategory = "PSYCHOLOGY" | "DEVELOPMENT" | "HEALTH" | "NUTRITION" | "FAMILY" | "ADAPTATION" | "HOME_GAMES";
+
+export interface ArticleTip {
+  title: string;
+  text: string;
+}
+
+/** `GET/POST/PATCH /app/articles` — xodim tomoni. */
+export interface Article {
+  id: string;
+  organizationId: string;
+  branchId: string;
+  /** null — butun filial uchun. */
+  groupId: string | null;
+  category: ArticleCategory;
+  title: string;
+  summary: string;
+  /** Xatboshilar bo'sh qator bilan ajratilgan matn. */
+  body: string;
+  tips: ArticleTip[];
+  memo: string | null;
+  status: UsefulStatus;
+  createdById: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: UsefulCreatedBy;
+  group: UsefulGroupRef | null;
+  hasCover: boolean;
+  readMinutes: number;
+}
+
+/** `GET/POST/PATCH /app/gallery` — bolalar ishlari (xodim tomoni). */
+export interface GalleryItem {
+  id: string;
+  branchId: string;
+  groupId: string;
+  title: string | null;
+  likesCount: number;
+  createdById: string;
+  createdAt: string;
+  group: UsefulGroupRef;
+  createdBy: UsefulCreatedBy;
+}
+
 // --- Lending sahifa (landing-web) ---------------------------------------------
 // `GET /app/landing/...` orqali o'qiladi (ochiq), `POST/PATCH/DELETE` esa shu
 // yerdan — "Lending sahifa" bo'limi orqali kiritiladi. Kontent global: barcha

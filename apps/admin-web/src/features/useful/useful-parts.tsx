@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
 import { BranchSectionTabs } from "@/features/nav/branch-section-tabs";
 import clsx from "clsx";
-import { BookOpen, Feather, Lightbulb, Minus, Pencil, Plus, Trash2 } from "lucide-react";
+import { BookOpen, Feather, Lightbulb, Minus, Newspaper, Pencil, Plus, Trash2 } from "lucide-react";
 import type { Group as GroupModel, UsefulStatus } from "@/lib/types";
 import { IosSheet, SheetSection } from "@/components/ios/sheet";
 import { FormSection, IosSwitch, Segmented } from "@/components/ios/form";
@@ -29,15 +29,31 @@ import { useTr } from "@/i18n/tr";
  * bosiladigan joy kamida 44px, native `<select>` yo'q.
  */
 
-export type UsefulKind = "poems" | "proverbs" | "tales";
+export type UsefulKind = "poems" | "proverbs" | "tales" | "articles";
 
 export const USEFUL_KINDS: Record<
   UsefulKind,
-  { label: string; noun: string; add: string; icon: ComponentType<IconProps>; tint: IosTint }
+  {
+    label: string;
+    noun: string;
+    add: string;
+    icon: ComponentType<IconProps>;
+    tint: IosTint;
+    /** «Faqat ko'rish» izohi — bo'lmasa umumiy (she'r, maqol, ertak) */
+    viewOnly?: string;
+  }
 > = {
   poems: { label: "She'rlar", noun: "she'r", add: "Yangi she'r", icon: Feather, tint: "purple" },
   proverbs: { label: "Maqollar", noun: "maqol", add: "Yangi maqol", icon: Lightbulb, tint: "orange" },
   tales: { label: "Ertaklar", noun: "ertak", add: "Yangi ertak", icon: BookOpen, tint: "teal" },
+  articles: {
+    label: "Maqolalar",
+    noun: "maqola",
+    add: "Yangi maqola",
+    icon: Newspaper,
+    tint: "indigo",
+    viewOnly: "Faqat ko'rish. Maqolalarni tarbiyachilar va filial admini yozadi.",
+  },
 };
 
 export interface UsefulListItem {
@@ -49,6 +65,10 @@ export interface UsefulListItem {
   draft: boolean;
   /** Qidiruv uchun qo'shimcha matn */
   searchText?: string;
+  /** Chapdagi 40px belgi (muqova surati) — bo'lmasa bo'limning 30px plitkasi */
+  leading?: ReactNode;
+  /** Ota-sahifa filtri (masalan, mavzu) uchun — ro'yxatda ko'rinmaydi */
+  hidden?: boolean;
 }
 
 /** Qidiruvda harf katta-kichikligi va o'zbekcha tutuq belgilari farq qilmasin */
@@ -71,6 +91,7 @@ export function UsefulScreen({
   onRetry,
   retrying,
   onOpen,
+  filters,
   children,
 }: {
   kind: UsefulKind;
@@ -87,6 +108,8 @@ export function UsefulScreen({
   onRetry: () => void;
   retrying: boolean;
   onOpen: (id: string) => void;
+  /** Guruh chiplaridan keyingi qo'shimcha filtr qatori (masalan, mavzu chiplari) */
+  filters?: ReactNode;
   /** Sahifaning varaqlari (ko'rish, tahrirlash) */
   children?: ReactNode;
 }) {
@@ -96,7 +119,8 @@ export function UsefulScreen({
 
 
   const q = norm(search.trim());
-  const shown = q ? items.filter((it) => norm(`${it.title} ${it.detail ?? ""} ${it.searchText ?? ""}`).includes(q)) : items;
+  const visible = items.filter((it) => !it.hidden);
+  const shown = q ? visible.filter((it) => norm(`${it.title} ${it.detail ?? ""} ${it.searchText ?? ""}`).includes(q)) : visible;
   const drafts = items.filter((it) => it.draft).length;
 
   return (
@@ -127,13 +151,14 @@ export function UsefulScreen({
               ))}
             </ChipRow>
           )}
+          {filters}
         </div>
 
         {!canWrite && (
           <div className={clsx(GROUP_BLOCK, "flex items-start gap-3 px-4 py-3.5")}>
             <InfoIcon className="mt-0.5 h-5 w-5 shrink-0 text-[#8e8e93]" />
             <p className="text-[13.5px] leading-snug text-[#8e8e93]">
-              {tr("Faqat ko'rish. She'r, maqol va ertaklarni tarbiyachilar va filial admini qo'shadi.")}
+              {tr(k.viewOnly ?? "Faqat ko'rish. She'r, maqol va ertaklarni tarbiyachilar va filial admini qo'shadi.")}
             </p>
           </div>
         )}
@@ -155,7 +180,7 @@ export function UsefulScreen({
             {shown.map((item) => (
               <div key={item.id} className="group/row relative">
                 <button type="button" onClick={() => onOpen(item.id)} className={clsx("flex min-h-[64px] w-full items-center gap-3 py-2.5 pl-4 pr-3 text-left", ROW_PRESS)}>
-                  <IosIcon icon={k.icon} tint={k.tint} size={30} />
+                  {item.leading ?? <IosIcon icon={k.icon} tint={k.tint} size={30} />}
                   <span className="min-w-0 flex-1">
                     <span className={clsx("block text-[15.5px] font-medium leading-snug text-[var(--color-text)]", item.detail ? "line-clamp-2" : "truncate")}>
                       {tr(item.title)}
@@ -166,7 +191,7 @@ export function UsefulScreen({
                   {item.draft && <Pill color={IOS.orange}>{tr("Qoralama")}</Pill>}
                   <ChevronRightIcon className="h-4 w-4 shrink-0 text-[#c7c7cc]" strokeWidth={2.2} aria-hidden="true" />
                 </button>
-                <span className={ROW_SEPARATOR} style={{ left: 58 }} aria-hidden="true" />
+                <span className={ROW_SEPARATOR} style={{ left: item.leading ? 68 : 58 }} aria-hidden="true" />
               </div>
             ))}
           </div>
@@ -209,10 +234,6 @@ export function UsefulViewSheet({
   deleteError: string | null;
 }) {
   const tr = useTr();
-  const [confirming, setConfirming] = useState(false);
-  useEffect(() => {
-    if (open) setConfirming(false);
-  }, [open]);
 
   return (
     <IosSheet open={open} onClose={() => !deleting && onClose()} cancelLabel="Yopish" title={tr(title)}>
@@ -231,43 +252,74 @@ export function UsefulViewSheet({
       {canEdit && (
         <SheetSection title={tr("Amallar")}>
           <Row leading={<IosIcon icon={Pencil} tint="blue" size={30} />} title={tr("Tahrirlash")} onClick={onEdit} />
-          {!confirming ? (
-            <Row
-              leading={<IosIcon icon={Trash2} tint="red" size={30} />}
-              title={<span className="text-[#ff3b30]">{tr("O'chirish")}</span>}
-              onClick={() => setConfirming(true)}
-              chevron={false}
-            />
-          ) : (
-            <div className="group/row relative space-y-3 bg-[#ff3b30]/[0.06] px-4 py-3.5">
-              <p className="text-[14px] leading-snug text-[#ff3b30]">
-                {tr("Bu {0} o'chiriladi va ota-onalar kabinetidan ham yo'qoladi. Qaytarib bo'lmaydi.", tr(noun))}
-              </p>
-              {deleteError && <p className="text-[13px] text-[#ff3b30]">{tr(deleteError)}</p>}
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  disabled={deleting}
-                  onClick={() => setConfirming(false)}
-                  className="h-11 flex-1 rounded-full bg-white text-[15px] font-semibold text-[var(--color-text)] transition-transform active:scale-[0.97]"
-                >
-                  {tr("Qoldirish")}
-                </button>
-                <button
-                  type="button"
-                  disabled={deleting}
-                  onClick={onDelete}
-                  className="flex h-11 flex-1 items-center justify-center rounded-full bg-[#ff3b30] text-[15px] font-semibold text-white transition-transform active:scale-[0.97] disabled:opacity-60"
-                >
-                  {deleting ? <Spinner className="h-4 w-4 text-white" /> : tr("O'chirish")}
-                </button>
-              </div>
-              <span className={ROW_SEPARATOR} style={{ left: 58 }} aria-hidden="true" />
-            </div>
-          )}
+          <DeleteActionRow noun={noun} onDelete={onDelete} deleting={deleting} deleteError={deleteError} resetKey={open} />
         </SheetSection>
       )}
     </IosSheet>
+  );
+}
+
+/**
+ * «O'chirish» qatori — bosilsa shu joyda ikkinchi bosqich (qizil-tint izoh +
+ * «Qoldirish» / «O'chirish»). `resetKey` o'zgarsa (varaq qayta ochilsa)
+ * tasdiqlash yopiladi.
+ */
+export function DeleteActionRow({
+  noun,
+  onDelete,
+  deleting,
+  deleteError,
+  resetKey,
+}: {
+  noun: string;
+  onDelete: () => void;
+  deleting: boolean;
+  deleteError: string | null;
+  resetKey?: unknown;
+}) {
+  const tr = useTr();
+  const [confirming, setConfirming] = useState(false);
+  useEffect(() => {
+    setConfirming(false);
+  }, [resetKey]);
+
+  return (
+    <>
+      {!confirming ? (
+        <Row
+          leading={<IosIcon icon={Trash2} tint="red" size={30} />}
+          title={<span className="text-[#ff3b30]">{tr("O'chirish")}</span>}
+          onClick={() => setConfirming(true)}
+          chevron={false}
+        />
+      ) : (
+        <div className="group/row relative space-y-3 bg-[#ff3b30]/[0.06] px-4 py-3.5">
+          <p className="text-[14px] leading-snug text-[#ff3b30]">
+            {tr("Bu {0} o'chiriladi va ota-onalar kabinetidan ham yo'qoladi. Qaytarib bo'lmaydi.", tr(noun))}
+          </p>
+          {deleteError && <p className="text-[13px] text-[#ff3b30]">{tr(deleteError)}</p>}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={deleting}
+              onClick={() => setConfirming(false)}
+              className="h-11 flex-1 rounded-full bg-white text-[15px] font-semibold text-[var(--color-text)] transition-transform active:scale-[0.97]"
+            >
+              {tr("Qoldirish")}
+            </button>
+            <button
+              type="button"
+              disabled={deleting}
+              onClick={onDelete}
+              className="flex h-11 flex-1 items-center justify-center rounded-full bg-[#ff3b30] text-[15px] font-semibold text-white transition-transform active:scale-[0.97] disabled:opacity-60"
+            >
+              {deleting ? <Spinner className="h-4 w-4 text-white" /> : tr("O'chirish")}
+            </button>
+          </div>
+          <span className={ROW_SEPARATOR} style={{ left: 58 }} aria-hidden="true" />
+        </div>
+      )}
+    </>
   );
 }
 
@@ -386,6 +438,7 @@ export function GroupPickerRow({
   onChange,
   allowWholeBranch,
   error,
+  footer = "Ota-onalar faqat o'z farzandining guruhi uchun qo'shilganini ko'radi.",
 }: {
   groups: GroupModel[];
   value: string;
@@ -393,6 +446,8 @@ export function GroupPickerRow({
   /** Tarbiyachidan boshqalar "Butun filial"ni ham tanlay oladi */
   allowWholeBranch: boolean;
   error?: string;
+  /** Ichki ro'yxat ostidagi izoh */
+  footer?: string;
 }) {
   const tr = useTr();
   const [open, setOpen] = useState(false);
@@ -416,7 +471,7 @@ export function GroupPickerRow({
         <span className={ROW_SEPARATOR} aria-hidden="true" />
       </div>
       <IosSheet open={open} onClose={() => setOpen(false)} cancelLabel="Orqaga" title={tr("Guruh")}>
-        <FormSection footer={tr("Ota-onalar faqat o'z farzandining guruhi uchun qo'shilganini ko'radi.")}>
+        <FormSection footer={tr(footer)}>
           {options.length === 0 ? (
             <Row title={<span className="text-[#8e8e93]">{tr("Sizga hali guruh biriktirilmagan")}</span>} />
           ) : (

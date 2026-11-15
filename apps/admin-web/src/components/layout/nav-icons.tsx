@@ -15,10 +15,12 @@ import {
   FileText,
   Globe,
   House,
+  Images,
   IdCard,
   KeyRound,
   Lightbulb,
   Megaphone,
+  Newspaper,
   Phone,
   PhoneOutgoing,
   ScanFace,
@@ -97,6 +99,8 @@ export const ShopIcon = navIcon(Store, "pink");
 export const StarIcon = navIcon(Star, "orange");
 export const BriefcaseIcon = navIcon(BriefcaseBusiness, "indigo");
 export const QuestionIcon = navIcon(CircleHelp, "blue");
+export const ArticleIcon = navIcon(Newspaper, "indigo");
+export const GalleryIcon = navIcon(Images, "pink");
 
 /** Bo'limning o'z rangi (telefon «Menyu»sida ham shu) — bo'lmasa ikonkaning rangi */
 export const SECTION_TINT: Record<string, IosTint> = {
