@@ -17,12 +17,15 @@ type State = {
   memory: Record<string, Result>;
   /** «Kim qichqirdi?»: daraja → natija */
   sounds: Record<string, Result>;
+  /** «Ortiqchasini top»: daraja → natija */
+  odd: Record<string, Result>;
   level: LevelId;
   soundLevel: LevelId;
+  oddLevel: LevelId;
   sound: boolean;
 };
 
-const DEFAULT: State = { memory: {}, sounds: {}, level: "oson", soundLevel: "oson", sound: true };
+const DEFAULT: State = { memory: {}, sounds: {}, odd: {}, level: "oson", soundLevel: "oson", oddLevel: "oson", sound: true };
 
 let cache: State | null = null;
 const listeners = new Set<() => void>();
@@ -32,7 +35,13 @@ function read(): State {
   try {
     const raw = localStorage.getItem(KEY);
     const parsed = raw ? (JSON.parse(raw) as Partial<State>) : {};
-    cache = { ...DEFAULT, ...parsed, memory: { ...(parsed.memory ?? {}) }, sounds: { ...(parsed.sounds ?? {}) } };
+    cache = {
+      ...DEFAULT,
+      ...parsed,
+      memory: { ...(parsed.memory ?? {}) },
+      sounds: { ...(parsed.sounds ?? {}) },
+      odd: { ...(parsed.odd ?? {}) },
+    };
   } catch {
     cache = DEFAULT;
   }
@@ -80,8 +89,22 @@ export function useGamesStore() {
     });
   }, []);
 
+  const setOddLevel = useCallback((oddLevel: LevelId) => write({ ...read(), oddLevel }), []);
+  const saveOddResult = useCallback((level: LevelId, stars: 1 | 2 | 3) => {
+    const current = read();
+    const prev = current.odd[level] ?? { best: 0, plays: 0 };
+    write({
+      ...current,
+      odd: { ...current.odd, [level]: { best: Math.max(prev.best, stars) as Result["best"], plays: prev.plays + 1 } },
+    });
+  }, []);
+
   return {
     level: state.level,
+    oddLevel: state.oddLevel,
+    oddResult: (level: LevelId): Result => state.odd[level] ?? { best: 0, plays: 0 },
+    setOddLevel,
+    saveOddResult,
     soundLevel: state.soundLevel,
     soundResult: (level: LevelId): Result => state.sounds[level] ?? { best: 0, plays: 0 },
     setSoundLevel,

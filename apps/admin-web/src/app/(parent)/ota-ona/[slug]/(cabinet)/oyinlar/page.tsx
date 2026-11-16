@@ -8,6 +8,7 @@ import { ChevronRightIcon } from "@/components/ui/icons";
 import parentStyles from "../../parent.module.css";
 import { GAMES, SOUND_ANIMALS, TOPICS } from "./data";
 import { GAME_BANNERS } from "./banners";
+import { ODD_SETS } from "./ortiqcha/odd-data";
 import { FoydaliHeader, SectionLabel } from "../foydali/ui";
 import { TONE } from "./ui";
 import { useTr } from "@/i18n/tr";
@@ -28,6 +29,7 @@ export default function GamesPage({ params }: { params: Promise<{ slug: string }
   const chips: Record<string, string> = {
     "juftini-top": tr("{0} mavzu", TOPICS.length),
     "kim-qichqirdi": tr("{0} ta hayvon", SOUND_ANIMALS.length),
+    ortiqcha: tr("{0} ta guruh", ODD_SETS.length),
   };
 
   return (

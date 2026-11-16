@@ -226,6 +226,15 @@ export const GAMES: GameInfo[] = [
     href: "/oyinlar/kim-qichqirdi",
   },
   {
+    id: "ortiqcha",
+    title: "Ortiqchasini top",
+    description: "To'rttadan qaysi biri boshqacha?",
+    age: "3–7 yosh",
+    skill: "Mantiq",
+    tone: "lilac",
+    href: "/oyinlar/ortiqcha",
+  },
+  {
     id: "nechta",
     title: "Nechta?",
     description: "Sanab, to'g'ri raqamni tanlang",

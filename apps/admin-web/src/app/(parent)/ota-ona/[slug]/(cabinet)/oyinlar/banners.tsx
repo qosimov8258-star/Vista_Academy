@@ -5,6 +5,7 @@ import { Volume2 } from "lucide-react";
 import styles from "./oyinlar.module.css";
 import { SOUND_ANIMALS, TOPICS, findItem } from "./data";
 import { TONE } from "./ui";
+import { useTr } from "@/i18n/tr";
 
 /**
  * O'yinlar ro'yxatidagi bannerlar. Har biri o'z o'yinining kichik sahnasi:
@@ -199,7 +200,46 @@ function AnswerTile({ src, right }: { src: string; right?: boolean }) {
   );
 }
 
+/**
+ * «Ortiqchasini top»: 2×2 karta — uchta meva va bitta mashina; mashina
+ * «topilgan» (yashil halqa, biroz ko'tarilgan). Yonida o'yindagi izoh.
+ */
+export function OddBanner() {
+  const tr = useTr();
+  const [apple, banana, grapes, car] = ["apple", "banana", "grapes", "car"].map((id) => findItem(id)!);
+  return (
+    <Backdrop tone="lilac">
+      <div className="absolute left-5 top-1/2 grid -translate-y-1/2 -rotate-[3deg] grid-cols-2 gap-2">
+        <AnswerTile src={apple.image} />
+        <AnswerTile src={banana.image} />
+        <span className={styles.bob} style={{ animationDuration: "2.8s" }}>
+          <span className="block -translate-y-1 rotate-[7deg]">
+            <AnswerTile src={car.image} right />
+          </span>
+        </span>
+        <AnswerTile src={grapes.image} />
+      </div>
+
+      {/* O'yindagi izoh: nega ortiqcha */}
+      <div className="absolute right-4 top-1/2 flex max-w-[52%] -translate-y-1/2 flex-col items-end gap-2">
+        <span className="flex items-center gap-1.5 rounded-full bg-[var(--p-card)] py-1 pl-1 pr-3 shadow-[var(--p-shadow)]">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full" style={{ background: TONE.lilac.soft }}>
+            <img src={car.image} alt="" draggable={false} className="h-5 w-5 object-contain" />
+          </span>
+          <span className="truncate text-[13px] font-extrabold text-[var(--p-ink)]">
+            {tr(car.name)} — {tr("transport")}
+          </span>
+        </span>
+        <span className="truncate rounded-full bg-[var(--p-card)] px-3 py-1.5 text-[12.5px] font-semibold text-[var(--p-muted)] shadow-[var(--p-shadow)]">
+          {tr("Qolganlari — {0}", tr("mevalar"))}
+        </span>
+      </div>
+    </Backdrop>
+  );
+}
+
 export const GAME_BANNERS: Record<string, () => React.JSX.Element> = {
   "juftini-top": MemoryBanner,
   "kim-qichqirdi": SoundBanner,
+  ortiqcha: OddBanner,
 };
