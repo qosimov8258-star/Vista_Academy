@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../database/prisma.service";
+import { canNotifyParents } from "../../common/features/feature-access";
 import { TenantScope, requireTeachingScope } from "../iam/tenant-auth.types";
 import { assertNotAssistant } from "../iam/teacher-scope";
 import { assertTeacherOwnsChild, resolveTeacherGroupIds, teacherChildWhere } from "../iam/teacher-scope";
@@ -52,7 +53,8 @@ export class AttendanceService {
     private readonly push: PushService,
   ) {}
 
-  async mark(scope: TenantScope, dto: MarkAttendanceDto) {
+  /** `disabledFeatures` — chaqiruvchida o'chiq funksiyalar (`user.disabledFeatures`). */
+  async mark(scope: TenantScope, dto: MarkAttendanceDto, disabledFeatures: readonly string[] = []) {
     const branchId = requireTeachingScope(scope);
     await assertNotAssistant(this.prisma, scope);
     const child = await this.prisma.child.findFirst({ where: { id: dto.childId, organizationId: scope.organizationId } });
@@ -79,8 +81,8 @@ export class AttendanceService {
     if (scope.role === "TEACHER" && ageDays > TEACHER_BACKFILL_DAYS) {
       throw new ForbiddenException(`Tarbiyachi ${TEACHER_BACKFILL_DAYS} kundan eski kunni o'zgartira olmaydi — administratorga ayting`);
     }
-    // Bola qo'shilishidan oldingi va eski kunlar coin bermaydi
-    const earnsCoin = ageDays <= COIN_BACKFILL_DAYS && date >= toDateOnly(dateKey(child.createdAt));
+    // Bola qo'shilishidan oldingi va eski kunlar coin bermaydi; koin tizimi o'chiq bo'lsa ham
+    const earnsCoin = !disabledFeatures.includes("coins") && ageDays <= COIN_BACKFILL_DAYS && date >= toDateOnly(dateKey(child.createdAt));
 
     let becameAbsent = false;
     const record = await this.prisma.$transaction(async (tx) => {
@@ -147,8 +149,9 @@ export class AttendanceService {
       return updated;
     });
 
-    // Qayta saqlash takror xabar bermaydi — faqat "kelmadi"ga o'tgan payt
-    if (becameAbsent) {
+    // Qayta saqlash takror xabar bermaydi — faqat "kelmadi"ga o'tgan payt.
+    // Ota-ona kabineti/bildirishnomalar/davomat ota-onada o'chiq bo'lsa xabar yo'q.
+    if (becameAbsent && (await canNotifyParents(this.prisma, scope.organizationId, "attendance"))) {
       const links = await this.prisma.childGuardian.findMany({
         where: { childId: child.id, canReceiveNotifications: true },
         include: { guardian: true },
@@ -184,7 +187,7 @@ export class AttendanceService {
    * boshqa xodim yoki terminal shu bolani belgilagan bo'lsa, u bosib ketilmaydi:
    * bola `conflicts` ro'yxatida qaytadi.
    */
-  async markMany(scope: TenantScope, dto: BulkMarkAttendanceDto) {
+  async markMany(scope: TenantScope, dto: BulkMarkAttendanceDto, disabledFeatures: readonly string[] = []) {
     requireTeachingScope(scope);
     await assertNotAssistant(this.prisma, scope);
     if (dto.date.slice(0, 10) > todayDateString()) {
@@ -208,7 +211,7 @@ export class AttendanceService {
     for (let i = 0; i < items.length; i += CHUNK) {
       await Promise.all(
         items.slice(i, i + CHUNK).map((item) =>
-          this.mark(scope, { childId: item.childId, date: dto.date, status: item.status, note: item.note }),
+          this.mark(scope, { childId: item.childId, date: dto.date, status: item.status, note: item.note }, disabledFeatures),
         ),
       );
     }
@@ -459,7 +462,7 @@ export class AttendanceService {
    * yoki to'lov muddati o'tgan va bugun ham kelmagan. Ikkala ma'lumot ham
    * bazada bor edi, faqat hech qachon bog'lanmagan edi.
    */
-  async chronicAbsenceFlags(scope: TenantScope, branchId?: string) {
+  async chronicAbsenceFlags(scope: TenantScope, branchId?: string, disabledFeatures: readonly string[] = []) {
     const resolvedBranchId = scope.branchId ?? branchId;
     if (scope.branchId && branchId && branchId !== scope.branchId) {
       throw new ForbiddenException("Bu filialga kirish huquqingiz yo'q");
@@ -485,6 +488,8 @@ export class AttendanceService {
     // Streakni aniqlash uchun oxirgi 14 kunlik yozuv yetarli — undan
     // uzoqroq tekshirish shart emas, ketma-ketlik shu oraliqda buziladi.
     const since = addDays(toDateOnly(todayDateString()), -13);
+    // To'lovlar o'chiq bo'lsa hisob-faktura ma'lumoti ishlatilmaydi
+    const billingOn = !disabledFeatures.includes("billing");
     const [records, workedDays, overdueInvoices] = await Promise.all([
       this.prisma.attendance.findMany({
         where: { childId: { in: childIds }, date: { gte: since } },
@@ -497,14 +502,16 @@ export class AttendanceService {
         distinct: ["date"],
         orderBy: { date: "desc" },
       }),
-      this.prisma.invoice.findMany({
-        where: {
-          branchId: resolvedBranchId,
-          status: { in: ["PENDING", "PARTIALLY_PAID"] },
-          dueDate: { lt: new Date() },
-        },
-        select: { childId: true },
-      }),
+      billingOn
+        ? this.prisma.invoice.findMany({
+            where: {
+              branchId: resolvedBranchId,
+              status: { in: ["PENDING", "PARTIALLY_PAID"] },
+              dueDate: { lt: new Date() },
+            },
+            select: { childId: true },
+          })
+        : Promise.resolve([] as { childId: string }[]),
     ]);
 
     const recordsByChild = new Map<string, Map<string, string>>();

@@ -6,7 +6,7 @@ import { FileSpreadsheet, Thermometer } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { AttendanceDay, AttendanceRangeSummary, AttendanceStatus, ChronicAbsenceFlag } from "@/lib/types";
-import { useAuth } from "@/lib/use-auth";
+import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
 import { canWriteTeaching } from "@/lib/permissions";
 import { isAssistantPosition } from "@/lib/employee-position";
 import { useBranchContext } from "@/lib/use-branch-context";
@@ -450,6 +450,8 @@ function ChildSheet({
   contact: { pending: boolean; error: boolean; onRequest: () => void };
 }) {
   const tr = useTr();
+  const featureOn = useFeatureEnabled();
+  const noteOn = featureOn("childReminders") || featureOn("health");
   const savedAbsent = child?.status === "ABSENT";
   return (
     <IosSheet
@@ -545,7 +547,7 @@ function ChildSheet({
           )}
           {contact.error && <p className="px-4 text-[13px] text-[#ff3b30]">{tr("Yuborib bo'lmadi — qayta urinib ko'ring")}</p>}
 
-          {canWrite && (
+          {canWrite && noteOn && (
             <SheetSecondaryButton onClick={onWriteNote}>
               <span className="inline-flex items-center gap-2">
                 <NoteIcon className="h-[18px] w-[18px]" strokeWidth={2} />

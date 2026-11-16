@@ -1,5 +1,6 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable, UnauthorizedException } from "@nestjs/common";
 import type { Request } from "express";
+import { loadDisabledFeatures } from "../../../common/features/feature-access";
 import { PrismaService } from "../../../database/prisma.service";
 import { AGENT_KEY_PREFIX, hashAgentToken } from "./agent-token";
 
@@ -9,6 +10,8 @@ export interface AgentDevice {
   organizationId: string;
   branchId: string;
   name: string;
+  /** Qurilma tashkilotida o'chiq funksiyalar (guard bir marta hisoblaydi). */
+  disabledFeatures?: string[];
 }
 
 /** Ulangan obyekt agenti (hka_ kaliti bilan). */
@@ -26,6 +29,18 @@ export const AGENT_DEVICE_HEADER = "x-face-id-device";
 
 /** Agent "onlayn" belgisini har so'rovda emas, shu oraliqda bir marta yangilaymiz. */
 const AGENT_SEEN_THROTTLE_MS = 30_000;
+
+/** Platforma bog'chada Face ID ni o'chirgan bo'lsa agent so'rovlari shu xabar bilan rad etiladi. */
+export const FACE_ID_DISABLED_MESSAGE = "Bu bog'chada Face ID funksiyasi o'chirilgan — platforma administratoriga murojaat qiling";
+
+/** Tashkilotda o'chiq funksiyalar; Face ID o'chiq bo'lsa 403. */
+export async function assertFaceIdEnabled(prisma: PrismaService, organizationId: string): Promise<string[]> {
+  const disabled = await loadDisabledFeatures(prisma, organizationId);
+  if (disabled.includes("faceId")) {
+    throw new ForbiddenException(FACE_ID_DISABLED_MESSAGE);
+  }
+  return disabled;
+}
 
 /**
  * hka_ kalitini tekshiradi: bekor qilinmagan agent. lastSeenAt ni ham yangilaydi.
@@ -64,7 +79,9 @@ export class AgentKeyGuard implements CanActivate {
     if (!key.startsWith(AGENT_KEY_PREFIX)) {
       throw new UnauthorizedException("Bu yo'l uchun ulangan agent kaliti kerak");
     }
-    request.agentKeyOwner = await resolveAgentKey(this.prisma, key);
+    const owner = await resolveAgentKey(this.prisma, key);
+    await assertFaceIdEnabled(this.prisma, owner.organizationId);
+    request.agentKeyOwner = owner;
     return true;
   }
 }
@@ -99,8 +116,9 @@ export class AgentTokenGuard implements CanActivate {
       if (device.status === "INACTIVE") {
         throw new ForbiddenException("Qurilma o'chirilgan");
       }
+      const disabledFeatures = await assertFaceIdEnabled(this.prisma, device.organizationId);
       request.agentKeyOwner = owner;
-      request.agentDevice = { id: device.id, organizationId: device.organizationId, branchId: device.branchId, name: device.name };
+      request.agentDevice = { id: device.id, organizationId: device.organizationId, branchId: device.branchId, name: device.name, disabledFeatures };
       return true;
     }
     const device = await this.prisma.faceIdDevice.findUnique({
@@ -113,7 +131,8 @@ export class AgentTokenGuard implements CanActivate {
     if (device.status === "INACTIVE") {
       throw new ForbiddenException("Qurilma o'chirilgan");
     }
-    request.agentDevice = { id: device.id, organizationId: device.organizationId, branchId: device.branchId, name: device.name };
+    const disabledFeatures = await assertFaceIdEnabled(this.prisma, device.organizationId);
+    request.agentDevice = { id: device.id, organizationId: device.organizationId, branchId: device.branchId, name: device.name, disabledFeatures };
     return true;
   }
 }

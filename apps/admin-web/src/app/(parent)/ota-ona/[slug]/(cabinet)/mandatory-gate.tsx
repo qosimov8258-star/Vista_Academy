@@ -3,6 +3,7 @@
 import { MessageGate } from "@/features/broadcasts/mandatory-gate";
 import { useAppPathname } from "@/lib/tenant-host-context";
 import { useMarkParentMessageRead, useParentMessages } from "./use-messages";
+import { useParentFeatures } from "./use-parent-features";
 
 const PALETTE = { sheet: "var(--p-bg)", card: "var(--p-card)", ink: "var(--p-ink)", muted: "var(--p-muted)", accent: "var(--p-coral)" };
 
@@ -14,10 +15,11 @@ const PALETTE = { sheet: "var(--p-bg)", card: "var(--p-card)", ink: "var(--p-ink
  */
 export function ParentMandatoryGate({ slug }: { slug: string }) {
   const pathname = useAppPathname();
-  const messages = useParentMessages(slug);
+  const { ready, isOn } = useParentFeatures(slug);
+  const messages = useParentMessages(slug, ready && isOn("notifications"));
   const read = useMarkParentMessageRead(slug);
   // Kirish sahifasi bu qobiqdan tashqarida, lekin ehtiyot uchun
-  if (pathname.includes("/kirish") || !messages.data) return null;
+  if (pathname.includes("/kirish") || !messages.data || !isOn("notifications")) return null;
   return (
     <MessageGate
       messages={messages.data}

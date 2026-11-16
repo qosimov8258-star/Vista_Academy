@@ -12,6 +12,7 @@ import { CreateBranchDto } from "./dto/create-branch.dto";
 import { UpdateBranchDto } from "./dto/update-branch.dto";
 import { UpdateBranchAvatarDto } from "./dto/update-branch-avatar.dto";
 import { UpdateOrganizationNameDto } from "./dto/update-organization-name.dto";
+import { UpdateOrganizationLogoDto } from "./dto/update-organization-logo.dto";
 import { DeleteBranchDto } from "./dto/delete-branch.dto";
 import { AllowChef } from "../iam/decorators/allow-chef.decorator";
 import { isAutoRenewEnabled } from "../subscriptions/subscription-billing.service";
@@ -64,6 +65,19 @@ export class TenantOrganizationsController {
       throw new ForbiddenException("Faqat Super Admin yoki filial admini tashkilot nomini o'zgartira oladi");
     }
     return this.organizationsService.updateName(user.organizationId, dto.name);
+  }
+
+  /** Bog'cha logosi — nom kabi Super Admin va filial admini o'zgartiradi. Ko'rish: ochiq `by-slug/:slug/logo`. */
+  @Put("me/logo")
+  updateLogo(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: UpdateOrganizationLogoDto) {
+    this.requireBrandEditor(user);
+    return this.organizationsService.updateLogo(user, dto.image);
+  }
+
+  @Delete("me/logo")
+  removeLogo(@CurrentTenantUser() user: TenantAuthenticatedUser) {
+    this.requireBrandEditor(user);
+    return this.organizationsService.removeLogo(user);
   }
 
   @AllowChef()
@@ -139,6 +153,12 @@ export class TenantOrganizationsController {
       { key: record.avatarKey, bytes: record.avatar, mimeType: record.avatarMimeType ?? "image/jpeg" },
       "Filial belgisi yo'q",
     );
+  }
+
+  private requireBrandEditor(user: TenantAuthenticatedUser) {
+    if (user.role !== "NETWORK_ADMIN" && user.role !== "BRANCH_ADMIN") {
+      throw new ForbiddenException("Faqat Super Admin yoki filial admini logoni o'zgartira oladi");
+    }
   }
 
   private requireNetworkAdmin(user: TenantAuthenticatedUser) {

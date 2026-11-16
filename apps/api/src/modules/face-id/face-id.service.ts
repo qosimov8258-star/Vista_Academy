@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
+import { loadDisabledFeatures } from "../../common/features/feature-access";
 import { encryptSecret } from "../../common/crypto/reversible-secret";
 import { TenantAuthenticatedUser, TenantScope, requireOperationalScope, toTenantScope } from "../iam/tenant-auth.types";
 import { AuditLogService } from "../audit-log/audit-log.service";
@@ -85,6 +86,10 @@ export class FaceIdService {
     person: { personType: "EMPLOYEE"; employeeId: string } | { personType: "CHILD"; childId: string },
   ): Promise<void> {
     try {
+      // Face ID o'chiq bog'chada yuz yozuvi yaratilmaydi
+      if ((await loadDisabledFeatures(this.prisma, scope.organizationId)).includes("faceId")) {
+        return;
+      }
       const devices = await this.prisma.faceIdDevice.findMany({
         where: { organizationId: scope.organizationId, branchId: scope.branchId, status: "ACTIVE" },
         select: { id: true },
@@ -267,7 +272,7 @@ export class FaceIdService {
     const branchId = requireOperationalScope(scope);
     const device = await this.prisma.faceIdDevice.findFirst({
       where: { id, organizationId: scope.organizationId, branchId },
-      select: { id: true, branchId: true },
+      select: { id: true, organizationId: true, branchId: true },
     });
     if (!device) {
       throw new NotFoundException("Qurilma topilmadi");

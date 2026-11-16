@@ -4,6 +4,7 @@ import Link from "next/link";
 import { todayTabs } from "@/features/desk/today-tabs";
 import { staffTabs } from "@/features/employees/staff-tabs";
 import { branchSectionLeaf } from "@/features/nav/branch-section-tabs";
+import { useRouteFeatureOn } from "@/lib/feature-routes";
 import { useParams, useRouter } from "next/navigation";
 import { useAppPathname } from "@/lib/tenant-host-context";
 import { useEffect, useRef, useState, type SyntheticEvent } from "react";
@@ -14,7 +15,7 @@ import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import type { EmployeeNotification } from "@/lib/types";
 import { clearTenantTokens, getTenantRefreshToken } from "@/lib/tenant-session";
 import clsx from "clsx";
-import { useAuth } from "@/lib/use-auth";
+import { useAuth, useFeatureFlags } from "@/lib/use-auth";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { useSidebarCollapsed } from "@/lib/use-sidebar-collapsed";
 import { useSidebarSections } from "@/lib/use-sidebar-sections";
@@ -25,6 +26,7 @@ import { isSection, type NavEntry, type NavLeaf, type NavSection } from "./nav-t
 import { DirectorRail } from "./director-rail";
 import { DirectorBottomBar } from "./director-bottom-bar";
 import { ArrowLeftIcon, ChevronRightIcon, CloseIcon, DocumentIcon, LogoutIcon, SidebarIcon } from "@/components/ui/icons";
+import { OrgLogo } from "@/features/organization/org-logo";
 import { ReceiptText } from "lucide-react";
 import type { IconProps } from "@/components/ui/icons";
 
@@ -38,6 +40,8 @@ import {
   BookIcon,
   BriefcaseIcon,
   BuildingIcon,
+  ArticleIcon,
+  GalleryIcon,
   BulbIcon,
   CalendarIcon,
   ChartIcon,
@@ -102,6 +106,8 @@ export function Sidebar({ slug }: { slug: string }) {
   const queryClient = useQueryClient();
   const [loggingOut, setLoggingOut] = useState(false);
   const { user } = useAuth();
+  // Platforma o'chirgan funksiyalarning menyu bandlari ko'rinmaydi
+  const routeOn = useRouteFeatureOn();
   const [collapsed, toggleCollapsed] = useSidebarCollapsed();
   const [openSections, toggleSection] = useSidebarSections();
   // Mobilda (<768px) tepadagi "uch chiziq" tugmasi ochadigan to'liq menyu (barcha rollar uchun).
@@ -169,13 +175,16 @@ export function Sidebar({ slug }: { slug: string }) {
   const isManager = user?.role === "MANAGER";
   const isFinance = user?.role === "FINANCE";
   // Yon paneldagi "Bildirishnomalarim" belgisi uchun — daqiqada bir marta yangilanadi.
+  // «Xodim bildirishnomalari» o'chirilgan bo'lsa so'rov ketmaydi (band routeOn bilan yashirinadi)
+  const features = useFeatureFlags();
+  const bellOn = receivesEmployeeNotifications(user?.role) && features.ready && features.isOn("employeeNotifications");
   const notificationsQuery = useQuery({
     queryKey: ["employee-notifications", slug],
     queryFn: () => api.get<EmployeeNotification[]>("/app/employee-notifications"),
-    enabled: receivesEmployeeNotifications(user?.role),
+    enabled: bellOn,
     refetchInterval: 60_000,
   });
-  const inboxUnread = useEmployeeInboxUnread(slug, receivesEmployeeNotifications(user?.role));
+  const inboxUnread = useEmployeeInboxUnread(slug, bellOn);
   const unreadNotificationsCount = (notificationsQuery.data?.filter((n) => !n.isRead).length ?? 0) + inboxUnread;
   const params = useParams<{ branchSlug?: string }>();
   const { branch, branches } = useBranchContext(slug);
@@ -279,7 +288,7 @@ export function Sidebar({ slug }: { slug: string }) {
     { href: financeBase ? `${financeBase}/employees` : `/${slug}`, label: "Xodimlar", icon: TeacherIcon, show: true },
     { href: financeBase ? `${financeBase}/children` : `/${slug}`, label: tr("O'quvchilar"), icon: ChildIcon, show: true },
     { href: financeBase ? `${financeBase}/reminders` : `/${slug}`, label: "Eslatmalar", icon: ClockIcon, show: true },
-  ];
+  ].filter((l) => routeOn(l.href));
   const financeMobileEntries: NavEntry[] = [
     { href: `/${slug}`, label: "Bosh sahifa", icon: HomeIcon, show: true, exact: true },
     // Moliyachining kundalik ishi pastda; qolganlari "Menyu" ichida
@@ -287,7 +296,7 @@ export function Sidebar({ slug }: { slug: string }) {
     { href: `/${slug}/expenses`, label: tr("Xarajatlar"), icon: CoinIcon, show: true },
     { href: `/${slug}/discounts`, label: tr("Chegirmalar"), icon: PercentIcon, show: true },
     ...financeMenuLinks,
-  ];
+  ].filter((e) => isSection(e) || routeOn(e.href));
 
   const rootEntries: NavEntry[] = [
     { href: `/${slug}`, label: t("nav.home"), icon: HomeIcon, show: true, exact: true },
@@ -351,6 +360,8 @@ export function Sidebar({ slug }: { slug: string }) {
         { href: `/${slug}/useful/poems`, label: t("nav.poems"), icon: NoteIcon, show: showUseful },
         { href: `/${slug}/useful/proverbs`, label: t("nav.proverbs"), icon: BulbIcon, show: showUseful },
         { href: `/${slug}/useful/tales`, label: t("nav.tales"), icon: BookIcon, show: showUseful },
+        { href: `/${slug}/useful/articles`, label: tr("Maqolalar"), icon: ArticleIcon, show: showUseful },
+        { href: `/${slug}/useful/gallery`, label: tr("Galereya"), icon: GalleryIcon, show: showUseful },
       ],
     },
   ];
@@ -396,6 +407,8 @@ export function Sidebar({ slug }: { slug: string }) {
               { href: `/${slug}/useful/poems`, label: t("nav.poems"), icon: NoteIcon, show: showUseful },
               { href: `/${slug}/useful/proverbs`, label: t("nav.proverbs"), icon: BulbIcon, show: showUseful },
               { href: `/${slug}/useful/tales`, label: t("nav.tales"), icon: BookIcon, show: showUseful },
+              { href: `/${slug}/useful/articles`, label: tr("Maqolalar"), icon: ArticleIcon, show: showUseful },
+              { href: `/${slug}/useful/gallery`, label: tr("Galereya"), icon: GalleryIcon, show: showUseful },
             ],
           },
         ]),
@@ -414,8 +427,12 @@ export function Sidebar({ slug }: { slug: string }) {
   ];
 
   // «Bugungi ishlar» sahifalari — tanlagich bilan bir xil ro'yxat (features/desk/today-tabs)
-  const todayList = todayTabs({ base, role: user?.role, inBranchContext });
-  const staffList = staffTabs({ base, role: user?.role, inBranchContext });
+  const todayList = todayTabs({ base, role: user?.role, inBranchContext }).filter((t) => routeOn(t.href));
+  const staffList = staffTabs({ base, role: user?.role, inBranchContext }).filter((t) => routeOn(t.href));
+  const dailyLeaf = branchSectionLeaf("daily", base, routeOn);
+  const faceIdLeaf = branchSectionLeaf("faceId", base, routeOn);
+  const coinLeaf = branchSectionLeaf("coin", base, routeOn);
+  const usefulLeaf = branchSectionLeaf("useful", base, routeOn);
 
   const operationalEntries: NavEntry[] = [
     { href: base, label: t("nav.home"), icon: HomeIcon, show: true, exact: true },
@@ -462,10 +479,10 @@ export function Sidebar({ slug }: { slug: string }) {
     // (features/nav/branch-section-tabs). Kundalik ish: «Haftalik jadval» —
     // guruhlarning kun tartibi (ota-onalar kabinetida ham ko'rinadi), «Dars jadvali»
     // o'zi bilan xonalar katalogini ham boshqaradi.
-    { ...branchSectionLeaf("daily", base), label: t("nav.dailyWork"), icon: DailyWorkIcon, show: true },
-    { ...branchSectionLeaf("faceId", base), label: t("nav.faceId"), icon: FaceIdIcon, show: true },
-    { ...branchSectionLeaf("coin", base), label: t("nav.coin"), icon: CoinIcon, show: true },
-    { ...branchSectionLeaf("useful", base), label: t("nav.useful"), icon: BulbIcon, show: showUseful },
+    { href: dailyLeaf.href, alsoActive: dailyLeaf.alsoActive, label: t("nav.dailyWork"), icon: DailyWorkIcon, show: dailyLeaf.visible },
+    { href: faceIdLeaf.href, alsoActive: faceIdLeaf.alsoActive, label: t("nav.faceId"), icon: FaceIdIcon, show: faceIdLeaf.visible },
+    { href: coinLeaf.href, alsoActive: coinLeaf.alsoActive, label: t("nav.coin"), icon: CoinIcon, show: coinLeaf.visible },
+    { href: usefulLeaf.href, alsoActive: usefulLeaf.alsoActive, label: t("nav.useful"), icon: BulbIcon, show: showUseful && usefulLeaf.visible },
     // Filial adminida «Moliya va aloqa» ichida faqat bildirishnomalar qoladi
     // (hisob-faktura, chegirma, qarzdorlar, eslatmalar — boshqa rollarda) —
     // bitta bandli guruh o'rniga to'g'ridan-to'g'ri bo'lim.
@@ -533,9 +550,9 @@ export function Sidebar({ slug }: { slug: string }) {
 
   const entries = (chef ? chefEntries : teacher ? (isAssistant ? assistantEntries : teacherEntries) : isNetworkAdmin && !inBranchContext ? rootEntries : isFinance ? financeEntries : isCallOperatorUser(user) ? callOperatorEntries : operationalEntries)
     .map((entry) =>
-      isSection(entry) ? { ...entry, items: entry.items.filter((item) => item.show) } : entry,
+      isSection(entry) ? { ...entry, items: entry.items.filter((item) => item.show && routeOn(item.href)) } : entry,
     )
-    .filter((entry) => (isSection(entry) ? entry.items.length > 0 : entry.show));
+    .filter((entry) => (isSection(entry) ? entry.items.length > 0 : entry.show && routeOn(entry.href)));
 
   useEffect(() => {
     setDrawerOpen(false);
@@ -638,13 +655,20 @@ export function Sidebar({ slug }: { slug: string }) {
               title={collapsed ? user.organizationName : undefined}
               aria-hidden="true"
             >
-              {dark ? (
-                <span className="bg-gradient-to-br from-[#a3143a] via-[#e0457a] to-[#c98a05] bg-clip-text text-transparent">
-                  {initials(user.organizationName)}
-                </span>
-              ) : (
-                initials(user.organizationName)
-              )}
+              <OrgLogo
+                slug={user.organizationSlug}
+                updatedAt={user.organizationLogoUpdatedAt}
+                className={clsx("h-[78%] w-[78%]", !dark && "rounded-[6px] bg-white p-[2px]")}
+                fallback={
+                  dark ? (
+                    <span className="bg-gradient-to-br from-[#a3143a] via-[#e0457a] to-[#c98a05] bg-clip-text text-transparent">
+                      {initials(user.organizationName)}
+                    </span>
+                  ) : (
+                    initials(user.organizationName)
+                  )
+                }
+              />
             </span>
           ) : (
             <span className="h-9 w-9 shrink-0 animate-pulse rounded-[11px] bg-black/[0.06]" aria-hidden="true" />
@@ -896,7 +920,7 @@ export function Sidebar({ slug }: { slug: string }) {
                     { href: `/${slug}/${b.slug}/children`, label: tr("O'quvchilar"), icon: ChildIcon },
                     { href: `/${slug}/${b.slug}/employees`, label: "Xodimlar", icon: TeacherIcon },
                     { href: `/${slug}/${b.slug}/reminders`, label: "Eslatmalar", icon: ClockIcon },
-                  ];
+                  ].filter((l) => routeOn(l.href));
                   return (
                     <div key={b.id}>
                       <div className="relative">

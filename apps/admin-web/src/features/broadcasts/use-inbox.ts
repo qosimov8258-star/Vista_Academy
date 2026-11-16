@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { InboxMessage } from "@/lib/types";
+import { useFeatureEnabled } from "@/lib/use-auth";
 
 /**
  * Xodimga rahbariyat yuborgan xabarlar («Xabar yuborish»). Bitta kalit —
@@ -10,10 +11,12 @@ import type { InboxMessage } from "@/lib/types";
  * o'qiydi, qo'shimcha so'rov ketmaydi.
  */
 export function useEmployeeInbox(slug: string, enabled = true) {
+  // «Bildirishnomalar» o'chirilgan bo'lsa so'rov umuman yuborilmaydi
+  const notificationsOn = useFeatureEnabled()("notifications");
   return useQuery({
     queryKey: ["broadcast-inbox", slug],
     queryFn: () => api.get<InboxMessage[]>("/app/broadcasts/inbox"),
-    enabled,
+    enabled: enabled && notificationsOn,
     refetchInterval: 60_000,
     // Bildirishnomalar funksiyasi o'chirilgan bog'chada 403 — jim, bo'sh ro'yxat
     retry: false,

@@ -50,7 +50,7 @@ function PasswordField({
           aria-invalid={invalid || undefined}
           aria-describedby={hint ? hintId : undefined}
           className={`h-14 w-full rounded-[18px] border-2 bg-[var(--p-sunken)] pl-4 pr-14 text-[17px] text-[var(--p-ink)] outline-none transition-colors placeholder:text-[var(--p-muted)]/60 focus:border-[var(--p-sun)] ${
-            invalid ? "border-[var(--p-coral)]" : "border-transparent"
+            invalid ? "border-[var(--p-red)]" : "border-transparent"
           }`}
         />
         <button
@@ -66,7 +66,7 @@ function PasswordField({
       {hint && (
         <span
           id={hintId}
-          className={`mt-1.5 block text-[12.5px] ${invalid ? "font-medium text-[var(--p-coral)]" : "text-[var(--p-muted)]"}`}
+          className={`mt-1.5 block text-[12.5px] ${invalid ? "font-medium text-[var(--p-red)]" : "text-[var(--p-muted)]"}`}
         >
           {tr(hint)}
         </span>
@@ -244,7 +244,7 @@ export function PasswordSheet({
             </div>
 
             {error && (
-              <p role="alert" className="mt-3 rounded-[16px] bg-[var(--p-coral)]/12 px-4 py-3 text-[14px] font-medium text-[var(--p-coral)]">
+              <p role="alert" className="mt-3 rounded-[16px] bg-[var(--p-red)]/12 px-4 py-3 text-[14px] font-medium text-[var(--p-red)]">
                 {tr(error)}
               </p>
             )}
@@ -252,7 +252,7 @@ export function PasswordSheet({
             <button
               type="submit"
               disabled={busy}
-              className="mt-5 flex h-14 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[var(--p-coral)] text-[16px] font-extrabold text-white shadow-[0_10px_24px_-10px_rgba(255,122,102,0.9)] transition-[transform,opacity] active:scale-[0.98] disabled:opacity-70"
+              className="mt-5 flex h-14 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[var(--p-coral)] text-[16px] font-extrabold text-white transition-[transform,opacity] active:scale-[0.98] disabled:opacity-70"
               style={{ opacity: ready || busy ? undefined : 0.55 }}
             >
               {busy && <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />}

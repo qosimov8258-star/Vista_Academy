@@ -7,6 +7,7 @@ import clsx from "clsx";
 import styles from "../parent.module.css";
 import { CABINET_TABS, TAB_BAR_SLOTS, tabIndexOf } from "./tabs";
 import { useTr } from "@/i18n/tr";
+import { useParentFeatures } from "./use-parent-features";
 
 /**
  * Pastdagi suzuvchi menyu. Telefonda bosh barmoq yetadigan joyda turadi,
@@ -25,17 +26,24 @@ export function ParentTabBar({ slug }: { slug: string }) {
   const tr = useTr();
   const pathname = useAppPathname();
   const base = `/ota-ona/${slug}`;
+  // Platforma o'chirgan bo'limlar menyuda ko'rinmaydi
+  // `me` kelmaguncha faqat doim bor bo'limlar — hammasi chiqib, keyin yo'qolmasin
+  const { ready, isOn } = useParentFeatures(slug);
+  const tabs = CABINET_TABS.filter((tab) => {
+    const feature = "feature" in tab ? tab.feature : undefined;
+    return feature ? ready && isOn(feature) : true;
+  });
 
-  const overflowing = CABINET_TABS.length > TAB_BAR_SLOTS;
-  const visibleCount = overflowing ? TAB_BAR_SLOTS - 1 : CABINET_TABS.length;
-  const visible = CABINET_TABS.slice(0, visibleCount);
-  const more = CABINET_TABS.slice(visibleCount);
+  const overflowing = tabs.length > TAB_BAR_SLOTS;
+  const visibleCount = overflowing ? TAB_BAR_SLOTS - 1 : tabs.length;
+  const visible = tabs.slice(0, visibleCount);
+  const more = tabs.slice(visibleCount);
   const moreSlot = visibleCount; // "Yana" tugmasining o'rni
 
   // Bo'lim indeksini menyudagi joyga aylantiradi: sig'maganlari — "Yana"
   const slotOf = (tabIndex: number) => (tabIndex < 0 ? -1 : tabIndex < visibleCount ? tabIndex : moreSlot);
 
-  const routeIndex = tabIndexOf(pathname, base);
+  const routeIndex = tabIndexOf(pathname, base, tabs);
   // Bosilgan bo'lim darhol faol ko'rinadi — sahifa yuklanishini kutmaydi.
   // Manzil o'zgargach (yoki boshqa yo'l bilan kelinganda) haqiqiy holatga qaytadi.
   const [tapped, setTapped] = useState<number | null>(null);
@@ -81,13 +89,16 @@ export function ParentTabBar({ slug }: { slug: string }) {
     clsx(
       // `basis-0 min-w-0` — bo'limlar uzun nomiga qarab emas, teng
       // bo'linadi; uzun nom o'z katagiga sig'adi.
-      "relative z-10 flex min-w-0 flex-1 basis-0 flex-col items-center justify-center gap-1 rounded-full py-2 transition-colors duration-200",
-      active ? "text-[var(--p-sun-ink)]" : "text-[var(--p-muted)] active:bg-[var(--p-sunken)]",
+      "relative z-10 flex min-w-0 flex-1 basis-0 flex-col items-center justify-center gap-1 rounded-full py-2 transition-colors duration-200 outline-none focus-visible:ring-2 focus-visible:ring-[var(--p-sky)]",
+      active ? "text-[var(--p-sky-ink)]" : "text-[var(--p-muted)] active:bg-black/[0.04]",
     );
   const labelClass = "w-full truncate text-center text-[clamp(10px,3vw,11.5px)] font-semibold leading-none";
   const iconClass = (active: boolean) => clsx("h-[22px] w-[22px] shrink-0", active && styles.tabIconActive);
 
   return (
+    <>
+    {/* Menyu ostidagi tuman — kontent menyu ostida yumshoq yo'qoladi */}
+    <div className={styles.navFade} aria-hidden="true" />
     <nav
       aria-label={tr("Asosiy menyu")}
       className="fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 min-[380px]:px-4"
@@ -109,7 +120,7 @@ export function ParentTabBar({ slug }: { slug: string }) {
 
       <div
         ref={barRef}
-        className="relative flex w-full max-w-[420px] items-stretch gap-1 rounded-full border border-[var(--p-line)] bg-[var(--p-card)] p-2 shadow-[var(--p-shadow)]"
+        className={clsx(styles.glass, "relative flex w-full max-w-[420px] items-stretch gap-1 rounded-full p-2")}
       >
         {/* Suriluvchi tamg'a. Bo'lim tanilmasa ko'rsatilmaydi. */}
         {pill && (
@@ -161,6 +172,7 @@ export function ParentTabBar({ slug }: { slug: string }) {
         )}
       </div>
     </nav>
+    </>
   );
 }
 
@@ -181,10 +193,11 @@ function MoreSheet({
   const tr = useTr();
   return (
     <div className="fixed inset-0 z-[-1]" role="dialog" aria-modal="true" aria-label={tr("Boshqa bo'limlar")}>
-      <div className={clsx("absolute inset-0 bg-black/35", styles.enterSoft)} onClick={onClose} aria-hidden />
+      <div className={clsx("absolute inset-0 bg-black/25", styles.enterSoft)} onClick={onClose} aria-hidden />
       <div
         className={clsx(
-          "absolute inset-x-3 mx-auto max-w-[420px] rounded-[28px] border border-[var(--p-line)] bg-[var(--p-card)] p-3 shadow-[var(--p-shadow)] min-[380px]:inset-x-4",
+          "absolute inset-x-3 mx-auto max-w-[420px] rounded-[28px] p-3 min-[380px]:inset-x-4",
+          styles.glass,
           styles.moreSheet,
         )}
         // Menyu ustida, undan biroz yuqorida suzib turadi
@@ -203,19 +216,19 @@ function MoreSheet({
                   aria-current={active ? "page" : undefined}
                   className={clsx(
                     "flex items-center gap-3.5 rounded-[20px] px-2.5 py-2.5 transition-colors",
-                    active ? "bg-[var(--p-sun)]/16" : "active:bg-[var(--p-sunken)]",
+                    active ? "bg-[var(--p-sky)]/12" : "active:bg-black/[0.04]",
                   )}
                 >
                   <span
                     className={clsx(
                       "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl",
-                      active ? "bg-[var(--p-sun)]/25 text-[var(--p-sun-ink)]" : "bg-[var(--p-sunken)] text-[var(--p-ink)]",
+                      active ? "bg-[var(--p-sky)]/16 text-[var(--p-sky-ink)]" : "bg-black/[0.05] text-[var(--p-ink)]",
                     )}
                   >
                     <Icon filled={active} className="h-[22px] w-[22px]" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className={clsx("block text-[15.5px] font-bold", active ? "text-[var(--p-sun-ink)]" : "text-[var(--p-ink)]")}>
+                    <span className={clsx("block text-[15.5px] font-bold", active ? "text-[var(--p-sky-ink)]" : "text-[var(--p-ink)]")}>
                       {tr(tab.label)}
                     </span>
                     <span className="block truncate text-[13px] text-[var(--p-muted)]">{tr(tab.hint)}</span>

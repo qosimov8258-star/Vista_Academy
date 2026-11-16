@@ -5,6 +5,7 @@ import { MainScroll } from "@/components/layout/main-scroll";
 import { ChefBottomBar } from "@/features/chef/chef-bottom-bar";
 import { TeacherTabBar } from "@/features/teacher/teacher-tab-bar";
 import { EmployeeMandatoryGate } from "@/features/broadcasts/mandatory-gate";
+import { FeatureRouteGate } from "@/features/feature-flags/route-gate";
 import { ThemeSync } from "@/lib/theme";
 import { tenantMetadata } from "@/lib/tenant-metadata";
 import type { Metadata } from "next";
@@ -36,7 +37,7 @@ export default async function DashboardLayout({
             Pastki bo'shliq mobilda kattaroq — o'qituvchi uchun ekran pastida
             turadigan navigatsiya panel mazmunni yopib qo'ymasligi kerak. */}
         <MainScroll className="min-h-0 flex-1 overflow-y-auto px-6 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-6 md:py-6">
-          {children}
+          <FeatureRouteGate slug={slug}>{children}</FeatureRouteGate>
         </MainScroll>
       </div>
       {/* Faqat oshpazga, faqat telefonda — boshqa rollar uchun hech narsa chizmaydi */}

@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { EmployeeNotification } from "@/lib/types";
 import { isCallOperatorUser } from "@/lib/employee-position";
-import { useAuth } from "@/lib/use-auth";
+import { useAuth, useFeatureFlags } from "@/lib/use-auth";
 import { isChef, isTeacher, receivesEmployeeNotifications } from "@/lib/permissions";
 import { BellIcon } from "@/components/ui/icons";
 import { ArrowLeftIcon } from "@/components/ui/icons";
@@ -28,7 +28,9 @@ import { useEmployeeInboxUnread } from "@/features/broadcasts/use-inbox";
 export function Topbar({ slug }: { slug: string }) {
   const tr = useTr();
   const { user } = useAuth();
-  const showNotifications = receivesEmployeeNotifications(user?.role);
+  const features = useFeatureFlags();
+  // «Xodim bildirishnomalari» o'chirilgan bo'lsa qo'ng'iroqcha ham, so'rov ham yo'q
+  const showNotifications = receivesEmployeeNotifications(user?.role) && features.ready && features.isOn("employeeNotifications");
   // Oshpazda telefonda pastki panel bor: menyu tugmasi va qo'ng'iroqcha takrorlanmaydi
   const chef = isChef(user?.role);
   // Tarbiyachida ham telefonda pastki tab-bar bor — menyu tugmasi kerak emas,

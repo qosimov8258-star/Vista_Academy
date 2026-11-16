@@ -1,7 +1,10 @@
 @import "tailwindcss";
 
 :root {
-  --color-bg: #f7f8fa;
+  /* Sahifa foni — tizim rangidan ozgina tus oladi (5%): rang almashsa, fon ham
+     sezilar-sezilmas o'zgaradi. --color-primary data-theme yoki o'z rangi
+     bilan almashadi, shuning uchun bu qiymat ham o'zi qayta hisoblanadi. */
+  --color-bg: color-mix(in srgb, var(--color-primary) 5%, #f7f8fa);
   --color-surface: #ffffff;
   --color-border: #e5e7eb;
   --color-text: #111827;
@@ -18,7 +21,7 @@
 
   /* Yon panel: mazmun maydonidan bir oz to'qroq kulrang. Faol bo'lim uning
      ustida oq "kartochka" bo'lib turadi, shuning uchun ular farqlanishi shart. */
-  --color-sidebar: #ecedf1;
+  --color-sidebar: color-mix(in srgb, var(--color-primary) 6%, #ecedf1);
   --color-sidebar-line: #c8cbd4;
 
   /* Panel ichida ajratilgan yuzalar: progress yo'lagi, ichki bloklar */

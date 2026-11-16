@@ -29,7 +29,7 @@ export class ExportsController {
     @Query("branchId") branchId: string | undefined,
     @Res() res: Response,
   ) {
-    const csv = await this.exportsService.childrenCsv(toTenantScope(user), branchId);
+    const csv = await this.exportsService.childrenCsv(toTenantScope(user), branchId, user.disabledFeatures);
     sendCsv(res, "bolalar.csv", csv);
   }
 
@@ -82,7 +82,7 @@ export class ExportsController {
 
   @Get("children/:id/contract-pdf")
   async childContractPdf(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string, @Res() res: Response) {
-    const pdf = await this.exportsService.childDocumentPdf(toTenantScope(user), id, "contract");
+    const pdf = await this.exportsService.childDocumentPdf(toTenantScope(user), id, "contract", user.disabledFeatures);
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="shartnoma-${id}.pdf"`);
     res.send(pdf);
@@ -90,7 +90,7 @@ export class ExportsController {
 
   @Get("children/:id/certificate-pdf")
   async childCertificatePdf(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string, @Res() res: Response) {
-    const pdf = await this.exportsService.childDocumentPdf(toTenantScope(user), id, "certificate");
+    const pdf = await this.exportsService.childDocumentPdf(toTenantScope(user), id, "certificate", user.disabledFeatures);
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="malumotnoma-${id}.pdf"`);
     res.send(pdf);

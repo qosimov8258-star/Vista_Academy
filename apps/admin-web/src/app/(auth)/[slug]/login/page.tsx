@@ -54,7 +54,7 @@ export default function LoginPage({ params }: { params: Promise<{ slug: string }
               "w-full max-w-[400px] rounded-[30px] bg-white/80 px-4 py-6 shadow-[0_24px_60px_-28px_rgba(120,40,40,0.35)] backdrop-blur-2xl sm:px-7 lg:rounded-none lg:bg-transparent lg:p-0 lg:shadow-none lg:backdrop-blur-none",
             )}
           >
-            <OrgMark name={orgName} />
+            <OrgMark name={orgName} slug={slug} logoUpdatedAt={orgQuery.data?.logoUpdatedAt} />
 
             <h1 data-hero className="mt-5 text-center sm:mt-7 text-[28px] font-semibold tracking-[-0.03em] text-[#0c0c0c]">{t("title")}</h1>
             <p className="mx-auto mt-2 max-w-[330px] text-center text-[13px] sm:text-[14px] leading-relaxed text-[#8e8e93]">{t("subtitle")}</p>

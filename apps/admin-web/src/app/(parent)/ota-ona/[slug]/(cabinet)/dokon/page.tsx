@@ -132,7 +132,7 @@ function ProductTile({ product, onOpen }: { product: Product; onOpen: () => void
             {tr(product.priceCoins)}
           </span>
           {!inStock && (
-            <span className="rounded-full bg-[var(--p-coral)]/14 px-2 py-0.5 text-[11px] font-bold text-[var(--p-coral)]">
+            <span className="rounded-full bg-[var(--p-red)]/14 px-2 py-0.5 text-[11px] font-bold text-[var(--p-red)]">
               {tr("Tugagan")}
             </span>
           )}
@@ -233,7 +233,7 @@ function ProductSheet({
         </div>
 
         {error && (
-          <div className="mt-3 rounded-[16px] bg-[var(--p-coral)]/12 px-4 py-2.5 text-[14px] font-medium text-[var(--p-coral)]">
+          <div className="mt-3 rounded-[16px] bg-[var(--p-red)]/12 px-4 py-2.5 text-[14px] font-medium text-[var(--p-red)]">
             {tr(error)}
           </div>
         )}
@@ -241,7 +241,7 @@ function ProductSheet({
         <div
           className={clsx(
             "mt-3 rounded-[16px] px-4 py-2.5 text-center text-[14px] font-bold",
-            inStock ? "bg-[var(--p-mint)]/14 text-[var(--p-mint)]" : "bg-[var(--p-coral)]/14 text-[var(--p-coral)]",
+            inStock ? "bg-[var(--p-mint)]/14 text-[var(--p-mint)]" : "bg-[var(--p-red)]/14 text-[var(--p-red)]",
           )}
         >
           {inStock ? "Yetarli" : "Tovar tugagan"}
@@ -251,7 +251,7 @@ function ProductSheet({
           type="button"
           onClick={() => purchase.mutate()}
           disabled={!inStock || !canAfford || purchase.isPending || !!result}
-          className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[var(--p-coral)] py-4 text-[16px] font-extrabold text-white shadow-[0_10px_24px_-10px_rgba(255,122,102,0.9)] transition-transform active:scale-[0.98] disabled:cursor-default disabled:opacity-50"
+          className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[var(--p-coral)] py-4 text-[16px] font-extrabold text-white transition-transform active:scale-[0.98] disabled:cursor-default disabled:opacity-50"
         >
           {tr(buttonLabel)}
         </button>

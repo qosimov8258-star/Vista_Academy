@@ -115,10 +115,6 @@ export default function UsefulPage({ params }: { params: Promise<{ slug: string 
           href={`${base}/sherlar/${featured.id}`}
           className="relative mt-5 block overflow-hidden rounded-[var(--p-radius)] bg-[var(--p-card)] p-5 shadow-[var(--p-shadow)] transition-transform active:scale-[0.99]"
         >
-          <span
-            aria-hidden="true"
-            className="absolute inset-0 bg-[radial-gradient(120%_90%_at_100%_0%,rgba(167,139,250,0.28),transparent_60%),radial-gradient(90%_80%_at_0%_100%,rgba(255,183,3,0.2),transparent_60%)]"
-          />
           <SparkleDeco className="absolute right-4 top-4 h-16 w-16" />
           <span className="relative inline-flex items-center gap-1.5 rounded-full bg-[var(--p-lilac)]/16 px-2.5 py-1 text-[11.5px] font-bold uppercase tracking-[0.06em] text-[var(--p-lilac-ink)]">
             <StarIcon filled className="h-3.5 w-3.5" />
@@ -132,7 +128,7 @@ export default function UsefulPage({ params }: { params: Promise<{ slug: string 
             <br />
             {tr(featured.stanzas[0]?.[1])}
           </p>
-          <span className="relative mt-4 inline-flex items-center gap-1.5 rounded-full bg-[var(--p-coral)] px-4 py-2.5 text-[14.5px] font-bold text-white shadow-[0_8px_18px_-8px_rgba(255,122,102,0.8)]">
+          <span className="relative mt-4 inline-flex items-center gap-1.5 rounded-full bg-[var(--p-coral)] px-4 py-2.5 text-[14.5px] font-bold text-white">
             {tr("Yodlashni boshlash")}
             <ChevronRightIcon className="h-4 w-4" />
           </span>
@@ -151,8 +147,8 @@ export default function UsefulPage({ params }: { params: Promise<{ slug: string 
                   href={section.href}
                   className="flex items-center gap-4 rounded-[24px] bg-[var(--p-card)] p-4 shadow-[var(--p-shadow)] transition-transform active:scale-[0.99]"
                 >
-                  <span className={clsx("flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-[20px]", tone.soft, tone.ink)}>
-                    <section.Icon className="h-9 w-9" />
+                  <span className={clsx("flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-[14px] text-white", tone.solid)}>
+                    <section.Icon className="h-7 w-7" />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className={`${styles.roundedFont} block text-[18px] font-extrabold text-[var(--p-ink)]`}>

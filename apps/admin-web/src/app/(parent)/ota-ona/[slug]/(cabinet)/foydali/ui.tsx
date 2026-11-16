@@ -183,8 +183,8 @@ export function LearnedButton({
         className={clsx(
           "relative flex w-full cursor-pointer items-center justify-center gap-2 rounded-full py-4 text-[16.5px] font-extrabold transition-[background-color,transform] duration-200 active:scale-[0.98]",
           learned
-            ? "bg-[var(--p-mint)] text-white shadow-[0_10px_24px_-10px_rgba(63,191,155,0.8)]"
-            : "bg-[var(--p-sun)] text-[#4a3200] shadow-[0_10px_24px_-10px_rgba(255,183,3,0.9)]",
+            ? "bg-[var(--p-mint)] text-white"
+            : "bg-[var(--p-accent)] text-white",
         )}
       >
         <StarIcon
@@ -251,7 +251,7 @@ export function EmptyCard({
   const tr = useTr();
   return (
     <div className="mt-5 flex flex-col items-center rounded-[var(--p-radius)] bg-[var(--p-card)] px-6 py-8 text-center shadow-[var(--p-shadow)]">
-      <span className={clsx("flex h-16 w-16 items-center justify-center rounded-[22px]", TONES[tone].soft, TONES[tone].ink)}>
+      <span className={clsx("flex h-16 w-16 items-center justify-center rounded-[18px] text-white", TONES[tone].solid)}>
         <Icon className="h-9 w-9" />
       </span>
       <p className={`${styles.roundedFont} mt-4 text-[19px] font-extrabold text-[var(--p-ink)]`}>{tr(title)}</p>

@@ -6,7 +6,7 @@ import clsx from "clsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, getPaginated, ApiError } from "@/lib/api";
 import type { Child, ChildGuardian, LedgerEntry, Payment, PaymentReceipt } from "@/lib/types";
-import { useAuth } from "@/lib/use-auth";
+import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable, THead, TBody, Tr, Th, Td } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -99,6 +99,8 @@ function Fact({
 
 export default function ChildFinancePage({ params }: { params: Promise<{ slug: string; childId: string }> }) {
   const tr = useTr();
+  // «Eksport» o'chirilgan bo'lsa yuklab olish tugmalari ko'rinmaydi
+  const exportsOn = useFeatureEnabled()("exports");
   const { slug, childId } = use(params);
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -108,6 +110,10 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
   // Bola profilini tahrirlash (surat, asosiy ma'lumot, ota-ona) — moliya emas,
   // operatsion huquq. Moliyachida bu yo'q, faqat ko'radi.
   const canWriteChild = canWriteOperational(user?.role);
+  // Platforma o'chirgan funksiyalar: bo'limi ko'rinmaydi va so'rovi yuborilmaydi
+  const isOn = useFeatureEnabled();
+  const guardiansOn = isOn("guardians");
+  const receiptsOn = isOn("paymentReceipts");
   const { branchSlug } = useBranchContext(slug);
   const financeHref = branchSlug ? `/${slug}/${branchSlug}/finance` : `/${slug}/finance`;
   const [downloadingReceiptId, setDownloadingReceiptId] = useState<string | null>(null);
@@ -144,6 +150,7 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
   const guardiansQuery = useQuery({
     queryKey: ["child-guardians", slug, childId],
     queryFn: () => api.get<ChildGuardian[]>(`/app/children/${childId}/guardians`),
+    enabled: guardiansOn,
   });
 
   const ledgerQuery = useQuery({
@@ -159,6 +166,7 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
   const receiptsQuery = useQuery({
     queryKey: ["payment-receipts", slug, childId],
     queryFn: () => api.get<PaymentReceipt[]>(`/app/children/${childId}/payment-receipts`),
+    enabled: receiptsOn,
   });
 
   // To'lovni bekor qilish — To'lovlar sahifasidagi varaqda, sabab bilan
@@ -255,7 +263,7 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
         <div className="flex flex-wrap items-start gap-4 px-5 py-5 sm:px-6">
           <div className="group relative shrink-0">
             <ChildPhoto child={child} size={72} fallback={initials(child.fullName)} />
-            {canWriteChild && (
+            {canWriteChild && isOn("childAvatar") && (
               <>
                 <button
                   type="button"
@@ -289,12 +297,12 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
               <Badge tone={child.status === "ACTIVE" ? "success" : child.status === "QUARANTINED" ? "danger" : "neutral"}>
                 {child.status === "ACTIVE" ? "Faol" : child.status === "QUARANTINED" ? "Karantinda" : "Nofaol"}
               </Badge>
-              {canWriteChild && (
+              {canWriteChild && isOn("childEdit") && (
                 <Button size="sm" variant="outline" onClick={() => setEditChildOpen(true)}>
                   {tr("Tahrirlash")}
                 </Button>
               )}
-              {canWriteChild && (
+              {canWriteChild && isOn("exports") && (
                 <>
                   {(["contract", "certificate"] as const).map((kind) => (
                     <Button
@@ -379,7 +387,7 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
       </Card>
 
       {showCash && <ChildCashCard slug={slug} childId={childId} childName={child.fullName} />}
-      {!showCash && (
+      {!showCash && guardiansOn && (
       <Card className="overflow-hidden">
         <div className="hairline flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-separator)] px-5 py-4 sm:px-6">
           <div>
@@ -658,7 +666,7 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
           }
           canWrite={canWrite}
           downloadingReceiptId={downloadingReceiptId}
-          onDownloadReceipt={handleReceipt}
+          onDownloadReceipt={exportsOn ? handleReceipt : undefined}
           onRefund={(id) => {
             setDetailEntry(null);
             setCancelTarget(id);

@@ -1,6 +1,7 @@
 "use client";
 
 import clsx from "clsx";
+import { OrgLogo } from "@/features/organization/org-logo";
 import { useTranslations } from "next-intl";
 import { initials } from "@/components/ui/avatar";
 import styles from "./login.module.css";
@@ -42,7 +43,7 @@ function ZeeronLogo({ size = "lg" }: { size?: "lg" | "sm" }) {
 }
 
 /** Bog'cha belgisi (bosh harflar) va nomi — formaning tepasida */
-export function OrgMark({ name }: { name: string | null }) {
+export function OrgMark({ name, slug, logoUpdatedAt }: { name: string | null; slug?: string; logoUpdatedAt?: string | null }) {
   const tr = useTr();
   if (name === null) {
     return (
@@ -55,8 +56,8 @@ export function OrgMark({ name }: { name: string | null }) {
   return (
     <div className="flex min-w-0 flex-col items-center gap-3.5">
       <span className={clsx(styles.ring, "h-[68px] w-[68px] shrink-0")} aria-hidden="true">
-        <span className="flex h-full w-full items-center justify-center rounded-full bg-white text-[20px] font-semibold tracking-tight text-[#0c0c0c]">
-          {initials(name)}
+        <span className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-white text-[20px] font-semibold tracking-tight text-[#0c0c0c]">
+          {slug ? <OrgLogo slug={slug} updatedAt={logoUpdatedAt} className="h-[74%] w-[74%]" fallback={initials(name)} /> : initials(name)}
         </span>
       </span>
       <span className="max-w-full truncate rounded-full bg-[#f6f6f7] px-3.5 py-1 text-[13px] font-medium text-[#3c3c43]">{tr(name)}</span>

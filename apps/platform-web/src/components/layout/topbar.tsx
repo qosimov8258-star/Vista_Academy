@@ -29,7 +29,7 @@ export function Topbar() {
   return (
     <header className="sticky top-0 z-20 flex h-[68px] items-center justify-between gap-3 bg-[var(--color-bg)]/90 px-4 backdrop-blur-sm sm:px-6">
       <Link href="/" className="md:hidden">
-        <ZeeronLogo className="h-[22px] w-auto" />
+        <ZeeronLogo className="h-[17px]" />
       </Link>
 
       <form onSubmit={submitSearch} role="search" className="ml-auto hidden w-full max-w-[300px] sm:block">

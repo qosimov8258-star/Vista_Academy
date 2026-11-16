@@ -3,6 +3,7 @@
 import Link from "next/link";
 import clsx from "clsx";
 import { useTr } from "@/i18n/tr";
+import { useRouteFeatureOn } from "@/lib/feature-routes";
 
 export interface SectionTab<K extends string = string> {
   key: K;
@@ -19,8 +20,11 @@ export interface SectionTab<K extends string = string> {
  * tanlangani oq), lekin har bandi — havola (sahifalar oldindan yuklanadi).
  * Telefonda qisqa nomlar va tor chetlar — hammasi bir qatorga sig'adi.
  */
-export function SectionTabs<K extends string>({ tabs, current, label }: { tabs: SectionTab<K>[]; current: K; label: string }) {
+export function SectionTabs<K extends string>({ tabs: allTabs, current, label }: { tabs: SectionTab<K>[]; current: K; label: string }) {
   const tr = useTr();
+  // Platforma o'chirgan funksiya sahifalari tanlagichda ko'rinmaydi
+  const routeOn = useRouteFeatureOn();
+  const tabs = allTabs.filter((t) => routeOn(t.href));
   if (tabs.length < 2) return null;
   return (
     <nav aria-label={tr(label)} className="grid rounded-full bg-[#767680]/[0.12] p-[3px]" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>

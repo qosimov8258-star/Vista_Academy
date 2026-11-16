@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useEffect, useState, type ComponentType } from "react";
 import clsx from "clsx";
-import { BookOpen, LayoutGrid, MessageSquareQuote, Paperclip, ScrollText } from "lucide-react";
+import { BookOpen, Images, LayoutGrid, MessageSquareQuote, Newspaper, Paperclip, ScrollText } from "lucide-react";
 import { useAppPathname } from "@/lib/tenant-host-context";
 import { useAuth } from "@/lib/use-auth";
+import { useRouteFeatureOn } from "@/lib/feature-routes";
 import { canViewUseful, isTeacher } from "@/lib/permissions";
 import { isSubjectTeacherPosition } from "@/lib/employee-position";
 import { CalendarIcon, ChecklistIcon, ChildIcon, HomeIcon, type IconProps } from "@/components/ui/icons";
@@ -32,6 +33,7 @@ const MoreIcon = ({ filled: _filled, ...props }: IconProps) => <LayoutGrid {...p
 export function TeacherTabBar({ slug }: { slug: string }) {
   const tr = useTr();
   const { user } = useAuth();
+  const routeOn = useRouteFeatureOn();
   const pathname = useAppPathname();
   const [moreOpen, setMoreOpen] = useState(false);
 
@@ -58,22 +60,24 @@ export function TeacherTabBar({ slug }: { slug: string }) {
       : { href: `/${slug}/children`, label: "Bolalar", Icon: ChildIcon },
     // Guruh fayllari — ota-onalarga vazifa, rasm, video, hujjat yuborish
     { href: `/${slug}/materials`, label: "Vazifa jo'natish", Icon: VazifaIcon },
-  ];
+  ].filter((tab) => routeOn(tab.href));
 
   // "Yana" varag'idagi, pastki panelga sig'magan bo'limlar (yon menyudagilar bilan bir xil)
   const showUseful = canViewUseful(user.role) && !subjectTeacher;
-  const useful: MoreItem[] = showUseful
+  const useful: MoreItem[] = showUseful && routeOn(`/${slug}/useful`)
     ? [
         { href: `/${slug}/useful/poems`, label: "She'rlar", icon: ScrollText },
         { href: `/${slug}/useful/proverbs`, label: "Maqollar", icon: MessageSquareQuote },
         { href: `/${slug}/useful/tales`, label: "Ertaklar", icon: BookOpen },
-      ]
+        { href: `/${slug}/useful/articles`, label: "Maqolalar", icon: Newspaper },
+        { href: `/${slug}/useful/gallery`, label: "Galereya", icon: Images },
+      ].filter((item) => routeOn(item.href))
     : [];
   const other: MoreItem[] = [
     ...(subjectTeacher ? [] : [{ href: `/${slug}/my-lessons/schedule`, label: "Dars jadvali", icon: RowCalendarIcon }]),
     { href: `/${slug}/my-notifications`, label: "Bildirishnomalar", icon: BellIcon },
     { href: `/${slug}/settings`, label: "Profil va sozlamalar", icon: UserIcon },
-  ];
+  ].filter((item) => routeOn(item.href));
   const moreActive = [...useful, ...other].some((item) => path.startsWith(item.href)) || path.startsWith(`/${slug}/useful`);
 
   const isActive = (tab: Tab) =>
@@ -117,9 +121,11 @@ export function TeacherTabBar({ slug }: { slug: string }) {
 
       <IosSheet open={moreOpen} onClose={() => setMoreOpen(false)} cancelLabel="Yopish" title={tr("Yana")}>
         <div className="space-y-5">
-          <Group>
-            <Row first icon={Paperclip} title={tr("Vazifa jo'natish")} subtitle={tr("Vazifa, rasm, video yoki hujjat")} href={`/${slug}/materials`} />
-          </Group>
+          {routeOn(`/${slug}/materials`) && (
+            <Group>
+              <Row first icon={Paperclip} title={tr("Vazifa jo'natish")} subtitle={tr("Vazifa, rasm, video yoki hujjat")} href={`/${slug}/materials`} />
+            </Group>
+          )}
           {useful.length > 0 && (
             <Group title={tr("Foydali")}>
               {useful.map((item, i) => (

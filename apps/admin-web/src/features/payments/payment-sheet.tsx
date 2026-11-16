@@ -19,6 +19,7 @@ import { Toast, type ToastState } from "@/components/ui/toast";
 import { useAuthedImage } from "@/components/ui/child-photo";
 import { currentMonth, todayTashkent } from "@/features/cash/shared";
 import { useTr } from "@/i18n/tr";
+import { useFeatureEnabled } from "@/lib/use-auth";
 import {
   METHOD_COLOR,
   METHOD_LABEL,
@@ -95,6 +96,8 @@ export function PaymentSheet({
   onClose: () => void;
 }) {
   const tr = useTr();
+  // «Eksport» o'chirilgan bo'lsa yuklab olish tugmalari ko'rinmaydi
+  const exportsOn = useFeatureEnabled()("exports");
   const queryClient = useQueryClient();
   const open = child !== null;
   const [current, setCurrent] = useState<PaymentSheetChild | null>(child);
@@ -524,7 +527,7 @@ export function PaymentSheet({
     body = <PaymentDetail payment={p} />;
     footer = (
       <div className="flex gap-3">
-        <div className="flex-1">
+        <div className={exportsOn ? "flex-1" : "hidden"}>
           <SheetSecondaryButton
             onClick={() => {
               void downloadCsv(`/app/exports/payments/${p.id}/pdf`, `tolov-kvitansiyasi-${p.id}.pdf`).catch(() => setError(tr("Kvitansiyani yuklab bo'lmadi")));

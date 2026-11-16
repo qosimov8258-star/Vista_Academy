@@ -6,7 +6,7 @@ import Link from "next/link";
 import { ChevronRight, ClipboardCheck, Paperclip, Plus, UsersRound } from "lucide-react";
 import { api } from "@/lib/api";
 import type { Group, Organization } from "@/lib/types";
-import { useAuth } from "@/lib/use-auth";
+import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { canWriteOperational } from "@/lib/permissions";
 import { IosButton } from "@/components/ios/button";
@@ -39,6 +39,9 @@ export default function GroupsPage({ params }: { params: Promise<{ slug: string 
   const { slug } = use(params);
   const { user } = useAuth();
   const canWrite = canWriteOperational(user?.role);
+  // «Guruh yaratish» o'chirilgan bo'lsa yangi guruh tugmalari ko'rinmaydi
+  const groupCreateOn = useFeatureEnabled()("groupCreate");
+  const canCreate = canWrite && groupCreateOn;
   const { branchId: forcedBranchId, base } = useBranchContext(slug);
   const [createOpen, setCreateOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -82,7 +85,7 @@ export default function GroupsPage({ params }: { params: Promise<{ slug: string 
           title={tr("Guruhlar")}
           count={groupsQuery.data ? tr("{0} ta", all.length) : undefined}
           subtitle={tr("Yosh toifalari bo'yicha guruhlar")}
-          actions={canWrite ? <IosButton label={tr("Yangi guruh")} icon={Plus} variant="primary" compact onClick={() => setCreateOpen(true)} /> : undefined}
+          actions={canCreate ? <IosButton label={tr("Yangi guruh")} icon={Plus} variant="primary" compact onClick={() => setCreateOpen(true)} /> : undefined}
         />
 
         {/* Guruhlar bilan bog'liq sahifalar — menyuda alohida band emas, shu yerdan ochiladi */}
@@ -114,8 +117,8 @@ export default function GroupsPage({ params }: { params: Promise<{ slug: string 
           </IosGroup>
         ) : all.length === 0 ? (
           <div className="space-y-4">
-            <EmptyState icon={UsersRound} title="Hali guruh yo'q" hint={canWrite ? "Birinchi guruhni qo'shing — keyin bolalarni unga biriktirasiz." : undefined} />
-            {canWrite && (
+            <EmptyState icon={UsersRound} title="Hali guruh yo'q" hint={canCreate ? "Birinchi guruhni qo'shing — keyin bolalarni unga biriktirasiz." : undefined} />
+            {canCreate && (
               <div className="flex justify-center">
                 <IosButton label={tr("Yangi guruh")} icon={Plus} variant="primary" onClick={() => setCreateOpen(true)} />
               </div>
@@ -193,7 +196,7 @@ export default function GroupsPage({ params }: { params: Promise<{ slug: string 
         )}
       </div>
 
-      {canWrite && <GroupFormSheet open={createOpen} onClose={() => setCreateOpen(false)} slug={slug} />}
+      {canCreate && <GroupFormSheet open={createOpen} onClose={() => setCreateOpen(false)} slug={slug} />}
     </div>
   );
 }

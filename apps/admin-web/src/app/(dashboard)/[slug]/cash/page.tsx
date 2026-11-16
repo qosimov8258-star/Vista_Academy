@@ -4,7 +4,7 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
-import { useAuth } from "@/lib/use-auth";
+import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +35,8 @@ function Tile({ label, value, tone }: { label: string; value: string; tone?: "da
 
 export default function CashPage({ params }: { params: Promise<{ slug: string }> }) {
   const tr = useTr();
+  // «Eksport» o'chirilgan bo'lsa yuklab olish tugmalari ko'rinmaydi
+  const exportsOn = useFeatureEnabled()("exports");
   const { slug } = use(params);
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -128,9 +130,11 @@ export default function CashPage({ params }: { params: Promise<{ slug: string }>
                       <div className="flex items-center gap-2">
                         <b className="tabular-nums">{formatMoney(p.amount)}</b>
                         <Badge tone={p.status === "COMPLETED" ? "success" : "neutral"}>{p.status === "COMPLETED" ? "Amalda" : "Qaytarilgan"}</Badge>
+                        {exportsOn && (
                         <Button size="sm" variant="outline" loading={receiptId === p.id} onClick={() => openReceipt(p.id)}>
                           {tr("Chek")}
                         </Button>
+                        )}
                       </div>
                     </li>
                   ))}

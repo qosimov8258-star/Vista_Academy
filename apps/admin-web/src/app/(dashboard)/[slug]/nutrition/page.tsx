@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { CalendarDays, Download, TriangleAlert, Utensils } from "lucide-react";
 import { api } from "@/lib/api";
 import type { ChildAllergy, MenuEntry, Organization } from "@/lib/types";
-import { useAuth } from "@/lib/use-auth";
+import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { downloadCsv } from "@/lib/download";
 import { useBranchContext } from "@/lib/use-branch-context";
@@ -60,6 +60,10 @@ export default function NutritionPage({ params }: { params: Promise<{ slug: stri
 
 function AdminNutritionPage({ slug }: { slug: string }) {
   const tr = useTr();
+  // «Eksport» o'chirilgan bo'lsa yuklab olish tugmalari ko'rinmaydi
+  // Allergiya ogohlantirishi — «Sog'liq» funksiyasidan; o'chirilgan bo'lsa so'ralmaydi
+  const healthOn = useFeatureEnabled()("health");
+  const exportsOn = useFeatureEnabled()("exports");
   const { user } = useAuth();
   // Menyu — oshpazning ishi; filial admini va administrator ham yozadi.
   const canWrite = canWriteKitchen(user?.role);
@@ -112,7 +116,7 @@ function AdminNutritionPage({ slug }: { slug: string }) {
   const allergiesQuery = useQuery({
     queryKey: ["allergies", slug, branchId],
     queryFn: () => api.get<ChildAllergy[]>(`/app/health/allergies?branchId=${branchId}`),
-    enabled: !!branchId,
+    enabled: healthOn && !!branchId,
   });
 
   // Menyu va allergiya ikkalasi ham erkin matn — vergul bilan ajratilgan
@@ -177,7 +181,7 @@ function AdminNutritionPage({ slug }: { slug: string }) {
           subtitle={tr("Bugungi porsiya, eslatmalar va haftalik menyu")}
           actions={
             <>
-              <IosButton label={tr("Eksport (CSV)")} icon={Download} compact loading={exporting} disabled={!weekStart || !branchId} onClick={handleExport} />
+              {exportsOn && <IosButton label={tr("Eksport (CSV)")} icon={Download} compact loading={exporting} disabled={!weekStart || !branchId} onClick={handleExport} />}
               {canWrite && (
                 <IosButton
                   label={tr("Haftalik menyu")}

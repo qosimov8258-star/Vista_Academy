@@ -4,6 +4,62 @@ import { PrismaService } from "../../database/prisma.service";
 import { TenantAuthenticatedUser } from "../iam/tenant-auth.types";
 import { AuditLogFilterDto, AuditLogQueryDto } from "./dto/audit-log-query.dto";
 
+/**
+ * Jurnal yozuvi qaysi funksiyaga tegishli (entityType bo'yicha). Funksiya
+ * chaqiruvchida o'chiq bo'lsa, shu turdagi yozuvlar jurnalda ko'rinmaydi.
+ * Hozir yozilmayotgan turlar (Lead, Product, Coin..., Menu...) ham oldindan
+ * qo'shilgan — keyin yozila boshlasa sizib chiqmasin.
+ */
+const ENTITY_TYPE_FEATURE: Record<string, string> = {
+  Invoice: "billing",
+  Payment: "billing",
+  LedgerEntry: "billing",
+  PaymentReminder: "paymentReminders",
+  PaymentReceipt: "paymentReceipts",
+  PaymentCard: "paymentReceipts",
+  ChildDiscount: "discounts",
+  Discount: "discounts",
+  Expense: "cash",
+  CashClosing: "cash",
+  CashTransaction: "cash",
+  PayrollEntry: "hr",
+  Payroll: "hr",
+  SalaryScheme: "hr",
+  Shift: "hr",
+  Lead: "crm",
+  Product: "products",
+  ProductSale: "products",
+  CoinTransaction: "coins",
+  Coin: "coins",
+  MenuEntry: "nutrition",
+  MenuPhoto: "nutrition",
+  Dish: "nutrition",
+  Vaccination: "health",
+  Medication: "health",
+  Allergy: "health",
+  FaceIdDevice: "faceId",
+  EmployeeAttendance: "staffAttendance",
+  Attendance: "attendance",
+  DailyReport: "dailyReports",
+};
+
+/** Umumiy turdagi (Child, Employee, TenantUser) yozuvlarning funksiyaga tegishli amallari. */
+const ACTION_FEATURE: Record<string, string> = {
+  "child.fee": "billing",
+  "lead.convert": "crm",
+  "employee.account_open": "employeeAccount",
+  "employee.password_regenerate": "employeeAccount",
+  "user.create": "employeeAccount",
+  "user.update": "employeeAccount",
+  "user.delete": "employeeAccount",
+};
+
+function hiddenKeys(map: Record<string, string>, disabled: readonly string[]): string[] {
+  return Object.entries(map)
+    .filter(([, feature]) => disabled.includes(feature))
+    .map(([key]) => key);
+}
+
 interface LogEntryFromUser {
   action: string;
   entityType: string;
@@ -82,12 +138,24 @@ export class AuditLogService {
     const from = filter.from ? new Date(`${filter.from}T00:00:00+05:00`) : undefined;
     const to = filter.to ? new Date(new Date(`${filter.to}T00:00:00+05:00`).getTime() + 24 * 60 * 60 * 1000) : undefined;
 
+    // O'chiq funksiyalarga tegishli yozuvlar chiqarib tashlanadi
+    const disabled = caller.disabledFeatures ?? [];
+    const hiddenTypes = hiddenKeys(ENTITY_TYPE_FEATURE, disabled);
+    const hiddenActions = hiddenKeys(ACTION_FEATURE, disabled);
+
     return {
       organizationId: caller.organizationId,
       // Filial admini va moliyachi faqat o'z filialini ko'radi — so'rovdagi branchId e'tiborga olinmaydi
       branchId: caller.role === "NETWORK_ADMIN" ? filter.branchId : caller.branchId,
       actorUserId: filter.actorUserId,
-      entityType: entityTypes?.length ? { in: entityTypes } : undefined,
+      entityType:
+        entityTypes?.length || hiddenTypes.length
+          ? {
+              ...(entityTypes?.length ? { in: entityTypes } : {}),
+              ...(hiddenTypes.length ? { notIn: hiddenTypes } : {}),
+            }
+          : undefined,
+      action: hiddenActions.length ? { notIn: hiddenActions } : undefined,
       createdAt: from || to ? { gte: from, lt: to } : undefined,
       OR: q
         ? [

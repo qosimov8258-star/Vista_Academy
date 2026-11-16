@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../database/prisma.service";
+import { canNotifyParents } from "../../common/features/feature-access";
 import { PushService } from "../push/push.service";
 import { TenantAuthenticatedUser, TenantScope, requireOperationalScope, toTenantScope } from "../iam/tenant-auth.types";
 import { BroadcastListQueryDto, BroadcastTargetDto, CreateBroadcastDto } from "./dto/broadcast.dto";
@@ -112,6 +113,10 @@ export class BroadcastsService {
       groupNames.length <= 3 ? groupNames.join(", ") : `${groupNames.slice(0, 3).join(", ")} +${groupNames.length - 3}`;
 
     if (dto.audience === "GUARDIANS") {
+      // Ota-onalar panelida kabinet yoki bildirishnomalar o'chiq — xabar yetib bormaydi
+      if (!(await canNotifyParents(this.prisma, scope.organizationId))) {
+        throw new BadRequestException("Ota-ona kabineti yoki bildirishnomalar o'chirilgan — ota-onalarga xabar yuborib bo'lmaydi");
+      }
       const childIds = [...new Set(dto.childIds ?? [])];
       if (dto.scope === "PICKED" && childIds.length === 0) throw new BadRequestException("Kamida bitta bolani tanlang");
       const children = await this.prisma.child.findMany({

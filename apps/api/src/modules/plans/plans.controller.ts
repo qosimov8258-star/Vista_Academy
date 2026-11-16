@@ -1,9 +1,11 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { PlatformUserRole } from "@prisma/client";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 import { RolesGuard } from "../../common/guards/roles.guard";
 import { Roles } from "../../common/decorators/roles.decorator";
+import { CurrentUser } from "../../common/decorators/current-user.decorator";
+import { AuthenticatedUser } from "../auth/auth.types";
 import { PlansService } from "./plans.service";
 import { CreatePlanDto } from "./dto/create-plan.dto";
 import { UpdatePlanDto } from "./dto/update-plan.dto";
@@ -22,8 +24,8 @@ export class PlansController {
 
   @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN)
   @Post()
-  create(@Body() dto: CreatePlanDto) {
-    return this.plansService.create(dto);
+  create(@Body() dto: CreatePlanDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.plansService.create(dto, user);
   }
 
   @Get(":id")
@@ -33,7 +35,7 @@ export class PlansController {
 
   @Roles(PlatformUserRole.PLATFORM_SUPER_ADMIN)
   @Patch(":id")
-  update(@Param("id") id: string, @Body() dto: UpdatePlanDto) {
-    return this.plansService.update(id, dto);
+  update(@Param("id", ParseUUIDPipe) id: string, @Body() dto: UpdatePlanDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.plansService.update(id, dto, user);
   }
 }

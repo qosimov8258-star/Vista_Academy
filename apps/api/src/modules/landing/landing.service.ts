@@ -1,8 +1,9 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { unlink } from "fs/promises";
 import { basename, join } from "path";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
+import { loadDisabledFeatures } from "../../common/features/feature-access";
 import { landingOwnerSlug } from "./landing-owner.guard";
 import { LANDING_UPLOAD_DIR } from "../../common/constants/uploads";
 import { normalizeWebsiteHost } from "../../common/website-host";
@@ -454,11 +455,16 @@ export class LandingService {
    */
   async createApplication(dto: CreateLandingApplicationDto, originHeader?: string) {
     const organizationId = await this.resolveApplicationOrganizationId(dto.organizationSlug, originHeader);
+    // Bog'chada lending o'chiq bo'lsa ariza qabul qilinmaydi; CRM o'chiq bo'lsa — lid ochilmaydi
+    const disabled = organizationId ? await loadDisabledFeatures(this.prisma, organizationId) : [];
+    if (disabled.includes("landing")) {
+      throw new ForbiddenException("Bu bog'chada sayt orqali ariza qabul qilish o'chirilgan");
+    }
     return this.prisma.$transaction(async (tx) => {
       const application = await tx.landingApplication.create({
         data: { organizationId, fullName: dto.fullName, phone: dto.phone },
       });
-      if (organizationId) {
+      if (organizationId && !disabled.includes("crm")) {
         await upsertWebsiteLead(tx, organizationId, dto.fullName, dto.phone);
       }
       return application;

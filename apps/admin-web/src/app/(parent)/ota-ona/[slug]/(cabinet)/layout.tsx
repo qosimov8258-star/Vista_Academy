@@ -2,6 +2,7 @@ import { ParentTabBar } from "./tab-bar";
 import { ParentPageTransition } from "./page-transition";
 import { CabinetThemeProvider } from "./theme";
 import { ParentMandatoryGate } from "./mandatory-gate";
+import { ParentFeatureGate } from "./feature-gate";
 import { tenantMetadata } from "@/lib/tenant-metadata";
 import type { Metadata } from "next";
 
@@ -31,8 +32,10 @@ export default async function ParentCabinetLayout({
         iPhone'ning pastki chizig'i ham hisobga olinadi — aks holda oxirgi
         karta menyu ostida qolardi.
       */}
-      <div style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 100px)" }}>
-        <ParentPageTransition slug={slug}>{children}</ParentPageTransition>
+      <div style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 116px)" }}>
+        <ParentPageTransition slug={slug}>
+          <ParentFeatureGate slug={slug}>{children}</ParentFeatureGate>
+        </ParentPageTransition>
       </div>
       <ParentTabBar slug={slug} />
       {/* Bog'cha «majburiy» deb yuborgan xabar — o'qilmaguncha yopilmaydi */}

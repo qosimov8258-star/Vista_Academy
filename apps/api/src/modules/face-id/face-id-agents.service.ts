@@ -5,7 +5,7 @@ import path from "path";
 import { PrismaService } from "../../database/prisma.service";
 import { TenantAuthenticatedUser, TenantScope, requireOperationalScope, toTenantScope } from "../iam/tenant-auth.types";
 import { generateAgentKey, generatePairingCode, hashAgentToken, hashPairingCode } from "./agent/agent-token";
-import type { AgentKeyOwner } from "./agent/agent-token.guard";
+import { assertFaceIdEnabled, type AgentKeyOwner } from "./agent/agent-token.guard";
 
 /** O'rnatuvchi turlari: release/ dagi fayl va yuklab olishdagi nom (nomida ulash kodi). */
 export const AGENT_INSTALLERS = {
@@ -142,6 +142,8 @@ export class FaceIdAgentsService {
     if (!pairing || pairing.usedAt || pairing.expiresAt.getTime() < Date.now()) {
       throw invalid;
     }
+    // Kod Face ID o'chirilishidan oldin berilgan bo'lishi mumkin
+    await assertFaceIdEnabled(this.prisma, pairing.organizationId);
     const agentKey = generateAgentKey();
     await this.prisma.$transaction(async (tx) => {
       const claimed = await tx.faceIdAgentPairingCode.updateMany({

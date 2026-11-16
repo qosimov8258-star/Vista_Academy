@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, DoorOpen } from "lucide-react";
 import { api } from "@/lib/api";
 import type { Employee, Group, LessonSchedule, Room, Weekday } from "@/lib/types";
-import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
+import { useAuth } from "@/lib/use-auth";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { canWriteOperational } from "@/lib/permissions";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
@@ -30,7 +30,6 @@ export default function LessonSchedulePage({ params }: { params: Promise<{ slug:
   const tr = useTr();
   const { slug } = use(params);
   const { user } = useAuth();
-  const isOn = useFeatureEnabled();
   const canWrite = canWriteOperational(user?.role);
   const { branchId: forcedBranchId } = useBranchContext(slug);
   const branchQuery = forcedBranchId ? `?branchId=${forcedBranchId}` : "";
@@ -56,11 +55,11 @@ export default function LessonSchedulePage({ params }: { params: Promise<{ slug:
     queryKey: ["groups", slug, forcedBranchId],
     queryFn: () => api.get<Group[]>(`/app/groups${branchQuery}`),
   });
-  // Xodimlar bo'limi o'chiq bo'lsa ro'yxat so'ralmaydi — o'qituvchilar jadvaldagi darslardan olinadi
+  // Xodimlar ro'yxati (faqat o'qish) «Xodimlar bo'limi» o'chirilganda ham ochiq —
+  // o'qituvchi tanlash va ustunlar shunga tayanadi
   const employeesQuery = useQuery({
     queryKey: ["employees", slug, forcedBranchId],
     queryFn: () => api.get<Employee[]>(`/app/employees${branchQuery}`),
-    enabled: isOn("employees"),
   });
 
   const lessons = useMemo(() => lessonsQuery.data ?? [], [lessonsQuery.data]);

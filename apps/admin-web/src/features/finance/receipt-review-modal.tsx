@@ -57,7 +57,8 @@ export function ReceiptReviewModal({
   receipt?: PaymentReceipt;
   canWrite: boolean;
   downloadingReceiptId: string | null;
-  onDownloadReceipt: (paymentId: string) => void;
+  /** Berilmasa (eksport o'chirilgan) kvitansiya tugmasi ko'rinmaydi */
+  onDownloadReceipt?: (paymentId: string) => void;
   onRefund: (paymentId: string) => void;
 }) {
   const tr = useTr();
@@ -193,6 +194,7 @@ export function ReceiptReviewModal({
 
         {payment && (
           <div className="flex justify-end gap-2 pt-2">
+            {onDownloadReceipt && (
             <Button
               size="sm"
               variant="outline"
@@ -201,6 +203,7 @@ export function ReceiptReviewModal({
             >
               {tr("Kvitansiya")}
             </Button>
+            )}
             {canWrite && payment.status === "COMPLETED" && (
               <Button
                 size="sm"

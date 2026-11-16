@@ -19,9 +19,29 @@ describe("feature-catalog", () => {
     expect(disabledFeatureKeys({}, {})).toEqual([]);
   });
 
-  it("bog'cha sozlamasi tarifni bekor qiladi", () => {
-    expect(disabledFeatureKeys({ crm: false, hr: false }, { crm: true })).toEqual(["hr"]);
+  it("tarif — yuqori chegara: bog'cha faqat cheklay oladi", () => {
+    // Tarifda o'chirilganni bog'cha yoqa olmaydi
+    expect(disabledFeatureKeys({ crm: false, hr: false }, { crm: true })).toEqual(["crm", "hr"]);
+    // Tarif ruxsat bergan funksiyani bog'cha o'chira oladi
     expect(resolveFeatures({ crm: true }, { crm: false }).crm).toBe(false);
+    // Panel ham tarifdan oshib keta olmaydi
+    expect(disabledFeatureKeys({ crm: false }, {}, "TEACHER", { TEACHER: { crm: true } })).toEqual(["crm"]);
+  });
+
+  it("bir nechta asosiy bo'lim va zanjir", () => {
+    // do'kon → koin; mavzular → xodimlar + darslar; chegirma → to'lovlar
+    expect(resolveFeatures({}, { coins: false }).products).toBe(false);
+    expect(resolveFeatures({}, { lessons: false }).employeeTopics).toBe(false);
+    expect(resolveFeatures({}, { employees: false }).employeeTopics).toBe(false);
+    expect(resolveFeatures({}, { billing: false }).discounts).toBe(false);
+    expect(resolveFeatures({}, {}).employeeTopics).toBe(true);
+  });
+
+  it("katta harf va to'liq URL bilan to'siqni aylanib o'tib bo'lmaydi", () => {
+    const off = ["crm"];
+    for (const url of ["/api/v1/app/LEADS", "/API/V1/APP/leads", "/api/v1/app/Leads?x=1", "http://x/api/v1/app/leads"]) {
+      expect(blockedFeatureForRequest(url, "GET", off)?.key).toBe("crm");
+    }
   });
 
   it("panel sozlamasi bog'cha sozlamasidan ustun turadi", () => {
@@ -48,7 +68,8 @@ describe("feature-catalog", () => {
     // rasmni ko'rish (GET) rasm funksiyasiga kirmaydi
     expect(keysOf("/api/v1/app/employees/1/avatar", "GET")).toEqual(["employees"]);
     expect(keysOf("/api/v1/app/employees", "POST")).toEqual(["employees", "employeeCreate"]);
-    expect(keysOf("/api/v1/app/employees", "GET")).toEqual(["employees"]);
+    // Ro'yxatni o'qish boshqa bo'limlar (dars jadvali, xodim davomati) uchun ochiq
+    expect(keysOf("/api/v1/app/employees", "GET")).toEqual([]);
     expect(keysOf("/api/v1/app/employees/1", "DELETE")).toEqual(["employees", "employeeDelete"]);
   });
 

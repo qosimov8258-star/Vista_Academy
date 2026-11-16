@@ -6,6 +6,8 @@ export interface TenantAuthenticatedUser {
   organizationId: string;
   organizationSlug: string;
   organizationName: string;
+  /** Bog'cha logosi yuklangan vaqt (rasm manziliga `?v=`); null — logo yo'q, harflar ko'rsatiladi. */
+  organizationLogoUpdatedAt: string | null;
   branchId: string | null;
   branchSlug: string | null;
   branchName: string | null;
@@ -24,6 +26,11 @@ export interface TenantAuthenticatedUser {
   topicsManagedByAdmin: boolean;
   /** Platforma tarif/bog'cha sozlamasi bilan o'chirilgan funksiya kalitlari (qarang: common/features). */
   disabledFeatures: string[];
+  /**
+   * «Xodim profiliga kirish» seansi bo'lsa — kirgan filial admini (TenantUser.id).
+   * Shunda o'chiq funksiyalar = xodim paneli ∪ filial admini paneli.
+   */
+  staffEntryIssuerId?: string | null;
 }
 
 export interface TenantAccessTokenPayload {
@@ -35,6 +42,8 @@ export interface TenantAccessTokenPayload {
   branchId: string | null;
   login: string;
   role: TenantUserRole;
+  /** «Xodim profiliga kirish» seansi: kirgan filial admini. Imzolangan — funksiyalarni faqat toraytiradi. */
+  issuerId?: string;
 }
 
 /**

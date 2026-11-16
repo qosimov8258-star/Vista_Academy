@@ -26,6 +26,7 @@ import { IosIcon } from "@/features/director/ios-icon";
 import { compactMoney, fullMoney } from "@/features/director/money";
 import styles from "@/features/director/director-home.module.css";
 import { useTr } from "@/i18n/tr";
+import { useFeatureEnabled } from "@/lib/use-auth";
 
 /**
  * Har bir filialning bosh harfi o'z rangida — bir necha filial bo'lganda
@@ -58,6 +59,8 @@ const initials = (name: string) =>
  */
 export default function BranchesPage({ params }: { params: Promise<{ slug: string }> }) {
   const tr = useTr();
+  // «To'lovlar» o'chirilgan bo'lsa pul ko'rsatkichlari yashiriladi
+  const billingOn = useFeatureEnabled()("billing");
   const { slug } = use(params);
   const [createOpen, setCreateOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -125,6 +128,7 @@ export default function BranchesPage({ params }: { params: Promise<{ slug: strin
             <Total icon={ChildIcon} label={tr("Bolalar")} value={total((s) => s.childrenCount)} loading={isLoading || totalsLoading} />
             <Total icon={GroupIcon} label={tr("Faol guruhlar")} value={total((s) => s.activeGroupsCount)} loading={isLoading || totalsLoading} />
             <Total icon={TeacherIcon} label={tr("Xodimlar")} value={total((s) => s.employeesCount)} loading={isLoading || totalsLoading} />
+            {billingOn && (
             <Total
               icon={MoneyIcon}
               label={tr("Shu oy tushumi")}
@@ -133,6 +137,7 @@ export default function BranchesPage({ params }: { params: Promise<{ slug: strin
               suffix="so'm"
               loading={isLoading || totalsLoading}
             />
+            )}
           </section>
 
           {/* Qidiruv — iOS uslubida; filial ko'p bo'lganda kerak */}
@@ -263,6 +268,8 @@ function BranchCard({
   delay: number;
 }) {
   const tr = useTr();
+  // «To'lovlar» o'chirilgan bo'lsa pul ko'rsatkichlari yashiriladi
+  const billingOn = useFeatureEnabled()("billing");
   const children = summary?.childrenCount ?? 0;
   const present = summary?.todayAttendance.present ?? 0;
   const absent = summary?.todayAttendance.absent ?? 0;
@@ -331,7 +338,7 @@ function BranchCard({
         <Tile label={tr("Bolalar")} value={children} loading={loading} />
         <Tile label={tr("Guruhlar")} value={summary?.activeGroupsCount ?? 0} loading={loading} />
         <Tile label={tr("Xodimlar")} value={summary?.employeesCount ?? 0} loading={loading} />
-        <Tile label={tr("Shu oy")} value={compactMoney(revenue, tr)} title={fullMoney(revenue, tr)} loading={loading} />
+        {billingOn && <Tile label={tr("Shu oy")} value={compactMoney(revenue, tr)} title={fullMoney(revenue, tr)} loading={loading} />}
       </div>
 
       {/* Bugungi davomat — ingichka chiziq */}
@@ -357,7 +364,7 @@ function BranchCard({
       </div>
 
       {/* Qarzdorlik — bo'lsagina, ogohlantirish sifatida */}
-      {!loading && debt > 0 && (
+      {billingOn && !loading && debt > 0 && (
         <div className="pointer-events-none relative z-10 mt-4 flex items-center gap-2.5 rounded-[16px] bg-[var(--color-danger-bg)] px-4 py-2.5" title={fullMoney(debt, tr)}>
           <span className="h-2 w-2 shrink-0 rounded-full bg-[var(--color-danger)]" />
           <span className="flex-1 text-[13.5px] font-medium text-[var(--color-danger)]">{tr("To'lanmagan qarzdorlik")}</span>

@@ -127,7 +127,7 @@ export default function ParentMaterialsPage({ params }: { params: Promise<{ slug
                     target="_blank"
                     rel="noreferrer"
                     aria-label={tr("Ochish")}
-                    className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[var(--p-bg)] text-[11px] font-extrabold text-[var(--p-ink)]"
+                    className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[var(--p-sunken)] text-[11px] font-extrabold text-[var(--p-ink)]"
                   >
                     {extensionOf(item.originalName)}
                   </a>

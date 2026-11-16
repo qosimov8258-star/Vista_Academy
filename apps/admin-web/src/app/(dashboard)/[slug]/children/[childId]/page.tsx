@@ -37,7 +37,7 @@ import type {
   MedicationLog,
   Vaccination,
 } from "@/lib/types";
-import { useAuth } from "@/lib/use-auth";
+import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { downloadCsv } from "@/lib/download";
 import { ChildPhotoSheet } from "@/features/children/child-photo-sheet";
@@ -134,7 +134,19 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
   const canReadDiscounts = canReadMoney && user?.role !== "CHEF";
   const canGiveDiscount = canWriteDiscounts(user?.role);
 
-  const [tab, setTab] = useState<Tab>("overview");
+  // Platforma o'chirgan funksiyalar: bo'limi ko'rinmaydi va so'rovi yuborilmaydi
+  const isOn = useFeatureEnabled();
+  const attendanceOn = isOn("attendance");
+  const healthOn = isOn("health");
+  const developmentOn = isOn("development");
+  const reportsOn = isOn("dailyReports");
+  const guardiansOn = isOn("guardians");
+  const moneyOn = canReadMoney && isOn("billing");
+  const discountsOn = canReadDiscounts && isOn("discounts");
+  const [tabChoice, setTab] = useState<Tab>("overview");
+  const photoOn = canEditPhoto && isOn("childAvatar");
+  const tabOn: Record<Tab, boolean> = { overview: true, attendance: attendanceOn, health: healthOn, development: developmentOn || reportsOn };
+  const tab: Tab = tabOn[tabChoice] ? tabChoice : "overview";
   const [editChildOpen, setEditChildOpen] = useState(false);
   const [photoOpen, setPhotoOpen] = useState(false);
   const [docsOpen, setDocsOpen] = useState(false);
@@ -166,22 +178,23 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
   const attendanceQuery = useQuery({
     queryKey: ["child-attendance-history", slug, childId],
     queryFn: () => api.get<ChildAttendanceHistory>(`/app/children/${childId}/attendance-history`),
+    enabled: attendanceOn,
   });
-  const reportsQuery = useQuery({ queryKey: ["daily-reports-history", slug, childId], queryFn: () => api.get<DailyReport[]>(`/app/children/${childId}/daily-reports`) });
-  const developmentQuery = useQuery({ queryKey: ["development", slug, childId], queryFn: () => api.get<DevelopmentAssessment[]>(`/app/children/${childId}/development`) });
-  const healthQuery = useQuery({ queryKey: ["child-health", slug, childId], queryFn: () => api.get<HealthProfile | null>(`/app/children/${childId}/health`) });
-  const vaccinationsQuery = useQuery({ queryKey: ["vaccinations", slug, childId], queryFn: () => api.get<Vaccination[]>(`/app/children/${childId}/vaccinations`) });
-  const medicationsQuery = useQuery({ queryKey: ["medications", slug, childId], queryFn: () => api.get<MedicationLog[]>(`/app/children/${childId}/medications`) });
-  const guardiansQuery = useQuery({ queryKey: ["child-guardians", slug, childId], queryFn: () => api.get<ChildGuardian[]>(`/app/children/${childId}/guardians`) });
+  const reportsQuery = useQuery({ queryKey: ["daily-reports-history", slug, childId], queryFn: () => api.get<DailyReport[]>(`/app/children/${childId}/daily-reports`), enabled: reportsOn });
+  const developmentQuery = useQuery({ queryKey: ["development", slug, childId], queryFn: () => api.get<DevelopmentAssessment[]>(`/app/children/${childId}/development`), enabled: developmentOn });
+  const healthQuery = useQuery({ queryKey: ["child-health", slug, childId], queryFn: () => api.get<HealthProfile | null>(`/app/children/${childId}/health`), enabled: healthOn });
+  const vaccinationsQuery = useQuery({ queryKey: ["vaccinations", slug, childId], queryFn: () => api.get<Vaccination[]>(`/app/children/${childId}/vaccinations`), enabled: healthOn });
+  const medicationsQuery = useQuery({ queryKey: ["medications", slug, childId], queryFn: () => api.get<MedicationLog[]>(`/app/children/${childId}/medications`), enabled: healthOn });
+  const guardiansQuery = useQuery({ queryKey: ["child-guardians", slug, childId], queryFn: () => api.get<ChildGuardian[]>(`/app/children/${childId}/guardians`), enabled: guardiansOn });
   const ledgerQuery = useQuery({
     queryKey: ["ledger", slug, childId],
     queryFn: () => api.get<LedgerEntry[]>(`/app/children/${childId}/ledger`),
-    enabled: canReadMoney,
+    enabled: moneyOn,
   });
   const discountQuery = useQuery({
     queryKey: ["child-discount", slug, childId],
     queryFn: () => api.get<DiscountChildHistory>(`/app/discounts/child/${childId}`),
-    enabled: canReadDiscounts,
+    enabled: discountsOn,
   });
 
   const child = childQuery.data;
@@ -197,7 +210,17 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
   const overdueVaccinations = (vaccinationsQuery.data ?? []).filter(isVaccinationOverdue).length;
 
   const refresh = () =>
-    Promise.all([childQuery, attendanceQuery, reportsQuery, developmentQuery, healthQuery, vaccinationsQuery, medicationsQuery, guardiansQuery, ...(canReadMoney ? [ledgerQuery] : [])].map((q) => q.refetch()));
+    Promise.all(
+      [
+        childQuery,
+        ...(attendanceOn ? [attendanceQuery] : []),
+        ...(reportsOn ? [reportsQuery] : []),
+        ...(developmentOn ? [developmentQuery] : []),
+        ...(healthOn ? [healthQuery, vaccinationsQuery, medicationsQuery] : []),
+        ...(guardiansOn ? [guardiansQuery] : []),
+        ...(moneyOn ? [ledgerQuery] : []),
+      ].map((q) => q.refetch()),
+    );
 
   if (childQuery.isError) {
     return (
@@ -229,13 +252,13 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
               <div className="flex flex-col items-center text-center">
                 <button
                   type="button"
-                  disabled={!canEditPhoto}
+                  disabled={!photoOn}
                   onClick={() => setPhotoOpen(true)}
                   className="relative rounded-full transition-transform enabled:active:scale-95"
-                  aria-label={canEditPhoto ? tr("Bolaning suratini almashtirish") : undefined}
+                  aria-label={photoOn ? tr("Bolaning suratini almashtirish") : undefined}
                 >
                   <ChildPhoto child={child} size={88} fallback={initials(child.fullName)} />
-                  {canEditPhoto && (
+                  {photoOn && (
                     <span className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full bg-[var(--color-primary)] text-white ring-[3px] ring-white">
                       <Camera className="h-3.5 w-3.5" strokeWidth={2.4} />
                     </span>
@@ -250,21 +273,22 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
                 <div className="mt-2.5 flex flex-wrap justify-center gap-1.5">
                   <Pill color={STATUS[child.status]?.color}>{tr(STATUS[child.status]?.label ?? child.status)}</Pill>
                   <CopyChip value={formatChildId(child.publicId)} />
-                  {health?.allergies && <Pill color={IOS.red}>{tr("Allergiya")}</Pill>}
+                  {healthOn && health?.allergies && <Pill color={IOS.red}>{tr("Allergiya")}</Pill>}
                 </div>
               </div>
 
               <div className="mt-5 grid grid-cols-4 gap-2">
-                <QuickAction icon={Phone} label={tr("Qo'ng'iroq")} color={IOS.green} href={primary ? `tel:${primary.guardian.phone}` : undefined} />
-                <QuickAction icon={FileText} label={tr("Hujjatlar")} color={IOS.blue} onClick={canWrite ? () => setDocsOpen(true) : undefined} />
-                <QuickAction icon={Pencil} label={tr("Tahrirlash")} color={IOS.orange} onClick={canWrite ? () => setEditChildOpen(true) : undefined} />
-                <QuickAction icon={Wallet} label={tr("Moliya")} color="#5856d6" href={canReadMoney ? financeHref : undefined} />
+                <QuickAction icon={Phone} label={tr("Qo'ng'iroq")} color={IOS.green} href={guardiansOn && primary ? `tel:${primary.guardian.phone}` : undefined} />
+                <QuickAction icon={FileText} label={tr("Hujjatlar")} color={IOS.blue} onClick={canWrite && isOn("exports") ? () => setDocsOpen(true) : undefined} />
+                <QuickAction icon={Pencil} label={tr("Tahrirlash")} color={IOS.orange} onClick={canWrite && isOn("childEdit") ? () => setEditChildOpen(true) : undefined} />
+                <QuickAction icon={Wallet} label={tr("Moliya")} color="#5856d6" href={moneyOn ? financeHref : undefined} />
               </div>
             </>
           )}
         </PageCard>
 
         <StatStrip tone="white">
+          {attendanceOn && (
           <StatCell
             label={tr("Davomat")}
             value={stats?.attendanceRate != null ? `${stats.attendanceRate}%` : "—"}
@@ -272,8 +296,9 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
             hint={attendanceQuery.data ? tr("{0}-yil", attendanceQuery.data.year) : undefined}
             loading={attendanceQuery.isLoading}
           />
-          <StatCell label={tr("Kelmagan")} value={stats?.absent ?? 0} hint={stats ? tr("sababsiz {0}", stats.unexcusedAbsent) : undefined} color={stats?.unexcusedAbsent ? IOS.red : undefined} loading={attendanceQuery.isLoading} />
-          {canReadMoney ? (
+          )}
+          {attendanceOn && <StatCell label={tr("Kelmagan")} value={stats?.absent ?? 0} hint={stats ? tr("sababsiz {0}", stats.unexcusedAbsent) : undefined} color={stats?.unexcusedAbsent ? IOS.red : undefined} loading={attendanceQuery.isLoading} />}
+          {moneyOn ? (
             <StatCell
               label={tr("Qarzdorlik")}
               value={balance > 0.5 ? groupDigits(balance) : "0"}
@@ -282,31 +307,35 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
               href={financeHref}
               loading={ledgerQuery.isLoading}
             />
-          ) : (
+          ) : guardiansOn ? (
             <StatCell label={tr("Ota-onalar")} value={guardians.length} loading={guardiansQuery.isLoading} />
-          )}
-          <StatCell label={tr("Emlash")} value={overdueVaccinations ? tr("{0} kechikkan", overdueVaccinations) : (vaccinationsQuery.data?.length ?? 0)} color={overdueVaccinations ? IOS.red : undefined} hint={overdueVaccinations ? undefined : tr("yozuv")} loading={vaccinationsQuery.isLoading} />
+          ) : null}
+          {healthOn && <StatCell label={tr("Emlash")} value={overdueVaccinations ? tr("{0} kechikkan", overdueVaccinations) : (vaccinationsQuery.data?.length ?? 0)} color={overdueVaccinations ? IOS.red : undefined} hint={overdueVaccinations ? undefined : tr("yozuv")} loading={vaccinationsQuery.isLoading} />}
         </StatStrip>
 
         {!canWrite && <ViewOnlyNote role={user?.role} />}
 
-        <Segmented<Tab>
+        {/* Faqat «Umumiy» qolsa tanlagich kerak emas */}
+        {Object.values(tabOn).filter(Boolean).length > 1 && <Segmented<Tab>
           value={tab}
           onChange={switchTab}
           label={tr("Bo'lim")}
-          options={[
-            { value: "overview", label: tr("Umumiy") },
-            { value: "attendance", label: tr("Davomat") },
-            { value: "health", label: tr("Sog'liq") },
-            { value: "development", label: tr("Rivojlanish") },
-          ]}
-        />
+          options={(
+            [
+              { value: "overview", label: tr("Umumiy") },
+              { value: "attendance", label: tr("Davomat") },
+              { value: "health", label: tr("Sog'liq") },
+              { value: "development", label: tr("Rivojlanish") },
+            ] as { value: Tab; label: string }[]
+          ).filter((o) => tabOn[o.value])}
+        />}
 
         {/* ---------------- Umumiy ---------------- */}
         {tab === "overview" && (
           <>
-            {showCash && child && <ChildCashCard slug={slug} childId={childId} childName={child.fullName} />}
+            {showCash && isOn("billing") && isOn("cash") && child && <ChildCashCard slug={slug} childId={childId} childName={child.fullName} />}
 
+            {guardiansOn && (
             <Group
               title={tr("Ota-onalar")}
               action={
@@ -361,6 +390,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
                 </>
               )}
             </Group>
+            )}
 
             {child && (
               <Group title={tr("Ma'lumot")}>
@@ -372,7 +402,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
               </Group>
             )}
 
-            {canReadDiscounts && !discountQuery.isError && (
+            {discountsOn && !discountQuery.isError && (
               <Group title={tr("Chegirma")} bare={discountQuery.isLoading}>
                 {discountQuery.isLoading ? (
                   <SkeletonRows rows={1} avatar={false} />
@@ -401,7 +431,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
               </Group>
             )}
 
-            {canReadMoney && !showCash && (
+            {moneyOn && !showCash && (
               <Group title={tr("Moliya")} action={<Link href={financeHref} className="text-[var(--color-primary)] active:opacity-50">{tr("To'liq tarix")}</Link>} bare={ledgerQuery.isLoading || ledgerQuery.isError}>
                 {ledgerQuery.isLoading ? (
                   <SkeletonRows rows={2} avatar={false} />
@@ -537,6 +567,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
         {/* ---------------- Rivojlanish ---------------- */}
         {tab === "development" && (
           <>
+            {developmentOn && (
             <Group
               title={latest ? tr("Rivojlanish · {0}", latest.period) : tr("Rivojlanish")}
               action={canWrite ? <button type="button" className="text-[var(--color-primary)] active:opacity-50" onClick={() => setAssessOpen(true)}>{latest ? tr("Tahrirlash") : tr("Baholash")}</button> : undefined}
@@ -558,7 +589,9 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
                 ))
               )}
             </Group>
+            )}
 
+            {reportsOn && (
             <ExpandableGroup
               title={tr("Kundalik hisobotlar")}
               loading={reportsQuery.isLoading}
@@ -578,12 +611,13 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
                 />
               ))}
             />
+            )}
           </>
         )}
       </div>
 
       {/* ---------------- Varaqlar ---------------- */}
-      {child && canEditPhoto && (
+      {child && photoOn && (
         <ChildPhotoSheet open={photoOpen} onClose={() => setPhotoOpen(false)} slug={slug} child={child} canRemove={canWrite} />
       )}
       {child && canWrite && <DocsSheet open={docsOpen} onClose={() => setDocsOpen(false)} childId={childId} />}

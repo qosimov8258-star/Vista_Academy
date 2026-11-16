@@ -1,31 +1,45 @@
 /*
- * Ota-ona kabineti — bog'chaga mos iliq palitra. Boshqaruv panelidagi
- * to'q yashil brend rangi bu yerda ishlatilmaydi: ota-ona kuniga bir marta
- * kiradigan, bolasi haqida yaxshi xabar oladigan joy, ish quroli emas.
+ * Ota-ona kabineti — iOS «soft UI» uslubi (egasining qarori, 2026-11-16):
+ * oq fon, yumshoq soyali oq kartalar, iOS tizim ranglari, tizim shrifti.
+ * Avvalgi iliq (krem/sariq) palitra va osmon yoyilmasi olib tashlandi.
+ *
+ * Token nomlari tarixiy: sahifalar ularni o'zgarishsiz ishlatadi, qiymatlari
+ * esa iOS ranglari:
+ *   --p-coral → asosiy urg'u (tugmalar, tanlangan holat) — tizim ko'ki
+ *   --p-red   → xato va salbiy holat
+ *   --p-sun   → to'q sariq (yulduzcha, ogohlantirish), --p-mint → yashil,
+ *   --p-sky   → ko'k, --p-lilac → binafsha
  */
 .shell {
-  --p-bg: #fff8f0;
+  --p-bg: #ffffff;
   --p-card: #ffffff;
-  --p-ink: #2c2320;
-  --p-muted: #8a7d75;
-  --p-line: rgba(120, 90, 70, 0.1);
+  --p-ink: #1c1c1e;
+  --p-muted: #8e8e93;
+  --p-line: rgba(60, 60, 67, 0.12);
 
-  --p-sun: #ffb703;
-  --p-coral: #ff7a66;
-  --p-mint: #3fbf9b;
-  --p-sky: #56b4f5;
-  --p-lilac: #a78bfa;
+  --p-accent: #007aff;
+  --p-coral: var(--p-accent);
+  --p-red: #ff3b30;
+  --p-sun: #ff9500;
+  --p-mint: #34c759;
+  --p-sky: #007aff;
+  --p-lilac: #af52de;
 
-  --p-radius: 26px;
-  --p-shadow: 0 2px 4px rgba(120, 90, 70, 0.05), 0 12px 28px -10px rgba(120, 90, 70, 0.18);
+  --p-radius: 24px;
+  /* Uch qatlam: ingichka chegara, yaqin soya, keng yumshoq tuman */
+  --p-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(17, 24, 39, 0.05), 0 12px 32px -14px rgba(17, 24, 39, 0.16);
 
   /* Ichki panellar va rang bo'yicha matnlar — ikkala rejimda ham o'qiladigan */
-  --p-sunken: rgba(0, 0, 0, 0.045);
-  --p-panel: rgba(255, 255, 255, 0.7);
-  --p-sun-ink: #a8720a;
-  --p-sky-ink: #2b7fb8;
-  --p-lilac-ink: #7c5cd6;
-  --p-card-border: rgba(255, 183, 3, 0.18);
+  --p-sunken: #f2f2f7;
+  --p-panel: #f7f7fa;
+  --p-sun-ink: #c96f00;
+  --p-sky-ink: #007aff;
+  --p-lilac-ink: #9b3fc9;
+  --p-card-border: rgba(0, 0, 0, 0.035);
+  /* Qator oxiridagi «›» va shunga o'xshash xira belgilar */
+  --p-chevron: #c7c7cc;
+  /* Segmentda tanlangan bo'lak foni */
+  --p-segment: #ffffff;
 
   min-height: 100dvh;
   background: var(--p-bg);
@@ -33,38 +47,47 @@
 }
 
 /*
- * Qorong'i rejim — quyosh botganda o'zi yonadi (qarang: theme.tsx).
- * Qora emas, to'q siyohrang-binafsha: bog'chaning iliq ohangi tunda ham qolsin.
+ * Qorong'i rejim — iOS'ning qorong'i palitrasi: qora fon, to'q kulrang
+ * kartalar, yorqinroq tizim ranglari. Faqat ota-ona Sozlamalarda tanlasa
+ * (yoki «Avto»da quyosh botgach) yonadi — qarang: theme.tsx.
  */
 .shell[data-theme="dark"] {
-  --p-bg: #1b1a2c;
-  --p-card: #272541;
-  --p-ink: #f5f0e8;
-  --p-muted: #aca6bd;
-  --p-line: rgba(255, 255, 255, 0.09);
-  --p-shadow: 0 2px 4px rgba(0, 0, 0, 0.28), 0 12px 28px -10px rgba(0, 0, 0, 0.55);
-  --p-sunken: rgba(255, 255, 255, 0.07);
-  --p-panel: rgba(255, 255, 255, 0.06);
-  --p-sun-ink: #ffd166;
-  --p-sky-ink: #8ccdff;
-  --p-lilac-ink: #cabdff;
-  --p-card-border: rgba(255, 255, 255, 0.09);
+  --p-bg: #000000;
+  --p-card: #1c1c1e;
+  --p-ink: #ffffff;
+  --p-muted: #98989f;
+  --p-line: rgba(255, 255, 255, 0.12);
+  --p-accent: #0a84ff;
+  --p-red: #ff453a;
+  --p-sun: #ff9f0a;
+  --p-mint: #30d158;
+  --p-sky: #0a84ff;
+  --p-lilac: #bf5af2;
+  --p-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.08);
+  --p-sunken: #2c2c2e;
+  --p-panel: #2c2c2e;
+  --p-sun-ink: #ffb340;
+  --p-sky-ink: #0a84ff;
+  --p-lilac-ink: #d08cf7;
+  --p-card-border: rgba(255, 255, 255, 0.08);
+  --p-chevron: #48484a;
+  --p-segment: #636366;
   color-scheme: dark;
 }
 
-/* Yuqoridagi iliq yoyilma — sahifa "quyoshli" boshlanadi */
-.sky {
-  background:
-    radial-gradient(120% 90% at 15% 0%, rgba(255, 183, 3, 0.28) 0%, rgba(255, 183, 3, 0) 60%),
-    radial-gradient(110% 80% at 90% 5%, rgba(86, 180, 245, 0.25) 0%, rgba(86, 180, 245, 0) 55%),
-    var(--p-bg);
+/*
+ * Tailwind'ning juda qalin vaznlari iOS'da ishlatilmaydi: sarlavhalar 700.
+ * (Modul CSS qatlamsiz — Tailwind utilitalaridan ustun turadi.)
+ */
+.shell :global(.font-extrabold),
+.shell :global(.font-black) {
+  font-weight: 700;
 }
-/* Tunda yoyilma xiraroq — oy nuri kabi */
-.shell[data-theme="dark"].sky {
-  background:
-    radial-gradient(120% 90% at 15% 0%, rgba(255, 183, 3, 0.09) 0%, rgba(255, 183, 3, 0) 60%),
-    radial-gradient(110% 80% at 90% 5%, rgba(86, 180, 245, 0.13) 0%, rgba(86, 180, 245, 0) 55%),
-    var(--p-bg);
+
+/* Eski nomlar: osmon yoyilmasi yo'q — fon tekis. Sinflar qobiqda qoladi. */
+.sky,
+.plain {
+  background: var(--p-bg);
 }
 
 @keyframes pFloat {
@@ -198,12 +221,83 @@
  * bitta tamg'a suriladi — ko'z uni kuzatib boradi va o'tish uzluksiz
  * ko'rinadi.
  */
+/* ---------------------------------------------------------------------------
+ * Pastki menyu — iOS 26 «Liquid Glass»
+ *
+ * Shisha: orqadagi mazmun xiralashib, to'yinib ko'rinadi (backdrop-filter),
+ * ustida yupqa oq chekka va tepadan tushgan yorug'lik. Qorong'ida shisha
+ * to'q, chekkasi xiraroq. backdrop-filter qo'llanmagan brauzerda fon
+ * shunchaki yarim shaffof oq/to'q qoladi — menyu baribir o'qiladi.
+ * ------------------------------------------------------------------------ */
+.glass {
+  /* position bu yerda berilmaydi: menyu `relative`, «Yana» oynasi `absolute` —
+     har biri o'zinikini saqlaydi. ::before qatlami isolation bilan ostda qoladi. */
+  isolation: isolate;
+  background: rgba(255, 255, 255, 0.55);
+  -webkit-backdrop-filter: blur(22px) saturate(1.6);
+  backdrop-filter: blur(22px) saturate(1.6);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 1px 2px rgba(17, 24, 39, 0.06),
+    0 14px 36px -14px rgba(17, 24, 39, 0.3);
+}
+/* Shishaning yaltirashi: tepada yorug', pastda yo'qoladi */
+.glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0) 55%);
+  pointer-events: none;
+}
+.shell[data-theme="dark"] .glass {
+  background: rgba(44, 44, 46, 0.6);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    0 14px 36px -14px rgba(0, 0, 0, 0.6);
+}
+.shell[data-theme="dark"] .glass::before {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 55%);
+}
+
+/*
+ * Menyu ostidagi tuman: ekranning pastki qismi asta xiralashib fonga
+ * qo'shiladi — kontent menyu ostida «kesilib» ko'rinmaydi, iOS'dagidek.
+ * Bosilmaydi (pointer-events: none), menyuning o'zi uning ustida turadi.
+ */
+.navFade {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 39;
+  height: calc(max(12px, env(safe-area-inset-bottom)) + 112px);
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent 0%, var(--p-bg) 72%);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 45%);
+  mask-image: linear-gradient(180deg, transparent 0%, #000 45%);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+/*
+ * Faol bo'lim tamg'asi — shisha ichidagi tomchi: oqroq, o'z soyasi bilan,
+ * xuddi shisha ustida suzib yurgandek.
+ */
 .tabPill {
   position: absolute;
   top: 0;
   left: 0;
   border-radius: 999px;
-  background: rgba(255, 183, 3, 0.16);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.9),
+    0 2px 6px rgba(17, 24, 39, 0.1),
+    0 8px 18px -10px rgba(17, 24, 39, 0.25);
   /*
    * O'lchami ham, o'rni ham React tomonidan qatorga yoziladi: ular faol
    * bo'limning haqiqiy o'lchamidan olinadi (tab-bar.tsx). Shuning uchun
@@ -212,6 +306,12 @@
   transition:
     transform 0.34s cubic-bezier(0.32, 0.72, 0, 1),
     width 0.34s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.shell[data-theme="dark"] .tabPill {
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.16),
+    0 2px 6px rgba(0, 0, 0, 0.25);
 }
 
 /* "Yana" oynasi menyudan yuqoriga ko'tarilib chiqadi */
@@ -528,9 +628,19 @@
  * Foydali bo'limi: she'rlar, maqollar, ertaklar
  * ------------------------------------------------------------------------ */
 
-/* Yumaloq shrift — sarlavha va she'rlar bolalarcha, iliq ko'rinsin */
+/*
+ * Sarlavhalar — tizim shrifti (iPhone'da SF Pro), biroz siqilgan. Ilgari
+ * yumaloq bolalarcha shrift edi; u faqat o'yin sahnasida ([data-kid-stage])
+ * qoldi — bolaga mo'ljallangan yagona joy.
+ */
 .roundedFont {
+  font-family: inherit;
+  letter-spacing: -0.02em;
+}
+[data-kid-stage] .roundedFont {
   font-family: ui-rounded, "SF Pro Rounded", "Nunito", "Segoe UI", system-ui, sans-serif;
+  font-weight: 800;
+  letter-spacing: normal;
 }
 
 /* Qatorma-qator rejimida yangi qator pastdan chiqib keladi */

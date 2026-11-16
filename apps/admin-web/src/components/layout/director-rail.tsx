@@ -9,6 +9,7 @@ import { useTranslations } from "next-intl";
 import type { TenantAuthenticatedUser } from "@/lib/types";
 import { ROLE_LABEL } from "@/lib/permissions";
 import { Avatar, initials } from "@/components/ui/avatar";
+import { OrgLogo } from "@/features/organization/org-logo";
 import { ArrowLeft, ChevronRight, X } from "lucide-react";
 import { ArrowLeftIcon, ChevronRightIcon, LogoutIcon } from "@/components/ui/icons";
 import { GROUP_BLOCK, SECTION_TITLE } from "@/components/ios/tokens";
@@ -355,7 +356,12 @@ export function DirectorRail({
       >
         <span className={clsx(styles.brand, "flex shrink-0 items-center justify-center rounded-full")}>
           {user ? (
-            <span className={clsx(styles.brandText, "text-[24px] font-extrabold tracking-tight")}>{initials(orgName)}</span>
+            <OrgLogo
+              slug={user.organizationSlug}
+              updatedAt={user.organizationLogoUpdatedAt}
+              className="h-[72%] w-[72%]"
+              fallback={<span className={clsx(styles.brandText, "text-[24px] font-extrabold tracking-tight")}>{initials(orgName)}</span>}
+            />
           ) : (
             <span className="h-7 w-7 animate-pulse rounded-full bg-black/[0.06]" />
           )}
@@ -641,9 +647,20 @@ export function DirectorMenuContent({
     <>
       {/* Tepa qism: bog'cha va foydalanuvchi (Apple ID kartasidagidek), o'ngda yopish */}
       <div className="flex shrink-0 items-center gap-3 px-5 pb-3 pt-3">
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)] text-[17px] font-semibold text-white" aria-hidden="true">
-          {orgName ? initials(orgName) : ""}
-        </span>
+        {user?.organizationLogoUpdatedAt ? (
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.08)]" aria-hidden="true">
+            <OrgLogo
+              slug={user.organizationSlug}
+              updatedAt={user.organizationLogoUpdatedAt}
+              className="h-[76%] w-[76%]"
+              fallback={<span className="text-[17px] font-semibold text-[var(--color-primary)]">{initials(orgName)}</span>}
+            />
+          </span>
+        ) : (
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)] text-[17px] font-semibold text-white" aria-hidden="true">
+            {orgName ? initials(orgName) : ""}
+          </span>
+        )}
         <div className="min-w-0 flex-1">
           <p className="truncate text-[20px] font-bold leading-tight text-[var(--color-text)]">{tr(orgName)}</p>
           <p className="truncate text-[13px] text-[#8e8e93]">{user ? `${user.fullName} · ${tr(ROLE_LABEL[user.role])}` : ""}</p>

@@ -14,6 +14,7 @@ import { monogram, paletteFor } from "@/features/network/palette";
 import { formatChildId } from "@/lib/format";
 import { ArrowLeftIcon, CheckIcon, CloseIcon, ClockIcon, TeacherIcon } from "@/components/ui/icons";
 import { useTr } from "@/i18n/tr";
+import { useFeatureEnabled } from "@/lib/use-auth";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 /** Uzbekcha qisqa kun nomlari — Intl uz-UZ da bular chiroyli chiqmaydi. */
@@ -52,6 +53,8 @@ export default function NetworkGroupDetailPage({
 }) {
   const tr = useTr();
   const { slug, groupId } = use(params);
+  // «Bolalar davomati» o'chirilgan bo'lsa davomat kartalari ko'rinmaydi
+  const attendanceOn = useFeatureEnabled()("attendance");
   // Sana mijoz soatiga bog'liq — birinchi renderda emas, effektda hisoblanadi,
   // aks holda server va brauzer HTML'i mos kelmaydi.
   const [range, setRange] = useState<{ from: string; to: string } | null>(null);
@@ -72,14 +75,14 @@ export default function NetworkGroupDetailPage({
   const rosterQuery = useQuery({
     queryKey: ["group-day", groupId, rosterDate],
     queryFn: () => api.get<GroupAttendanceDay>(`/app/groups/${groupId}/attendance/day?date=${rosterDate}`),
-    enabled: !!rosterDate,
+    enabled: !!rosterDate && attendanceOn,
   });
 
   const attendanceQuery = useQuery({
     queryKey: ["group-attendance", groupId, range?.from, range?.to],
     queryFn: () =>
       api.get<GroupAttendanceRange>(`/app/groups/${groupId}/attendance?from=${range!.from}&to=${range!.to}`),
-    enabled: !!range,
+    enabled: !!range && attendanceOn,
   });
 
   const overview = overviewQuery.data;
@@ -159,6 +162,8 @@ export default function NetworkGroupDetailPage({
         <StatTile label={tr("Bo'sh o'rin")} value={Math.max(0, group.capacity - children.active)} hint={tr("Sig'im {0}", group.capacity)} tone="neutral" />
       </div>
 
+      {attendanceOn && (
+      <>
       {/* Kunlik nomli ro'yxat: aynan kim keldi, kim kelmadi */}
       <Card className="overflow-hidden">
         <div className="hairline flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-separator)] px-5 py-4 sm:px-6">
@@ -336,12 +341,15 @@ export default function NetworkGroupDetailPage({
         )}
       </Card>
 
+      </>
+      )}
+
       {/* Guruhdagi bolalar va ularning shu oraliqdagi davomati */}
       <Card className="overflow-hidden">
         <div className="border-b border-[var(--color-separator)] px-5 py-4">
           <h2 className="text-sm font-semibold text-[var(--color-text)]">{tr("O'quvchilar")}</h2>
           <p className="text-xs text-[var(--color-text-muted)]">
-            {tr(children.total)} {tr("bola")}{range ? ` · davomat ${range.from} — ${range.to}` : ""}
+            {tr(children.total)} {tr("bola")}{range && attendanceOn ? ` · davomat ${range.from} — ${range.to}` : ""}
           </p>
         </div>
         {children.items.length === 0 ? (

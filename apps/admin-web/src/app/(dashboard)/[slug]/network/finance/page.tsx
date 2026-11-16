@@ -21,7 +21,7 @@ import { monogram, paletteFor } from "@/features/network/palette";
 import { SplitBar, formatCompact, formatSum } from "@/features/network/money";
 import { PeriodPicker, formatPeriod } from "@/features/network/period-picker";
 import { ChildIcon, EyeIcon, EyeOffIcon, MoneyIcon, TeacherIcon, WalletIcon } from "@/components/ui/icons";
-import { useAuth } from "@/lib/use-auth";
+import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
 import { useHiddenAmounts } from "@/lib/use-hidden-amounts";
 import { useTr } from "@/i18n/tr";
 
@@ -54,7 +54,11 @@ function currentPeriod(): string {
 export default function NetworkFinancePage({ params }: { params: Promise<{ slug: string }> }) {
   const tr = useTr();
   const { slug } = use(params);
-  const [tab, setTab] = useState<Tab>("groups");
+  const [pickedTab, setTab] = useState<Tab>("groups");
+  // «Xodimlar oyligi» — «Ish haqi (HR)» funksiyasi; o'chirilgan bo'lsa tab ham, so'rov ham yo'q
+  const hrOn = useFeatureEnabled()("hr");
+  const tabs = TABS.filter((item) => item.key !== "payroll" || hrOn);
+  const tab: Tab = pickedTab === "payroll" && !hrOn ? "groups" : pickedTab;
   // Joriy oy mijoz soatiga bog'liq — effektda hisoblanadi, aks holda
   // server va brauzer HTML'i mos kelmaydi.
   const [period, setPeriod] = useState<string | null>(null);
@@ -182,7 +186,7 @@ export default function NetworkFinancePage({ params }: { params: Promise<{ slug:
 
           {/* Bo'limlar */}
           <div className="inline-flex gap-1 rounded-full bg-[var(--color-surface-sunken)] p-1">
-            {TABS.map((item) => (
+            {tabs.map((item) => (
               <button
                 key={item.key}
                 type="button"

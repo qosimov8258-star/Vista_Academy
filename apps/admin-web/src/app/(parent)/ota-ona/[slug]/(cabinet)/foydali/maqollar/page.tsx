@@ -35,10 +35,6 @@ export default function ProverbsPage({ params }: { params: Promise<{ slug: strin
 
       {featured && (
         <section className="relative mt-5 overflow-hidden rounded-[var(--p-radius)] bg-[var(--p-card)] px-5 pb-5 pt-4 shadow-[var(--p-shadow)]">
-          <span
-            aria-hidden="true"
-            className="absolute inset-0 bg-[radial-gradient(110%_80%_at_100%_0%,rgba(63,191,155,0.22),transparent_60%),radial-gradient(90%_70%_at_0%_100%,rgba(86,180,245,0.18),transparent_60%)]"
-          />
           <SparkleDeco className="absolute right-3 top-3 h-14 w-14" />
           <span className="relative inline-flex items-center gap-1.5 rounded-full bg-[var(--p-mint)]/16 px-2.5 py-1 text-[11.5px] font-bold uppercase tracking-[0.06em] text-[var(--p-mint)]">
             <StarIcon filled className="h-3.5 w-3.5" />
@@ -81,7 +77,7 @@ export default function ProverbsPage({ params }: { params: Promise<{ slug: strin
           return (
             <li key={proverb.id} className="overflow-hidden rounded-[24px] bg-[var(--p-card)] shadow-[var(--p-shadow)]">
               <div className="flex items-start gap-3 p-4">
-                <span className={clsx("flex h-10 w-10 shrink-0 items-center justify-center rounded-full", tone.soft, tone.ink)}>
+                <span className={clsx("flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] text-white", tone.solid)}>
                   <ProverbIcon className="h-6 w-6" />
                 </span>
                 <p className={`${styles.roundedFont} flex-1 pt-1 text-[18px] font-bold leading-snug text-[var(--p-ink)]`}>

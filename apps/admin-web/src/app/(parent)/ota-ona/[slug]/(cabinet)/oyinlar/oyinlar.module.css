@@ -1,0 +1,481 @@
+/* ---------------------------------------------------------------------------
+ * O'yin ekrani — bolalar rejimi
+ *
+ * Ekranni to'liq egallaydi (pastki menyu ham yopiladi). Bosib turish,
+ * matn belgilash, rasmni «saqlash» menyusi va ikki marta bosib kattalashtirish
+ * o'chirilgan — kichkintoy tasodifan boshqa joyga chiqib ketmasin.
+ * ------------------------------------------------------------------------ */
+.stage {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  /* --g — mavzu rangi (KidStage beradi); fon, kartalar va tugmalar shundan */
+  --g: var(--p-mint);
+  isolation: isolate;
+  overflow: hidden;
+  background: var(--p-bg);
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  animation: gStageIn 0.32s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+@keyframes gStageIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+/* Fon: mavzu rangidagi yumshoq yoyilmalar — tepada yorqinroq, burchaklarda xira */
+.stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(100% 55% at 50% -8%, color-mix(in srgb, var(--g) 34%, transparent) 0%, transparent 72%),
+    radial-gradient(75% 45% at 108% 104%, color-mix(in srgb, var(--g) 22%, transparent) 0%, transparent 70%),
+    radial-gradient(60% 40% at -8% 82%, color-mix(in srgb, var(--g) 13%, transparent) 0%, transparent 70%);
+  pointer-events: none;
+}
+/* Sekin suzuvchi shakllar — fon jonli, lekin kartalardan chalg'itmaydi */
+.decor {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+.decor span {
+  position: absolute;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--g) 16%, transparent);
+  animation: gDrift 11s ease-in-out infinite alternate;
+}
+.decor span[data-ring] {
+  background: none;
+  border: 3px solid color-mix(in srgb, var(--g) 22%, transparent);
+}
+@keyframes gDrift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(10px, -18px, 0) scale(1.08); }
+}
+
+/* Shisha yuzalar: tugmalar, juftlar patnisi, nom pufakchasi */
+.chip {
+  background: color-mix(in srgb, var(--p-card) 76%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(1.5);
+  backdrop-filter: blur(14px) saturate(1.5);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--p-card) 92%, transparent),
+    0 1px 2px rgba(17, 24, 39, 0.06),
+    0 10px 22px -12px rgba(17, 24, 39, 0.3);
+  color: var(--p-ink);
+}
+
+/* ---------------------------------------------------------------------------
+ * Karta: ikki tomonli, Y o'qi atrofida aylanadi
+ * ------------------------------------------------------------------------ */
+.card {
+  position: relative;
+  perspective: 900px;
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+}
+.card:focus-visible {
+  outline: 3px solid var(--p-sky);
+  outline-offset: 3px;
+  border-radius: 22%;
+}
+.inner {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transition: transform 0.42s cubic-bezier(0.3, 0.75, 0.3, 1.15);
+}
+.up .inner {
+  transform: rotateY(180deg);
+}
+.face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 20%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  overflow: hidden;
+}
+/*
+ * O'yinchoqdek hajm: har yuzning pastida qalin «chet» (qattiq soya).
+ * Orqa tomon — mavzu rangida, yorug'likdan soyaga o'tadi, ustida yengil yo'llar.
+ */
+.back {
+  background:
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0 10px, transparent 10px 20px),
+    linear-gradient(160deg, color-mix(in srgb, var(--g) 78%, white) 0%, var(--g) 55%, color-mix(in srgb, var(--g) 86%, black) 100%);
+  box-shadow:
+    inset 0 0 0 3px rgba(255, 255, 255, 0.4),
+    inset 0 -10px 14px -8px rgba(0, 0, 0, 0.2),
+    0 5px 0 color-mix(in srgb, var(--g) 64%, black);
+}
+.front {
+  transform: rotateY(180deg);
+  background: var(--p-card);
+  box-shadow:
+    inset 0 0 0 3px color-mix(in srgb, var(--g) 24%, var(--p-card)),
+    0 5px 0 color-mix(in srgb, var(--g) 28%, var(--p-chevron));
+}
+.front img {
+  width: 76%;
+  height: 76%;
+  object-fit: contain;
+  pointer-events: none;
+}
+/* Topilgan juft — yashil halqa va yashil chet bilan ochiq qoladi */
+.matched .front {
+  box-shadow:
+    inset 0 0 0 3px var(--p-mint),
+    0 5px 0 color-mix(in srgb, var(--p-mint) 68%, black);
+}
+/* Burchakdagi «✓» — topilganini rangni ajratolmaydigan bola ham ko'radi */
+.check {
+  position: absolute;
+  top: 7%;
+  right: 7%;
+  display: flex;
+  width: 26%;
+  height: 26%;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--p-mint);
+  color: #fff;
+  box-shadow: 0 0 0 2px var(--p-card);
+  scale: 0;
+}
+/* Yakuniy holat animatsiyaga bog'liq emas — animatsiya o'chiq bo'lsa ham ko'rinadi */
+.matched .check {
+  scale: 1;
+  animation: gCheck 0.4s cubic-bezier(0.34, 1.6, 0.64, 1) 0.15s backwards;
+}
+@keyframes gCheck {
+  from { scale: 0; }
+  to { scale: 1; }
+}
+
+/* Bosilganda cho'kadi — barmoq ostida haqiqiy «tugma» his qilinadi */
+.card:active:not(:disabled) .inner {
+  translate: 0 3px;
+}
+
+/* Juft topildi — sakrab quvonadi */
+.found {
+  animation: gFound 0.55s cubic-bezier(0.34, 1.5, 0.64, 1) both;
+}
+@keyframes gFound {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.12) rotate(-3deg); }
+  100% { transform: none; }
+}
+/* ...va atrofida yashil halqa chaqnab tarqaladi */
+.found::after {
+  content: "";
+  position: absolute;
+  inset: -6%;
+  border-radius: 26%;
+  border: 4px solid var(--p-mint);
+  pointer-events: none;
+  animation: gBurst 0.65s ease-out both;
+}
+@keyframes gBurst {
+  from { opacity: 0.9; transform: scale(0.85); }
+  to { opacity: 0; transform: scale(1.3); }
+}
+
+/* Eslab qolish vaqti — chiziq qisqarib boradi (davomiyligi inline beriladi) */
+.peekBar {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--g);
+  transform-origin: left center;
+  animation: gShrink linear both;
+}
+@keyframes gShrink {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+/* «Kartani bosing!» yonidagi barmoq — yengil turtadi */
+.tapHint {
+  animation: gTap 1.1s ease-in-out infinite;
+}
+@keyframes gTap {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+/* Hajmli tugmalar (g'alaba oynasi): --btn — tugma rangi */
+.btn3d {
+  background: var(--btn);
+  box-shadow: 0 5px 0 color-mix(in srgb, var(--btn) 66%, black);
+  transition: translate 0.08s ease, box-shadow 0.08s ease;
+}
+.btn3d:active {
+  translate: 0 3px;
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--btn) 66%, black);
+}
+/* Katta dumaloq tugma (boshlash, karnay) */
+.bigBtn {
+  background: linear-gradient(160deg, color-mix(in srgb, var(--g) 76%, white) 0%, var(--g) 60%, color-mix(in srgb, var(--g) 88%, black) 100%);
+  box-shadow:
+    inset 0 0 0 4px rgba(255, 255, 255, 0.35),
+    0 8px 0 color-mix(in srgb, var(--g) 64%, black),
+    0 22px 34px -14px color-mix(in srgb, var(--g) 70%, transparent);
+  transition: translate 0.08s ease, box-shadow 0.08s ease;
+}
+.bigBtn:active:not(:disabled) {
+  translate: 0 5px;
+  box-shadow:
+    inset 0 0 0 4px rgba(255, 255, 255, 0.35),
+    0 3px 0 color-mix(in srgb, var(--g) 64%, black),
+    0 12px 22px -14px color-mix(in srgb, var(--g) 70%, transparent);
+}
+
+/* G'alaba: tepadan yog'iladigan konfetti */
+.confettiFall {
+  position: absolute;
+  top: -4%;
+  left: var(--x);
+  width: 9px;
+  height: 14px;
+  border-radius: 3px;
+  background: var(--c);
+  opacity: 0;
+  animation: gFall var(--d) cubic-bezier(0.3, 0.55, 0.5, 1) var(--delay) both;
+}
+@keyframes gFall {
+  0% { opacity: 1; transform: translate3d(0, 0, 0) rotate(0deg); }
+  100% { opacity: 0.9; transform: translate3d(var(--sway), 112vh, 0) rotate(var(--rot)); }
+}
+/* Yulduzlar ortidagi nur */
+.glow {
+  animation: gGlow 2.4s ease-in-out infinite;
+}
+@keyframes gGlow {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 0.9; transform: scale(1.08); }
+}
+
+/* Mos kelmadi — yumshoq chayqaladi */
+.miss {
+  animation: gMiss 0.42s ease-in-out both;
+}
+@keyframes gMiss {
+  0%, 100% { transform: none; }
+  25% { transform: translateX(-5px) rotate(-2deg); }
+  75% { transform: translateX(5px) rotate(2deg); }
+}
+
+/* Topilgan rasm pastda nomi bilan chiqadi */
+.bubble {
+  animation: gBubble 1.7s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+@keyframes gBubble {
+  0% { opacity: 0; transform: translateY(14px) scale(0.9); }
+  14% { opacity: 1; transform: none; }
+  80% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateY(-6px); }
+}
+
+/* Yuqoridagi to'planayotgan juftlar */
+.slotIn {
+  animation: gSlotIn 0.5s cubic-bezier(0.34, 1.5, 0.64, 1) both;
+}
+@keyframes gSlotIn {
+  from { opacity: 0; transform: scale(0.3); }
+  to { opacity: 1; transform: none; }
+}
+
+/* G'alaba oynasi */
+.winBackdrop {
+  animation: gFade 0.3s ease-out both;
+}
+.winCard {
+  animation: gWinIn 0.5s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+@keyframes gFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes gWinIn {
+  from { opacity: 0; transform: translateY(24px) scale(0.92); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Chiqish tugmasi atrofidagi to'lib boruvchi halqa */
+.holdRing {
+  transition: stroke-dashoffset 0.12s linear;
+}
+
+/* Mavzu kartasidagi rasmlar — yengil tebranadi */
+.bob {
+  animation: gBob 3.2s ease-in-out infinite;
+}
+@keyframes gBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage,
+  .found,
+  .miss,
+  .slotIn,
+  .winBackdrop,
+  .winCard,
+  .bob,
+  .decor span,
+  .tapHint,
+  .glow,
+  .peekBar {
+    animation: none;
+  }
+  .found::after,
+  .confettiFall {
+    display: none;
+  }
+  .matched .check {
+    animation: none;
+    scale: 1;
+  }
+  .bubble {
+    animation-duration: 0.01s;
+    animation-delay: 1.6s;
+  }
+  .inner {
+    transition-duration: 0.01s;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * «Kim qichqirdi?»
+ * ------------------------------------------------------------------------ */
+
+/* Ovoz ijro etilayotganda karnay atrofida to'lqinlar tarqaladi */
+.speaker {
+  position: relative;
+}
+.speaker::before,
+.speaker::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  border: 3px solid var(--wave, var(--p-sun));
+  opacity: 0;
+  pointer-events: none;
+}
+.speaking::before {
+  animation: gWave 1.3s ease-out infinite;
+}
+.speaking::after {
+  animation: gWave 1.3s ease-out 0.45s infinite;
+}
+@keyframes gWave {
+  0% { opacity: 0.7; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.45); }
+}
+/* Boshlash tugmasi — bolani o'ziga chaqirib, yengil «nafas oladi» */
+.breathe {
+  animation: gBreathe 2.2s ease-in-out infinite;
+}
+@keyframes gBreathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
+/* Javob kartasi */
+.choice {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 22%;
+  background: var(--p-card);
+  box-shadow:
+    inset 0 0 0 3px color-mix(in srgb, var(--g) 24%, var(--p-card)),
+    0 6px 0 color-mix(in srgb, var(--g) 28%, var(--p-chevron));
+  cursor: pointer;
+  transition: opacity 0.3s ease, filter 0.3s ease, translate 0.08s ease, box-shadow 0.08s ease;
+  animation: gChoiceIn 0.45s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+.choice:active:not(:disabled) {
+  translate: 0 4px;
+  box-shadow:
+    inset 0 0 0 3px color-mix(in srgb, var(--g) 24%, var(--p-card)),
+    0 2px 0 color-mix(in srgb, var(--g) 28%, var(--p-chevron));
+}
+.choice:focus-visible {
+  outline: 3px solid var(--p-sky);
+  outline-offset: 3px;
+}
+.choice img {
+  width: 74%;
+  height: 74%;
+  object-fit: contain;
+  pointer-events: none;
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
+@keyframes gChoiceIn {
+  from { opacity: 0; transform: scale(0.6) translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+/* Noto'g'ri tanlangan — xiralashadi, qayta bosilmaydi */
+/* Karta o'zi shaffof bo'lmaydi (orqa fon bezagi ko'rinib qolmasin) — faqat rasm xiralashadi */
+.wrong {
+  box-shadow:
+    inset 0 0 0 3px var(--p-sunken),
+    0 3px 0 var(--p-chevron);
+  translate: 0 3px;
+}
+.wrong img {
+  opacity: 0.3;
+  filter: grayscale(1);
+}
+/* To'g'ri javob — yashil halqa, rasm sakraydi */
+.right {
+  box-shadow:
+    inset 0 0 0 4px var(--p-mint),
+    0 6px 0 color-mix(in srgb, var(--p-mint) 68%, black);
+}
+/*
+ * Sakrash va chayqalish rasmning o'ziga beriladi: tugmaning kirish
+ * animatsiyasi almashsa, u qaytadan boshlanib ketardi.
+ */
+.right img {
+  animation: gFound 0.55s cubic-bezier(0.34, 1.5, 0.64, 1) both;
+}
+.shake img {
+  animation: gMiss 0.42s ease-in-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .speaking::before,
+  .speaking::after,
+  .breathe,
+  .choice,
+  .right img,
+  .shake img {
+    animation: none;
+  }
+}

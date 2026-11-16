@@ -70,6 +70,8 @@ export function EditChildModal({
   const featureOn = useFeatureEnabled();
   const showGender = featureOn("childFieldGender");
   const showBirthDate = featureOn("childFieldBirthDate");
+  // Oylik narx — «To'lovlar» funksiyasi; o'chirilgan bo'lsa bo'lim ko'rinmaydi va so'ralmaydi
+  const showFee = featureOn("billing");
   const formId = useId();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -83,7 +85,7 @@ export function EditChildModal({
   const feeQuery = useQuery({
     queryKey: ["child-fee", slug, child.id],
     queryFn: () => api.get<ChildFee>(`/app/children/${child.id}/monthly-fee`),
-    enabled: open,
+    enabled: open && showFee,
   });
   const feeInfo = feeQuery.data;
   const initialFee = feeInfo ? String(Math.round(feeInfo.invoice?.amount ?? feeInfo.ownFee ?? feeInfo.groupFee ?? 0) || "") : "";
@@ -91,7 +93,7 @@ export function EditChildModal({
   useEffect(() => {
     if (feeInfo) setFee(initialFee);
   }, [feeInfo, initialFee]);
-  const feeDirty = !!feeInfo && fee !== initialFee;
+  const feeDirty = showFee && !!feeInfo && fee !== initialFee;
   const [feeNotice, setFeeNotice] = useState<string | null>(null);
 
   const { data: groups } = useQuery({
@@ -335,6 +337,7 @@ export function EditChildModal({
           </FieldRow>
         </FormSection>
 
+        {showFee && (
         <FormSection title={tr("To'lov")} footer={feeFooter()}>
           <FieldRow label={tr("Oylik to'lov")} htmlFor={`${formId}-fee`}>
             {feeQuery.isError ? (
@@ -344,6 +347,7 @@ export function EditChildModal({
             )}
           </FieldRow>
         </FormSection>
+        )}
       </form>
       <Toast toast={toast} onDismiss={() => setToast(null)} />
     </IosSheet>

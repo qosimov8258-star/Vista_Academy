@@ -30,6 +30,10 @@ const SECTIONS: Record<BranchSection, { key: string; path: string; label: string
     { key: "poems", path: "/useful/poems", label: "She'rlar", short: "She'rlar" },
     { key: "proverbs", path: "/useful/proverbs", label: "Maqollar", short: "Maqollar" },
     { key: "tales", path: "/useful/tales", label: "Ertaklar", short: "Ertaklar" },
+    // Telefonda qisqa: «Maqola» «Maqollar» bilan adashtirilardi, uzunroqlari (Galereya, Maslahat) sig'masdi.
+    // O'z funksiyasi bor (`articles`, `gallery`) — o'chirilsa tanlagichda ko'rinmaydi (feature-routes)
+    { key: "articles", path: "/useful/articles", label: "Maqolalar", short: "Tavsiya" },
+    { key: "gallery", path: "/useful/gallery", label: "Galereya", short: "Rasmlar" },
   ],
 };
 
@@ -38,9 +42,10 @@ export function branchSectionTabs(section: BranchSection, base: string) {
 }
 
 /** Menyu bandi: birinchi sahifa ochiladi, qolganlari ochiq bo'lganda ham band faol */
-export function branchSectionLeaf(section: BranchSection, base: string) {
-  const tabs = branchSectionTabs(section, base);
-  return { href: tabs[0].href, alsoActive: tabs.slice(1).map((t) => t.href) };
+export function branchSectionLeaf(section: BranchSection, base: string, isOn: (href: string) => boolean = () => true) {
+  // O'chirilgan funksiya sahifalari tashlab ketiladi; hammasi o'chiq bo'lsa band ko'rinmaydi
+  const tabs = branchSectionTabs(section, base).filter((t) => isOn(t.href));
+  return { href: tabs[0]?.href ?? base, alsoActive: tabs.slice(1).map((t) => t.href), visible: tabs.length > 0 };
 }
 
 /**

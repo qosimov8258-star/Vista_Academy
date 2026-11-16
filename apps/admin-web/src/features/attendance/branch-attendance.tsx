@@ -6,7 +6,7 @@ import clsx from "clsx";
 import { CheckCheck, ClipboardCheck, Download, MessageCircle, PhoneCall, ScanFace, TriangleAlert } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import type { AttendanceChild, AttendanceDay, AttendanceRangeSummary, AttendanceStatus, ChronicAbsenceFlag, Organization } from "@/lib/types";
-import { useAuth } from "@/lib/use-auth";
+import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { canWriteTeaching } from "@/lib/permissions";
 import { isAssistantPosition } from "@/lib/employee-position";
@@ -88,6 +88,11 @@ function StatusPicker({ value, onChange, size = "row" }: { value: AttendanceStat
  */
 export function BranchAttendance({ slug }: { slug: string }) {
   const tr = useTr();
+  // «Eksport» o'chirilgan bo'lsa yuklab olish tugmalari ko'rinmaydi
+  const featureOn = useFeatureEnabled();
+  // Eslatma oynasi eslatma va allergiyadan iborat — ikkalasi ham o'chiq bo'lsa tugma yo'q
+  const noteOn = featureOn("childReminders") || featureOn("health");
+  const exportsOn = featureOn("exports");
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { branchId: forcedBranchId } = useBranchContext(slug);
@@ -263,7 +268,7 @@ export function BranchAttendance({ slug }: { slug: string }) {
           title={tr("Davomat")}
           count={children.length ? `${counts.PRESENT + counts.LATE}/${children.length}` : undefined}
           subtitle={tr("Bolalarning kunlik qatnashuvi")}
-          actions={<IosButton label={tr("Eksport")} icon={Download} compact onClick={() => setExportOpen(true)} disabled={!branchId} />}
+          actions={exportsOn ? <IosButton label={tr("Eksport")} icon={Download} compact onClick={() => setExportOpen(true)} disabled={!branchId} /> : undefined}
         />
 
         {!forcedBranchId && branches.length > 1 && (
@@ -522,10 +527,12 @@ export function BranchAttendance({ slug }: { slug: string }) {
                     {contactMutation.isPending ? tr("Yuborilmoqda…") : tr("Aloqaga chiqishni so'rash")}
                   </SheetSecondaryButton>
                 )}
+                {noteOn && (
                 <SheetSecondaryButton onClick={() => setNoteChild({ id: sheetChild.childId, name: sheetChild.fullName })}>
                   <MessageCircle className="h-[18px] w-[18px]" strokeWidth={2.2} />
                   {tr("Xabar / eslatma")}
                 </SheetSecondaryButton>
+                )}
               </div>
             )}
           </>

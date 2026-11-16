@@ -76,23 +76,32 @@ export function Group({
   footer,
   children,
   className,
+  large = false,
 }: {
   title?: ReactNode;
   action?: ReactNode;
   footer?: ReactNode;
   children: ReactNode;
   className?: string;
+  /** Bosh sahifa uslubi: katta (22px) sarlavha va yumshoq soyali karta */
+  large?: boolean;
 }) {
   const tr = useTr();
   return (
-    <section>
-      {(title || action) && (
-        <div className="flex min-h-[28px] items-end justify-between gap-3 pr-4">
-          {title ? <h2 className={SECTION_TITLE}>{tr(title)}</h2> : <span />}
-          {action && <div className="pb-1.5 text-[13.5px]">{tr(action)}</div>}
-        </div>
-      )}
-      <div className={clsx(styles.group, "overflow-hidden", className)}>{children}</div>
+    <section className={large ? "pt-2" : undefined}>
+      {(title || action) &&
+        (large ? (
+          <div className="mb-2.5 flex items-baseline justify-between gap-3 px-1">
+            {title ? <h2 className="min-w-0 truncate text-[22px] font-bold leading-tight tracking-[-0.02em] text-[var(--color-text)]">{tr(title)}</h2> : <span />}
+            {action && <div className="shrink-0 text-[14px]">{tr(action)}</div>}
+          </div>
+        ) : (
+          <div className="flex min-h-[28px] items-end justify-between gap-3 pr-4">
+            {title ? <h2 className={SECTION_TITLE}>{tr(title)}</h2> : <span />}
+            {action && <div className="pb-1.5 text-[13.5px]">{tr(action)}</div>}
+          </div>
+        ))}
+      <div className={clsx(styles.group, large && styles.soft, "overflow-hidden", className)}>{children}</div>
       {footer && <p className="px-4 pt-2 text-[12.5px] leading-snug text-[#8e8e93]">{tr(footer)}</p>}
     </section>
   );

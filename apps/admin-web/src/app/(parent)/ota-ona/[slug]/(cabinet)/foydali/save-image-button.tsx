@@ -104,7 +104,7 @@ export function SaveImageButton({
         )}
         {building ? "Rasm tayyorlanmoqda…" : label}
       </button>
-      {error && <p className="mt-2 text-center text-[13px] font-medium text-[var(--p-coral)]">{tr(error)}</p>}
+      {error && <p className="mt-2 text-center text-[13px] font-medium text-[var(--p-red)]">{tr(error)}</p>}
       {previews && <ImageSheet previews={previews} onClose={close} shareTitle={shareTitle} shareText={shareText} />}
     </>
   );
@@ -188,7 +188,7 @@ function ImageSheet({
           type="button"
           onClick={save}
           disabled={status === "saving"}
-          className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[var(--p-coral)] py-4 text-[16px] font-extrabold text-white shadow-[0_10px_24px_-10px_rgba(255,122,102,0.9)] transition-transform active:scale-[0.98] disabled:opacity-70"
+          className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[var(--p-coral)] py-4 text-[16px] font-extrabold text-white transition-transform active:scale-[0.98] disabled:opacity-70"
         >
           {status === "downloaded" ? <CheckIcon className="h-5 w-5" /> : <DownloadIcon className="h-5 w-5" />}
           {status === "downloaded" ? "Yuklab olindi" : status === "saving" ? "Saqlanmoqda…" : "Galereyaga saqlash"}

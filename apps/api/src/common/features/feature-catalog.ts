@@ -21,60 +21,67 @@ export interface FeatureDefinition {
    */
   fields?: { methods: string[]; re: RegExp; names: string[] }[];
   /**
-   * Ichki funksiya: asosiy bo'lim kaliti. Asosiy bo'lim o'chirilsa, ichkilari
-   * ham o'chiriladi (qiymatlari saqlanib qoladi, bo'lim qaytsa o'zlari qaytadi).
+   * Ichki funksiya: asosiy bo'lim kaliti (yoki bir nechtasi). Asosiylardan
+   * biri o'chirilsa, ichkisi ham o'chadi (qiymati saqlanib qoladi, bo'lim
+   * qaytsa o'zi qaytadi).
    */
-  parent?: string;
+  parent?: string | string[];
 }
 
 const only = (methods: string[], re: RegExp): PathRule => ({ methods, re });
 
 export const FEATURE_CATALOG: readonly FeatureDefinition[] = [
   // Qabul va bolalar
-  { key: "crm", label: "CRM (arizalar)", group: "Qabul va bolalar", description: "Lidlar, arizalar va qabul bosqichlari", paths: [/^leads(\/|$)/] },
-  { key: "attendance", label: "Bolalar davomati", group: "Qabul va bolalar", description: "Kunlik davomat va surunkali kelmaslik", paths: [/^attendance(\/|$)/, /^children\/[^/]+\/attendance-history/] },
+  { key: "crm", label: "CRM (arizalar)", group: "Qabul va bolalar", description: "Lidlar, arizalar va qabul bosqichlari", paths: [/^leads(\/|$)/, /^exports\/leads/, /^desk\/calls\/leads-called/] },
+  { key: "attendance", label: "Bolalar davomati", group: "Qabul va bolalar", description: "Kunlik davomat va surunkali kelmaslik", paths: [/^attendance(\/|$)/, /^children\/[^/]+\/attendance-history/, /^groups\/[^/]+\/attendance/, /^parent\/children\/[^/]+\/attendance/, /^exports\/attendance/] },
   { key: "dailyReports", label: "Kunlik hisobotlar", group: "Qabul va bolalar", description: "Bola haqida kunlik hisobot", paths: [/^daily-reports(\/|$)/, /^children\/[^/]+\/daily-reports/] },
   { key: "development", label: "Rivojlanish baholari", group: "Qabul va bolalar", description: "Bola rivojlanishini baholash", paths: [/^development(\/|$)/, /^children\/[^/]+\/development/] },
   { key: "health", label: "Sog'liq", group: "Qabul va bolalar", description: "Sog'liq kartasi, emlash, dori, allergiya", paths: [/^children\/[^/]+\/(health|medications|quarantine|vaccinations|allergies)/, /^health\//, /^vaccinations\//] },
   { key: "childReminders", label: "Bola eslatmalari", group: "Qabul va bolalar", description: "Bolaga biriktirilgan eslatmalar", paths: [/^reminders(\/|$)/] },
   { key: "coins", label: "Koin tizimi", group: "Qabul va bolalar", description: "Koinlar va haftalik baholash", paths: [/^coins(\/|$)/] },
-  { key: "pickups", label: "Olib ketish va qo'ng'iroqlar", group: "Qabul va bolalar", description: "Bugungi holat, olib ketish, qo'ng'iroqlar", paths: [/^desk(\/|$)/] },
-  { key: "childCreate", label: "Bola qo'shish", group: "Qabul va bolalar", description: "Yangi bola kartochkasi yaratish", paths: [only(["POST"], /^children\/?$/)] },
+  { key: "pickups", label: "Olib ketish va qo'ng'iroqlar", group: "Qabul va bolalar", description: "Bugungi holat, olib ketish, qo'ng'iroqlar", paths: [/^desk\/(pickups|calls)/, /^parent\/children\/[^/]+\/departure/] },
+  { key: "childCreate", label: "Bola qo'shish", group: "Qabul va bolalar", description: "Yangi bola kartochkasi yaratish", paths: [only(["POST"], /^children\/?$/), only(["POST"], /^leads\/[^/]+\/convert/)] },
   { key: "childEdit", label: "Bola ma'lumotini tahrirlash", group: "Qabul va bolalar", description: "Bola kartochkasidagi ma'lumotlarni o'zgartirish", paths: [only(["PATCH", "PUT"], /^children\/[^/]+\/?$/)] },
   { key: "childAvatar", label: "Bola rasmi", group: "Qabul va bolalar", description: "Rasm joylash va olib tashlash (ko'rish ochiq qoladi)", paths: [only(["PUT", "POST", "PATCH", "DELETE"], /^children\/[^/]+\/avatar/)] },
   { key: "childFieldBirthDate", label: "Bola formasi: tug'ilgan sana", group: "Qabul va bolalar", description: "Bola qo'shish va tahrirlash formasidagi tug'ilgan sana maydoni", paths: [], fields: [{ methods: ["POST", "PATCH", "PUT"], re: /^children(\/[^/]+)?\/?$/, names: ["birthDate"] }] },
   { key: "childFieldGender", label: "Bola formasi: jinsi", group: "Qabul va bolalar", description: "Forma maydoni; o'chirilsa jins so'ralmaydi va majburiy emas", paths: [], fields: [{ methods: ["POST", "PATCH", "PUT"], re: /^children(\/[^/]+)?\/?$/, names: ["gender"] }] },
-  { key: "childFieldGuardianPassword", label: "Bola formasi: ota-ona kabineti paroli", group: "Qabul va bolalar", description: "Bola qo'shishdagi parol maydoni; o'chirilsa parol avtomatik beriladi", paths: [], fields: [{ methods: ["POST"], re: /^children\/?$/, names: ["guardianPassword"] }] },
+  { key: "childFieldGuardianPassword", label: "Bola formasi: ota-ona kabineti paroli", group: "Qabul va bolalar", description: "Bola qo'shishdagi parol maydoni; o'chirilsa parol avtomatik beriladi", parent: "parentCabinet", paths: [], fields: [{ methods: ["POST"], re: /^children\/?$/, names: ["guardianPassword"] }] },
   { key: "groupCreate", label: "Guruh yaratish", group: "Qabul va bolalar", description: "Yangi guruh ochish", paths: [only(["POST"], /^groups\/?$/)] },
-  { key: "groupEdit", label: "Guruhni tahrirlash", group: "Qabul va bolalar", description: "Guruh ma'lumotlarini o'zgartirish", paths: [only(["PATCH", "PUT"], /^groups\/[^/]+\/?$/)] },
+  { key: "groupEdit", label: "Guruhni tahrirlash", group: "Qabul va bolalar", description: "Guruh ma'lumotlarini o'zgartirish", paths: [only(["PATCH", "PUT"], /^groups\/[^/]+\/?$/), only(["PUT", "POST", "PATCH", "DELETE"], /^groups\/[^/]+\/avatar/)] },
 
   // Moliya
-  { key: "billing", label: "To'lovlar va hisob-fakturalar", group: "Moliya", description: "To'lov qabul qilish, hisob-faktura, qarzdorlar", paths: [/^invoices(\/|$)/, /^payments(\/|$)/, /^finance\/(children|summary)/, /^children\/[^/]+\/ledger/] },
+  { key: "billing", label: "To'lovlar va hisob-fakturalar", group: "Moliya", description: "To'lov qabul qilish, hisob-faktura, qarzdorlar", paths: [/^invoices(\/|$)/, /^payments(\/|$)/, /^finance\/(children|summary)/, /^children\/[^/]+\/ledger/, /^children\/[^/]+\/monthly-fee/, /^children\/finance-stats/, /^parent\/children\/[^/]+\/payment-reminder/, /^exports\/(invoices|payments)/] },
   { key: "cash", label: "Kassa va xarajatlar", group: "Moliya", description: "Kassa, xarajatlar, oylik hisobot", paths: [/^cash(\/|$)/] },
-  { key: "paymentReceipts", label: "To'lov cheklari", group: "Moliya", description: "Ota-ona yuborgan chek rasmlari", paths: [/^payment-receipts(\/|$)/, /^children\/[^/]+\/payment-receipts/] },
-  { key: "paymentReminders", label: "To'lov eslatmalari", group: "Moliya", description: "Qarzdorlarga avtomatik eslatma", paths: [/^finance\/reminder-settings/] },
-  { key: "discounts", label: "Chegirmalar", group: "Moliya", description: "Bola uchun chegirma qoidalari", paths: [/^discounts(\/|$)/] },
-  { key: "products", label: "Mahsulotlar (do'kon)", group: "Moliya", description: "Mahsulot va sotuvlar", paths: [/^products(\/|$)/] },
+  { key: "paymentReceipts", label: "To'lov cheklari", group: "Moliya", description: "Ota-ona yuborgan chek rasmlari", parent: "billing", paths: [/^payment-receipts(\/|$)/, /^children\/[^/]+\/payment-receipts/, /^payment-card(\/|$)/, /^parent\/payment-(card|receipts)/, /^parent\/children\/[^/]+\/payment-(receipts|summary)/] },
+  { key: "paymentReminders", label: "To'lov eslatmalari", group: "Moliya", description: "Qarzdorlarga avtomatik eslatma", parent: "billing", paths: [/^finance\/reminder-settings/, /^parent\/children\/[^/]+\/payment-reminder/, only(["POST"], /^cash\/debtors\/[^/]+\/remind/)] },
+  { key: "discounts", label: "Chegirmalar", group: "Moliya", description: "Bola uchun chegirma qoidalari", parent: "billing", paths: [/^discounts(\/|$)/] },
+  { key: "products", label: "Mahsulotlar (do'kon)", group: "Moliya", description: "Mahsulot va sotuvlar (koinga sotiladi)", parent: "coins", paths: [/^products(\/|$)/, /^parent\/products(\/|$)/, /^parent\/children\/[^/]+\/products/] },
 
   // Xodimlar
-  { key: "employees", label: "Xodimlar bo'limi", group: "Xodimlar", description: "Xodimlar ro'yxati va kartochkasi — o'chirilsa ichidagi hamma amal ham o'chadi", paths: [/^employees(?:\/(?![^/]+\/(?:payroll|salary-scheme))|$)/] },
-  { key: "employeeCreate", label: "Xodim qo'shish", group: "Xodimlar", description: "Yangi xodim kartochkasi yaratish", parent: "employees", paths: [only(["POST"], /^employees\/?$/)] },
+  // Ro'yxatni o'qish (GET employees) ochiq qoladi: dars jadvali, xodimlar davomati,
+  // guruh sahifasi o'qituvchi tanlash uchun shunga tayanadi. Bo'limning o'zi
+  // (sahifa, kartochka, amallar) o'chadi.
+  { key: "employees", label: "Xodimlar bo'limi", group: "Xodimlar", description: "Xodimlar sahifasi va kartochkasi — o'chirilsa ichidagi hamma amal ham o'chadi (boshqa bo'limlardagi xodim tanlash ishlayveradi)", paths: [only(["POST", "PUT", "PATCH", "DELETE"], /^employees\/?$/), /^employees\/(?![^/]+\/(?:payroll|salary-scheme))/] },
+  { key: "employeeCreate", label: "Xodim qo'shish", group: "Xodimlar", description: "Yangi xodim kartochkasi yaratish", parent: "employees", paths: [only(["POST"], /^employees\/?$/), only(["POST"], /^users\/?$/)] },
   { key: "employeeDelete", label: "Xodimni o'chirish", group: "Xodimlar", description: "Xodimni butunlay olib tashlash", parent: "employees", paths: [only(["DELETE"], /^employees\/[^/]+\/?$/)] },
   { key: "employeeAvatar", label: "Xodim rasmi", group: "Xodimlar", description: "Rasm joylash va olib tashlash (ko'rish ochiq qoladi)", parent: "employees", paths: [only(["PUT", "POST", "PATCH", "DELETE"], /^employees\/[^/]+\/avatar/)] },
-  { key: "employeeAccount", label: "Kirish akkaunti va parol", group: "Xodimlar", description: "Login/parol ochish, almashtirish va ko'rish", parent: "employees", paths: [/^employees\/[^/]+\/(account|password|credentials)/] },
-  { key: "employeeGroups", label: "Guruhga biriktirish", group: "Xodimlar", description: "Tarbiyachini guruhlarga biriktirish", parent: "employees", paths: [only(["PATCH", "PUT", "POST"], /^employees\/[^/]+\/groups/)] },
-  { key: "employeeTopics", label: "Dars mavzulari", group: "Xodimlar", description: "O'qituvchi mavzulari va ularni boshqarish", parent: "employees", paths: [/^employees\/[^/]+\/topics/] },
+  { key: "employeeAccount", label: "Kirish akkaunti va parol", group: "Xodimlar", description: "Login/parol ochish, almashtirish va ko'rish", parent: "employees", paths: [/^employees\/[^/]+\/(account|password|credentials)/, /^users(\/|$)/], fields: [{ methods: ["POST"], re: /^employees\/?$/, names: ["account"] }] },
+  { key: "employeeGroups", label: "Guruhga biriktirish", group: "Xodimlar", description: "Tarbiyachini guruhlarga biriktirish", parent: "employees", paths: [only(["PATCH", "PUT", "POST"], /^employees\/[^/]+\/groups/)], fields: [{ methods: ["PATCH", "PUT"], re: /^employees\/[^/]+\/?$/, names: ["groupIds"] }] },
+  { key: "employeeTopics", label: "Dars mavzulari", group: "Xodimlar", description: "O'qituvchi mavzulari va ularni boshqarish", parent: ["employees", "lessons"], paths: [/^employees\/[^/]+\/topics/] },
   { key: "hr", label: "Ish haqi (HR)", group: "Xodimlar", description: "Ish haqi, smenalar, to'lovlar", paths: [/^payroll(\/|$)/, /^shifts(\/|$)/, /^employees\/[^/]+\/(payroll|salary-scheme)/] },
   { key: "staffAttendance", label: "Xodimlar davomati", group: "Xodimlar", description: "Xodimlarning kelish-ketishi", paths: [/^staff-attendance(\/|$)/] },
   { key: "faceId", label: "Face ID", group: "Xodimlar", description: "Qurilmalar va yuz ro'yxati", paths: [/^face-id(\/|$)/] },
-  { key: "employeeNotifications", label: "Xodim bildirishnomalari", group: "Xodimlar", description: "Xodimlarga ichki bildirishnoma", paths: [/^employee-notifications(\/|$)/] },
+  { key: "employeeNotifications", label: "Xodim bildirishnomalari", group: "Xodimlar", description: "Xodimlarga ichki bildirishnoma (ota-onaning «Tarbiyachiga xabar berish»i ham shu orqali)", paths: [/^employee-notifications(\/|$)/, only(["POST"], /^parent\/children\/[^/]+\/(note|departure)/)] },
 
   // Kundalik ish
-  { key: "nutrition", label: "Ovqatlanish", group: "Kundalik ish", description: "Menyu va taomlar", paths: [/^menu(\/|$)/, /^dishes(\/|$)/] },
-  { key: "lessons", label: "Qo'shimcha darslar", group: "Kundalik ish", description: "Dars jadvali, xonalar, mavzu, davomat, baholar, fanlar", paths: [/^lesson-/, /^rooms(\/|$)/, /^subjects(\/|$)/, /^children\/[^/]+\/lesson-grades/] },
+  { key: "nutrition", label: "Ovqatlanish", group: "Kundalik ish", description: "Menyu va taomlar", paths: [/^menu(\/|$)/, /^dishes(\/|$)/, /^parent\/children\/[^/]+\/menu-photos/, /^exports\/menu/] },
+  { key: "lessons", label: "Qo'shimcha darslar", group: "Kundalik ish", description: "Dars jadvali, xonalar, mavzu, davomat, baholar, fanlar", paths: [/^lesson-/, /^rooms(\/|$)/, /^subjects(\/|$)/, /^children\/[^/]+\/lesson-grades/, /^parent\/children\/[^/]+\/timetable/] },
   { key: "useful", label: "Foydali bo'lim", group: "Kundalik ish", description: "She'r, maqol va ertaklar", paths: [/^useful(\/|$)/, /^parent\/useful/] },
-  { key: "diary", label: "Kundalik (diary)", group: "Kundalik ish", description: "Bola kundaligi", paths: [/^diary(\/|$)/, /^parent\/diary/] },
-  { key: "notifications", label: "Bildirishnomalar", group: "Kundalik ish", description: "Ota-onalarga xabar yuborish", paths: [/^notifications(\/|$)/, /^broadcasts(\/|$)/, /^parent\/push/, /^parent\/messages/] },
+  { key: "diary", label: "Kundalik (diary)", group: "Kundalik ish", description: "Bola kundaligi", paths: [/^diary(\/|$)/, /^parent\/diary/, /^parent\/children\/[^/]+\/diary/] },
+  { key: "articles", label: "Maqolalar", group: "Kundalik ish", description: "Ota-onalarga eslatma: maslahatlar va maqolalar", paths: [/^articles(\/|$)/, /^parent\/articles/] },
+  { key: "gallery", label: "Galereya", group: "Kundalik ish", description: "Bolalar ishlari muzeyi: rasm, kardon va loy ishlari", paths: [/^gallery(\/|$)/, /^parent\/gallery/] },
+  { key: "groupMaterials", label: "Guruh materiallari", group: "Kundalik ish", description: "Guruhga yuklangan rasm, ovoz va hujjatlar (ota-onada «Fayllar»)", paths: [/^group-materials(\/|$)/, /^parent\/materials(\/|$)/, /^parent\/children\/[^/]+\/materials/] },
+  { key: "notifications", label: "Bildirishnomalar", group: "Kundalik ish", description: "Ota-onalarga xabar yuborish", paths: [/^notifications(\/|$)/, /^broadcasts(\/|$)/, /^parent\/push/, /^parent\/messages/, only(["POST"], /^cash\/debtors\/[^/]+\/remind/)] },
 
   // Ota-onalar
   { key: "parentCabinet", label: "Ota-ona kabineti", group: "Ota-onalar", description: "Ota-onalar uchun shaxsiy kabinet", paths: [/^parent(\/|$)/, /^guardians\/[^/]+\/cabinet/] },
@@ -121,10 +128,18 @@ export function panelOverridesOf(panelOverrides: unknown, panel: string): Featur
   return toBooleanMap((panelOverrides as Record<string, unknown>)[panel]);
 }
 
+/** Funksiyaning asosiy bo'limlari (bo'lmasa bo'sh ro'yxat). */
+export function parentsOf(feature: FeatureDefinition): string[] {
+  if (!feature.parent) return [];
+  return Array.isArray(feature.parent) ? feature.parent : [feature.parent];
+}
+
 /**
- * Yakuniy holat: panelning o'z qiymati → bog'chaning o'z qiymati → tarifdagi
- * qiymat → yoqilgan. Kalit yo'q bo'lsa yoqilgan hisoblanadi, shuning uchun
- * eski tariflar va yangi qo'shilgan funksiyalar hech narsani buzmaydi.
+ * Yakuniy holat. Tarif — yuqori chegara: tarifda o'chirilgan funksiyani
+ * bog'cha yoki panel sozlamasi yoqa olmaydi. Tarif ruxsat bergan bo'lsa:
+ * panelning o'z qiymati → bog'chaning o'z qiymati → yoqilgan. Kalit yo'q
+ * bo'lsa yoqilgan hisoblanadi, shuning uchun eski tariflar va yangi
+ * qo'shilgan funksiyalar hech narsani buzmaydi.
  */
 export function resolveFeatures(planFeatures: unknown, overrides: unknown, panelOverrides?: unknown): FeatureMap {
   const plan = toBooleanMap(planFeatures);
@@ -132,11 +147,19 @@ export function resolveFeatures(planFeatures: unknown, overrides: unknown, panel
   const panel = toBooleanMap(panelOverrides);
   const result: FeatureMap = {};
   for (const key of FEATURE_KEYS) {
-    result[key] = panel[key] ?? own[key] ?? plan[key] ?? true;
+    result[key] = plan[key] === false ? false : (panel[key] ?? own[key] ?? true);
   }
-  // Ichki funksiya asosiy bo'lim o'chiq bo'lsa ishlamaydi
-  for (const feature of FEATURE_CATALOG) {
-    if (feature.parent && result[feature.parent] === false) result[feature.key] = false;
+  // Ichki funksiya asosiy bo'limlaridan biri o'chiq bo'lsa ishlamaydi.
+  // Zanjir bo'lishi mumkin (do'kon → koin), shuning uchun o'zgarish to'xtaguncha.
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const feature of FEATURE_CATALOG) {
+      if (result[feature.key] && parentsOf(feature).some((p) => result[p] === false)) {
+        result[feature.key] = false;
+        changed = true;
+      }
+    }
   }
   return result;
 }
@@ -156,10 +179,23 @@ export function disabledFeatureKeys(
   return FEATURE_KEYS.filter((key) => !resolved[key]);
 }
 
-/** `/api/v1/app/leads/5` → `leads/5`; `/app` dan tashqari yo'llar uchun null. */
+/**
+ * `/api/v1/app/leads/5` → `leads/5`; `/app` dan tashqari yo'llar uchun null.
+ *
+ * Express yo'llarni katta-kichik harfga qaramay moslaydi (`/api/v1/app/LEADS`
+ * ham leads controller'iga tushadi) va `GET http://x/api/v1/app/leads`
+ * ko'rinishidagi so'rovni ham qabul qiladi. Shuning uchun tekshiruvdan oldin
+ * manzil faqat yo'lga keltiriladi va kichik harfga o'tkaziladi — aks holda
+ * shu ikki usul bilan har qanday funksiya to'sig'idan o'tib ketish mumkin edi.
+ */
 function appRelativePath(url: string): string | null {
-  const path = url.split("?")[0];
-  const match = /^\/api\/v1\/app\/(.*)$/.exec(path);
+  let path: string;
+  try {
+    path = new URL(url, "http://localhost").pathname;
+  } catch {
+    path = url.split("?")[0];
+  }
+  const match = /^\/api\/v1\/app\/(.*)$/.exec(path.toLowerCase());
   return match ? match[1] : null;
 }
 

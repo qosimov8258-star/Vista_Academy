@@ -9,6 +9,9 @@ export function useAuth() {
     queryKey: ["auth", "me"],
     queryFn: () => api.get<{ user: TenantAuthenticatedUser }>("/app/auth/me"),
     retry: false,
+    // Platforma funksiyani o'chirsa/yoqsa — panel bir daqiqada sezadi
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
   });
 
   return {
@@ -19,11 +22,24 @@ export function useAuth() {
 }
 
 /**
- * Platforma shu panel uchun funksiyani o'chirganmi. `me` hali yuklanmagan
- * bo'lsa hammasi yoqilgan hisoblanadi (API baribir to'sadi).
+ * Platforma o'chirgan funksiyalar. `ready` — `me` yuklanganmi: yuklanmaguncha
+ * `isOn` hammasini yoqilgan deb qaytaradi, shuning uchun bo'limni ko'rsatish
+ * yoki so'rov yuborishdan oldin `ready` ham tekshirilsin.
  */
-export function useFeatureEnabled() {
+export function useFeatureFlags() {
   const { user } = useAuth();
   const disabled = user?.disabledFeatures ?? [];
-  return (key: string) => !disabled.includes(key);
+  return {
+    ready: !!user,
+    isOn: (key: string) => !disabled.includes(key),
+  };
+}
+
+/**
+ * Platforma shu panel uchun funksiyani o'chirganmi. `me` hali yuklanmagan
+ * bo'lsa hammasi yoqilgan hisoblanadi (API baribir to'sadi) — buni bilish
+ * kerak bo'lsa `useFeatureFlags().ready`.
+ */
+export function useFeatureEnabled() {
+  return useFeatureFlags().isOn;
 }

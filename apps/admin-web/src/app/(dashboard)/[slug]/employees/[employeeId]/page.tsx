@@ -7,7 +7,7 @@ import clsx from "clsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, getPaginated } from "@/lib/api";
 import type { Employee, EmployeePayrollOverview, PaymentMethod, PayrollEntry, SalaryScheme, StaffAttendanceHistory, StaffAttendanceStatus } from "@/lib/types";
-import { useAuth } from "@/lib/use-auth";
+import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -113,7 +113,11 @@ export default function EmployeeFinancePage({ params }: { params: Promise<{ slug
   const queryClient = useQueryClient();
   const { user } = useAuth();
   // Maosh sxemasini moliyachi ham belgilaydi (API'dagi `requireMoneyScope` bilan bir xil).
-  const canWriteScheme = canWriteMoney(user?.role);
+  // Platforma o'chirgan funksiyalar: bo'limi ko'rinmaydi va so'rovi yuborilmaydi
+  const isOn = useFeatureEnabled();
+  const staffAttendanceOn = isOn("staffAttendance");
+  const hrOn = isOn("hr");
+  const canWriteScheme = canWriteMoney(user?.role) && hrOn;
   const { branches } = useBranchContext(slug);
   // `useBranchContext`ning branchSlug/branchId'i shu sahifada ishonchsiz —
   // sabab: employees/page.tsx dagi izohga qarang (bu komponent ham xuddi
@@ -155,19 +159,19 @@ export default function EmployeeFinancePage({ params }: { params: Promise<{ slug
       api.get<StaffAttendanceHistory>(
         `/app/staff-attendance/history?employeeId=${employeeId}&branchId=${branchId}&period=${period}`,
       ),
-    enabled: !!employeeId && !!branchId && !!period,
+    enabled: !!employeeId && !!branchId && !!period && staffAttendanceOn,
   });
 
   const overviewQuery = useQuery({
     queryKey: ["employee-payroll-overview", slug, employeeId, period],
     queryFn: () => api.get<EmployeePayrollOverview>(`/app/employees/${employeeId}/payroll?period=${period}`),
-    enabled: !!employeeId && !!period,
+    enabled: !!employeeId && !!period && hrOn,
   });
 
   const paidHistoryQuery = useQuery({
     queryKey: ["payroll", slug, "employee-history", employeeId],
     queryFn: () => getPaginated<PayrollEntry>(`/app/payroll?employeeId=${employeeId}&status=PAID&page=1&limit=12`),
-    enabled: !!employeeId,
+    enabled: !!employeeId && hrOn,
   });
 
   const overview = overviewQuery.data;
@@ -258,6 +262,7 @@ export default function EmployeeFinancePage({ params }: { params: Promise<{ slug
         </div>
       </Card>
 
+      {staffAttendanceOn && (
       <Card className="overflow-hidden">
         <div className="hairline flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-separator)] px-5 py-4 sm:px-6">
           <CardTitle>{tr("Davomat")}</CardTitle>
@@ -322,7 +327,9 @@ export default function EmployeeFinancePage({ params }: { params: Promise<{ slug
           )}
         </CardBody>
       </Card>
+      )}
 
+      {hrOn && (
       <Card className="overflow-hidden">
         <CardHeader>
           <CardTitle>{tr("Oylik —")}{" "}{tr(period)}</CardTitle>
@@ -403,7 +410,9 @@ export default function EmployeeFinancePage({ params }: { params: Promise<{ slug
           )}
         </CardBody>
       </Card>
+      )}
 
+      {hrOn && (
       <Card className="overflow-hidden">
         <CardHeader>
           <CardTitle>{tr("Yopilgan oyliklar")}</CardTitle>
@@ -440,6 +449,7 @@ export default function EmployeeFinancePage({ params }: { params: Promise<{ slug
           )}
         </CardBody>
       </Card>
+      )}
 
       {canWriteScheme && (
         <EditSalarySchemeModal

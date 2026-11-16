@@ -6,7 +6,7 @@ import clsx from "clsx";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { ChildAllergy, MenuEntry, MenuMeal } from "@/lib/types";
-import { useAuth } from "@/lib/use-auth";
+import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
 import { AlertIcon, CheckIcon, ChevronRightIcon } from "@/components/ui/icons";
 import { LoadingState, ErrorState } from "@/components/ui/states";
 import { todayTashkent } from "@/features/desk/shared";
@@ -74,48 +74,67 @@ export function ChefHome({ slug }: { slug: string }) {
   const { user } = useAuth();
   const branchId = user?.branchId ?? "";
   const today = todayTashkent();
+  const isOn = useFeatureEnabled();
+  // Porsiya, menyu va suratlar — «Ovqatlanish»; allergiyalar — «Sog'liq»
+  const nutritionOn = isOn("nutrition");
+  const healthOn = isOn("health");
 
   const todayQuery = useQuery({
     queryKey: ["menu-today-summary", slug, branchId, today],
     queryFn: () => api.get<TodaySummary>(`/app/menu/today-summary?branchId=${branchId}&date=${today}`),
-    enabled: !!branchId,
+    enabled: !!branchId && nutritionOn,
     refetchInterval: 15_000,
   });
   const menuQuery = useQuery({
     queryKey: ["menu", slug, branchId, today, "chef-home"],
     queryFn: () => api.get<MenuEntry[]>(`/app/menu?branchId=${branchId}&from=${today}&to=${today}`),
-    enabled: !!branchId,
+    enabled: !!branchId && nutritionOn,
     refetchInterval: 60_000,
   });
   const allergiesQuery = useQuery({
     queryKey: ["allergies", slug, branchId],
     queryFn: () => api.get<ChildAllergy[]>(`/app/health/allergies?branchId=${branchId}`),
-    enabled: !!branchId,
+    enabled: !!branchId && healthOn,
     refetchInterval: 60_000,
   });
-  const photos = useMenuPhotos(slug, branchId, today);
+  // Bo'sh filial — suratlar so'rovi yuborilmaydi
+  const photos = useMenuPhotos(slug, nutritionOn ? branchId : "", today);
   const [viewing, setViewing] = useState<{ id: string; title: string } | null>(null);
 
   const menu = menuQuery.data?.find((e) => e.date.slice(0, 10) === today) ?? null;
   const firstName = user?.fullName?.trim().split(/\s+/).slice(-1)[0];
 
-  if (todayQuery.isLoading) return <LoadingState rows={4} />;
-  if (todayQuery.isError) return <ErrorState message={tr((todayQuery.error as Error).message)} />;
+  if (nutritionOn && todayQuery.isLoading) return <LoadingState rows={4} />;
+  if (nutritionOn && todayQuery.isError) return <ErrorState message={tr((todayQuery.error as Error).message)} />;
   const d = todayQuery.data;
-  if (!d) return null;
+  if (nutritionOn && !d) return null;
+
+  const header = (
+    <header>
+      <p className="text-[13px] font-medium text-[var(--color-text-muted)]">
+        {dateLabel(today)}
+        {user?.branchName ? ` · ${user.branchName}` : ""}
+      </p>
+      <h1 className="mt-0.5 text-[24px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
+        {greeting()}
+        {firstName ? `, ${firstName}` : ""}!
+      </h1>
+    </header>
+  );
+
+  // «Ovqatlanish» o'chirilgan — faqat salom va (bo'lsa) allergiyalar
+  if (!nutritionOn || !d) {
+    return (
+      <div className="mx-auto max-w-[640px] space-y-5">
+        {header}
+        {healthOn && <AllergiesCard allergies={allergiesQuery.data ?? []} loading={allergiesQuery.isLoading} />}
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-[1100px] space-y-5">
-      <header>
-        <p className="text-[13px] font-medium text-[var(--color-text-muted)]">
-          {dateLabel(today)}
-          {user?.branchName ? ` · ${user.branchName}` : ""}
-        </p>
-        <h1 className="mt-0.5 text-[24px] font-semibold tracking-[var(--tracking-title)] text-[var(--color-text)]">
-          {greeting()}
-          {firstName ? `, ${firstName}` : ""}!
-        </h1>
-      </header>
+      {header}
 
       {/* grid-cols-1 = minmax(0,1fr): ustun ekrandan kengaymaydi — keng surat tasmasi o'z ichida aylanadi */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:items-start">
@@ -152,7 +171,7 @@ export function ChefHome({ slug }: { slug: string }) {
         </div>
 
         <div className="min-w-0 space-y-5">
-          <AllergiesCard allergies={allergiesQuery.data ?? []} loading={allergiesQuery.isLoading} />
+          {healthOn && <AllergiesCard allergies={allergiesQuery.data ?? []} loading={allergiesQuery.isLoading} />}
           <GroupsCard groups={d.groups} />
         </div>
       </div>

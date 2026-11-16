@@ -22,6 +22,7 @@ import { UpdateChildDto } from "./dto/update-child.dto";
 import { ChildQueryDto } from "./dto/child-query.dto";
 import { UpdateChildAvatarDto } from "./dto/update-child-avatar.dto";
 import { assertGroupHasRoom, createChildWithGuardian, withPublicIdRetry, composeChildFullName } from "./child-creation";
+import { allOn } from "../../common/features/feature-access";
 
 /** Ro'yxatda ota-ona telefoni ko'rinishi uchun asosiy vasiy ham olinadi. */
 const childInclude = {
@@ -32,6 +33,26 @@ const childInclude = {
     include: { guardian: { select: { id: true, fullName: true, phone: true } } },
   },
 } satisfies Prisma.ChildInclude;
+
+/**
+ * Chaqiruvchida o'chiq funksiyalar ma'lumoti javobdan olib tashlanadi (shakl
+ * o'zgarmaydi): vasiylar o'chiq — `guardians: []`; sog'liq o'chiq — karantin
+ * muddati va sababi null (holat — status — qoladi).
+ */
+function redactChild<T extends { guardians: unknown[]; quarantineUntil: Date | null; quarantineReason: string | null }>(
+  child: T,
+  disabled: readonly string[],
+): T {
+  const hideGuardians = !allOn(disabled, "guardians");
+  const hideHealth = !allOn(disabled, "health");
+  if (!hideGuardians && !hideHealth) return child;
+  return {
+    ...child,
+    guardians: hideGuardians ? [] : child.guardians,
+    quarantineUntil: hideHealth ? null : child.quarantineUntil,
+    quarantineReason: hideHealth ? null : child.quarantineReason,
+  };
+}
 
 /** 512px JPEG shu hajmdan oshmasligi kerak. */
 const MAX_CHILD_AVATAR_BYTES = 600 * 1024;
@@ -95,7 +116,11 @@ export class ChildrenService {
     return { ...created.child, credentials: created.credentials };
   }
 
-  async findAll(scope: TenantScope, query: ChildQueryDto) {
+  async findAll(scope: TenantScope, query: ChildQueryDto, disabled: readonly string[] = []) {
+    if (query.paymentStatus && !allOn(disabled, "billing")) {
+      throw new BadRequestException("To'lovlar bo'limi o'chirilgan — to'lov holati bo'yicha saralab bo'lmaydi");
+    }
+    const guardiansOn = allOn(disabled, "guardians");
     const teacherGroupIds = await resolveTeacherGroupIds(this.prisma, scope);
     const branchId = resolveReadBranchFilter(scope, query.branchId);
     const paymentStatusFilter = query.paymentStatus
@@ -106,7 +131,8 @@ export class ChildrenService {
       branchId,
       ...(query.groupId ? { groupId: query.groupId } : {}),
       ...(query.status ? { status: query.status } : {}),
-      ...(query.search ? { OR: searchFilters(query.search) } : {}),
+      // Vasiylar o'chiq bo'lsa ota-ona ismi bo'yicha qidirilmaydi (yashirin ma'lumot sizib chiqmasin)
+      ...(query.search ? { OR: searchFilters(query.search, guardiansOn) } : {}),
       ...(paymentStatusFilter ? { id: paymentStatusFilter } : {}),
     }, teacherGroupIds);
 
@@ -121,10 +147,10 @@ export class ChildrenService {
       this.prisma.child.count({ where }),
     ]);
 
-    return { data: items, meta: { page: query.page, limit: query.limit, total } };
+    return { data: items.map((c) => redactChild(c, disabled)), meta: { page: query.page, limit: query.limit, total } };
   }
 
-  async findOne(scope: TenantScope, id: string) {
+  async findOne(scope: TenantScope, id: string, disabled: readonly string[] = []) {
     const child = await this.prisma.child.findFirst({
       where: { id, organizationId: scope.organizationId },
       include: childInclude,
@@ -136,7 +162,7 @@ export class ChildrenService {
       throw new ForbiddenException("Bu bolaga kirish huquqingiz yo'q");
     }
     await assertTeacherOwnsChild(this.prisma, scope, child);
-    return child;
+    return redactChild(child, disabled);
   }
 
   /**
@@ -203,7 +229,7 @@ export class ChildrenService {
     if (nameChanged || (dto.status && dto.status !== existing.status)) {
       await this.faceIdCommands.enqueueChildSync(updated.id);
     }
-    return updated;
+    return redactChild(updated, caller.disabledFeatures);
   }
 
   /**
@@ -406,11 +432,11 @@ export class ChildrenService {
  * Qidiruv ism bo'yicha ham, ID bo'yicha ham ishlaydi — ota-ona telefonda
  * "id12345" deb aytadi, xodim esa o'shani qidiruvga kiritadi.
  */
-function searchFilters(search: string): Prisma.ChildWhereInput[] {
-  const filters: Prisma.ChildWhereInput[] = [
-    { fullName: { contains: search, mode: "insensitive" } },
-    { guardians: { some: { guardian: { fullName: { contains: search, mode: "insensitive" } } } } },
-  ];
+function searchFilters(search: string, byGuardian = true): Prisma.ChildWhereInput[] {
+  const filters: Prisma.ChildWhereInput[] = [{ fullName: { contains: search, mode: "insensitive" } }];
+  if (byGuardian) {
+    filters.push({ guardians: { some: { guardian: { fullName: { contains: search, mode: "insensitive" } } } } });
+  }
 
   const digits = search.replace(/^id/i, "").trim();
   if (/^\d{1,5}$/.test(digits)) {

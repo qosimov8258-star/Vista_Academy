@@ -12,6 +12,7 @@ import { initials } from "@/components/ui/avatar";
 import { isCabinetlessPosition, isGrouplessPosition, isSubjectTeacherPosition, normalizePosition } from "@/lib/employee-position";
 import { CatalogPickerSheet, CheckRow, PhotoPickerHero, PickerRow, phoneErrorText } from "@/features/employees/employee-form-parts";
 import { useTr } from "@/i18n/tr";
+import { useFeatureEnabled } from "@/lib/use-auth";
 
 /** Kabinet roli lavozimdan kelib chiqadigan xodimlar (filial admini, moliyachi emas) */
 const POSITION_ROLES = ["TEACHER", "CHEF", "MANAGER"];
@@ -37,6 +38,9 @@ export function EditEmployeeSheet({
   employee: Employee;
 }) {
   const tr = useTr();
+  // Platforma o'chirgan funksiyalar: rasm va guruh maydoni ko'rinmaydi
+  const isOn = useFeatureEnabled();
+  const avatarOn = isOn("employeeAvatar");
   const queryClient = useQueryClient();
 
   const [lastName, setLastName] = useState("");
@@ -67,7 +71,7 @@ export function EditEmployeeSheet({
 
   const subjectTeacher = isSubjectTeacherPosition(position);
   const hasCabinet = !!employee.tenantUser;
-  const showGroups = hasCabinet && POSITION_ROLES.includes(employee.tenantUser!.role) && !isGrouplessPosition(position);
+  const showGroups = isOn("employeeGroups") && hasCabinet && POSITION_ROLES.includes(employee.tenantUser!.role) && !isGrouplessPosition(position);
   // Kabineti bor xodimni kabinetsiz lavozimga o'tkazib bo'lmaydi (server ham rad etadi)
   const positionBlocked = hasCabinet && isCabinetlessPosition(position) && normalizePosition(position) !== normalizePosition(employee.position);
 
@@ -151,6 +155,7 @@ export function EditEmployeeSheet({
           </SheetPrimaryButton>
         }
       >
+        {avatarOn ? (
         <PhotoPickerHero
           hasPhoto={showsPhoto}
           preview={
@@ -166,6 +171,9 @@ export function EditEmployeeSheet({
           onRemove={() => setPhoto(hasSavedPhoto ? { kind: "remove" } : { kind: "keep" })}
           hint="Faqat xodimning o'zi, yuzi aniq ko'rinsin — Face ID shu surat bilan taniydi"
         />
+        ) : (
+          <div className="flex justify-center py-2"><EmployeePhoto employee={employee} size={88} fallback={initials(employee.fullName)} /></div>
+        )}
 
         <FormSection>
           <FieldRow label={tr("Familiya")} htmlFor="emp-last" error={show("lastName")}>

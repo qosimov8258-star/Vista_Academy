@@ -6,7 +6,7 @@ import clsx from "clsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { ChildAllergy, MenuEntry, MenuMeal } from "@/lib/types";
-import { useAuth } from "@/lib/use-auth";
+import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
 import { AlertIcon, ChevronRightIcon, PencilIcon } from "@/components/ui/icons";
 import { LoadingState, ErrorState } from "@/components/ui/states";
 import { todayTashkent } from "@/features/desk/shared";
@@ -52,6 +52,8 @@ export function ChefMenu({ slug }: { slug: string }) {
   const [selected, setSelected] = useState(today);
   const [editing, setEditing] = useState<MenuMeal | null>(null);
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
+  // Allergiyalar «Sog'liq» funksiyasidan — o'chirilgan bo'lsa ogohlantirish ham yo'q
+  const healthOn = useFeatureEnabled()("health");
 
   const menuQuery = useQuery({
     queryKey: ["menu", slug, branchId, weekStart],
@@ -61,7 +63,7 @@ export function ChefMenu({ slug }: { slug: string }) {
   const allergiesQuery = useQuery({
     queryKey: ["allergies", slug, branchId],
     queryFn: () => api.get<ChildAllergy[]>(`/app/health/allergies?branchId=${branchId}`),
-    enabled: !!branchId,
+    enabled: !!branchId && healthOn,
   });
   const byDate = useMemo(() => new Map((menuQuery.data ?? []).map((e) => [e.date.slice(0, 10), e])), [menuQuery.data]);
   const entry = byDate.get(selected) ?? null;
@@ -70,7 +72,7 @@ export function ChefMenu({ slug }: { slug: string }) {
   // (harf katta-kichikligidan qat'i nazar) qidiriladi — o'tkazib yuborgandan
   // ortiqcha ogohlantirish yaxshiroq.
   const warnings = useMemo(() => {
-    if (!entry || !allergiesQuery.data?.length) return [];
+    if (!entry || !healthOn || !allergiesQuery.data?.length) return [];
     const result: { meal: string; token: string; child: string }[] = [];
     for (const { meal, short } of MEALS) {
       const text = entry[FIELD[meal]]?.toLowerCase();
@@ -82,7 +84,7 @@ export function ChefMenu({ slug }: { slug: string }) {
       }
     }
     return result;
-  }, [entry, allergiesQuery.data]);
+  }, [entry, healthOn, allergiesQuery.data]);
 
   const goWeek = (delta: number) => {
     const next = addDays(weekStart, delta * 7);

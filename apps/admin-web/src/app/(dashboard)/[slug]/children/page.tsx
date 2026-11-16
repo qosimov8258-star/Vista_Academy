@@ -1,13 +1,12 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useInfiniteQuery, useQueries, useQuery } from "@tanstack/react-query";
 import { api, getPaginated } from "@/lib/api";
 import type { Child, ChildAllergy, Group } from "@/lib/types";
-import { useAuth } from "@/lib/use-auth";
-import { ChildIcon, DocumentIcon, PhoneIcon, PlusIcon, SearchIcon } from "@/components/ios/icons";
-import { rowLinkProps } from "@/components/ui/table";
+import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
+import { ChevronRightIcon, ChildIcon, DocumentIcon, PhoneIcon, PlusIcon, SearchIcon } from "@/components/ios/icons";
 import { ViewOnlyNote } from "@/components/ios/view-only-note";
 import { ChildPhoto } from "@/components/ui/child-photo";
 import { initials } from "@/components/ui/avatar";
@@ -21,7 +20,7 @@ import { PullToRefresh } from "@/components/ios/pull-to-refresh";
 import { IosSheet, SheetPrimaryButton, SheetRow, SheetSecondaryButton, SheetSection } from "@/components/ios/sheet";
 import { StatCell, StatStrip } from "@/components/ios/stat-strip";
 import { EmptyState, ErrorState, SkeletonRows } from "@/components/ios/states";
-import { GROUP_BLOCK, IOS, ROW_PRESS } from "@/components/ios/tokens";
+import { GROUP_BLOCK, IOS, ROW_PRESS, ROW_SEPARATOR } from "@/components/ios/tokens";
 import { formatAge, formatChildId, formatDate } from "@/lib/format";
 import { downloadCsv } from "@/lib/download";
 import { useBranchContext } from "@/lib/use-branch-context";
@@ -76,11 +75,10 @@ function useDebounced<T>(value: T, ms: number): T {
  * - CSV eksport, yangi bola qo'shish va tahrirlash (canWrite);
  * - ro'yxat sahifalab ("Yana ko'rsatish"), yangilash va pastga tortish.
  * Telefonda qator bosilsa tafsilot varag'i ochiladi; katta ekranda (xl)
- * jadval, qator bosilsa — bola profili.
+ * o'sha iOS ro'yxati kengaytirilgan qatorlar bilan, qator bosilsa — bola profili.
  */
 function BranchChildren({ slug }: { slug: string }) {
   const tr = useTr();
-  const router = useRouter();
   const [searchInput, setSearchInput] = useState("");
   const search = useDebounced(searchInput.trim(), 300);
   const [groupFilter, setGroupFilter] = useState("");
@@ -100,6 +98,7 @@ function BranchChildren({ slug }: { slug: string }) {
   // to'lovlar va moliyaviy tarix ko'rinadigan alohida sahifaga o'tadi —
   // rivojlanish, sog'liq va shu kabi bo'limlar moliyachiga aloqasi yo'q.
   const isFinance = user?.role === "FINANCE";
+  const isOn = useFeatureEnabled();
   const childHref = (childId: string) =>
     isFinance ? (branchSlug ? `/${slug}/${branchSlug}/finance/${childId}` : `/${slug}/finance/${childId}`) : `${base}/children/${childId}`;
 
@@ -117,6 +116,7 @@ function BranchChildren({ slug }: { slug: string }) {
   const allergiesQuery = useQuery({
     queryKey: ["child-allergies", slug, forcedBranchId],
     queryFn: () => api.get<ChildAllergy[]>(`/app/health/allergies${forcedBranchId ? `?branchId=${forcedBranchId}` : ""}`),
+    enabled: isOn("health"),
   });
   const allergyChildIds = new Set((allergiesQuery.data ?? []).map((a) => a.child.id));
 
@@ -125,7 +125,8 @@ function BranchChildren({ slug }: { slug: string }) {
   const financeStatsQuery = useQuery({
     queryKey: ["children-finance-stats", slug, forcedBranchId],
     queryFn: () => api.get<ChildrenFinanceStats>(`/app/children/finance-stats${forcedBranchId ? `?branchId=${forcedBranchId}` : ""}`),
-    enabled: isFinance,
+    // «To'lovlar» o'chirilgan bo'lsa statistika so'ralmaydi
+    enabled: isFinance && isOn("billing"),
   });
 
   const childrenQuery = useInfiniteQuery({
@@ -167,7 +168,7 @@ function BranchChildren({ slug }: { slug: string }) {
   };
 
   const refresh = async () => {
-    await Promise.all([childrenQuery.refetch(), allergiesQuery.refetch(), ...(isFinance ? [financeStatsQuery.refetch()] : [])]);
+    await Promise.all([childrenQuery.refetch(), ...(isOn("health") ? [allergiesQuery.refetch()] : []), ...(isFinance && isOn("billing") ? [financeStatsQuery.refetch()] : [])]);
   };
 
   const handleExport = async () => {
@@ -202,14 +203,15 @@ function BranchChildren({ slug }: { slug: string }) {
           subtitle={tr("Tarmoqqa ro'yxatga olingan bolalar")}
           actions={
             <>
-              <IosButton label={tr("Eksport (CSV)")} icon={DocumentIcon} compact onClick={handleExport} loading={exporting} />
-              {canWrite && <IosButton label={tr("Yangi bola")} icon={PlusIcon} variant="primary" compact onClick={() => setCreateOpen(true)} />}
+              {isOn("exports") && <IosButton label={tr("Eksport (CSV)")} icon={DocumentIcon} compact onClick={handleExport} loading={exporting} />}
+              {canWrite && isOn("childCreate") && <IosButton label={tr("Yangi bola")} icon={PlusIcon} variant="primary" compact onClick={() => setCreateOpen(true)} />}
             </>
           }
         />
 
         {!canWrite &&
           (isFinance ? (
+            isOn("billing") &&
             <StatStrip>
               <StatCell label={tr("To'lagan")} value={stats?.paid ?? "—"} color={IOS.green} loading={financeStatsQuery.isLoading} />
               <StatCell label={tr("Yarim to'lagan")} value={stats?.partial ?? "—"} color={IOS.orange} loading={financeStatsQuery.isLoading} />
@@ -296,65 +298,68 @@ function BranchChildren({ slug }: { slug: string }) {
                 })}
               </div>
 
-              {/* Katta ekran (xl) — jadval, qator bosilsa profil */}
-              <div className={`${GROUP_BLOCK} hidden overflow-x-auto xl:block`}>
-                <table className="w-full text-left text-[14px]">
-                  <thead>
-                    <tr className="text-[12px] font-semibold uppercase tracking-[0.06em] text-[#6d6d72]">
-                      <th className="w-px py-3 pl-4 pr-0">
-                        <span className="sr-only">{tr("Surat")}</span>
-                      </th>
-                      <th className="px-4 py-3">{tr("To'liq ism")}</th>
-                      <th className="px-4 py-3">{tr("Ota-ona / aloqa")}</th>
-                      <th className="px-4 py-3">{tr("Tug'ilgan sana")}</th>
-                      {!forcedBranchId && !teacher && <th className="px-4 py-3">{tr("Filial")}</th>}
-                      {!teacher && <th className="px-4 py-3">{tr("Guruh")}</th>}
-                      <th className="px-4 py-3">{tr("Holat")}</th>
-                      <th className="w-px px-4 py-3" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {children.map((child) => {
-                      const guardian = child.guardians?.[0];
-                      return (
-                        <tr key={child.id} {...rowLinkProps(childHref(child.id), (href) => router.push(href))} className={`cursor-pointer border-t border-[#c6c6c8]/50 ${ROW_PRESS}`}>
-                          <td className="w-px py-2.5 pl-4 pr-0">
-                            <ChildPhoto child={child} size={40} fallback={initials(child.fullName)} />
-                          </td>
-                          <td className="max-w-[260px] px-4 py-2.5">
-                            <p className="truncate text-[15px] font-medium text-[var(--color-text)]" title={child.fullName}>
-                              {tr(child.fullName)}
-                            </p>
-                            <p className="font-mono text-[12.5px] tabular-nums text-[#8e8e93]">{formatChildId(child.publicId)}</p>
-                          </td>
-                          <td className="max-w-[240px] px-4 py-2.5">
-                            {guardian ? (
-                              <>
-                                <p className="truncate text-[var(--color-text)]">{tr(guardian.guardian.fullName)}</p>
-                                <p className="truncate text-[12.5px] tabular-nums text-[#8e8e93]">
-                                  {tr(RELATION_LABEL[guardian.relation])} · {tr(guardian.guardian.phone)}
-                                </p>
-                              </>
-                            ) : (
-                              <span className="text-[#8e8e93]">—</span>
-                            )}
-                          </td>
-                          <td className="whitespace-nowrap px-4 py-2.5 tabular-nums text-[#8e8e93]">{child.birthDate ? formatDate(child.birthDate) : "—"}</td>
-                          {!forcedBranchId && !teacher && <td className="whitespace-nowrap px-4 py-2.5 text-[#8e8e93]">{child.branch?.name ?? "—"}</td>}
-                          {!teacher && <td className="whitespace-nowrap px-4 py-2.5 text-[#8e8e93]">{child.group?.name ? tr(child.group.name) : "—"}</td>}
-                          <td className="px-4 py-2.5">
-                            <div className="flex flex-wrap gap-1.5">
-                              <Pill color={STATUS_COLOR[child.status]}>{tr(STATUS_LABEL[child.status])}</Pill>
-                              {allergyChildIds.has(child.id) && <Pill color={IOS.red}>{tr("Allergiya")}</Pill>}
-                            </div>
-                          </td>
-                          {/* Qatorda amal tugmasi yo'q — tahrirlash profilda */}
-                          <td className="w-px px-4 py-2.5 text-[#c7c7cc]">›</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+              {/* Katta ekran (xl) — o'sha iOS ro'yxati, kengroq: qatorda ota-ona, guruh va
+                  tug'ilgan sana ham ko'rinadi. Ustun sarlavhalari yo'q (iPhone ro'yxatidagidek),
+                  qator bosilsa — bola profili (Cmd/Ctrl bilan — yangi oynada). */}
+              <div className={`${GROUP_BLOCK} hidden xl:block`}>
+                {children.map((child) => {
+                  const guardian = child.guardians?.[0];
+                  const showBranch = !forcedBranchId && !teacher && child.branch?.name;
+                  return (
+                    <div key={child.id} className="group/row relative flex items-center">
+                      <Link
+                        href={childHref(child.id)}
+                        className={`flex min-h-[68px] min-w-0 flex-1 items-center gap-3 py-2.5 pl-4 pr-3 ${ROW_PRESS}`}
+                      >
+                        <ChildPhoto child={child} size={44} fallback={initials(child.fullName)} />
+                        <span className="min-w-0 flex-[1.2]">
+                          <span className="block truncate text-[15.5px] font-medium leading-snug text-[var(--color-text)]" title={child.fullName}>
+                            {tr(child.fullName)}
+                          </span>
+                          <span className="block truncate font-mono text-[13px] leading-snug tabular-nums text-[#8e8e93]">{formatChildId(child.publicId)}</span>
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          {guardian ? (
+                            <>
+                              <span className="block truncate text-[15px] leading-snug text-[var(--color-text)]">{tr(guardian.guardian.fullName)}</span>
+                              <span className="block truncate text-[13px] leading-snug tabular-nums text-[#8e8e93]">
+                                {tr(RELATION_LABEL[guardian.relation])} · {tr(guardian.guardian.phone)}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="block truncate text-[15px] text-[#8e8e93]">{tr("Ota-ona biriktirilmagan")}</span>
+                          )}
+                        </span>
+                        {!teacher && (
+                          <span className="w-[140px] min-w-0 shrink-0">
+                            <span className={`block truncate text-[15px] leading-snug ${child.group?.name ? "text-[var(--color-text)]" : "text-[#8e8e93]"}`}>
+                              {child.group?.name ? tr(child.group.name) : tr("Guruhsiz")}
+                            </span>
+                            {showBranch && <span className="block truncate text-[13px] leading-snug text-[#8e8e93]">{child.branch!.name}</span>}
+                          </span>
+                        )}
+                        <span className="w-[110px] shrink-0">
+                          <span className="block text-[15px] leading-snug tabular-nums text-[var(--color-text)]">
+                            {child.birthDate ? formatDate(child.birthDate) : "—"}
+                          </span>
+                          {child.birthDate && <span className="block truncate text-[13px] leading-snug text-[#8e8e93]">{tr(formatAge(child.birthDate))}</span>}
+                        </span>
+                        {/* Faol bola uchun ortiqcha yorliq yo'q — faqat nofaol/karantin va allergiya */}
+                        <span className="flex w-[150px] shrink-0 justify-end">
+                          <ChildPills child={child} allergy={allergyChildIds.has(child.id)} />
+                        </span>
+                        {!guardian && <ChevronRightIcon className="h-4 w-4 shrink-0 text-[#c7c7cc]" strokeWidth={2.2} aria-hidden="true" />}
+                      </Link>
+                      {guardian && (
+                        <span className="shrink-0 pr-4">
+                          <CallButton phone={guardian.guardian.phone} name={guardian.guardian.fullName} />
+                        </span>
+                      )}
+                      {/* Chiziq ismdan boshlanadi (16 + 44 + 12) */}
+                      <span className={ROW_SEPARATOR} style={{ left: 72 }} aria-hidden="true" />
+                    </div>
+                  );
+                })}
               </div>
 
               <div className="flex flex-col items-center gap-2.5 pt-3">
@@ -382,7 +387,7 @@ function BranchChildren({ slug }: { slug: string }) {
           openChild && (
             <>
               <SheetPrimaryButton href={childHref(openChild.id)}>{isFinance ? tr("To'lovlarni ochish") : tr("Profilni ochish")}</SheetPrimaryButton>
-              {canWrite && <SheetSecondaryButton onClick={() => startEdit(openChild)}>{tr("Tahrirlash")}</SheetSecondaryButton>}
+              {canWrite && isOn("childEdit") && <SheetSecondaryButton onClick={() => startEdit(openChild)}>{tr("Tahrirlash")}</SheetSecondaryButton>}
             </>
           )
         }

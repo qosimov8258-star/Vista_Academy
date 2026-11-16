@@ -29,13 +29,20 @@ export class TenantJwtAuthGuard extends AuthGuard("tenant-jwt") {
     if (user?.disabledFeatures.length) {
       const feature = blockedFeatureForRequest(request.originalUrl ?? request.url, request.method, user.disabledFeatures);
       if (feature) {
-        throw new ForbiddenException(`"${feature.label}" funksiyasi sizning panelingiz uchun yoqilmagan — platforma administratoriga murojaat qiling`);
+        // `code` — mijoz shu 403 ni tanib, funksiyalar ro'yxatini yangilaydi
+        throw new ForbiddenException({
+          code: "FEATURE_DISABLED",
+          message: `"${feature.label}" funksiyasi sizning panelingiz uchun yoqilmagan — platforma administratoriga murojaat qiling`,
+        });
       }
     }
     if (user?.disabledFeatures.length) {
       const blocked = blockedFieldForRequest(request.originalUrl ?? request.url, request.method, request.body, user.disabledFeatures);
       if (blocked) {
-        throw new ForbiddenException(`"${blocked.feature.label}" o'chirilgan — "${blocked.field}" maydonini yuborib bo'lmaydi`);
+        throw new ForbiddenException({
+          code: "FEATURE_DISABLED",
+          message: `"${blocked.feature.label}" o'chirilgan — "${blocked.field}" maydonini yuborib bo'lmaydi`,
+        });
       }
     }
     if (user?.role === "CHEF") {

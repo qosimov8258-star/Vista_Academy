@@ -48,6 +48,7 @@ export {
   Search as SearchIcon,
   Settings as SettingsIcon,
   IdCard as TeacherIcon,
+  Image as ImageIcon,
   Trash2 as TrashIcon,
   UserRound as UserIcon,
 } from "lucide-react";

@@ -256,7 +256,8 @@ export class CrmService {
             // bolaning kartochkasidan aniqlashtiriladi.
             ...splitLeadChildName(lead.childFullName),
             gender: null,
-            birthDate: lead.childBirthDate,
+            // Tug'ilgan sana maydoni chaqiruvchida o'chiq bo'lsa arizadagisi ko'chirilmaydi
+            birthDate: user.disabledFeatures.includes("childFieldBirthDate") ? null : lead.childBirthDate,
             guardian: { fullName: lead.parentName, phone: lead.parentPhone, relation: "OTHER" },
           },
           {},

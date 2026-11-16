@@ -4,6 +4,8 @@ export type TenantUserRole = "NETWORK_ADMIN" | "BRANCH_ADMIN" | "FINANCE" | "MAN
 export interface PublicOrganization {
   name: string;
   slug: string;
+  /** Bog'cha logosi yuklangan vaqt; null — logo yo'q. */
+  logoUpdatedAt?: string | null;
 }
 
 export interface TenantAuthenticatedUser {
@@ -11,6 +13,8 @@ export interface TenantAuthenticatedUser {
   organizationId: string;
   organizationSlug: string;
   organizationName: string;
+  /** Bog'cha logosi yuklangan vaqt (rasm manziliga `?v=`); null — logo yo'q. */
+  organizationLogoUpdatedAt?: string | null;
   branchId: string | null;
   branchSlug: string | null;
   branchName: string | null;
@@ -1075,6 +1079,8 @@ export interface ParentAccount {
   organizationName: string;
   fullName: string;
   phone: string;
+  /** Platforma ota-onalar paneli uchun o'chirgan funksiyalar kalitlari */
+  disabledFeatures?: string[];
 }
 
 export interface ParentChild {
@@ -1468,6 +1474,56 @@ export interface Tale {
   group: UsefulGroupRef | null;
   createdAt: string;
   updatedAt: string;
+}
+
+/* ------------------------------------------------------------------ */
+/* Maqolalar (ota-onalarga eslatma) va bolalar ishlari galereyasi      */
+/* ------------------------------------------------------------------ */
+
+export type ArticleCategory = "PSYCHOLOGY" | "DEVELOPMENT" | "HEALTH" | "NUTRITION" | "FAMILY" | "ADAPTATION" | "HOME_GAMES";
+
+export interface ArticleTip {
+  title: string;
+  text: string;
+}
+
+/** `GET/POST/PATCH /app/articles` — xodim tomoni. */
+export interface Article {
+  id: string;
+  organizationId: string;
+  branchId: string;
+  /** null — butun filial uchun. */
+  groupId: string | null;
+  category: ArticleCategory;
+  title: string;
+  summary: string;
+  /** Xatboshilar bo'sh qator bilan ajratilgan matn. */
+  body: string;
+  tips: ArticleTip[];
+  memo: string | null;
+  status: UsefulStatus;
+  createdById: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: UsefulCreatedBy;
+  group: UsefulGroupRef | null;
+  hasCover: boolean;
+  readMinutes: number;
+  /** Ota-onalar bahosi (anonim, faqat son) va izohlar soni */
+  feedback?: { likes: number; dislikes: number; comments: number };
+}
+
+/** `GET/POST/PATCH /app/gallery` — bolalar ishlari (xodim tomoni). */
+export interface GalleryItem {
+  id: string;
+  branchId: string;
+  groupId: string;
+  title: string | null;
+  likesCount: number;
+  createdById: string;
+  createdAt: string;
+  group: UsefulGroupRef;
+  createdBy: UsefulCreatedBy;
 }
 
 // --- Lending sahifa (landing-web) ---------------------------------------------

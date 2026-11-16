@@ -28,7 +28,7 @@ export class ChildrenController {
 
   @Get()
   findAll(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query() query: ChildQueryDto) {
-    return this.childrenService.findAll(toTenantScope(user), query);
+    return this.childrenService.findAll(toTenantScope(user), query, user.disabledFeatures);
   }
 
   @Post()
@@ -44,7 +44,7 @@ export class ChildrenController {
 
   @Get(":id")
   findOne(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string) {
-    return this.childrenService.findOne(toTenantScope(user), id);
+    return this.childrenService.findOne(toTenantScope(user), id, user.disabledFeatures);
   }
 
   @Patch(":id")

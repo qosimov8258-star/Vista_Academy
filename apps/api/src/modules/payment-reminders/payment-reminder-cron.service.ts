@@ -1,5 +1,7 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
+import { allOn, disabledFeaturesOf } from "../../common/features/feature-access";
 import { PrismaService } from "../../database/prisma.service";
+import { isOrganizationSuspended } from "../iam/organization-access";
 import { PushService } from "../push/push.service";
 import { PaymentRemindersService, daysBetween, tashkentCurrentTime, tashkentTodayUtcMidnight } from "./payment-reminders.service";
 
@@ -47,10 +49,19 @@ export class PaymentReminderCronService implements OnModuleInit, OnModuleDestroy
     const today = tashkentTodayUtcMidnight();
 
     const settingsList = await this.prisma.paymentReminderSettings.findMany({ where: { isEnabled: true } });
+    // Har bir tashkilot shu tekshiruvda bir marta o'qiladi (filiallar ko'p bo'lishi mumkin)
+    const allowedByOrganization = new Map<string, boolean>();
 
     for (const settings of settingsList) {
       const matchedSendTime = settings.sendTimes.find((sendTime) => matchesTolerance(sendTime, currentMinutes));
       if (!matchedSendTime) continue;
+
+      let allowed = allowedByOrganization.get(settings.organizationId);
+      if (allowed === undefined) {
+        allowed = await this.isRemindersAllowed(settings.organizationId);
+        allowedByOrganization.set(settings.organizationId, allowed);
+      }
+      if (!allowed) continue;
 
       const invoices = await this.paymentRemindersService.findUnpaidInvoices(settings.organizationId, settings.branchId, {
         daysBeforeDue: settings.daysBeforeDue,
@@ -94,6 +105,26 @@ export class PaymentReminderCronService implements OnModuleInit, OnModuleDestroy
         });
       }
     }
+  }
+
+  /**
+   * Bog'cha ishlayaptimi va eslatma yuborish mumkinmi: tashkilot darajasida
+   * to'lovlar + eslatmalar yoqilgan, ota-onalar panelida kabinet va
+   * bildirishnomalar yoqilgan bo'lsin.
+   */
+  private async isRemindersAllowed(organizationId: string): Promise<boolean> {
+    const organization = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: {
+        status: true,
+        featureOverrides: true,
+        panelFeatureOverrides: true,
+        subscription: { select: { status: true, plan: { select: { features: true } } } },
+      },
+    });
+    if (!organization || isOrganizationSuspended(organization, organization.subscription)) return false;
+    if (!allOn(disabledFeaturesOf(organization), "billing", "paymentReminders")) return false;
+    return allOn(disabledFeaturesOf(organization, "PARENT"), "parentCabinet", "notifications");
   }
 }
 

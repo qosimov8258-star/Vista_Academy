@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { Prisma } from "@prisma/client";
 import type { Response } from "express";
 import { PrismaService } from "../../database/prisma.service";
+import { canNotifyParents } from "../../common/features/feature-access";
 import { TenantScope, requireTeachingScope } from "../iam/tenant-auth.types";
 import { assertTeacherOwnsGroup, resolveTeacherGroupIds } from "../iam/teacher-scope";
 import { PushService } from "../push/push.service";
@@ -106,12 +107,14 @@ export class GroupMaterialsService {
     });
     if (recent === 0) {
       // Push xatosi yuklashni to'xtatmaydi
-      void this.notifyParents(group.id).catch(() => undefined);
+      void this.notifyParents(scope.organizationId, group.id).catch(() => undefined);
     }
     return created;
   }
 
-  private async notifyParents(groupId: string) {
+  private async notifyParents(organizationId: string, groupId: string) {
+    // Ota-onada kabinet, bildirishnomalar yoki «Fayllar» o'chiq bo'lsa push yo'q
+    if (!(await canNotifyParents(this.prisma, organizationId, "groupMaterials"))) return;
     const links = await this.prisma.childGuardian.findMany({
       where: { canReceiveNotifications: true, child: { groupId, status: "ACTIVE" } },
       select: { guardianId: true },

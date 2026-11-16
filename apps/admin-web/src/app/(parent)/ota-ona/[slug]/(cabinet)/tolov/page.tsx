@@ -32,7 +32,7 @@ const STATUS_LABEL: Record<ParentPaymentReceipt["status"], string> = {
 const STATUS_TONE: Record<ParentPaymentReceipt["status"], string> = {
   PENDING: "bg-[var(--p-sun)]/20 text-[var(--p-sun-ink)]",
   APPROVED: "bg-[var(--p-mint)]/15 text-[var(--p-mint)]",
-  REJECTED: "bg-[var(--p-coral)]/15 text-[var(--p-coral)]",
+  REJECTED: "bg-[var(--p-red)]/15 text-[var(--p-red)]",
 };
 
 const FIELD =
@@ -400,12 +400,12 @@ function SubmitForm({ childId, remaining }: { childId: string; remaining: number
         </div>
       </div>
 
-      {error && <p className="mt-3 px-1 text-[13px] font-medium text-[var(--p-coral)]">{tr(error)}</p>}
+      {error && <p className="mt-3 px-1 text-[13px] font-medium text-[var(--p-red)]">{tr(error)}</p>}
 
       <button
         type="submit"
         disabled={submit.isPending || preparing}
-        className="mt-4 w-full rounded-full bg-[var(--p-sun)] px-5 py-3.5 text-[15.5px] font-bold text-[#3a2a00] shadow-[0_8px_18px_-8px_rgba(255,183,3,0.7)] transition active:scale-[0.99] disabled:opacity-60"
+        className="mt-4 w-full rounded-full bg-[var(--p-accent)] px-5 py-3.5 text-[15.5px] font-bold text-white transition active:scale-[0.99] disabled:opacity-60"
       >
         {submit.isPending ? tr("Yuborilmoqda...") : tr("Chekni yuborish")}
       </button>
@@ -438,7 +438,7 @@ function HistorySection({ receipts, loading, error }: { receipts: ParentPaymentR
             <p className="mt-1 text-[12.5px] text-[var(--p-muted)]">{formatDateTime(r.createdAt)}</p>
             {r.note && <p className="mt-2 text-[13.5px] leading-snug text-[var(--p-ink)]/85">{r.note}</p>}
             {r.status === "REJECTED" && r.reviewNote && (
-              <p className="mt-2 rounded-[12px] bg-[var(--p-coral)]/12 px-3 py-2 text-[13px] leading-snug text-[var(--p-coral)]">
+              <p className="mt-2 rounded-[12px] bg-[var(--p-red)]/12 px-3 py-2 text-[13px] leading-snug text-[var(--p-red)]">
                 {r.reviewNote}
               </p>
             )}

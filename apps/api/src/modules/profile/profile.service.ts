@@ -34,7 +34,8 @@ export class ProfileService {
   async updateTheme(user: TenantAuthenticatedUser, dto: UpdateThemeDto) {
     return this.prisma.tenantUser.update({
       where: { id: user.id },
-      data: { themeColor: dto.themeColor },
+      // O'z rangi bir xil ko'rinishda saqlanadi («#1A2B3C» → «#1a2b3c»)
+      data: { themeColor: dto.themeColor.toLowerCase() },
       select: { themeColor: true },
     });
   }

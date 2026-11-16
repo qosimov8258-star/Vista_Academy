@@ -14,6 +14,7 @@ import { PasswordChecklist, getPasswordRules } from "@/components/ui/password-ch
 import { isCabinetlessPosition, isCookPosition, isGrouplessPosition, isSubjectTeacherPosition } from "@/lib/employee-position";
 import { CatalogPickerSheet, CheckRow, CopyRow, PhotoPickerHero, PickerRow, phoneErrorText } from "@/features/employees/employee-form-parts";
 import { useTr } from "@/i18n/tr";
+import { useFeatureEnabled } from "@/lib/use-auth";
 
 /**
  * Yangi xodim — iOS varag'i (tahrirlash varag'i bilan bir xil tartib):
@@ -34,6 +35,8 @@ export function CreateEmployeeModal({
   initialPosition?: Position | null;
 }) {
   const tr = useTr();
+  // «Xodim rasmi» o'chirilgan bo'lsa surat tanlash ko'rinmaydi
+  const avatarOn = useFeatureEnabled()("employeeAvatar");
   const queryClient = useQueryClient();
 
   const [photo, setPhoto] = useState<string | null>(null);
@@ -173,6 +176,7 @@ export function CreateEmployeeModal({
           </SheetPrimaryButton>
         }
       >
+        {avatarOn && (
         <PhotoPickerHero
           hasPhoto={!!photo}
           preview={photo ? <img src={photo} alt="" className="h-full w-full rounded-full object-cover" /> : null}
@@ -182,6 +186,7 @@ export function CreateEmployeeModal({
           hint="Majburiy · faqat xodimning o'zi, yuzi aniq ko'rinsin — Face ID shu surat bilan taniydi"
           error={show("photo")}
         />
+        )}
 
         <FormSection>
           <FieldRow label={tr("Familiya")} htmlFor="new-emp-last" error={show("lastName")}>

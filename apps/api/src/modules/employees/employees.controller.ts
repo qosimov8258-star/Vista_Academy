@@ -30,7 +30,7 @@ export class EmployeesController {
 
   @Get()
   findAll(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query() query: EmployeeQueryDto) {
-    return this.employeesService.findAll(toTenantScope(user), query);
+    return this.employeesService.findAll(toTenantScope(user), query, user.disabledFeatures);
   }
 
   @Post()
@@ -63,7 +63,7 @@ export class EmployeesController {
     @Param("id") id: string,
     @Body() dto: UpdateEmployeeGroupsDto,
   ) {
-    return this.employeesService.updateGroups(toTenantScope(user), id, dto);
+    return this.employeesService.updateGroups(toTenantScope(user), id, dto, user.disabledFeatures);
   }
 
   /** Xodimga yangi (avtomatik generatsiya qilingan) parol beradi — bir martalik javobda qaytadi. */

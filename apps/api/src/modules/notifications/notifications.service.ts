@@ -1,6 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { NotificationEventType, Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
+import { loadDisabledFeatures } from "../../common/features/feature-access";
 import { TenantAuthenticatedUser, TenantScope, requireOperationalScope, toTenantScope } from "../iam/tenant-auth.types";
 import { CreateNotificationDto } from "./dto/create-notification.dto";
 import { MarkNotificationSentDto } from "./dto/mark-notification-sent.dto";
@@ -76,6 +77,7 @@ export class NotificationsService {
    * Internal, called from other modules when a notification-worthy event
    * happens (e.g. a child marked absent). Not exposed as its own endpoint —
    * always logged as PENDING since there's no real dispatch provider here.
+   * `notifications` o'chiq bo'lsa — hech narsa yozilmaydi (null).
    */
   async logSystemEvent(params: {
     organizationId: string;
@@ -85,6 +87,10 @@ export class NotificationsService {
     recipientName: string;
     message: string;
   }) {
+    // Bog'chada bildirishnomalar o'chiq bo'lsa jurnalga yozilmaydi
+    if ((await loadDisabledFeatures(this.prisma, params.organizationId)).includes("notifications")) {
+      return null;
+    }
     return this.prisma.notificationLog.create({
       data: {
         organizationId: params.organizationId,
