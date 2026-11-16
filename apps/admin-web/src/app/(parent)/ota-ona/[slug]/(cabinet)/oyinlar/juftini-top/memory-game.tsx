@@ -6,7 +6,7 @@ import clsx from "clsx";
 import { Check, Eye, Pointer, RotateCcw, Volume2, VolumeX } from "lucide-react";
 import parentStyles from "../../../parent.module.css";
 import styles from "../oyinlar.module.css";
-import { nextLevel, starsFor, topicTone, type GameItem, type Level, type Topic } from "../data";
+import { asPhoto, nextLevel, starsFor, topicTone, type GameItem, type Level, type Topic } from "../data";
 import { useGamesStore } from "../store";
 import { buzz, sfx } from "../sound";
 import { KidStage, NameBubble, ProgressTray, StageButton, StageHeader } from "../ui";
@@ -43,7 +43,7 @@ function shuffle<T>(list: readonly T[]): T[] {
 }
 
 function deal(topic: Topic, pairs: number): Card[] {
-  const picked = shuffle(topic.items).slice(0, pairs);
+  const picked = shuffle(topic.items).slice(0, pairs).map(asPhoto);
   return shuffle([...picked, ...picked]).map((item, uid) => ({ uid, item }));
 }
 

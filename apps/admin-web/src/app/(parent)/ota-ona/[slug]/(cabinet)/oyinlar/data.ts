@@ -16,7 +16,18 @@ export type GameItem = {
   /** Bolaga aytiladigan nom — `tr()` orqali tarjima qilinadi */
   name: string;
   image: string;
+  /**
+   * Haqiqiy surat (fon olib tashlangan). Hozircha faqat «Juftini top»da:
+   * boshqa o'yinlarda bitta surat rasmlar orasida qolsa, bola ortiqchasini
+   * uslubidan topib qo'yadi. Hamma mavzu suratga o'tgach — hamma joyda.
+   */
+  photo?: string;
 };
+
+/** «Juftini top» uchun: surat bo'lsa — surat */
+export function asPhoto(item: GameItem): GameItem {
+  return item.photo ? { ...item, image: item.photo } : item;
+}
 
 export type TopicTone = "mint" | "coral" | "sky" | "lilac" | "sun";
 
@@ -45,7 +56,7 @@ export function findTopic(id: string): Topic | undefined {
 
 /** Mavzu kartasida ko'rinadigan rasmlar — birinchi uchtasi */
 export function topicCover(topic: Topic): GameItem[] {
-  return topic.items.slice(0, 3);
+  return topic.items.slice(0, 3).map(asPhoto);
 }
 
 /** Karta orqa tomonining rangi va mavzu kartasi tusi — guruhnikidan */

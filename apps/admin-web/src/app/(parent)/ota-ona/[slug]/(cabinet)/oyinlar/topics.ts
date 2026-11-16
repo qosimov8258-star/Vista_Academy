@@ -9,6 +9,9 @@
  * Rasmlar — Microsoft Fluent Emoji (3D), MIT litsenziyasi:
  * https://github.com/microsoft/fluentui-emoji. 256×256, WebP (dastlabki
  * ikki mavzu — PNG).
+ *
+ * `photo` — haqiqiy surat (CC0 / jamoat mulki, fon olib tashlangan, 384px
+ * WebP), `public/_oyinlar/foto/<mavzu>/`. Manbalari: FOTO-MANBALAR.md.
  */
 import type { Topic, TopicGroup } from "./data";
 
@@ -27,18 +30,18 @@ export const TOPICS: Topic[] = [
     group: "jonzotlar",
     title: "Uy hayvonlari",
     items: [
-      { id: "cat", name: "Mushuk", image: "/_oyinlar/hayvonlar/cat.png" },
-      { id: "dog", name: "Kuchukcha", image: "/_oyinlar/hayvonlar/dog.png" },
-      { id: "cow", name: "Sigir", image: "/_oyinlar/hayvonlar/cow.png" },
-      { id: "horse", name: "Ot", image: "/_oyinlar/hayvonlar/horse.png" },
-      { id: "sheep", name: "Qo'y", image: "/_oyinlar/hayvonlar/sheep.png" },
-      { id: "goat", name: "Echki", image: "/_oyinlar/hayvonlar/goat.png" },
-      { id: "donkey", name: "Eshak", image: "/_oyinlar/hayvonlar/donkey.png" },
-      { id: "rabbit", name: "Quyon", image: "/_oyinlar/hayvonlar/rabbit.png" },
-      { id: "chicken", name: "Tovuq", image: "/_oyinlar/hayvonlar/chicken.png" },
-      { id: "rooster", name: "Xo'roz", image: "/_oyinlar/hayvonlar/rooster.png" },
-      { id: "duck", name: "O'rdak", image: "/_oyinlar/hayvonlar/duck.png" },
-      { id: "camel", name: "Tuya", image: "/_oyinlar/hayvonlar/camel.webp" },
+      { id: "cat", name: "Mushuk", image: "/_oyinlar/hayvonlar/cat.png", photo: "/_oyinlar/foto/hayvonlar/cat.webp" },
+      { id: "dog", name: "Kuchukcha", image: "/_oyinlar/hayvonlar/dog.png", photo: "/_oyinlar/foto/hayvonlar/dog.webp" },
+      { id: "cow", name: "Sigir", image: "/_oyinlar/hayvonlar/cow.png", photo: "/_oyinlar/foto/hayvonlar/cow.webp" },
+      { id: "horse", name: "Ot", image: "/_oyinlar/hayvonlar/horse.png", photo: "/_oyinlar/foto/hayvonlar/horse.webp" },
+      { id: "sheep", name: "Qo'y", image: "/_oyinlar/hayvonlar/sheep.png", photo: "/_oyinlar/foto/hayvonlar/sheep.webp" },
+      { id: "goat", name: "Echki", image: "/_oyinlar/hayvonlar/goat.png", photo: "/_oyinlar/foto/hayvonlar/goat.webp" },
+      { id: "donkey", name: "Eshak", image: "/_oyinlar/hayvonlar/donkey.png", photo: "/_oyinlar/foto/hayvonlar/donkey.webp" },
+      { id: "rabbit", name: "Quyon", image: "/_oyinlar/hayvonlar/rabbit.png", photo: "/_oyinlar/foto/hayvonlar/rabbit.webp" },
+      { id: "chicken", name: "Tovuq", image: "/_oyinlar/hayvonlar/chicken.png", photo: "/_oyinlar/foto/hayvonlar/chicken.webp" },
+      { id: "rooster", name: "Xo'roz", image: "/_oyinlar/hayvonlar/rooster.png", photo: "/_oyinlar/foto/hayvonlar/rooster.webp" },
+      { id: "duck", name: "O'rdak", image: "/_oyinlar/hayvonlar/duck.png", photo: "/_oyinlar/foto/hayvonlar/duck.webp" },
+      { id: "camel", name: "Tuya", image: "/_oyinlar/hayvonlar/camel.webp", photo: "/_oyinlar/foto/hayvonlar/camel.webp" },
     ],
   },
   {
