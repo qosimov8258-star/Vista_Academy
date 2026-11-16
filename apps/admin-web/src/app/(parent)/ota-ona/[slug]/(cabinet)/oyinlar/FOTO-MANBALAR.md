@@ -35,7 +35,6 @@ ko'rsatilgan.
 | `wolf.webp` | Bo'ri | Public domain | [wikimedia](https://commons.wikimedia.org/wiki/File:Mexican_Wolf_2_yfb-edit_1.jpg) | Clark, Jim (U.S. Fish and Wildlife Service) |
 | `giraffe.webp` | Jirafa | CC0 1.0 (jamoat mulki) | [flickr](https://www.flickr.com/photos/40632439@N00/51832884568) | Thad Zajdowicz |
 | `zebra.webp` | Zebra | Public domain | [wikimedia](https://commons.wikimedia.org/wiki/File:20150927_115614_Male_Zebra_at_Tanzania.jpg) | Mussi Katz |
-| `panda.webp` | Panda | Public domain | [wikimedia](https://commons.wikimedia.org/wiki/File:Female_giant_pandas_Yuan_Yuan_%E5%9C%93%E5%9C%93_and_Yuan_Zai_%E5%9C%93%E4%BB%94_(Ailuropoda_melanoleuca)_at_Taipei_Zoo_(%E8%87%BA%E5%8C%97%E5%B8%82%E7%AB%8B%E5%8B%95%E7%89%A9%E5%9C%92_-_%E6%9C%A8%E6%9F%B5%E5%8B%95%E7%89%A9%E5%9C%92),_Taiwan_(16026349648).jpg) | Loeffle |
 | `hedgehog.webp` | Tipratikan | CC0 1.0 (jamoat mulki) | [flickr](https://www.flickr.com/photos/191729915@N03/51385935942) | Nils Soderman |
 
 ## Qushlar (`public/_oyinlar/foto/qushlar/`)
@@ -86,11 +85,9 @@ ko'rsatilgan.
 | Fayl | Nima | Litsenziya | Manba | Muallif |
 |---|---|---|---|---|
 | `pear.webp` | Nok | Public domain | [wikimedia](https://commons.wikimedia.org/wiki/File:Pears.jpg) | Keith Weller |
-| `banana.webp` | Banan | CC0 1.0 (jamoat mulki) | [wikimedia](https://commons.wikimedia.org/wiki/File:Bunch_of_bananas_on_sale.jpg) | Wilfredor |
 | `grapes.webp` | Uzum | CC0 1.0 (jamoat mulki) | [wikimedia](https://commons.wikimedia.org/wiki/File:A_bunch_of_grapes_on_a_vine.jpg) | Ian Schneider on Unsplash |
 | `tangerine.webp` | Mandarin | CC0 1.0 (jamoat mulki) | [stocksnap](https://stocksnap.io/photo/tangerines-clementines-WZEKJQF6AZ) | Tomasz%20Gaw%u0142owski |
 | `lemon.webp` | Limon | CC0 1.0 (jamoat mulki) | [stocksnap](https://stocksnap.io/photo/yellow-lemons-4CIBHHJOHE) | Patryk Dziejma |
-| `strawberry.webp` | Qulupnay | Public domain | [wikimedia](https://commons.wikimedia.org/wiki/File:More_strawberries.jpg) | Keith Weller, USDA ARS |
 | `cherries.webp` | Gilos | Public Domain Mark (jamoat mulki) | [flickr](https://www.flickr.com/photos/190270151@N02/51295471407) | GeorgeTan#3 - OFF permanently |
 | `watermelon.webp` | Tarvuz | CC0 1.0 (jamoat mulki) | [stocksnap](https://stocksnap.io/photo/watermelon-fruits-GDTA8DSYQ7) | Krzysztof%20Puszczy%u0144ski |
 | `peach.webp` | Shaftoli | Public domain | [wikimedia](https://commons.wikimedia.org/wiki/File:Autumn_Red_peaches.jpg) | Jack Dykinga, USDA |

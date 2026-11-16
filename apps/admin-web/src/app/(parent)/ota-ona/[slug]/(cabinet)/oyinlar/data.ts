@@ -72,7 +72,7 @@ export function findTopic(id: string): Topic | undefined {
 /** Suratli mavzularda muqovaga eng tanish surat (birinchisi har doim ham emas) */
 const COVER: Record<string, string> = {
   hayvonlar: "cat", yovvoyi: "lion", qushlar: "owl", dengiz: "fish", hasharotlar: "ladybug",
-  mevalar: "strawberry", sabzavotlar: "tomato", taomlar: "soup", shirinliklar: "cupcake",
+  mevalar: "cherries", sabzavotlar: "tomato", taomlar: "soup", shirinliklar: "cupcake",
   transport: "bus", gullar: "tulip",
 };
 
