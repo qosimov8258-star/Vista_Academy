@@ -204,8 +204,9 @@ export function OddGame({ slug, level }: { slug: string; level: OddLevel }) {
         )}
       </div>
 
-      {/* To'g'ri topilganda — nega ortiqcha */}
-      <div className="flex h-[104px] items-start justify-center px-4 pb-3">
+      {/* To'g'ri topilganda — nega ortiqcha. Uzun nom ikki qatorga tushsa ham
+          sig'adi: joy balandligi o'zgarmaydi, kartalar to'ri shunga moslashadi */}
+      <div className="flex h-[118px] items-center justify-center px-4 pb-[max(12px,env(safe-area-inset-bottom))]">
         {phase === "correct" && round && (
           <div key={`${game}-${index}`} className={clsx(styles.bubble, styles.chip, "flex max-w-full items-center gap-3 rounded-[28px] py-2.5 pl-2.5 pr-5")}>
             <span
@@ -215,10 +216,10 @@ export function OddGame({ slug, level }: { slug: string; level: OddLevel }) {
               <img src={round.odd.item.image} alt="" draggable={false} className="h-10 w-10 object-contain" />
             </span>
             <span className="min-w-0">
-              <span className={clsx(parentStyles.roundedFont, "block text-[21px] leading-tight text-[var(--p-ink)]")}>
+              <span className={clsx(parentStyles.roundedFont, "block text-balance text-[19px] leading-[1.15] text-[var(--p-ink)]")}>
                 {tr(round.odd.item.name)} — {tr(round.odd.set.kind)}
               </span>
-              <span className="mt-0.5 block text-[14.5px] font-semibold leading-snug text-[var(--p-ink)]/60">
+              <span className="mt-0.5 block text-[14px] font-semibold leading-snug text-[var(--p-ink)]/60">
                 {tr("Qolganlari — {0}", tr(round.base.plural))}
               </span>
             </span>
