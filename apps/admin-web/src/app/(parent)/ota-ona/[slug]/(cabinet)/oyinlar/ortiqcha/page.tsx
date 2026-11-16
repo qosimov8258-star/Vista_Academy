@@ -84,21 +84,12 @@ export default function OddGameHomePage({ params }: { params: Promise<{ slug: st
         </p>
         <div className="mt-3 grid grid-cols-3 gap-2.5">
           {ODD_SETS.map((set) => (
-            <div key={set.id} className="flex min-w-0 flex-col items-center rounded-[20px] bg-[var(--p-card)] px-1.5 pb-2.5 pt-2.5 shadow-[var(--p-shadow)]">
-              <span className="flex h-[52px] items-end justify-center -space-x-3">
-                {set.items.slice(0, 3).map((item, i) => (
-                  <img
-                    key={item.id}
-                    src={item.image}
-                    alt=""
-                    loading="lazy"
-                    draggable={false}
-                    className={clsx("object-contain", i === 1 ? "relative z-10 h-[46px] w-[46px]" : "h-[34px] w-[34px]")}
-                  />
-                ))}
+            <div key={set.id} className="flex min-w-0 flex-col rounded-[20px] bg-[var(--p-card)] p-1.5 shadow-[var(--p-shadow)]">
+              <span className="flex aspect-[4/3] items-center justify-center rounded-[15px]" style={{ background: tone.soft }}>
+                <img src={set.items[0].image} alt="" loading="lazy" draggable={false} className="h-[66%] w-auto object-contain" />
               </span>
-              <span className="mt-1.5 line-clamp-2 min-h-[32px] text-center text-[12.5px] font-semibold leading-[1.25] text-[var(--p-ink)]">
-                {capitalize(tr(set.plural))}
+              <span className="flex min-h-[38px] items-center justify-center px-0.5 pt-1.5 text-center text-[12.5px] font-semibold leading-[1.2] text-[var(--p-ink)]">
+                <span className="line-clamp-2">{capitalize(tr(set.plural))}</span>
               </span>
             </div>
           ))}
