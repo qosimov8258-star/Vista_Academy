@@ -69,8 +69,17 @@ export function findTopic(id: string): Topic | undefined {
 }
 
 /** Mavzu kartasida ko'rinadigan rasmlar — birinchi uchtasi */
+/** Suratli mavzularda muqovaga eng tanish surat (birinchisi har doim ham emas) */
+const COVER: Record<string, string> = {
+  hayvonlar: "cat", yovvoyi: "lion", qushlar: "owl", dengiz: "fish", hasharotlar: "ladybug",
+  mevalar: "strawberry", sabzavotlar: "tomato", taomlar: "soup", shirinliklar: "cupcake",
+  transport: "bus", gullar: "tulip",
+};
+
 export function topicCover(topic: Topic): GameItem[] {
-  return playItems(topic).slice(0, 3);
+  const items = playItems(topic);
+  const first = items.findIndex((item) => item.id === COVER[topic.id] && item.photo);
+  return (first > 0 ? [items[first], ...items.filter((_, i) => i !== first)] : items).slice(0, 3);
 }
 
 /** Karta orqa tomonining rangi va mavzu kartasi tusi — guruhnikidan */
