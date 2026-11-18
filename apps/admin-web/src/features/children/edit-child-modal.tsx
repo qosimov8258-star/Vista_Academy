@@ -1,6 +1,6 @@
 "use client";
 
-import { Controller, useForm, type FieldErrors } from "react-hook-form";
+import { Controller, useForm, useWatch, type FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -13,6 +13,7 @@ import { DobPicker, FieldRow, FormSection, MoneyInput, Segmented, TextInput } fr
 import { ChildGroupPicker } from "@/features/children/create-child-modal";
 import { useTr } from "@/i18n/tr";
 import { GroupFullPrompt } from "./group-full-prompt";
+import { ArchiveChildPrompt } from "./archive-child-prompt";
 import { useFeatureEnabled } from "@/lib/use-auth";
 
 const schema = z.object({
@@ -79,6 +80,10 @@ export function EditChildModal({
   const allowOverCapacity = useRef(false);
   const [toast, setToast] = useState<ToastState | null>(null);
   const quarantined = child.status === "QUARANTINED";
+  // Arxivlash — saqlashdan oldin varaq ichida tasdiqlanadi
+  const [confirmArchive, setConfirmArchive] = useState(false);
+  const archiveConfirmed = useRef(false);
+  const archived = child.status === "INACTIVE";
 
   // Oylik narx: shu oy hisob-fakturasi bo'lsa — uning summasi (bola hozir shuni to'laydi),
   // bo'lmasa bolaning o'z narxi yoki guruh narxi. O'zgartirilsa shu oydan amal qiladi.
@@ -125,6 +130,11 @@ export function EditChildModal({
       status: child.status === "QUARANTINED" ? "ACTIVE" : child.status,
     },
   });
+  const watchedStatus = useWatch({ control, name: "status" });
+  // Arxivdagi (INACTIVE) bola guruhsiz turadi: arxivlanganda guruhdan chiqariladi
+  const inArchive = !quarantined && watchedStatus === "INACTIVE";
+  const archiving = !archived && inArchive;
+  const restoring = archived && watchedStatus === "ACTIVE";
 
   const saveFee = async (): Promise<ChildFeeResult> =>
     api.put<ChildFeeResult>(`/app/children/${child.id}/monthly-fee`, { amount: fee ? Number(fee) : null });
@@ -143,7 +153,8 @@ export function EditChildModal({
           gender: showGender ? values.gender : undefined,
           birthDate: showBirthDate ? values.birthDate || undefined : undefined,
           status: quarantined ? undefined : values.status,
-          groupId: values.groupId || null,
+          // Arxivga o'tgan bola guruhdan chiqariladi — ma'lumotlari saqlanadi
+          groupId: inArchive ? null : values.groupId || null,
           allowOverCapacity: allowOverCapacity.current || undefined,
         });
       }
@@ -152,6 +163,13 @@ export function EditChildModal({
     onSuccess: (feeResult) => {
       queryClient.invalidateQueries({ queryKey: ["child", slug, child.id] });
       queryClient.invalidateQueries({ queryKey: ["children", slug] });
+      if (archiving || restoring) {
+        // Guruh soni, davomat va bosh sahifa hisoblari ham o'zgaradi
+        queryClient.invalidateQueries();
+        onSaved?.(archiving ? tr("Bola arxivga o'tkazildi") : tr("Bola arxivdan qaytarildi"));
+        onClose();
+        return;
+      }
       if (!feeResult) {
         onSaved?.();
         onClose();
@@ -181,6 +199,7 @@ export function EditChildModal({
     },
     onSettled: () => {
       allowOverCapacity.current = false;
+      archiveConfirmed.current = false;
     },
   });
 
@@ -193,6 +212,16 @@ export function EditChildModal({
   const ready = isDirty || feeDirty;
   const submit = handleSubmit((values) => {
     if (!ready) return;
+    // Arxivdan qaytgan bola qaysidir guruhga tushishi shart — aks holda yana «Guruhsiz»da qoladi
+    if (restoring && !values.groupId) {
+      setToast({ type: "error", message: tr("Qaysi guruhga qaytishini tanlang") });
+      return;
+    }
+    if (archiving && !archiveConfirmed.current) {
+      setConfirmArchive(true);
+      return;
+    }
+    setConfirmArchive(false);
     setServerError(null);
     setFeeNotice(null);
     setGroupFull(null);
@@ -234,6 +263,18 @@ export function EditChildModal({
       }
     >
       <form id={formId} noValidate onSubmit={submit} className="space-y-6">
+        {confirmArchive && archiving && (
+          <ArchiveChildPrompt
+            childName={child.fullName}
+            groupName={groups?.find((g) => g.id === child.groupId)?.name ?? null}
+            loading={saving}
+            onCancel={() => setConfirmArchive(false)}
+            onConfirm={() => {
+              archiveConfirmed.current = true;
+              void submit();
+            }}
+          />
+        )}
         {groupFull && (
           <GroupFullPrompt
             message={groupFull}
@@ -293,26 +334,39 @@ export function EditChildModal({
 
         <FormSection
           title={tr("Bog'chada")}
-          footer={quarantined ? tr("Karantindagi bolaning holatini avval karantinni yopib o'zgartiring") : undefined}
+          footer={
+            quarantined
+              ? tr("Karantindagi bolaning holatini avval karantinni yopib o'zgartiring")
+              : archiving
+                ? tr("Bola guruhdan chiqariladi va «Bolalar → Arxiv»ga o'tadi. To'lovlari, davomati va boshqa ma'lumotlari saqlanadi.")
+                : restoring
+                  ? tr("Qaysi guruhga qaytishini tanlang.")
+                  : undefined
+          }
         >
-          <FieldRow label={tr("Guruh")} htmlFor={`${formId}-g`} error={err("groupId")}>
-            <Controller
-              control={control}
-              name="groupId"
-              render={({ field }) => (
-                <ChildGroupPicker
-                  id={`${formId}-g`}
-                  title={tr("Guruh")}
-                  value={field.value ?? ""}
-                  onChange={field.onChange}
-                  groups={groupOptions}
-                  inactiveIds={inactiveIds}
-                  loading={!groups}
-                  placeholder={tr("Guruhsiz")}
-                  emptyOption={tr("Guruhsiz")}
-                />
-              )}
-            />
+          <FieldRow label={tr("Guruh")} htmlFor={inArchive ? undefined : `${formId}-g`} error={err("groupId")}>
+            {inArchive ? (
+              <p className="py-3 text-right text-[15px] text-[#8e8e93]">{tr(archived ? "—" : "Guruhdan chiqariladi")}</p>
+            ) : (
+              <Controller
+                control={control}
+                name="groupId"
+                render={({ field }) => (
+                  <ChildGroupPicker
+                    id={`${formId}-g`}
+                    title={tr("Guruh")}
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                    groups={groupOptions}
+                    inactiveIds={inactiveIds}
+                    loading={!groups}
+                    placeholder={tr(restoring ? "Guruhni tanlang" : "Guruhsiz")}
+                    // Arxivdan qaytayotgan bolani yana guruhsiz qoldirib bo'lmaydi
+                    emptyOption={restoring ? undefined : tr("Guruhsiz")}
+                  />
+                )}
+              />
+            )}
           </FieldRow>
           <FieldRow label={tr("Holati")} error={err("status")}>
             {quarantined ? (
@@ -328,7 +382,8 @@ export function EditChildModal({
                     onChange={field.onChange}
                     options={[
                       { value: "ACTIVE", label: tr("Faol") },
-                      { value: "INACTIVE", label: tr("Nofaol") },
+                      // «Nofaol» o'rniga — arxiv (bola guruhdan chiqariladi, ma'lumotlari saqlanadi)
+                      { value: "INACTIVE", label: tr(archived ? "Arxivda" : "Arxivlash") },
                     ]}
                   />
                 )}

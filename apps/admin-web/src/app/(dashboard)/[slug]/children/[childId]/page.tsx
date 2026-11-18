@@ -5,6 +5,7 @@ import Link from "next/link";
 import clsx from "clsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  Archive,
   Baby,
   BadgePercent,
   Camera,
@@ -70,6 +71,8 @@ import { AddGuardianModal } from "@/features/guardians/add-guardian-modal";
 import { ParentCabinetModal } from "@/features/guardians/parent-cabinet-modal";
 import { EditGuardianLinkModal } from "@/features/guardians/edit-guardian-link-modal";
 import { EditChildModal } from "@/features/children/edit-child-modal";
+import { RestoreChildSheet } from "@/features/children/restore-child-sheet";
+import { IosButton } from "@/components/ios/button";
 import { ChildAttendanceCalendar } from "@/features/attendance/child-attendance-calendar";
 import { useTr } from "@/i18n/tr";
 
@@ -78,7 +81,8 @@ const TABS: Tab[] = ["overview", "attendance", "health", "development"];
 
 const STATUS: Record<string, { label: string; color: string }> = {
   ACTIVE: { label: "Faol", color: IOS.green },
-  INACTIVE: { label: "Nofaol", color: IOS.gray },
+  // INACTIVE — arxiv: guruhsiz, ma'lumotlari saqlangan
+  INACTIVE: { label: "Arxivda", color: IOS.gray },
   QUARANTINED: { label: "Karantinda", color: IOS.red },
 };
 const RELATION: Record<string, string> = { FATHER: "Ota", MOTHER: "Ona", GRANDPARENT: "Bobo/Buvi", OTHER: "Boshqa" };
@@ -148,6 +152,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
   const tabOn: Record<Tab, boolean> = { overview: true, attendance: attendanceOn, health: healthOn, development: developmentOn || reportsOn };
   const tab: Tab = tabOn[tabChoice] ? tabChoice : "overview";
   const [editChildOpen, setEditChildOpen] = useState(false);
+  const [restoreOpen, setRestoreOpen] = useState(false);
   const [photoOpen, setPhotoOpen] = useState(false);
   const [docsOpen, setDocsOpen] = useState(false);
   const [guardianSheet, setGuardianSheet] = useState<ChildGuardian | null>(null);
@@ -268,7 +273,12 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
                   {tr(child.fullName)}
                 </h1>
                 <p className="mt-1 text-[14px] text-[#8e8e93]">
-                  {[child.group?.name ? tr(child.group.name) : tr("Guruhsiz"), child.birthDate ? tr(formatAge(child.birthDate)) : null].filter(Boolean).join(" · ")}
+                  {[
+                    child.group?.name ? tr(child.group.name) : child.status === "INACTIVE" ? null : tr("Guruhsiz"),
+                    child.birthDate ? tr(formatAge(child.birthDate)) : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </p>
                 <div className="mt-2.5 flex flex-wrap justify-center gap-1.5">
                   <Pill color={STATUS[child.status]?.color}>{tr(STATUS[child.status]?.label ?? child.status)}</Pill>
@@ -286,6 +296,24 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
             </>
           )}
         </PageCard>
+
+        {/* Arxivdagi bola: guruhsiz, ma'lumotlari (to'lov, davomat va h.k.) pastda saqlangan */}
+        {child?.status === "INACTIVE" && (
+          <PageCard className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center">
+            <div className="flex min-w-0 flex-1 items-start gap-3">
+              <IosIcon icon={Archive} tint="gray" size={40} />
+              <div className="min-w-0">
+                <p className="text-[16px] font-semibold leading-snug text-[var(--color-text)]">{tr("Bola arxivda")}</p>
+                <p className="mt-0.5 text-[13.5px] leading-snug text-[#8e8e93]">
+                  {tr("Guruhdan chiqarilgan. To'lovlari, davomati va boshqa ma'lumotlari saqlangan.")}
+                </p>
+              </div>
+            </div>
+            {canWrite && isOn("childEdit") && (
+              <IosButton label={tr("Arxivdan qaytarish")} variant="primary" onClick={() => setRestoreOpen(true)} className="w-full sm:w-auto" />
+            )}
+          </PageCard>
+        )}
 
         <StatStrip tone="white">
           {attendanceOn && (
@@ -648,6 +676,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
       </IosSheet>
 
       {canWrite && editChildOpen && child && <EditChildModal open={editChildOpen} onClose={() => setEditChildOpen(false)} slug={slug} child={child} />}
+      {canWrite && child?.status === "INACTIVE" && <RestoreChildSheet open={restoreOpen} onClose={() => setRestoreOpen(false)} slug={slug} child={child} />}
       {canWrite && assessOpen && <EditDevelopmentModal open={assessOpen} onClose={() => setAssessOpen(false)} slug={slug} childId={childId} existing={latest} />}
       {canWrite && healthOpen && <EditHealthProfileModal open={healthOpen} onClose={() => setHealthOpen(false)} slug={slug} childId={childId} existing={health} />}
       {canWrite && vaccinationOpen && <AddVaccinationModal open={vaccinationOpen} onClose={() => setVaccinationOpen(false)} slug={slug} childId={childId} />}
