@@ -23,6 +23,8 @@ const ROUTE_FEATURES: Record<string, string | string[]> = {
   coin: "coins",
   crm: "crm",
   "daily-reports": "dailyReports",
+  // Kayfiyat belgilash kundalik hisobotning bir qismi — u o'chsa, bu ham yashirinadi
+  mood: "dailyReports",
   // Qarzdorlar va to'lovlar ro'yxati /cash/* dan o'qiladi — kassa ham kerak
   debtors: ["billing", "cash"],
   finance: "billing",

@@ -9,7 +9,7 @@ import { useRouteFeatureOn } from "@/lib/feature-routes";
 import { canViewUseful, canWriteTeaching } from "@/lib/permissions";
 import { isAssistantPosition, isSubjectTeacherPosition } from "@/lib/employee-position";
 import { Avatar } from "@/components/ui/avatar";
-import { ArrowRight, Baby, Bell, CalendarDays, Check, ClipboardCheck, Images, Newspaper, Paperclip, UsersRound } from "lucide-react";
+import { ArrowRight, Baby, Bell, CalendarDays, Check, ClipboardCheck, Images, Newspaper, Paperclip, Smile, UsersRound } from "lucide-react";
 import { CalendarIcon, ClockIcon, GroupIcon } from "@/components/ios/icons";
 import { IosIcon, type AnyIcon, type IosTint } from "@/features/director/ios-icon";
 import { EmptyRow, Group, GroupAction, Row, SkeletonRows, TeacherPage, formatDayLong, todayIso } from "./teacher-ui";
@@ -111,9 +111,13 @@ export function TeacherHome({ slug }: { slug: string }) {
   const scheduleOn = lessonsOn && routeOn(`/${slug}/my-lessons/schedule`);
   const usefulOn = !!user && canViewUseful(user.role) && !subjectTeacher;
   const todayLessons = lessons.filter(({ day }) => day.key === todayWeekday).length;
+  // Kayfiyat belgilash — guruh tarbiyachisi (yordamchi faqat ko'radi, fan o'qituvchisida guruh bolalari yo'q)
+  const moodOn = canMark && !subjectTeacher && routeOn(`/${slug}/mood`);
 
-  // Ilova yorliqlari — eng ko'p kerak bo'ladiganlari, ko'pi bilan 4 ta
+  // Ilova yorliqlari — eng ko'p kerak bo'ladiganlari, ko'pi bilan 4 ta (+ «Kayfiyat», u bo'lsa).
+  // «Kayfiyat» birinchi va qo'shimcha o'rin oladi — qolgan yorliqlar avvalgidek qoladi.
   const shortcuts: Shortcut[] = ([
+    moodOn && { key: "mood", label: "Kayfiyat", icon: Smile, tint: "green", href: `/${slug}/mood` },
     materialsOn && { key: "materials", label: "Vazifa", icon: Paperclip, tint: "teal", href: `/${slug}/materials` },
     usefulOn && routeOn(`/${slug}/useful/gallery`) && { key: "gallery", label: "Galereya", icon: Images, tint: "pink", href: `/${slug}/useful/gallery` },
     scheduleOn && { key: "schedule", label: "Jadval", icon: CalendarDays, tint: "orange", href: `/${slug}/my-lessons/schedule` },
@@ -122,7 +126,7 @@ export function TeacherHome({ slug }: { slug: string }) {
     usefulOn && routeOn(`/${slug}/useful/articles`) && { key: "articles", label: "Maqolalar", icon: Newspaper, tint: "purple", href: `/${slug}/useful/articles` },
   ] as (Shortcut | false)[])
     .filter((item): item is Shortcut => !!item)
-    .slice(0, 4);
+    .slice(0, moodOn ? 5 : 4);
 
   const status = marked === 0 ? "Kutilmoqda" : marked >= total ? "Bajarildi" : `${marked}/${total}`;
 
