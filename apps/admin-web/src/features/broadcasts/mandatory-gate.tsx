@@ -13,7 +13,17 @@ import { receivesEmployeeNotifications } from "@/lib/permissions";
 import type { InboxMessage } from "@/lib/types";
 import { Spinner } from "@/components/ios/spinner";
 import { useEmployeeInbox } from "./use-inbox";
+import { MessageImage, inboxImageUrl } from "./message-image";
 import { useTr } from "@/i18n/tr";
+
+/**
+ * Xabar rasmi qayerdan olinadi: `url(id)` — inbox qatori id bo'yicha manzil;
+ * `authed` — xodim paneli (token bilan), ota-ona kabinetida `false` (cookie).
+ */
+export interface MessageImageSource {
+  url: (id: string) => string;
+  authed: boolean;
+}
 
 /**
  * Xabar oynasi — ikki rejim:
@@ -59,6 +69,7 @@ export function MandatoryMessageModal({
   hidden = [],
   onLater,
   onlyId,
+  image,
 }: {
   messages: InboxMessage[];
   onAcknowledge: (id: string) => void;
@@ -71,6 +82,8 @@ export function MandatoryMessageModal({
   onLater?: (id: string) => void;
   /** `new` rejimida faqat shu xabar (bannerdan ochilgani) */
   onlyId?: string;
+  /** Xabar rasmi manbai; berilmasa rasm ko'rsatilmaydi */
+  image?: MessageImageSource;
 }) {
   const tr = useTr();
   const isNew = mode === "new";
@@ -133,6 +146,7 @@ export function MandatoryMessageModal({
                 <h2 id="message-popup-title" className="mt-0.5 break-words text-[15px] font-semibold leading-snug" style={{ color: palette.ink }}>
                   {current.title}
                 </h2>
+                {current.hasImage && image && <MessageImage url={image.url(current.id)} authed={image.authed} alt={current.title} className="mt-2" />}
                 <p className="mt-0.5 max-h-[45dvh] overflow-y-auto whitespace-pre-line break-words text-[15px] leading-[1.38]" style={{ color: palette.ink }}>
                   {current.body}
                 </p>
@@ -216,12 +230,14 @@ export function MessageGate({
   pendingId,
   palette,
   portal,
+  image,
 }: {
   messages: InboxMessage[];
   onRead: (id: string) => void;
   pendingId: string | null;
   palette?: MandatoryPalette;
   portal?: boolean;
+  image?: MessageImageSource;
 }) {
   const tr = useTr();
   const { later, add } = useLaterMessages();
@@ -230,7 +246,7 @@ export function MessageGate({
   const [acked, setAcked] = useState<string[]>([]);
   const mandatoryPending = messages.some((m) => m.isMandatory && !m.readAt);
   if (mandatoryPending) {
-    return <MandatoryMessageModal messages={messages} onAcknowledge={onRead} pendingId={pendingId} palette={palette} portal={portal} />;
+    return <MandatoryMessageModal messages={messages} onAcknowledge={onRead} pendingId={pendingId} palette={palette} portal={portal} image={image} />;
   }
   const open = openId ? messages.find((m) => m.id === openId && !m.readAt && !acked.includes(m.id)) : undefined;
   if (open) {
@@ -241,6 +257,7 @@ export function MessageGate({
         mode="new"
         palette={palette}
         portal={portal}
+        image={image}
         pendingId={pendingId}
         onAcknowledge={(id) => {
           setAcked((l) => [...l, id]);
@@ -282,5 +299,12 @@ export function EmployeeMandatoryGate({ slug }: { slug: string }) {
     },
   });
   if (!enabled || !inbox.data) return null;
-  return <MessageGate messages={inbox.data} onRead={(id) => read.mutate(id)} pendingId={read.isPending ? (read.variables ?? null) : null} />;
+  return (
+    <MessageGate
+      messages={inbox.data}
+      onRead={(id) => read.mutate(id)}
+      pendingId={read.isPending ? (read.variables ?? null) : null}
+      image={{ url: inboxImageUrl, authed: true }}
+    />
+  );
 }

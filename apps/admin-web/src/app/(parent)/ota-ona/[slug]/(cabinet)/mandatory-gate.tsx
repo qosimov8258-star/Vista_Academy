@@ -1,6 +1,7 @@
 "use client";
 
 import { MessageGate } from "@/features/broadcasts/mandatory-gate";
+import { parentMessageImageUrl } from "@/features/broadcasts/message-image";
 import { useAppPathname } from "@/lib/tenant-host-context";
 import { useMarkParentMessageRead, useParentMessages } from "./use-messages";
 import { useParentFeatures } from "./use-parent-features";
@@ -27,6 +28,7 @@ export function ParentMandatoryGate({ slug }: { slug: string }) {
       pendingId={read.isPending ? (read.variables ?? null) : null}
       palette={PALETTE}
       portal={false}
+      image={{ url: parentMessageImageUrl, authed: false }}
     />
   );
 }

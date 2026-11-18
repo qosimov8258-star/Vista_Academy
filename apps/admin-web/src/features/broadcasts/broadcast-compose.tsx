@@ -14,6 +14,7 @@ import { IosSheet, SheetPrimaryButton, SheetSecondaryButton, SheetSection } from
 import { Spinner } from "@/components/ios/spinner";
 import { GROUP_BLOCK, ROW_PRESS, ROW_SEPARATOR } from "@/components/ios/tokens";
 import { IosIcon } from "@/features/director/ios-icon";
+import { PhotoPicker } from "@/features/useful/photo-picker";
 import { useTr } from "@/i18n/tr";
 
 export const TITLE_MAX = 120;
@@ -39,6 +40,8 @@ export function BroadcastCompose({ open, onClose, slug }: { open: boolean; onClo
   const [employees, setEmployees] = useState<Map<string, string>>(new Map());
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  /** Ixtiyoriy rasm — data URL (brauzerda kichraytirilgan) */
+  const [image, setImage] = useState<string | null>(null);
   const [mandatory, setMandatory] = useState(false);
   const [step, setStep] = useState<Step>("edit");
   const [picker, setPicker] = useState<"groups" | "children" | "employees" | null>(null);
@@ -55,6 +58,7 @@ export function BroadcastCompose({ open, onClose, slug }: { open: boolean; onClo
     setEmployees(new Map());
     setTitle("");
     setBody("");
+    setImage(null);
     setMandatory(false);
     setStep("edit");
     setError(null);
@@ -100,7 +104,14 @@ export function BroadcastCompose({ open, onClose, slug }: { open: boolean; onClo
   const preview = targetReady ? previewQuery.data : undefined;
 
   const send = useMutation({
-    mutationFn: () => api.post<{ id: string; recipients: number; noCabinet: number }>("/app/broadcasts", { ...target, title: title.trim(), body: body.trim(), isMandatory: mandatory }),
+    mutationFn: () =>
+      api.post<{ id: string; recipients: number; noCabinet: number }>("/app/broadcasts", {
+        ...target,
+        title: title.trim(),
+        body: body.trim(),
+        isMandatory: mandatory,
+        ...(image ? { image } : {}),
+      }),
     onSuccess: (res) => {
       setResult(res);
       setStep("done");
@@ -224,6 +235,17 @@ export function BroadcastCompose({ open, onClose, slug }: { open: boolean; onClo
 
             <RecipientsLine preview={preview} loading={targetReady && previewQuery.isFetching} audience={audience} nobody={nobody} />
 
+            <SheetSection title={tr("Rasm")} footer={tr("Ixtiyoriy. Rasm xabar matni tepasida ko'rinadi.")}>
+              <PhotoPicker
+                src={image}
+                onPicked={setImage}
+                onRemove={() => setImage(null)}
+                aspect="square"
+                emptyTitle="Rasm qo'shish"
+                alt={tr("Xabar rasmi")}
+              />
+            </SheetSection>
+
             <SheetSection title={tr("Xabar")} footer={`${body.length}/${BODY_MAX}`}>
               <FieldRow label={tr("Sarlavha")} htmlFor="bc-title" error={titleError}>
                 <TextInput
@@ -257,10 +279,10 @@ export function BroadcastCompose({ open, onClose, slug }: { open: boolean; onClo
               </div>
             </SheetSection>
 
-            {(title.trim() || body.trim()) && (
+            {(title.trim() || body.trim() || image) && (
               <section>
                 <h3 className="px-4 pb-1.5 text-[13px] uppercase tracking-wide text-[#8e8e93]">{tr("Ko'rinishi")}</h3>
-                <MessagePreview title={title} body={body} mandatory={mandatory} />
+                <MessagePreview title={title} body={body} mandatory={mandatory} image={image ? <PreviewImage src={image} alt={tr("Xabar rasmi")} /> : undefined} />
               </section>
             )}
 
@@ -279,7 +301,7 @@ export function BroadcastCompose({ open, onClose, slug }: { open: boolean; onClo
               <p className="text-[20px] font-bold leading-tight text-[var(--color-text)]">{per("{0} ta ota-onaga yuborilsinmi?", "{0} ta xodimga yuborilsinmi?", preview.recipients)}</p>
               <p className="text-[13.5px] text-[#8e8e93]">{tr(preview.scopeLabel)}</p>
             </div>
-            <MessagePreview title={title} body={body} mandatory={mandatory} />
+            <MessagePreview title={title} body={body} mandatory={mandatory} image={image ? <PreviewImage src={image} alt={tr("Xabar rasmi")} /> : undefined} />
             {preview.sample.length > 0 && (
               <SheetSection title={tr("Qabul qiluvchilar")}>
                 <p className="px-4 py-3 text-[14px] leading-snug text-[var(--color-text)]">
@@ -343,8 +365,18 @@ function RecipientsLine({ preview, loading, audience, nobody }: { preview?: Broa
   );
 }
 
-/** Qabul qiluvchida qanday ko'rinishi */
-export function MessagePreview({ title, body, mandatory }: { title: string; body: string; mandatory: boolean }) {
+/** Yozilayotgan xabar rasmi (data URL) — ko'rinish va tasdiqlashda */
+function PreviewImage({ src, alt }: { src: string; alt: string }) {
+  return (
+    <div className="overflow-hidden rounded-[14px] bg-[#767680]/[0.12]">
+      {/* eslint-disable-next-line @next/next/no-img-element -- data URL */}
+      <img src={src} alt={alt} className="mx-auto block max-h-[min(420px,45dvh)] w-auto max-w-full object-contain" />
+    </div>
+  );
+}
+
+/** Qabul qiluvchida qanday ko'rinishi. `image` — ixtiyoriy rasm (sarlavha va matn orasida) */
+export function MessagePreview({ title, body, mandatory, image }: { title: string; body: string; mandatory: boolean; image?: ReactNode }) {
   const tr = useTr();
   return (
     <div className={clsx(GROUP_BLOCK, "px-4 py-3.5")}>
@@ -355,6 +387,7 @@ export function MessagePreview({ title, body, mandatory }: { title: string; body
             <span className="min-w-0 break-words">{title.trim() || tr("Sarlavha")}</span>
             {mandatory && <span className="shrink-0 rounded-full bg-[#ff3b30]/[0.12] px-2 py-0.5 text-[11.5px] font-semibold text-[#ff3b30]">{tr("Majburiy")}</span>}
           </p>
+          {image && <div className="mt-2">{image}</div>}
           <p className="mt-1 whitespace-pre-line break-words text-[14.5px] leading-snug text-[var(--color-text)]/80">{body.trim() || "…"}</p>
         </div>
       </div>

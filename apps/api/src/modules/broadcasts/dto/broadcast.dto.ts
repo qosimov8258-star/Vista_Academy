@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Transform, Type } from "class-transformer";
-import { ArrayMaxSize, IsArray, IsBoolean, IsIn, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength } from "class-validator";
+import { ArrayMaxSize, IsArray, IsBoolean, IsIn, IsInt, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, MinLength } from "class-validator";
+import { IMAGE_DATA_URL_MESSAGE, IMAGE_DATA_URL_RE } from "../../useful/content-scope";
 
 export const BROADCAST_AUDIENCES = ["GUARDIANS", "EMPLOYEES"] as const;
 export type BroadcastAudienceKey = (typeof BROADCAST_AUDIENCES)[number];
@@ -66,6 +67,12 @@ export class CreateBroadcastDto extends BroadcastTargetDto {
   @IsOptional()
   @IsBoolean()
   isMandatory?: boolean;
+
+  @ApiPropertyOptional({ description: "Ixtiyoriy bitta rasm: data:image/...;base64 (brauzerda 1280px gacha kichraytiriladi)" })
+  @IsOptional()
+  @IsString()
+  @Matches(IMAGE_DATA_URL_RE, { message: IMAGE_DATA_URL_MESSAGE })
+  image?: string;
 }
 
 export class BroadcastListQueryDto {
