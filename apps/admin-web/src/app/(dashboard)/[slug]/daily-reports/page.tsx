@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { ChildAllergy, DailyReportDay, EatingQuality, MoodStatus, Organization } from "@/lib/types";
-import { useAuth } from "@/lib/use-auth";
+import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +38,7 @@ export default function DailyReportsPage({ params }: { params: Promise<{ slug: s
   const [date, setDate] = useState("");
   const [editChild, setEditChild] = useState<{ childId: string; fullName: string } | null>(null);
   const { user } = useAuth();
+  const isOn = useFeatureEnabled();
   const canWrite = canWriteTeaching(user?.role);
 
   useEffect(() => {
@@ -73,7 +74,8 @@ export default function DailyReportsPage({ params }: { params: Promise<{ slug: s
   const allergiesQuery = useQuery({
     queryKey: ["child-allergies", slug, branchId],
     queryFn: () => api.get<ChildAllergy[]>(`/app/health/allergies?branchId=${branchId}`),
-    enabled: !!branchId,
+    // Allergiyalar «Sog'liq» funksiyasiga tegishli — o'chirilgan bo'lsa so'ralmaydi
+    enabled: !!branchId && isOn("health"),
   });
   const allergyByChildId = new Map((allergiesQuery.data ?? []).map((a) => [a.child.id, a.allergies]));
 

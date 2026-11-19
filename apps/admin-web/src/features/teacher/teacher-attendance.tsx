@@ -47,6 +47,8 @@ type Child = AttendanceDay["children"][number];
  */
 export function TeacherAttendance({ slug }: { slug: string }) {
   const tr = useTr();
+  // «Eksport» o'chirilgan bo'lsa Excel hisobot tugmasi ko'rinmaydi (filial davomatidagidek)
+  const exportsOn = useFeatureEnabled()("exports");
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { branchId: forcedBranchId } = useBranchContext(slug);
@@ -330,9 +332,11 @@ export function TeacherAttendance({ slug }: { slug: string }) {
         )}
       </Group>
 
+      {exportsOn && (
       <Group footer={tr("Kun, hafta yoki oy tanlanadi — har bola bo'yicha jamlanma, tabel va batafsil ro'yxat.")}>
         <Row first icon={FileSpreadsheet} tint="green" title={tr("Excel hisobot yuklab olish")} onClick={date ? () => setReportOpen(true) : undefined} />
       </Group>
+      )}
 
       <ReportSheet
         open={reportOpen}

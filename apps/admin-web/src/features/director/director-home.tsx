@@ -122,6 +122,7 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
   const isOn = useFeatureEnabled();
   const routeOn = useRouteFeatureOn();
   const billingOn = isOn("billing");
+  const staffAttendanceOn = isOn("staffAttendance");
   const currentPeriod = periods[periods.length - 1];
 
   // Bosh sahifadagi umumiy so'rov bilan bir xil kalit — qayta yuklanmaydi
@@ -284,8 +285,9 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
             tint="purple"
             label={tr("Xodimlar")}
             value={loading ? null : employees}
-            hint={tr("Bugun ishda: {0}", staffPresent)}
-            progress={pctOf(staffPresent, employees)}
+            // Xodimlar davomati o'chirilgan bo'lsa «Bugun ishda: 0» ko'rsatilmaydi
+            hint={staffAttendanceOn ? tr("Bugun ishda: {0}", staffPresent) : undefined}
+            progress={staffAttendanceOn ? pctOf(staffPresent, employees) : undefined}
             progressColor={IOS.blue}
           />
           {billingOn && (
@@ -658,7 +660,7 @@ function KpiCard({
   valueTitle?: string;
   valueColor?: string;
   pill?: ReactNode;
-  hint: string;
+  hint?: string;
   progress?: number;
   progressColor?: string;
 }) {
@@ -675,7 +677,7 @@ function KpiCard({
         </p>
         {pill}
       </div>
-      <p className="mt-1.5 truncate text-[12.5px] text-[#8e8e93]">{hint}</p>
+      {hint !== undefined && <p className="mt-1.5 truncate text-[12.5px] text-[#8e8e93]">{hint}</p>}
       {progress !== undefined && <ProgressBar value={progress} color={progressColor ?? IOS.green} thin />}
     </Link>
   );

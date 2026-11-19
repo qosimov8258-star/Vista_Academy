@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowRightLeft, Baby, CalendarClock, ChevronLeft, Plus, UserRoundCheck } from "lucide-react";
 import { api } from "@/lib/api";
 import type { Lead, LeadActivity } from "@/lib/types";
-import { useAuth } from "@/lib/use-auth";
+import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { isCallOperatorUser } from "@/lib/employee-position";
@@ -47,6 +47,7 @@ export default function LeadDetailPage({ params }: { params: Promise<{ slug: str
   const { user } = useAuth();
   const callOperator = isCallOperatorUser(user);
   const canWrite = canWriteOperational(user?.role);
+  const isOn = useFeatureEnabled();
   const { branchSlug, base } = useBranchContext(slug);
   const crmHref = branchSlug ? `/${slug}/${branchSlug}/crm` : `/${slug}/crm`;
 
@@ -149,7 +150,7 @@ export default function LeadDetailPage({ params }: { params: Promise<{ slug: str
               onClick={() => setSheet("assign")}
             />
             {/* Bola yaratish call operatorning ishi emas — uni administrator qiladi */}
-            {!isFinal && !callOperator && (
+            {!isFinal && !callOperator && isOn("childCreate") && (
               <Row leading={<IosIcon icon={Baby} tint="green" size={30} />} title={tr("Bolaga aylantirish")} onClick={() => setSheet("convert")} />
             )}
           </Group>

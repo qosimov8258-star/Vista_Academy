@@ -453,7 +453,7 @@ export default function ChildFinancePage({ params }: { params: Promise<{ slug: s
           </ul>
         )}
 
-        {canWriteChild && guardiansQuery.data && guardiansQuery.data.length > 0 && (
+        {canWriteChild && isOn("parentCabinet") && guardiansQuery.data && guardiansQuery.data.length > 0 && (
           <div className="hairline flex flex-wrap items-center gap-3 border-t border-[var(--color-separator)] bg-[var(--color-surface-sunken)]/60 px-5 py-3.5 sm:px-6">
             <span
               className={clsx(
