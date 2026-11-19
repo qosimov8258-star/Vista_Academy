@@ -186,6 +186,8 @@ export interface Employee {
   /** Yuz tanish terminalidagi (Face ID) raqami — 1001, 1002, … */
   employeeNo: string;
   isActive: boolean;
+  /** Arxivlangan vaqt (arxivdagi xodimda) — tarixi saqlanadi, ro'yxatlarda chiqmaydi */
+  archivedAt?: string | null;
   createdAt: string;
   avatarUpdatedAt: string | null;
   /** "Mavzu qo'shasizmi?" almashtirgichi — yoqiq bo'lsa, xodimning o'zi "Savol-javob"ga mavzu qo'sha olmaydi. */
@@ -1596,4 +1598,12 @@ export interface LandingContentBlock {
   title: string;
   body: string;
   photoPath: string | null;
+}
+
+/** Xodim faoliyatining xulosasi (`GET /app/employees/:id/summary`) */
+export interface EmployeeActivitySummary {
+  startedAt: string;
+  archivedAt: string | null;
+  attendance: { present: number; late: number; absent: number; sick: number; onLeave: number; firstDate: string | null; lastDate: string | null };
+  payroll: { paidMonths: number; paidTotal: number; lastPaidPeriod: string | null };
 }

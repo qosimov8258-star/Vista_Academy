@@ -7,6 +7,8 @@ import { StaffAttendanceSummaryQueryDto } from "./dto/staff-attendance-summary-q
 import { LockStaffAttendanceDto } from "./dto/lock-staff-attendance.dto";
 import { StaffAttendanceHistoryQueryDto } from "./dto/staff-attendance-history-query.dto";
 
+export const ARCHIVED_EMPLOYEE_ATTENDANCE_MESSAGE = "Xodim arxivda — unga davomat yozilmaydi. Kerak bo'lsa, avval arxivdan qaytaring";
+
 function toDateOnly(value: string): Date {
   return new Date(`${value}T00:00:00.000Z`);
 }
@@ -32,6 +34,10 @@ export class StaffAttendanceService {
     }
     if (employee.branchId !== branchId) {
       throw new ForbiddenException("Bu xodimga kirish huquqingiz yo'q");
+    }
+    // Arxivdagi xodim ishlamaydi — davomat (va undan hisoblanadigan oylik) yozilmaydi
+    if (!employee.isActive) {
+      throw new BadRequestException(ARCHIVED_EMPLOYEE_ATTENDANCE_MESSAGE);
     }
     const date = toDateOnly(dto.date);
     await this.assertNotLocked(branchId, date);

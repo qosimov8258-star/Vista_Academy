@@ -101,6 +101,13 @@ function assertCanManageCredentials(callerRole: TenantUserRole, targetRole: Tena
   }
 }
 
+/** Administrator (MANAGER) faqat o'qituvchi va oshpazni tahrirlaydi/arxivlaydi. */
+function assertCanEditEmployee(callerRole: TenantUserRole, targetRole: TenantUserRole | null) {
+  if (callerRole === "MANAGER" && targetRole && !["TEACHER", "CHEF"].includes(targetRole)) {
+    throw new ForbiddenException("Bu xodimni tahrirlashga huquqingiz yo'q");
+  }
+}
+
 /** O'qituvchi va oshpaz xodimlar ro'yxatida hamkasblarining oyligi va loginini ko'rmaydi. */
 const ROLES_WITHOUT_STAFF_DETAILS: TenantUserRole[] = ["TEACHER", "CHEF"];
 
@@ -281,12 +288,14 @@ export class EmployeesService {
     const where: Prisma.EmployeeWhereInput = {
       organizationId: scope.organizationId,
       branchId: resolveReadBranchFilter(scope, query.branchId),
+      // Arxivdagi xodim odatda ko'rinmaydi (ro'yxat, guruhga biriktirish, smena tanlovlari)
+      ...(query.archived === "all" ? {} : { isActive: query.archived !== "only" }),
       ...(query.isActive !== undefined ? { isActive: query.isActive } : {}),
     };
     const rows = await this.prisma.employee.findMany({
       where,
       include: employeeInclude,
-      orderBy: { createdAt: "desc" },
+      orderBy: query.archived === "only" ? [{ archivedAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }] : { createdAt: "desc" },
     });
     return rows.map((row) => redactEmployee(row, scope.role, disabled));
   }
@@ -315,11 +324,11 @@ export class EmployeesService {
   }
 
   /**
-   * Xodimni tahrirlash: ism, telefon, lavozim (fan), faol/nofaol holati va
-   * kabineti bo'lsa — guruhi. Kabinet (TenantUser) xodim bilan birga
-   * moslanadi: ism o'zgarsa kabinetdagi ism ham, lavozim o'zgarsa rol ham
-   * (o'qituvchi/oshpaz/administrator), nofaol bo'lsa kabinet yopiladi va
-   * ochiq seanslar tugatiladi. Yuz tanish terminali ham yangilanadi.
+   * Xodimni tahrirlash: ism, telefon, lavozim (fan) va kabineti bo'lsa —
+   * guruhi. Kabinet (TenantUser) xodim bilan birga moslanadi: ism o'zgarsa
+   * kabinetdagi ism ham, lavozim o'zgarsa rol ham (o'qituvchi/oshpaz/
+   * administrator). Yuz tanish terminali ham yangilanadi. Ishdan ketish bu
+   * yerda emas — `archive` / `restore` (avvalgi «Faol/Nofaol» o'rniga).
    *
    * Huquq: administrator (MANAGER) faqat o'qituvchi va oshpazni tahrirlaydi
    * va hech kimni administrator qila olmaydi — login/parol qoidasi bilan bir xil.
@@ -337,9 +346,7 @@ export class EmployeesService {
       throw new NotFoundException("Xodim topilmadi");
     }
     const currentRole = employee.tenantUser?.role ?? null;
-    if (scope.role === "MANAGER" && currentRole && !["TEACHER", "CHEF"].includes(currentRole)) {
-      throw new ForbiddenException("Bu xodimni tahrirlashga huquqingiz yo'q");
-    }
+    assertCanEditEmployee(scope.role, currentRole);
 
     const firstName = dto.firstName?.trim() ?? employee.firstName;
     const lastName = dto.lastName?.trim() ?? employee.lastName;
@@ -378,11 +385,6 @@ export class EmployeesService {
       throw new ForbiddenException("Administrator lavozimiga faqat filial admini o'tkaza oladi");
     }
 
-    const isActive = dto.isActive ?? employee.isActive;
-    if (!isActive && employee.tenantUserId === scope.userId) {
-      throw new BadRequestException("O'zingizni nofaol qila olmaysiz");
-    }
-
     // Guruh: faqat kabineti bor o'qituvchi/oshpaz/administratorda. Guruhsiz
     // lavozimga o'tsa guruhdan chiqariladi.
     let groupIds: string[] | null = null;
@@ -398,19 +400,17 @@ export class EmployeesService {
     }
 
     const nameChanged = fullName !== employee.fullName;
-    const activeChanged = isActive !== employee.isActive;
 
     const updated = await this.prisma.$transaction(async (tx) => {
       if (employee.tenantUser) {
         const userData: Prisma.TenantUserUpdateInput = {};
         if (nameChanged) userData.fullName = fullName;
         if (nextRole && nextRole !== currentRole) userData.role = nextRole;
-        if (activeChanged) userData.isActive = isActive;
         if (Object.keys(userData).length > 0) {
           await tx.tenantUser.update({ where: { id: employee.tenantUser.id }, data: userData });
         }
-        // Nofaol qilinsa yoki roli o'zgarsa — eski seans eski huquq bilan qolmasin
-        if ((activeChanged && !isActive) || (nextRole && nextRole !== currentRole)) {
+        // Roli o'zgarsa — eski seans eski huquq bilan qolmasin
+        if (nextRole && nextRole !== currentRole) {
           await tx.tenantRefreshToken.updateMany({
             where: { tenantUserId: employee.tenantUser.id, revokedAt: null },
             data: { revokedAt: new Date() },
@@ -425,7 +425,7 @@ export class EmployeesService {
       }
       return tx.employee.update({
         where: { id },
-        data: { firstName, lastName, fullName, phone, position, subjects, isActive },
+        data: { firstName, lastName, fullName, phone, position, subjects },
         include: employeeInclude,
       });
     });
@@ -434,7 +434,6 @@ export class EmployeesService {
       nameChanged && `ism: ${employee.fullName} → ${fullName}`,
       phone !== employee.phone && "telefon",
       positionChanged && `lavozim: ${employee.position} → ${position}`,
-      activeChanged && (isActive ? "faol qilindi" : "nofaol qilindi"),
       groupIds !== null && "guruh",
     ].filter(Boolean);
     if (changes.length > 0) {
@@ -447,14 +446,141 @@ export class EmployeesService {
       });
     }
 
-    // Yuz tanish terminallari: nofaol — olib tashlanadi; faol bo'lsa ism/surat yangilanadi
-    if (activeChanged && !isActive) {
-      await this.faceIdCommands.enqueueDelete({ organizationId: employee.organizationId, branchId, employeeNo: employee.employeeNo });
-    } else if (isActive && (nameChanged || activeChanged)) {
+    // Yuz tanish terminallarida ism yangilanadi (arxivdagi xodim u yerda yo'q)
+    if (employee.isActive && nameChanged) {
       await this.faceIdCommands.enqueueEmployeeSync(id);
-      if (activeChanged) await this.faceIdCommands.enqueueFace(id);
     }
     return redactEmployee(updated, scope.role, caller.disabledFeatures);
+  }
+
+  /**
+   * Ishdan ketgan xodimni arxivlaydi — o'chirilmaydi: davomat, oylik, smena
+   * va dars tarixi saqlanadi. Arxivdagi xodim ro'yxatlardan, guruhdan va yuz
+   * tanish terminalidan chiqadi, kabineti yopiladi va seanslari tugatiladi.
+   */
+  archive(caller: TenantAuthenticatedUser, id: string) {
+    return this.setArchived(caller, id, true);
+  }
+
+  /**
+   * Arxivdagi xodimni ishga qaytaradi: kabineti qayta ochiladi (login/parol
+   * o'sha), yuz tanish terminaliga qayta yoziladi. Guruhga qaytadan biriktiriladi.
+   */
+  restore(caller: TenantAuthenticatedUser, id: string) {
+    return this.setArchived(caller, id, false);
+  }
+
+  /** Arxivlash va qaytarishning umumiy yo'li (avvalgi «Faol/Nofaol» almashtirgichi o'rniga). */
+  private async setArchived(caller: TenantAuthenticatedUser, id: string, archived: boolean) {
+    const scope = toTenantScope(caller);
+    const branchId = requireOperationalScope(scope);
+    const employee = await this.prisma.employee.findFirst({
+      where: { id, organizationId: scope.organizationId, branchId },
+      select: {
+        id: true,
+        fullName: true,
+        isActive: true,
+        tenantUserId: true,
+        employeeNo: true,
+        organizationId: true,
+        tenantUser: { select: { role: true } },
+      },
+    });
+    if (!employee) {
+      throw new NotFoundException("Xodim topilmadi");
+    }
+    assertCanEditEmployee(scope.role, employee.tenantUser?.role ?? null);
+    if (archived && !employee.isActive) {
+      throw new BadRequestException("Xodim allaqachon arxivda");
+    }
+    if (!archived && employee.isActive) {
+      throw new BadRequestException("Xodim arxivda emas");
+    }
+    if (archived && employee.tenantUserId === scope.userId) {
+      throw new BadRequestException("O'zingizni arxivlay olmaysiz");
+    }
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      if (employee.tenantUserId) {
+        await tx.tenantUser.update({ where: { id: employee.tenantUserId }, data: { isActive: !archived } });
+        // Arxivlansa — ochiq seanslar darhol tugaydi
+        if (archived) {
+          await tx.tenantRefreshToken.updateMany({
+            where: { tenantUserId: employee.tenantUserId, revokedAt: null },
+            data: { revokedAt: new Date() },
+          });
+        }
+      }
+      // Guruhda arxivdagi tarbiyachi ko'rinmasin — qaytarilsa qayta biriktiriladi
+      if (archived) {
+        await tx.groupTeacher.deleteMany({ where: { employeeId: employee.id } });
+      }
+      return tx.employee.update({
+        where: { id: employee.id },
+        data: { isActive: !archived, archivedAt: archived ? new Date() : null },
+        include: employeeInclude,
+      });
+    });
+
+    await this.auditLog.logFromUser(caller, {
+      action: archived ? "employee.archive" : "employee.restore",
+      entityType: "Employee",
+      entityId: employee.id,
+      branchId,
+      summary: archived ? `${employee.fullName} arxivga o'tkazildi` : `${employee.fullName} arxivdan qaytarildi`,
+    });
+
+    // Yuz tanish terminallari: arxivlansa — olib tashlanadi; qaytarilsa — qayta yoziladi (surati bilan)
+    if (archived) {
+      await this.faceIdCommands.enqueueDelete({ organizationId: employee.organizationId, branchId, employeeNo: employee.employeeNo });
+    } else {
+      await this.faceIdCommands.enqueueEmployeeSync(employee.id);
+      await this.faceIdCommands.enqueueFace(employee.id);
+    }
+    return redactEmployee(updated, scope.role, caller.disabledFeatures);
+  }
+
+  /**
+   * Xodim faoliyatining xulosasi — xodim sahifasida (ayniqsa arxivdagisida):
+   * ishlagan davri, davomat bo'yicha kunlar, to'langan oyliklar.
+   */
+  async activitySummary(scope: TenantScope, id: string) {
+    const employee = await this.prisma.employee.findFirst({
+      where: { id, organizationId: scope.organizationId, branchId: resolveReadBranchFilter(scope, undefined) },
+      select: { id: true, createdAt: true, archivedAt: true },
+    });
+    if (!employee) {
+      throw new NotFoundException("Xodim topilmadi");
+    }
+    const [attendance, firstLast, payroll] = await Promise.all([
+      this.prisma.employeeAttendance.groupBy({ by: ["status"], where: { employeeId: id }, _count: { _all: true } }),
+      this.prisma.employeeAttendance.aggregate({ where: { employeeId: id }, _min: { date: true }, _max: { date: true } }),
+      this.prisma.payrollEntry.aggregate({
+        where: { employeeId: id, status: "PAID" },
+        _sum: { paidAmount: true },
+        _count: { _all: true },
+        _max: { period: true },
+      }),
+    ]);
+    const days = (status: string) => attendance.find((row) => row.status === status)?._count._all ?? 0;
+    return {
+      startedAt: employee.createdAt,
+      archivedAt: employee.archivedAt,
+      attendance: {
+        present: days("PRESENT"),
+        late: days("LATE"),
+        absent: days("ABSENT"),
+        sick: days("SICK"),
+        onLeave: days("ON_LEAVE"),
+        firstDate: firstLast._min.date,
+        lastDate: firstLast._max.date,
+      },
+      payroll: {
+        paidMonths: payroll._count._all,
+        paidTotal: Number(payroll._sum.paidAmount ?? 0),
+        lastPaidPeriod: payroll._max.period,
+      },
+    };
   }
 
   /** Kabineti bo'lmagan xodimga keyinchalik login ochish. Login/parol avtomatik generatsiya qilinadi. */
@@ -622,10 +748,15 @@ export class EmployeesService {
     const branchId = requireOperationalScope(scope);
     const employee = await this.prisma.employee.findFirst({
       where: { id, organizationId: scope.organizationId, branchId },
-      select: { id: true, fullName: true, tenantUserId: true, employeeNo: true, organizationId: true, branchId: true },
+      select: { id: true, fullName: true, isActive: true, tenantUserId: true, employeeNo: true, organizationId: true, branchId: true },
     });
     if (!employee) {
       throw new NotFoundException("Xodim topilmadi");
+    }
+    // Butunlay o'chirish faqat arxivdan (masalan xato kiritilgan xodim) — ishdan
+    // ketgan xodim arxivlanadi, shunda tarixi yo'qolmaydi
+    if (employee.isActive) {
+      throw new BadRequestException("Avval xodimni arxivlang — butunlay o'chirish faqat arxivdan");
     }
     await this.prisma.$transaction(async (tx) => {
       await tx.employee.delete({ where: { id: employee.id } });

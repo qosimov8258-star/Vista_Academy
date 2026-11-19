@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, getPaginated } from "@/lib/api";
-import type { Employee, EmployeePayrollOverview, PaymentMethod, PayrollEntry, SalaryScheme, StaffAttendanceHistory, StaffAttendanceStatus } from "@/lib/types";
+import type { Employee, EmployeeActivitySummary, EmployeePayrollOverview, PaymentMethod, PayrollEntry, SalaryScheme, StaffAttendanceHistory, StaffAttendanceStatus } from "@/lib/types";
 import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +21,12 @@ import { LoadingState, ErrorState } from "@/components/ui/states";
 import { Toast, type ToastState } from "@/components/ui/toast";
 import { formatPositionLabel } from "@/lib/employee-position";
 import { formatMoney, formatDate } from "@/lib/format";
-import { canWriteMoney } from "@/lib/permissions";
+import { canWriteMoney, canWriteOperational } from "@/lib/permissions";
+import { ArchiveRestore } from "lucide-react";
+import { IosButton } from "@/components/ios/button";
+import { Group as IosGroup, Row } from "@/components/ios/group";
+import { Pill } from "@/components/ios/pill";
+import { IOS } from "@/components/ios/tokens";
 import { EditSalarySchemeModal } from "@/features/hr/edit-salary-scheme-modal";
 import { PeriodPicker } from "@/features/network/period-picker";
 import { useTr } from "@/i18n/tr";
@@ -147,11 +152,33 @@ export default function EmployeeFinancePage({ params }: { params: Promise<{ slug
     setPayError(null);
   }, [employeeId, period]);
 
+  // Arxivdagi xodim sahifasi ham shu yerda ochiladi — shuning uchun hammasi so'raladi
   const employeesQuery = useQuery({
-    queryKey: ["employees", slug, forcedBranchId],
-    queryFn: () => api.get<Employee[]>(`/app/employees${forcedBranchId ? `?branchId=${forcedBranchId}` : ""}`),
+    queryKey: ["employees", slug, forcedBranchId, "all"],
+    queryFn: () => api.get<Employee[]>(`/app/employees?archived=all${forcedBranchId ? `&branchId=${forcedBranchId}` : ""}`),
   });
   const employee = employeesQuery.data?.find((e) => e.id === employeeId) ?? null;
+  const archived = !!employee && !employee.isActive;
+  // Arxivdan qaytarish — filial xodimlari (moliyachi emas) va «Xodimni arxivlash» funksiyasi yoqiq bo'lsa
+  const canRestore = canWriteOperational(user?.role) && isOn("employeeDelete");
+
+  const summaryQuery = useQuery({
+    queryKey: ["employee-summary", slug, employeeId],
+    queryFn: () => api.get<EmployeeActivitySummary>(`/app/employees/${employeeId}/summary`),
+    enabled: !!employeeId,
+  });
+  const [restoreError, setRestoreError] = useState<string | null>(null);
+  const restoreMutation = useMutation({
+    mutationFn: () => api.post(`/app/employees/${employeeId}/restore`),
+    onSuccess: () => {
+      setRestoreError(null);
+      queryClient.invalidateQueries({ queryKey: ["employees", slug] });
+      queryClient.invalidateQueries({ queryKey: ["employee-summary", slug, employeeId] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-summary", slug] });
+      setToast({ type: "success", message: tr("Xodim ishga qaytarildi") });
+    },
+    onError: (err) => setRestoreError(err instanceof ApiError ? err.message : tr("Arxivdan qaytarib bo'lmadi")),
+  });
 
   const historyQuery = useQuery({
     queryKey: ["staff-attendance-history", slug, employeeId, branchId, period],
@@ -239,7 +266,11 @@ export default function EmployeeFinancePage({ params }: { params: Promise<{ slug
               <h1 className="text-[24px] font-semibold leading-tight tracking-[var(--tracking-title)] text-[var(--color-text)]">
                 {tr(employee.fullName)}
               </h1>
-              <Badge tone={employee.isActive ? "success" : "neutral"}>{employee.isActive ? "Faol" : "Nofaol"}</Badge>
+              {employee.isActive ? (
+                <Pill color={IOS.green}>{tr("Faol")}</Pill>
+              ) : (
+                <Pill color={IOS.orange}>{employee.archivedAt ? `${tr("Arxivda")} · ${formatDate(employee.archivedAt)}` : tr("Arxivda")}</Pill>
+              )}
             </div>
             <p className="mt-1 text-[14px] text-[var(--color-text-muted)]">
               {tr(formatPositionLabel(employee.position, employee.subjects))}
@@ -260,7 +291,28 @@ export default function EmployeeFinancePage({ params }: { params: Promise<{ slug
           <PhoneIcon className="h-4 w-4 shrink-0 text-[var(--color-text-muted)]" />
           <span className="text-[14px] text-[var(--color-text)]">{employee.phone ?? "Telefon raqami kiritilmagan"}</span>
         </div>
+
+        {archived && (
+          <div className="space-y-3 border-t border-[var(--color-separator)] bg-[#ff9500]/[0.08] px-5 py-4 sm:px-6">
+            <p className="text-[13px] leading-snug text-[#8e8e93]">
+              {tr("Xodim arxivda: ro'yxat, guruh va Face ID dan chiqarilgan, kabinetiga kira olmaydi. Tarixi to'liq saqlangan.")}
+            </p>
+            {canRestore && (
+              <IosButton
+                label={tr("Arxivdan qaytarish")}
+                icon={ArchiveRestore}
+                variant="primary"
+                loading={restoreMutation.isPending}
+                onClick={() => restoreMutation.mutate()}
+                className="max-sm:w-full"
+              />
+            )}
+            {restoreError && <p className="text-[13px] text-[#ff3b30]">{tr(restoreError)}</p>}
+          </div>
+        )}
       </Card>
+
+      {summaryQuery.data && <ActivitySummary summary={summaryQuery.data} archived={archived} />}
 
       {staffAttendanceOn && (
       <Card className="overflow-hidden">
@@ -345,7 +397,7 @@ export default function EmployeeFinancePage({ params }: { params: Promise<{ slug
                     <p className="text-[13px] font-medium text-[var(--color-text)]">{schemeSummary(overview.scheme, overview.preview?.quantity ?? null)}</p>
                     <p className="text-[12px] text-[var(--color-text-muted)]">{tr("Maosh sxemasi")}</p>
                   </div>
-                  {canWriteScheme && (
+                  {canWriteScheme && !archived && (
                     <Button type="button" variant="outline" size="sm" onClick={() => setSchemeModalOpen(true)}>
                       {tr("O'zgartirish")}
                     </Button>
@@ -354,7 +406,7 @@ export default function EmployeeFinancePage({ params }: { params: Promise<{ slug
               ) : (
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm text-[var(--color-text-muted)]">{tr("Maosh sxemasi belgilanmagan")}</p>
-                  {canWriteScheme && (
+                  {canWriteScheme && !archived && (
                     <Button type="button" variant="outline" size="sm" onClick={() => setSchemeModalOpen(true)}>
                       {tr("Sxema belgilash")}
                     </Button>
@@ -385,6 +437,11 @@ export default function EmployeeFinancePage({ params }: { params: Promise<{ slug
                 {formatMoney(overview!.entry!.paidAmount)}
               </span>
             </div>
+          ) : archived ? (
+            // Arxivdagi xodimga oylik to'lanmaydi (API ham rad etadi) — tarix faqat ko'rish uchun
+            <p className="rounded-[14px] bg-[#767680]/[0.12] px-3.5 py-3 text-[13px] text-[#8e8e93]">
+              {tr("Xodim arxivda — unga oylik to'lanmaydi. Kerak bo'lsa, avval arxivdan qaytaring.")}
+            </p>
           ) : (
             <div className="max-w-sm space-y-2 border-t border-[var(--color-border)] pt-3">
               <AmountInput label={tr("To'lanadigan summa")} placeholder="2 000 000" value={amount} onChange={setAmount} />
@@ -466,5 +523,36 @@ export default function EmployeeFinancePage({ params }: { params: Promise<{ slug
 
       <Toast toast={toast} onDismiss={() => setToast(null)} />
     </div>
+  );
+}
+
+/** Faoliyat xulosasi: ishlagan davri, davomat kunlari va to'langan oyliklar (arxivda ayniqsa kerak). */
+function ActivitySummary({ summary, archived }: { summary: EmployeeActivitySummary; archived: boolean }) {
+  const tr = useTr();
+  const a = summary.attendance;
+  const p = summary.payroll;
+  return (
+    <IosGroup title={archived ? tr("Faoliyati (arxiv)") : tr("Faoliyati")}>
+      <Row
+        title={tr("Ishlagan davri")}
+        subtitle={
+          a.firstDate
+            ? tr("davomat {0} dan {1} gacha", formatDate(a.firstDate), a.lastDate ? formatDate(a.lastDate) : "—")
+            : tr("davomat yozuvi yo'q")
+        }
+        value={`${formatDate(summary.startedAt)} — ${summary.archivedAt ? formatDate(summary.archivedAt) : tr("hozir")}`}
+      />
+      <Row
+        title={tr("Kelgan kunlar")}
+        subtitle={a.late ? tr("{0} tasida kechikkan", a.late) : undefined}
+        value={<span className="font-semibold text-[var(--color-text)]">{a.present + a.late}</span>}
+      />
+      <Row title={tr("Kelmagan / kasal / ta'til")} value={`${a.absent} / ${a.sick} / ${a.onLeave}`} />
+      <Row
+        title={tr("To'langan oyliklar")}
+        subtitle={p.paidMonths ? tr("{0} oy · oxirgisi {1}", p.paidMonths, p.lastPaidPeriod ?? "—") : tr("hali to'lanmagan")}
+        value={<span className="font-semibold text-[var(--color-text)]">{formatMoney(p.paidTotal)}</span>}
+      />
+    </IosGroup>
   );
 }

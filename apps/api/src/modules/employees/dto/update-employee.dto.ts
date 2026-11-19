@@ -1,9 +1,11 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
-import { IsArray, IsBoolean, IsOptional, IsString, Matches, MaxLength, MinLength, ValidateIf } from "class-validator";
+import { IsArray, IsOptional, IsString, Matches, MaxLength, MinLength, ValidateIf } from "class-validator";
 
 /**
  * Xodimni tahrirlash — faqat yuborilgan maydonlar o'zgaradi. Login/parol
- * bu yerda emas (`/credentials`), surat ham alohida (`/avatar`).
+ * bu yerda emas (`/credentials`), surat ham alohida (`/avatar`). Ishdan
+ * ketish ham bu yerda emas — `/archive` va `/restore` (avvalgi `isActive`
+ * maydoni olib tashlandi; global ValidationPipe uni rad etadi).
  */
 export class UpdateEmployeeDto {
   @ApiPropertyOptional({ example: "Yusupova" })
@@ -40,12 +42,6 @@ export class UpdateEmployeeDto {
   @IsArray()
   @IsString({ each: true })
   subjects?: string[];
-
-  /** Nofaol xodim kabinetga kira olmaydi va yuz tanish terminalidan olib tashlanadi. */
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsBoolean()
-  isActive?: boolean;
 
   /** Kabineti bor xodimning guruhi — yangi ro'yxat eskisining o'rnini oladi. */
   @ApiPropertyOptional({ type: [String] })

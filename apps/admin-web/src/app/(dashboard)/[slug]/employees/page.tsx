@@ -4,14 +4,9 @@ import { use, useEffect, useMemo, useState } from "react";
 import { StaffTabs } from "@/features/employees/staff-tabs";
 import { useRouter, usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import clsx from "clsx";
 import { api, getPaginated } from "@/lib/api";
 import type { Employee, PayrollEntry, Position } from "@/lib/types";
 import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { CreateEmployeeModal } from "@/features/employees/create-employee-modal";
 import { EmployeeDetailModal } from "@/features/employees/employee-detail-modal";
@@ -19,8 +14,17 @@ import { useBranchContext } from "@/lib/use-branch-context";
 import { canWriteOperational, canReadPayroll } from "@/lib/permissions";
 import { EmployeePhoto } from "@/components/ui/employee-photo";
 import { initials } from "@/components/ui/avatar";
+import { IosButton } from "@/components/ios/button";
+import { ChipRow, IosChip } from "@/components/ios/filters";
+import { Group as IosGroup } from "@/components/ios/group";
+import { MoneyIcon, PlusIcon, TeacherIcon } from "@/components/ios/icons";
+import { PageHeaderCard } from "@/components/ios/page-card";
+import { Pill } from "@/components/ios/pill";
+import { StatCell, StatStrip } from "@/components/ios/stat-strip";
+import { EmptyState, ErrorState, SkeletonRows } from "@/components/ios/states";
+import { GROUP_BLOCK, IOS, ROW_PRESS } from "@/components/ios/tokens";
 import { formatPositionLabel } from "@/lib/employee-position";
-import { formatMoney } from "@/lib/format";
+import { formatDate, formatMoney } from "@/lib/format";
 import { useTr } from "@/i18n/tr";
 
 const OTHER_POSITION: Position = { id: "__other__", organizationId: "", name: "Boshqa", createdAt: "" };
@@ -28,6 +32,7 @@ const ALL_TAB = "__all__";
 const PAID_TAB = "__paid__";
 const UNPAID_TAB = "__unpaid__";
 const BONUS_TAB = "__bonus__";
+const ARCHIVE_TAB = "__archive__";
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 
 function currentPeriodString(): string {
@@ -96,6 +101,13 @@ export default function EmployeesPage({ params }: { params: Promise<{ slug: stri
     queryFn: () => api.get<Employee[]>(`/app/employees${forcedBranchId ? `?branchId=${forcedBranchId}` : ""}`),
   });
 
+  // Arxiv: ishdan ketgan xodimlar — tarixi saqlangan, qaytarish yoki o'chirish mumkin
+  const archivedQuery = useQuery({
+    queryKey: ["employees", slug, forcedBranchId, "archived"],
+    queryFn: () => api.get<Employee[]>(`/app/employees?archived=only${forcedBranchId ? `&branchId=${forcedBranchId}` : ""}`),
+  });
+  const archivedEmployees = useMemo(() => archivedQuery.data ?? [], [archivedQuery.data]);
+
   const payrollQuery = useQuery({
     queryKey: ["payroll", slug, period, forcedBranchId],
     queryFn: () =>
@@ -134,7 +146,9 @@ export default function EmployeesPage({ params }: { params: Promise<{ slug: stri
 
   const nonEmptyGroups = useMemo(() => groups.filter((group) => group.employees.length > 0), [groups]);
   const allEmployees = employeesQuery.data ?? [];
-  const detailEmployee = detailId ? (allEmployees.find((e) => e.id === detailId) ?? null) : null;
+  const detailEmployee = detailId
+    ? (allEmployees.find((e) => e.id === detailId) ?? archivedEmployees.find((e) => e.id === detailId) ?? null)
+    : null;
 
   const paidEmployees = useMemo(
     () => allEmployees.filter((employee) => payrollByEmployee.get(employee.id)?.status === "PAID"),
@@ -154,187 +168,161 @@ export default function EmployeesPage({ params }: { params: Promise<{ slug: stri
     if (activeTab === PAID_TAB) return paidEmployees;
     if (activeTab === UNPAID_TAB) return unpaidEmployees;
     if (activeTab === BONUS_TAB) return bonusEmployees;
+    if (activeTab === ARCHIVE_TAB) return archivedEmployees;
     return nonEmptyGroups.find((group) => group.position.id === activeTab)?.employees ?? [];
-  }, [activeTab, allEmployees, nonEmptyGroups, paidEmployees, unpaidEmployees, bonusEmployees]);
+  }, [activeTab, allEmployees, nonEmptyGroups, paidEmployees, unpaidEmployees, bonusEmployees, archivedEmployees]);
 
   const isLoading = positionsQuery.isLoading || employeesQuery.isLoading;
   const isError = positionsQuery.isError || employeesQuery.isError;
   const isPayrollTab = activeTab === PAID_TAB || activeTab === UNPAID_TAB || activeTab === BONUS_TAB;
+  // Arxiv bo'shab qolsa ham (oxirgisi qaytarilsa) tanlangan filtr yo'qolib qolmasin
+  const showArchiveChip = archivedEmployees.length > 0 || activeTab === ARCHIVE_TAB;
 
   return (
-    <div className="space-y-5">
-      <StaffTabs slug={slug} role={user?.role} current="list" />
-      <div className="flex items-start justify-between gap-3 md:flex-wrap md:items-center">
-        <div className="min-w-0">
-          <h1 className="text-xl font-semibold text-[var(--color-text)]">{tr("Xodimlar")}</h1>
-          <p className="text-sm text-[var(--color-text-muted)]">{tr("Lavozimlar bo'yicha guruhlangan xodimlar ro'yxati")}</p>
-        </div>
-        {canCreate && (
-          <Button variant="outline" className="shrink-0" onClick={() => setEmployeeModal({ open: true, position: null })}>
-            {tr("+ Yangi xodim")}
-          </Button>
-        )}
-      </div>
-
-      {!canWrite &&
-        (canViewPayroll ? (
-          <EmployeesStatsBar
-            total={allEmployees.length}
-            paid={paidEmployees.length}
-            unpaid={unpaidEmployees.length}
-            bonus={bonusEmployees.length}
-          />
-        ) : (
-          <ViewOnlyNote role={user?.role} />
-        ))}
-
-      {isLoading ? (
-        <LoadingState />
-      ) : isError ? (
-        <ErrorState
-          message={
-            (positionsQuery.error as Error | undefined)?.message ?? (employeesQuery.error as Error | undefined)?.message ?? ""
+    // Telefonda chetlar 16px (asosiy konteyner 24px beradi)
+    <div className="-mx-2 md:mx-0">
+      <div className="mx-auto w-full max-w-6xl space-y-5 pb-2">
+        <StaffTabs slug={slug} role={user?.role} current="list" />
+        <PageHeaderCard
+          icon={TeacherIcon}
+          title={tr("Xodimlar")}
+          count={employeesQuery.data ? tr("{0} ta", allEmployees.length) : undefined}
+          subtitle={tr("Lavozimlar bo'yicha guruhlangan xodimlar ro'yxati")}
+          actions={
+            canCreate ? (
+              <IosButton
+                label={tr("Yangi xodim")}
+                icon={PlusIcon}
+                variant="primary"
+                compact
+                onClick={() => setEmployeeModal({ open: true, position: null })}
+              />
+            ) : undefined
           }
         />
-      ) : allEmployees.length === 0 ? (
-        <EmptyState
-          title={tr("Hali xodim yo'q")}
-          description={canWrite ? tr("Yuqoridagi \"+ Yangi xodim\" tugmasi orqali birinchi xodimni qo'shing") : undefined}
-        />
-      ) : (
-        <Card className="overflow-hidden">
-          <div className="flex items-center gap-1 overflow-x-auto px-3 border-b border-[var(--color-separator)]">
-            <button
-              type="button"
-              onClick={() => setActiveTab(ALL_TAB)}
-              className={clsx(
-                "flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-3 text-[13px] font-medium transition-colors",
-                activeTab === ALL_TAB
-                  ? "border-[var(--color-primary)] text-[var(--color-text)]"
-                  : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
+
+        {!canWrite &&
+          (canViewPayroll ? (
+            <StatStrip>
+              <StatCell label={tr("Jami xodimlar")} value={allEmployees.length} loading={employeesQuery.isLoading} />
+              <StatCell label={tr("Oylik to'langan")} value={paidEmployees.length} color={IOS.green} loading={employeesQuery.isLoading || payrollQuery.isLoading} />
+              <StatCell label={tr("Oylik to'lanmagan")} value={unpaidEmployees.length} color={IOS.red} loading={employeesQuery.isLoading || payrollQuery.isLoading} />
+              <StatCell label={tr("Bonus olganlar")} value={bonusEmployees.length} color={IOS.blue} loading={employeesQuery.isLoading || payrollQuery.isLoading} />
+            </StatStrip>
+          ) : (
+            <ViewOnlyNote role={user?.role} />
+          ))}
+
+        {isLoading ? (
+          <SkeletonRows rows={7} />
+        ) : isError ? (
+          <ErrorState
+            message={(positionsQuery.error as Error | undefined)?.message ?? (employeesQuery.error as Error | undefined)?.message}
+            onRetry={() => {
+              void positionsQuery.refetch();
+              void employeesQuery.refetch();
+            }}
+            retrying={positionsQuery.isFetching || employeesQuery.isFetching}
+          />
+        ) : allEmployees.length === 0 && archivedEmployees.length === 0 ? (
+          <EmptyState
+            icon={TeacherIcon}
+            title="Hali xodim yo'q"
+            hint={canCreate ? "«Yangi xodim» tugmasi orqali birinchi xodimni qo'shing" : undefined}
+          />
+        ) : (
+          <>
+            {/* Filtr: oylik holati, lavozimlar, arxiv — bittasi tanlanadi */}
+            <ChipRow label={tr("Xodimlar filtri")}>
+              <IosChip active={activeTab === ALL_TAB} onClick={() => setActiveTab(ALL_TAB)} count={allEmployees.length}>
+                {tr("Barchasi")}
+              </IosChip>
+              {canViewPayroll && (
+                <>
+                  <IosChip active={activeTab === PAID_TAB} onClick={() => setActiveTab(PAID_TAB)} count={paidEmployees.length}>
+                    {tr("Oylik to'langan")}
+                  </IosChip>
+                  <IosChip active={activeTab === UNPAID_TAB} onClick={() => setActiveTab(UNPAID_TAB)} count={unpaidEmployees.length}>
+                    {tr("Oylik to'lanmagan")}
+                  </IosChip>
+                  <IosChip active={activeTab === BONUS_TAB} onClick={() => setActiveTab(BONUS_TAB)} count={bonusEmployees.length}>
+                    {tr("Bonuslar")}
+                  </IosChip>
+                </>
               )}
+              {nonEmptyGroups.map(({ position, employees }) => (
+                <IosChip key={position.id} active={activeTab === position.id} onClick={() => setActiveTab(position.id)} count={employees.length}>
+                  {tr(position.name)}
+                </IosChip>
+              ))}
+              {showArchiveChip && (
+                <IosChip active={activeTab === ARCHIVE_TAB} onClick={() => setActiveTab(ARCHIVE_TAB)} count={archivedEmployees.length}>
+                  {tr("Arxiv")}
+                </IosChip>
+              )}
+            </ChipRow>
+
+            <IosGroup
+              footer={
+                activeTab === ARCHIVE_TAB && archivedEmployees.length > 0
+                  ? tr("Ishdan ketgan xodimlar. Davomat, oylik va boshqa tarixi saqlangan — xodimni bosib ishga qaytaring yoki to'liq ma'lumotini ko'ring.")
+                  : undefined
+              }
+              bare
             >
-              {tr("Barchasi")}
-              <Badge tone={activeTab === ALL_TAB ? "primary" : "neutral"}>{tr(allEmployees.length)}</Badge>
-            </button>
-            {canViewPayroll && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab(PAID_TAB)}
-                  className={clsx(
-                    "flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-3 text-[13px] font-medium transition-colors",
-                    activeTab === PAID_TAB
-                      ? "border-[var(--color-primary)] text-[var(--color-text)]"
-                      : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
-                  )}
-                >
-                  {tr("Oylik to'langan")}
-                  <Badge tone={activeTab === PAID_TAB ? "primary" : "success"}>{tr(paidEmployees.length)}</Badge>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab(UNPAID_TAB)}
-                  className={clsx(
-                    "flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-3 text-[13px] font-medium transition-colors",
-                    activeTab === UNPAID_TAB
-                      ? "border-[var(--color-primary)] text-[var(--color-text)]"
-                      : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
-                  )}
-                >
-                  {tr("Oylik to'lanmagan")}
-                  <Badge tone={activeTab === UNPAID_TAB ? "primary" : "danger"}>{tr(unpaidEmployees.length)}</Badge>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab(BONUS_TAB)}
-                  className={clsx(
-                    "flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-3 text-[13px] font-medium transition-colors",
+              {(isPayrollTab && payrollQuery.isLoading) || (activeTab === ARCHIVE_TAB && archivedQuery.isLoading) ? (
+                <SkeletonRows rows={5} />
+              ) : visibleEmployees.length === 0 ? (
+                <EmptyState
+                  icon={isPayrollTab ? MoneyIcon : TeacherIcon}
+                  title={
                     activeTab === BONUS_TAB
-                      ? "border-[var(--color-primary)] text-[var(--color-text)]"
-                      : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
-                  )}
-                >
-                  {tr("Bonuslar")}
-                  <Badge tone={activeTab === BONUS_TAB ? "primary" : "info"}>{tr(bonusEmployees.length)}</Badge>
-                </button>
-                <span aria-hidden className="mx-1 h-5 w-px shrink-0 bg-[var(--color-separator)]" />
-              </>
-            )}
-            {nonEmptyGroups.map(({ position, employees }) => (
-              <button
-                key={position.id}
-                type="button"
-                onClick={() => setActiveTab(position.id)}
-                className={clsx(
-                  "flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-3 text-[13px] font-medium transition-colors",
-                  activeTab === position.id
-                    ? "border-[var(--color-primary)] text-[var(--color-text)]"
-                    : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
-                )}
-              >
-                {tr(position.name)}
-                <Badge tone={activeTab === position.id ? "primary" : "neutral"}>{tr(employees.length)}</Badge>
-              </button>
-            ))}
-          </div>
-
-          {isPayrollTab && canViewPayroll && !payrollQuery.isLoading && visibleEmployees.length === 0 && (
-            <div className="px-4 pt-4">
-              <EmptyState
-                title={
-                  activeTab === BONUS_TAB
-                    ? tr("Bu oyda bonus berilgan xodim yo'q")
-                    : activeTab === PAID_TAB
-                      ? tr("Bu oyda hali oylik to'langan xodim yo'q")
-                      : tr("Bu oyda barcha xodimlarga oylik to'langan")
-                }
-              />
-            </div>
-          )}
-
-          <div className="grid grid-cols-3 gap-3 p-4 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8">
-            {visibleEmployees.map((employee) => {
-              const payrollEntry = payrollByEmployee.get(employee.id);
-              return (
-              <button
-                key={employee.id}
-                type="button"
-                onClick={() => (isFinance ? router.push(employeeHref(employee.id)) : setDetailId(employee.id))}
-                className="flex flex-col items-center gap-1.5 rounded-[var(--radius-lg)] p-2 text-center transition-colors hover:bg-[var(--color-surface-hover)]"
-              >
-                <EmployeePhoto
-                  employee={employee}
-                  size={64}
-                  shape="circle"
-                  fallback={initials(employee.fullName)}
-                  className="text-[18px]"
+                      ? "Bu oyda bonus berilgan xodim yo'q"
+                      : activeTab === PAID_TAB
+                        ? "Bu oyda hali oylik to'langan xodim yo'q"
+                        : activeTab === UNPAID_TAB
+                          ? "Bu oyda barcha xodimlarga oylik to'langan"
+                          : activeTab === ARCHIVE_TAB
+                            ? "Arxiv bo'sh"
+                            : "Xodim topilmadi"
+                  }
                 />
-                <div className="min-w-0 w-full">
-                  <p className="truncate text-[13px] font-medium text-[var(--color-text)]">
-                    {tr(employee.fullName)}
-                  </p>
-                  <p className="truncate text-[11px] text-[var(--color-text-muted)]">
-                    {tr(formatPositionLabel(employee.position, employee.subjects))}
-                  </p>
+              ) : (
+                <div className={`${GROUP_BLOCK} grid grid-cols-3 gap-1 p-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8`}>
+                  {visibleEmployees.map((employee) => {
+                    const payrollEntry = payrollByEmployee.get(employee.id);
+                    return (
+                      <button
+                        key={employee.id}
+                        type="button"
+                        onClick={() => (isFinance ? router.push(employeeHref(employee.id)) : setDetailId(employee.id))}
+                        className={`flex min-w-0 flex-col items-center gap-1.5 rounded-[14px] px-1.5 py-2.5 text-center ${ROW_PRESS}`}
+                      >
+                        <EmployeePhoto employee={employee} size={64} shape="circle" fallback={initials(employee.fullName)} className="text-[20px]" />
+                        <span className="w-full min-w-0">
+                          <span className="block truncate text-[13.5px] font-medium text-[var(--color-text)]">{tr(employee.fullName)}</span>
+                          <span className="block truncate text-[12px] text-[#8e8e93]">{tr(formatPositionLabel(employee.position, employee.subjects))}</span>
+                        </span>
+                        {activeTab === PAID_TAB ? (
+                          <Pill color={IOS.green}>{formatMoney(payrollEntry?.totalAmount ?? 0)}</Pill>
+                        ) : activeTab === UNPAID_TAB ? (
+                          <Pill color={IOS.red}>{tr("To'lanmagan")}</Pill>
+                        ) : activeTab === BONUS_TAB ? (
+                          <Pill color={IOS.blue}>{formatMoney(payrollEntry?.bonusAmount ?? 0)}</Pill>
+                        ) : !employee.isActive ? (
+                          <Pill color={IOS.orange}>{employee.archivedAt ? formatDate(employee.archivedAt) : tr("Arxivda")}</Pill>
+                        ) : (
+                          <Pill color={IOS.green}>{tr("Faol")}</Pill>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
-                {activeTab === PAID_TAB ? (
-                  <Badge tone="success">{formatMoney(payrollEntry?.totalAmount ?? 0)}</Badge>
-                ) : activeTab === UNPAID_TAB ? (
-                  <Badge tone="danger">{tr("To'lanmagan")}</Badge>
-                ) : activeTab === BONUS_TAB ? (
-                  <Badge tone="info">{formatMoney(payrollEntry?.bonusAmount ?? 0)}</Badge>
-                ) : (
-                  <Badge tone={employee.isActive ? "success" : "neutral"}>
-                    {employee.isActive ? "Faol" : "Nofaol"}
-                  </Badge>
-                )}
-              </button>
-              );
-            })}
-          </div>
-        </Card>
-      )}
+              )}
+            </IosGroup>
+          </>
+        )}
+      </div>
 
       {canCreate && (
         <CreateEmployeeModal
@@ -351,47 +339,9 @@ export default function EmployeesPage({ params }: { params: Promise<{ slug: stri
           slug={slug}
           employee={detailEmployee}
           canWrite={canWrite}
+          profileHref={detailEmployee && !detailEmployee.isActive ? employeeHref(detailEmployee.id) : undefined}
         />
       )}
     </div>
-  );
-}
-
-/**
- * Yozish huquqi yo'q, ammo ish haqini ko'ra oladigan rollarga (Super Admin,
- * Moliyachi) "Faqat ko'rish rejimi" ogohlantirishi o'rniga ko'rsatiladi —
- * huquq yo'qligini takrorlashdan ko'ra, xodimlar bo'yicha oylik holati
- * taqsimoti foydaliroq.
- */
-function EmployeesStatsBar({
-  total,
-  paid,
-  unpaid,
-  bonus,
-}: {
-  total: number;
-  paid: number;
-  unpaid: number;
-  bonus: number;
-}) {
-  const tr = useTr();
-  const tiles: { label: string; value: number; toneClass: string }[] = [
-    { label: "Jami xodimlar", value: total, toneClass: "text-[var(--color-text)]" },
-    { label: tr("Oylik to'langan"), value: paid, toneClass: "text-[var(--color-success)]" },
-    { label: tr("Oylik to'lanmagan"), value: unpaid, toneClass: "text-[var(--color-danger)]" },
-    { label: "Bonus olganlar", value: bonus, toneClass: "text-sky-700" },
-  ];
-
-  return (
-    <Card className="overflow-hidden">
-      <div className="grid grid-cols-2 gap-px bg-[var(--color-separator)] sm:grid-cols-4">
-        {tiles.map((tile) => (
-          <div key={tile.label} className="bg-[var(--color-surface)] px-5 py-3.5 sm:px-6">
-            <p className="text-[12px] font-medium text-[var(--color-text-muted)]">{tr(tile.label)}</p>
-            <p className={`mt-1 text-[20px] font-semibold tabular-nums ${tile.toneClass}`}>{tr(tile.value)}</p>
-          </div>
-        ))}
-      </div>
-    </Card>
   );
 }

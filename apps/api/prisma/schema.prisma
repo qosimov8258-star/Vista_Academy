@@ -615,6 +615,10 @@ model Employee {
   // o'qitishini belgilaydi. Boshqa lavozimlarda bo'sh massiv.
   subjects             String[]  @default([])
   isActive             Boolean   @default(true) @map("is_active")
+  // Arxivlangan vaqt. Ishdan ketgan xodim o'chirilmaydi, arxivlanadi
+  // (isActive=false bilan birga): ro'yxatlar, guruh va Face ID dan chiqadi,
+  // kabineti yopiladi, lekin davomat, oylik va boshqa tarixi to'liq saqlanadi.
+  archivedAt           DateTime? @map("archived_at")
   // "Mavzu qo'shasizmi?" (xodim tafsilotidagi) yoqilib saqlansa — mavzularni
   // administrator shu yerdan markazlashtirib boshqaradi va shu xodimning o'zi
   // "Savol-javob" sahifasida ("/my-lessons/topics") yangi mavzu qo'sha olmaydi.

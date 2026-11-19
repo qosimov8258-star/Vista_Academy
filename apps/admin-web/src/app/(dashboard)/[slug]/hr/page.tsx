@@ -92,13 +92,18 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
     queryFn: () => api.get<Employee[]>(`/app/employees${forcedBranchId ? `?branchId=${forcedBranchId}` : ""}`),
   });
 
+  // Tarixdagi (smena, oylik) ismlar arxivdagi xodimlarni ham o'z ichiga oladi
+  const allEmployeesQuery = useQuery({
+    queryKey: ["employees", slug, forcedBranchId, "all"],
+    queryFn: () => api.get<Employee[]>(`/app/employees?archived=all${forcedBranchId ? `&branchId=${forcedBranchId}` : ""}`),
+  });
   const employeeName = useMemo(() => {
     const map = new Map<string, string>();
-    for (const employee of employeesQuery.data ?? []) {
+    for (const employee of allEmployeesQuery.data ?? employeesQuery.data ?? []) {
       map.set(employee.id, employee.fullName);
     }
     return (employeeId: string) => map.get(employeeId) ?? "—";
-  }, [employeesQuery.data]);
+  }, [allEmployeesQuery.data, employeesQuery.data]);
 
   const shiftsQuery = useQuery({
     queryKey: ["shifts", slug, period, employeeFilter, forcedBranchId],
