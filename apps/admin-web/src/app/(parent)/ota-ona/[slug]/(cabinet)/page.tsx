@@ -50,6 +50,7 @@ import { useSelectedChild } from "./use-selected-child";
 import { useParentMessages } from "./use-messages";
 import { useParentFeatures } from "./use-parent-features";
 import { FoydaliCards } from "./foydali-cards";
+import { GroupTopics } from "./group-topics";
 import { useTr } from "@/i18n/tr";
 
 /**
@@ -489,6 +490,9 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
           </section>
         )
       )}
+
+      {/* O'tilgan mavzular — tarbiyachi guruhga yuklagan oxirgilari, sanasi bilan («Fayllar» o'chirilgan bo'lsa chiqmaydi) */}
+      {childId && featuresReady && isOn("groupMaterials") && <GroupTopics slug={slug} childId={childId} />}
 
       {/* Davomat — foiz halqasi va oxirgi 2 hafta kalendari; sahifaning eng pastida */}
       {attendanceOn && stripQuery.data && <AttendanceCard strip={stripQuery.data} />}
