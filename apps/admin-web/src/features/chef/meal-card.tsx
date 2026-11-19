@@ -1,6 +1,7 @@
 "use client";
 
 import clsx from "clsx";
+import { Pencil } from "lucide-react";
 import type { MenuMeal, MenuPhoto } from "@/lib/types";
 import { CameraIcon, CheckIcon } from "@/components/ui/icons";
 import { MAX_PHOTOS_PER_MEAL, menuPhotoSrc } from "@/features/nutrition/use-menu-photos";
@@ -31,6 +32,10 @@ export function MealCard({
   error,
   onFile,
   onOpenPhoto,
+  carriedLabel,
+  textCarried = false,
+  photosCarried = false,
+  onEdit,
 }: {
   meal: MenuMeal;
   label: string;
@@ -40,12 +45,21 @@ export function MealCard({
   error?: string;
   onFile: (file: File) => void;
   onOpenPhoto: (id: string) => void;
+  /** Bugun bo'sh qism oldingi kundan ko'rsatilayotgan bo'lsa — «Kechagi menyu» */
+  carriedLabel?: string | null;
+  /** Matn oldingi kundan (hali bugunga saqlanmagan) */
+  textCarried?: boolean;
+  /** Rasmlar oldingi kundan (hali bugunga saqlanmagan, ota-onalarga ko'rinmaydi) */
+  photosCarried?: boolean;
+  onEdit?: () => void;
 }) {
   const tr = useTr();
   const picker = usePhotoPicker();
   const look = MEAL_LOOK[meal];
-  const full = photos.length >= MAX_PHOTOS_PER_MEAL;
-  const shared = photos.length > 0;
+  // To'liqlik va «ko'rinmoqda» — faqat bugungi rasmlar bo'yicha
+  const full = !photosCarried && photos.length >= MAX_PHOTOS_PER_MEAL;
+  const shared = !photosCarried && photos.length > 0;
+  const carried = !!carriedLabel && (textCarried || photosCarried);
 
   return (
     <article className="rounded-[22px] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)]">
@@ -55,7 +69,9 @@ export function MealCard({
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-[16px] font-semibold leading-tight text-[var(--color-text)]">{tr(label)}</p>
-          {shared ? (
+          {carried ? (
+            <p className="mt-0.5 text-[12.5px] font-medium leading-snug text-orange-600">{tr("{0} · hali saqlanmagan", carriedLabel ?? "")}</p>
+          ) : shared ? (
             <p className={clsx("mt-0.5 flex items-center gap-1 text-[12.5px] font-medium text-[var(--color-success)]", styles.doneIn)}>
               <CheckIcon className="h-3.5 w-3.5" />
               {tr("Ota-onalarga ko'rinmoqda ·")}{" "}{tr(photos.length)} {tr("ta rasm")}
@@ -64,9 +80,21 @@ export function MealCard({
             <p className="mt-0.5 text-[12.5px] text-[var(--color-text-muted)]">{tr("Hali rasm yuklanmagan")}</p>
           )}
         </div>
+        {onEdit && (
+          // Telefonda faqat qalam belgisi (sarlavha matni siqilmasin), kattaroq ekranda — yozuv bilan
+          <button
+            type="button"
+            onClick={onEdit}
+            aria-label={tr("Tahrirlash")}
+            className="flex h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-full bg-orange-50 text-[14px] font-semibold text-orange-600 transition-transform active:scale-[0.97] sm:px-4"
+          >
+            <Pencil className="h-[18px] w-[18px]" strokeWidth={2.2} aria-hidden />
+            <span className="max-sm:hidden">{tr("Tahrirlash")}</span>
+          </button>
+        )}
       </header>
 
-      <p className={clsx("mt-3 text-[15px] leading-snug", dishes ? "text-[var(--color-text)]" : "text-[var(--color-text-muted)]")}>
+      <p className={clsx("mt-3 text-[15px] leading-snug", dishes && !textCarried ? "text-[var(--color-text)]" : "text-[var(--color-text-muted)]")}>
         {dishes || "Menyu kiritilmagan"}
       </p>
 
@@ -76,7 +104,7 @@ export function MealCard({
             key={p.id}
             type="button"
             onClick={() => onOpenPhoto(p.id)}
-            className="h-[84px] w-[84px] shrink-0 overflow-hidden rounded-2xl bg-[var(--color-surface-sunken)] active:opacity-80"
+            className={clsx("h-[84px] w-[84px] shrink-0 overflow-hidden rounded-2xl bg-[var(--color-surface-sunken)] active:opacity-80", photosCarried && "opacity-60")}
             aria-label={`${label} suratini ochish`}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}

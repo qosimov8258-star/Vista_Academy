@@ -5,15 +5,16 @@ import Link from "next/link";
 import clsx from "clsx";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { ChildAllergy, MenuEntry, MenuMeal } from "@/lib/types";
+import type { ChildAllergy, MenuEntry, MenuMeal, MenuPhoto } from "@/lib/types";
 import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
 import { AlertIcon, CheckIcon, ChevronRightIcon } from "@/components/ui/icons";
 import { LoadingState, ErrorState } from "@/components/ui/states";
 import { todayTashkent } from "@/features/desk/shared";
 import { MealCard } from "@/features/chef/meal-card";
+import { MealEditSheet, type CarriedMeal, type MealEditTarget } from "@/features/chef/meal-edit-sheet";
 import { PhotoViewer } from "@/features/chef/photo-viewer";
 import styles from "@/features/chef/chef.module.css";
-import { MEALS, useMenuPhotos } from "./use-menu-photos";
+import { MEALS, menuPhotosKey, useMenuPhotos } from "./use-menu-photos";
 import { useTr } from "@/i18n/tr";
 
 interface GroupRow {
@@ -54,6 +55,16 @@ function dateLabel(iso: string): string {
   const d = new Date(`${iso}T00:00:00Z`);
   return `${WEEKDAYS[d.getUTCDay()]}, ${d.getUTCDate()}-${MONTHS[d.getUTCMonth()]}`;
 }
+
+/** "YYYY-MM-DD" ± kun */
+function shiftDay(iso: string, days: number): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Oldingi menyu qancha orqagacha qidiriladi (bayram, ta'til kunlari uchun zaxira bilan) */
+const CARRY_LOOKBACK_DAYS = 14;
 
 function greeting(): string {
   const hour = Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hour12: false, timeZone: "Asia/Tashkent" }).format(new Date()));
@@ -99,10 +110,53 @@ export function ChefHome({ slug }: { slug: string }) {
   });
   // Bo'sh filial — suratlar so'rovi yuborilmaydi
   const photos = useMenuPhotos(slug, nutritionOn ? branchId : "", today);
-  const [viewing, setViewing] = useState<{ id: string; title: string } | null>(null);
+  const [viewing, setViewing] = useState<{ id: string; title: string; carried: boolean } | null>(null);
+  const [editingMeal, setEditingMeal] = useState<MenuMeal | null>(null);
+
+  // Oldingi kunning menyusi: bugun bo'sh qolgan qismlar uchun tayyor turadi —
+  // oshpaz «Tahrirlash» orqali o'zgartirib (yoki o'zgartirmay) bugunga saqlaydi
+  const yesterday = shiftDay(today, -1);
+  const prevMenuQuery = useQuery({
+    queryKey: ["menu", slug, branchId, "chef-carry", today],
+    queryFn: () => api.get<MenuEntry[]>(`/app/menu?branchId=${branchId}&from=${shiftDay(today, -CARRY_LOOKBACK_DAYS)}&to=${yesterday}`),
+    enabled: !!branchId && nutritionOn,
+  });
+  const sourceEntry =
+    [...(prevMenuQuery.data ?? [])]
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .find((e) => e.breakfast?.trim() || e.lunch?.trim() || e.snack?.trim()) ?? null;
+  const sourceDate = sourceEntry?.date.slice(0, 10) ?? null;
+  const sourcePhotosQuery = useQuery({
+    queryKey: menuPhotosKey(slug, branchId, sourceDate ?? ""),
+    queryFn: () => api.get<MenuPhoto[]>(`/app/menu/photos?branchId=${branchId}&date=${sourceDate}`),
+    enabled: !!branchId && nutritionOn && !!sourceDate,
+  });
+  const carriedLabel = !sourceDate
+    ? null
+    : sourceDate === yesterday
+      ? tr("Kechagi menyu")
+      : tr("{0} menyusi", `${Number(sourceDate.slice(8, 10))}-${MONTHS[Number(sourceDate.slice(5, 7)) - 1]}`);
 
   const menu = menuQuery.data?.find((e) => e.date.slice(0, 10) === today) ?? null;
   const firstName = user?.fullName?.trim().split(/\s+/).slice(-1)[0];
+
+  /** Ovqat bo'yicha: bugungi matn/rasmlar va bugun bo'sh qism uchun oldingi kundagisi */
+  const mealState = (meal: MenuMeal) => {
+    const todayText = menu?.[MENU_FIELD[meal]]?.trim() || null;
+    const todayPhotos = photos.photosOf(meal);
+    const prevText = sourceEntry?.[MENU_FIELD[meal]]?.trim() || null;
+    const prevPhotos = (sourcePhotosQuery.data ?? []).filter((p) => p.meal === meal);
+    const carriedText = !todayText ? prevText : null;
+    const carriedPhotos = todayPhotos.length === 0 ? prevPhotos : [];
+    const carried: CarriedMeal | null =
+      carriedLabel && (carriedText || carriedPhotos.length > 0) ? { label: carriedLabel, text: carriedText, photos: carriedPhotos } : null;
+    return { todayText, todayPhotos, carried };
+  };
+  const editTarget: MealEditTarget | null = (() => {
+    if (!editingMeal) return null;
+    const meta = MEALS.find((m) => m.meal === editingMeal);
+    return { meal: editingMeal, label: meta?.label ?? "", ...mealState(editingMeal) };
+  })();
 
   if (nutritionOn && todayQuery.isLoading) return <LoadingState rows={4} />;
   if (nutritionOn && todayQuery.isError) return <ErrorState message={tr((todayQuery.error as Error).message)} />;
@@ -153,19 +207,28 @@ export function ChefHome({ slug }: { slug: string }) {
               </Link>
             </div>
             <div className="space-y-3">
-              {MEALS.map(({ meal, label }) => (
-                <MealCard
-                  key={meal}
-                  meal={meal}
-                  label={tr(label)}
-                  dishes={menu?.[MENU_FIELD[meal]] ?? null}
-                  photos={photos.photosOf(meal)}
-                  uploading={photos.uploading === meal}
-                  error={photos.errors[meal]}
-                  onFile={(file) => void photos.upload(meal, file)}
-                  onOpenPhoto={(id) => setViewing({ id, title: label })}
-                />
-              ))}
+              {MEALS.map(({ meal, label }) => {
+                const state = mealState(meal);
+                const photosCarried = state.todayPhotos.length === 0 && (state.carried?.photos.length ?? 0) > 0;
+                const textCarried = !state.todayText && !!state.carried?.text;
+                return (
+                  <MealCard
+                    key={meal}
+                    meal={meal}
+                    label={tr(label)}
+                    dishes={state.todayText ?? state.carried?.text ?? null}
+                    photos={photosCarried ? (state.carried?.photos ?? []) : state.todayPhotos}
+                    uploading={photos.uploading === meal}
+                    error={photos.errors[meal]}
+                    onFile={(file) => void photos.upload(meal, file)}
+                    onOpenPhoto={(id) => setViewing({ id, title: label, carried: photosCarried })}
+                    carriedLabel={state.carried?.label ?? null}
+                    textCarried={textCarried}
+                    photosCarried={photosCarried}
+                    onEdit={() => setEditingMeal(meal)}
+                  />
+                );
+              })}
             </div>
           </section>
         </div>
@@ -181,8 +244,11 @@ export function ChefHome({ slug }: { slug: string }) {
         title={viewing?.title ?? ""}
         onClose={() => setViewing(null)}
         deleting={photos.remove.isPending}
-        onDelete={(id) => photos.remove.mutate(id, { onSuccess: () => setViewing(null) })}
+        // Oldingi kun rasmi bu yerdan o'chirilmaydi — u o'sha kunning tarixi
+        onDelete={viewing?.carried ? undefined : (id) => photos.remove.mutate(id, { onSuccess: () => setViewing(null) })}
       />
+
+      <MealEditSheet slug={slug} branchId={branchId} date={today} target={editTarget} onClose={() => setEditingMeal(null)} />
     </div>
   );
 }
