@@ -98,7 +98,8 @@ export default function NetworkFinancePage({ params }: { params: Promise<{ slug:
 
   const employeesQuery = useQuery({
     queryKey: ["employees", slug, "network"],
-    queryFn: () => api.get<Employee[]>("/app/employees"),
+    // Arxivdagi xodim ham — shu oy oyligi yozilgan bo'lsa ro'yxatdan tushib qolmasin
+    queryFn: () => api.get<Employee[]>("/app/employees?archived=all"),
     enabled: tab === "payroll",
   });
 
@@ -495,7 +496,7 @@ function PayrollPanel({
   // Ish haqi hali hisoblanmagan xodimlar ham ko'rinsin: ularda oylik
   // sxemasi bor, lekin bu oy uchun yozuv yo'q.
   const byEmployee = new Map(entries.map((entry) => [entry.employeeId, entry]));
-  const rows = employees.map((employee) => ({
+  const rows = employees.filter((employee) => employee.isActive || byEmployee.has(employee.id)).map((employee) => ({
     employee,
     entry: byEmployee.get(employee.id) ?? null,
     scheme: employee.salaryScheme ? Number(employee.salaryScheme.fixedAmount) : null,

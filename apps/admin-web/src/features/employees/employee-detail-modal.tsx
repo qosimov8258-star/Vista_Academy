@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { LogIn, Pencil, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, ChartColumn, LogIn, Pencil, Trash2 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import type { CreateEmployeeResult, Employee, EmployeeCredentials, Group } from "@/lib/types";
 import { deleteEmployeeWithConfirmation, webauthnErrorMessage } from "@/lib/webauthn";
@@ -23,6 +23,7 @@ import { CopyRow } from "@/features/employees/employee-form-parts";
 import { PasswordChecklist, getPasswordRules } from "@/components/ui/password-checklist";
 import { Toast, type ToastState } from "@/components/ui/toast";
 import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
+import { formatDate } from "@/lib/format";
 import { useTr } from "@/i18n/tr";
 
 const LOGIN_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{1,30}[A-Za-z0-9]$/;
@@ -31,7 +32,11 @@ const LOGIN_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{1,30}[A-Za-z0-9]$/;
  * Xodim varag'i — iOS uslubida (SaaS ERP'dagi o'quvchi varag'i tartibida):
  * tepada surat, ism, lavozim va holat; keyin «Ma'lumot», «Kabinet»
  * (login, yangi parol), fan o'qituvchisida «Mavzular», oxirida «Amallar»
- * (tahrirlash, o'chirish).
+ * (tahrirlash, arxivlash; arxivdagi xodimda — arxivdan qaytarish va o'chirish).
+ *
+ * Ishdan ketgan xodim o'chirilmaydi — arxivlanadi: davomat, oylik va boshqa
+ * tarixi saqlanadi. Butunlay o'chirish faqat arxivdagi xodim uchun (masalan
+ * xato kiritilgan bo'lsa).
  *
  * Joriy parol hech qayerda ko'rsatilmaydi — server uni faqat hash ko'rinishida
  * saqlaydi. Admin faqat yangi parol qo'ya oladi. O'chirish admin qurilmasi
@@ -43,12 +48,15 @@ export function EmployeeDetailModal({
   slug,
   employee: employeeProp,
   canWrite,
+  profileHref,
 }: {
   open: boolean;
   onClose: () => void;
   slug: string;
   employee: Employee | null;
   canWrite: boolean;
+  /** Xodimning to'liq sahifasi (arxivdagisida — faoliyat xulosasi bilan) */
+  profileHref?: string;
 }) {
   const tr = useTr();
   const queryClient = useQueryClient();
@@ -62,7 +70,8 @@ export function EmployeeDetailModal({
   const [accountError, setAccountError] = useState<string | null>(null);
   const [createdCredentials, setCreatedCredentials] = useState<EmployeeCredentials | null>(null);
 
-  const [deleteConfirming, setDeleteConfirming] = useState(false);
+  // Varaq ichidagi ikkinchi bosqich: arxivlash yoki butunlay o'chirishni tasdiqlash
+  const [confirming, setConfirming] = useState<"archive" | "delete" | null>(null);
   const { user: viewer } = useAuth();
   // Platforma o'chirgan funksiyalar amallari ko'rinmaydi
   const isOn = useFeatureEnabled();
@@ -125,7 +134,7 @@ export function EmployeeDetailModal({
       setGroupIds([]);
       setAccountError(null);
       setCreatedCredentials(null);
-      setDeleteConfirming(false);
+      setConfirming(null);
       setDeleting(false);
       setDeleteError(null);
       setTopicsSaveError(null);
@@ -269,6 +278,24 @@ export function EmployeeDetailModal({
     setGroupIds((prev) => (prev.includes(id) ? [] : [id]));
   };
 
+  const handleArchiveToggle = async () => {
+    const archiving = employee.isActive;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await api.post(`/app/employees/${employee.id}/${archiving ? "archive" : "restore"}`);
+      queryClient.invalidateQueries({ queryKey: ["employees", slug] });
+      queryClient.invalidateQueries({ queryKey: ["employee-summary", slug, employee.id] });
+      queryClient.invalidateQueries({ queryKey: ["groups", slug] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-summary", slug] });
+      onClose();
+    } catch (err) {
+      setDeleteError(err instanceof ApiError ? err.message : tr(archiving ? "Arxivlab bo'lmadi" : "Arxivdan qaytarib bo'lmadi"));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const handleDelete = async () => {
     setDeleting(true);
     setDeleteError(null);
@@ -328,7 +355,7 @@ export function EmployeeDetailModal({
           <p className="px-6 text-center text-[20px] font-bold leading-tight text-[var(--color-text)]">{tr(employee.fullName)}</p>
           <p className="-mt-1 px-6 text-center text-[15px] text-[#8e8e93]">{tr(positionLabel)}</p>
           <div className="flex flex-wrap items-center justify-center gap-2">
-            <Pill color={employee.isActive ? IOS.green : IOS.gray}>{tr(employee.isActive ? "Faol" : "Nofaol")}</Pill>
+            <Pill color={employee.isActive ? IOS.green : IOS.orange}>{tr(employee.isActive ? "Faol" : "Arxivda")}</Pill>
             <Pill color={IOS.gray} title={tr("Face ID raqami")}>
               ID {employee.employeeNo}
             </Pill>
@@ -352,6 +379,19 @@ export function EmployeeDetailModal({
             <SheetRow label={tr("Guruh")}>
               <span className="block truncate">{groupNames.map((n) => tr(n)).join(", ")}</span>
             </SheetRow>
+          )}
+          {!employee.isActive && employee.archivedAt && (
+            <SheetRow label={tr("Arxivlangan")}>
+              <span className="tabular-nums">{formatDate(employee.archivedAt)}</span>
+            </SheetRow>
+          )}
+          {profileHref && (
+            <Row
+              leading={<IosIcon icon={ChartColumn} tint="indigo" size={30} />}
+              title={tr("Faoliyati")}
+              subtitle={tr("Ishlagan davri, davomat, oyliklar")}
+              href={profileHref}
+            />
           )}
         </SheetSection>
 
@@ -504,7 +544,16 @@ export function EmployeeDetailModal({
         {topicsSaveError && <p className="px-4 text-[13px] text-[#ff3b30]">{tr(topicsSaveError)}</p>}
 
         {canWrite && (
-          <SheetSection title={tr("Amallar")} footer={enterError ? <span className="text-[#ff3b30]">{tr(enterError)}</span> : undefined}>
+          <SheetSection
+            title={tr("Amallar")}
+            footer={
+              enterError || (!confirming && deleteError) ? (
+                <span className="text-[#ff3b30]">{tr((enterError || deleteError)!)}</span>
+              ) : !employee.isActive && canDelete ? (
+                tr("Qaytarilgan xodimni guruhga qaytadan biriktiring.")
+              ) : undefined
+            }
+          >
             {canEnterCabinet && (
               <Row
                 leading={<IosIcon icon={LogIn} tint="green" size={30} />}
@@ -514,48 +563,72 @@ export function EmployeeDetailModal({
                 onClick={entering ? undefined : enterCabinet}
               />
             )}
-            <Row leading={<IosIcon icon={Pencil} tint="blue" size={30} />} title={tr("Tahrirlash")} subtitle={tr("Ism, telefon, lavozim, guruh, surat, holat")} onClick={() => setEditOpen(true)} />
-            {!canDelete ? null : !deleteConfirming ? (
-              <Row
-                leading={<IosIcon icon={Trash2} tint="red" size={30} />}
-                title={<span className="text-[#ff3b30]">{tr("O'chirish")}</span>}
-                onClick={() => setDeleteConfirming(true)}
-                chevron={false}
-              />
-            ) : (
+            <Row leading={<IosIcon icon={Pencil} tint="blue" size={30} />} title={tr("Tahrirlash")} subtitle={tr("Ism, telefon, lavozim, guruh, surat")} onClick={() => setEditOpen(true)} />
+            {!canDelete ? null : confirming ? (
               // Tasdiqlash — varaq ichida ikkinchi bosqich
               <div className="group/row relative space-y-3 bg-[#ff3b30]/[0.06] px-4 py-3.5">
                 <p className="text-[13.5px] leading-snug text-[#ff3b30]">
-                  &quot;{tr(employee.fullName)}
-                  {tr("\"ni butunlay o'chirmoqchimisiz? Uning davomat va oylik tarixi ham qaytarib bo'lmas tarzda o'chadi.")}
+                  {confirming === "archive"
+                    ? tr("«{0}» arxivga o'tkaziladi: ro'yxat, guruh va Face ID dan chiqadi, kabinetiga kira olmaydi. Davomat, oylik va boshqa tarixi to'liq saqlanadi — «Arxiv» bo'limidan ko'rish va qaytarish mumkin.", tr(employee.fullName))
+                    : tr("«{0}» butunlay o'chiriladi. Uning davomat va oylik tarixi ham qaytarib bo'lmas tarzda o'chadi.", tr(employee.fullName))}
                 </p>
-                {employee.isActive && (
-                  <p className="text-[12.5px] leading-snug text-[#8e8e93]">{tr("Ishdan ketgan bo'lsa, tarixini saqlab qolish uchun «Tahrirlash»da nofaol qiling.")}</p>
-                )}
                 {deleteError && <p className="text-[12.5px] text-[#ff3b30]">{tr(deleteError)}</p>}
                 <div className="flex gap-2">
                   <button
                     type="button"
                     disabled={deleting}
                     onClick={() => {
-                      setDeleteConfirming(false);
+                      setConfirming(null);
                       setDeleteError(null);
                     }}
-                    className="h-10 flex-1 rounded-full bg-white text-[15px] font-semibold text-[var(--color-text)] transition-transform active:scale-[0.97]"
+                    className="h-11 flex-1 rounded-full bg-white text-[15px] font-semibold text-[var(--color-text)] transition-transform active:scale-[0.97]"
                   >
                     {tr("Qoldirish")}
                   </button>
                   <button
                     type="button"
                     disabled={deleting}
-                    onClick={handleDelete}
-                    className="flex h-10 flex-1 items-center justify-center rounded-full bg-[#ff3b30] text-[15px] font-semibold text-white transition-transform active:scale-[0.97] disabled:opacity-60"
+                    onClick={confirming === "archive" ? handleArchiveToggle : handleDelete}
+                    className="flex h-11 flex-1 items-center justify-center rounded-full bg-[#ff3b30] text-[15px] font-semibold text-white transition-transform active:scale-[0.97] disabled:opacity-60"
                   >
-                    {deleting ? <Spinner className="h-4 w-4 text-white" /> : tr("O'chirish")}
+                    {deleting ? <Spinner className="h-4 w-4 text-white" /> : tr(confirming === "archive" ? "Arxivlash" : "O'chirish")}
                   </button>
                 </div>
                 <span className={ROW_SEPARATOR} style={{ left: 58 }} aria-hidden="true" />
               </div>
+            ) : employee.isActive ? (
+              <Row
+                leading={<IosIcon icon={Archive} tint="orange" size={30} />}
+                title={tr("Arxivlash")}
+                subtitle={tr("Ishdan ketdi — tarixi saqlanadi")}
+                onClick={() => {
+                  setDeleteError(null);
+                  setConfirming("archive");
+                }}
+                chevron={false}
+              />
+            ) : (
+              <>
+                {/* Qaytarish xavfsiz amal — tasdiqlashsiz */}
+                <Row
+                  leading={<IosIcon icon={ArchiveRestore} tint="green" size={30} />}
+                  title={tr("Arxivdan qaytarish")}
+                  subtitle={tr("Kabinet va Face ID qayta ochiladi")}
+                  value={deleting ? <Spinner className="h-4 w-4" /> : undefined}
+                  onClick={deleting ? undefined : handleArchiveToggle}
+                  chevron={false}
+                />
+                <Row
+                  leading={<IosIcon icon={Trash2} tint="red" size={30} />}
+                  title={<span className="text-[#ff3b30]">{tr("O'chirish")}</span>}
+                  subtitle={tr("Faqat xato kiritilgan xodim uchun")}
+                  onClick={() => {
+                    setDeleteError(null);
+                    setConfirming("delete");
+                  }}
+                  chevron={false}
+                />
+              </>
             )}
           </SheetSection>
         )}

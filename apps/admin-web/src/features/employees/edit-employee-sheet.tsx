@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
 import type { Employee, Group } from "@/lib/types";
 import { IosSheet, SheetPrimaryButton } from "@/components/ios/sheet";
-import { FieldRow, FormSection, IosSwitch, TextInput } from "@/components/ios/form";
+import { FieldRow, FormSection, TextInput } from "@/components/ios/form";
 import { Row } from "@/components/ios/group";
 import { EmployeePhoto } from "@/components/ui/employee-photo";
 import { initials } from "@/components/ui/avatar";
@@ -23,8 +23,8 @@ type PhotoChange = { kind: "keep" } | { kind: "new"; image: string } | { kind: "
 /**
  * Xodimni tahrirlash — iOS varag'i (SaaS ERP'dagi o'qituvchi formasi
  * tartibida): tepada surat, keyin ism, ish (lavozim, fan, telefon),
- * kabineti bo'lsa guruh, oxirida holat. Login/parol bu yerda emas —
- * ular xodim varag'ining «Kabinet» bo'limida.
+ * kabineti bo'lsa guruh. Login/parol bu yerda emas — ular xodim varag'ining
+ * «Kabinet» bo'limida; ishdan ketish — «Arxivlash» (xodim varag'idagi amallar).
  */
 export function EditEmployeeSheet({
   open,
@@ -49,7 +49,6 @@ export function EditEmployeeSheet({
   const [position, setPosition] = useState("");
   const [subject, setSubject] = useState("");
   const [groupId, setGroupId] = useState("");
-  const [isActive, setIsActive] = useState(true);
   const [photo, setPhoto] = useState<PhotoChange>({ kind: "keep" });
   const [picker, setPicker] = useState<"position" | "subject" | null>(null);
   const [tried, setTried] = useState(false);
@@ -63,7 +62,6 @@ export function EditEmployeeSheet({
     setPosition(employee.position);
     setSubject(employee.subjects[0] ?? "");
     setGroupId(employee.teachingGroups?.[0]?.groupId ?? "");
-    setIsActive(employee.isActive);
     setPhoto({ kind: "keep" });
     setPicker(null);
     setTried(false);
@@ -102,7 +100,6 @@ export function EditEmployeeSheet({
     normalizePosition(position) !== normalizePosition(employee.position) ||
     (subjectTeacher && subject !== (employee.subjects[0] ?? "")) ||
     (showGroups && groupId !== originalGroupId) ||
-    isActive !== employee.isActive ||
     photo.kind !== "keep";
 
   const save = useMutation({
@@ -113,7 +110,6 @@ export function EditEmployeeSheet({
         phone: phoneChanged ? phone.trim() : undefined,
         position: position.trim(),
         subjects: subjectTeacher ? [subject] : undefined,
-        isActive,
         // Guruh faqat almashtirilganda yuboriladi (eski yozuvlarda bir nechta guruh bo'lishi mumkin)
         groupIds: showGroups && groupId !== originalGroupId ? [groupId] : undefined,
       });
@@ -218,20 +214,6 @@ export function EditEmployeeSheet({
             )}
           </FormSection>
         )}
-
-        <FormSection
-          title={tr("Holat")}
-          footer={
-            isActive
-              ? tr("Nofaol qilinsa xodim kabinetga kira olmaydi va Face ID terminalidan olib tashlanadi. Tarixi saqlanib qoladi.")
-              : tr("Xodim nofaol: kabinetga kira olmaydi, Face ID uni tanimaydi. Davomat va oylik tarixi saqlangan.")
-          }
-        >
-          <div className="flex min-h-[52px] items-center gap-3 px-4">
-            <span className="flex-1 text-[15px] text-[var(--color-text)]">{tr("Faol")}</span>
-            <IosSwitch checked={isActive} onChange={setIsActive} label={tr("Faol")} />
-          </div>
-        </FormSection>
 
         {save.error && (
           <p role="alert" className="px-4 text-[13px] text-[#ff3b30]">
