@@ -55,6 +55,17 @@ export const sfx = {
   win: () => [523, 659, 784, 1047, 1319].forEach((freq, i) => tone(freq, i * 0.11, i === 4 ? 0.55 : 0.28, "triangle", 0.1)),
 };
 
+/** Do-majorning ikki oktavasi: 1 — do, 2 — re … 10 — mi */
+const COUNT_NOTES = [523, 587, 659, 698, 784, 880, 988, 1047, 1175, 1319];
+
+/**
+ * «Nechta?»: n-chi narsa sanaldi — har safar bir nota baland (do, re, mi…),
+ * bola tartibni eshitadi. `sfx` dan tashqarida: u yerdagilar argumentsiz.
+ */
+export function countNote(n: number) {
+  tone(COUNT_NOTES[Math.min(Math.max(n, 1), COUNT_NOTES.length) - 1], 0, 0.22, "sine", 0.1);
+}
+
 /** Android'da yengil titrash; iPhone Safari qo'llamaydi — jim o'tadi */
 export function buzz(ms: number) {
   try {
