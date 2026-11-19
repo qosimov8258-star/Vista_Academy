@@ -47,7 +47,7 @@ export class EmployeesController {
     return this.employeesService.openAccount(user, id, dto);
   }
 
-  /** Xodimni tahrirlash: ism, telefon, lavozim, fan, faol/nofaol, guruh. */
+  /** Xodimni tahrirlash: ism, telefon, lavozim, fan, guruh. */
   @Patch(":id")
   update(
     @CurrentTenantUser() user: TenantAuthenticatedUser,
@@ -137,8 +137,26 @@ export class EmployeesController {
     return this.employeesService.removeAvatar(toTenantScope(user), id);
   }
 
+  /** Ishdan ketgan xodimni arxivlash — tarixi saqlanadi (avvalgi «Nofaol» o'rniga). */
+  @Post(":id/archive")
+  archive(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string) {
+    return this.employeesService.archive(user, id);
+  }
+
+  /** Arxivdagi xodimni ishga qaytarish. */
+  @Post(":id/restore")
+  restore(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string) {
+    return this.employeesService.restore(user, id);
+  }
+
+  /** Faoliyat xulosasi: ishlagan davri, davomat kunlari, to'langan oyliklar. */
+  @Get(":id/summary")
+  summary(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string) {
+    return this.employeesService.activitySummary(toTenantScope(user), id);
+  }
+
   /**
-   * Xodimni butunlay o'chiradi. `X-Reveal-Token` — admin qurilmasi WebAuthn
+   * Xodimni butunlay o'chiradi (faqat arxivdagini). `X-Reveal-Token` — admin qurilmasi WebAuthn
    * bilan tasdiqlangandan keyin `/app/webauthn/authentication/verify` dan
    * olinadigan qisqa umrli token (parolni ko'rsatishdagi bilan bir xil).
    */

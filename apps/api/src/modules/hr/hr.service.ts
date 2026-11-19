@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
 import {
@@ -14,6 +14,8 @@ import { ShiftQueryDto } from "./dto/shift-query.dto";
 import { GeneratePayrollDto } from "./dto/generate-payroll.dto";
 import { PayrollQueryDto } from "./dto/payroll-query.dto";
 import { PayEmployeeSalaryDto } from "./dto/pay-employee-salary.dto";
+
+export const ARCHIVED_EMPLOYEE_MESSAGE = "Xodim arxivda — unga oylik to'lanmaydi va yangi yozuv qo'shilmaydi. Kerak bo'lsa, avval arxivdan qaytaring";
 
 function currentPeriod(): string {
   const now = new Date();
@@ -43,6 +45,19 @@ export class HrService {
     return employee;
   }
 
+  /**
+   * Yozish amallari (oylik to'lash, hisoblash, smena, maosh sxemasi) uchun:
+   * arxivdagi xodimga pul to'lanmaydi va yangi yozuv qo'shilmaydi — uning
+   * tarixi faqat o'qish uchun saqlanadi.
+   */
+  private async requireActiveEmployee(scope: TenantScope, employeeId: string) {
+    const employee = await this.requireEmployee(scope, employeeId);
+    if (!employee.isActive) {
+      throw new BadRequestException(ARCHIVED_EMPLOYEE_MESSAGE);
+    }
+    return employee;
+  }
+
   async getSalaryScheme(scope: TenantScope, employeeId: string) {
     // Ilgari bu yerda rol umuman tekshirilmasdi — O'qituvchi ham
     // hamkasabasining maosh sxemasini to'g'ridan-to'g'ri so'rov bilan
@@ -59,7 +74,7 @@ export class HrService {
     // Sxemani moliyachi ham belgilaydi — xodim kartochkasidan oylikni shu yerning o'zida
     // hisoblab to'laydi (`requireMoneyScope`: o'qituvchi va oshpaz kira olmaydi).
     requireMoneyScope(scope);
-    await this.requireEmployee(scope, employeeId);
+    await this.requireActiveEmployee(scope, employeeId);
     return this.prisma.salaryScheme.upsert({
       where: { employeeId },
       create: { employeeId, ruleType: dto.ruleType, fixedAmount: dto.fixedAmount ?? 0, rate: dto.rate ?? 0 },
@@ -69,7 +84,7 @@ export class HrService {
 
   async createShift(scope: TenantScope, dto: CreateShiftDto) {
     const branchId = requireMoneyScope(scope);
-    const employee = await this.requireEmployee(scope, dto.employeeId);
+    const employee = await this.requireActiveEmployee(scope, dto.employeeId);
     const date = new Date(`${dto.date}T00:00:00.000Z`);
     return this.prisma.shift.upsert({
       where: { employeeId_date: { employeeId: dto.employeeId, date } },
@@ -135,7 +150,7 @@ export class HrService {
   async generatePayroll(caller: TenantAuthenticatedUser, dto: GeneratePayrollDto) {
     const scope = toTenantScope(caller);
     const branchId = requireMoneyScope(scope);
-    const employee = await this.requireEmployee(scope, dto.employeeId);
+    const employee = await this.requireActiveEmployee(scope, dto.employeeId);
     const scheme = await this.prisma.salaryScheme.findUnique({ where: { employeeId: dto.employeeId } });
     if (!scheme) {
       throw new NotFoundException("Xodim uchun maosh sxemasi belgilanmagan");
@@ -177,10 +192,13 @@ export class HrService {
     const branchId = requireMoneyScope(scope);
     const entry = await this.prisma.payrollEntry.findFirst({
       where: { id },
-      include: { employee: { select: { fullName: true } } },
+      include: { employee: { select: { fullName: true, isActive: true } } },
     });
     if (!entry || entry.branchId !== branchId) {
       throw new NotFoundException("Payroll yozuvi topilmadi");
+    }
+    if (!entry.employee.isActive) {
+      throw new BadRequestException(ARCHIVED_EMPLOYEE_MESSAGE);
     }
     const updated = await this.prisma.payrollEntry.update({
       where: { id },
@@ -231,7 +249,7 @@ export class HrService {
   async payEmployeeSalary(caller: TenantAuthenticatedUser, employeeId: string, dto: PayEmployeeSalaryDto) {
     const scope = toTenantScope(caller);
     const branchId = requireMoneyScope(scope);
-    const employee = await this.requireEmployee(scope, employeeId);
+    const employee = await this.requireActiveEmployee(scope, employeeId);
 
     const entry = await this.prisma.payrollEntry.upsert({
       where: { employeeId_period: { employeeId, period: dto.period } },

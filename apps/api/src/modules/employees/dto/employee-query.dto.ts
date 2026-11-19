@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsBoolean, IsOptional, IsString } from "class-validator";
+import { IsBoolean, IsIn, IsOptional, IsString } from "class-validator";
 
 export class EmployeeQueryDto {
   @ApiPropertyOptional()
@@ -13,4 +13,13 @@ export class EmployeeQueryDto {
   @Type(() => Boolean)
   @IsBoolean()
   isActive?: boolean;
+
+  /**
+   * Arxiv: berilmasa — faqat ishlayotganlar (arxivdagilar ro'yxat va tanlovlarda
+   * chiqmaydi); "only" — faqat arxiv; "all" — hammasi (tarix sahifalarida ism uchun).
+   */
+  @ApiPropertyOptional({ enum: ["only", "all"] })
+  @IsOptional()
+  @IsIn(["only", "all"])
+  archived?: "only" | "all";
 }

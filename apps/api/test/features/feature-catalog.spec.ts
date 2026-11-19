@@ -71,6 +71,10 @@ describe("feature-catalog", () => {
     // Ro'yxatni o'qish boshqa bo'limlar (dars jadvali, xodim davomati) uchun ochiq
     expect(keysOf("/api/v1/app/employees", "GET")).toEqual([]);
     expect(keysOf("/api/v1/app/employees/1", "DELETE")).toEqual(["employees", "employeeDelete"]);
+    expect(keysOf("/api/v1/app/employees/1/archive", "POST")).toEqual(["employees", "employeeDelete"]);
+    expect(keysOf("/api/v1/app/employees/1/restore", "POST")).toEqual(["employees", "employeeDelete"]);
+    // faoliyat xulosasini ko'rish arxivlashga bog'liq emas
+    expect(keysOf("/api/v1/app/employees/1/summary", "GET")).toEqual(["employees"]);
   });
 
   it("faqat o'chirilgan ichki funksiya to'xtatadi", () => {
