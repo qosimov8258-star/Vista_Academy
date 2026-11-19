@@ -13,6 +13,7 @@ import {
   ChevronRight,
   Clock3,
   FolderOpen,
+  Gamepad2,
   ImagePlus,
   Moon,
   NotebookPen,
@@ -200,7 +201,8 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
       : tr("Tarbiyachi hali davomat qilmadi");
 
   // Tezkor amallar — pastki menyuda «Yana» ichida qolgan bo'limlarga bir bosishda.
-  // Platforma o'chirgan bo'lim chiqmaydi; eng ko'pi to'rtta.
+  // Platforma o'chirgan bo'lim chiqmaydi; eng ko'pi to'rtta. Bog'cha xabarlari bu
+  // yerda yo'q — ular tepadagi qo'ng'iroqchada, yangilari soni bilan.
   const base = `/ota-ona/${slug}`;
   const actions = (
     [
@@ -209,10 +211,8 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
         : null,
       isOn("paymentReceipts") ? { key: "tolov", label: tr("To'lov"), icon: Wallet, tint: "green", href: `${base}/tolov` } : null,
       isOn("groupMaterials") ? { key: "fayllar", label: tr("Fayllar"), icon: FolderOpen, tint: "orange", href: `${base}/fayllar` } : null,
-      // Do'kon «Yana» ichida qoladi; bu yerda — bog'cha xabarlari, o'qilmaganlar soni bilan
-      isOn("notifications")
-        ? { key: "xabarlar", label: softHyphen(tr("Bildirishnomalar")), icon: Bell, tint: "indigo", href: `${base}/xabarlar`, badge: newMessages.length }
-        : null,
+      // O'yinlar — doim bor (platforma o'chira olmaydi), bola ham o'zi topa olsin
+      { key: "oyinlar", label: tr("O'yinlar"), icon: Gamepad2, tint: "pink", href: `${base}/oyinlar` },
       isOn("diary") ? { key: "kundalik", label: tr("Kundalik"), icon: NotebookPen, tint: "purple", href: `${base}/kundalik` } : null,
       isOn("lessons") ? { key: "jadval", label: tr("Jadval"), icon: CalendarDays, tint: "red", href: `${base}/jadval` } : null,
     ] as Array<QuickAction | null>
@@ -517,15 +517,6 @@ type QuickAction = {
   /** Ikonka burchagidagi qizil son (iOS ilova belgisidek); 0 bo'lsa chiqmaydi */
   badge?: number;
 };
-
-/**
- * Uzun so'z ikonka ostiga sig'masa, harfma-harf emas, bo'g'in chegarasida
- * chiziqcha bilan bo'linsin («Bildirish-nomalar»). Brauzerda o'zbekcha
- * avtomatik bo'g'in lug'ati yo'q — shuning uchun yumshoq chiziqcha (U+00AD).
- */
-function softHyphen(label: string): string {
-  return label.replace("Bildirishnomalar", "Bildirish\u00ADnomalar");
-}
 
 /** Bosh harflar — faqat harflardan («[SINOV] Ali Vali» → «AV»); harf topilmasa umumiy `initials` */
 function lettersOf(name: string): string {

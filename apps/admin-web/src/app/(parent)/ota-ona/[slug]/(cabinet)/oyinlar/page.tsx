@@ -79,26 +79,28 @@ export default function GamesPage({ params }: { params: Promise<{ slug: string }
         })}
       </ul>
 
-      <section className="mt-7">
-        <SectionLabel>{tr("Tez orada")}</SectionLabel>
-        <div className="mt-3 grid grid-cols-2 gap-2.5">
-          {soon.map((game) => {
-            const Icon = soonIcon[game.id] ?? Hand;
-            return (
-              <div
-                key={game.id}
-                className="flex flex-col items-start gap-2 rounded-[20px] border border-dashed border-[var(--p-line)] p-4"
-              >
-                <Icon className="h-6 w-6 text-[var(--p-muted)] opacity-80" strokeWidth={2} />
-                <span className={clsx(parentStyles.roundedFont, "text-[16px] font-extrabold leading-tight text-[var(--p-ink)]")}>
-                  {tr(game.title)}
-                </span>
-                <span className="text-[12.5px] leading-snug text-[var(--p-muted)]">{tr(game.description)}</span>
-              </div>
-            );
-          })}
-        </div>
-      </section>
+      {soon.length > 0 && (
+        <section className="mt-7">
+          <SectionLabel>{tr("Tez orada")}</SectionLabel>
+          <div className="mt-3 grid grid-cols-2 gap-2.5">
+            {soon.map((game) => {
+              const Icon = soonIcon[game.id] ?? Hand;
+              return (
+                <div
+                  key={game.id}
+                  className="flex flex-col items-start gap-2 rounded-[20px] border border-dashed border-[var(--p-line)] p-4"
+                >
+                  <Icon className="h-6 w-6 text-[var(--p-muted)] opacity-80" strokeWidth={2} />
+                  <span className={clsx(parentStyles.roundedFont, "text-[16px] font-extrabold leading-tight text-[var(--p-ink)]")}>
+                    {tr(game.title)}
+                  </span>
+                  <span className="text-[12.5px] leading-snug text-[var(--p-muted)]">{tr(game.description)}</span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <div className="mt-7 space-y-2.5">
         <div className="flex items-start gap-3 rounded-[20px] bg-[var(--p-sky)]/12 px-4 py-3.5">

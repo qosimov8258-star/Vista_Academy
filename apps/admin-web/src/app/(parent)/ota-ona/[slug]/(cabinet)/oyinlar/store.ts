@@ -19,13 +19,27 @@ type State = {
   sounds: Record<string, Result>;
   /** «Ortiqchasini top»: daraja → natija */
   odd: Record<string, Result>;
+  /** Mantiqiy o'yinlar («Nima keyin keladi?» va boshqalar): `${o'yin}:${daraja}` → natija */
+  logic: Record<string, Result>;
+  /** Mantiqiy o'yinlarda oxirgi tanlangan daraja: o'yin → daraja */
+  logicLevels: Record<string, LevelId>;
   level: LevelId;
   soundLevel: LevelId;
   oddLevel: LevelId;
   sound: boolean;
 };
 
-const DEFAULT: State = { memory: {}, sounds: {}, odd: {}, level: "oson", soundLevel: "oson", oddLevel: "oson", sound: true };
+const DEFAULT: State = {
+  memory: {},
+  sounds: {},
+  odd: {},
+  logic: {},
+  logicLevels: {},
+  level: "oson",
+  soundLevel: "oson",
+  oddLevel: "oson",
+  sound: true,
+};
 
 let cache: State | null = null;
 const listeners = new Set<() => void>();
@@ -41,6 +55,8 @@ function read(): State {
       memory: { ...(parsed.memory ?? {}) },
       sounds: { ...(parsed.sounds ?? {}) },
       odd: { ...(parsed.odd ?? {}) },
+      logic: { ...(parsed.logic ?? {}) },
+      logicLevels: { ...(parsed.logicLevels ?? {}) },
     };
   } catch {
     cache = DEFAULT;
@@ -99,8 +115,26 @@ export function useGamesStore() {
     });
   }, []);
 
+  const setLogicLevel = useCallback((game: string, level: LevelId) => {
+    const current = read();
+    write({ ...current, logicLevels: { ...current.logicLevels, [game]: level } });
+  }, []);
+  const saveLogicResult = useCallback((game: string, level: LevelId, stars: 1 | 2 | 3) => {
+    const current = read();
+    const key = `${game}:${level}`;
+    const prev = current.logic[key] ?? { best: 0, plays: 0 };
+    write({
+      ...current,
+      logic: { ...current.logic, [key]: { best: Math.max(prev.best, stars) as Result["best"], plays: prev.plays + 1 } },
+    });
+  }, []);
+
   return {
     level: state.level,
+    logicLevel: (game: string): LevelId => state.logicLevels[game] ?? "oson",
+    logicResult: (game: string, level: LevelId): Result => state.logic[`${game}:${level}`] ?? { best: 0, plays: 0 },
+    setLogicLevel,
+    saveLogicResult,
     oddLevel: state.oddLevel,
     oddResult: (level: LevelId): Result => state.odd[level] ?? { best: 0, plays: 0 },
     setOddLevel,

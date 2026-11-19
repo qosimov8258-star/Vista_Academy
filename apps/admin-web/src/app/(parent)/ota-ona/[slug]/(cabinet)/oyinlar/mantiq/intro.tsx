@@ -1,0 +1,101 @@
+"use client";
+
+import Link from "next/link";
+import clsx from "clsx";
+import { Lightbulb, Play } from "lucide-react";
+import parentStyles from "../../../parent.module.css";
+import { useGamesStore } from "../store";
+import { StarRow, TONE } from "../ui";
+import { FoydaliHeader, SectionLabel } from "../../foydali/ui";
+import { findLogicLevel, type LogicGame } from "./games";
+import { useTr } from "@/i18n/tr";
+
+/**
+ * Mantiqiy o'yinning kirish sahifasi: daraja tanlash, «O'ynash» (eng yaxshi
+ * natija yulduzchalari bilan), qanday o'ynalishi va foydasi. «Ortiqchasini
+ * top» sahifasi bilan bir xil tuzilgan.
+ */
+export function LogicIntro({ slug, game }: { slug: string; game: LogicGame }) {
+  const tr = useTr();
+  const base = `/ota-ona/${slug}/oyinlar`;
+  const store = useGamesStore();
+  const level = findLogicLevel(game, store.logicLevel(game.id));
+  const result = store.logicResult(game.id, level.id);
+  const tone = TONE[game.tone];
+
+  return (
+    <div className="mx-auto w-full max-w-[520px] px-4">
+      <FoydaliHeader backHref={base} backLabel="O'yinlar" title={tr(game.title)} subtitle={tr(game.description)} />
+
+      <section className="mt-6">
+        <SectionLabel>{tr("Daraja")}</SectionLabel>
+        <div role="radiogroup" aria-label={tr("Daraja")} className="mt-3 flex rounded-full bg-[var(--p-sunken)] p-[3px]">
+          {game.levels.map((item) => {
+            const active = item.id === level.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => store.setLogicLevel(game.id, item.id)}
+                className={clsx(
+                  "flex min-h-[44px] flex-1 flex-col items-center justify-center rounded-full px-2 py-1",
+                  active && "bg-[var(--p-segment)] shadow-sm",
+                )}
+              >
+                <span className={clsx("text-[14.5px] font-bold", active ? "text-[var(--p-ink)]" : "text-[var(--p-muted)]")}>
+                  {tr(item.title)}
+                </span>
+                <span className="text-[11.5px] font-semibold text-[var(--p-muted)]">{tr(item.age)}</span>
+              </button>
+            );
+          })}
+        </div>
+        <p className="mt-2 px-1 text-[13px] leading-snug text-[var(--p-muted)]">
+          {tr("{0} ta savol.", level.rounds)} {tr(level.hint)}
+        </p>
+      </section>
+
+      {/* O'ynash */}
+      <Link
+        href={`${base}/${game.id}/oyna?daraja=${level.id}`}
+        className="mt-5 flex items-center gap-4 rounded-[var(--p-radius)] bg-[var(--p-card)] p-4 shadow-[var(--p-shadow)] transition-transform active:scale-[0.99]"
+      >
+        <span className="flex h-[64px] w-[64px] shrink-0 items-center justify-center rounded-full text-white" style={{ background: tone.solid }}>
+          <Play className="ml-1 h-8 w-8" strokeWidth={2} fill="currentColor" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className={clsx(parentStyles.roundedFont, "block text-[21px] font-extrabold text-[var(--p-ink)]")}>{tr("O'ynash")}</span>
+          <span className="mt-0.5 block text-[13px] text-[var(--p-muted)]">
+            {result.plays > 0 ? tr("{0} marta o'ynaldi", result.plays) : tr("Hali o'ynalmagan")}
+          </span>
+        </span>
+        <StarRow count={result.best} size={18} />
+      </Link>
+
+      <section className="mt-7">
+        <SectionLabel>{tr("Qanday o'ynaladi?")}</SectionLabel>
+        <ol className="mt-3 space-y-3 rounded-[24px] bg-[var(--p-card)] p-4 shadow-[var(--p-shadow)]">
+          {game.steps.map((step, i) => (
+            <li key={step} className="flex items-start gap-3">
+              <span
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[13.5px] font-extrabold"
+                style={{ background: tone.soft, color: tone.ink }}
+              >
+                {i + 1}
+              </span>
+              <span className="pt-0.5 text-[14.5px] leading-snug text-[var(--p-ink)]">{tr(step)}</span>
+            </li>
+          ))}
+        </ol>
+        <div className="mt-3 flex items-start gap-3 rounded-[20px] bg-[var(--p-sun)]/12 px-4 py-3.5">
+          <Lightbulb className="mt-0.5 h-5 w-5 shrink-0 text-[var(--p-sun-ink)]" strokeWidth={2} />
+          <p className="text-[13.5px] leading-relaxed text-[var(--p-ink)]">
+            <span className="font-bold">{tr("Foydasi:")}</span> {tr(game.benefit)}
+          </p>
+        </div>
+      </section>
+    </div>
+  );
+}

@@ -62,6 +62,7 @@ export type Topic = {
 
 // Mavzular ko'p bo'lgani uchun alohida faylda (topics.ts)
 import { TOPICS, TOPIC_GROUPS } from "./topics";
+import { LOGIC_GAMES } from "./mantiq/games";
 export { TOPICS, TOPIC_GROUPS };
 
 export function findTopic(id: string): Topic | undefined {
@@ -274,13 +275,16 @@ export const GAMES: GameInfo[] = [
     tone: "lilac",
     href: "/oyinlar/ortiqcha",
   },
-  {
-    id: "nechta",
-    title: "Nechta?",
-    description: "Sanab, to'g'ri raqamni tanlang",
-    age: "4–6 yosh",
-    skill: "Sanash",
-    tone: "sky",
-    href: null,
-  },
+  // Mantiqiy o'yinlar — mantiq/games.ts
+  ...LOGIC_GAMES.map(
+    (game): GameInfo => ({
+      id: game.id,
+      title: game.title,
+      description: game.description,
+      age: game.age,
+      skill: game.skill,
+      tone: game.tone,
+      href: `/oyinlar/${game.id}`,
+    }),
+  ),
 ];
