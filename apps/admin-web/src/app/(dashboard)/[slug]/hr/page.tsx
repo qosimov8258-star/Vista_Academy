@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, getPaginated, ApiError } from "@/lib/api";
 import type { Employee, PayrollEntry, PayrollSummary, Shift, StaffAttendanceSummary } from "@/lib/types";
 import { absenceNote } from "@/features/cash/staff-absence";
-import { useAuth } from "@/lib/use-auth";
+import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
 import { ViewOnlyNote } from "@/components/ui/view-only-note";
 import { EmployeePhoto } from "@/components/ui/employee-photo";
 import { initials } from "@/components/ui/avatar";
@@ -57,6 +57,7 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
   const { slug } = use(params);
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const isOn = useFeatureEnabled();
   const canWrite = canWriteMoney(user?.role);
   // Maosh sxemasini belgilash — moliyachi emas, faqat filial admini/administrator ishi
   // (moliyachi faqat hisoblangan summani to'laydi, sxemani o'zi yarata olmaydi).
@@ -113,7 +114,8 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
     queryKey: ["staff-attendance-summary", slug, forcedBranchId ?? user?.branchId, period],
     queryFn: () =>
       api.get<StaffAttendanceSummary>(`/app/staff-attendance/summary?period=${period}${forcedBranchId ?? user?.branchId ? `&branchId=${forcedBranchId ?? user?.branchId}` : ""}`),
-    enabled: !!period,
+    // Xodimlar davomati o'chirilgan bo'lsa so'ralmaydi — izohlar o'zi yashirinadi
+    enabled: !!period && isOn("staffAttendance"),
   });
   const absenceByEmployee = useMemo(
     () => new Map((attendanceSummaryQuery.data?.employees ?? []).map((row) => [row.employeeId, row])),

@@ -403,7 +403,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ slug: st
                       trailing={<CallButton phone={link.guardian.phone} name={link.guardian.fullName} />}
                     />
                   ))}
-                  {canWrite && (
+                  {canWrite && isOn("parentCabinet") && (
                     <Row
                       onClick={() => setCabinetOpen(true)}
                       leading={<IosIcon icon={KeyRound} tint={cabinetHolder ? "green" : "blue"} size={30} />}

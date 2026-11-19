@@ -113,6 +113,8 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
   const showGender = featureOn("childFieldGender");
   const showBirthDate = featureOn("childFieldBirthDate");
   const showGuardianPassword = featureOn("childFieldGuardianPassword");
+  // Hisob-faktura «billing» funksiyasiga tegishli — o'chirilgan bo'lsa bo'lim ko'rinmaydi
+  const showInvoice = featureOn("billing");
   const formId = useId();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -193,7 +195,7 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
       }
       // Birinchi hisob-faktura: bola allaqachon yaratilgan, shuning uchun xato bo'lsa
       // ham bola yozuvi qoladi — hisob-fakturani Moliya sahifasidan qayta yaratish mumkin.
-      if (values.createInvoice) {
+      if (values.createInvoice && showInvoice) {
         const now = new Date();
         const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
         await api
@@ -460,6 +462,7 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
         </FormSection>
         )}
 
+        {showInvoice && (
         <FormSection title={tr("To'lov")} footer={tr("Joriy oy uchun to'lov summasi va muddatini kiriting.")}>
           <FieldRow label={<span className="block leading-snug">{tr("Birinchi hisob-faktura")}</span>} htmlFor={`${formId}-inv`}>
             <div className="flex justify-end">
@@ -487,6 +490,7 @@ export function CreateChildModal({ open, onClose, slug }: { open: boolean; onClo
             </>
           )}
         </FormSection>
+        )}
       </form>
       <Toast toast={toast} onDismiss={() => setToast(null)} />
     </IosSheet>

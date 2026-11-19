@@ -70,6 +70,8 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
   // Tarbiyachi biriktirish xodimlar ro'yxati va «Guruhga biriktirish»ga tayanadi
   const canAssignTeachers = canWriteOperational(user?.role) && isOn("employees") && isOn("employeeGroups");
   const canWrite = canWriteOperational(user?.role);
+  // O'quvchilarni qo'shish/chiqarish PATCH children/:id orqali — «childEdit» kerak
+  const canManageChildren = canWrite && isOn("childEdit");
   const canMark = canWriteTeaching(user?.role) && attendanceOn;
   const [editOpen, setEditOpen] = useState(false);
   const [teachersOpen, setTeachersOpen] = useState(false);
@@ -224,9 +226,9 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
         </StatStrip>
 
         {/* Tezkor amallar */}
-        {(canMark || canWrite) && overview && (
+        {(canMark || canManageChildren) && overview && (
           <IosGroup>
-            {canWrite && (
+            {canManageChildren && (
               <Row
                 onClick={() => setChildrenOpen(true)}
                 leading={<IosIcon icon={UsersRound} tint="blue" size={30} />}
@@ -343,7 +345,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
           {overview && overview.children.items.length > 8 && <SearchPill value={childSearch} onChange={setChildSearch} placeholder={tr("Bola ismi yoki ID")} />}
           <IosGroup
             action={
-              canWrite && overview ? (
+              canManageChildren && overview ? (
                 <button type="button" className="text-[var(--color-primary)] active:opacity-50" onClick={() => setChildrenOpen(true)}>
                   {tr("Boshqarish")}
                 </button>
@@ -468,7 +470,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ slug: st
 
       {canEditGroup && <GroupFormSheet open={editOpen} onClose={() => setEditOpen(false)} slug={slug} group={group} />}
       {canAssignTeachers && <TeachersSheet open={teachersOpen} onClose={() => setTeachersOpen(false)} slug={slug} group={group} />}
-      {canWrite && <ManageChildrenSheet open={childrenOpen} onClose={() => setChildrenOpen(false)} slug={slug} group={group} />}
+      {canManageChildren && <ManageChildrenSheet open={childrenOpen} onClose={() => setChildrenOpen(false)} slug={slug} group={group} />}
       {canWrite && overview && <GroupPhotoSheet open={photoOpen} onClose={() => setPhotoOpen(false)} slug={slug} group={overview.group} />}
     </div>
   );

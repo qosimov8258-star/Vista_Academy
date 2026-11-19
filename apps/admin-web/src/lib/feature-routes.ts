@@ -33,7 +33,8 @@ const ROUTE_FEATURES: Record<string, string | string[]> = {
   discounts: "discounts",
   employees: "employees",
   "face-id": "faceId",
-  hr: "hr",
+  // Ish haqi va xodim kelmasliklari — «Xodimlar bo'limi» o'chirilsa ular ham yopiladi
+  hr: ["hr", "employees"],
   lending: "landing",
   lessons: "lessons",
   "lesson-attendance": "lessons",
@@ -46,7 +47,7 @@ const ROUTE_FEATURES: Record<string, string | string[]> = {
   "payment-receipts": "paymentReceipts",
   reminders: "paymentReminders",
   "staff-attendance": "staffAttendance",
-  "staff-absences": "staffAttendance",
+  "staff-absences": ["staffAttendance", "employees"],
   timetable: "diary",
   useful: "useful",
   // Ota-onalar faolligi (feature/ota-ona-faolligi) — kabinet bo'lmasa ma'nosiz
@@ -60,6 +61,7 @@ const ROUTE_FEATURES: Record<string, string | string[]> = {
 const SUB_ROUTE_FEATURES: Record<string, string> = {
   "useful/articles": "articles",
   "useful/gallery": "gallery",
+  "coin/shop": "products",
 };
 
 /** Sahifa manzili qaysi funksiyalarga tegishli (`/test-bogcha/filial-1/nutrition` → ["nutrition"]); yo'q bo'lsa bo'sh. */
