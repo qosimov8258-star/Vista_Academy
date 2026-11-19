@@ -94,7 +94,37 @@ export function amountInWords(value: number): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-export function renderPaymentReceiptPdf(data: PaymentReceiptData): Promise<Buffer> {
+/**
+ * Helvetica (pdfkit'ning ichki shrifti) faqat WinAnsi belgilarini chiqaradi.
+ * O'zbek lotinidagi «ʻ» (U+02BB) va «ʼ» (U+02BC) unda yo'q — o'rnida
+ * keraksiz belgilar chiqardi («Oʻtkir»). Ularni oddiy tutuq belgisiga
+ * almashtiramiz; «‘ ’» WinAnsi'da bor, ular o'zgarmaydi.
+ * (Kirill yozuvi uchun Unicode shrift kerak — hozircha yo'q.)
+ */
+export function pdfSafeText(value: string): string {
+  return value.replace(/[\u02BB\u02BC\u02B9\u02BF\u0060\u00B4]/g, "'");
+}
+
+function sanitize(data: PaymentReceiptData): PaymentReceiptData {
+  const t = (v: string) => pdfSafeText(v);
+  const n = (v: string | null) => (v === null ? null : pdfSafeText(v));
+  return {
+    ...data,
+    number: t(data.number),
+    organizationName: t(data.organizationName),
+    branchName: t(data.branchName),
+    branchAddress: n(data.branchAddress),
+    childName: t(data.childName),
+    childPublicId: t(data.childPublicId),
+    methodLabel: t(data.methodLabel),
+    recordedBy: n(data.recordedBy),
+    note: n(data.note),
+    refunded: data.refunded ? { ...data.refunded, reason: n(data.refunded.reason) } : null,
+  };
+}
+
+export function renderPaymentReceiptPdf(input: PaymentReceiptData): Promise<Buffer> {
+  const data = sanitize(input);
   // A5 — chek/kvitansiya o'lchami; chegaralar 0, hamma narsa aniq koordinatada
   const doc = new PDFDocument({ size: "A5", margin: 0, info: { Title: `Kvitansiya Nº ${data.number}` } });
   const chunks: Buffer[] = [];
