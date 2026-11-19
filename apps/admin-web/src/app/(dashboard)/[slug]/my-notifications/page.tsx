@@ -10,6 +10,7 @@ import { BellIcon, CalendarIcon } from "@/components/ios/icons";
 import { ErrorState } from "@/components/ios/states";
 import { IosSheet, SheetSection } from "@/components/ios/sheet";
 import { useEmployeeInbox } from "@/features/broadcasts/use-inbox";
+import { MessageImage, inboxImageUrl } from "@/features/broadcasts/message-image";
 import { IosIcon } from "@/features/director/ios-icon";
 import { useAuth } from "@/lib/use-auth";
 import { isChef } from "@/lib/permissions";
@@ -48,6 +49,8 @@ interface Item {
   text: string;
   isRead: boolean;
   isMandatory: boolean;
+  /** Rahbariyat xabariga rasm biriktirilgan */
+  hasImage?: boolean;
   createdAt: string;
 }
 
@@ -116,6 +119,7 @@ export default function MyNotificationsPage({ params }: { params: Promise<{ slug
       text: m.body,
       isRead: !!m.readAt,
       isMandatory: m.isMandatory,
+      hasImage: m.hasImage,
       createdAt: m.createdAt,
     })),
   ].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -221,6 +225,7 @@ export default function MyNotificationsPage({ params }: { params: Promise<{ slug
                 {(inboxQuery.data ?? []).find((m) => m.id === opened.id)?.from} · {shortTime(opened.createdAt, tr)}
               </p>
             </div>
+            {opened.hasImage && <MessageImage url={inboxImageUrl(opened.id)} alt={opened.title ?? tr("Xabar rasmi")} />}
             <SheetSection>
               <p className="whitespace-pre-line break-words px-4 py-3.5 text-[15.5px] leading-relaxed text-[var(--color-text)]">{opened.text}</p>
             </SheetSection>

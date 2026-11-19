@@ -3019,6 +3019,8 @@
  "Xodimlarni tanlab": "Pick staff",
  "Xodimlarni tanlash": "Choose staff",
  "Yangi xabar": "New message",
+ "Xabar rasmi": "Message photo",
+ "Ixtiyoriy. Rasm xabar matni tepasida ko'rinadi.": "Optional. The photo is shown above the message text.",
  "Yoqilsa, xabar ochib o'qilmaguncha kabinetda yopilmaydigan oyna chiqadi. Muhim e'lonlar uchun.": "If on, the cabinet shows a window that can't be closed until the message is read. For important announcements.",
  "Yuborilgan xabarni qaytarib yoki tahrirlab bo'lmaydi.": "A sent message can't be recalled or edited.",
  "kabinet ochilmagan": "no cabinet yet",

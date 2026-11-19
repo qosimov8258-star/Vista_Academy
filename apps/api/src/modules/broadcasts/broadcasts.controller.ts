@@ -1,6 +1,9 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Header, HttpCode, HttpStatus, Param, ParseUUIDPipe, Patch, Post, Query, Res, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
+import type { Response } from "express";
 import { Public } from "../../common/decorators/public.decorator";
+import { sendMediaResponse } from "../../common/media-response";
+import { R2Service } from "../storage/r2.service";
 import { TenantJwtAuthGuard } from "../iam/guards/tenant-jwt-auth.guard";
 import { CurrentTenantUser } from "../iam/decorators/current-tenant-user.decorator";
 import { AllowChef } from "../iam/decorators/allow-chef.decorator";
@@ -18,7 +21,10 @@ import { BroadcastListQueryDto, BroadcastTargetDto, CreateBroadcastDto } from ".
 @UseGuards(TenantJwtAuthGuard)
 @Controller("app/broadcasts")
 export class BroadcastsController {
-  constructor(private readonly service: BroadcastsService) {}
+  constructor(
+    private readonly service: BroadcastsService,
+    private readonly r2: R2Service,
+  ) {}
 
   @Get()
   list(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query() query: BroadcastListQueryDto, @Query("branchId") branchId?: string) {
@@ -56,9 +62,26 @@ export class BroadcastsController {
     return this.service.employeeMarkRead(user, id);
   }
 
+  /** Xodimga kelgan xabar rasmi (`id` — inbox qatori) */
+  @Get("inbox/:id/image")
+  @AllowChef()
+  @Header("Cache-Control", "private, max-age=86400")
+  async inboxImage(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id", ParseUUIDPipe) id: string, @Res() res: Response) {
+    const media = await this.service.employeeImage(user, id);
+    await sendMediaResponse(res, this.r2, media, "Rasm topilmadi");
+  }
+
   @Get(":id")
   detail(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string) {
     return this.service.detail(user, id);
+  }
+
+  /** Yuborilgan xabar rasmi — tarixda */
+  @Get(":id/image")
+  @Header("Cache-Control", "private, max-age=86400")
+  async image(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id", ParseUUIDPipe) id: string, @Res() res: Response) {
+    const media = await this.service.imageForSender(user, id);
+    await sendMediaResponse(res, this.r2, media, "Rasm topilmadi");
   }
 }
 
@@ -68,7 +91,10 @@ export class BroadcastsController {
 @UseGuards(ParentJwtAuthGuard)
 @Controller("app/parent/messages")
 export class ParentMessagesController {
-  constructor(private readonly service: BroadcastsService) {}
+  constructor(
+    private readonly service: BroadcastsService,
+    private readonly r2: R2Service,
+  ) {}
 
   @Get()
   inbox(@CurrentParent() parent: AuthenticatedParent) {
@@ -83,5 +109,12 @@ export class ParentMessagesController {
   @Patch(":id/read")
   read(@CurrentParent() parent: AuthenticatedParent, @Param("id") id: string) {
     return this.service.guardianMarkRead(parent.id, id);
+  }
+
+  @Get(":id/image")
+  @Header("Cache-Control", "private, max-age=86400")
+  async image(@CurrentParent() parent: AuthenticatedParent, @Param("id", ParseUUIDPipe) id: string, @Res() res: Response) {
+    const media = await this.service.guardianImage(parent.id, id);
+    await sendMediaResponse(res, this.r2, media, "Rasm topilmadi");
   }
 }

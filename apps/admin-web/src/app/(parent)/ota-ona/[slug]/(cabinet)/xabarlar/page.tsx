@@ -7,6 +7,7 @@ import clsx from "clsx";
 import { ApiError } from "@/lib/api";
 import { parentApi } from "@/lib/parent-api";
 import { BellIcon } from "@/components/ui/icons";
+import { MessageImage, parentMessageImageUrl } from "@/features/broadcasts/message-image";
 import styles from "../../parent.module.css";
 import { EmptyCard, ListSkeleton, LoadErrorCard, formatUzDate } from "../foydali/ui";
 import { useMarkParentMessageRead, useParentMessages } from "../use-messages";
@@ -113,6 +114,7 @@ export default function ParentMessagesPage({ params }: { params: Promise<{ slug:
                         <p className={clsx("min-w-0 flex-1 break-words text-[16px] leading-snug text-[var(--p-ink)]", isRead ? "font-semibold" : "font-extrabold")}>{m.title}</p>
                         <span className="shrink-0 text-[12.5px] tabular-nums text-[var(--p-muted)]">{timeLabel(m.createdAt, tr)}</span>
                       </div>
+                      {m.hasImage && <MessageImage url={parentMessageImageUrl(m.id)} authed={false} alt={m.title} className="mt-2" />}
                       <p className={clsx("mt-1 whitespace-pre-line break-words text-[14.5px] leading-relaxed text-[var(--p-muted)]", !open && "line-clamp-2")}>{m.body}</p>
                       <p className="mt-1.5 flex items-center gap-2 text-[12.5px] text-[var(--p-muted)]">
                         <span className="truncate">{m.from}</span>

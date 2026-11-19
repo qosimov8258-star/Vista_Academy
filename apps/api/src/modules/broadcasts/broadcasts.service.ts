@@ -2,6 +2,9 @@ import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundEx
 import { PrismaService } from "../../database/prisma.service";
 import { canNotifyParents } from "../../common/features/feature-access";
 import { PushService } from "../push/push.service";
+import { R2Service } from "../storage/r2.service";
+import { R2_CATEGORY } from "../storage/r2.constants";
+import { MAX_CONTENT_IMAGE_BYTES, decodeImageDataUrl } from "../useful/content-scope";
 import { TenantAuthenticatedUser, TenantScope, requireOperationalScope, toTenantScope } from "../iam/tenant-auth.types";
 import { BroadcastListQueryDto, BroadcastTargetDto, CreateBroadcastDto } from "./dto/broadcast.dto";
 
@@ -39,6 +42,7 @@ export class BroadcastsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly push: PushService,
+    private readonly r2: R2Service,
   ) {}
 
   // ---------------------------------------------------------------- yuborish
@@ -62,27 +66,53 @@ export class BroadcastsService {
       throw new BadRequestException("Tanlanganlar orasida xabar oladigan hech kim yo'q");
     }
 
-    const broadcast = await this.prisma.$transaction(async (tx) => {
-      const created = await tx.broadcast.create({
-        data: {
-          organizationId: scope.organizationId,
-          branchId: target.branchId,
-          audience: dto.audience,
-          scopeLabel: target.scopeLabel,
-          title: dto.title,
-          body: dto.body,
-          isMandatory: dto.isMandatory ?? false,
-          recipientCount: ids.length,
-          sentByUserId: user.id,
-        },
+    // Ixtiyoriy rasm: R2 yoqilgan bo'lsa u yerga, aks holda baytlar bazada
+    let image: Uint8Array<ArrayBuffer> | null = null;
+    let imageKey: string | null = null;
+    let imageMimeType: string | null = null;
+    if (dto.image) {
+      const decoded = decodeImageDataUrl(dto.image, MAX_CONTENT_IMAGE_BYTES);
+      imageMimeType = decoded.mimeType;
+      if (this.r2.enabled) {
+        imageKey = this.r2.buildKey(scope.organizationId, R2_CATEGORY.BROADCAST_IMAGE);
+        await this.r2.uploadBuffer(imageKey, decoded.buffer, decoded.mimeType);
+      } else {
+        image = new Uint8Array(decoded.buffer);
+      }
+    }
+
+    let broadcast;
+    try {
+      broadcast = await this.prisma.$transaction(async (tx) => {
+        const created = await tx.broadcast.create({
+          data: {
+            organizationId: scope.organizationId,
+            branchId: target.branchId,
+            audience: dto.audience,
+            scopeLabel: target.scopeLabel,
+            title: dto.title,
+            body: dto.body,
+            isMandatory: dto.isMandatory ?? false,
+            image,
+            imageKey,
+            imageMimeType,
+            recipientCount: ids.length,
+            sentByUserId: user.id,
+          },
+          select: { id: true },
+        });
+        await tx.broadcastRecipient.createMany({
+          data: ids.map((id) =>
+            dto.audience === "GUARDIANS" ? { broadcastId: created.id, guardianId: id } : { broadcastId: created.id, employeeId: id },
+          ),
+        });
+        return created;
       });
-      await tx.broadcastRecipient.createMany({
-        data: ids.map((id) =>
-          dto.audience === "GUARDIANS" ? { broadcastId: created.id, guardianId: id } : { broadcastId: created.id, employeeId: id },
-        ),
-      });
-      return created;
-    });
+    } catch (error) {
+      // Xabar saqlanmadi — R2'ga yuklangan rasm egasiz qolmasin
+      if (imageKey) await this.r2.deleteObject(imageKey);
+      throw error;
+    }
 
     if (dto.audience === "GUARDIANS") {
       // Push xatosi yuborishni to'xtatmaydi — xabar kabinetda baribir turadi
@@ -211,6 +241,7 @@ export class BroadcastsService {
           title: true,
           body: true,
           isMandatory: true,
+          imageMimeType: true,
           recipientCount: true,
           createdAt: true,
           sentBy: { select: { fullName: true } },
@@ -228,7 +259,7 @@ export class BroadcastsService {
       : [];
     const readBy = new Map(reads.map((r) => [r.broadcastId, r._count._all]));
     return {
-      data: items.map((item) => ({ ...item, readCount: readBy.get(item.id) ?? 0 })),
+      data: items.map(({ imageMimeType, ...item }) => ({ ...item, hasImage: imageMimeType !== null, readCount: readBy.get(item.id) ?? 0 })),
       meta: { page: query.page, limit: query.limit, total },
     };
   }
@@ -245,6 +276,7 @@ export class BroadcastsService {
         title: true,
         body: true,
         isMandatory: true,
+        imageMimeType: true,
         recipientCount: true,
         createdAt: true,
         sentBy: { select: { fullName: true } },
@@ -294,8 +326,18 @@ export class BroadcastsService {
       // O'qimaganlar tepada — admin kimga qo'ng'iroq qilishni ko'radi
       .sort((a, b) => Number(Boolean(a.readAt)) - Number(Boolean(b.readAt)) || a.name.localeCompare(b.name));
 
-    const { recipients: _raw, branchId: _branch, ...rest } = broadcast;
-    return { ...rest, readCount: recipients.filter((r) => r.readAt).length, recipients };
+    const { recipients: _raw, branchId: _branch, imageMimeType, ...rest } = broadcast;
+    return { ...rest, hasImage: imageMimeType !== null, readCount: recipients.filter((r) => r.readAt).length, recipients };
+  }
+
+  /** Yuboruvchi tarixda ko'radigan rasm — tarixni ko'ra oladigan rahbariyatga */
+  async imageForSender(user: TenantAuthenticatedUser, id: string) {
+    const row = await this.prisma.broadcast.findFirst({
+      where: { id, ...this.readScope(toTenantScope(user)) },
+      select: { image: true, imageKey: true, imageMimeType: true },
+    });
+    if (!row) throw new NotFoundException("Rasm topilmadi");
+    return { key: row.imageKey, bytes: row.image, mimeType: row.imageMimeType };
   }
 
   // ------------------------------------------------- xodimning o'z xabarlari
@@ -323,6 +365,12 @@ export class BroadcastsService {
     return this.markAllRead({ employeeId });
   }
 
+  async employeeImage(user: TenantAuthenticatedUser, id: string) {
+    const employeeId = await this.ownEmployeeId(toTenantScope(user));
+    if (!employeeId) throw new NotFoundException("Rasm topilmadi");
+    return this.recipientImage({ employeeId }, id);
+  }
+
   // ------------------------------------------------- ota-onaning xabarlari
 
   guardianInbox(guardianId: string) {
@@ -337,6 +385,10 @@ export class BroadcastsService {
     return this.markAllRead({ guardianId });
   }
 
+  guardianImage(guardianId: string, id: string) {
+    return this.recipientImage({ guardianId }, id);
+  }
+
   // ------------------------------------------------------------ umumiy
 
   private async inbox(owner: { guardianId: string } | { employeeId: string }) {
@@ -348,7 +400,7 @@ export class BroadcastsService {
         id: true,
         readAt: true,
         createdAt: true,
-        broadcast: { select: { title: true, body: true, isMandatory: true, branch: { select: { name: true } } } },
+        broadcast: { select: { title: true, body: true, isMandatory: true, imageMimeType: true, branch: { select: { name: true } } } },
       },
     });
     return rows.map((r) => ({
@@ -356,10 +408,21 @@ export class BroadcastsService {
       title: r.broadcast.title,
       body: r.broadcast.body,
       isMandatory: r.broadcast.isMandatory,
+      hasImage: r.broadcast.imageMimeType !== null,
       from: r.broadcast.branch.name,
       readAt: r.readAt,
       createdAt: r.createdAt,
     }));
+  }
+
+  /** Qabul qiluvchiga kelgan xabar rasmi — `id` uning o'z `BroadcastRecipient` qatori */
+  private async recipientImage(owner: { guardianId: string } | { employeeId: string }, id: string) {
+    const row = await this.prisma.broadcastRecipient.findFirst({
+      where: { id, ...owner },
+      select: { broadcast: { select: { image: true, imageKey: true, imageMimeType: true } } },
+    });
+    if (!row) throw new NotFoundException("Rasm topilmadi");
+    return { key: row.broadcast.imageKey, bytes: row.broadcast.image, mimeType: row.broadcast.imageMimeType };
   }
 
   private async markRead(owner: { guardianId: string } | { employeeId: string }, id: string) {

@@ -1283,6 +1283,8 @@ export interface BroadcastSummary {
   title: string;
   body: string;
   isMandatory: boolean;
+  /** Xabarga rasm biriktirilganmi (`/app/broadcasts/:id/image`) */
+  hasImage: boolean;
   recipientCount: number;
   readCount: number;
   createdAt: string;
@@ -1310,6 +1312,8 @@ export interface InboxMessage {
   title: string;
   body: string;
   isMandatory: boolean;
+  /** Xabarga rasm biriktirilganmi — rasm `id` (inbox qatori) bo'yicha olinadi */
+  hasImage: boolean;
   from: string;
   readAt: string | null;
   createdAt: string;

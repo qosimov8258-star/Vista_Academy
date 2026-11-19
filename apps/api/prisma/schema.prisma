@@ -1060,6 +1060,11 @@ model Broadcast {
   body           String
   // Majburiy xabar ochilmaguncha kabinetda yopilmaydigan oyna chiqadi.
   isMandatory    Boolean           @default(false) @map("is_mandatory")
+  // Ixtiyoriy bitta rasm (matn tepasida ko'rinadi). R2 yoqilgan bo'lsa —
+  // `imageKey`, aks holda baytlar shu jadvalda (`image`).
+  image          Bytes?
+  imageKey       String?           @map("image_key")
+  imageMimeType  String?           @map("image_mime_type")
   recipientCount Int               @default(0) @map("recipient_count")
   sentByUserId   String?           @map("sent_by_user_id")
   createdAt      DateTime          @default(now()) @map("created_at")

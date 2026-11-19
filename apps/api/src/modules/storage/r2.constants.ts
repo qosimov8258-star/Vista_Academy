@@ -18,4 +18,5 @@ export const R2_CATEGORY = {
   GROUP_MATERIAL: "group-material",
   ARTICLE_COVER: "article-cover",
   GALLERY_IMAGE: "gallery-image",
+  BROADCAST_IMAGE: "broadcast-image",
 } as const;

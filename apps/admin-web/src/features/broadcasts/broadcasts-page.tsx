@@ -20,6 +20,7 @@ import { EmptyState, ErrorState, SkeletonRows } from "@/components/ios/states";
 import { GROUP_BLOCK, IOS, ROW_SEPARATOR } from "@/components/ios/tokens";
 import { IosIcon } from "@/features/director/ios-icon";
 import { BroadcastCompose, MessagePreview } from "./broadcast-compose";
+import { MessageImage, broadcastImageUrl } from "./message-image";
 import { useTr } from "@/i18n/tr";
 
 const PAGE_SIZE = 20;
@@ -156,7 +157,12 @@ function BroadcastDetailSheet({ id, onClose }: { id: string | null; onClose: () 
         )
       ) : (
         <>
-          <MessagePreview title={b.title} body={b.body} mandatory={b.isMandatory} />
+          <MessagePreview
+            title={b.title}
+            body={b.body}
+            mandatory={b.isMandatory}
+            image={b.hasImage ? <MessageImage url={broadcastImageUrl(b.id)} alt={tr("Xabar rasmi")} /> : undefined}
+          />
 
           {/* O'qilganlik */}
           <div className={`${GROUP_BLOCK} px-4 py-4`}>
