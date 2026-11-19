@@ -30,7 +30,8 @@ import { TeacherChildren } from "@/features/teacher/teacher-children";
 import { canWriteOperational, isTeacher } from "@/lib/permissions";
 import { useTr } from "@/i18n/tr";
 
-const STATUS_LABEL: Record<string, string> = { ACTIVE: "Faol", INACTIVE: "Nofaol", QUARANTINED: "Karantinda" };
+// INACTIVE — arxiv: bog'chadan ketgan bola, guruhsiz, ma'lumotlari saqlanadi
+const STATUS_LABEL: Record<string, string> = { ACTIVE: "Faol", INACTIVE: "Arxivda", QUARANTINED: "Karantinda" };
 const STATUS_COLOR: Record<string, string> = { ACTIVE: IOS.green, INACTIVE: IOS.gray, QUARANTINED: IOS.red };
 const RELATION_LABEL: Record<string, string> = {
   MOTHER: "Onasi",
@@ -150,7 +151,7 @@ function BranchChildren({ slug }: { slug: string }) {
     : [
         { value: "", label: "Barchasi" },
         { value: "ACTIVE", label: "Faol" },
-        { value: "INACTIVE", label: "Nofaol" },
+        { value: "INACTIVE", label: "Arxiv" },
       ];
   const counts = useQueries({
     queries: chipOptions.map((option) => ({
@@ -333,7 +334,8 @@ function BranchChildren({ slug }: { slug: string }) {
                         {!teacher && (
                           <span className="w-[140px] min-w-0 shrink-0">
                             <span className={`block truncate text-[15px] leading-snug ${child.group?.name ? "text-[var(--color-text)]" : "text-[#8e8e93]"}`}>
-                              {child.group?.name ? tr(child.group.name) : tr("Guruhsiz")}
+                              {/* Arxivdagi bola «Guruhsiz» emas — yonidagi «Arxivda» yorlig'i yetarli */}
+                              {child.group?.name ? tr(child.group.name) : child.status === "INACTIVE" ? "—" : tr("Guruhsiz")}
                             </span>
                             {showBranch && <span className="block truncate text-[13px] leading-snug text-[#8e8e93]">{child.branch!.name}</span>}
                           </span>
@@ -403,7 +405,11 @@ function BranchChildren({ slug }: { slug: string }) {
               </div>
             </div>
             <SheetSection title={tr("Ma'lumot")}>
-              {!teacher && <SheetRow label={tr("Guruh")}>{openChild.group?.name ? tr(openChild.group.name) : tr("Guruhsiz")}</SheetRow>}
+              {!teacher && (
+                <SheetRow label={tr("Guruh")}>
+                  {openChild.group?.name ? tr(openChild.group.name) : openChild.status === "INACTIVE" ? "—" : tr("Guruhsiz")}
+                </SheetRow>
+              )}
               {!forcedBranchId && !teacher && <SheetRow label={tr("Filial")}>{openChild.branch?.name ?? "—"}</SheetRow>}
               <SheetRow label={tr("Tug'ilgan sana")}>
                 {openChild.birthDate ? `${formatDate(openChild.birthDate)} · ${tr(formatAge(openChild.birthDate))}` : "—"}
