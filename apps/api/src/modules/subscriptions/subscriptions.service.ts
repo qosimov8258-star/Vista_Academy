@@ -10,8 +10,13 @@ const include = { organization: true, plan: true } as const;
 export class SubscriptionsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /** Platformadagi «Obunalar» — arxivlangan bog'chalarniki chiqmaydi (ular «Bog'chalar → Arxiv»da) */
   findAll() {
-    return this.prisma.subscription.findMany({ include, orderBy: { createdAt: "desc" } });
+    return this.prisma.subscription.findMany({
+      where: { organization: { status: { not: "ARCHIVED" } } },
+      include,
+      orderBy: { createdAt: "desc" },
+    });
   }
 
   async create(dto: CreateSubscriptionDto) {
