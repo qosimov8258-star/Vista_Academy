@@ -16,7 +16,32 @@ export type GameItem = {
   /** Bolaga aytiladigan nom — `tr()` orqali tarjima qilinadi */
   name: string;
   image: string;
+  /**
+   * Haqiqiy surat (fon olib tashlangan, `public/_oyinlar/foto/`). Surati yo'q
+   * mavzular (ranglar, raqamlar, ertaklar…) rasmda qoladi. Bitta o'yin
+   * ichida surat va rasm aralashmasin: bola «ortiqcha»ni uslubidan topib
+   * qo'yadi — shuning uchun o'yinlar `asPhoto` ni o'zi hal qiladi.
+   */
+  photo?: string;
 };
+
+/** Surat bo'lsa — surat, bo'lmasa — rasm */
+export function asPhoto(item: GameItem): GameItem {
+  return item.photo ? { ...item, image: item.photo } : item;
+}
+
+/** «Juftini top» eng qiyin darajasi uchun kerakli juftlar soni */
+const MIN_PHOTO_ITEMS = 8;
+
+/**
+ * «Juftini top» uchun mavzu rasmlari: suratlari yetarli bo'lsa — faqat
+ * suratlilar (surati topilmagan narsa kartaga tushmaydi), aks holda hammasi
+ * rasmda. Bitta mavzuda surat va rasm aralashmaydi.
+ */
+export function playItems(topic: Topic): GameItem[] {
+  const photos = topic.items.filter((item) => item.photo);
+  return photos.length >= MIN_PHOTO_ITEMS ? photos.map(asPhoto) : topic.items;
+}
 
 export type TopicTone = "mint" | "coral" | "sky" | "lilac" | "sun";
 
@@ -44,8 +69,17 @@ export function findTopic(id: string): Topic | undefined {
 }
 
 /** Mavzu kartasida ko'rinadigan rasmlar — birinchi uchtasi */
+/** Suratli mavzularda muqovaga eng tanish surat (birinchisi har doim ham emas) */
+const COVER: Record<string, string> = {
+  hayvonlar: "cat", yovvoyi: "lion", qushlar: "owl", dengiz: "fish", hasharotlar: "ladybug",
+  mevalar: "cherries", sabzavotlar: "tomato", taomlar: "soup", shirinliklar: "cupcake",
+  transport: "bus", gullar: "tulip",
+};
+
 export function topicCover(topic: Topic): GameItem[] {
-  return topic.items.slice(0, 3);
+  const items = playItems(topic);
+  const first = items.findIndex((item) => item.id === COVER[topic.id] && item.photo);
+  return (first > 0 ? [items[first], ...items.filter((_, i) => i !== first)] : items).slice(0, 3);
 }
 
 /** Karta orqa tomonining rangi va mavzu kartasi tusi — guruhnikidan */
@@ -53,7 +87,7 @@ export function topicTone(topic: Topic): TopicTone {
   return TOPIC_GROUPS.find((group) => group.id === topic.group)?.tone ?? "mint";
 }
 
-/** Rasmni id bo'yicha barcha mavzulardan topadi (bannerlar uchun) */
+/** Rasmni id bo'yicha barcha mavzulardan topadi (bannerlar uchun); surati kerak bo'lsa — `asPhoto` */
 export function findItem(id: string): GameItem | undefined {
   for (const topic of TOPICS) {
     const item = topic.items.find((entry) => entry.id === id);
@@ -130,7 +164,13 @@ const voiced = (id: string, name: string): SoundAnimal => ({
   sound: `/_oyinlar/ovozlar/${id}.m4a`,
 });
 
-export const SOUND_ANIMALS: SoundAnimal[] = [
+/** O'yindagi hamma hayvonning surati bo'lsagina — suratlar (aralashmasin) */
+function withPhotos(animals: SoundAnimal[]): SoundAnimal[] {
+  const photos = animals.map((animal) => findItem(animal.id)?.photo);
+  return photos.every(Boolean) ? animals.map((animal, i) => ({ ...animal, image: photos[i] as string })) : animals;
+}
+
+export const SOUND_ANIMALS: SoundAnimal[] = withPhotos([
   voiced("cow", "Sigir"),
   voiced("cat", "Mushuk"),
   voiced("dog", "Kuchukcha"),
@@ -143,7 +183,7 @@ export const SOUND_ANIMALS: SoundAnimal[] = [
   voiced("donkey", "Eshak"),
   voiced("owl", "Boyqush"),
   voiced("bee", "Ari"),
-];
+]);
 
 /**
  * Ovozi o'xshash juftlar bitta savolda birga chiqmaydi — kichkintoy

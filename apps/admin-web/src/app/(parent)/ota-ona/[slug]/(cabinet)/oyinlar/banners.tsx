@@ -3,7 +3,7 @@
 import clsx from "clsx";
 import { Volume2 } from "lucide-react";
 import styles from "./oyinlar.module.css";
-import { SOUND_ANIMALS, TOPICS, findItem } from "./data";
+import { SOUND_ANIMALS, TOPICS, asPhoto, findItem, playItems } from "./data";
 import { TONE } from "./ui";
 import { useTr } from "@/i18n/tr";
 
@@ -78,7 +78,7 @@ function CardFace({ src, matched, className, style }: { src: string; matched?: b
  * halqa), bittasi hozir ochilgan, qolganlari yopiq. Yonida mavzular yorlig'i.
  */
 export function MemoryBanner() {
-  const [cat, lion, apple] = ["cat", "lion", "apple"].map((id) => findItem(id)!);
+  const [cat, lion, apple] = ["cat", "lion", "cherries"].map((id) => asPhoto(findItem(id)!));
   // Mavzular ko'p — bannerda bir nechtasining birinchi rasmi va «+N»
   const shownTopics = TOPICS.filter((topic) => ["yovvoyi", "mevalar", "transport"].includes(topic.id));
   const size = "h-[46px] w-[46px]";
@@ -107,7 +107,7 @@ export function MemoryBanner() {
               key={topic.id}
               className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--p-card)] shadow-[var(--p-shadow)]"
             >
-              <img src={topic.items[0]?.image} alt="" draggable={false} className="h-6 w-6 object-contain" />
+              <img src={playItems(topic)[0]?.image} alt="" draggable={false} className="h-6 w-6 object-contain" />
             </span>
           ))}
           {TOPICS.length > shownTopics.length && (

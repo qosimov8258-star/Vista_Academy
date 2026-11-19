@@ -8,7 +8,7 @@ import { articleCoverUrl, galleryImageUrl, useParentArticles, useParentGallery }
 import { useTr } from "@/i18n/tr";
 
 /** O'yinlar kartasidagi rasmlar — o'yinlarning o'zidan */
-const GAME_PICS = ["/_oyinlar/hayvonlar/lion.png", "/_oyinlar/hayvonlar/rooster.png", "/_oyinlar/mevalar/strawberry.png"];
+const GAME_PICS = ["/_oyinlar/foto/yovvoyi/lion.webp", "/_oyinlar/foto/hayvonlar/rooster.webp", "/_oyinlar/foto/mevalar/cherries.webp"];
 
 /**
  * Bosh sahifadagi «Foydali» — yonga suriladigan kartalar (barmoq bilan,

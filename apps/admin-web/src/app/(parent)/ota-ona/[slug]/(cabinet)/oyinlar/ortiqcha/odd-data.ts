@@ -1,4 +1,4 @@
-import { TOPICS, type GameItem, type LevelId } from "../data";
+import { TOPICS, asPhoto, type GameItem, type LevelId } from "../data";
 
 /**
  * «Ortiqchasini top» — to'rtta rasmdan uchtasi bitta guruhdan, bittasi
@@ -49,10 +49,17 @@ const SETS: Array<{ topic: string; family: OddFamily; kind: string; plural: stri
   { topic: "gullar", family: "tabiat", kind: "gul", plural: "gullar", exclude: ["cactus", "palm", "fir", "tree", "seedling", "leaf"] },
 ];
 
+const setItems = (set: (typeof SETS)[number]) =>
+  (TOPICS.find((item) => item.id === set.topic)?.items ?? []).filter((item) => !set.exclude?.includes(item.id));
+
+/**
+ * Suratlar faqat hamma guruhda yetarli bo'lsa ishlatiladi; aks holda hammasi
+ * rasmda. Bitta savolda surat va rasm aralashsa, ortiqcha uslubidan bilinib qoladi.
+ */
+const PHOTOS = SETS.every((set) => setItems(set).filter((item) => item.photo).length >= 6);
+
 export const ODD_SETS: OddSet[] = SETS.flatMap((set) => {
-  const topic = TOPICS.find((item) => item.id === set.topic);
-  if (!topic) return [];
-  const items = topic.items.filter((item) => !set.exclude?.includes(item.id));
+  const items = PHOTOS ? setItems(set).filter((item) => item.photo).map(asPhoto) : setItems(set);
   return items.length >= 3 ? [{ id: set.topic, family: set.family, kind: set.kind, plural: set.plural, items }] : [];
 });
 
