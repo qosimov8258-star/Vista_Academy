@@ -53,12 +53,15 @@ export function DeviceFormModal({
   onClose,
   slug,
   device,
+  gatewayEnabled = false,
   onCreated,
 }: {
   open: boolean;
   onClose: () => void;
   slug: string;
   device?: FaceIdDevice | null;
+  /** Internet orqali ulash yoqilgan — tarmoq bo'limi ixtiyoriy ekanini aytamiz */
+  gatewayEnabled?: boolean;
   /** Yangi qurilma yaratilganda — agent tokeni faqat shu bir marta keladi */
   onCreated?: (device: FaceIdDevice, agentToken: string) => void;
 }) {
@@ -145,7 +148,14 @@ export function DeviceFormModal({
           </FieldRow>
         </FormSection>
 
-        <FormSection title={tr("Tarmoq va kirish")} footer={tr("Parol shifrlab saqlanadi va faqat obyektdagi agentga beriladi — hech kimga ko'rsatilmaydi.")}>
+        <FormSection
+          title={tr("Tarmoq va kirish")}
+          footer={
+            gatewayEnabled
+              ? tr("Faqat agent bilan ulashda kerak. Internet orqali ulanadigan terminal uchun bu bo'limni to'ldirish shart emas.")
+              : tr("Parol shifrlab saqlanadi va faqat obyektdagi agentga beriladi — hech kimga ko'rsatilmaydi.")
+          }
+        >
           <FieldRow label={tr("IP manzili")} htmlFor={field("ip")} error={errors.ipAddress?.message}>
             <TextInput id={field("ip")} inputMode="decimal" placeholder="192.168.1.50" className="text-right tabular-nums" {...register("ipAddress")} />
           </FieldRow>

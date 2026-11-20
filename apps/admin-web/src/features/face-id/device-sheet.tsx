@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { KeyRound, ListChecks, Pencil, RefreshCw, Trash2 } from "lucide-react";
+import { Globe, KeyRound, ListChecks, Pencil, RefreshCw, Trash2 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import type { FaceIdDevice } from "@/lib/types";
 import { Row } from "@/components/ios/group";
@@ -25,18 +25,23 @@ export function DeviceSheet({
   slug,
   device,
   canWrite,
+  gatewayEnabled,
   onClose,
   onEdit,
   onShowCommands,
+  onShowGateway,
   onTokenCreated,
   onNotice,
 }: {
   slug: string;
   device: FaceIdDevice | null;
   canWrite: boolean;
+  /** Serverda internet (ISUP gateway) orqali ulash yoqilgan */
+  gatewayEnabled: boolean;
   onClose: () => void;
   onEdit: (device: FaceIdDevice) => void;
   onShowCommands: (device: FaceIdDevice) => void;
+  onShowGateway: (device: FaceIdDevice) => void;
   onTokenCreated: (token: string, deviceName: string) => void;
   onNotice: (message: string, type?: "success" | "error") => void;
 }) {
@@ -160,7 +165,13 @@ export function DeviceSheet({
           <Pill color={status.color}>{tr(status.label)}</Pill>
           <p className="inline-flex items-center gap-1.5 text-[13px] text-[#8e8e93]">
             <StatusDot online={conn.online} />
-            {conn.online ? tr("Agent onlayn") : device.lastSeenAt ? tr("Oxirgi aloqa: {0}", conn.text) : tr(conn.text)}
+            {conn.online
+              ? device.gatewayConnected
+                ? tr("Onlayn · internet orqali")
+                : tr("Agent onlayn")
+              : device.lastSeenAt
+                ? tr("Oxirgi aloqa: {0}", conn.text)
+                : tr(conn.text)}
           </p>
         </div>
 
@@ -197,6 +208,15 @@ export function DeviceSheet({
                 value={syncMutation.isPending ? <Spinner className="h-[18px] w-[18px]" /> : undefined}
                 chevron={false}
                 onClick={device.status === "ACTIVE" ? () => !busy && syncMutation.mutate(device) : undefined}
+              />
+            )}
+            {canWrite && (gatewayEnabled || device.gatewayConnected) && (
+              <Row
+                leading={<IosIcon icon={Globe} tint="teal" size={30} />}
+                title={tr("Internet orqali ulash")}
+                subtitle={device.gatewayConnected ? tr("Qiymatlar va aloqa holati") : tr("Agentsiz — terminal o'zi ulanadi")}
+                value={device.gatewayConnected ? tr("Ulangan") : undefined}
+                onClick={() => onShowGateway(device)}
               />
             )}
             <Row

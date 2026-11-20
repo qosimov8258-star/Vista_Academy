@@ -247,12 +247,33 @@ export interface FaceIdDevice {
   lastSeenAt: string | null;
   /** Qurilmaga hali yetib bormagan buyruqlar soni */
   queuedCommands: number;
+  /** Internet (ISUP gateway) orqali ulangan — bog'chada agent kerak emas */
+  gatewayConnected?: boolean;
   location: string | null;
   status: FaceIdDeviceStatus;
   notes: string | null;
   createdAt: string;
   updatedAt: string;
   branch?: { id: string; name: string };
+}
+
+/** Internet orqali ulash shu serverda yoqilganmi va terminal qaysi manzilga ulanadi */
+export interface FaceIdGatewayInfo {
+  enabled: boolean;
+  host: string | null;
+  port: number;
+}
+
+/** Terminalning ISUP bo'limiga kiritiladigan qiymatlar va hozirgi aloqa holati */
+export interface FaceIdGatewayDetails {
+  host: string | null;
+  port: number;
+  deviceId: string;
+  key: string;
+  /** null — gateway vaqtincha javob bermadi */
+  online: boolean | null;
+  /** Faqat ulash javobida: terminalga yuborish navbatiga qo'yilganlar */
+  queued?: { employees: number; children: number };
 }
 
 export type FaceIdCommandType = "ADD_OR_UPDATE_USER" | "SET_FACE" | "DELETE_USER";

@@ -2,16 +2,16 @@
 
 import { use, useCallback, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ScanFace } from "lucide-react";
+import { Globe, ScanFace } from "lucide-react";
 import { BranchSectionTabs } from "@/features/nav/branch-section-tabs";
 import { api, ApiError } from "@/lib/api";
-import type { FaceIdDevice } from "@/lib/types";
+import type { FaceIdDevice, FaceIdGatewayInfo } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { canWriteOperational } from "@/lib/permissions";
 import { PageHeaderCard } from "@/components/ios/page-card";
 import { IosButton } from "@/components/ios/button";
-import { Group, ListRow } from "@/components/ios/group";
+import { Group, ListRow, Row } from "@/components/ios/group";
 import { Pill } from "@/components/ios/pill";
 import { EmptyState, ErrorState, SkeletonRows } from "@/components/ios/states";
 import { PlusIcon } from "@/components/ios/icons";
@@ -23,6 +23,7 @@ import { DeviceFormModal } from "@/features/face-id/device-form-modal";
 import { AgentTokenModal } from "@/features/face-id/agent-token-modal";
 import { DeviceCommandsModal } from "@/features/face-id/device-commands-modal";
 import { DeviceSheet } from "@/features/face-id/device-sheet";
+import { GatewaySheet } from "@/features/face-id/gateway-sheet";
 import { AgentPairingCard } from "@/features/face-id/agent-pairing-card";
 import { DEVICE_ONLINE_MS, DEVICE_STATUS, isOnline } from "@/features/face-id/shared";
 import { useTr } from "@/i18n/tr";
@@ -51,6 +52,8 @@ export default function FaceIdDevicesPage({ params }: { params: Promise<{ slug: 
   // Agent tokeni faqat bir marta ko'rsatiladi — yaratilganda yoki yangilanganda
   const [shownToken, setShownToken] = useState<{ token: string; deviceName: string } | null>(null);
   const [commandsFor, setCommandsFor] = useState<FaceIdDevice | null>(null);
+  // «Internet orqali ulash» varag'i — id bo'yicha: ulangach holat ro'yxatdan yangilanadi
+  const [gatewayForId, setGatewayForId] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
   const dismissToast = useCallback(() => setToast(null), []);
 
@@ -61,8 +64,17 @@ export default function FaceIdDevicesPage({ params }: { params: Promise<{ slug: 
     refetchInterval: 15_000,
   });
 
+  // Internet (ISUP gateway) orqali ulash shu serverda yoqilganmi — yoqilmagan bo'lsa bo'lim ko'rinmaydi
+  const gatewayQuery = useQuery({
+    queryKey: ["face-id-gateway-info"],
+    queryFn: () => api.get<FaceIdGatewayInfo>("/app/face-id/gateway"),
+    staleTime: 5 * 60_000,
+  });
+  const gatewayEnabled = !!gatewayQuery.data?.enabled;
+
   const devices = devicesQuery.data ?? [];
   const selected = devices.find((d) => d.id === selectedId) ?? null;
+  const gatewayFor = devices.find((d) => d.id === gatewayForId) ?? null;
   const online = devices.filter((d) => d.status === "ACTIVE" && isOnline(d.lastSeenAt, DEVICE_ONLINE_MS)).length;
 
   return (
@@ -85,7 +97,22 @@ export default function FaceIdDevicesPage({ params }: { params: Promise<{ slug: 
 
         {!canWrite && <ViewOnlyNote role={user?.role} />}
 
-        <AgentPairingCard branchId={forcedBranchId ?? null} canWrite={canWrite} />
+        {/* Internet orqali ulash yoqilgan serverda u asosiy yo'l — agent kartasi ro'yxatdan keyin turadi */}
+        {gatewayEnabled ? (
+          <Group
+            title={tr("Internet orqali ulash")}
+            footer={canWrite ? tr("Ulash uchun pastdagi qurilmani bosing → «Internet orqali ulash». Qurilma hali yo'q bo'lsa — «Yangi qurilma».") : undefined}
+          >
+            <Row
+              leading={<IosIcon icon={Globe} tint="teal" size={30} />}
+              title={<span className="whitespace-normal">{tr("Terminal serverga o'zi ulanadi")}</span>}
+              subtitle={<span className="whitespace-normal">{tr("Bog'chada doim yoniq kompyuter va agent kerak emas — terminalga internet yetarli.")}</span>}
+              chevron={false}
+            />
+          </Group>
+        ) : (
+          <AgentPairingCard branchId={forcedBranchId ?? null} canWrite={canWrite} />
+        )}
 
         <Group
           title={devices.length > 0 ? tr("Qurilmalar · {0} onlayn", online) : tr("Qurilmalar")}
@@ -120,7 +147,7 @@ export default function FaceIdDevicesPage({ params }: { params: Promise<{ slug: 
                 avatar={<IosIcon icon={ScanFace} tint={device.status === "ACTIVE" ? "purple" : "gray"} size={44} />}
                 title={device.name}
                 subtitle={[
-                  device.ipAddress ? `${device.ipAddress}:${device.port}` : device.model,
+                  device.gatewayConnected ? tr("Internet orqali") : device.ipAddress ? `${device.ipAddress}:${device.port}` : device.model,
                   device.location,
                   device.queuedCommands > 0 ? tr("{0} navbatda", device.queuedCommands) : null,
                 ]
@@ -132,18 +159,22 @@ export default function FaceIdDevicesPage({ params }: { params: Promise<{ slug: 
             ))
           )}
         </Group>
+
+        {gatewayEnabled && <AgentPairingCard branchId={forcedBranchId ?? null} canWrite={canWrite} />}
       </div>
 
       <DeviceSheet
         slug={slug}
         device={selected}
         canWrite={canWrite}
+        gatewayEnabled={gatewayEnabled}
         onClose={() => setSelectedId(null)}
         onEdit={(device) => {
           setSelectedId(null);
           setFormModal({ open: true, device });
         }}
         onShowCommands={(device) => setCommandsFor(device)}
+        onShowGateway={(device) => setGatewayForId(device.id)}
         onTokenCreated={(token, deviceName) => setShownToken({ token, deviceName })}
         onNotice={(message, type = "success") => setToast({ type, message })}
       />
@@ -154,7 +185,19 @@ export default function FaceIdDevicesPage({ params }: { params: Promise<{ slug: 
           onClose={() => setFormModal({ open: false, device: null })}
           slug={slug}
           device={formModal.device}
-          onCreated={(device, token) => setShownToken({ token, deviceName: device.name })}
+          gatewayEnabled={gatewayEnabled}
+          // Internet orqali ulash yoqilgan serverda yangi qurilma shu yo'l bilan ulanadi —
+          // agent tokeni kerak bo'lsa, qurilma varag'idagi «Yangi token» bilan olinadi
+          onCreated={(device, token) => (gatewayEnabled ? setGatewayForId(device.id) : setShownToken({ token, deviceName: device.name }))}
+        />
+      )}
+
+      {canWrite && (
+        <GatewaySheet
+          slug={slug}
+          device={gatewayFor}
+          onClose={() => setGatewayForId(null)}
+          onNotice={(message, type = "success") => setToast({ type, message })}
         />
       )}
 
