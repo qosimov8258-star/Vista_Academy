@@ -2,19 +2,21 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import clsx from "clsx";
 import { api, ApiError, getPaginated } from "@/lib/api";
 import type { Child, Employee, FaceIdDevice, FaceEnrollment, FacePersonType } from "@/lib/types";
-import { Modal } from "@/components/ui/modal";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/input";
-import { SelectMenu } from "@/components/ui/select-menu";
+import { IosSheet, SheetPrimaryButton } from "@/components/ios/sheet";
+import { FieldRow, FormSection, Segmented, TextArea } from "@/components/ios/form";
+import { CheckRow } from "@/components/ios/check-row";
+import { SearchPill } from "@/components/ios/filters";
+import { SkeletonRows } from "@/components/ios/states";
+import { GROUP_BLOCK, IOS, SECTION_TITLE } from "@/components/ios/tokens";
 import { EmployeePhoto } from "@/components/ui/employee-photo";
 import { ChildPhoto } from "@/components/ui/child-photo";
 import { initials } from "@/components/ui/avatar";
+import { TintNote } from "./shared";
 import { useTr } from "@/i18n/tr";
 
-/** Xodim yoki bolani tanlab, tanlangan qurilmada yuzini ro'yxatga qo'shish. */
+/** Xodim yoki bolani tanlab, tanlangan qurilmada yuzini ro'yxatga qo'shish (iOS varag'i). */
 export function CreateEnrollmentModal({
   open,
   onClose,
@@ -103,108 +105,96 @@ export function CreateEnrollmentModal({
     mutation.mutate();
   };
 
+  const switchType = (value: FacePersonType) => {
+    setPersonType(value);
+    setPersonId(null);
+    setSearch("");
+    setPersonError(null);
+  };
+
   return (
-    <Modal open={open} onClose={onClose} title={tr("Yuzni ro'yxatga qo'shish")}>
-      <div className="space-y-4">
-        {serverError && (
-          <div role="alert" className="rounded-[var(--radius-lg)] bg-[var(--color-danger-bg)] px-3 py-2.5 text-[13px] text-[var(--color-danger)]">
-            {tr(serverError)}
-          </div>
-        )}
+    <IosSheet
+      open={open}
+      onClose={() => !mutation.isPending && onClose()}
+      title={tr("Yuz qo'shish")}
+      footer={
+        <SheetPrimaryButton onClick={handleSubmit} loading={mutation.isPending} dim={!deviceId || !personId}>
+          {tr("Qo'shish")}
+        </SheetPrimaryButton>
+      }
+    >
+      {serverError && <TintNote color={IOS.red}>{tr(serverError)}</TintNote>}
 
-        <SelectMenu
-          label={tr("Qurilma")}
-          options={devices.map((d) => ({ value: d.id, label: d.name }))}
-          value={deviceId}
-          onChange={setDeviceId}
-          error={deviceError ?? undefined}
+      <FormSection title={tr("Qurilma")} footer={deviceError ? <span className="text-[#ff3b30]">{deviceError}</span> : undefined}>
+        <div role="radiogroup" aria-label={tr("Qurilma")}>
+          {devices.map((d) => (
+            <CheckRow
+              key={d.id}
+              label={d.name}
+              subtitle={d.location ?? d.model}
+              checked={deviceId === d.id}
+              onClick={() => {
+                setDeviceId(d.id);
+                setDeviceError(null);
+              }}
+            />
+          ))}
+        </div>
+      </FormSection>
+
+      <section className="space-y-3">
+        <h3 className={SECTION_TITLE}>{tr("Kim uchun")}</h3>
+        <Segmented<FacePersonType>
+          value={personType}
+          onChange={switchType}
+          label={tr("Kim uchun")}
+          options={[
+            { value: "EMPLOYEE", label: tr("Xodim") },
+            { value: "CHILD", label: tr("Bola") },
+          ]}
         />
-
-        <div>
-          <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">{tr("Kim uchun")}</span>
-          <div className="flex gap-2">
-            {(
-              [
-                ["EMPLOYEE", tr("Xodim")],
-                ["CHILD", tr("Bola")],
-              ] as const
-            ).map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
+        <SearchPill
+          value={search}
+          onChange={(value) => {
+            setSearch(value);
+            setPersonId(null);
+          }}
+          placeholder={personType === "EMPLOYEE" ? tr("Xodim ismi bo'yicha qidirish") : tr("Bola ismi bo'yicha qidirish")}
+        />
+        {peopleLoading ? (
+          <SkeletonRows rows={3} />
+        ) : people.length === 0 ? (
+          <p className={`${GROUP_BLOCK} px-4 py-4 text-center text-[14px] text-[#8e8e93]`}>{tr("Hech kim topilmadi")}</p>
+        ) : (
+          <div role="radiogroup" aria-label={tr("Kim uchun")} className={GROUP_BLOCK}>
+            {people.map((person) => (
+              <CheckRow
+                key={person.id}
+                label={person.fullName}
+                checked={personId === person.id}
                 onClick={() => {
-                  setPersonType(value);
-                  setPersonId(null);
-                  setSearch("");
+                  setPersonId(person.id);
                   setPersonError(null);
                 }}
-                aria-pressed={personType === value}
-                className={clsx(
-                  "cursor-pointer rounded-full border px-4 py-1.5 text-[13px] font-medium transition-colors",
-                  personType === value
-                    ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
-                    : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]",
-                )}
-              >
-                {tr(label)}
-              </button>
+                leading={
+                  personType === "EMPLOYEE" ? (
+                    <EmployeePhoto employee={person as Employee} size={30} fallback={initials(person.fullName)} />
+                  ) : (
+                    <ChildPhoto child={person as Child} size={30} fallback={initials(person.fullName)} />
+                  )
+                }
+              />
             ))}
           </div>
-        </div>
+        )}
+        {personError && <p className="px-4 text-[13px] text-[#ff3b30]">{personError}</p>}
+      </section>
 
-        <div>
-          <input
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPersonId(null);
-            }}
-            placeholder={personType === "EMPLOYEE" ? tr("Xodim ismi bo'yicha qidirish") : tr("Bola ismi bo'yicha qidirish")}
-            className="h-11 w-full rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface)] px-3.5 text-[15px] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]/60 outline-none transition-[border-color,box-shadow] duration-[var(--dur-fast)] ease-[var(--ease-out)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/[0.12]"
-          />
-          <div className="mt-2 max-h-56 space-y-0.5 overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--color-border-hair)] p-1.5">
-            {peopleLoading ? (
-              <p className="px-3 py-2 text-[13px] text-[var(--color-text-muted)]">{tr("Yuklanmoqda...")}</p>
-            ) : people.length === 0 ? (
-              <p className="px-3 py-2 text-[13px] text-[var(--color-text-muted)]">{tr("Hech kim topilmadi")}</p>
-            ) : (
-              people.map((person) => (
-                <button
-                  key={person.id}
-                  type="button"
-                  onClick={() => {
-                    setPersonId(person.id);
-                    setPersonError(null);
-                  }}
-                  className={clsx(
-                    "flex w-full cursor-pointer items-center gap-2.5 rounded-[var(--radius-md)] px-2.5 py-2 text-left text-[14px] transition-colors hover:bg-[var(--color-surface-hover)]",
-                    personId === person.id && "bg-[var(--color-primary)]/10 font-medium text-[var(--color-primary)]",
-                  )}
-                >
-                  {personType === "EMPLOYEE" ? (
-                    <EmployeePhoto employee={person as Employee} size={32} fallback={initials(person.fullName)} />
-                  ) : (
-                    <ChildPhoto child={person as Child} size={32} fallback={initials(person.fullName)} />
-                  )}
-                  <span className="truncate">{tr(person.fullName)}</span>
-                </button>
-              ))
-            )}
-          </div>
-          {personError && <span className="mt-1.5 block text-[13px] text-[var(--color-danger)]">{tr(personError)}</span>}
-        </div>
-
-        <Textarea label={tr("Izoh")} rows={2} placeholder={tr("Ixtiyoriy")} value={notes} onChange={(e) => setNotes(e.target.value)} />
-
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="outline" onClick={onClose}>
-            {tr("Bekor qilish")}
-          </Button>
-          <Button type="button" loading={mutation.isPending} onClick={handleSubmit}>
-            {tr("Qo'shish")}
-          </Button>
-        </div>
-      </div>
-    </Modal>
+      <FormSection>
+        <FieldRow label={tr("Izoh")} stacked>
+          <TextArea rows={2} placeholder={tr("Ixtiyoriy")} value={notes} onChange={(e) => setNotes(e.target.value)} aria-label={tr("Izoh")} />
+        </FieldRow>
+      </FormSection>
+    </IosSheet>
   );
 }

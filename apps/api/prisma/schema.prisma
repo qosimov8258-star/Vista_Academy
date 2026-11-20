@@ -2383,6 +2383,18 @@ model FaceIdDevice {
   agentTokenHash    String?            @unique @map("agent_token_hash")
   // Agent oxirgi marta murojaat qilgan payt — "onlayn" belgisi shundan.
   lastSeenAt        DateTime?          @map("last_seen_at")
+  // --- Internet (ISUP gateway) orqali ulanish: bog'chada agent kerak emas ---
+  // Terminal Hik Device Gateway serveriga o'zi ulanadi; `gatewayIndex`
+  // to'ldirilgan qurilmaning buyruqlarini va hodisalarini server o'zi yuritadi.
+  // Agent maydonlari (IP, parol, token) bilan birga turishi mumkin — o'tish
+  // davrida ikkalasi parallel ishlaydi.
+  gatewayIndex       String?   @map("gateway_index")
+  /// Terminalga kiritiladigan ISUP «Device ID» — butun platformada noyob
+  isupDeviceId       String?   @unique @map("isup_device_id")
+  /// ISUP kaliti, shifrlangan (DEVICE_SECRET_KEY) — admin terminalga kiritadi
+  isupKeyEncrypted   Bytes?    @map("isup_key_encrypted")
+  /// Gateway orqali hodisalar shu vaqtgacha o'qilgan
+  gatewayEventsSince DateTime? @map("gateway_events_since")
   location          String?
   status            FaceIdDeviceStatus @default(ACTIVE)
   notes             String?

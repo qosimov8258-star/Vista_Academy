@@ -2,27 +2,17 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
-import type { FaceIdCommand, FaceIdCommandStatus, FaceIdCommandType, FaceIdDevice } from "@/lib/types";
-import { Modal } from "@/components/ui/modal";
-import { Badge } from "@/components/ui/badge";
-import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
+import type { FaceIdCommand, FaceIdDevice } from "@/lib/types";
+import { IosSheet } from "@/components/ios/sheet";
+import { Pill } from "@/components/ios/pill";
+import { EmptyState, ErrorState, SkeletonRows } from "@/components/ios/states";
+import { ChecklistIcon } from "@/components/ios/icons";
+import { GROUP_BLOCK, ROW_SEPARATOR } from "@/components/ios/tokens";
 import { formatDateTime } from "@/lib/format";
+import { COMMAND_STATUS, COMMAND_TYPE } from "./shared";
 import { useTr } from "@/i18n/tr";
 
-const TYPE_LABEL: Record<FaceIdCommandType, string> = {
-  ADD_OR_UPDATE_USER: "Qo'shish",
-  SET_FACE: "Yuzni yuklash",
-  DELETE_USER: "O'chirish",
-};
-
-const STATUS: Record<FaceIdCommandStatus, { label: string; tone: "neutral" | "warning" | "success" | "danger" }> = {
-  PENDING: { label: "Navbatda", tone: "neutral" },
-  SENT: { label: "Agentda", tone: "warning" },
-  DONE: { label: "Bajarildi", tone: "success" },
-  FAILED: { label: "Xato", tone: "danger" },
-};
-
-/** Qurilmaning so'nggi buyruqlari — nima yetib bordi, nima xato berdi. */
+/** Qurilmaning so'nggi buyruqlari — nima yetib bordi, nima xato berdi (iOS varag'i). */
 export function DeviceCommandsModal({ slug, device, onClose }: { slug: string; device: FaceIdDevice | null; onClose: () => void }) {
   const tr = useTr();
   const query = useQuery({
@@ -33,32 +23,33 @@ export function DeviceCommandsModal({ slug, device, onClose }: { slug: string; d
   });
 
   return (
-    <Modal open={!!device} onClose={onClose} title={`Buyruqlar — ${device?.name ?? ""}`} widthClassName="max-w-2xl">
+    <IosSheet open={!!device} onClose={onClose} title={tr("Buyruqlar")} cancelLabel="Yopish">
+      <p className="!mt-0 truncate text-center text-[13px] text-[#8e8e93]">{tr(device?.name)}</p>
       {query.isLoading ? (
-        <LoadingState rows={4} />
+        <SkeletonRows rows={4} avatar={false} />
       ) : query.isError ? (
-        <ErrorState message={query.error instanceof ApiError ? query.error.message : tr("Xatolik yuz berdi")} />
+        <ErrorState message={query.error instanceof ApiError ? query.error.message : undefined} onRetry={() => query.refetch()} retrying={query.isFetching} />
       ) : !query.data?.length ? (
-        <EmptyState title={tr("Hali buyruq yo'q")} description={tr("Xodim qo'shilganda yoki «Sinxronlash» bosilganda shu yerda paydo bo'ladi")} />
+        <EmptyState icon={ChecklistIcon} title="Hali buyruq yo'q" hint="Xodim qo'shilganda yoki «Sinxronlash» bosilganda shu yerda paydo bo'ladi" />
       ) : (
-        <ul className="divide-y divide-[var(--color-separator)]">
+        <div className={GROUP_BLOCK}>
           {query.data.map((c) => (
-            <li key={c.id} className="flex items-start gap-3 py-2.5">
-              <div className="min-w-0 flex-1">
-                <p className="text-[14px] text-[var(--color-text)]">
-                  {tr(TYPE_LABEL[c.type])} · <span className="font-medium">{c.employee?.fullName ?? c.child?.fullName ?? `№ ${c.employeeNo}`}</span>
-                  <span className="text-[var(--color-text-muted)]"> ({tr(c.employeeNo)})</span>
-                </p>
-                <p className="mt-0.5 text-[12.5px] text-[var(--color-text-muted)]">
-                  {formatDateTime(c.createdAt)} {tr("· urinish")}{" "}{tr(c.attempts)}
-                </p>
-                {c.lastError && c.status !== "DONE" && <p className="mt-1 break-words text-[12.5px] text-[var(--color-danger)]">{tr(c.lastError)}</p>}
-              </div>
-              <Badge tone={STATUS[c.status].tone}>{tr(STATUS[c.status].label)}</Badge>
-            </li>
+            <div key={c.id} className="group/row relative flex min-h-[60px] items-start gap-3 px-4 py-2.5">
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[15px] text-[var(--color-text)]">
+                  {tr(COMMAND_TYPE[c.type])} · <span className="font-medium">{c.employee?.fullName ?? c.child?.fullName ?? `№ ${c.employeeNo}`}</span>
+                </span>
+                <span className="block truncate text-[13px] tabular-nums text-[#8e8e93]">
+                  № {c.employeeNo} · {formatDateTime(c.createdAt)} · {tr("urinish")} {c.attempts}
+                </span>
+                {c.lastError && c.status !== "DONE" && <span className="mt-0.5 block break-words text-[12.5px] leading-snug text-[#ff3b30]">{c.lastError}</span>}
+              </span>
+              <Pill color={COMMAND_STATUS[c.status].color}>{tr(COMMAND_STATUS[c.status].label)}</Pill>
+              <span className={ROW_SEPARATOR} aria-hidden="true" />
+            </div>
           ))}
-        </ul>
+        </div>
       )}
-    </Modal>
+    </IosSheet>
   );
 }

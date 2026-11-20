@@ -43,14 +43,23 @@ const deviceSelect = {
   updatedAt: true,
   passwordEncrypted: true,
   agentTokenHash: true,
+  gatewayIndex: true,
+  isupDeviceId: true,
   _count: { select: { commands: { where: { status: { in: ["PENDING", "SENT"] } } } } },
 } satisfies Prisma.FaceIdDeviceSelect;
 
 type DeviceRow = Prisma.FaceIdDeviceGetPayload<{ select: typeof deviceSelect }>;
 
 function toPublicDevice(row: DeviceRow) {
-  const { passwordEncrypted, agentTokenHash, _count, ...rest } = row;
-  return { ...rest, hasPassword: !!passwordEncrypted, hasAgentToken: !!agentTokenHash, queuedCommands: _count.commands };
+  const { passwordEncrypted, agentTokenHash, gatewayIndex, _count, ...rest } = row;
+  return {
+    ...rest,
+    hasPassword: !!passwordEncrypted,
+    hasAgentToken: !!agentTokenHash,
+    /** Internet (ISUP gateway) orqali ulangan — buyruq va hodisalarni server o'zi yuritadi */
+    gatewayConnected: !!gatewayIndex,
+    queuedCommands: _count.commands,
+  };
 }
 
 /** Parol maydoni: berilmagan — o'zgarmaydi, bo'sh qator — o'chiriladi. */
@@ -262,9 +271,10 @@ export class FaceIdService {
 
   async removeDevice(scope: TenantScope, id: string) {
     const device = await this.requireWritableDevice(scope, id);
+    const row = await this.prisma.faceIdDevice.findUnique({ where: { id: device.id }, select: { gatewayIndex: true } });
     // Bog'langan yuz yozuvlari ham o'chadi (sxemada `onDelete: Cascade`).
     await this.prisma.faceIdDevice.delete({ where: { id: device.id } });
-    return { id: device.id };
+    return { id: device.id, gatewayIndex: row?.gatewayIndex ?? null };
   }
 
   /** Yozish uchun: qurilma shu tashkilot/filialda. */

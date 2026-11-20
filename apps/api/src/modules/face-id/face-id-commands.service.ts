@@ -244,6 +244,19 @@ export class FaceIdCommandsService {
     return { id: command.id, status };
   }
 
+  /**
+   * Olingan (SENT) buyruqlarni bajarmasdan navbatga qaytaradi — aloqa uzilgan
+   * yoki terminal o'chgan holat uchun. Urinish sanalmaydi: aks holda uzoq
+   * uzilishda buyruq o'z-o'zidan FAILED bo'lib qolardi.
+   */
+  async release(device: AgentDevice, commandIds: string[]) {
+    if (commandIds.length === 0) return;
+    await this.prisma.faceIdCommand.updateMany({
+      where: { id: { in: commandIds }, deviceId: device.id, status: "SENT" },
+      data: { status: "PENDING", sentAt: null, attempts: { decrement: 1 } },
+    });
+  }
+
   /** SET_FACE uchun xodim yoki bolaning joriy surati (agent kichraytirib qurilmaga yuboradi). */
   async faceImage(device: AgentDevice, commandId: string) {
     const command = await this.prisma.faceIdCommand.findFirst({

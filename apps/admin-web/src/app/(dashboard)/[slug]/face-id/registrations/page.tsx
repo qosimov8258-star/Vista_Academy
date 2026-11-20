@@ -1,55 +1,44 @@
 "use client";
 
 import { use, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { ScanFace } from "lucide-react";
 import { BranchSectionTabs } from "@/features/nav/branch-section-tabs";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import clsx from "clsx";
 import { api, ApiError } from "@/lib/api";
-import type { FaceEnrollment, FaceEnrollmentStatus, FaceIdDevice, FacePersonType } from "@/lib/types";
+import type { FaceEnrollment, FaceIdDevice, FacePersonType } from "@/lib/types";
 import { useAuth } from "@/lib/use-auth";
 import { useBranchContext } from "@/lib/use-branch-context";
 import { canWriteOperational } from "@/lib/permissions";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { DataTable, THead, TBody, Tr, Th, Td } from "@/components/ui/table";
-import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
-import { ViewOnlyNote } from "@/components/ui/view-only-note";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { SelectMenu } from "@/components/ui/select-menu";
+import { PageHeaderCard } from "@/components/ios/page-card";
+import { IosButton } from "@/components/ios/button";
+import { Group, ListRow } from "@/components/ios/group";
+import { Segmented } from "@/components/ios/form";
+import { Pill } from "@/components/ios/pill";
+import { EmptyState, ErrorState, SkeletonRows } from "@/components/ios/states";
+import { PlusIcon } from "@/components/ios/icons";
+import { IOS } from "@/components/ios/tokens";
+import { ViewOnlyNote } from "@/components/ios/view-only-note";
 import { EmployeePhoto } from "@/components/ui/employee-photo";
 import { ChildPhoto } from "@/components/ui/child-photo";
 import { initials } from "@/components/ui/avatar";
-import { TrashIcon, FaceIdIcon } from "@/components/ui/icons";
 import { CreateEnrollmentModal } from "@/features/face-id/create-enrollment-modal";
+import { EnrollmentSheet } from "@/features/face-id/enrollment-sheet";
+import { ENROLLMENT_STATUS, TintNote, tintText } from "@/features/face-id/shared";
 import { useTr } from "@/i18n/tr";
 
-const ALL_TAB = "__all__";
-
-const STATUS_TONE: Record<FaceEnrollmentStatus, { label: string; tone: "success" | "neutral" | "warning" | "danger" }> = {
-  PENDING: { label: "Kutilmoqda", tone: "warning" },
-  REGISTERED: { label: "Ro'yxatga olindi", tone: "success" },
-  FAILED: { label: "Muvaffaqiyatsiz", tone: "danger" },
-  REMOVED: { label: "Olib tashlangan", tone: "neutral" },
-};
-
-const STATUS_OPTIONS = (Object.keys(STATUS_TONE) as FaceEnrollmentStatus[]).map((value) => ({
-  value,
-  label: STATUS_TONE[value].label,
-}));
+type Tab = "ALL" | FacePersonType;
 
 export default function FaceIdRegistrationsPage({ params }: { params: Promise<{ slug: string }> }) {
   const tr = useTr();
   const { slug } = use(params);
   const { user } = useAuth();
   const canWrite = canWriteOperational(user?.role);
-  const { branchSlug, branchId: forcedBranchId } = useBranchContext(slug);
-  const base = branchSlug ? `/${slug}/${branchSlug}` : `/${slug}`;
-  const queryClient = useQueryClient();
+  const { branchId: forcedBranchId } = useBranchContext(slug);
 
-  const [activeTab, setActiveTab] = useState<typeof ALL_TAB | FacePersonType>(ALL_TAB);
+  const [activeTab, setActiveTab] = useState<Tab>("ALL");
   const [createOpen, setCreateOpen] = useState(false);
-  const [deleting, setDeleting] = useState<FaceEnrollment | null>(null);
+  // Ochiq varaq — id bo'yicha: holat o'zgarsa varaq ham yangilanadi
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const devicesQuery = useQuery({
     queryKey: ["face-id-devices", slug, forcedBranchId],
@@ -63,173 +52,134 @@ export default function FaceIdRegistrationsPage({ params }: { params: Promise<{ 
 
   const devices = devicesQuery.data ?? [];
   const enrollments = enrollmentsQuery.data ?? [];
+  const selected = enrollments.find((e) => e.id === selectedId) ?? null;
 
-  const visibleEnrollments = useMemo(() => {
-    if (activeTab === ALL_TAB) return enrollments;
-    return enrollments.filter((e) => e.personType === activeTab);
-  }, [enrollments, activeTab]);
-
-  const statusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: FaceEnrollmentStatus }) =>
-      api.patch<FaceEnrollment>(`/app/face-id/enrollments/${id}`, { status }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["face-id-enrollments", slug] }),
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => api.delete(`/app/face-id/enrollments/${id}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["face-id-enrollments", slug] });
-      setDeleting(null);
-    },
-  });
+  const counts = useMemo(
+    () => ({
+      ALL: enrollments.length,
+      EMPLOYEE: enrollments.filter((e) => e.personType === "EMPLOYEE").length,
+      CHILD: enrollments.filter((e) => e.personType === "CHILD").length,
+    }),
+    [enrollments],
+  );
+  const visible = useMemo(() => (activeTab === "ALL" ? enrollments : enrollments.filter((e) => e.personType === activeTab)), [enrollments, activeTab]);
 
   const isLoading = devicesQuery.isLoading || enrollmentsQuery.isLoading;
-  const isError = devicesQuery.isError || enrollmentsQuery.isError;
+  const error = devicesQuery.error ?? enrollmentsQuery.error;
+  const noDevices = !devicesQuery.isLoading && devices.length === 0;
+
+  const tabLabel = (label: string, count: number) => (
+    <>
+      {tr(label)} <span className="font-normal tabular-nums text-[#8e8e93]">{count}</span>
+    </>
+  );
 
   return (
-    <div className="space-y-5">
-      <BranchSectionTabs slug={slug} section="faceId" current="registrations" />
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-[var(--color-text)]">{tr("Face ID")}</h1>
-          <p className="text-sm text-[var(--color-text-muted)]">
-            {tr("Xodim va bolalarning qaysi qurilmada yuzi ro'yxatga olinganini kuzatish")}
-          </p>
-        </div>
-        {canWrite && (
-          <Button
-            variant="outline"
-            disabled={devices.length === 0}
-            title={devices.length === 0 ? tr("Avval qurilma qo'shing") : undefined}
-            onClick={() => setCreateOpen(true)}
-          >
-            {tr("+ Yuz qo'shish")}
-          </Button>
+    // Telefonda chetlar 16px (asosiy konteyner 24px beradi)
+    <div className="-mx-2 md:mx-0">
+      <div className="mx-auto w-full max-w-5xl space-y-5 pb-2">
+        <BranchSectionTabs slug={slug} section="faceId" current="registrations" />
+        <PageHeaderCard
+          icon={ScanFace}
+          tint="purple"
+          title={tr("Face ID")}
+          count={enrollmentsQuery.data ? tr("{0} ta", enrollments.length) : undefined}
+          subtitle={tr("Kimning yuzi qaysi qurilmada ro'yxatga olingan")}
+          actions={
+            canWrite && (
+              <IosButton
+                label={tr("Yuz qo'shish")}
+                icon={PlusIcon}
+                variant="primary"
+                compact
+                disabled={devices.length === 0}
+                onClick={() => setCreateOpen(true)}
+              />
+            )
+          }
+        />
+
+        {!canWrite && <ViewOnlyNote role={user?.role} />}
+        {canWrite && noDevices && (
+          <TintNote color={IOS.blue}>{tr("Avval \"Qurilmalar\" bo'limida terminalni qo'shing, keyin shu yerda yuz ro'yxatini yuritishingiz mumkin.")}</TintNote>
+        )}
+
+        {isLoading ? (
+          <SkeletonRows rows={4} />
+        ) : error ? (
+          <ErrorState
+            message={error instanceof ApiError ? error.message : undefined}
+            onRetry={() => {
+              devicesQuery.refetch();
+              enrollmentsQuery.refetch();
+            }}
+            retrying={devicesQuery.isFetching || enrollmentsQuery.isFetching}
+          />
+        ) : enrollments.length === 0 ? (
+          <EmptyState
+            icon={ScanFace}
+            title="Hali yuz ro'yxatga olinmagan"
+            hint={canWrite && devices.length > 0 ? "«Yuz qo'shish» tugmasi orqali birinchi yozuvni qo'shing" : undefined}
+          />
+        ) : (
+          <>
+            <Segmented<Tab>
+              value={activeTab}
+              onChange={setActiveTab}
+              label={tr("Kim")}
+              options={[
+                { value: "ALL", label: tabLabel("Barchasi", counts.ALL) },
+                { value: "EMPLOYEE", label: tabLabel("Xodimlar", counts.EMPLOYEE) },
+                { value: "CHILD", label: tabLabel("Bolalar", counts.CHILD) },
+              ]}
+            />
+            <Group bare={visible.length === 0} refreshing={enrollmentsQuery.isFetching}>
+              {visible.length === 0 ? (
+                <EmptyState icon={ScanFace} title="Bu bo'limda yozuv yo'q" />
+              ) : (
+                visible.map((enrollment) => {
+                  const person = enrollment.employee ?? enrollment.child;
+                  const name = person?.fullName ?? "—";
+                  const status = ENROLLMENT_STATUS[enrollment.status];
+                  return (
+                    <ListRow
+                      key={enrollment.id}
+                      avatar={
+                        enrollment.personType === "EMPLOYEE" && enrollment.employee ? (
+                          <EmployeePhoto employee={enrollment.employee} size={44} fallback={initials(name)} />
+                        ) : enrollment.child ? (
+                          <ChildPhoto child={enrollment.child} size={44} fallback={initials(name)} />
+                        ) : (
+                          <span className="h-11 w-11 shrink-0 rounded-full bg-[#767680]/[0.12]" aria-hidden="true" />
+                        )
+                      }
+                      title={name}
+                      subtitle={
+                        // Telefonda kapsula ismni siqib qo'ymasin — holat izoh qatorida rangli matn bo'ladi
+                        <>
+                          <span className="font-medium sm:hidden" style={{ color: tintText(status.color) }}>
+                            {tr(status.label)} ·{" "}
+                          </span>
+                          <span className="max-sm:hidden">{enrollment.personType === "EMPLOYEE" ? tr("Xodim") : tr("Bola")} · </span>
+                          {tr(enrollment.device.name)}
+                        </>
+                      }
+                      meta={
+                        <span className="max-sm:hidden">
+                          <Pill color={status.color}>{tr(status.label)}</Pill>
+                        </span>
+                      }
+                      onClick={() => setSelectedId(enrollment.id)}
+                    />
+                  );
+                })
+              )}
+            </Group>
+          </>
         )}
       </div>
 
-
-      {!canWrite && <ViewOnlyNote role={user?.role} />}
-      {canWrite && devices.length === 0 && !devicesQuery.isLoading && (
-        <div className="rounded-[var(--radius-lg)] bg-[var(--color-primary)]/[0.06] px-4 py-3.5 text-[14px] text-[var(--color-text-muted)]">
-          {tr("Avval \"Qurilmalar\" bo'limida terminalni qo'shing, keyin shu yerda yuz ro'yxatini yuritishingiz mumkin.")}
-        </div>
-      )}
-
-      {isLoading ? (
-        <LoadingState />
-      ) : isError ? (
-        <ErrorState
-          message={
-            devicesQuery.error instanceof ApiError
-              ? devicesQuery.error.message
-              : enrollmentsQuery.error instanceof ApiError
-                ? enrollmentsQuery.error.message
-                : tr("Xatolik yuz berdi")
-          }
-        />
-      ) : enrollments.length === 0 ? (
-        <EmptyState
-          icon={<FaceIdIcon className="h-[26px] w-[26px]" />}
-          title={tr("Hali yuz ro'yxatga olinmagan")}
-          description={canWrite && devices.length > 0 ? tr("Yuqoridagi \"+ Yuz qo'shish\" tugmasi orqali birinchi yozuvni qo'shing") : undefined}
-        />
-      ) : (
-        <Card className="overflow-hidden">
-          <div className="flex items-center gap-1 overflow-x-auto px-3 border-b border-[var(--color-separator)]">
-            {(
-              [
-                [ALL_TAB, "Barchasi"],
-                ["EMPLOYEE", "Xodimlar"],
-                ["CHILD", "Bolalar"],
-              ] as const
-            ).map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setActiveTab(value)}
-                className={clsx(
-                  "flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-3 text-[13px] font-medium transition-colors",
-                  activeTab === value
-                    ? "border-[var(--color-primary)] text-[var(--color-text)]"
-                    : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
-                )}
-              >
-                {tr(label)}
-                <Badge tone={activeTab === value ? "primary" : "neutral"}>
-                  {value === ALL_TAB ? enrollments.length : enrollments.filter((e) => e.personType === value).length}
-                </Badge>
-              </button>
-            ))}
-          </div>
-
-          <DataTable>
-            <THead>
-              <tr>
-                <Th>{tr("Kim")}</Th>
-                <Th>{tr("Turi")}</Th>
-                <Th>{tr("Qurilma")}</Th>
-                <Th>{tr("Holati")}</Th>
-                {canWrite && <Th>&nbsp;</Th>}
-              </tr>
-            </THead>
-            <TBody>
-              {visibleEnrollments.map((enrollment) => {
-                const person = enrollment.employee ?? enrollment.child;
-                return (
-                  <Tr key={enrollment.id}>
-                    <Td>
-                      <div className="flex items-center gap-2.5">
-                        {person ? (
-                          enrollment.personType === "EMPLOYEE" ? (
-                            <EmployeePhoto employee={enrollment.employee!} size={32} fallback={initials(person.fullName)} />
-                          ) : (
-                            <ChildPhoto child={enrollment.child!} size={32} fallback={initials(person.fullName)} />
-                          )
-                        ) : null}
-                        <span className="font-medium">{person?.fullName ?? "—"}</span>
-                      </div>
-                    </Td>
-                    <Td>
-                      <Badge tone="neutral">{enrollment.personType === "EMPLOYEE" ? tr("Xodim") : tr("Bola")}</Badge>
-                    </Td>
-                    <Td>{tr(enrollment.device.name)}</Td>
-                    <Td>
-                      {canWrite ? (
-                        <div className="w-44">
-                          <SelectMenu
-                            options={STATUS_OPTIONS}
-                            value={enrollment.status}
-                            onChange={(value) =>
-                              statusMutation.mutate({ id: enrollment.id, status: value as FaceEnrollmentStatus })
-                            }
-                          />
-                        </div>
-                      ) : (
-                        <Badge tone={STATUS_TONE[enrollment.status].tone}>{tr(STATUS_TONE[enrollment.status].label)}</Badge>
-                      )}
-                    </Td>
-                    {canWrite && (
-                      <Td nowrap>
-                        <div className="flex items-center justify-end">
-                          <button
-                            type="button"
-                            onClick={() => setDeleting(enrollment)}
-                            aria-label={tr("O'chirish")}
-                            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]"
-                          >
-                            <TrashIcon className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </Td>
-                    )}
-                  </Tr>
-                );
-              })}
-            </TBody>
-          </DataTable>
-        </Card>
-      )}
+      <EnrollmentSheet slug={slug} enrollment={selected} canWrite={canWrite} onClose={() => setSelectedId(null)} />
 
       {canWrite && (
         <CreateEnrollmentModal
@@ -240,22 +190,6 @@ export default function FaceIdRegistrationsPage({ params }: { params: Promise<{ 
           devices={devices}
         />
       )}
-
-      <ConfirmDialog
-        open={!!deleting}
-        onClose={() => setDeleting(null)}
-        title={tr("Yozuvni o'chirish")}
-        description={
-          <>
-            <strong>{tr((deleting?.employee ?? deleting?.child)?.fullName)}</strong> {tr("uchun yuz yozuvini o'chirmoqchimisiz?")}
-          </>
-        }
-        confirmLabel={tr("O'chirish")}
-        tone="danger"
-        loading={deleteMutation.isPending}
-        error={deleteMutation.error instanceof ApiError ? deleteMutation.error.message : null}
-        onConfirm={() => deleting && deleteMutation.mutate(deleting.id)}
-      />
     </div>
   );
 }
