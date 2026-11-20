@@ -48,6 +48,7 @@ function applyData(row: Row, data: Row) {
   for (const [key, value] of Object.entries(data)) {
     if (value === undefined) continue;
     if (value && typeof value === "object" && "increment" in value) row[key] = (row[key] ?? 0) + value.increment;
+    else if (value && typeof value === "object" && "decrement" in value) row[key] = (row[key] ?? 0) - value.decrement;
     else row[key] = value;
   }
   if ("updatedAt" in row) row.updatedAt = new Date();

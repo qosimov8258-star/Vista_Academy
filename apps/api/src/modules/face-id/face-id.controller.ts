@@ -6,6 +6,7 @@ import { CurrentTenantUser } from "../iam/decorators/current-tenant-user.decorat
 import { TenantAuthenticatedUser, toTenantScope } from "../iam/tenant-auth.types";
 import { FaceIdService } from "./face-id.service";
 import { FaceIdAgentsService } from "./face-id-agents.service";
+import { FaceIdGatewayService } from "./gateway/face-id-gateway.service";
 import { CreateDeviceDto } from "./dto/create-device.dto";
 import { UpdateDeviceDto } from "./dto/update-device.dto";
 import { DeviceQueryDto } from "./dto/device-query.dto";
@@ -22,7 +23,31 @@ export class FaceIdController {
   constructor(
     private readonly faceIdService: FaceIdService,
     private readonly agentsService: FaceIdAgentsService,
+    private readonly gatewayService: FaceIdGatewayService,
   ) {}
+
+  /** Internet (ISUP gateway) orqali ulash mavjudmi va terminalga qaysi server manzili kiritiladi. */
+  @Get("gateway")
+  gatewayInfo() {
+    return this.gatewayService.info();
+  }
+
+  /** Qurilmani internet orqali ulash: ISUP ID va kalit beriladi, hamma odam navbatga qo'yiladi. */
+  @Post("devices/:id/gateway")
+  connectGateway(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string) {
+    return this.gatewayService.connect(user, id);
+  }
+
+  /** Terminalga kiritiladigan ISUP qiymatlari va aloqa holati. */
+  @Get("devices/:id/gateway")
+  gatewayDetails(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string) {
+    return this.gatewayService.details(toTenantScope(user), id);
+  }
+
+  @Delete("devices/:id/gateway")
+  disconnectGateway(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string) {
+    return this.gatewayService.disconnect(user, id);
+  }
 
   /** Obyekt agentini ulash uchun bir martalik kod (15 daqiqa) — faqat shu javobda ko'rinadi. */
   @Post("agents/pairing-code")
@@ -82,8 +107,10 @@ export class FaceIdController {
   }
 
   @Delete("devices/:id")
-  removeDevice(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string) {
-    return this.faceIdService.removeDevice(toTenantScope(user), id);
+  async removeDevice(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id") id: string) {
+    const { gatewayIndex, ...removed } = await this.faceIdService.removeDevice(toTenantScope(user), id);
+    await this.gatewayService.forget(gatewayIndex);
+    return removed;
   }
 
   @Get("enrollments")
