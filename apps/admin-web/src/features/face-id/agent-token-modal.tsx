@@ -1,14 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Modal } from "@/components/ui/modal";
-import { Button } from "@/components/ui/button";
-import { CopyIcon } from "@/components/ui/icons";
+import clsx from "clsx";
+import { IosSheet, SheetPrimaryButton, SheetSection } from "@/components/ios/sheet";
+import { CheckIcon, CopyIcon } from "@/components/ios/icons";
+import { IOS } from "@/components/ios/tokens";
+import { TintNote } from "./shared";
 import { useTr } from "@/i18n/tr";
 
 /**
  * Agent tokeni faqat bir marta — yaratilganda yoki yangilanganda —
- * ko'rsatiladi. Bazada faqat hash'i saqlanadi, shuning uchun oyna yopilgach
+ * ko'rsatiladi. Bazada faqat hash'i saqlanadi, shuning uchun varaq yopilgach
  * uni qayta ko'rib bo'lmaydi (yo'qolsa — "Yangi token").
  */
 export function AgentTokenModal({ token, deviceName, onClose }: { token: string | null; deviceName: string; onClose: () => void }) {
@@ -27,30 +29,39 @@ export function AgentTokenModal({ token, deviceName, onClose }: { token: string 
   };
 
   return (
-    <Modal open={!!token} onClose={onClose} title={tr("Agent tokeni")}>
-      <div className="space-y-4">
-        <p className="text-[14px] leading-relaxed text-[var(--color-text-muted)]">
-          <b className="text-[var(--color-text)]">{tr(deviceName)}</b> {tr("uchun obyektdagi")}{" "}<code>hik-agent</code> {tr("shu token bilan ulanadi. Uni agentning")}{" "}<code>.env</code> {tr("faylidagi")}{" "}<code>AGENT_TOKENS</code> {tr("ga qo'ying.")}
-        </p>
-        <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-border-hair)] bg-[var(--color-surface-sunken)] p-3">
-          <code className="min-w-0 flex-1 select-all break-all font-mono text-[13px] text-[var(--color-text)]">{tr(token)}</code>
+    <IosSheet
+      open={!!token}
+      onClose={onClose}
+      title={tr("Agent tokeni")}
+      cancelLabel="Yopish"
+      footer={<SheetPrimaryButton onClick={onClose}>{tr("Saqladim")}</SheetPrimaryButton>}
+    >
+      <SheetSection
+        title={tr(deviceName)}
+        footer={
+          <>
+            {tr("Obyektdagi hik-agent shu token bilan ulanadi. Uni agentning .env faylidagi AGENT_TOKENS ga qo'ying.")}
+          </>
+        }
+      >
+        <div className="flex items-center gap-2 py-1.5 pl-4 pr-2">
+          <code className="min-w-0 flex-1 select-all break-all py-2 font-mono text-[14px] leading-snug text-[var(--color-text)]">{token}</code>
           <button
             type="button"
             onClick={copy}
             aria-label={tr("Nusxalash")}
-            className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-black/5 hover:text-[var(--color-text)]"
+            className={clsx(
+              "flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-[#767680]/[0.12]",
+              copied ? "text-[#34c759]" : "text-[var(--color-primary)]",
+            )}
           >
-            <CopyIcon className="h-4 w-4" />
+            {copied ? <CheckIcon className="h-[18px] w-[18px]" strokeWidth={2.6} /> : <CopyIcon className="h-[18px] w-[18px]" />}
           </button>
         </div>
-        {copied && <p className="text-[13px] text-[var(--color-success)]">{tr("Nusxalandi")}</p>}
-        <div role="alert" className="rounded-[var(--radius-md)] bg-[var(--color-warning-bg)] px-3 py-2.5 text-[13px] text-[var(--color-warning)]">
-          {tr("Token boshqa ko'rsatilmaydi. Yo'qolsa — \"Yangi token\" bilan yangisini yarating (eskisi darhol bekor bo'ladi).")}
-        </div>
-        <div className="flex justify-end">
-          <Button onClick={onClose}>{tr("Saqladim")}</Button>
-        </div>
-      </div>
-    </Modal>
+      </SheetSection>
+      <TintNote color={IOS.orange}>
+        {tr("Token boshqa ko'rsatilmaydi. Yo'qolsa — \"Yangi token\" bilan yangisini yarating (eskisi darhol bekor bo'ladi).")}
+      </TintNote>
+    </IosSheet>
   );
 }

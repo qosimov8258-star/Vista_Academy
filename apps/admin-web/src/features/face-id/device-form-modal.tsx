@@ -1,16 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
 import type { FaceIdDevice, FaceIdDeviceStatus } from "@/lib/types";
-import { Modal } from "@/components/ui/modal";
-import { Input, Textarea } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { SelectMenu } from "@/components/ui/select-menu";
+import { IosSheet, SheetPrimaryButton } from "@/components/ios/sheet";
+import { FieldRow, FormSection, PasswordInput, TextArea, TextInput } from "@/components/ios/form";
+import { CheckRow } from "@/components/ios/check-row";
+import { IOS } from "@/components/ios/tokens";
+import { DEVICE_STATUS, TintNote } from "./shared";
 import { useTr } from "@/i18n/tr";
 
 const schema = z.object({
@@ -30,13 +31,23 @@ const schema = z.object({
 });
 type FormValues = z.infer<typeof schema>;
 
-const STATUS_OPTIONS: { value: FaceIdDeviceStatus; label: string }[] = [
-  { value: "ACTIVE", label: "Faol" },
-  { value: "INACTIVE", label: "Nofaol" },
-  { value: "MAINTENANCE", label: "Texnik xizmatda" },
-];
+const STATUSES: FaceIdDeviceStatus[] = ["ACTIVE", "INACTIVE", "MAINTENANCE"];
 
-/** Yangi qurilma qo'shish yoki mavjudini tahrirlash — `device` berilsa tahrirlash rejimi. */
+function defaults(device?: FaceIdDevice | null): FormValues {
+  return {
+    name: device?.name ?? "",
+    model: device?.model ?? "DS-K1T342MX",
+    serialNumber: device?.serialNumber ?? "",
+    ipAddress: device?.ipAddress ?? "",
+    port: String(device?.port ?? 80),
+    username: device?.username ?? "admin",
+    password: "",
+    location: device?.location ?? "",
+    notes: device?.notes ?? "",
+  };
+}
+
+/** Yangi qurilma qo'shish yoki mavjudini tahrirlash (iOS varag'i) — `device` berilsa tahrirlash rejimi. */
 export function DeviceFormModal({
   open,
   onClose,
@@ -52,6 +63,7 @@ export function DeviceFormModal({
   onCreated?: (device: FaceIdDevice, agentToken: string) => void;
 }) {
   const tr = useTr();
+  const formId = useId();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
   const [status, setStatus] = useState<FaceIdDeviceStatus>(device?.status ?? "ACTIVE");
@@ -62,34 +74,11 @@ export function DeviceFormModal({
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: {
-      name: device?.name ?? "",
-      model: device?.model ?? "DS-K1T342MX",
-      serialNumber: device?.serialNumber ?? "",
-      ipAddress: device?.ipAddress ?? "",
-      port: String(device?.port ?? 80),
-      username: device?.username ?? "admin",
-      password: "",
-      location: device?.location ?? "",
-      notes: device?.notes ?? "",
-    },
-  });
+  } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: defaults(device) });
 
   useEffect(() => {
     if (!open) return;
-    reset({
-      name: device?.name ?? "",
-      model: device?.model ?? "DS-K1T342MX",
-      serialNumber: device?.serialNumber ?? "",
-      ipAddress: device?.ipAddress ?? "",
-      port: String(device?.port ?? 80),
-      username: device?.username ?? "admin",
-      password: "",
-      location: device?.location ?? "",
-      notes: device?.notes ?? "",
-    });
+    reset(defaults(device));
     setStatus(device?.status ?? "ACTIVE");
     setServerError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- faqat oyna ochilganda yoki tahrirlanayotgan qurilma almashganda to'ldiriladi
@@ -124,84 +113,75 @@ export function DeviceFormModal({
     onError: (err) => setServerError(err instanceof ApiError ? err.message : tr("Kutilmagan xatolik yuz berdi")),
   });
 
+  const saving = isSubmitting || mutation.isPending;
+  const field = (name: string) => `${formId}-${name}`;
+
   return (
-    <Modal open={open} onClose={onClose} title={isEditing ? "Qurilmani tahrirlash" : tr("Yangi qurilma")}>
-      <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
-        {serverError && (
-          <div role="alert" className="rounded-[var(--radius-lg)] bg-[var(--color-danger-bg)] px-3 py-2.5 text-[13px] text-[var(--color-danger)]">
-            {tr(serverError)}
-          </div>
+    <IosSheet
+      open={open}
+      onClose={() => !saving && onClose()}
+      title={isEditing ? tr("Qurilmani tahrirlash") : tr("Yangi qurilma")}
+      footer={
+        <SheetPrimaryButton type="submit" form={formId} loading={saving}>
+          {isEditing ? tr("Saqlash") : tr("Qo'shish")}
+        </SheetPrimaryButton>
+      }
+    >
+      <form id={formId} className="space-y-6" onSubmit={handleSubmit((values) => mutation.mutate(values))} noValidate>
+        {serverError && <TintNote color={IOS.red}>{tr(serverError)}</TintNote>}
+
+        <FormSection title={tr("Qurilma")} footer={tr("Masalan: Hikvision Turniket Terminal Kontrol DS-K1T342MX")}>
+          <FieldRow label={tr("Nomi")} htmlFor={field("name")} error={errors.name?.message}>
+            <TextInput id={field("name")} placeholder={tr("Asosiy kirish turniketi")} className="text-right" {...register("name")} />
+          </FieldRow>
+          <FieldRow label={tr("Rusumi")} htmlFor={field("model")} error={errors.model?.message}>
+            <TextInput id={field("model")} placeholder="DS-K1T342MX" className="text-right" {...register("model")} />
+          </FieldRow>
+          <FieldRow label={tr("Seriya raqami")} htmlFor={field("serial")} error={errors.serialNumber?.message}>
+            <TextInput id={field("serial")} placeholder={tr("Ixtiyoriy")} className="text-right" {...register("serialNumber")} />
+          </FieldRow>
+          <FieldRow label={tr("Joylashuvi")} htmlFor={field("location")} error={errors.location?.message}>
+            <TextInput id={field("location")} placeholder={tr("Ixtiyoriy")} className="text-right" {...register("location")} />
+          </FieldRow>
+        </FormSection>
+
+        <FormSection title={tr("Tarmoq va kirish")} footer={tr("Parol shifrlab saqlanadi va faqat obyektdagi agentga beriladi — hech kimga ko'rsatilmaydi.")}>
+          <FieldRow label={tr("IP manzili")} htmlFor={field("ip")} error={errors.ipAddress?.message}>
+            <TextInput id={field("ip")} inputMode="decimal" placeholder="192.168.1.50" className="text-right tabular-nums" {...register("ipAddress")} />
+          </FieldRow>
+          <FieldRow label={tr("Port")} htmlFor={field("port")} error={errors.port?.message}>
+            <TextInput id={field("port")} inputMode="numeric" placeholder="80" className="text-right tabular-nums" {...register("port")} />
+          </FieldRow>
+          <FieldRow label={tr("Login")} htmlFor={field("user")} error={errors.username?.message}>
+            <TextInput id={field("user")} autoComplete="off" placeholder="admin" className="text-right" {...register("username")} />
+          </FieldRow>
+          <FieldRow label={tr("Parol")} htmlFor={field("password")} error={errors.password?.message}>
+            <PasswordInput
+              id={field("password")}
+              autoComplete="new-password"
+              placeholder={isEditing && device?.hasPassword ? tr("O'zgarmaydi") : tr("Qurilma paroli")}
+              className="text-right"
+              {...register("password")}
+            />
+          </FieldRow>
+        </FormSection>
+
+        {isEditing && (
+          <FormSection title={tr("Holati")}>
+            <div role="radiogroup" aria-label={tr("Holati")}>
+              {STATUSES.map((value) => (
+                <CheckRow key={value} label={tr(DEVICE_STATUS[value].label)} checked={status === value} onClick={() => setStatus(value)} />
+              ))}
+            </div>
+          </FormSection>
         )}
 
-        <Input
-          label={tr("Nomi")}
-          placeholder={tr("Asosiy kirish turniketi")}
-          error={errors.name?.message}
-          {...register("name")}
-        />
-        <Input
-          label={tr("Qurilma rusumi")}
-          placeholder="DS-K1T342MX"
-          hint={tr("Masalan: Hikvision Turniket Terminal Kontrol DS-K1T342MX")}
-          error={errors.model?.message}
-          {...register("model")}
-        />
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input
-            label={tr("Seriya raqami")}
-            placeholder={tr("Ixtiyoriy")}
-            error={errors.serialNumber?.message}
-            {...register("serialNumber")}
-          />
-          <Input
-            label={tr("IP manzili")}
-            placeholder={tr("192.168.1.50 (ixtiyoriy)")}
-            error={errors.ipAddress?.message}
-            {...register("ipAddress")}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_120px]">
-          <Input
-            label={tr("Qurilma logini")}
-            placeholder="admin"
-            autoComplete="off"
-            error={errors.username?.message}
-            {...register("username")}
-          />
-          <Input label={tr("Port")} inputMode="numeric" placeholder="80" error={errors.port?.message} {...register("port")} />
-        </div>
-        <Input
-          label={tr("Qurilma paroli")}
-          type="password"
-          autoComplete="new-password"
-          placeholder={isEditing && device?.hasPassword ? tr("O'zgartirmaslik uchun bo'sh qoldiring") : "Qurilma administratori paroli"}
-          hint={tr("Shifrlab saqlanadi va faqat obyektdagi agentga beriladi — hech kimga ko'rsatilmaydi.")}
-          error={errors.password?.message}
-          {...register("password")}
-        />
-
-        <Input
-          label={tr("Joylashuvi")}
-          placeholder={tr("Asosiy kirish eshigi (ixtiyoriy)")}
-          error={errors.location?.message}
-          {...register("location")}
-        />
-
-        {isEditing && <SelectMenu label={tr("Holati")} options={STATUS_OPTIONS} value={status} onChange={(v) => setStatus(v as FaceIdDeviceStatus)} />}
-
-        <Textarea label={tr("Izoh")} rows={2} placeholder={tr("Ixtiyoriy")} error={errors.notes?.message} {...register("notes")} />
-
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="outline" onClick={onClose}>
-            {tr("Bekor qilish")}
-          </Button>
-          <Button type="submit" loading={isSubmitting || mutation.isPending}>
-            {isEditing ? "Saqlash" : tr("Qo'shish")}
-          </Button>
-        </div>
+        <FormSection>
+          <FieldRow label={tr("Izoh")} htmlFor={field("notes")} stacked error={errors.notes?.message}>
+            <TextArea id={field("notes")} rows={2} placeholder={tr("Ixtiyoriy")} {...register("notes")} />
+          </FieldRow>
+        </FormSection>
       </form>
-    </Modal>
+    </IosSheet>
   );
 }
