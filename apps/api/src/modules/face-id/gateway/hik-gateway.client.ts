@@ -99,7 +99,7 @@ export interface HikGwDevice {
   offlineHint: number | null;
 }
 
-type Body = { kind: "json"; value: unknown } | { kind: "xml"; value: string } | { kind: "form"; build: () => FormData };
+type Body = { kind: "json"; value: unknown } | { kind: "xml"; value: string } | { kind: "multipart"; boundary: string; content: Buffer };
 
 const VALID = { enable: false, beginTime: "2020-01-01T00:00:00", endTime: "2037-12-31T23:59:59" };
 const ACCESS = { doorRight: "1", RightPlan: [{ doorNo: 1, planTemplateNo: "1" }] };
@@ -125,8 +125,9 @@ export class HikGwClient {
     } else if (body?.kind === "xml") {
       headers["Content-Type"] = "application/xml";
       payload = body.value;
-    } else if (body?.kind === "form") {
-      payload = body.build();
+    } else if (body?.kind === "multipart") {
+      headers["Content-Type"] = `multipart/form-data; boundary=${body.boundary}`;
+      payload = new Uint8Array(body.content);
     }
     if (auth) headers.Authorization = auth;
     try {
@@ -264,13 +265,8 @@ export class HikGwClient {
   /** Odamning yuzini qo'yadi yoki almashtiradi (JPEG) */
   async setFace(devIndex: string, employeeNo: string, jpeg: Buffer): Promise<void> {
     await this.json("PUT", `/ISAPI/Intelligent/FDLib/FDSetUp?format=json&devIndex=${encodeURIComponent(devIndex)}`, {
-      kind: "form",
-      build: () => {
-        const form = new FormData();
-        form.append("FaceDataRecord", new Blob([JSON.stringify({ faceLibType: "blackFD", FDID: "1", FPID: employeeNo })], { type: "application/json" }));
-        form.append("img", new Blob([new Uint8Array(jpeg)], { type: "image/jpeg" }), "face.jpg");
-        return form;
-      },
+      kind: "multipart",
+      ...faceMultipart(employeeNo, jpeg),
     });
   }
 
@@ -340,6 +336,25 @@ export class HikGwClient {
     const sub = /<subStatusCode>\s*([^<]*)<\/subStatusCode>/.exec(text)?.[1]?.trim();
     throw new HikGwError(sub || "badResponse", `Hodisa manzilini sozlab bo'lmadi: ${text.slice(0, 120)}`);
   }
+}
+
+/**
+ * Yuz so'rovining tanasi: JSON qism + JPEG. Qo'lda yig'iladi — `FormData`ga
+ * Blob qo'shilsa, JSON qism ham fayl bo'lib ketadi (`filename="blob"`) va
+ * terminal uni o'qiy olmay «Invalid JSON format» qaytaradi. JSON qismda fayl
+ * nomi bo'lmasligi shart; hik-agent ham shu ko'rinishda yuboradi.
+ */
+export function faceMultipart(employeeNo: string, jpeg: Buffer, boundary = `----zeeron${randomBytes(12).toString("hex")}`) {
+  const json = JSON.stringify({ faceLibType: "blackFD", FDID: "1", FPID: employeeNo });
+  const head =
+    `--${boundary}\r\n` +
+    `Content-Disposition: form-data; name="FaceDataRecord"\r\n` +
+    `Content-Type: application/json\r\n\r\n` +
+    `${json}\r\n` +
+    `--${boundary}\r\n` +
+    `Content-Disposition: form-data; name="img"; filename="face.jpg"\r\n` +
+    `Content-Type: image/jpeg\r\n\r\n`;
+  return { boundary, content: Buffer.concat([Buffer.from(head, "utf8"), jpeg, Buffer.from(`\r\n--${boundary}--\r\n`, "utf8")]) };
 }
 
 /** Gateway/terminal javobidagi xatoni istisnoga aylantiradi */
