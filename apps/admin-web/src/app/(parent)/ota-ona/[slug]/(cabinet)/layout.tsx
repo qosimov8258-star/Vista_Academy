@@ -3,6 +3,7 @@ import { ParentPageTransition } from "./page-transition";
 import { CabinetThemeProvider } from "./theme";
 import { ParentMandatoryGate } from "./mandatory-gate";
 import { ActivityTracker } from "./activity-tracker";
+import { ParentLocaleSync } from "./locale-sync";
 import { ParentFeatureGate } from "./feature-gate";
 import { tenantMetadata } from "@/lib/tenant-metadata";
 import type { Metadata } from "next";
@@ -43,6 +44,8 @@ export default async function ParentCabinetLayout({
       <ParentMandatoryGate slug={slug} />
       {/* Faollik (qaysi bo'lim, qancha vaqt) — bog'cha panelidagi «Ota-onalar» statistikasi uchun */}
       <ActivityTracker slug={slug} />
+      {/* Hisobdagi tilni qo'llaydi — bitta telefonda boshqa hisob tilni o'zgartirsa ham */}
+      <ParentLocaleSync slug={slug} />
     </CabinetThemeProvider>
   );
 }

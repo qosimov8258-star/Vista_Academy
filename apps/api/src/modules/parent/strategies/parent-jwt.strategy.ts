@@ -59,6 +59,7 @@ export class ParentJwtStrategy extends PassportStrategy(Strategy, "parent-jwt") 
       organizationName: guardian.organization.name,
       fullName: guardian.fullName,
       phone: guardian.phone,
+      locale: guardian.locale ?? null,
       disabledFeatures: disabledFeatureKeys(
         guardian.organization.subscription?.plan.features,
         guardian.organization.featureOverrides,

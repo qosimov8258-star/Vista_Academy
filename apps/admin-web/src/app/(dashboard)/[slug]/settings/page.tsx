@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/use-auth";
+import { clearCachedTheme } from "@/lib/theme";
 import { clearTenantTokens, getTenantRefreshToken } from "@/lib/tenant-session";
 import { Input, PasswordInput } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -228,6 +229,7 @@ export default function SettingsPage({ params }: { params: Promise<{ slug: strin
     } finally {
       clearTenantTokens();
       queryClient.clear();
+      clearCachedTheme();
       router.push(`/${slug}/login`);
       router.refresh();
     }

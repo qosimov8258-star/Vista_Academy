@@ -7,7 +7,7 @@ import { CheckIcon, GlobeIcon } from "@/components/ios/icons";
 import { Palette as PaletteIcon, Plus } from "lucide-react";
 import { IosSheet, SheetSection } from "@/components/ios/sheet";
 import { ROW_PRESS, ROW_SEPARATOR } from "@/components/ios/tokens";
-import { applyLocale } from "@/components/ui/language-switcher";
+import { changeStaffLocale } from "@/lib/staff-locale";
 import { locales, type Locale } from "@/i18n/config";
 import { THEMES, applyTheme, isCustomColor, useTheme, type ThemeValue } from "@/lib/theme";
 import { customThemeVars, type CustomColor } from "@/lib/theme-config";
@@ -169,7 +169,8 @@ function LanguageRow() {
       return;
     }
     setSwitching(next);
-    applyLocale(next);
+    // Saqlansa sahifa qayta yuklanadi; saqlanmasa tanlov eski tilga qaytadi
+    changeStaffLocale(next).catch(() => setSwitching(null));
   };
 
   return (

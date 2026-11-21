@@ -1,28 +1,24 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import clsx from "clsx";
-import { locales, localeCookieName, type Locale } from "@/i18n/config";
+import { locales, type Locale } from "@/i18n/config";
+import { applyLocaleBeforeLogin } from "@/i18n/account-locale";
 import { GlobeIcon, ChevronDownIcon } from "@/components/ui/icons";
 import { useTr } from "@/i18n/tr";
-
-/**
- * Tilni almashtiradi: cookie yoziladi va sahifa to'liq qayta yuklanadi.
- * router.refresh() yetarli emas: DomTranslator ba'zi matn tugunlarini React'dan
- * tashqarida almashtirgan, React esa ularni "o'zgarmagan" deb o'tkazib yuboradi —
- * shuning uchun eski til qolib ketardi. To'liq qayta yuklash toza holat beradi.
- */
-export function applyLocale(next: Locale) {
-  document.cookie = `${localeCookieName}=${next}; path=/; max-age=31536000`;
-  window.location.reload();
-}
 
 export function LanguageSwitcher({
   collapsed = false,
   dropUp = false,
   appearance = "default",
+  change = applyLocaleBeforeLogin,
 }: {
+  /**
+   * Tanlangan tilni qo'llaydi. Sukut — kirish sahifasi (hisob hali yo'q);
+   * panel ichida `changeStaffLocale` beriladi — til hisobga yoziladi.
+   */
+  change?: (next: Locale) => void | Promise<void>;
   collapsed?: boolean;
   dropUp?: boolean;
   /** `onDark` — to'q fon ustida (masalan, kirish sahifasi): tugma och rangda */
@@ -32,7 +28,7 @@ export function LanguageSwitcher({
   const locale = useLocale() as Locale;
   const t = useTranslations("common");
   const [open, setOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setPending] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -47,7 +43,11 @@ export function LanguageSwitcher({
   const changeLocale = (next: Locale) => {
     setOpen(false);
     if (next === locale) return;
-    startTransition(() => applyLocale(next));
+    setPending(true);
+    // Muvaffaqiyatli bo'lsa sahifa qayta yuklanadi; saqlanmasa til o'zgarmaydi, tugma qayta ochiladi
+    Promise.resolve()
+      .then(() => change(next))
+      .catch(() => setPending(false));
   };
 
   return (

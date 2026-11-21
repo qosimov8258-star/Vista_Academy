@@ -7,6 +7,7 @@ import { TeacherTabBar } from "@/features/teacher/teacher-tab-bar";
 import { EmployeeMandatoryGate } from "@/features/broadcasts/mandatory-gate";
 import { FeatureRouteGate } from "@/features/feature-flags/route-gate";
 import { ThemeSync } from "@/lib/theme";
+import { StaffLocaleSync } from "@/lib/staff-locale";
 import { tenantMetadata } from "@/lib/tenant-metadata";
 import type { Metadata } from "next";
 
@@ -48,6 +49,8 @@ export default async function DashboardLayout({
       <EmployeeMandatoryGate slug={slug} />
       {/* Hisobdagi tizim rangini qo'llaydi — hech narsa chizmaydi */}
       <ThemeSync />
+      {/* Hisobdagi tilni qo'llaydi — hech narsa chizmaydi */}
+      <StaffLocaleSync />
     </div>
   );
 }

@@ -13,6 +13,7 @@ import { ChangePasswordDto } from "./dto/change-password.dto";
 import { ChangeLoginDto } from "./dto/change-login.dto";
 import { UpdateAvatarDto } from "./dto/update-avatar.dto";
 import { UpdateThemeDto } from "./dto/update-theme.dto";
+import { UpdateLocaleDto } from "../../common/locale.dto";
 import { AllowChef } from "../iam/decorators/allow-chef.decorator";
 
 @ApiBearerAuth()
@@ -46,6 +47,12 @@ export class ProfileController {
   @Put("theme")
   updateTheme(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: UpdateThemeDto) {
     return this.profileService.updateTheme(user, dto);
+  }
+
+  /** Til tanlanganda — hisobga yoziladi, boshqa qurilmada ham shu til */
+  @Put("locale")
+  updateLocale(@CurrentTenantUser() user: TenantAuthenticatedUser, @Body() dto: UpdateLocaleDto) {
+    return this.profileService.updateLocale(user, dto);
   }
 
   @Put("avatar")

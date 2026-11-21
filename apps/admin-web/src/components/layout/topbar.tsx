@@ -12,6 +12,7 @@ import { isChef, isTeacher, receivesEmployeeNotifications } from "@/lib/permissi
 import { BellIcon } from "@/components/ui/icons";
 import { ArrowLeftIcon } from "@/components/ui/icons";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
+import { changeStaffLocale } from "@/lib/staff-locale";
 import { useTr } from "@/i18n/tr";
 import { useEmployeeInboxUnread } from "@/features/broadcasts/use-inbox";
 
@@ -123,7 +124,7 @@ export function Topbar({ slug }: { slug: string }) {
         </Link>
       )}
       <div className={teacher ? "hidden md:ml-auto md:block" : "md:ml-auto"}>
-        <LanguageSwitcher />
+        <LanguageSwitcher change={changeStaffLocale} />
       </div>
     </header>
   );
