@@ -10,7 +10,7 @@ import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
 import { parentApi } from "@/lib/parent-api";
-import { setTenantTokens } from "@/lib/tenant-session";
+import { setTenantTokens, unmarkTenantEntrySession } from "@/lib/tenant-session";
 import { ArrowRight, Eye, EyeOff, LockKeyhole, UserRound } from "lucide-react";
 import { Spinner } from "@/components/ios/spinner";
 import type { TenantAuthenticatedUser } from "@/lib/types";
@@ -73,6 +73,7 @@ export function LoginForm({ slug, inputClassName, submitClassName }: { slug: str
       // Shu tab uchun mustaqil token — boshqa tabda boshqa foydalanuvchi kirsa ham,
       // bu tab o'zining sessionStorage'idagi tokeni bilan ishlashda davom etadi.
       setTenantTokens({ accessToken, refreshToken });
+      unmarkTenantEntrySession();
       // Kesh foydalanuvchiga emas, tashkilot slug'iga bog'langan (["auth","me"] va h.k.) —
       // "Chiqish" bosmasdan shu tabda boshqa hisobga kirilsa (masalan, Super Admin filial
       // admini yaratib, uni sinash uchun darhol qayta login qilsa), eski foydalanuvchining

@@ -98,6 +98,7 @@ export class ParentAuthService {
       organizationName: organization.name,
       fullName: guardian.fullName,
       phone: guardian.phone,
+      locale: guardian.locale ?? null,
       // Haqiqiy qiymatni ParentJwtStrategy har so'rovda hisoblaydi
       disabledFeatures: [],
     };
@@ -159,6 +160,7 @@ export class ParentAuthService {
       organizationName: existing.guardian.organization.name,
       fullName: existing.guardian.fullName,
       phone: existing.guardian.phone,
+      locale: existing.guardian.locale ?? null,
       disabledFeatures: [],
     };
     const issued = await this.issueTokens(parent, meta);
@@ -178,6 +180,15 @@ export class ParentAuthService {
   }
 
   /** Ota-ona o'z parolini almashtiradi; boshqa qurilmalardagi seanslar yopiladi. */
+  /** Kabinet tilini hisobga yozadi — ota-ona qaysi qurilmadan kirmasin, shu til */
+  async updateLocale(parent: AuthenticatedParent, locale: string) {
+    return this.prisma.guardian.update({
+      where: { id: parent.id },
+      data: { locale },
+      select: { locale: true },
+    });
+  }
+
   async changePassword(parent: AuthenticatedParent, dto: ChangeParentPasswordDto) {
     const guardian = await this.prisma.guardian.findUniqueOrThrow({
       where: { id: parent.id },

@@ -18,6 +18,8 @@ export interface AuthenticatedParent {
   organizationName: string;
   fullName: string;
   phone: string;
+  /** Hisobda saqlangan kabinet tili ("uz" | "ru" | "en"); null — hali tanlanmagan. */
+  locale: string | null;
   /** Platforma o'chirgan funksiya kalitlari (qarang: common/features). */
   disabledFeatures: string[];
 }

@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import * as argon2 from "argon2";
 import { PrismaService } from "../../database/prisma.service";
@@ -10,6 +10,7 @@ import { UpdateThemeDto } from "./dto/update-theme.dto";
 import { ChangePasswordDto } from "./dto/change-password.dto";
 import { ChangeLoginDto } from "./dto/change-login.dto";
 import { UpdateAvatarDto } from "./dto/update-avatar.dto";
+import { UpdateLocaleDto } from "../../common/locale.dto";
 
 /** Rasm 256x256 gacha kichraytirilgani uchun bundan oshmasligi kerak. */
 const MAX_AVATAR_BYTES = 300 * 1024;
@@ -37,6 +38,22 @@ export class ProfileService {
       // O'z rangi bir xil ko'rinishda saqlanadi («#1A2B3C» → «#1a2b3c»)
       data: { themeColor: dto.themeColor.toLowerCase() },
       select: { themeColor: true },
+    });
+  }
+
+  /**
+   * Panel tilini hisobga yozadi. «Xodim profiliga kirish» seansida yozilmaydi:
+   * filial admini xodim kabinetini o'z tilida ko'rsa, xodimning tili o'zgarib
+   * qolmasligi kerak.
+   */
+  async updateLocale(user: TenantAuthenticatedUser, dto: UpdateLocaleDto) {
+    if (user.staffEntryIssuerId) {
+      throw new ForbiddenException("Xodim profiliga kirish seansida til saqlanmaydi");
+    }
+    return this.prisma.tenantUser.update({
+      where: { id: user.id },
+      data: { locale: dto.locale },
+      select: { locale: true },
     });
   }
 

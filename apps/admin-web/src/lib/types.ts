@@ -25,6 +25,10 @@ export interface TenantAuthenticatedUser {
   avatarUpdatedAt: string | null;
   /** Sozlamalarda tanlangan tizim rangi ("blue" va h.k.); null — sukut (yashil). Hisobda saqlanadi. */
   themeColor: string | null;
+  /** Hisobda saqlangan panel tili; null — hali tanlanmagan (panel hozirgi tilni yozib oladi). */
+  locale?: string | null;
+  /** «Xodim profiliga kirish» seansi bo'lsa — kirgan filial admini. */
+  staffEntryIssuerId?: string | null;
   /** Bog'langan xodim kartochkasidagi lavozim (masalan "Fan o'qituvchisi", "Oshpaz"). Xodimga bog'lanmagan hisoblarda (Super Admin, moliyachi) — null. */
   position: string | null;
   /** "Fan o'qituvchisi" lavozimida tanlangan fan(lar). Boshqa lavozimlarda/bog'lanmagan hisoblarda — bo'sh massiv. */
@@ -1102,6 +1106,8 @@ export interface ParentAccount {
   organizationName: string;
   fullName: string;
   phone: string;
+  /** Hisobda saqlangan kabinet tili; null — hali tanlanmagan. */
+  locale?: string | null;
   /** Platforma ota-onalar paneli uchun o'chirgan funksiyalar kalitlari */
   disabledFeatures?: string[];
 }

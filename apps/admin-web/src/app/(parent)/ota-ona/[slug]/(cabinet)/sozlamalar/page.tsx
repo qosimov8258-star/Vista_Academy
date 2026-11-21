@@ -10,7 +10,7 @@ import { parentApi } from "@/lib/parent-api";
 import { getPushStatus, subscribeToPush, unsubscribeFromPush, type PushStatus } from "@/lib/push";
 import type { ParentAccount, ParentChild } from "@/lib/types";
 import { locales, type Locale } from "@/i18n/config";
-import { applyLocale } from "@/components/ui/language-switcher";
+import { changeParentLocale } from "../locale-sync";
 import { useTr } from "@/i18n/tr";
 import styles from "../../parent.module.css";
 import { useCabinetTheme, type ThemeMode } from "../theme";
@@ -365,7 +365,10 @@ export default function ParentSettingsPage({ params }: { params: Promise<{ slug:
           footer={tr("Kabinetdagi barcha matnlar tanlangan tilda chiqadi.")}
           options={locales.map((code) => ({ value: code, label: LOCALE_NAMES[code] }))}
           value={locale}
-          onPick={(code) => code !== locale && applyLocale(code)}
+          onPick={(code) => {
+            // Saqlanmasa til o'zgarmaydi — varaq ochiq qoladi, qayta urinish mumkin
+            if (code !== locale) changeParentLocale(code).catch(() => undefined);
+          }}
           onClose={() => setSheet(null)}
         />
       )}

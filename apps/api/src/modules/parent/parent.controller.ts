@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Param,
   Post,
+  Put,
   Query,
   Req,
   Res,
@@ -24,6 +25,7 @@ import { ParentLoginDto } from "./dto/parent-login.dto";
 import { ParentEnterDto } from "./dto/parent-enter.dto";
 import { ParentEntryService } from "./parent-entry.service";
 import { ChangeParentPasswordDto } from "./dto/change-parent-password.dto";
+import { UpdateLocaleDto } from "../../common/locale.dto";
 import { SubmitAbsenceReasonDto } from "./dto/submit-absence-reason.dto";
 import { NotifyDepartureDto } from "./dto/notify-departure.dto";
 import { NotifyNoteDto } from "./dto/notify-note.dto";
@@ -105,6 +107,12 @@ export class ParentController {
   @UseGuards(ParentJwtAuthGuard)
   async me(@CurrentParent() parent: AuthenticatedParent) {
     return { parent, children: await this.parentService.children(parent) };
+  }
+
+  @Put("locale")
+  @UseGuards(ParentJwtAuthGuard)
+  updateLocale(@CurrentParent() parent: AuthenticatedParent, @Body() dto: UpdateLocaleDto) {
+    return this.authService.updateLocale(parent, dto.locale);
   }
 
   @Post("password")

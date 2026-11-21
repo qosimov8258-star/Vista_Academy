@@ -12,6 +12,8 @@ import { useTranslations } from "next-intl";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
+import { changeStaffLocale } from "@/lib/staff-locale";
+import { clearCachedTheme } from "@/lib/theme";
 import type { EmployeeNotification } from "@/lib/types";
 import { clearTenantTokens, getTenantRefreshToken } from "@/lib/tenant-session";
 import clsx from "clsx";
@@ -587,6 +589,7 @@ export function Sidebar({ slug }: { slug: string }) {
       // kesh kaliti foydalanuvchiga emas, tashkilot slug'iga bog'langan.
       clearTenantTokens();
       queryClient.clear();
+      clearCachedTheme();
       router.push(`/${slug}/login`);
       router.refresh();
     }
@@ -1031,7 +1034,7 @@ export function Sidebar({ slug }: { slug: string }) {
           </div>
         )}
         <div className={clsx("mb-1 flex", collapsed ? "justify-center" : "justify-end")}>
-          <LanguageSwitcher collapsed={collapsed} dropUp />
+          <LanguageSwitcher change={changeStaffLocale} collapsed={collapsed} dropUp />
         </div>
         <button
           type="button"

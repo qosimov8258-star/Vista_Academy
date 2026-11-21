@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "./api";
 import { useAuth } from "./use-auth";
+import { isTenantEntrySession } from "./tenant-session";
 import type { TenantAuthenticatedUser } from "./types";
 import {
   CUSTOM_THEME_VARS,
@@ -34,12 +35,31 @@ export function applyTheme(theme: ThemeValue) {
     root.dataset.theme = "custom";
   } else if (theme === DEFAULT_THEME) delete root.dataset.theme;
   else root.dataset.theme = theme;
+  // «Profilga kirish» tabi: mehmonning o'z paneli keyingi ochilishda birovning rangida chiqmasin
+  if (isTenantEntrySession()) return;
   try {
     window.localStorage.setItem(THEME_STORAGE_KEY, theme);
     if (vars) window.localStorage.setItem(THEME_VARS_STORAGE_KEY, JSON.stringify(vars));
     else window.localStorage.removeItem(THEME_VARS_STORAGE_KEY);
   } catch {
     // Shaxsiy rejimda localStorage yopiq — rang baribir hisobdan keladi
+  }
+}
+
+/**
+ * Chiqishda: brauzerdagi rang nusxasi o'chiriladi va sahifa sukut rangga
+ * qaytadi — aks holda kirish sahifasi va shu brauzerda keyin kirgan boshqa
+ * foydalanuvchining birinchi lahzasi oldingi odamning rangida chiqardi.
+ */
+export function clearCachedTheme() {
+  const root = document.documentElement;
+  CUSTOM_THEME_VARS.forEach((name) => root.style.removeProperty(name));
+  delete root.dataset.theme;
+  try {
+    window.localStorage.removeItem(THEME_STORAGE_KEY);
+    window.localStorage.removeItem(THEME_VARS_STORAGE_KEY);
+  } catch {
+    // localStorage yopiq — saqlangan nusxa ham yo'q
   }
 }
 

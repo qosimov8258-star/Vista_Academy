@@ -346,6 +346,7 @@ export class TenantAuthService {
       role: TenantAccessTokenPayload["role"];
       avatarUpdatedAt: Date | null;
       themeColor: string | null;
+      locale: string | null;
       employee: { position: string; subjects: string[]; topicsManagedByAdmin: boolean } | null;
     },
     organization: { slug: string; name: string; logoUpdatedAt?: Date | null },
@@ -364,6 +365,7 @@ export class TenantAuthService {
       role: tenantUser.role,
       avatarUpdatedAt: tenantUser.avatarUpdatedAt?.toISOString() ?? null,
       themeColor: tenantUser.themeColor ?? null,
+      locale: tenantUser.locale ?? null,
       position: tenantUser.employee?.position ?? null,
       subjects: tenantUser.employee?.subjects ?? [],
       topicsManagedByAdmin: tenantUser.employee?.topicsManagedByAdmin ?? false,

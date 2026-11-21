@@ -7,6 +7,12 @@
 
 const ACCESS_KEY = "bogcha_tenant_at";
 const REFRESH_KEY = "bogcha_tenant_rt";
+/**
+ * «Profilga kirish» orqali ochilgan tab (platforma operatorining «Bog'chaga
+ * kirish»i yoki filial adminining «Xodim profiliga kirish»i). Bunday tabda
+ * mehmon o'tiribdi: til va rang hisob egasiniki bo'lib qolishi kerak.
+ */
+const ENTRY_KEY = "bogcha_tenant_entry";
 
 function isBrowser() {
   return typeof window !== "undefined";
@@ -32,4 +38,21 @@ export function clearTenantTokens(): void {
   if (!isBrowser()) return;
   sessionStorage.removeItem(ACCESS_KEY);
   sessionStorage.removeItem(REFRESH_KEY);
+  sessionStorage.removeItem(ENTRY_KEY);
+}
+
+export function markTenantEntrySession(): void {
+  if (!isBrowser()) return;
+  sessionStorage.setItem(ENTRY_KEY, "1");
+}
+
+/** Oddiy login: shu tabda avval «Profilga kirish» seansi bo'lgan bo'lsa, belgisi olib tashlanadi */
+export function unmarkTenantEntrySession(): void {
+  if (!isBrowser()) return;
+  sessionStorage.removeItem(ENTRY_KEY);
+}
+
+export function isTenantEntrySession(): boolean {
+  if (!isBrowser()) return false;
+  return sessionStorage.getItem(ENTRY_KEY) === "1";
 }

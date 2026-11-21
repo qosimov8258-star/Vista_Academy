@@ -147,6 +147,7 @@ export class ParentEntryService {
       organizationName: org.name,
       fullName: guardian.fullName,
       phone: guardian.phone,
+      locale: guardian.locale ?? null,
       disabledFeatures: [],
     };
   }

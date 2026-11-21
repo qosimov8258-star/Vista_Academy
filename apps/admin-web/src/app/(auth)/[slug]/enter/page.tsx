@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
-import { setTenantTokens } from "@/lib/tenant-session";
+import { markTenantEntrySession, setTenantTokens } from "@/lib/tenant-session";
 import type { TenantAuthenticatedUser } from "@/lib/types";
 
 // Chipta bir martalik: React StrictMode effektni ikki marta ishga tushirsa
@@ -39,6 +39,8 @@ export default function EnterPage({ params }: { params: Promise<{ slug: string }
       .post<{ user: TenantAuthenticatedUser; accessToken: string; refreshToken: string }>("/app/auth/enter", { ticket })
       .then(({ accessToken, refreshToken }) => {
         setTenantTokens({ accessToken, refreshToken });
+        // Mehmon tabi: til va rang hisob egasiniki bo'lib qoladi
+        markTenantEntrySession();
         queryClient.clear();
         router.replace(`/${slug}`);
         router.refresh();

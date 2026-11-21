@@ -18,6 +18,8 @@ export interface TenantAuthenticatedUser {
   avatarUpdatedAt: string | null;
   /** Sozlamalarda tanlangan tizim rangi ("blue" va h.k.); null — sukut (yashil). */
   themeColor: string | null;
+  /** Hisobda saqlangan panel tili ("uz" | "ru" | "en"); null — hali tanlanmagan. */
+  locale: string | null;
   /** Bog'langan xodim kartochkasidagi lavozim (masalan "Fan o'qituvchisi", "Oshpaz"). Xodimga bog'lanmagan hisoblarda (Super Admin, moliyachi) — null. */
   position: string | null;
   /** "Fan o'qituvchisi" lavozimida tanlangan fan(lar). Boshqa lavozimlarda/bog'lanmagan hisoblarda — bo'sh massiv. */
