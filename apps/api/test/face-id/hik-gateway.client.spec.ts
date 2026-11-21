@@ -85,9 +85,16 @@ describe("HikGateway — klient", () => {
     const { client, calls } = fakeGateway(() => json(OK));
     await client.setFace("IDX", "C14732", JPEG);
     assert.equal(`${calls[0].method} ${calls[0].path}?${calls[0].query.get("devIndex")}`, "PUT /ISAPI/Intelligent/FDLib/FDSetUp?IDX");
-    const form = calls[0].body as FormData;
-    assert.deepEqual(JSON.parse(await (form.get("FaceDataRecord") as Blob).text()), { faceLibType: "blackFD", FDID: "1", FPID: "C14732" });
-    assert.equal((form.get("img") as Blob).size, JPEG.length);
+    // Tana haqiqiy multipart sifatida o'qiladi — terminal ko'radigan narsaning o'zi
+    const form = await new Response(calls[0].body as BodyInit, { headers: { "content-type": calls[0].headers["Content-Type"] } }).formData();
+    const record = form.get("FaceDataRecord");
+    // JSON qism oddiy maydon bo'lishi shart: fayl bo'lib ketsa (`filename="blob"`) terminal «Invalid JSON format» qaytaradi
+    assert.equal(typeof record, "string");
+    assert.deepEqual(JSON.parse(record as string), { faceLibType: "blackFD", FDID: "1", FPID: "C14732" });
+    const img = form.get("img") as File;
+    assert.equal(img.name, "face.jpg");
+    assert.equal(img.type, "image/jpeg");
+    assert.deepEqual(Buffer.from(await img.arrayBuffer()), Buffer.from(JPEG));
   });
 
   it("terminal xatosi koddan olinadi; aloqa xatosi — vaqtinchalik", async () => {
