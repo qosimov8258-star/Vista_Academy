@@ -3070,6 +3070,9 @@ model GalleryItem {
   groupId        String    @map("group_id")
   /// Ixtiyoriy nom: «Quyoshli uy», «Tipratikan»
   title          String?
+  /// Ixtiyoriy matn — ota-ona ish ostida o'qiydi
+  description    String?
+  /// 1-rasm (muqova). 2–5-rasmlar — GalleryImage'da
   image          Bytes?
   imageKey       String?   @map("image_key")
   imageMimeType  String    @map("image_mime_type")
@@ -3083,9 +3086,28 @@ model GalleryItem {
   group        Group         @relation(fields: [groupId], references: [id], onDelete: Cascade)
   createdBy    TenantUser    @relation(fields: [createdById], references: [id])
   likes        GalleryLike[]
+  images       GalleryImage[]
 
   @@index([branchId, createdAt])
   @@map("gallery_items")
+}
+
+/// Ishning qo'shimcha rasmlari (2–5): tarbiyachi guruhni bo'lib suratga oladi —
+/// har rasmda bir necha bola, ota-ona ularni varaqlab ko'radi.
+model GalleryImage {
+  id        String   @id @default(uuid())
+  itemId    String   @map("item_id")
+  /// 1–4 (0 — ishning o'zidagi muqova rasm)
+  position  Int
+  image     Bytes?
+  imageKey  String?  @map("image_key")
+  mimeType  String   @map("mime_type")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  item GalleryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([itemId, position])
+  @@map("gallery_images")
 }
 
 /// Ota-onaning «Yoqdi» belgisi — bitta ishga bittadan

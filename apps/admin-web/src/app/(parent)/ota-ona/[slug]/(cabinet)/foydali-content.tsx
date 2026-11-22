@@ -18,7 +18,7 @@ import type { ArticleCommentItem, ArticleReactionKind } from "@/features/article
  *   DELETE /app/parent/articles/:id/comments/:cid     → { id } (faqat o'ziniki)
  *   GET  /app/parent/gallery             → ParentGalleryItem[]
  *   POST /app/parent/gallery/:id/like    → { liked, likesCount }
- *   GET  /app/parent/gallery/:id/image   → rasm
+ *   GET  /app/parent/gallery/:id/image   → rasm (`?n=1..4` — keyingi suratlari)
  */
 
 export type ArticleCategory = "PSYCHOLOGY" | "DEVELOPMENT" | "HEALTH" | "NUTRITION" | "FAMILY" | "ADAPTATION" | "HOME_GAMES";
@@ -67,6 +67,10 @@ export interface ParentArticle extends ParentArticleSummary {
 export interface ParentGalleryItem {
   id: string;
   title: string | null;
+  /** Tarbiyachining ixtiyoriy matni */
+  description?: string | null;
+  /** 1–5: suratlar soni (`/image?n=0..4`) */
+  imageCount?: number;
   groupId: string;
   groupName: string;
   likesCount: number;
@@ -76,7 +80,8 @@ export interface ParentGalleryItem {
 
 export const articleCoverUrl = (article: { id: string; version: number }) =>
   `${PARENT_API_URL}/app/parent/articles/${article.id}/cover?v=${article.version}`;
-export const galleryImageUrl = (id: string) => `${PARENT_API_URL}/app/parent/gallery/${id}/image`;
+/** `n` — ishning nechanchi surati (0 — birinchisi, muqova) */
+export const galleryImageUrl = (id: string, n = 0) => `${PARENT_API_URL}/app/parent/gallery/${id}/image${n > 0 ? `?n=${n}` : ""}`;
 
 export function useParentArticles(enabled = true) {
   return useQuery({
