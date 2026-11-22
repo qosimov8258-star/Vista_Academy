@@ -1552,6 +1552,10 @@ export interface GalleryItem {
   branchId: string;
   groupId: string;
   title: string | null;
+  /** Ish ostidagi ixtiyoriy matn */
+  description: string | null;
+  /** 1–5: suratlar soni (`/image?n=0..4`) */
+  imageCount: number;
   likesCount: number;
   createdById: string;
   createdAt: string;

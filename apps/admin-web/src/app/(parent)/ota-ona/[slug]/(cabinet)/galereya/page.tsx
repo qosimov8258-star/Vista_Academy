@@ -10,6 +10,7 @@ import { GalleryIcon, galleryImageUrl, useParentGallery, useToggleLike, type Par
 import { EmptyCard, FoydaliHeader, ListSkeleton, LoadErrorCard, formatUzDate } from "../foydali/ui";
 import { parentApi } from "@/lib/parent-api";
 import type { ParentAccount, ParentChild } from "@/lib/types";
+import { SwipeStrip } from "@/features/gallery/swipe-strip";
 import { useTr } from "@/i18n/tr";
 
 /** «2-guruh», «Группа Солнышко» kabi nomlarga «Guruh» qayta qo'shilmaydi */
@@ -21,7 +22,8 @@ function useGroupLabel() {
 /**
  * Bog'cha galereyasi — bolalar ishlari muzeyi. Filialdagi hamma guruhlar
  * ishlari guruh nomi bilan; ota-ona «Yoqdi» bosadi (bitta ishga bitta).
- * Rasm bosilsa butun ekranda ochiladi.
+ * Bitta ishda 1–5 ta surat bo'ladi (guruh bo'linib suratga olinadi) —
+ * barmoq bilan varaqlanadi; surat bosilsa butun ekranda, o'sha suratdan ochiladi.
  */
 export default function GalleryPage({ params }: { params: Promise<{ slug: string }> }) {
   const tr = useTr();
@@ -35,7 +37,7 @@ export default function GalleryPage({ params }: { params: Promise<{ slug: string
     retry: false,
   });
   const [group, setGroup] = useState<string | null>(null);
-  const [open, setOpen] = useState<ParentGalleryItem | null>(null);
+  const [open, setOpen] = useState<{ item: ParentGalleryItem; index: number } | null>(null);
 
   const items = useMemo(() => query.data ?? [], [query.data]);
   // Guruhlar: o'z bolasining guruhi birinchi, qolganlari alifbo bo'yicha
@@ -90,25 +92,40 @@ export default function GalleryPage({ params }: { params: Promise<{ slug: string
                     <p className="truncate text-[12.5px] text-[var(--p-muted)]">{formatUzDate(item.addedAt)}</p>
                   </div>
                 </div>
-                <button type="button" onClick={() => setOpen(item)} className="block w-full px-3" aria-label={tr("Kattalashtirish")}>
-                  <img
-                    src={galleryImageUrl(item.id)}
-                    alt={item.title ?? ""}
-                    loading="lazy"
-                    className="aspect-[4/3] w-full rounded-[18px] bg-[var(--p-sunken)] object-cover"
+                <div className="px-3">
+                  <SwipeStrip
+                    count={item.imageCount ?? 1}
+                    accent="var(--p-coral)"
+                    label={item.title ?? groupLabel(item.groupName)}
+                    frameClassName="aspect-[4/3] w-full rounded-[18px] bg-[var(--p-sunken)]"
+                    renderSlide={(n) => (
+                      <button type="button" onClick={() => setOpen({ item, index: n })} className="block h-full w-full" aria-label={tr("Kattalashtirish")}>
+                        <img src={galleryImageUrl(item.id, n)} alt={item.title ?? ""} loading="lazy" className="h-full w-full object-cover" />
+                      </button>
+                    )}
                   />
-                </button>
+                </div>
                 <div className="flex items-center gap-3 px-4 py-3">
                   <p className="min-w-0 flex-1 truncate text-[15px] font-semibold text-[var(--p-ink)]">{item.title ?? ""}</p>
                   <LikeButton item={item} onToggle={() => like.mutate(item.id)} />
                 </div>
+                {item.description?.trim() && (
+                  <p className="-mt-1 whitespace-pre-line break-words px-4 pb-4 text-[14.5px] leading-relaxed text-[var(--p-ink)]">{item.description}</p>
+                )}
               </li>
             ))}
           </ul>
         </>
       )}
 
-      {open && <Viewer item={items.find((item) => item.id === open.id) ?? open} onClose={() => setOpen(null)} onLike={(id) => like.mutate(id)} />}
+      {open && (
+        <Viewer
+          item={items.find((item) => item.id === open.item.id) ?? open.item}
+          startIndex={open.index}
+          onClose={() => setOpen(null)}
+          onLike={(id) => like.mutate(id)}
+        />
+      )}
     </div>
   );
 }
@@ -155,8 +172,18 @@ function GroupChip({ active, onClick, children }: { active: boolean; onClick: ()
   );
 }
 
-/** Butun ekranda ko'rish: qora fon, rasm sig'adi, pastda nomi va «Yoqdi» */
-function Viewer({ item, onClose, onLike }: { item: ParentGalleryItem; onClose: () => void; onLike: (id: string) => void }) {
+/** Butun ekranda ko'rish: qora fon, rasm sig'adi (bir nechta bo'lsa — varaqlanadi), pastda nomi va «Yoqdi» */
+function Viewer({
+  item,
+  startIndex,
+  onClose,
+  onLike,
+}: {
+  item: ParentGalleryItem;
+  startIndex: number;
+  onClose: () => void;
+  onLike: (id: string) => void;
+}) {
   const tr = useTr();
   const groupLabel = useGroupLabel();
   const [host, setHost] = useState<HTMLElement | null>(null);
@@ -187,9 +214,23 @@ function Viewer({ item, onClose, onLike }: { item: ParentGalleryItem; onClose: (
           <X className="h-5 w-5" strokeWidth={2.4} />
         </button>
       </div>
-      <div className="flex min-h-0 flex-1 items-center justify-center px-3">
-        <img src={galleryImageUrl(item.id)} alt={item.title ?? ""} className="max-h-full max-w-full rounded-[14px] object-contain" onClick={(event) => event.stopPropagation()} />
-      </div>
+      <SwipeStrip
+        fill
+        dark
+        count={item.imageCount ?? 1}
+        startIndex={startIndex}
+        label={item.title ?? groupLabel(item.groupName)}
+        renderSlide={(n) => (
+          <div className="flex h-full w-full items-center justify-center px-3">
+            <img
+              src={galleryImageUrl(item.id, n)}
+              alt={item.title ?? ""}
+              className="max-h-full max-w-full rounded-[14px] object-contain"
+              onClick={(event) => event.stopPropagation()}
+            />
+          </div>
+        )}
+      />
       <div className="flex items-center gap-3 px-5 py-4" onClick={(event) => event.stopPropagation()}>
         <div className="min-w-0 flex-1 text-white">
           <p className="truncate text-[16px] font-bold">{item.title ?? groupLabel(item.groupName)}</p>
@@ -197,6 +238,7 @@ function Viewer({ item, onClose, onLike }: { item: ParentGalleryItem; onClose: (
             {item.title ? `${groupLabel(item.groupName)} · ` : ""}
             {formatUzDate(item.addedAt)}
           </p>
+          {item.description?.trim() && <p className="mt-1 line-clamp-2 text-[13.5px] leading-snug text-white/80">{item.description}</p>}
         </div>
         <LikeButton item={item} onToggle={() => onLike(item.id)} light />
       </div>

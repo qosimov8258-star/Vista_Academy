@@ -10,7 +10,7 @@ import { CurrentParent } from "../parent/decorators/current-parent.decorator";
 import { ParentJwtAuthGuard } from "../parent/guards/parent-jwt-auth.guard";
 import { AuthenticatedParent } from "../parent/parent-auth.types";
 import { R2Service } from "../storage/r2.service";
-import { CreateGalleryItemDto, GalleryQueryDto, UpdateGalleryItemDto } from "./dto/gallery.dto";
+import { CreateGalleryItemDto, GALLERY_MAX_IMAGES, GalleryQueryDto, UpdateGalleryItemDto } from "./dto/gallery.dto";
 import { GalleryService } from "./gallery.service";
 
 /** Xodimlar: bolalar ishlarini yuklash */
@@ -47,8 +47,13 @@ export class GalleryController {
 
   @Get(":id/image")
   @Header("Cache-Control", "private, max-age=86400")
-  async image(@CurrentTenantUser() user: TenantAuthenticatedUser, @Param("id", ParseUUIDPipe) id: string, @Res() res: Response) {
-    const media = await this.gallery.imageForStaff(toTenantScope(user), id);
+  async image(
+    @CurrentTenantUser() user: TenantAuthenticatedUser,
+    @Param("id", ParseUUIDPipe) id: string,
+    @Query("n") n: string | undefined,
+    @Res() res: Response,
+  ) {
+    const media = await this.gallery.imageForStaff(toTenantScope(user), id, imageIndex(n));
     await sendMediaResponse(res, this.r2, media, "Rasm topilmadi");
   }
 }
@@ -76,8 +81,19 @@ export class ParentGalleryController {
 
   @Get(":id/image")
   @Header("Cache-Control", "private, max-age=86400")
-  async image(@CurrentParent() parent: AuthenticatedParent, @Param("id", ParseUUIDPipe) id: string, @Res() res: Response) {
-    const media = await this.gallery.imageForParent(parent, id);
+  async image(
+    @CurrentParent() parent: AuthenticatedParent,
+    @Param("id", ParseUUIDPipe) id: string,
+    @Query("n") n: string | undefined,
+    @Res() res: Response,
+  ) {
+    const media = await this.gallery.imageForParent(parent, id, imageIndex(n));
     await sendMediaResponse(res, this.r2, media, "Rasm topilmadi");
   }
+}
+
+/** `?n=` — ishning nechanchi rasmi (0 — birinchisi); noto'g'ri bo'lsa birinchisi */
+function imageIndex(n: string | undefined): number {
+  const index = Number(n);
+  return Number.isInteger(index) && index >= 0 && index < GALLERY_MAX_IMAGES ? index : 0;
 }

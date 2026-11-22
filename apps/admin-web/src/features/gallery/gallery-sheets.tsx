@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import clsx from "clsx";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Heart, ImageOff, Info } from "lucide-react";
+import { Heart, ImageOff, Images, Info } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import type { GalleryItem, Group } from "@/lib/types";
 import { formatDate } from "@/lib/format";
@@ -11,20 +11,27 @@ import { useAuthedImage } from "@/components/ui/child-photo";
 import { IosSheet, SheetPrimaryButton, SheetSection } from "@/components/ios/sheet";
 import { FormSection } from "@/components/ios/form";
 import { GROUP_BLOCK, ROW_SEPARATOR } from "@/components/ios/tokens";
-import { PhotoPicker } from "@/features/useful/photo-picker";
-import { DeleteActionRow, FormError, GroupPickerRow, InputRow } from "@/features/useful/useful-parts";
+import { DeleteActionRow, FormError, GroupPickerRow, InputRow, TextBlock } from "@/features/useful/useful-parts";
+import { GALLERY_MAX_PHOTOS, GalleryPhotosPicker } from "@/features/gallery/gallery-photos-picker";
+import { SwipeStrip } from "@/features/gallery/swipe-strip";
 import { useTr } from "@/i18n/tr";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
 
-/** Surat almashtirilmaydi (faqat nomi) — manzil o'zgarmas, kesh xavfsiz */
-export function galleryImageUrl(id: string): string {
-  return `${API_URL}/app/gallery/${id}/image`;
+/** Ish ostidagi matn uzunligi (API bilan bir xil) */
+const GALLERY_TEXT_MAX = 500;
+
+/**
+ * Surat almashtirilmaydi (faqat nomi/matni) — manzil o'zgarmas, kesh xavfsiz.
+ * `n` — ishning nechanchi surati (0 — birinchisi, muqova).
+ */
+export function galleryImageUrl(id: string, n = 0): string {
+  return `${API_URL}/app/gallery/${id}/image${n > 0 ? `?n=${n}` : ""}`;
 }
 
 /** Suratning o'zi: yuklanguncha kulrang plitka, xato bo'lsa belgi */
-function GalleryImage({ id, alt, fit, className }: { id: string; alt: string; fit: "cover" | "contain"; className?: string }) {
-  const { src, failed } = useAuthedImage(galleryImageUrl(id));
+function GalleryImage({ id, n = 0, alt, fit, className }: { id: string; n?: number; alt: string; fit: "cover" | "contain"; className?: string }) {
+  const { src, failed } = useAuthedImage(galleryImageUrl(id, n));
   return (
     <div className={clsx("relative overflow-hidden bg-[#767680]/[0.12]", className)}>
       {src && !failed ? (
@@ -39,13 +46,23 @@ function GalleryImage({ id, alt, fit, className }: { id: string; alt: string; fi
   );
 }
 
-/** To'rdagi bitta ish: kvadrat surat + nomi, guruh va ♥ soni */
+/** To'rdagi bitta ish: kvadrat surat (bir nechta bo'lsa — soni), nomi, guruh va ♥ soni */
 export function GalleryTile({ item, onOpen }: { item: GalleryItem; onOpen: () => void }) {
   const tr = useTr();
   const name = item.title?.trim() || tr("Nomsiz ish");
+  const count = item.imageCount ?? 1;
   return (
     <button type="button" onClick={onOpen} className="group min-w-0 text-left transition-transform active:scale-[0.97]">
-      <GalleryImage id={item.id} alt={name} fit="cover" className="aspect-square w-full rounded-[16px]" />
+      <span className="relative block">
+        <GalleryImage id={item.id} alt={name} fit="cover" className="aspect-square w-full rounded-[16px]" />
+        {count > 1 && (
+          <span className="pointer-events-none absolute right-2 top-2 flex h-6 items-center gap-1 rounded-full bg-black/55 px-2 text-[12.5px] font-semibold tabular-nums text-white backdrop-blur-sm">
+            <Images className="h-3.5 w-3.5" strokeWidth={2.2} aria-hidden="true" />
+            {count}
+            <span className="sr-only">{tr("ta surat")}</span>
+          </span>
+        )}
+      </span>
       <span className={clsx("mt-1.5 block truncate px-0.5 text-[14.5px] font-medium leading-snug", item.title?.trim() ? "text-[var(--color-text)]" : "text-[#8e8e93]")}>
         {tr(name)}
       </span>
@@ -86,9 +103,9 @@ function InfoRow({ label, children }: { label: string; children: React.ReactNode
 }
 
 /**
- * Ishni ko'rish: katta surat, nomi (huquqi borga tahrirlanadi — tepada
- * «Saqlash»), guruh, kim yuklagani, sana, yoqtirishlar va o'chirish
- * (varaq ichida ikkinchi bosqich).
+ * Ishni ko'rish: suratlar (bir nechta bo'lsa — barmoq bilan varaqlanadi),
+ * nomi va matni (huquqi borga tahrirlanadi — tepada «Saqlash»), guruh, kim
+ * yuklagani, sana, yoqtirishlar va o'chirish (varaq ichida ikkinchi bosqich).
  */
 export function GalleryViewSheet({
   item,
@@ -106,13 +123,17 @@ export function GalleryViewSheet({
   const tr = useTr();
   const queryClient = useQueryClient();
   const [title, setTitle] = useState(item.title ?? "");
+  const [text, setText] = useState(item.description ?? "");
 
   useEffect(() => {
-    if (open) setTitle(item.title ?? "");
-  }, [open, item.id, item.title]);
+    if (open) {
+      setTitle(item.title ?? "");
+      setText(item.description ?? "");
+    }
+  }, [open, item.id, item.title, item.description]);
 
   const rename = useMutation({
-    mutationFn: () => api.patch<GalleryItem>(`/app/gallery/${item.id}`, { title: title.trim() || null }),
+    mutationFn: () => api.patch<GalleryItem>(`/app/gallery/${item.id}`, { title: title.trim() || null, description: text.trim() || null }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["gallery", slug] }),
   });
   const remove = useMutation({
@@ -131,9 +152,10 @@ export function GalleryViewSheet({
     }
   }, [open, item.id, resetRename, resetRemove]);
 
-  const dirty = canEdit && title.trim() !== (item.title ?? "").trim();
+  const dirty = canEdit && (title.trim() !== (item.title ?? "").trim() || text.trim() !== (item.description ?? "").trim());
   const busy = rename.isPending || remove.isPending;
   const name = item.title?.trim() || tr("Nomsiz ish");
+  const count = item.imageCount ?? 1;
 
   return (
     <IosSheet
@@ -143,12 +165,33 @@ export function GalleryViewSheet({
       title={tr(name)}
       action={dirty ? { label: "Saqlash", onClick: () => !rename.isPending && rename.mutate(), loading: rename.isPending } : undefined}
     >
-      <GalleryImage id={item.id} alt={name} fit="contain" className="aspect-square max-h-[60dvh] w-full rounded-[18px] bg-white" />
+      {/* Har ochilishda birinchi suratdan boshlanadi */}
+      <SwipeStrip
+        key={`${item.id}-${open}`}
+        count={count}
+        label={tr(name)}
+        frameClassName="aspect-square max-h-[60dvh] w-full rounded-[18px] bg-white"
+        renderSlide={(n) => <GalleryImage id={item.id} n={n} alt={tr("{0}-surat", n + 1)} fit="contain" className="h-full w-full bg-white" />}
+      />
 
-      {canEdit && (
+      {canEdit ? (
         <SheetSection footer={rename.isError ? <span className="text-[#ff3b30]">{tr(rename.error instanceof ApiError ? rename.error.message : "Saqlab bo'lmadi")}</span> : undefined}>
           <InputRow label="Nomi" value={title} onChange={setTitle} placeholder="Masalan, Quyoshli uy" maxLength={80} />
+          <TextBlock
+            value={text}
+            onChange={setText}
+            maxLength={GALLERY_TEXT_MAX}
+            minRows={2}
+            ariaLabel="Matn"
+            placeholder="Matn: bugun nima qildik? (ixtiyoriy)"
+          />
         </SheetSection>
+      ) : (
+        item.description?.trim() && (
+          <div className={clsx(GROUP_BLOCK, "px-4 py-3.5")}>
+            <p className="whitespace-pre-line break-words text-[15px] leading-relaxed text-[var(--color-text)]">{item.description}</p>
+          </div>
+        )
       )}
 
       <SheetSection title={tr("Ma'lumot")}>
@@ -178,7 +221,7 @@ export function GalleryViewSheet({
   );
 }
 
-/** Yangi ish yuklash: surat, guruh (majburiy), ixtiyoriy nomi */
+/** Yangi ish yuklash: 1–5 ta surat, guruh (majburiy), ixtiyoriy nomi va matni */
 export function GalleryAddSheet({
   open,
   onClose,
@@ -195,29 +238,37 @@ export function GalleryAddSheet({
 }) {
   const tr = useTr();
   const queryClient = useQueryClient();
-  const [image, setImage] = useState<string | null>(null);
+  const [images, setImages] = useState<string[]>([]);
   const [groupId, setGroupId] = useState("");
   const [title, setTitle] = useState("");
+  const [text, setText] = useState("");
   const [tried, setTried] = useState(false);
 
   // Bitta guruh bo'lsa (odatda tarbiyachi) — o'zi tanlanadi
   const onlyGroupId = groups.length === 1 ? groups[0].id : "";
   useEffect(() => {
     if (!open) return;
-    setImage(null);
+    setImages([]);
     setTitle("");
+    setText("");
     setTried(false);
     setGroupId(defaultGroupId || onlyGroupId);
   }, [open, defaultGroupId, onlyGroupId]);
 
   const errors = {
-    image: !image ? "Suratni tanlang" : undefined,
+    image: images.length === 0 ? "Kamida bitta surat tanlang" : undefined,
     group: !groupId ? "Guruhni tanlang" : undefined,
   };
   const valid = !errors.image && !errors.group;
 
   const save = useMutation({
-    mutationFn: () => api.post<GalleryItem>("/app/gallery", { groupId, title: title.trim() || undefined, image }),
+    mutationFn: () =>
+      api.post<GalleryItem>("/app/gallery", {
+        groupId,
+        title: title.trim() || undefined,
+        description: text.trim() || undefined,
+        images,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["gallery", slug] });
       onClose();
@@ -252,20 +303,16 @@ export function GalleryAddSheet({
         </p>
       </div>
 
-      <FormSection>
-        <PhotoPicker
-          src={image}
-          onPicked={setImage}
-          onRemove={() => setImage(null)}
-          aspect="square"
-          emptyTitle="Suratni tanlang"
-          emptyHint="Rasm, applikatsiya yoki loydan yasalgan ish — yorug' joyda, tekis suratga oling"
+      <FormSection title={tr("Suratlar")}>
+        <GalleryPhotosPicker
+          images={images}
+          onAdd={(dataUrl) => setImages((prev) => (prev.length >= GALLERY_MAX_PHOTOS ? prev : [...prev, dataUrl]))}
+          onRemove={(index) => setImages((prev) => prev.filter((_, i) => i !== index))}
           error={tried ? errors.image : undefined}
-          alt={tr("Tanlangan surat")}
         />
       </FormSection>
 
-      <FormSection footer={tr("Nomi bo'lmasa ham bo'ladi.")}>
+      <FormSection footer={tr("Nomi va matn bo'lmasa ham bo'ladi.")}>
         <GroupPickerRow
           groups={groups}
           value={groupId}
@@ -275,6 +322,14 @@ export function GalleryAddSheet({
           footer="Qaysi guruh bolalarining ishi. Galereyani filialdagi barcha ota-onalar ko'radi."
         />
         <InputRow label="Nomi" value={title} onChange={setTitle} placeholder="Masalan, Quyoshli uy" maxLength={80} />
+        <TextBlock
+          value={text}
+          onChange={setText}
+          maxLength={GALLERY_TEXT_MAX}
+          minRows={3}
+          ariaLabel="Matn"
+          placeholder="Matn: bugun nima qildik? (ixtiyoriy)"
+        />
       </FormSection>
 
       <FormError message={save.error ? (save.error instanceof ApiError ? save.error.message : "Kutilmagan xatolik yuz berdi") : null} />

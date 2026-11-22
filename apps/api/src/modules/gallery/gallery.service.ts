@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
 import { canNotifyParents } from "../../common/features/feature-access";
@@ -14,7 +14,7 @@ import {
   resolveContentGroupForWrite,
   resolveContentReadBranch,
 } from "../useful/content-scope";
-import { CreateGalleryItemDto, GalleryQueryDto, UpdateGalleryItemDto } from "./dto/gallery.dto";
+import { CreateGalleryItemDto, GALLERY_MAX_IMAGES, GalleryQueryDto, UpdateGalleryItemDto } from "./dto/gallery.dto";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 
@@ -29,13 +29,21 @@ const ITEM_SELECT = {
   branchId: true,
   groupId: true,
   title: true,
+  description: true,
   likesCount: true,
   createdById: true,
   createdAt: true,
   group: { select: { id: true, name: true } },
   createdBy: { select: { id: true, fullName: true } },
   branch: { select: { timezone: true } },
+  // 2–5-rasmlar soni (1-rasm ishning o'zida)
+  _count: { select: { images: true } },
 } satisfies Prisma.GalleryItemSelect;
+
+/** Ro'yxat qatori: ichki maydonlar o'rniga rasmlar soni */
+function toRow<T extends { branch: unknown; _count: { images: number } }>({ branch: _branch, _count, ...row }: T) {
+  return { ...row, imageCount: 1 + _count.images };
+}
 
 /**
  * Galereya — bolalar ishlari muzeyi. Tarbiyachi (o'z guruhlari), filial
@@ -68,41 +76,56 @@ export class GalleryService {
       orderBy: { createdAt: "desc" },
       take: 300,
     });
-    return rows.map(({ branch: _branch, ...row }) => row);
+    return rows.map(toRow);
   }
 
+  /**
+   * Yangi ish: 1–5 ta rasm (tartibda, birinchisi — muqova) va ixtiyoriy nom/matn.
+   * Hamma rasm avval tekshiriladi — bittasi yaroqsiz bo'lsa hech narsa saqlanmaydi.
+   */
   async create(scope: TenantScope, dto: CreateGalleryItemDto) {
     const branchId = requireTeachingScope(scope);
     const groupId = (await resolveContentGroupForWrite(this.prisma, scope, branchId, dto.groupId, true))!;
-    const { buffer, mimeType } = decodeImageDataUrl(dto.image, MAX_CONTENT_IMAGE_BYTES);
-    let image: Uint8Array<ArrayBuffer> | null = new Uint8Array(buffer);
-    let imageKey: string | null = null;
-    if (this.r2.enabled) {
-      imageKey = this.r2.buildKey(scope.organizationId, R2_CATEGORY.GALLERY_IMAGE);
-      await this.r2.uploadBuffer(imageKey, buffer, mimeType);
-      image = null;
-    }
+    const sources = dto.images?.length ? dto.images : dto.image ? [dto.image] : [];
+    if (sources.length === 0) throw new BadRequestException("Kamida bitta rasm tanlang");
+    if (sources.length > GALLERY_MAX_IMAGES) throw new BadRequestException(`Ko'pi bilan ${GALLERY_MAX_IMAGES} ta rasm yuklash mumkin`);
+    const decoded = sources.map((source) => decodeImageDataUrl(source, MAX_CONTENT_IMAGE_BYTES));
+    const stored = [];
+    for (const { buffer, mimeType } of decoded) stored.push(await this.storeImage(scope.organizationId, buffer, mimeType));
+    const [cover, ...extra] = stored;
     const recent = await this.prisma.galleryItem.count({
       where: { groupId, createdById: scope.userId, createdAt: { gte: new Date(Date.now() - PUSH_QUIET_MS) } },
     });
-    const { branch: _branch, ...row } = await this.prisma.galleryItem.create({
+    const created = await this.prisma.galleryItem.create({
       data: {
         organizationId: scope.organizationId,
         branchId,
         groupId,
         title: dto.title?.trim() || null,
-        image,
-        imageKey,
-        imageMimeType: mimeType,
+        description: dto.description?.trim() || null,
+        image: cover.image,
+        imageKey: cover.imageKey,
+        imageMimeType: cover.mimeType,
         createdById: scope.userId,
+        images: { create: extra.map((img, i) => ({ position: i + 1, image: img.image, imageKey: img.imageKey, mimeType: img.mimeType })) },
       },
       select: ITEM_SELECT,
     });
     if (recent === 0) {
       // Push xatosi yuklashni to'xtatmaydi
-      void this.notifyParents(scope.organizationId, groupId, row.group.name).catch(() => undefined);
+      void this.notifyParents(scope.organizationId, groupId, created.group.name).catch(() => undefined);
     }
-    return row;
+    return toRow(created);
+  }
+
+  /** Rasm R2'ga (yoqilgan bo'lsa) yoki bazaga — qaysi biri ishlatilganini qaytaradi */
+  private async storeImage(organizationId: string, buffer: Buffer, mimeType: string) {
+    if (this.r2.enabled) {
+      const imageKey = this.r2.buildKey(organizationId, R2_CATEGORY.GALLERY_IMAGE);
+      await this.r2.uploadBuffer(imageKey, buffer, mimeType);
+      return { image: null, imageKey, mimeType };
+    }
+    return { image: new Uint8Array(buffer) as Uint8Array<ArrayBuffer>, imageKey: null, mimeType };
   }
 
   /**
@@ -132,12 +155,15 @@ export class GalleryService {
   async update(scope: TenantScope, id: string, dto: UpdateGalleryItemDto) {
     requireTeachingScope(scope);
     await this.requireEditable(scope, id);
-    const { branch: _branch, ...row } = await this.prisma.galleryItem.update({
+    const updated = await this.prisma.galleryItem.update({
       where: { id },
-      data: { title: dto.title?.trim() || null },
+      data: {
+        ...(dto.title !== undefined ? { title: dto.title?.trim() || null } : {}),
+        ...(dto.description !== undefined ? { description: dto.description?.trim() || null } : {}),
+      },
       select: ITEM_SELECT,
     });
-    return row;
+    return toRow(updated);
   }
 
   async remove(scope: TenantScope, id: string) {
@@ -145,16 +171,19 @@ export class GalleryService {
     const item = await this.requireEditable(scope, id);
     await this.prisma.galleryItem.update({ where: { id }, data: { deletedAt: new Date() } });
     if (item.imageKey) await this.r2.deleteObject(item.imageKey).catch(() => undefined);
+    for (const extra of item.images) {
+      if (extra.imageKey) await this.r2.deleteObject(extra.imageKey).catch(() => undefined);
+    }
     return { id };
   }
 
-  async imageForStaff(scope: TenantScope, id: string) {
+  async imageForStaff(scope: TenantScope, id: string, index = 0) {
     const branchId = await resolveContentReadBranch(this.prisma, scope);
     const visible = await this.prisma.galleryItem.count({
       where: { id, organizationId: scope.organizationId, deletedAt: null, ...(branchId ? { branchId } : {}) },
     });
     if (!visible) throw new NotFoundException("Rasm topilmadi");
-    return this.imageMedia(id);
+    return this.imageMedia(id, index);
   }
 
   // ---------------------------------------------------------------------
@@ -172,6 +201,8 @@ export class GalleryService {
     return rows.map((row) => ({
       id: row.id,
       title: row.title,
+      description: row.description,
+      imageCount: 1 + row._count.images,
       groupId: row.groupId,
       groupName: row.group.name,
       likesCount: row.likesCount,
@@ -195,9 +226,9 @@ export class GalleryService {
     });
   }
 
-  async imageForParent(parent: AuthenticatedParent, id: string) {
+  async imageForParent(parent: AuthenticatedParent, id: string, index = 0) {
     await this.requireParentVisible(parent, id);
-    return this.imageMedia(id);
+    return this.imageMedia(id, index);
   }
 
   // ---------------------------------------------------------------------
@@ -210,7 +241,15 @@ export class GalleryService {
     if (!visible) throw new NotFoundException("Rasm topilmadi");
   }
 
-  private async imageMedia(id: string) {
+  /** `index`: 0 — ishning o'zidagi muqova, 1–4 — qo'shimcha rasmlar */
+  private async imageMedia(id: string, index = 0) {
+    if (index > 0) {
+      const extra = await this.prisma.galleryImage.findUnique({
+        where: { itemId_position: { itemId: id, position: index } },
+        select: { image: true, imageKey: true, mimeType: true },
+      });
+      return { key: extra?.imageKey ?? null, bytes: extra?.image ?? null, mimeType: extra?.mimeType ?? null };
+    }
     const row = await this.prisma.galleryItem.findUnique({ where: { id }, select: { image: true, imageKey: true, imageMimeType: true } });
     return { key: row?.imageKey ?? null, bytes: row?.image ?? null, mimeType: row?.imageMimeType ?? null };
   }
@@ -218,7 +257,7 @@ export class GalleryService {
   private async requireEditable(scope: TenantScope, id: string) {
     const item = await this.prisma.galleryItem.findFirst({
       where: { id, organizationId: scope.organizationId, deletedAt: null },
-      select: { id: true, branchId: true, createdById: true, imageKey: true },
+      select: { id: true, branchId: true, createdById: true, imageKey: true, images: { select: { imageKey: true } } },
     });
     if (!item) throw new NotFoundException("Rasm topilmadi");
     if (scope.branchId && item.branchId !== scope.branchId) {
