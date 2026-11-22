@@ -18,6 +18,7 @@ import { AdminHome } from "@/features/desk/admin-home";
 import { BranchAdminHome } from "@/features/branch-admin/branch-admin-home";
 import { DirectorHome } from "@/features/director/director-home";
 import { TeacherHome } from "@/features/teacher/teacher-home";
+import { InstallBanner } from "@/features/pwa/install-banner";
 import { ChildIcon, ChevronRightIcon, MoneyIcon } from "@/components/ios/icons";
 import { PeriodPicker } from "@/features/network/period-picker";
 import { IosIcon } from "@/features/director/ios-icon";
@@ -289,7 +290,18 @@ function RecentPayments({ payments, slug }: { payments: Payment[]; slug: string 
   );
 }
 
+/** Bosh sahifa: tepada «Ilovani o'rnating» qatori (o'rnatilgach yo'qoladi), ostida rolga qarab sahifa */
 export default function DashboardPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = use(params);
+  return (
+    <>
+      <InstallBanner slug={slug} app="staff" className="mx-auto mb-5 max-w-[1100px]" />
+      <RoleHome params={params} />
+    </>
+  );
+}
+
+function RoleHome({ params }: { params: Promise<{ slug: string }> }) {
   const tr = useTr();
   const { slug } = use(params);
   const { user } = useAuth();
