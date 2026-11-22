@@ -623,6 +623,9 @@ export interface MenuEntry {
   breakfast: string | null;
   lunch: string | null;
   snack: string | null;
+  /** Server qaytaradi: yozuv qachon yaratilgan va oxirgi marta saqlangan */
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 /** Oshpaz suratga olib yuklagan taom — qaysi ovqatga tegishli */
