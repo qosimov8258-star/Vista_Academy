@@ -15,7 +15,6 @@ import {
   FolderOpen,
   Gamepad2,
   ImagePlus,
-  Moon,
   NotebookPen,
   PencilLine,
   ReceiptText,
@@ -23,7 +22,6 @@ import {
   Smile,
   Soup,
   StickyNote,
-  Utensils,
   Wallet,
   X,
   type LucideIcon,
@@ -73,7 +71,6 @@ const MONTH = [
   "iyul", "avgust", "sentabr", "oktabr", "noyabr", "dekabr",
 ];
 
-const EATING = { GOOD: "Yaxshi", AVERAGE: "O'rtacha", POOR: "Kam" } as const;
 const MOOD = { HAPPY: "Xursand", NEUTRAL: "Oddiy", UPSET: "Xafa" } as const;
 
 /** iOS tizim ranglari — shu sahifada ko'p ishlatiladiganlari */
@@ -88,13 +85,6 @@ const HERO_GRADIENT = "linear-gradient(135deg, #0a84ff 0%, #5e5ce6 58%, #a45cf0 
 function prettyDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00.000Z`);
   return `${WEEKDAY[d.getUTCDay()]}, ${d.getUTCDate()} ${MONTH[d.getUTCMonth()]}`;
-}
-
-function sleepLabel(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  if (h === 0) return `${m} daqiqa`;
-  return m === 0 ? `${h} soat` : `${h} soat ${m} daqiqa`;
 }
 
 export default function ParentHomePage({ params }: { params: Promise<{ slug: string }> }) {
@@ -441,11 +431,7 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
       {/* Bugungi kun */}
       {dayQuery.isLoading ? (
         <div className="mt-8">
-          <div className="grid grid-cols-3 gap-3">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="h-[112px] animate-pulse rounded-[22px] bg-[var(--p-sunken)] motion-reduce:animate-none" />
-            ))}
-          </div>
+          <div className="h-[68px] animate-pulse rounded-[22px] bg-[var(--p-sunken)] motion-reduce:animate-none" />
           <div className="mt-3 h-[76px] animate-pulse rounded-[var(--p-radius)] bg-[var(--p-sunken)] motion-reduce:animate-none" />
         </div>
       ) : (
@@ -454,24 +440,8 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
           <section className="mt-8">
             <SectionTitle>{tr("Bugun")}</SectionTitle>
 
-            {/* Kayfiyat, ovqat, uyqu — rangli plitkalar */}
-            {reportsOn && (
-              <div className="grid grid-cols-3 gap-3">
-                <StatTile icon={Smile} color="#ff2d55" label={tr("Kayfiyat")} value={day.report?.mood ? tr(MOOD[day.report.mood]) : "—"} />
-                <StatTile
-                  icon={Utensils}
-                  color="#ff9500"
-                  label={tr("Ovqat")}
-                  value={day.report?.eatingQuality ? tr(EATING[day.report.eatingQuality]) : "—"}
-                />
-                <StatTile
-                  icon={Moon}
-                  color="#5856d6"
-                  label={tr("Uyqu")}
-                  value={day.report?.sleepMinutes != null ? tr(sleepLabel(day.report.sleepMinutes)) : "—"}
-                />
-              </div>
-            )}
+            {/* Kayfiyat — rangli qator (ovqat tartibi uning ostida) */}
+            {reportsOn && <StatTile icon={Smile} color="#ff2d55" label={tr("Kayfiyat")} value={day.report?.mood ? tr(MOOD[day.report.mood]) : "—"} />}
 
             {/* «Bugun nima qildik» (tarbiyachining uzun yozuvi) — Kundalik bo'limida.
                 Ovqat tartibi ham to'liq o'sha yerda; bu yerda qisqacha va havola
@@ -553,15 +523,17 @@ function SectionTitle({ children, trailing }: { children: React.ReactNode; trail
   );
 }
 
-/** Rangli plitka: o'z rangining och tusi fonda, dumaloq belgi, nom va qiymat */
+/** Rangli qator: o'z rangining och tusi fonda, chapda dumaloq belgi, o'ngda nom va qiymat */
 function StatTile({ icon: Icon, color, label, value }: { icon: LucideIcon; color: string; label: string; value: string }) {
   return (
-    <div className="rounded-[22px] p-3.5" style={{ background: `color-mix(in srgb, ${color} 11%, var(--p-card))` }}>
-      <span className="flex h-8 w-8 items-center justify-center rounded-full text-white" style={{ background: color }}>
-        <Icon className="h-[17px] w-[17px]" strokeWidth={2.3} aria-hidden="true" />
+    <div className="flex items-center gap-3 rounded-[22px] p-3.5" style={{ background: `color-mix(in srgb, ${color} 11%, var(--p-card))` }}>
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white" style={{ background: color }}>
+        <Icon className="h-5 w-5" strokeWidth={2.3} aria-hidden="true" />
       </span>
-      <p className="mt-3 truncate text-[12.5px] font-medium text-[var(--p-ink)]/60">{label}</p>
-      <p className="mt-0.5 text-[16px] font-bold leading-tight text-[var(--p-ink)] [overflow-wrap:anywhere]">{value}</p>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[12.5px] font-medium text-[var(--p-ink)]/60">{label}</p>
+        <p className="mt-0.5 text-[16px] font-bold leading-tight text-[var(--p-ink)] [overflow-wrap:anywhere]">{value}</p>
+      </div>
     </div>
   );
 }
