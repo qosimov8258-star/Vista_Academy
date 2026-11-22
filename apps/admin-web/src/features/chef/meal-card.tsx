@@ -1,13 +1,14 @@
 "use client";
 
 import clsx from "clsx";
-import { Pencil } from "lucide-react";
+import { Clock3, Pencil } from "lucide-react";
 import type { MenuMeal, MenuPhoto } from "@/lib/types";
 import { CameraIcon, CheckIcon } from "@/components/ui/icons";
 import { MAX_PHOTOS_PER_MEAL, menuPhotoSrc } from "@/features/nutrition/use-menu-photos";
 import styles from "./chef.module.css";
 import { usePhotoPicker } from "./photo-picker";
 import { GalleryIcon } from "./quick-photo-sheet";
+import { stampBadge, stampLabel } from "./stamp";
 import { useTr } from "@/i18n/tr";
 
 /** Har bir ovqatning o'z rangi va belgisi — ro'yxatda bir qarashda ajralsin */
@@ -22,6 +23,8 @@ export const MEAL_LOOK: Record<MenuMeal, { tint: string; ink: string; Icon: (p: 
  * Oshpaz ovqat tayyor bo'lgach shu kartadagi kamerani bosadi — telefon
  * kamerasi to'g'ridan-to'g'ri ochiladi, surat esa darhol ota-onalarga
  * ko'rinadi. Surat yo'q bo'lsa karta buni ochiq aytadi.
+ * Menyu qachon saqlangani va har bir surat qachon olingani (sana, soat)
+ * yozib qo'yiladi — kechagisi bugungidan bir qarashda ajralsin.
  */
 export function MealCard({
   meal,
@@ -36,6 +39,8 @@ export function MealCard({
   textCarried = false,
   photosCarried = false,
   onEdit,
+  savedAt,
+  today,
 }: {
   meal: MenuMeal;
   label: string;
@@ -52,6 +57,10 @@ export function MealCard({
   /** Rasmlar oldingi kundan (hali bugunga saqlanmagan, ota-onalarga ko'rinmaydi) */
   photosCarried?: boolean;
   onEdit?: () => void;
+  /** Ko'rsatilayotgan menyu matni qachon saqlangan (ISO) */
+  savedAt?: string | null;
+  /** Bugungi sana (Toshkent, YYYY-MM-DD) — «Bugun/Kecha» deb yozish uchun */
+  today: string;
 }) {
   const tr = useTr();
   const picker = usePhotoPicker();
@@ -97,6 +106,12 @@ export function MealCard({
       <p className={clsx("mt-3 text-[15px] leading-snug", dishes && !textCarried ? "text-[var(--color-text)]" : "text-[var(--color-text-muted)]")}>
         {dishes || "Menyu kiritilmagan"}
       </p>
+      {dishes && savedAt && (
+        <p className="mt-1 flex items-center gap-1 text-[12.5px] text-[var(--color-text-muted)]">
+          <Clock3 className="h-3.5 w-3.5 shrink-0" strokeWidth={2.2} aria-hidden />
+          {tr("Saqlangan: {0}", stampLabel(savedAt, today, tr))}
+        </p>
+      )}
 
       <div className={clsx("-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-0.5", styles.strip)}>
         {photos.map((p) => (
@@ -104,11 +119,15 @@ export function MealCard({
             key={p.id}
             type="button"
             onClick={() => onOpenPhoto(p.id)}
-            className={clsx("h-[84px] w-[84px] shrink-0 overflow-hidden rounded-2xl bg-[var(--color-surface-sunken)] active:opacity-80", photosCarried && "opacity-60")}
-            aria-label={`${label} suratini ochish`}
+            className={clsx("relative h-[84px] w-[84px] shrink-0 overflow-hidden rounded-2xl bg-[var(--color-surface-sunken)] active:opacity-80", photosCarried && "opacity-60")}
+            aria-label={`${label} suratini ochish · ${stampLabel(p.createdAt, today, tr)}`}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={menuPhotoSrc(p.id)} alt={tr(label)} loading="lazy" className="h-full w-full object-cover" />
+            {/* Qachon olingan — surat ustida, pastda */}
+            <span className="absolute inset-x-1 bottom-1 truncate rounded-full bg-black/55 px-1.5 py-0.5 text-center text-[11px] font-semibold tabular-nums text-white">
+              {stampBadge(p.createdAt, today, tr)}
+            </span>
           </button>
         ))}
         {!full && (

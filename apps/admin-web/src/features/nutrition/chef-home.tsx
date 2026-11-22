@@ -13,6 +13,7 @@ import { todayTashkent } from "@/features/desk/shared";
 import { MealCard } from "@/features/chef/meal-card";
 import { MealEditSheet, type CarriedMeal, type MealEditTarget } from "@/features/chef/meal-edit-sheet";
 import { PhotoViewer } from "@/features/chef/photo-viewer";
+import { stampLabel } from "@/features/chef/stamp";
 import styles from "@/features/chef/chef.module.css";
 import { MEALS, menuPhotosKey, useMenuPhotos } from "./use-menu-photos";
 import { useTr } from "@/i18n/tr";
@@ -150,7 +151,9 @@ export function ChefHome({ slug }: { slug: string }) {
     const carriedPhotos = todayPhotos.length === 0 ? prevPhotos : [];
     const carried: CarriedMeal | null =
       carriedLabel && (carriedText || carriedPhotos.length > 0) ? { label: carriedLabel, text: carriedText, photos: carriedPhotos } : null;
-    return { todayText, todayPhotos, carried };
+    // Ko'rsatilayotgan matn qachon saqlangan: bugungisi — bugungi yozuvdan, aks holda oldingi kunnikidan
+    const savedAt = todayText ? (menu?.updatedAt ?? null) : carriedText ? (sourceEntry?.updatedAt ?? null) : null;
+    return { todayText, todayPhotos, carried, savedAt };
   };
   const editTarget: MealEditTarget | null = (() => {
     if (!editingMeal) return null;
@@ -196,11 +199,18 @@ export function ChefHome({ slug }: { slug: string }) {
           <PortionsHero d={d} />
 
           <section>
-            <div className="mb-2.5 flex items-end justify-between">
-              <h2 className="text-[17px] font-semibold text-[var(--color-text)]">{tr("Bugungi taomlar")}</h2>
+            <div className="mb-2.5 flex items-end justify-between gap-3">
+              {/* Menyu qaysi kunniki: telefonda sarlavha ostida, kattaroq ekranda — «Bugungi taomlar · 22-noyabr» */}
+              <h2 className="min-w-0 text-[17px] font-semibold text-[var(--color-text)]">
+                {tr("Bugungi taomlar")}
+                <span className="block text-[13.5px] font-medium text-[var(--color-text-muted)] sm:inline sm:text-[17px]">
+                  <span className="max-sm:hidden">{" · "}</span>
+                  {`${Number(today.slice(8, 10))}-${tr(MONTHS[Number(today.slice(5, 7)) - 1])}`}
+                </span>
+              </h2>
               <Link
                 href={`/${slug}/nutrition`}
-                className="flex items-center gap-0.5 text-[13.5px] font-semibold text-orange-600 active:opacity-70"
+                className="flex shrink-0 items-center gap-0.5 text-[13.5px] font-semibold text-orange-600 active:opacity-70"
               >
                 {tr("Haftalik menyu")}
                 <ChevronRightIcon className="h-4 w-4" />
@@ -211,21 +221,27 @@ export function ChefHome({ slug }: { slug: string }) {
                 const state = mealState(meal);
                 const photosCarried = state.todayPhotos.length === 0 && (state.carried?.photos.length ?? 0) > 0;
                 const textCarried = !state.todayText && !!state.carried?.text;
+                const shownPhotos = photosCarried ? (state.carried?.photos ?? []) : state.todayPhotos;
                 return (
                   <MealCard
                     key={meal}
                     meal={meal}
                     label={tr(label)}
                     dishes={state.todayText ?? state.carried?.text ?? null}
-                    photos={photosCarried ? (state.carried?.photos ?? []) : state.todayPhotos}
+                    photos={shownPhotos}
                     uploading={photos.uploading === meal}
                     error={photos.errors[meal]}
                     onFile={(file) => void photos.upload(meal, file)}
-                    onOpenPhoto={(id) => setViewing({ id, title: label, carried: photosCarried })}
+                    onOpenPhoto={(id) => {
+                      const taken = shownPhotos.find((p) => p.id === id)?.createdAt;
+                      setViewing({ id, title: taken ? `${tr(label)} · ${stampLabel(taken, today, tr)}` : tr(label), carried: photosCarried });
+                    }}
                     carriedLabel={state.carried?.label ?? null}
                     textCarried={textCarried}
                     photosCarried={photosCarried}
                     onEdit={() => setEditingMeal(meal)}
+                    savedAt={state.savedAt}
+                    today={today}
                   />
                 );
               })}
