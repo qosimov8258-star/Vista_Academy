@@ -27,6 +27,7 @@ function setup({ recent = 0, parentOverrides = {} as Record<string, boolean> } =
         group: { id: "g1", name: "Quyoshcha" },
         createdBy: { id: "u1", fullName: "Admin" },
         branch: { timezone: "Asia/Tashkent" },
+        _count: { images: 0 },
       }),
     },
     childGuardian: {
