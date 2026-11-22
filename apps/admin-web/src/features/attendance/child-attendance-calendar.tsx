@@ -15,7 +15,8 @@ import { useTr } from "@/i18n/tr";
 const STATUS_LABEL: Record<AttendanceStatus, string> = {
   PRESENT: "Keldi",
   ABSENT: "Kelmadi",
-  LATE: "Kech qoldi",
+  // «Kech qoldi» yo'q — eski yozuvlar «Keldi» bo'lib ko'rinadi
+  LATE: "Keldi",
   SICK: "Kasal",
 };
 

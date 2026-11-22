@@ -22,12 +22,17 @@ const THEME: ReportTheme = { accent: "#248a3d", light: "#e3f4e8" };
 /** Kunlik jadval (tabel) shu kundan uzun davrda chiqarilmaydi — juda keng bo'lib ketadi */
 const MAX_TABEL_DAYS = 62;
 
-const STATUS_UZ: Record<string, string> = { PRESENT: "Keldi", LATE: "Kech qoldi", ABSENT: "Kelmadi", SICK: "Kasal" };
+/*
+ * Bolalarda «Kech qoldi» yo'q: bola nechida kelsa ham «Keldi» (Face ID ham shunday
+ * yozadi, panelda bu tanlov olib tashlangan). Bazada qolgan eski «LATE» yozuvlari
+ * hisobotda «Keldi» bo'lib chiqadi va «Keldi»da sanaladi.
+ */
+const STATUS_UZ: Record<string, string> = { PRESENT: "Keldi", LATE: "Keldi", ABSENT: "Kelmadi", SICK: "Kasal" };
 /** Tabel katagidagi qisqa belgi */
-const STATUS_SHORT: Record<string, string> = { PRESENT: "✓", LATE: "Kech", ABSENT: "✕", SICK: "Kasal" };
+const STATUS_SHORT: Record<string, string> = { PRESENT: "✓", LATE: "✓", ABSENT: "✕", SICK: "Kasal" };
 const STATUS_FILL: Record<string, string> = {
   PRESENT: "FFE2F0D9",
-  LATE: "FFFFF2CC",
+  LATE: "FFE2F0D9",
   ABSENT: "FFFCE4E4",
   SICK: "FFEFE3F7",
 };
@@ -51,7 +56,6 @@ interface Row {
 
 interface Totals {
   present: number;
-  late: number;
   absent: number;
   sick: number;
   faceId: number;
@@ -59,7 +63,6 @@ interface Totals {
 
 const tally = (rows: Row[]): Totals => ({
   present: rows.filter((r) => came(r.status)).length,
-  late: rows.filter((r) => r.status === "LATE").length,
   absent: rows.filter((r) => r.status === "ABSENT").length,
   sick: rows.filter((r) => r.status === "SICK").length,
   faceId: rows.filter((r) => r.checkIn).length,
@@ -173,8 +176,8 @@ export class AttendanceReportService {
 
     // 1. Umumiy — ko'rsatkichlar va har bola bo'yicha jamlanma
     const ws = wb.addWorksheet("Umumiy");
-    const cols = ["№", "F.I.Sh.", "Guruh", "Keldi (kun)", "shundan kech", "Kelmadi", "Kasal", "Davomat", "Face ID bilan"];
-    ws.columns = [5, 30, 18, 11, 11, 10, 9, 10, 12].map((width) => ({ width }));
+    const cols = ["№", "F.I.Sh.", "Guruh", "Keldi (kun)", "Kelmadi", "Kasal", "Davomat", "Face ID bilan"];
+    ws.columns = [5, 30, 18, 11, 10, 9, 10, 12].map((width) => ({ width }));
     titleBlock(ws, "Bolalar davomati", cols.length);
     info(
       ws,
@@ -183,7 +186,6 @@ export class AttendanceReportService {
         ["Bolalar", `${children.length} ta · ${groups.length} ta guruh`],
         ["O'rtacha davomat", allRate === null ? "—" : `${Math.round(allRate * 100)}%`],
         ["Kelgan kunlar (jami)", `${all.present} ta`],
-        ["Kech qolgan", `${all.late} marta`],
         ["Kelmagan / kasal", `${all.absent} / ${all.sick}`],
         ["Tuzildi", `${d.generatedAt} · ${d.generatedBy}`],
       ],
@@ -196,34 +198,34 @@ export class AttendanceReportService {
     head(headerRow);
     children.forEach((c, i) => {
       const t = tally(rows.filter((r) => r.childId === c.id));
-      const row = ws.addRow([i + 1, c.fullName, c.group?.name ?? "—", t.present, t.late || null, t.absent || null, t.sick || null, rate(t.present, markedOf(t)), t.faceId || null]);
-      row.getCell(8).numFmt = PERCENT;
-      [4, 5, 6, 7, 8, 9].forEach((col) => (row.getCell(col).alignment = { horizontal: "center" }));
+      const row = ws.addRow([i + 1, c.fullName, c.group?.name ?? "—", t.present, t.absent || null, t.sick || null, rate(t.present, markedOf(t)), t.faceId || null]);
+      row.getCell(7).numFmt = PERCENT;
+      [4, 5, 6, 7, 8].forEach((col) => (row.getCell(col).alignment = { horizontal: "center" }));
       zebra(row, i);
     });
-    const tr = ws.addRow(["", "Jami", `${children.length} ta bola`, all.present, all.late, all.absent, all.sick, allRate, all.faceId]);
-    tr.getCell(8).numFmt = PERCENT;
-    [4, 5, 6, 7, 8, 9].forEach((col) => (tr.getCell(col).alignment = { horizontal: "center" }));
+    const tr = ws.addRow(["", "Jami", `${children.length} ta bola`, all.present, all.absent, all.sick, allRate, all.faceId]);
+    tr.getCell(7).numFmt = PERCENT;
+    [4, 5, 6, 7, 8].forEach((col) => (tr.getCell(col).alignment = { horizontal: "center" }));
     totalRow(tr);
     ws.autoFilter = { from: { row: headerRow.number, column: 1 }, to: { row: headerRow.number, column: cols.length } };
 
     // 2. Guruhlar — har guruh bo'yicha jamlanma
     if (groups.length > 1) {
       const wg = wb.addWorksheet("Guruhlar");
-      const gcols = ["№", "Guruh", "Bolalar", "Keldi (kun)", "shundan kech", "Kelmadi", "Kasal", "Davomat"];
-      wg.columns = [5, 24, 10, 11, 11, 10, 9, 10].map((width) => ({ width }));
+      const gcols = ["№", "Guruh", "Bolalar", "Keldi (kun)", "Kelmadi", "Kasal", "Davomat"];
+      wg.columns = [5, 24, 10, 11, 10, 9, 10].map((width) => ({ width }));
       titleBlock(wg, "Guruhlar bo'yicha", gcols.length);
       head(wg.addRow(gcols));
       groups.forEach((g, i) => {
         const t = tally(rows.filter((r) => r.group === g));
-        const row = wg.addRow([i + 1, g, children.filter((c) => (c.group?.name ?? "—") === g).length, t.present, t.late || null, t.absent || null, t.sick || null, rate(t.present, markedOf(t))]);
-        row.getCell(8).numFmt = PERCENT;
-        [3, 4, 5, 6, 7, 8].forEach((col) => (row.getCell(col).alignment = { horizontal: "center" }));
+        const row = wg.addRow([i + 1, g, children.filter((c) => (c.group?.name ?? "—") === g).length, t.present, t.absent || null, t.sick || null, rate(t.present, markedOf(t))]);
+        row.getCell(7).numFmt = PERCENT;
+        [3, 4, 5, 6, 7].forEach((col) => (row.getCell(col).alignment = { horizontal: "center" }));
         zebra(row, i);
       });
-      const gt = wg.addRow(["", "Jami", children.length, all.present, all.late, all.absent, all.sick, allRate]);
-      gt.getCell(8).numFmt = PERCENT;
-      [3, 4, 5, 6, 7, 8].forEach((col) => (gt.getCell(col).alignment = { horizontal: "center" }));
+      const gt = wg.addRow(["", "Jami", children.length, all.present, all.absent, all.sick, allRate]);
+      gt.getCell(7).numFmt = PERCENT;
+      [3, 4, 5, 6, 7].forEach((col) => (gt.getCell(col).alignment = { horizontal: "center" }));
       totalRow(gt);
     }
 
@@ -256,15 +258,15 @@ export class AttendanceReportService {
         row.getCell(n).font = { bold: true };
       });
       wt.addRow([]);
-      const legend = wt.addRow(["", "✓ / vaqt — keldi (vaqt — Face ID orqali kelgan), Kech — kech qoldi, ✕ — kelmadi, Kasal. Kulrang — dam olish kuni."]);
+      const legend = wt.addRow(["", "✓ / vaqt — keldi (vaqt — Face ID orqali kelgan), ✕ — kelmadi, Kasal. Kulrang — dam olish kuni."]);
       legend.getCell(2).font = { italic: true, size: 9, color: { argb: "FF6D6D72" } };
     }
 
     // 4. Kunlar — har kuni nechta bola kelgan
     if (days.length) {
       const wk = wb.addWorksheet("Kunlar", { views: [{ state: "frozen", ySplit: 4 }] });
-      const kcols = ["№", "Sana", "Hafta kuni", "Keldi", "shundan kech", "Kelmadi", "Kasal", "Belgilanmagan", "Davomat"];
-      wk.columns = [5, 16, 12, 9, 11, 10, 9, 13, 10].map((width) => ({ width }));
+      const kcols = ["№", "Sana", "Hafta kuni", "Keldi", "Kelmadi", "Kasal", "Belgilanmagan", "Davomat"];
+      wk.columns = [5, 16, 12, 9, 10, 9, 13, 10].map((width) => ({ width }));
       titleBlock(wk, "Kunlar bo'yicha", kcols.length);
       head(wk.addRow(kcols));
       let i = 0;
@@ -272,14 +274,14 @@ export class AttendanceReportService {
         const mine = rows.filter((r) => r.day === day);
         if (!mine.length) continue;
         const t = tally(mine);
-        const row = wk.addRow([i + 1, dayLabel(day), weekday(day), t.present, t.late || null, t.absent || null, t.sick || null, Math.max(children.length - mine.length, 0) || null, rate(t.present, markedOf(t))]);
-        row.getCell(9).numFmt = PERCENT;
-        [4, 5, 6, 7, 8, 9].forEach((col) => (row.getCell(col).alignment = { horizontal: "center" }));
+        const row = wk.addRow([i + 1, dayLabel(day), weekday(day), t.present, t.absent || null, t.sick || null, Math.max(children.length - mine.length, 0) || null, rate(t.present, markedOf(t))]);
+        row.getCell(8).numFmt = PERCENT;
+        [4, 5, 6, 7, 8].forEach((col) => (row.getCell(col).alignment = { horizontal: "center" }));
         zebra(row, i++);
       }
-      const kt = wk.addRow(["", "Jami", `${i} kun`, all.present, all.late, all.absent, all.sick, "", allRate]);
-      kt.getCell(9).numFmt = PERCENT;
-      [4, 5, 6, 7, 9].forEach((col) => (kt.getCell(col).alignment = { horizontal: "center" }));
+      const kt = wk.addRow(["", "Jami", `${i} kun`, all.present, all.absent, all.sick, "", allRate]);
+      kt.getCell(8).numFmt = PERCENT;
+      [4, 5, 6, 8].forEach((col) => (kt.getCell(col).alignment = { horizontal: "center" }));
       totalRow(kt);
     }
 
