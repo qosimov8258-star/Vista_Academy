@@ -41,7 +41,8 @@ const shiftDays = (date: string, days: number) => {
 const ATTENDANCE: Record<AttendanceStatus, { label: string; color: string }> = {
   PRESENT: { label: "Keldi", color: IOS.green },
   ABSENT: { label: "Kelmadi", color: IOS.red },
-  LATE: { label: "Kech qoldi", color: IOS.orange },
+  // «Kech qoldi» yo'q — eski yozuvlar «Keldi» bo'lib ko'rinadi
+  LATE: { label: "Keldi", color: IOS.green },
   SICK: { label: "Kasal", color: "#af52de" },
 };
 const CHILD_STATUS: Record<string, { label: string; color: string }> = {

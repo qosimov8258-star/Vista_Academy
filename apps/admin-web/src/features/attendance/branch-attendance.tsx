@@ -36,10 +36,17 @@ const todayTashkent = () => new Intl.DateTimeFormat("en-CA", { timeZone: TIMEZON
 const STATUSES: { value: AttendanceStatus; label: string; short: string; color: string }[] = [
   { value: "PRESENT", label: "Keldi", short: "Keldi", color: IOS.green },
   { value: "ABSENT", label: "Kelmadi", short: "Kelmadi", color: IOS.red },
-  { value: "LATE", label: "Kech qoldi", short: "Kech", color: IOS.orange },
   { value: "SICK", label: "Kasal", short: "Kasal", color: "#af52de" },
 ];
-const STATUS_META = Object.fromEntries(STATUSES.map((s) => [s.value, s])) as Record<AttendanceStatus, (typeof STATUSES)[number]>;
+/*
+ * «Kech qoldi» yo'q: bola nechida kelsa ham «Keldi» (Face ID ham bolalarga faqat
+ * «Keldi» yozadi). Bazadagi eski «LATE» yozuvlari o'zgartirilmaydi — «Keldi»
+ * bo'lib ko'rinadi va «Keldi»da sanaladi.
+ */
+const STATUS_ONLY = Object.fromEntries(STATUSES.map((s) => [s.value, s])) as Record<Exclude<AttendanceStatus, "LATE">, (typeof STATUSES)[number]>;
+const STATUS_META: Record<AttendanceStatus, (typeof STATUSES)[number]> = { ...STATUS_ONLY, LATE: STATUS_ONLY.PRESENT };
+/** Ko'rinishdagi holat: «LATE» — «Keldi» */
+const shownAs = (status: AttendanceStatus): AttendanceStatus => (status === "LATE" ? "PRESENT" : status);
 
 type StatusFilter = "all" | AttendanceStatus;
 
@@ -51,20 +58,20 @@ const initials = (name: string) =>
     .map((p) => p[0]?.toUpperCase())
     .join("");
 
-/** Bola holati: 4 ta kapsula (telefonda qatorning to'liq kengligida) */
+/** Bola holati: 3 ta kapsula (telefonda qatorning to'liq kengligida) */
 function StatusPicker({ value, onChange, size = "row" }: { value: AttendanceStatus; onChange: (s: AttendanceStatus) => void; size?: "row" | "sheet" }) {
   const tr = useTr();
-  const index = STATUSES.findIndex((s) => s.value === value);
+  const index = STATUSES.findIndex((s) => s.value === shownAs(value));
   const { containerRef, thumbStyle } = useSegmentThumb(index);
   return (
-    <div ref={containerRef} role="radiogroup" aria-label={tr("Holat")} className={clsx("relative grid grid-cols-4 gap-[3px] rounded-full bg-[#767680]/[0.12] p-[3px]", size === "row" ? "w-full sm:w-[300px]" : "w-full")}>
+    <div ref={containerRef} role="radiogroup" aria-label={tr("Holat")} className={clsx("relative grid grid-cols-3 gap-[3px] rounded-full bg-[#767680]/[0.12] p-[3px]", size === "row" ? "w-full sm:w-[300px]" : "w-full")}>
       <span
         aria-hidden="true"
         className="pointer-events-none bottom-[3px] top-[3px] rounded-full shadow-sm"
         style={{ ...thumbStyle, backgroundColor: index >= 0 ? STATUSES[index].color : undefined }}
       />
       {STATUSES.map((s) => {
-        const active = value === s.value;
+        const active = shownAs(value) === s.value;
         return (
           <button
             key={s.value}
@@ -236,7 +243,7 @@ export function BranchAttendance({ slug }: { slug: string }) {
     // Belgilanmagan bola sukutda "Keldi" turadi, lekin saqlanmaguncha sanalmaydi
     const out: Record<AttendanceStatus, number> = { PRESENT: 0, ABSENT: 0, LATE: 0, SICK: 0 };
     for (const c of children) {
-      if (c.status !== null || local[c.childId]) out[statusOf(c.childId)] += 1;
+      if (c.status !== null || local[c.childId]) out[shownAs(statusOf(c.childId))] += 1;
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -252,7 +259,7 @@ export function BranchAttendance({ slug }: { slug: string }) {
   const visible = children.filter(
     (c) =>
       (!q || c.fullName.toLowerCase().includes(q)) &&
-      (statusFilter === "all" || statusOf(c.childId) === statusFilter) &&
+      (statusFilter === "all" || shownAs(statusOf(c.childId)) === statusFilter) &&
       (!groupFilter || (c.groupName ?? "Guruhsiz") === groupFilter),
   );
   const sections = useMemo(() => {
@@ -302,7 +309,8 @@ export function BranchAttendance({ slug }: { slug: string }) {
 
         {branchId && date && <TodayRemindersCard slug={slug} branchId={branchId} today={date} />}
 
-        <StatStrip tone="white">
+        {/* 3 ta holat — telefonda ham bir qatorda (bo'sh katak qolmasin) */}
+        <StatStrip tone="white" className="grid-cols-3! lg:grid-cols-3!">
           {STATUSES.map((s) => (
             <StatCell
               key={s.value}
@@ -383,7 +391,7 @@ export function BranchAttendance({ slug }: { slug: string }) {
                       </>
                     }
                     action={
-                      canWrite && rows.some((c) => statusOf(c.childId) !== "PRESENT") ? (
+                      canWrite && rows.some((c) => shownAs(statusOf(c.childId)) !== "PRESENT") ? (
                         <button type="button" className="text-[var(--color-primary)] active:opacity-50" onClick={() => rows.forEach((c) => setStatus(c.childId, "PRESENT"))}>
                           {tr("Hammasi keldi")}
                         </button>

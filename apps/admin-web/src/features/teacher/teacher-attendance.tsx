@@ -13,7 +13,7 @@ import { useBranchContext } from "@/lib/use-branch-context";
 import { ReportSheet } from "@/features/reports/report-sheet";
 import { ChildPhoto } from "@/components/ui/child-photo";
 import { initials } from "@/components/ui/avatar";
-import { CheckIcon, ChecklistIcon, ClockIcon, CloseIcon, NoteIcon, PhoneIcon, type IconProps } from "@/components/ios/icons";
+import { CheckIcon, ChecklistIcon, CloseIcon, NoteIcon, PhoneIcon, type IconProps } from "@/components/ios/icons";
 import { IOS } from "@/components/ios/tokens";
 import { Pill } from "@/components/ios/pill";
 import { DayStepper } from "@/components/ios/day-stepper";
@@ -30,10 +30,17 @@ import { useTr } from "@/i18n/tr";
 const STATUS: { value: AttendanceStatus; label: string; color: string; icon: ComponentType<IconProps> }[] = [
   { value: "PRESENT", label: "Keldi", color: IOS.green, icon: CheckIcon },
   { value: "ABSENT", label: "Kelmadi", color: IOS.red, icon: CloseIcon },
-  { value: "LATE", label: "Kech qoldi", color: IOS.orange, icon: ClockIcon },
   { value: "SICK", label: "Kasal", color: "#af52de", icon: Thermometer },
 ];
-const STATUS_BY_VALUE = Object.fromEntries(STATUS.map((s) => [s.value, s])) as Record<AttendanceStatus, (typeof STATUS)[number]>;
+/*
+ * «Kech qoldi» yo'q: tarbiyachi faqat Keldi / Kelmadi / Kasal belgilaydi — bola
+ * nechida kelsa ham «Keldi». Bazadagi eski (yoki terminal yozgan) «LATE» yozuvlari
+ * o'zgartirilmaydi, faqat «Keldi» bo'lib ko'rinadi va «Keldi» qatorida sanaladi.
+ */
+const STATUS_ONLY = Object.fromEntries(STATUS.map((s) => [s.value, s])) as Record<Exclude<AttendanceStatus, "LATE">, (typeof STATUS)[number]>;
+const STATUS_BY_VALUE: Record<AttendanceStatus, (typeof STATUS)[number]> = { ...STATUS_ONLY, LATE: STATUS_ONLY.PRESENT };
+/** Ko'rinishdagi holat: «LATE» — «Keldi» */
+const shownAs = (status: AttendanceStatus | null): AttendanceStatus | null => (status === "LATE" ? "PRESENT" : status);
 
 type Child = AttendanceDay["children"][number];
 
@@ -151,8 +158,8 @@ export function TeacherAttendance({ slug }: { slug: string }) {
   const daySaved = children.some((c) => c.status);
   // Tarbiyachi — o'zi belgilayotgan holat; yordamchi — faqat saqlangani (belgilanmagan hisobga kirmaydi)
   const effectiveStatus = (c: Child): AttendanceStatus | null => (canWrite ? statusFor(c.childId) : (c.status ?? null));
-  const counts = STATUS.map((s) => ({ ...s, count: children.filter((c) => effectiveStatus(c) === s.value).length }));
-  const shown = filter ? children.filter((c) => effectiveStatus(c) === filter) : children;
+  const counts = STATUS.map((s) => ({ ...s, count: children.filter((c) => shownAs(effectiveStatus(c)) === s.value).length }));
+  const shown = filter ? children.filter((c) => shownAs(effectiveStatus(c)) === filter) : children;
   const sheetChild = children.find((c) => c.childId === sheetChildId) ?? null;
   const showSaveBar = canWrite && children.length > 0 && (unsaved > 0 || !daySaved || saveMutation.isPending || saveMutation.isSuccess || saveMutation.isError);
 
@@ -190,7 +197,7 @@ export function TeacherAttendance({ slug }: { slug: string }) {
 
       {/* Jonli hisob — bosilsa ro'yxat shu holat bo'yicha suziladi */}
       {children.length > 0 && (
-        <div className={clsx(styles.group, "grid grid-cols-4 gap-1 p-1.5")} role="radiogroup" aria-label={tr("Holat bo'yicha suzish")}>
+        <div className={clsx(styles.group, "grid grid-cols-3 gap-1 p-1.5")} role="radiogroup" aria-label={tr("Holat bo'yicha suzish")}>
           {counts.map((c) => {
             const active = filter === c.value;
             return (
@@ -232,7 +239,7 @@ export function TeacherAttendance({ slug }: { slug: string }) {
           !canWrite
             ? tr("Davomatni tarbiyachi belgilaydi — siz faqat ko'rasiz.")
             : children.length > 0
-              ? tr("O'ngdagi belgi: Keldi ↔ Kelmadi. Kech qoldi, Kasal va izoh — bolani bosing.")
+              ? tr("O'ngdagi belgi: Keldi ↔ Kelmadi. Kasal va izoh — bolani bosing.")
               : undefined
         }
       >
@@ -248,6 +255,7 @@ export function TeacherAttendance({ slug }: { slug: string }) {
           shown.map((child, i) => {
             const status = statusFor(child.childId);
             const meta = STATUS_BY_VALUE[status];
+            const present = shownAs(status) === "PRESENT";
             // Kun hali saqlanmagan bo'lsa hammasi "yangi" — nuqta faqat saqlangan kunni o'zgartirganda
             const changed = daySaved && (child.status !== status || (child.note ?? "") !== noteFor(child.childId));
             return (
@@ -277,12 +285,12 @@ export function TeacherAttendance({ slug }: { slug: string }) {
                   // Bir bosishda eng ko'p kerak bo'ladigan almashtirish: Keldi ↔ Kelmadi
                   <button
                     type="button"
-                    onClick={() => setStatus(child.childId, status === "PRESENT" ? "ABSENT" : "PRESENT")}
+                    onClick={() => setStatus(child.childId, present ? "ABSENT" : "PRESENT")}
                     aria-label={tr("{0}: {1}. Almashtirish", child.fullName, tr(meta.label))}
                     className="mr-3 flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full transition-transform active:scale-90"
-                    style={status === "PRESENT" ? { backgroundColor: meta.color } : { backgroundColor: `${meta.color}1f`, boxShadow: `inset 0 0 0 2px ${meta.color}` }}
+                    style={present ? { backgroundColor: meta.color } : { backgroundColor: `${meta.color}1f`, boxShadow: `inset 0 0 0 2px ${meta.color}` }}
                   >
-                    <meta.icon className="h-[22px] w-[22px]" strokeWidth={2.6} style={{ color: status === "PRESENT" ? "#fff" : meta.color }} />
+                    <meta.icon className="h-[22px] w-[22px]" strokeWidth={2.6} style={{ color: present ? "#fff" : meta.color }} />
                   </button>
                 ) : (
                   <span className="mr-4 shrink-0">
@@ -475,9 +483,9 @@ function ChildSheet({
 
           {canWrite ? (
             <section>
-              <div className="grid grid-cols-2 gap-2.5" role="radiogroup" aria-label={tr("Holat")}>
+              <div className="grid grid-cols-3 gap-2.5" role="radiogroup" aria-label={tr("Holat")}>
                 {STATUS.map((s) => {
-                  const active = status === s.value;
+                  const active = shownAs(status) === s.value;
                   return (
                     <button
                       key={s.value}
@@ -494,7 +502,7 @@ function ChildSheet({
                   );
                 })}
               </div>
-              {status !== "PRESENT" && (
+              {shownAs(status) !== "PRESENT" && (
                 <input
                   type="text"
                   value={note}
@@ -582,7 +590,7 @@ function GuideToken({ status }: { status: AttendanceStatus }) {
 const GUIDE_STEPS: { title: string; text: string; token?: AttendanceStatus }[] = [
   { title: "Hamma bola — «Keldi»", text: "Sahifa ochilganda hamma bola avtomatik keldi deb turadi.", token: "PRESENT" },
   { title: "Kelmaganini belgilang", text: "Kelmagan bolaning o'ngidagi yashil belgini bir marta bosing — qizil «Kelmadi» bo'ladi. Yana bossangiz qaytadi.", token: "ABSENT" },
-  { title: "Kech qoldi yoki kasal bo'lsa", text: "Bolaning ismini bosing — oyna ochiladi. «Kech qoldi» yoki «Kasal»ni tanlang, xohlasangiz izoh yozing va «Tayyor»ni bosing.", token: "SICK" },
+  { title: "Kasal bo'lsa", text: "Bolaning ismini bosing — oyna ochiladi. «Kasal»ni tanlang, xohlasangiz izoh yozing va «Tayyor»ni bosing.", token: "SICK" },
   { title: "«Saqlash»ni bosing", text: "Pastdagi «Saqlash» tugmasini bosmaguningizcha davomat yozilmaydi. Ko'k nuqta — hali saqlanmagan o'zgarish." },
   { title: "Ota-ona sabab yozmagan bo'lsa", text: "Kelmagan bolani bosib «Aloqaga chiqish»ni tanlang — administrator ota-onaga qo'ng'iroq qiladi." },
 ];
