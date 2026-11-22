@@ -49,6 +49,7 @@ import { useParentMessages } from "./use-messages";
 import { useParentFeatures } from "./use-parent-features";
 import { FoydaliCards } from "./foydali-cards";
 import { GroupTopics } from "./group-topics";
+import { InstallBanner } from "@/features/pwa/install-banner";
 import { useTr } from "@/i18n/tr";
 
 /**
@@ -243,6 +244,9 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
           </Link>
         )}
       </header>
+
+      {/* Ilovani o'rnatish — yopish tugmasi yo'q, o'rnatilgach o'zi yo'qoladi */}
+      <InstallBanner slug={slug} app="parent" className="mt-4" />
 
       {/* Yangi xabar — bildirishnoma ko'rinishida */}
       {newMessages.length > 0 && (

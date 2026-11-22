@@ -8,11 +8,11 @@ import { EmployeeMandatoryGate } from "@/features/broadcasts/mandatory-gate";
 import { FeatureRouteGate } from "@/features/feature-flags/route-gate";
 import { ThemeSync } from "@/lib/theme";
 import { StaffLocaleSync } from "@/lib/staff-locale";
-import { tenantMetadata } from "@/lib/tenant-metadata";
+import { panelMetadata } from "@/lib/tenant-metadata";
 import type { Metadata } from "next";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  return tenantMetadata((await params).slug);
+  return panelMetadata((await params).slug, "staff");
 }
 
 export default async function DashboardLayout({

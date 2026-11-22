@@ -1,5 +1,6 @@
 import { cache } from "react";
 import type { Metadata } from "next";
+import { pwaManifestHref, type PwaApp } from "@/lib/pwa";
 
 /**
  * Sahifa sarlavhasi va havola ko'rinishi (Telegram, WhatsApp) — har bir
@@ -26,7 +27,7 @@ function apiOrigin(): string {
 }
 
 /** Bitta so'rov ichida layout'lar takror chaqirsa ham API'ga bir marta boriladi. */
-const fetchOrganizationName = cache(async (slug: string): Promise<string | null> => {
+export const fetchOrganizationName = cache(async (slug: string): Promise<string | null> => {
   try {
     const res = await fetch(`${apiOrigin()}/api/v1/app/organizations/by-slug/${encodeURIComponent(slug)}`, {
       next: { revalidate: 300 },
@@ -52,5 +53,20 @@ export async function tenantMetadata(slug: string | null | undefined): Promise<M
     description,
     openGraph: { title: name, description, siteName: "Zeeron", type: "website" },
     twitter: { card: "summary", title: name, description },
+  };
+}
+
+/**
+ * Kabinet sahifalari (xodim paneli, ota-ona kabineti): sarlavha + ilova
+ * manifesti. iPhone «Bosh ekranga qo'shish»da ham alohida oynada (brauzer
+ * satrisiz) ochilishi uchun `appleWebApp`.
+ */
+export async function panelMetadata(slug: string, app: PwaApp): Promise<Metadata> {
+  const base = await tenantMetadata(slug);
+  const name = (await fetchOrganizationName(slug.toLowerCase())) ?? "Zeeron";
+  return {
+    ...base,
+    manifest: pwaManifestHref(slug, app),
+    appleWebApp: { capable: true, title: name, statusBarStyle: "default" },
   };
 }

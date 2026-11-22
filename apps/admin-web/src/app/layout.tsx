@@ -5,6 +5,7 @@ import { getLocale, getMessages } from "next-intl/server";
 import { headers } from "next/headers";
 import { QueryProvider } from "@/lib/query-provider";
 import { THEME_BOOT_SCRIPT } from "@/lib/theme-config";
+import { PWA_BOOT_SCRIPT } from "@/lib/pwa";
 import { TENANT_SLUG_HEADER } from "@/lib/tenant-host";
 import { TrProvider } from "@/i18n/tr";
 import { loadDict } from "@/i18n/dict";
@@ -41,6 +42,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <head>
         {/* Tanlangan tizim rangi (Sozlamalar) — sahifa yashil bo'lib "sakramasligi" uchun */}
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
+        {/* Chrome'ning «ilovani o'rnatish» hodisasi React'dan oldin kelsa ham yo'qolmasin (InstallBanner) */}
+        <script dangerouslySetInnerHTML={{ __html: PWA_BOOT_SCRIPT }} />
       </head>
       <body>
         <NextIntlClientProvider locale={locale} messages={messages}>

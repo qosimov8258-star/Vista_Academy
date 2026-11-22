@@ -5,7 +5,7 @@ import { ParentMandatoryGate } from "./mandatory-gate";
 import { ActivityTracker } from "./activity-tracker";
 import { ParentLocaleSync } from "./locale-sync";
 import { ParentFeatureGate } from "./feature-gate";
-import { tenantMetadata } from "@/lib/tenant-metadata";
+import { panelMetadata } from "@/lib/tenant-metadata";
 import type { Metadata } from "next";
 
 /**
@@ -16,7 +16,7 @@ import type { Metadata } from "next";
  * Kirish sahifasi bu guruhdan tashqarida: u yerda pastki menyu kerak emas.
  */
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  return tenantMetadata((await params).slug);
+  return panelMetadata((await params).slug, "parent");
 }
 
 export default async function ParentCabinetLayout({
