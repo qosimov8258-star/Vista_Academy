@@ -14,6 +14,7 @@ import {
   ChartIcon,
   CheckIcon,
   ChildIcon,
+  ClockIcon,
   DoorIcon,
   GroupIcon,
   MealIcon,
@@ -151,6 +152,8 @@ export function BranchAdminHome({ slug, branchName }: { slug: string; branchName
     { label: "Xodimlar", href: `/${slug}/employees`, icon: TeacherIcon, tint: "purple" },
     { label: "Xodimlar davomati", href: `/${slug}/staff-attendance`, icon: CalendarIcon, tint: "teal" },
     { label: "Ovqatlanish", href: `/${slug}/nutrition`, icon: MealIcon, tint: "orange" },
+    // Dars jadvali menyuda «Kundalik ish» ichida — bosh sahifadan ham bir bosishda ochilsin
+    { label: "Dars jadvali", href: `/${slug}/lessons/schedule`, icon: ClockIcon, tint: "pink" },
     { label: "Arizalar (CRM)", href: `/${slug}/crm`, icon: PhoneIcon, tint: "green" },
     { label: "Xabarlar", href: `/${slug}/notifications`, icon: BellIcon, tint: "red" },
     { label: "Haftalik hisobot", href: `/${slug}/weekly-report`, icon: NoteIcon, tint: "gray" },
