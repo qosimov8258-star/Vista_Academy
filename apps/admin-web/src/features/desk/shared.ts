@@ -3,6 +3,10 @@ export type CallKind = "DEBT" | "ABSENT" | "LEAD" | "FAKE_RECEIPT";
 export interface CallItem {
   kind: CallKind;
   subjectId: string;
+  /** Qo'ng'iroq qaysi bola haqida (ariza uchun null) */
+  childId: string | null;
+  /** Bolaning surati bo'lsa — versiyasi (keshni yangilash uchun), aks holda null */
+  photoVersion: string | null;
   title: string;
   subtitle: string;
   contactName: string | null;
@@ -20,16 +24,24 @@ export interface CallsResult {
   open: number;
 }
 
-/** "Qo'ng'iroq qilinganlar" — javob olingan arizalar (oxirgi 30 kun) */
+/** "Qo'ng'iroq qilinganlar" — javob olingan qo'ng'iroqlar (oxirgi 30 kun): arizalar, qarz, kelmagan bola */
 export interface CalledLeadsResult {
   items: {
-    leadId: string;
+    kind: Extract<CallKind, "LEAD" | "DEBT" | "ABSENT">;
+    /** Ro'yxat kaliti: ariza — bitta, bola qo'ng'irog'i — har kun alohida */
+    key: string;
+    subjectId: string;
+    /** Faqat arizada */
+    leadId: string | null;
+    childId: string | null;
+    photoVersion: string | null;
     title: string;
     parentName: string;
-    phone: string;
-    source: string;
-    stage: string;
-    appliedAt: string;
+    phone: string | null;
+    source: string | null;
+    stage: string | null;
+    appliedAt: string | null;
+    groupName: string | null;
     calledAt: string;
     calledByName: string;
     note: string | null;

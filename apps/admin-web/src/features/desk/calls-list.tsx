@@ -14,6 +14,7 @@ import { EmptyState, ErrorState, SkeletonRows } from "@/components/ios/states";
 import { GROUP_BLOCK, IOS } from "@/components/ios/tokens";
 import { IosIcon, type AnyIcon, type IosTint } from "@/features/director/ios-icon";
 import { CALL_KIND_LABEL, RELATION_LABEL, todayTashkent, type CallItem, type CallKind, type CallsResult } from "./shared";
+import { CallAvatar } from "./call-avatar";
 import { useTr } from "@/i18n/tr";
 
 /** Qo'ng'iroq turi — plitka rangi va belgisi (har turning o'z rangi) */
@@ -94,7 +95,16 @@ export function CallsList({ slug, limit, filter }: { slug: string; limit?: numbe
       <ListRow
         key={`${item.kind}-${item.subjectId}`}
         onClick={() => open(item)}
-        avatar={<IosIcon icon={style.icon} tint={style.tint} size={44} />}
+        avatar={
+          <CallAvatar
+            childId={item.childId}
+            photoVersion={item.photoVersion}
+            icon={style.icon}
+            tint={style.tint}
+            color={style.color}
+            alt={tr(item.title)}
+          />
+        }
         title={tr(item.title)}
         subtitle={
           item.done
@@ -129,7 +139,10 @@ export function CallsList({ slug, limit, filter }: { slug: string; limit?: numbe
         shown.length === 0 ? (
           <EmptyState icon={PhoneIcon} title="Bugun qo'ng'iroq qilish kerak emas" />
         ) : (
-          <div className={GROUP_BLOCK}>{shown.map(rowFor)}</div>
+          // ios-snow — qishda ro'yxat ustida qor qatlami (blok o'zi overflow-hidden)
+          <div className="ios-snow">
+            <div className={GROUP_BLOCK}>{shown.map(rowFor)}</div>
+          </div>
         );
     } else if (all.length === 0) {
       body = <EmptyState icon={PhoneIcon} title={filter && filter !== "ALL" ? "Bu turda qo'ng'iroq yo'q" : "Ro'yxat bo'sh"} hint="Bugun qo'ng'iroq qilish kerak bo'lganlar shu yerda chiqadi" />;
@@ -146,12 +159,14 @@ export function CallsList({ slug, limit, filter }: { slug: string; limit?: numbe
             bare={openItems.length === 0}
           >
             {openItems.length === 0 ? (
-              <div className={GROUP_BLOCK}>
-                <Row
-                  leading={<IosIcon icon={PhoneIcon} tint="green" size={30} />}
-                  title={tr("Hammasi bajarildi")}
-                  subtitle={tr("Bugungi qo'ng'iroqlar tugadi")}
-                />
+              <div className="ios-snow">
+                <div className={GROUP_BLOCK}>
+                  <Row
+                    leading={<IosIcon icon={PhoneIcon} tint="green" size={30} />}
+                    title={tr("Hammasi bajarildi")}
+                    subtitle={tr("Bugungi qo'ng'iroqlar tugadi")}
+                  />
+                </div>
               </div>
             ) : (
               openItems.map(rowFor)
@@ -210,7 +225,18 @@ export function CallsList({ slug, limit, filter }: { slug: string; limit?: numbe
         {t && style && (
           <>
             <div className="flex flex-col items-center gap-2 pt-1 text-center">
-              <IosIcon icon={style.icon} tint={style.tint} size={48} />
+              {/* Bolaning surati katta — operator kim haqida gaplashayotganini yuzidan taniydi */}
+              <CallAvatar
+                childId={t.childId}
+                photoVersion={t.photoVersion}
+                icon={style.icon}
+                tint={style.tint}
+                color={style.color}
+                alt={tr(t.title)}
+                size={96}
+                iconSize={48}
+                badge={false}
+              />
               <div className="flex flex-wrap justify-center gap-1.5">
                 <Pill color={style.color}>{tr(CALL_KIND_LABEL[t.kind])}</Pill>
                 {t.badge && <Pill color={IOS.red}>{tr(t.badge)}</Pill>}

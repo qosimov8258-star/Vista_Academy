@@ -10,8 +10,9 @@ import { Pill } from "@/components/ios/pill";
 import { SearchPill } from "@/components/ios/filters";
 import { EmptyState, ErrorState, SkeletonRows } from "@/components/ios/states";
 import { IOS } from "@/components/ios/tokens";
-import { IosIcon } from "@/features/director/ios-icon";
-import { todayTashkent, type CalledLeadsResult } from "./shared";
+import { CALL_KIND_LABEL, todayTashkent, type CalledLeadsResult } from "./shared";
+import { CALL_KIND_STYLE } from "./calls-list";
+import { CallAvatar } from "./call-avatar";
 import { useTr } from "@/i18n/tr";
 
 type CalledLead = CalledLeadsResult["items"][number];
@@ -30,10 +31,11 @@ export function useCalledLeads(slug: string) {
 }
 
 /**
- * "Qo'ng'iroq qilinganlar" — oxirgi 30 kunda javob olingan arizalar (sayt
- * arizalari ham), kun bo'yicha, eng yangisi tepada. Bosilsa CRM'dagi ariza
- * sahifasi ochiladi (bosqich, izoh) — faqat ariza shu filialga yozilgan
- * bo'lsa (CRM filial bo'yicha ishlaydi).
+ * "Qo'ng'iroq qilinganlar" — oxirgi 30 kunda javob olingan qo'ng'iroqlar,
+ * kun bo'yicha, eng yangisi tepada: arizalar (sayt arizalari ham), qarzdorlar
+ * va kelmagan bolalar. Bola qo'ng'irog'ida — bolaning surati, har qatorda —
+ * turi. Ariza bosilsa CRM'dagi sahifasi ochiladi (faqat shu filialga
+ * yozilgan bo'lsa — CRM filial bo'yicha ishlaydi).
  */
 export function CalledLeadsList({ slug }: { slug: string }) {
   const tr = useTr();
@@ -45,7 +47,10 @@ export function CalledLeadsList({ slug }: { slug: string }) {
     const q = search.trim().toLowerCase();
     const digits = q.replace(/\D/g, "");
     const match = (i: CalledLead) =>
-      !q || i.title.toLowerCase().includes(q) || i.parentName.toLowerCase().includes(q) || (!!digits && i.phone.replace(/\D/g, "").includes(digits));
+      !q ||
+      i.title.toLowerCase().includes(q) ||
+      i.parentName.toLowerCase().includes(q) ||
+      (!!digits && !!i.phone && i.phone.replace(/\D/g, "").includes(digits));
     const byDay = new Map<string, CalledLead[]>();
     for (const item of items.filter(match)) {
       const day = tashkentDay(item.calledAt);
@@ -63,8 +68,8 @@ export function CalledLeadsList({ slug }: { slug: string }) {
     return (
       <EmptyState
         icon={PhoneOutgoing}
-        title="Hali qo'ng'iroq qilingan ariza yo'q"
-        hint="«Qo'ng'iroqlar»da «Qo'ng'iroq qildim» bosilgan arizalar shu yerda chiqadi"
+        title="Hali qo'ng'iroq qilinganlar yo'q"
+        hint="«Qo'ng'iroqlar»da «Qo'ng'iroq qildim» bosilganlar shu yerda chiqadi"
       />
     );
   }
@@ -72,7 +77,7 @@ export function CalledLeadsList({ slug }: { slug: string }) {
   const today = todayTashkent();
   const yesterday = new Date(Date.parse(`${today}T00:00:00Z`) - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const dayLabel = (day: string) => (day === today ? tr("Bugun") : day === yesterday ? tr("Kecha") : formatDate(`${day}T12:00:00`));
-  const canOpen = items.some((i) => i.inMyBranch);
+  const canOpen = items.some((i) => i.kind === "LEAD" && i.inMyBranch);
 
   return (
     <div className="space-y-5">
@@ -91,16 +96,36 @@ export function CalledLeadsList({ slug }: { slug: string }) {
             refreshing={index === 0 && query.isFetching && !query.isLoading}
             footer={index === days.length - 1 && canOpen ? tr("Bosilsa — CRM'dagi ariza ochiladi.") : undefined}
           >
-            {rows.map((item) => (
-              <ListRow
-                key={item.leadId}
-                href={item.inMyBranch ? `/${slug}/crm/${item.leadId}` : undefined}
-                avatar={<IosIcon icon={PhoneOutgoing} tint="teal" size={44} />}
-                title={item.title}
-                subtitle={[formatPhone(item.phone), item.calledByName, tashkentTime(item.calledAt), item.note].filter(Boolean).join(" · ")}
-                meta={item.source === "WEBSITE" ? <Pill color={IOS.blue}>{tr("Sayt")}</Pill> : undefined}
-              />
-            ))}
+            {rows.map((item) => {
+              const style = CALL_KIND_STYLE[item.kind];
+              return (
+                <ListRow
+                  key={item.key}
+                  href={item.kind === "LEAD" && item.inMyBranch && item.leadId ? `/${slug}/crm/${item.leadId}` : undefined}
+                  avatar={
+                    <CallAvatar
+                      childId={item.childId}
+                      photoVersion={item.photoVersion}
+                      icon={style.icon}
+                      tint={style.tint}
+                      color={style.color}
+                      alt={tr(item.title)}
+                    />
+                  }
+                  title={item.title}
+                  subtitle={[item.phone ? formatPhone(item.phone) : null, item.calledByName, tashkentTime(item.calledAt), item.note]
+                    .filter(Boolean)
+                    .join(" · ")}
+                  meta={
+                    item.kind === "LEAD" && item.source === "WEBSITE" ? (
+                      <Pill color={IOS.blue}>{tr("Sayt")}</Pill>
+                    ) : (
+                      <Pill color={style.color}>{tr(CALL_KIND_LABEL[item.kind])}</Pill>
+                    )
+                  }
+                />
+              );
+            })}
           </Group>
         ))
       )}
