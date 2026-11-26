@@ -596,7 +596,8 @@ export function DirectorMenuContent({
       >
         <span className="relative">
           <span
-            className="flex h-[52px] w-[52px] items-center justify-center rounded-[14px] text-white"
+            // winter-cap-sm — qishda plitka ustida qor (oyna `data-season` bilan)
+            className="winter-cap-sm flex h-[52px] w-[52px] items-center justify-center rounded-[14px] text-white"
             style={{ backgroundColor: color, boxShadow: active ? `0 0 0 2px #fff, 0 0 0 4px ${color}` : undefined }}
           >
             <Icon filled={active} className="h-[26px] w-[26px]" />
@@ -625,7 +626,10 @@ export function DirectorMenuContent({
         aria-current={active ? "page" : undefined}
         className={clsx("flex min-h-[48px] items-center gap-3 pl-4 transition-colors active:bg-black/[0.05]", active && "bg-[var(--color-primary)]/[0.06]")}
       >
-        <NavTile icon={Icon} color={tintOf(Icon)} active={active} />
+        {/* winter-cap-sm — qishda plitka ustida qor */}
+        <span className="winter-cap-sm inline-flex shrink-0">
+          <NavTile icon={Icon} color={tintOf(Icon)} active={active} />
+        </span>
         <span className={clsx("flex min-h-[48px] min-w-0 flex-1 items-center gap-2 pr-3", index > 0 && "border-t border-black/[0.08]")}>
           <span className={clsx("min-w-0 flex-1 truncate text-[16px]", active ? "font-semibold text-[var(--color-primary)]" : "text-[var(--color-text)]")}>{tr(item.label)}</span>
           {badgeOf(item)}
@@ -680,7 +684,7 @@ export function DirectorMenuContent({
           <Link
             href={`/${slug}/branches`}
             onClick={onClose}
-            className="flex min-h-[56px] items-center gap-3 rounded-[18px] bg-white pl-4 pr-3 transition-colors active:bg-[#e5e5ea]"
+            className="winter-cap flex min-h-[56px] items-center gap-3 rounded-[18px] bg-white pl-4 pr-3 transition-colors active:bg-[#e5e5ea]"
           >
             <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[8px] bg-[#8e8e93] text-white" aria-hidden="true">
               <ArrowLeft className="h-[17px] w-[17px]" strokeWidth={2.4} />
@@ -696,13 +700,16 @@ export function DirectorMenuContent({
         {groups.map((group, gi) => (
           <section key={group.id ?? `g${gi}`}>
             {group.title && <p className={SECTION_TITLE}>{tr(group.title)}</p>}
-            {group.title ? (
-              <div className={clsx(GROUP_BLOCK, "grid grid-cols-4 gap-x-1 gap-y-2 px-2 py-3")}>
-                {group.items.map((item) => tile(item, SECTION_TINT[group.id ?? ""] ?? "accent"))}
-              </div>
-            ) : (
-              <div className={GROUP_BLOCK}>{group.items.map(row)}</div>
-            )}
+            {/* winter-cap — qishda karta ustida qor (blok o'zi overflow-hidden) */}
+            <div className="winter-cap">
+              {group.title ? (
+                <div className={clsx(GROUP_BLOCK, "grid grid-cols-4 gap-x-1 gap-y-2 px-2 py-3")}>
+                  {group.items.map((item) => tile(item, SECTION_TINT[group.id ?? ""] ?? "accent"))}
+                </div>
+              ) : (
+                <div className={GROUP_BLOCK}>{group.items.map(row)}</div>
+              )}
+            </div>
           </section>
         ))}
       </nav>
@@ -712,7 +719,7 @@ export function DirectorMenuContent({
           href={settingsItem.href}
           onClick={onClose}
           aria-current={isActive(settingsItem) ? "page" : undefined}
-          className="flex h-12 items-center justify-center gap-2 rounded-full bg-white text-[15px] font-semibold text-[var(--color-text)] transition-opacity active:opacity-60"
+          className="winter-cap-pill flex h-12 items-center justify-center gap-2 rounded-full bg-white text-[15px] font-semibold text-[var(--color-text)] transition-opacity active:opacity-60"
         >
           <settingsItem.icon className="h-[19px] w-[19px] text-[#8e8e93]" />
           {tr(settingsItem.label)}
@@ -721,7 +728,7 @@ export function DirectorMenuContent({
           type="button"
           onClick={onLogout}
           disabled={loggingOut}
-          className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded-full bg-[#ff3b30]/[0.12] text-[15px] font-semibold text-[#ff3b30] transition-opacity active:opacity-60 disabled:opacity-50"
+          className="winter-cap-pill flex h-12 cursor-pointer items-center justify-center gap-2 rounded-full bg-[#ff3b30]/[0.12] text-[15px] font-semibold text-[#ff3b30] transition-opacity active:opacity-60 disabled:opacity-50"
         >
           <LogoutIcon className="h-[19px] w-[19px]" />
           {tr(logoutLabel)}

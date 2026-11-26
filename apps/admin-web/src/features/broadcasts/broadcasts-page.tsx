@@ -86,22 +86,24 @@ export function BroadcastsPage({ slug }: { slug: string }) {
           ) : rows.length === 0 ? (
             <EmptyState icon={Megaphone} title="Hali xabar yuborilmagan" hint={canWrite ? "«Yangi xabar» tugmasini bosing — ota-onalarga yoki xodimlarga yozing" : undefined} />
           ) : (
-            <div className={GROUP_BLOCK}>
-              {rows.map((b) => (
-                <ListRow
-                  key={b.id}
-                  onClick={() => setOpenId(b.id)}
-                  avatar={<IosIcon icon={b.audience === "GUARDIANS" ? UsersRound : IdCard} tint={b.audience === "GUARDIANS" ? "orange" : "indigo"} size={40} />}
-                  title={b.title}
-                  subtitle={[tr(b.audience === "GUARDIANS" ? "Ota-onalar" : "Xodimlar"), tr(b.scopeLabel), showBranch ? tr(b.branch.name) : null, formatDateTime(b.createdAt)].filter(Boolean).join(" · ")}
-                  meta={
-                    <span className="flex flex-col items-end gap-1">
-                      <ReadPill read={b.readCount} total={b.recipientCount} />
-                      {b.isMandatory && <span className="text-[11.5px] font-semibold text-[#ff3b30]">{tr("Majburiy")}</span>}
-                    </span>
-                  }
-                />
-              ))}
+            <div className="ios-snow">
+              <div className={GROUP_BLOCK}>
+                {rows.map((b) => (
+                  <ListRow
+                    key={b.id}
+                    onClick={() => setOpenId(b.id)}
+                    avatar={<IosIcon icon={b.audience === "GUARDIANS" ? UsersRound : IdCard} tint={b.audience === "GUARDIANS" ? "orange" : "indigo"} size={40} />}
+                    title={b.title}
+                    subtitle={[tr(b.audience === "GUARDIANS" ? "Ota-onalar" : "Xodimlar"), tr(b.scopeLabel), showBranch ? tr(b.branch.name) : null, formatDateTime(b.createdAt)].filter(Boolean).join(" · ")}
+                    meta={
+                      <span className="flex flex-col items-end gap-1">
+                        <ReadPill read={b.readCount} total={b.recipientCount} />
+                        {b.isMandatory && <span className="text-[11.5px] font-semibold text-[#ff3b30]">{tr("Majburiy")}</span>}
+                      </span>
+                    }
+                  />
+                ))}
+              </div>
             </div>
           )}
         </IosGroup>
@@ -165,17 +167,19 @@ function BroadcastDetailSheet({ id, onClose }: { id: string | null; onClose: () 
           />
 
           {/* O'qilganlik */}
-          <div className={`${GROUP_BLOCK} px-4 py-4`}>
-            <div className="flex items-baseline justify-between gap-3">
-              <p className="text-[13px] text-[#8e8e93]">{tr("O'qidi")}</p>
-              <p className="text-[13px] tabular-nums text-[#8e8e93]">{pct}%</p>
-            </div>
-            <p className="mt-0.5 text-[28px] font-bold leading-tight tabular-nums text-[var(--color-text)]">
-              {b.readCount}
-              <span className="text-[17px] font-semibold text-[#8e8e93]"> / {b.recipientCount}</span>
-            </p>
-            <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-[#767680]/[0.12]">
-              <div className="h-full rounded-full bg-[#34c759] transition-[width] duration-500" style={{ width: `${pct}%` }} />
+          <div className="ios-snow">
+            <div className={`${GROUP_BLOCK} px-4 py-4`}>
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="text-[13px] text-[#8e8e93]">{tr("O'qidi")}</p>
+                <p className="text-[13px] tabular-nums text-[#8e8e93]">{pct}%</p>
+              </div>
+              <p className="mt-0.5 text-[28px] font-bold leading-tight tabular-nums text-[var(--color-text)]">
+                {b.readCount}
+                <span className="text-[17px] font-semibold text-[#8e8e93]"> / {b.recipientCount}</span>
+              </p>
+              <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-[#767680]/[0.12]">
+                <div className="h-full rounded-full bg-[#34c759] transition-[width] duration-500" style={{ width: `${pct}%` }} />
+              </div>
             </div>
           </div>
 
@@ -202,31 +206,33 @@ function BroadcastDetailSheet({ id, onClose }: { id: string | null; onClose: () 
                 { value: "read", label: tr("O'qigan · {0}", read.length) },
               ]}
             />
-            <div className={GROUP_BLOCK}>
-              {list.length === 0 ? (
-                <p className="px-4 py-5 text-center text-[14px] text-[#8e8e93]">{tab === "unread" ? tr("Hamma o'qidi") : tr("Hali hech kim o'qimadi")}</p>
-              ) : (
-                list.map((r) => (
-                  <div key={r.id} className="group/row relative flex min-h-[56px] items-center gap-3 px-4 py-2">
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[15px] text-[var(--color-text)]">{r.name}</span>
-                      <span className="block truncate text-[12.5px] text-[#8e8e93]">
-                        {[r.note ? tr(r.note) : null, !r.hasCabinet ? tr("kabinet ochilmagan") : null, r.readAt ? formatDateTime(r.readAt) : null].filter(Boolean).join(" · ") || "—"}
+            <div className="ios-snow">
+              <div className={GROUP_BLOCK}>
+                {list.length === 0 ? (
+                  <p className="px-4 py-5 text-center text-[14px] text-[#8e8e93]">{tab === "unread" ? tr("Hamma o'qidi") : tr("Hali hech kim o'qimadi")}</p>
+                ) : (
+                  list.map((r) => (
+                    <div key={r.id} className="group/row relative flex min-h-[56px] items-center gap-3 px-4 py-2">
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[15px] text-[var(--color-text)]">{r.name}</span>
+                        <span className="block truncate text-[12.5px] text-[#8e8e93]">
+                          {[r.note ? tr(r.note) : null, !r.hasCabinet ? tr("kabinet ochilmagan") : null, r.readAt ? formatDateTime(r.readAt) : null].filter(Boolean).join(" · ") || "—"}
+                        </span>
                       </span>
-                    </span>
-                    {r.phone && !r.readAt && (
-                      <a
-                        href={`tel:${r.phone}`}
-                        aria-label={tr("Qo'ng'iroq qilish")}
-                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#34c759]/[0.12] text-[#34c759] transition-transform active:scale-90"
-                      >
-                        <PhoneIcon className="h-[18px] w-[18px]" strokeWidth={2.2} />
-                      </a>
-                    )}
-                    <span className={ROW_SEPARATOR} aria-hidden="true" />
-                  </div>
-                ))
-              )}
+                      {r.phone && !r.readAt && (
+                        <a
+                          href={`tel:${r.phone}`}
+                          aria-label={tr("Qo'ng'iroq qilish")}
+                          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#34c759]/[0.12] text-[#34c759] transition-transform active:scale-90"
+                        >
+                          <PhoneIcon className="h-[18px] w-[18px]" strokeWidth={2.2} />
+                        </a>
+                      )}
+                      <span className={ROW_SEPARATOR} aria-hidden="true" />
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </section>
         </>

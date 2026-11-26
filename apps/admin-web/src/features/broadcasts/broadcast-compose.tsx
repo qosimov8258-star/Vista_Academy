@@ -379,16 +379,18 @@ function PreviewImage({ src, alt }: { src: string; alt: string }) {
 export function MessagePreview({ title, body, mandatory, image }: { title: string; body: string; mandatory: boolean; image?: ReactNode }) {
   const tr = useTr();
   return (
-    <div className={clsx(GROUP_BLOCK, "px-4 py-3.5")}>
-      <div className="flex items-start gap-3">
-        <IosIcon icon={Send} tint={mandatory ? "red" : "blue"} size={30} />
-        <div className="min-w-0 flex-1">
-          <p className="flex items-center gap-2 text-[15.5px] font-semibold leading-snug text-[var(--color-text)]">
-            <span className="min-w-0 break-words">{title.trim() || tr("Sarlavha")}</span>
-            {mandatory && <span className="shrink-0 rounded-full bg-[#ff3b30]/[0.12] px-2 py-0.5 text-[11.5px] font-semibold text-[#ff3b30]">{tr("Majburiy")}</span>}
-          </p>
-          {image && <div className="mt-2">{image}</div>}
-          <p className="mt-1 whitespace-pre-line break-words text-[14.5px] leading-snug text-[var(--color-text)]/80">{body.trim() || "…"}</p>
+    <div className="ios-snow">
+      <div className={clsx(GROUP_BLOCK, "px-4 py-3.5")}>
+        <div className="flex items-start gap-3">
+          <IosIcon icon={Send} tint={mandatory ? "red" : "blue"} size={30} />
+          <div className="min-w-0 flex-1">
+            <p className="flex items-center gap-2 text-[15.5px] font-semibold leading-snug text-[var(--color-text)]">
+              <span className="min-w-0 break-words">{title.trim() || tr("Sarlavha")}</span>
+              {mandatory && <span className="shrink-0 rounded-full bg-[#ff3b30]/[0.12] px-2 py-0.5 text-[11.5px] font-semibold text-[#ff3b30]">{tr("Majburiy")}</span>}
+            </p>
+            {image && <div className="mt-2">{image}</div>}
+            <p className="mt-1 whitespace-pre-line break-words text-[14.5px] leading-snug text-[var(--color-text)]/80">{body.trim() || "…"}</p>
+          </div>
         </div>
       </div>
     </div>

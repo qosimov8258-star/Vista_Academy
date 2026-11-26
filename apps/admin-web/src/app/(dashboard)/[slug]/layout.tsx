@@ -9,7 +9,9 @@ import { FeatureRouteGate } from "@/features/feature-flags/route-gate";
 import { ThemeSync } from "@/lib/theme";
 import { StaffLocaleSync } from "@/lib/staff-locale";
 import { panelMetadata } from "@/lib/tenant-metadata";
+import { SeasonShell } from "@/components/winter/season-shell";
 import type { Metadata } from "next";
+import "@/components/winter/winter.css";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   return panelMetadata((await params).slug, "staff");
@@ -29,7 +31,8 @@ export default async function DashboardLayout({
     // joyida qoladi, faqat <main> ichidagi mazmun aylanadi. Avval `min-h-screen`
     // edi — qobiq mazmun bilan cho'zilib, brauzerning o'zi sahifani aylantirar,
     // yon panel ham u bilan birga ketardi.
-    <div className="flex h-dvh overflow-hidden bg-[var(--color-bg)]">
+    // SeasonShell — oddiy div, qishda esa qishki fon va qor yog'ishi bilan.
+    <SeasonShell className="flex h-dvh overflow-hidden bg-[var(--color-bg)]">
       <Sidebar slug={slug} />
       <div className="flex min-w-0 flex-1 flex-col">
         <SubscriptionBanner slug={slug} />
@@ -40,6 +43,8 @@ export default async function DashboardLayout({
         <MainScroll className="min-h-0 flex-1 overflow-y-auto px-6 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-6 md:py-6">
           <FeatureRouteGate slug={slug}>{children}</FeatureRouteGate>
         </MainScroll>
+        {/* Qishda: mazmun ustuni tagidagi qor uyumi (boshqa paytda ko'rinmaydi) */}
+        <div className="winter-ground" aria-hidden="true" />
       </div>
       {/* Faqat oshpazga, faqat telefonda — boshqa rollar uchun hech narsa chizmaydi */}
       <ChefBottomBar slug={slug} />
@@ -51,6 +56,6 @@ export default async function DashboardLayout({
       <ThemeSync />
       {/* Hisobdagi tilni qo'llaydi — hech narsa chizmaydi */}
       <StaffLocaleSync />
-    </div>
+    </SeasonShell>
   );
 }

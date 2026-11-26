@@ -115,11 +115,13 @@ export default function CoinShopPage({ params }: { params: Promise<{ slug: strin
           ) : !branchId || productsQuery.isLoading ? (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4" aria-busy="true">
               {Array.from({ length: 4 }, (_, i) => (
-                <div key={i} className={GROUP_BLOCK}>
-                  <div className="aspect-square animate-pulse bg-[#767680]/[0.12]" />
-                  <div className="space-y-2 p-3">
-                    <div className="h-3.5 w-3/4 animate-pulse rounded bg-[#767680]/[0.12]" />
-                    <div className="h-3 w-1/2 animate-pulse rounded bg-[#767680]/[0.12]" />
+                <div key={i} className="ios-snow">
+                  <div className={`${GROUP_BLOCK} h-full`}>
+                    <div className="aspect-square animate-pulse bg-[#767680]/[0.12]" />
+                    <div className="space-y-2 p-3">
+                      <div className="h-3.5 w-3/4 animate-pulse rounded bg-[#767680]/[0.12]" />
+                      <div className="h-3 w-1/2 animate-pulse rounded bg-[#767680]/[0.12]" />
+                    </div>
                   </div>
                 </div>
               ))}
@@ -150,36 +152,37 @@ export default function CoinShopPage({ params }: { params: Promise<{ slug: strin
                 const first = productImagePositions(product)[0];
                 const soldOut = product.quantity <= 0;
                 return (
-                  <button
-                    key={product.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedId(product.id);
-                      setView("detail");
-                    }}
-                    className={clsx(GROUP_BLOCK, "flex flex-col text-left transition-transform active:scale-[0.98]")}
-                  >
-                    <div className="relative aspect-square w-full bg-[#f2f2f7]">
-                      {first ? (
-                        // eslint-disable-next-line @next/next/no-img-element -- tashqi manzil
-                        <img src={productImageUrl(product, first)} alt={tr(product.name)} className={clsx("h-full w-full object-cover", soldOut && "opacity-50")} />
-                      ) : (
-                        <span className="flex h-full w-full items-center justify-center">
-                          <Store className="h-10 w-10 text-[#c7c7cc]" strokeWidth={1.6} />
+                  <div key={product.id} className="ios-snow">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedId(product.id);
+                        setView("detail");
+                      }}
+                      className={clsx(GROUP_BLOCK, "flex h-full w-full flex-col text-left transition-transform active:scale-[0.98]")}
+                    >
+                      <div className="relative aspect-square w-full bg-[#f2f2f7]">
+                        {first ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- tashqi manzil
+                          <img src={productImageUrl(product, first)} alt={tr(product.name)} className={clsx("h-full w-full object-cover", soldOut && "opacity-50")} />
+                        ) : (
+                          <span className="flex h-full w-full items-center justify-center">
+                            <Store className="h-10 w-10 text-[#c7c7cc]" strokeWidth={1.6} />
+                          </span>
+                        )}
+                        <span className="absolute left-2 top-2">
+                          <StockPill quantity={product.quantity} />
                         </span>
-                      )}
-                      <span className="absolute left-2 top-2">
-                        <StockPill quantity={product.quantity} />
-                      </span>
-                    </div>
-                    <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-3">
-                      <span className="line-clamp-2 text-[15px] font-semibold leading-snug text-[var(--color-text)]">{tr(product.name)}</span>
-                      {product.color && <span className="truncate text-[13px] text-[#8e8e93]">{tr(product.color)}</span>}
-                      <span className="mt-auto pt-1">
-                        <PricePill value={product.priceCoins} />
-                      </span>
-                    </div>
-                  </button>
+                      </div>
+                      <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-3">
+                        <span className="line-clamp-2 text-[15px] font-semibold leading-snug text-[var(--color-text)]">{tr(product.name)}</span>
+                        {product.color && <span className="truncate text-[13px] text-[#8e8e93]">{tr(product.color)}</span>}
+                        <span className="mt-auto pt-1">
+                          <PricePill value={product.priceCoins} />
+                        </span>
+                      </div>
+                    </button>
+                  </div>
                 );
               })}
             </div>
@@ -189,25 +192,27 @@ export default function CoinShopPage({ params }: { params: Promise<{ slug: strin
 
       {/* Filial tanlash (ko'p filial bo'lsa) */}
       <IosSheet open={branchPickerOpen} onClose={() => setBranchPickerOpen(false)} cancelLabel="Orqaga" title={tr("Filial")}>
-        <div className={GROUP_BLOCK}>
-          {branches.map((b) => (
-            <div key={b.id} className="group/row relative">
-              <button
-                type="button"
-                role="radio"
-                aria-checked={b.id === branchId}
-                onClick={() => {
-                  setBranchId(b.id);
-                  setBranchPickerOpen(false);
-                }}
-                className="flex min-h-[48px] w-full items-center gap-3 px-4 text-left transition-colors hover:bg-[#767680]/[0.05] active:bg-[#767680]/[0.1]"
-              >
-                <span className="min-w-0 flex-1 truncate py-3 text-[15px] text-[var(--color-text)]">{tr(b.name)}</span>
-                {b.id === branchId && <CheckIcon className="h-[18px] w-[18px] shrink-0 text-[var(--color-primary)]" strokeWidth={2.6} />}
-              </button>
-              <span className={ROW_SEPARATOR} aria-hidden="true" />
-            </div>
-          ))}
+        <div className="ios-snow">
+          <div className={GROUP_BLOCK}>
+            {branches.map((b) => (
+              <div key={b.id} className="group/row relative">
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={b.id === branchId}
+                  onClick={() => {
+                    setBranchId(b.id);
+                    setBranchPickerOpen(false);
+                  }}
+                  className="flex min-h-[48px] w-full items-center gap-3 px-4 text-left transition-colors hover:bg-[#767680]/[0.05] active:bg-[#767680]/[0.1]"
+                >
+                  <span className="min-w-0 flex-1 truncate py-3 text-[15px] text-[var(--color-text)]">{tr(b.name)}</span>
+                  {b.id === branchId && <CheckIcon className="h-[18px] w-[18px] shrink-0 text-[var(--color-primary)]" strokeWidth={2.6} />}
+                </button>
+                <span className={ROW_SEPARATOR} aria-hidden="true" />
+              </div>
+            ))}
+          </div>
         </div>
       </IosSheet>
 

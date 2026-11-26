@@ -16,6 +16,8 @@ import { EmptyRow, Group, GroupAction, Row, SkeletonRows, TeacherPage, formatDay
 import { TeacherReminders } from "./teacher-reminders";
 import styles from "./teacher.module.css";
 import { useTr } from "@/i18n/tr";
+import { useWinter } from "@/components/winter/season-shell";
+import { WinterHeroScene } from "@/components/winter/winter-hero";
 import { useEmployeeInboxUnread } from "@/features/broadcasts/use-inbox";
 
 const WEEK: { key: Weekday; label: string }[] = [
@@ -51,6 +53,8 @@ function tashkentHour(): number {
  */
 export function TeacherHome({ slug }: { slug: string }) {
   const tr = useTr();
+  // Qishda rangli kartada shimol yog'dusi va qorli archalar
+  const winter = useWinter();
   const { user } = useAuth();
   const today = todayIso();
   const todayWeekday = WEEKDAY_BY_JS_DAY[new Date().getDay()];
@@ -147,7 +151,9 @@ export function TeacherHome({ slug }: { slug: string }) {
 
       {/* Bugungi davomat — asosiy ish, rangli karta */}
       {!subjectTeacher && attendanceOn && (
-        <section className={`${styles.hero} p-5`}>
+        <section className={`${styles.hero} p-5 ${winter ? "pb-12" : ""}`}>
+          {/* Qishda: shimol yog'dusi, pastda qorli archalar va qor uyumi */}
+          {winter && <WinterHeroScene />}
           <div className="relative flex items-center justify-between gap-3">
             <p className="min-w-0 truncate text-[13px] font-medium text-white/75">{tr(formatDayLong(today))}</p>
             {!summaryQuery.isLoading && total > 0 && (
@@ -203,7 +209,8 @@ export function TeacherHome({ slug }: { slug: string }) {
 
       {/* Fan o'qituvchisi — dars davomati */}
       {subjectTeacher && attendanceOn && (
-        <section className={`${styles.hero} p-5`}>
+        <section className={`${styles.hero} p-5 ${winter ? "pb-12" : ""}`}>
+          {winter && <WinterHeroScene />}
           <p className="relative truncate text-[13px] font-medium text-white/75">{tr(formatDayLong(today))}</p>
           <div className="relative mt-3 flex items-center gap-3.5">
             <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] bg-white/20">

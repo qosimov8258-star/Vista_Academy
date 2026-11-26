@@ -108,30 +108,32 @@ export default function NotificationsPage({ params }: { params: Promise<{ slug: 
           ) : rows.length === 0 ? (
             <EmptyState icon={BellIcon} title="Bildirishnoma topilmadi" hint={canWrite ? "Yangi yozuv qo'shish uchun tugmani bosing" : undefined} />
           ) : (
-            <div className={GROUP_BLOCK}>
-              {rows.map((n) => {
-                const event = EVENT_META[n.eventType];
-                return (
-                  <ListRow
-                    key={n.id}
-                    onClick={() => setOpenId(n.id)}
-                    avatar={<IosIcon icon={event.icon} tint={event.tint} size={40} />}
-                    title={
-                      <>
-                        {tr(n.recipientName)}
-                        <span className="font-normal text-[#8e8e93] max-sm:hidden"> · {tr(event.label)}</span>
-                      </>
-                    }
-                    subtitle={n.message ? tr(n.message) : formatDateTime(n.createdAt)}
-                    meta={
-                      <span className="flex flex-col items-end gap-1">
-                        <Pill color={n.status === "SENT" ? IOS.green : IOS.orange}>{n.status === "SENT" ? tr("Yuborildi") : tr("Kutilmoqda")}</Pill>
-                        <span className="whitespace-nowrap text-[12px] tabular-nums text-[#8e8e93] max-sm:hidden">{formatDateTime(n.createdAt)}</span>
-                      </span>
-                    }
-                  />
-                );
-              })}
+            <div className="ios-snow">
+              <div className={GROUP_BLOCK}>
+                {rows.map((n) => {
+                  const event = EVENT_META[n.eventType];
+                  return (
+                    <ListRow
+                      key={n.id}
+                      onClick={() => setOpenId(n.id)}
+                      avatar={<IosIcon icon={event.icon} tint={event.tint} size={40} />}
+                      title={
+                        <>
+                          {tr(n.recipientName)}
+                          <span className="font-normal text-[#8e8e93] max-sm:hidden"> · {tr(event.label)}</span>
+                        </>
+                      }
+                      subtitle={n.message ? tr(n.message) : formatDateTime(n.createdAt)}
+                      meta={
+                        <span className="flex flex-col items-end gap-1">
+                          <Pill color={n.status === "SENT" ? IOS.green : IOS.orange}>{n.status === "SENT" ? tr("Yuborildi") : tr("Kutilmoqda")}</Pill>
+                          <span className="whitespace-nowrap text-[12px] tabular-nums text-[#8e8e93] max-sm:hidden">{formatDateTime(n.createdAt)}</span>
+                        </span>
+                      }
+                    />
+                  );
+                })}
+              </div>
             </div>
           )}
         </IosGroup>

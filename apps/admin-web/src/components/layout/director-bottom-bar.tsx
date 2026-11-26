@@ -11,6 +11,7 @@ import { isSection, type NavEntry, type NavIcon, type NavLeaf, type NavSection }
 import { DirectorMenuContent } from "./director-rail";
 import styles from "./director-bottom-bar.module.css";
 import { useTr } from "@/i18n/tr";
+import { useWinter } from "@/components/winter/season-shell";
 
 /** Panelda nechta joy: oxirgisi har doim "Menyu" */
 const SLOTS = 5;
@@ -80,6 +81,8 @@ export function DirectorBottomBar({
   loggingOut,
 }: DirectorBottomBarProps) {
   const tr = useTr();
+  // Qishda menyu oynasidagi kartalar va ikonkalar ustida qor
+  const winter = useWinter();
   const t = useTranslations("sidebar");
   const pathname = useAppPathname();
   const barRef = useRef<HTMLDivElement>(null);
@@ -167,9 +170,11 @@ export function DirectorBottomBar({
         <nav
           ref={barRef}
           aria-label={tr("Asosiy menyu")}
-          className={clsx(styles.bar, "relative flex items-stretch px-1.5")}
+          // winter-glass — qishda chetlarida qirov naqshi (winter.css)
+          className={clsx(styles.bar, "winter-glass relative flex items-stretch px-1.5")}
           style={{ borderRadius: `${CORNER}px ${CORNER}px 0 0`, height: "calc(66px + env(safe-area-inset-bottom))", paddingBottom: "env(safe-area-inset-bottom)" }}
         >
+          <span className="winter-frost" aria-hidden="true" />
           {/* Faol bo'lim: paneldan yuqoriga bo'rtma va uning ichidagi zumrad doira */}
           {orbX !== null && ActiveIcon && (
             <div
@@ -251,7 +256,14 @@ export function DirectorBottomBar({
       {typeof document !== "undefined" &&
         sheet &&
         createPortal(
-          <div className="aurora-nav fixed inset-0 z-[65] md:hidden" role="dialog" aria-modal="true" aria-label={sheet.kind === "menu" ? tr("Barcha bo'limlar") : sheet.section.label}>
+          // data-season — oyna qobiqdan tashqarida (document.body), qishki qor qatlami shu orqali
+          <div
+            className="aurora-nav fixed inset-0 z-[65] md:hidden"
+            role="dialog"
+            aria-modal="true"
+            aria-label={sheet.kind === "menu" ? tr("Barcha bo'limlar") : sheet.section.label}
+            data-season={winter ? "winter" : undefined}
+          >
             <div className={clsx(styles.scrim, "absolute inset-0 bg-black/40 backdrop-blur-[3px]")} onClick={() => setSheet(null)} aria-hidden="true" />
             <div
               className={clsx(
@@ -313,7 +325,8 @@ function SectionList({ section, isActive, onClose }: { section: NavSection; isAc
             >
               <span
                 className={clsx(
-                  "flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px]",
+                  // winter-cap-sm — qishda ikonka ustida qor
+                  "winter-cap-sm flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px]",
                   active ? "bg-[var(--accent-soft-icon)]/15 text-[var(--accent-soft-icon)]" : "bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)]",
                 )}
               >

@@ -48,23 +48,25 @@ function TodayRemindersCardInner({ slug, branchId, today }: { slug: string; bran
   return (
     <>
       <Group title={tr("Bugungi eslatmalar")} footer={canMark ? tr("Eslatmani bosib, berilganini belgilang.") : undefined} bare>
-        <div className={GROUP_BLOCK}>
-          {query.data.map((r) => (
-            <Row
-              key={r.id}
-              onClick={canMark ? () => setOpenId(r.id) : undefined}
-              leading={<IosIcon icon={AlarmClock} tint={r.doneAt ? "gray" : "orange"} size={30} />}
-              title={
-                <span className={r.doneAt ? "text-[#8e8e93] line-through" : undefined}>
-                  {r.time && <b className="mr-1.5 tabular-nums">{r.time}</b>}
-                  {tr(r.childName)}
-                  {r.groupName && <span className="font-normal text-[#8e8e93]"> · {tr(r.groupName)}</span>}
-                </span>
-              }
-              subtitle={tr(r.text)}
-              value={r.doneAt ? <Pill color={IOS.green}>{tr("Berildi")} {timeOf(r.doneAt)}</Pill> : <Pill color={IOS.orange}>{tr("Kutilmoqda")}</Pill>}
-            />
-          ))}
+        <div className="ios-snow">
+          <div className={GROUP_BLOCK}>
+            {query.data.map((r) => (
+              <Row
+                key={r.id}
+                onClick={canMark ? () => setOpenId(r.id) : undefined}
+                leading={<IosIcon icon={AlarmClock} tint={r.doneAt ? "gray" : "orange"} size={30} />}
+                title={
+                  <span className={r.doneAt ? "text-[#8e8e93] line-through" : undefined}>
+                    {r.time && <b className="mr-1.5 tabular-nums">{r.time}</b>}
+                    {tr(r.childName)}
+                    {r.groupName && <span className="font-normal text-[#8e8e93]"> · {tr(r.groupName)}</span>}
+                  </span>
+                }
+                subtitle={tr(r.text)}
+                value={r.doneAt ? <Pill color={IOS.green}>{tr("Berildi")} {timeOf(r.doneAt)}</Pill> : <Pill color={IOS.orange}>{tr("Kutilmoqda")}</Pill>}
+              />
+            ))}
+          </div>
         </div>
       </Group>
 

@@ -14,8 +14,11 @@ export const IOS = {
   gray: "#8e8e93",
 } as const;
 
-/** Sahifa kartasi: 18px burchak, ramka va soyasiz — iOS «inset grouped» (Sabot bilan bir xil) */
-export const PAGE_CARD = "rounded-[18px] bg-white";
+/**
+ * Sahifa kartasi: 18px burchak, ramka va soyasiz — iOS «inset grouped» (Sabot bilan bir xil).
+ * `ios-snow` — qishda karta ustida qor qatlami (boshqa paytda hech narsa qilmaydi, winter.css).
+ */
+export const PAGE_CARD = "ios-snow rounded-[18px] bg-white";
 
 /** Bo'lim bloki (Group ichidagi oq blok) — sahifa kartasi bilan bir xil */
 export const GROUP_BLOCK = "overflow-hidden rounded-[18px] bg-white";

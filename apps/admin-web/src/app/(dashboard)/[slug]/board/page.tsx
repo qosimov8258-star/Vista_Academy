@@ -225,13 +225,15 @@ export default function BoardPage({ params }: { params: Promise<{ slug: string }
               <SheetRow label={tr("Bolalar")}>{tr("{0} ta bola", openGroup.total)}</SheetRow>
               <SheetRow label={tr("Olib ketildi")}>{openGroup.pickedUp}</SheetRow>
             </SheetSection>
-            <div className={`${GROUP_BLOCK} px-4 py-3`}>
-              <div className="flex items-center justify-between text-[13px] text-[#8e8e93]">
-                <span>{tr("Davomat")}</span>
-                <span className="tabular-nums">{pct(openGroup.present, openGroup.total)}%</span>
-              </div>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#767680]/[0.12]" aria-hidden="true">
-                <div className="h-full rounded-full bg-[#34c759]" style={{ width: `${pct(openGroup.present, openGroup.total)}%` }} />
+            <div className="ios-snow">
+              <div className={`${GROUP_BLOCK} px-4 py-3`}>
+                <div className="flex items-center justify-between text-[13px] text-[#8e8e93]">
+                  <span>{tr("Davomat")}</span>
+                  <span className="tabular-nums">{pct(openGroup.present, openGroup.total)}%</span>
+                </div>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#767680]/[0.12]" aria-hidden="true">
+                  <div className="h-full rounded-full bg-[#34c759]" style={{ width: `${pct(openGroup.present, openGroup.total)}%` }} />
+                </div>
               </div>
             </div>
           </>

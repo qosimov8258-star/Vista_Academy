@@ -17,6 +17,8 @@ import { stampLabel } from "@/features/chef/stamp";
 import styles from "@/features/chef/chef.module.css";
 import { MEALS, menuPhotosKey, useMenuPhotos } from "./use-menu-photos";
 import { useTr } from "@/i18n/tr";
+import { useWinter } from "@/components/winter/season-shell";
+import { WinterHeroScene } from "@/components/winter/winter-hero";
 
 interface GroupRow {
   groupId: string | null;
@@ -277,9 +279,18 @@ function PortionsHero({ d }: { d: TodaySummary }) {
   const complete = d.notMarked === 0 && d.staff.notMarked === 0;
   const people = d.total + d.staff.total;
   const progress = people > 0 ? (childMarked + staffMarked) / people : 0;
+  // Qishda kartada shimol yog'dusi, pastda qorli archalar
+  const winter = useWinter();
 
   return (
-    <section className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-orange-500 via-orange-400 to-amber-400 p-5 text-white shadow-[0_18px_40px_-20px_rgba(234,88,12,0.7)]">
+    <section
+      className={clsx(
+        "relative overflow-hidden rounded-[26px] bg-gradient-to-br from-orange-500 via-orange-400 to-amber-400 p-5 text-white shadow-[0_18px_40px_-20px_rgba(234,88,12,0.7)]",
+        winter && "pb-12",
+      )}
+    >
+      {/* Yorqin to'q sariq kartada yog'du matnni xiralashtiradi — faqat archalar */}
+      {winter && <WinterHeroScene aurora={false} />}
       {/* Bezak doiralar */}
       <span className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-white/15" aria-hidden />
       <span className="pointer-events-none absolute -bottom-16 right-16 h-36 w-36 rounded-full bg-white/10" aria-hidden />

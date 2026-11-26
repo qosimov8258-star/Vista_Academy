@@ -249,21 +249,23 @@ export function BranchAdminHome({ slug, branchName }: { slug: string; branchName
               ) : groups.length === 0 ? (
                 <EmptyState icon={GroupIcon} title="Bu filialda hali guruh yo'q" />
               ) : (
-                <div className={GROUP_BLOCK}>
-                  {groups.slice(0, shown).map((g) => (
-                    <ListRow
-                      key={g.id}
-                      onClick={() => setOpenGroup(g)}
-                      avatar={<IosAvatar name={g.name} letters={1} />}
-                      title={tr(g.name)}
-                      subtitle={`${tr("{0} ta bola", g.total)} · ${g.teachers.length > 0 ? g.teachers.join(", ") : tr("Tarbiyachi biriktirilmagan")}`}
-                      meta={attendanceOn ? <GroupPill g={g} /> : undefined}
-                      chevron
-                    />
-                  ))}
-                  {groups.length > shown && (
-                    <Row title={<span className="text-[var(--color-primary)]">{tr("Yana ko'rsatish")}</span>} value={groups.length - shown} onClick={() => setShown((n) => n + PAGE)} chevron={false} />
-                  )}
+                <div className="ios-snow">
+                  <div className={GROUP_BLOCK}>
+                    {groups.slice(0, shown).map((g) => (
+                      <ListRow
+                        key={g.id}
+                        onClick={() => setOpenGroup(g)}
+                        avatar={<IosAvatar name={g.name} letters={1} />}
+                        title={tr(g.name)}
+                        subtitle={`${tr("{0} ta bola", g.total)} · ${g.teachers.length > 0 ? g.teachers.join(", ") : tr("Tarbiyachi biriktirilmagan")}`}
+                        meta={attendanceOn ? <GroupPill g={g} /> : undefined}
+                        chevron
+                      />
+                    ))}
+                    {groups.length > shown && (
+                      <Row title={<span className="text-[var(--color-primary)]">{tr("Yana ko'rsatish")}</span>} value={groups.length - shown} onClick={() => setShown((n) => n + PAGE)} chevron={false} />
+                    )}
+                  </div>
                 </div>
               )}
             </Group>

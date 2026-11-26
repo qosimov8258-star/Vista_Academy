@@ -101,7 +101,10 @@ export function Group({
             {action && <div className="pb-1.5 text-[13.5px]">{tr(action)}</div>}
           </div>
         ))}
-      <div className={clsx(styles.group, large && styles.soft, "overflow-hidden", className)}>{children}</div>
+      {/* Tashqi qobiq — qishda blok ustidagi qor qatlami uchun (blok `overflow-hidden`) */}
+      <div className="ios-snow">
+        <div className={clsx(styles.group, large && styles.soft, "overflow-hidden", className)}>{children}</div>
+      </div>
       {footer && <p className="px-4 pt-2 text-[12.5px] leading-snug text-[#8e8e93]">{tr(footer)}</p>}
     </section>
   );

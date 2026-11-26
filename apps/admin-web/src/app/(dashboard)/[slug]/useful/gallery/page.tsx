@@ -91,9 +91,11 @@ export default function GalleryPage({ params }: { params: Promise<{ slug: string
         )}
 
         {!canWrite && (
-          <div className={clsx(GROUP_BLOCK, "flex items-start gap-3 px-4 py-3.5")}>
-            <InfoIcon className="mt-0.5 h-5 w-5 shrink-0 text-[#8e8e93]" />
-            <p className="text-[13.5px] leading-snug text-[#8e8e93]">{tr("Faqat ko'rish. Bolalar ishlarini tarbiyachilar va filial admini yuklaydi.")}</p>
+          <div className="ios-snow">
+            <div className={clsx(GROUP_BLOCK, "flex items-start gap-3 px-4 py-3.5")}>
+              <InfoIcon className="mt-0.5 h-5 w-5 shrink-0 text-[#8e8e93]" />
+              <p className="text-[13.5px] leading-snug text-[#8e8e93]">{tr("Faqat ko'rish. Bolalar ishlarini tarbiyachilar va filial admini yuklaydi.")}</p>
+            </div>
           </div>
         )}
 
