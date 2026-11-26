@@ -281,87 +281,91 @@ function BranchChildren({ slug }: { slug: string }) {
           ) : (
             <>
               {/* Telefon, planshet va kichik noutbuk — iOS qatorlari */}
-              <div className={`${GROUP_BLOCK} xl:hidden`}>
-                {children.map((child) => {
-                  const guardian = child.guardians?.[0];
-                  return (
-                    <ListRow
-                      key={child.id}
-                      onClick={() => setOpenChild(child)}
-                      avatar={<ChildPhoto child={child} size={44} fallback={initials(child.fullName)} />}
-                      title={tr(child.fullName)}
-                      subtitle={[formatChildId(child.publicId), !teacher && child.group?.name ? tr(child.group.name) : null].filter(Boolean).join(" · ")}
-                      meta={<ChildPills child={child} allergy={allergyChildIds.has(child.id)} />}
-                      chevron={!guardian}
-                      trailing={guardian ? <CallButton phone={guardian.guardian.phone} name={guardian.guardian.fullName} /> : undefined}
-                    />
-                  );
-                })}
+              <div className="ios-snow xl:hidden">
+                <div className={GROUP_BLOCK}>
+                  {children.map((child) => {
+                    const guardian = child.guardians?.[0];
+                    return (
+                      <ListRow
+                        key={child.id}
+                        onClick={() => setOpenChild(child)}
+                        avatar={<ChildPhoto child={child} size={44} fallback={initials(child.fullName)} />}
+                        title={tr(child.fullName)}
+                        subtitle={[formatChildId(child.publicId), !teacher && child.group?.name ? tr(child.group.name) : null].filter(Boolean).join(" · ")}
+                        meta={<ChildPills child={child} allergy={allergyChildIds.has(child.id)} />}
+                        chevron={!guardian}
+                        trailing={guardian ? <CallButton phone={guardian.guardian.phone} name={guardian.guardian.fullName} /> : undefined}
+                      />
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Katta ekran (xl) — o'sha iOS ro'yxati, kengroq: qatorda ota-ona, guruh va
                   tug'ilgan sana ham ko'rinadi. Ustun sarlavhalari yo'q (iPhone ro'yxatidagidek),
                   qator bosilsa — bola profili (Cmd/Ctrl bilan — yangi oynada). */}
-              <div className={`${GROUP_BLOCK} hidden xl:block`}>
-                {children.map((child) => {
-                  const guardian = child.guardians?.[0];
-                  const showBranch = !forcedBranchId && !teacher && child.branch?.name;
-                  return (
-                    <div key={child.id} className="group/row relative flex items-center">
-                      <Link
-                        href={childHref(child.id)}
-                        className={`flex min-h-[68px] min-w-0 flex-1 items-center gap-3 py-2.5 pl-4 pr-3 ${ROW_PRESS}`}
-                      >
-                        <ChildPhoto child={child} size={44} fallback={initials(child.fullName)} />
-                        <span className="min-w-0 flex-[1.2]">
-                          <span className="block truncate text-[15.5px] font-medium leading-snug text-[var(--color-text)]" title={child.fullName}>
-                            {tr(child.fullName)}
-                          </span>
-                          <span className="block truncate font-mono text-[13px] leading-snug tabular-nums text-[#8e8e93]">{formatChildId(child.publicId)}</span>
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          {guardian ? (
-                            <>
-                              <span className="block truncate text-[15px] leading-snug text-[var(--color-text)]">{tr(guardian.guardian.fullName)}</span>
-                              <span className="block truncate text-[13px] leading-snug tabular-nums text-[#8e8e93]">
-                                {tr(RELATION_LABEL[guardian.relation])} · {tr(guardian.guardian.phone)}
-                              </span>
-                            </>
-                          ) : (
-                            <span className="block truncate text-[15px] text-[#8e8e93]">{tr("Ota-ona biriktirilmagan")}</span>
-                          )}
-                        </span>
-                        {!teacher && (
-                          <span className="w-[140px] min-w-0 shrink-0">
-                            <span className={`block truncate text-[15px] leading-snug ${child.group?.name ? "text-[var(--color-text)]" : "text-[#8e8e93]"}`}>
-                              {/* Arxivdagi bola «Guruhsiz» emas — yonidagi «Arxivda» yorlig'i yetarli */}
-                              {child.group?.name ? tr(child.group.name) : child.status === "INACTIVE" ? "—" : tr("Guruhsiz")}
+              <div className="ios-snow hidden xl:block">
+                <div className={GROUP_BLOCK}>
+                  {children.map((child) => {
+                    const guardian = child.guardians?.[0];
+                    const showBranch = !forcedBranchId && !teacher && child.branch?.name;
+                    return (
+                      <div key={child.id} className="group/row relative flex items-center">
+                        <Link
+                          href={childHref(child.id)}
+                          className={`flex min-h-[68px] min-w-0 flex-1 items-center gap-3 py-2.5 pl-4 pr-3 ${ROW_PRESS}`}
+                        >
+                          <ChildPhoto child={child} size={44} fallback={initials(child.fullName)} />
+                          <span className="min-w-0 flex-[1.2]">
+                            <span className="block truncate text-[15.5px] font-medium leading-snug text-[var(--color-text)]" title={child.fullName}>
+                              {tr(child.fullName)}
                             </span>
-                            {showBranch && <span className="block truncate text-[13px] leading-snug text-[#8e8e93]">{child.branch!.name}</span>}
+                            <span className="block truncate font-mono text-[13px] leading-snug tabular-nums text-[#8e8e93]">{formatChildId(child.publicId)}</span>
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            {guardian ? (
+                              <>
+                                <span className="block truncate text-[15px] leading-snug text-[var(--color-text)]">{tr(guardian.guardian.fullName)}</span>
+                                <span className="block truncate text-[13px] leading-snug tabular-nums text-[#8e8e93]">
+                                  {tr(RELATION_LABEL[guardian.relation])} · {tr(guardian.guardian.phone)}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="block truncate text-[15px] text-[#8e8e93]">{tr("Ota-ona biriktirilmagan")}</span>
+                            )}
+                          </span>
+                          {!teacher && (
+                            <span className="w-[140px] min-w-0 shrink-0">
+                              <span className={`block truncate text-[15px] leading-snug ${child.group?.name ? "text-[var(--color-text)]" : "text-[#8e8e93]"}`}>
+                                {/* Arxivdagi bola «Guruhsiz» emas — yonidagi «Arxivda» yorlig'i yetarli */}
+                                {child.group?.name ? tr(child.group.name) : child.status === "INACTIVE" ? "—" : tr("Guruhsiz")}
+                              </span>
+                              {showBranch && <span className="block truncate text-[13px] leading-snug text-[#8e8e93]">{child.branch!.name}</span>}
+                            </span>
+                          )}
+                          <span className="w-[110px] shrink-0">
+                            <span className="block text-[15px] leading-snug tabular-nums text-[var(--color-text)]">
+                              {child.birthDate ? formatDate(child.birthDate) : "—"}
+                            </span>
+                            {child.birthDate && <span className="block truncate text-[13px] leading-snug text-[#8e8e93]">{tr(formatAge(child.birthDate))}</span>}
+                          </span>
+                          {/* Faol bola uchun ortiqcha yorliq yo'q — faqat nofaol/karantin va allergiya */}
+                          <span className="flex w-[150px] shrink-0 justify-end">
+                            <ChildPills child={child} allergy={allergyChildIds.has(child.id)} />
+                          </span>
+                          {!guardian && <ChevronRightIcon className="h-4 w-4 shrink-0 text-[#c7c7cc]" strokeWidth={2.2} aria-hidden="true" />}
+                        </Link>
+                        {guardian && (
+                          <span className="shrink-0 pr-4">
+                            <CallButton phone={guardian.guardian.phone} name={guardian.guardian.fullName} />
                           </span>
                         )}
-                        <span className="w-[110px] shrink-0">
-                          <span className="block text-[15px] leading-snug tabular-nums text-[var(--color-text)]">
-                            {child.birthDate ? formatDate(child.birthDate) : "—"}
-                          </span>
-                          {child.birthDate && <span className="block truncate text-[13px] leading-snug text-[#8e8e93]">{tr(formatAge(child.birthDate))}</span>}
-                        </span>
-                        {/* Faol bola uchun ortiqcha yorliq yo'q — faqat nofaol/karantin va allergiya */}
-                        <span className="flex w-[150px] shrink-0 justify-end">
-                          <ChildPills child={child} allergy={allergyChildIds.has(child.id)} />
-                        </span>
-                        {!guardian && <ChevronRightIcon className="h-4 w-4 shrink-0 text-[#c7c7cc]" strokeWidth={2.2} aria-hidden="true" />}
-                      </Link>
-                      {guardian && (
-                        <span className="shrink-0 pr-4">
-                          <CallButton phone={guardian.guardian.phone} name={guardian.guardian.fullName} />
-                        </span>
-                      )}
-                      {/* Chiziq ismdan boshlanadi (16 + 44 + 12) */}
-                      <span className={ROW_SEPARATOR} style={{ left: 72 }} aria-hidden="true" />
-                    </div>
-                  );
-                })}
+                        {/* Chiziq ismdan boshlanadi (16 + 44 + 12) */}
+                        <span className={ROW_SEPARATOR} style={{ left: 72 }} aria-hidden="true" />
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="flex flex-col items-center gap-2.5 pt-3">

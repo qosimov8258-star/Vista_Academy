@@ -232,92 +232,96 @@ function GroupTimetableView({
       </PageCard>
 
       {rows.length === 0 ? (
-        <div className={clsx(GROUP_BLOCK, "flex flex-col items-center px-6 py-9 text-center")}>
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#767680]/[0.12] text-[#8e8e93]">
-            <CalendarRange className="h-7 w-7" strokeWidth={1.9} />
-          </span>
-          <p className="mt-3 text-[15px] font-semibold text-[var(--color-text)]">{tr("Jadval hali to'ldirilmagan")}</p>
-          <p className="mt-1 max-w-[320px] text-[13px] text-[#8e8e93]">
-            {canWrite
-              ? tr("09:00–17:00 vaqt qatorlari bilan boshlang yoki boshqa guruh jadvalidan nusxa oling.")
-              : tr("Filial admini jadvalni to'ldirgach shu yerda ko'rinadi.")}
-          </p>
-          {canWrite && (
-            <div className="mt-4 flex flex-wrap justify-center gap-2">
-              <IosButton label={tr("Vaqt qatorlari bilan boshlash")} variant="primary" loading={save.isPending} onClick={startWithSample} />
-              <IosButton label={tr("Bo'sh qator qo'shish")} icon={Plus} onClick={() => openRow(null)} />
-            </div>
-          )}
-          {saveError && !rowSheet.open && !copyOpen && <p className="mt-3 text-[13px] text-[#ff3b30]">{tr(saveError)}</p>}
+        <div className="ios-snow">
+          <div className={clsx(GROUP_BLOCK, "flex flex-col items-center px-6 py-9 text-center")}>
+            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#767680]/[0.12] text-[#8e8e93]">
+              <CalendarRange className="h-7 w-7" strokeWidth={1.9} />
+            </span>
+            <p className="mt-3 text-[15px] font-semibold text-[var(--color-text)]">{tr("Jadval hali to'ldirilmagan")}</p>
+            <p className="mt-1 max-w-[320px] text-[13px] text-[#8e8e93]">
+              {canWrite
+                ? tr("09:00–17:00 vaqt qatorlari bilan boshlang yoki boshqa guruh jadvalidan nusxa oling.")
+                : tr("Filial admini jadvalni to'ldirgach shu yerda ko'rinadi.")}
+            </p>
+            {canWrite && (
+              <div className="mt-4 flex flex-wrap justify-center gap-2">
+                <IosButton label={tr("Vaqt qatorlari bilan boshlash")} variant="primary" loading={save.isPending} onClick={startWithSample} />
+                <IosButton label={tr("Bo'sh qator qo'shish")} icon={Plus} onClick={() => openRow(null)} />
+              </div>
+            )}
+            {saveError && !rowSheet.open && !copyOpen && <p className="mt-3 text-[13px] text-[#ff3b30]">{tr(saveError)}</p>}
+          </div>
         </div>
       ) : (
         <>
           {/* Kompyuter va planshet: PDF'dagidek to'liq jadval */}
-          <div className={clsx(GROUP_BLOCK, "max-md:hidden")} data-print-area>
-            {/* Faqat chop etishda: PDF'dagidek sarlavha */}
-            <div className="hidden px-3 pb-3 pt-1 text-center print:block">
-              <p className="text-[20px] font-bold">{tr("Haftalik jadval")}</p>
-              <p className="text-[14px]">{tr("Guruh «{0}»", timetable.groupName)}</p>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[720px] border-collapse text-[13.5px]">
-                <thead>
-                  <tr>
-                    <th className="sticky left-0 z-[1] w-[112px] bg-[#f7f7fa] px-3 py-3 text-left text-[12.5px] font-semibold uppercase tracking-wide text-[#8e8e93]">
-                      {tr("Vaqt")}
-                    </th>
-                    {days.map((d) => (
-                      <th
-                        key={d}
-                        className={clsx(
-                          "px-2 py-3 text-center text-[13px] font-semibold",
-                          d === today ? "bg-[var(--color-primary)]/[0.1] text-[var(--color-primary)]" : "bg-[#f7f7fa] text-[var(--color-text)]",
-                        )}
-                      >
-                        {tr(DAY_SHORT[d])}
+          <div className="ios-snow max-md:hidden">
+            <div className={GROUP_BLOCK} data-print-area>
+              {/* Faqat chop etishda: PDF'dagidek sarlavha */}
+              <div className="hidden px-3 pb-3 pt-1 text-center print:block">
+                <p className="text-[20px] font-bold">{tr("Haftalik jadval")}</p>
+                <p className="text-[14px]">{tr("Guruh «{0}»", timetable.groupName)}</p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[720px] border-collapse text-[13.5px]">
+                  <thead>
+                    <tr>
+                      <th className="sticky left-0 z-[1] w-[112px] bg-[#f7f7fa] px-3 py-3 text-left text-[12.5px] font-semibold uppercase tracking-wide text-[#8e8e93]">
+                        {tr("Vaqt")}
                       </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row, index) => (
-                    <tr key={`${row.startTime}-${row.endTime}`} className="border-t border-black/[0.08]">
-                      <td className="sticky left-0 z-[1] whitespace-nowrap bg-[#fbfbfd] px-3 py-2.5 text-[13px] tabular-nums text-[#6d6d72]">
-                        {canWrite ? (
-                          <button type="button" onClick={() => openRow(index)} className="text-left tabular-nums hover:text-[var(--color-primary)]">
-                            {timeLabel(row)}
-                          </button>
-                        ) : (
-                          timeLabel(row)
-                        )}
-                      </td>
                       {days.map((d) => (
-                        <td
+                        <th
                           key={d}
                           className={clsx(
-                            "border-l border-black/[0.06] p-0 text-center align-middle",
-                            d === today && "bg-[var(--color-primary)]/[0.04]",
+                            "px-2 py-3 text-center text-[13px] font-semibold",
+                            d === today ? "bg-[var(--color-primary)]/[0.1] text-[var(--color-primary)]" : "bg-[#f7f7fa] text-[var(--color-text)]",
                           )}
                         >
-                          {canWrite ? (
-                            <button
-                              type="button"
-                              onClick={() => openRow(index, d)}
-                              className="block min-h-[44px] w-full px-2 py-2.5 leading-snug text-[var(--color-text)] transition-colors hover:bg-[#767680]/[0.06]"
-                            >
-                              {row.cells[d] || <span className="text-[#c7c7cc]">—</span>}
-                            </button>
-                          ) : (
-                            <span className="block px-2 py-2.5 leading-snug text-[var(--color-text)]">{row.cells[d] || <span className="text-[#c7c7cc]">—</span>}</span>
-                          )}
-                        </td>
+                          {tr(DAY_SHORT[d])}
+                        </th>
                       ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {rows.map((row, index) => (
+                      <tr key={`${row.startTime}-${row.endTime}`} className="border-t border-black/[0.08]">
+                        <td className="sticky left-0 z-[1] whitespace-nowrap bg-[#fbfbfd] px-3 py-2.5 text-[13px] tabular-nums text-[#6d6d72]">
+                          {canWrite ? (
+                            <button type="button" onClick={() => openRow(index)} className="text-left tabular-nums hover:text-[var(--color-primary)]">
+                              {timeLabel(row)}
+                            </button>
+                          ) : (
+                            timeLabel(row)
+                          )}
+                        </td>
+                        {days.map((d) => (
+                          <td
+                            key={d}
+                            className={clsx(
+                              "border-l border-black/[0.06] p-0 text-center align-middle",
+                              d === today && "bg-[var(--color-primary)]/[0.04]",
+                            )}
+                          >
+                            {canWrite ? (
+                              <button
+                                type="button"
+                                onClick={() => openRow(index, d)}
+                                className="block min-h-[44px] w-full px-2 py-2.5 leading-snug text-[var(--color-text)] transition-colors hover:bg-[#767680]/[0.06]"
+                              >
+                                {row.cells[d] || <span className="text-[#c7c7cc]">—</span>}
+                              </button>
+                            ) : (
+                              <span className="block px-2 py-2.5 leading-snug text-[var(--color-text)]">{row.cells[d] || <span className="text-[#c7c7cc]">—</span>}</span>
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {timetable.note && <p className="hidden whitespace-pre-line px-3 pt-3 text-[12px] print:block">{timetable.note}</p>}
             </div>
-            {timetable.note && <p className="hidden whitespace-pre-line px-3 pt-3 text-[12px] print:block">{timetable.note}</p>}
           </div>
 
           {/* Telefon: kun tanlanadi, shu kunning qatorlari */}

@@ -327,55 +327,59 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
                   bare
                 >
                   {visibleRows.length === 0 ? (
-                    <div className={GROUP_BLOCK}>
-                      <EmptyState icon={UserCheck} title="Bu bo'limda xodim yo'q" />
+                    <div className="ios-snow">
+                      <div className={GROUP_BLOCK}>
+                        <EmptyState icon={UserCheck} title="Bu bo'limda xodim yo'q" />
+                      </div>
                     </div>
                   ) : (
-                    <div className={GROUP_BLOCK}>
-                      {visibleRows.map(({ employee, eff }) => {
-                        const present = isPresentStatus(eff.status);
-                        const changed = !!drafts[employee.employeeId];
-                        const faceId = isFaceIdRecord(employee.note) && !changed;
-                        return (
-                          <ListRow
-                            key={employee.employeeId}
-                            onClick={() => setEditingId(employee.employeeId)}
-                            chevron={false}
-                            avatar={<IosAvatar name={employee.fullName} src={employeePhotoUrl({ id: employee.employeeId, avatarUpdatedAt: employee.avatarUpdatedAt })} size={44} />}
-                            title={
-                              <>
-                                {changed && <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[var(--color-primary)] align-middle" aria-label={tr("O'zgartirilgan")} />}
-                                {tr(employee.fullName)}
-                              </>
-                            }
-                            subtitle={
-                              <>
-                                {tr(employee.position)}
-                                {faceId && (
-                                  <>
-                                    {" · "}
-                                    <FaceIdMark />
-                                  </>
-                                )}
-                              </>
-                            }
-                            meta={
-                              present ? (
-                                <InOutTimes checkIn={eff.checkInTime} checkOut={eff.checkOutTime} late={eff.status === "LATE"} />
-                              ) : (
-                                <span className="flex items-center gap-1.5">
-                                  {employee.documents.length > 0 && (
-                                    <Paperclip className="h-[15px] w-[15px] text-[#007aff]" strokeWidth={2.2} aria-label={tr("Hujjat bor")} />
+                    <div className="ios-snow">
+                      <div className={GROUP_BLOCK}>
+                        {visibleRows.map(({ employee, eff }) => {
+                          const present = isPresentStatus(eff.status);
+                          const changed = !!drafts[employee.employeeId];
+                          const faceId = isFaceIdRecord(employee.note) && !changed;
+                          return (
+                            <ListRow
+                              key={employee.employeeId}
+                              onClick={() => setEditingId(employee.employeeId)}
+                              chevron={false}
+                              avatar={<IosAvatar name={employee.fullName} src={employeePhotoUrl({ id: employee.employeeId, avatarUpdatedAt: employee.avatarUpdatedAt })} size={44} />}
+                              title={
+                                <>
+                                  {changed && <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[var(--color-primary)] align-middle" aria-label={tr("O'zgartirilgan")} />}
+                                  {tr(employee.fullName)}
+                                </>
+                              }
+                              subtitle={
+                                <>
+                                  {tr(employee.position)}
+                                  {faceId && (
+                                    <>
+                                      {" · "}
+                                      <FaceIdMark />
+                                    </>
                                   )}
-                                  <Pill color={eff.status ? STAFF_STATUS_COLOR[eff.status] : IOS.gray}>
-                                    {tr(eff.status ? STAFF_STATUS_LABEL[eff.status] : "Belgilanmagan")}
-                                  </Pill>
-                                </span>
-                              )
-                            }
-                          />
-                        );
-                      })}
+                                </>
+                              }
+                              meta={
+                                present ? (
+                                  <InOutTimes checkIn={eff.checkInTime} checkOut={eff.checkOutTime} late={eff.status === "LATE"} />
+                                ) : (
+                                  <span className="flex items-center gap-1.5">
+                                    {employee.documents.length > 0 && (
+                                      <Paperclip className="h-[15px] w-[15px] text-[#007aff]" strokeWidth={2.2} aria-label={tr("Hujjat bor")} />
+                                    )}
+                                    <Pill color={eff.status ? STAFF_STATUS_COLOR[eff.status] : IOS.gray}>
+                                      {tr(eff.status ? STAFF_STATUS_LABEL[eff.status] : "Belgilanmagan")}
+                                    </Pill>
+                                  </span>
+                                )
+                              }
+                            />
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
                 </IosGroup>
@@ -432,32 +436,34 @@ export default function StaffAttendancePage({ params }: { params: Promise<{ slug
               ) : !summaryQuery.data || summaryQuery.data.employees.length === 0 ? (
                 <EmptyState icon={UserCheck} title="Bu oy uchun ma'lumot yo'q" />
               ) : (
-                <div className={GROUP_BLOCK}>
-                  {summaryQuery.data.employees.map((employee) => {
-                    // Kech qoldi, kasal va ta'til — barchasi "Kelmadi" qatoriga qo'shib ko'rsatiladi
-                    const missed = employee.absent + employee.late + employee.sick + employee.onLeave;
-                    return (
-                      <ListRow
-                        key={employee.employeeId}
-                        onClick={() => {
-                          setHistoryPreselect(null);
-                          setHistoryEmployeeId(employee.employeeId);
-                          setHistoryPeriod(period);
-                        }}
-                        avatar={<IosAvatar name={employee.fullName} src={employeePhotoUrl({ id: employee.employeeId, avatarUpdatedAt: employee.avatarUpdatedAt })} size={44} />}
-                        title={tr(employee.fullName)}
-                        subtitle={`${tr(formatPositionLabel(employee.position, employee.subjects))}${employee.groups.length > 0 ? ` · ${employee.groups.join(", ")}` : ""}`}
-                        meta={
-                          <span className="flex flex-col items-end gap-1">
-                            {employee.rate === null ? <Pill color={IOS.gray}>—</Pill> : <Pill color={rateColor(employee.rate)}>{employee.rate}%</Pill>}
-                            <span className="whitespace-nowrap text-[12px] tabular-nums text-[#8e8e93]">
-                              {tr("keldi {0}", employee.present)} · {tr("kelmadi {0}", missed)}
+                <div className="ios-snow">
+                  <div className={GROUP_BLOCK}>
+                    {summaryQuery.data.employees.map((employee) => {
+                      // Kech qoldi, kasal va ta'til — barchasi "Kelmadi" qatoriga qo'shib ko'rsatiladi
+                      const missed = employee.absent + employee.late + employee.sick + employee.onLeave;
+                      return (
+                        <ListRow
+                          key={employee.employeeId}
+                          onClick={() => {
+                            setHistoryPreselect(null);
+                            setHistoryEmployeeId(employee.employeeId);
+                            setHistoryPeriod(period);
+                          }}
+                          avatar={<IosAvatar name={employee.fullName} src={employeePhotoUrl({ id: employee.employeeId, avatarUpdatedAt: employee.avatarUpdatedAt })} size={44} />}
+                          title={tr(employee.fullName)}
+                          subtitle={`${tr(formatPositionLabel(employee.position, employee.subjects))}${employee.groups.length > 0 ? ` · ${employee.groups.join(", ")}` : ""}`}
+                          meta={
+                            <span className="flex flex-col items-end gap-1">
+                              {employee.rate === null ? <Pill color={IOS.gray}>—</Pill> : <Pill color={rateColor(employee.rate)}>{employee.rate}%</Pill>}
+                              <span className="whitespace-nowrap text-[12px] tabular-nums text-[#8e8e93]">
+                                {tr("keldi {0}", employee.present)} · {tr("kelmadi {0}", missed)}
+                              </span>
                             </span>
-                          </span>
-                        }
-                      />
-                    );
-                  })}
+                          }
+                        />
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </IosGroup>

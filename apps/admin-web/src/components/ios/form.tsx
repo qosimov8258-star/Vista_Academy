@@ -16,7 +16,9 @@ export function FormSection({ title, footer, children }: { title?: ReactNode; fo
   return (
     <section>
       {title && <h3 className={SECTION_TITLE}>{title}</h3>}
-      <div className={GROUP_BLOCK}>{children}</div>
+      <div className="ios-snow">
+        <div className={GROUP_BLOCK}>{children}</div>
+      </div>
       {footer && <p className="px-4 pt-2 text-[12.5px] leading-snug text-[#8e8e93]">{footer}</p>}
     </section>
   );

@@ -378,7 +378,9 @@ export function BranchAttendance({ slug }: { slug: string }) {
             </div>
 
             {sections.length === 0 ? (
-              <p className={clsx(GROUP_BLOCK, "px-4 py-8 text-center text-[14px] text-[#8e8e93]")}>{tr("Bu tanlovda bola yo'q")}</p>
+              <div className="ios-snow">
+                <p className={clsx(GROUP_BLOCK, "px-4 py-8 text-center text-[14px] text-[#8e8e93]")}>{tr("Bu tanlovda bola yo'q")}</p>
+              </div>
             ) : (
               sections.map(([group, rows]) => {
                 const here = rows.filter((c) => (c.status !== null || local[c.childId]) && ["PRESENT", "LATE"].includes(statusOf(c.childId))).length;

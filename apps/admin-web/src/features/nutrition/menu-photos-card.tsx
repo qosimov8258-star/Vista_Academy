@@ -55,20 +55,22 @@ export function MenuPhotosCard({
       ) : query.isError ? (
         <p className="px-4 text-[13px] text-[#ff3b30]">{tr((query.error as Error).message)}</p>
       ) : (
-        <div className={GROUP_BLOCK}>
-          {MEALS.map(({ meal, label }) => (
-            <MealRow
-              key={meal}
-              meal={meal}
-              label={tr(label)}
-              photos={photosOf(meal)}
-              canWrite={canWrite}
-              uploading={uploading === meal}
-              error={errors[meal]}
-              onFile={(file) => upload(meal, file)}
-              onView={(id) => setViewing({ id, label: tr(label) })}
-            />
-          ))}
+        <div className="ios-snow">
+          <div className={GROUP_BLOCK}>
+            {MEALS.map(({ meal, label }) => (
+              <MealRow
+                key={meal}
+                meal={meal}
+                label={tr(label)}
+                photos={photosOf(meal)}
+                canWrite={canWrite}
+                uploading={uploading === meal}
+                error={errors[meal]}
+                onFile={(file) => upload(meal, file)}
+                onView={(id) => setViewing({ id, label: tr(label) })}
+              />
+            ))}
+          </div>
         </div>
       )}
 

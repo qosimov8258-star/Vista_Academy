@@ -17,8 +17,10 @@ export default function MyLessonSchedulePage({ params }: { params: Promise<{ slu
   const { user, isLoading } = useAuth();
   if (isLoading) {
     return (
-      <div className={GROUP_BLOCK}>
-        <SkeletonRows rows={3} />
+      <div className="ios-snow">
+        <div className={GROUP_BLOCK}>
+          <SkeletonRows rows={3} />
+        </div>
       </div>
     );
   }

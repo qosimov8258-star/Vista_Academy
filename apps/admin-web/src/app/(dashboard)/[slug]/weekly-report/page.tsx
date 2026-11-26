@@ -284,19 +284,21 @@ export default function WeeklyReportPage({ params }: { params: Promise<{ slug: s
               {r.groups.length === 0 ? (
                 <EmptyState icon={ChartColumn} title="Guruh yo'q" />
               ) : (
-                <div className={GROUP_BLOCK}>
-                  {r.groups.map((g) => {
-                    const gd = g.daily[openDay];
-                    return (
-                      <ListRow
-                        key={g.id}
-                        avatar={<IosAvatar name={tr(g.name)} letters={1} />}
-                        title={tr(g.name)}
-                        subtitle={`${tr("Kelmadi")} ${gd?.absent ?? 0} · ${tr("Kasal")} ${gd?.sick ?? 0} · ${g.teachers.length > 0 ? g.teachers.join(", ") : tr("Tarbiyachi biriktirilmagan")}`}
-                        meta={<Pill color={(gd?.present ?? 0) > 0 ? IOS.green : IOS.gray}>{`${gd?.present ?? 0}/${g.childrenCount}`}</Pill>}
-                      />
-                    );
-                  })}
+                <div className="ios-snow">
+                  <div className={GROUP_BLOCK}>
+                    {r.groups.map((g) => {
+                      const gd = g.daily[openDay];
+                      return (
+                        <ListRow
+                          key={g.id}
+                          avatar={<IosAvatar name={tr(g.name)} letters={1} />}
+                          title={tr(g.name)}
+                          subtitle={`${tr("Kelmadi")} ${gd?.absent ?? 0} · ${tr("Kasal")} ${gd?.sick ?? 0} · ${g.teachers.length > 0 ? g.teachers.join(", ") : tr("Tarbiyachi biriktirilmagan")}`}
+                          meta={<Pill color={(gd?.present ?? 0) > 0 ? IOS.green : IOS.gray}>{`${gd?.present ?? 0}/${g.childrenCount}`}</Pill>}
+                        />
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </section>

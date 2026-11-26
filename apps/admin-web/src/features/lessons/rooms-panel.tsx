@@ -66,17 +66,19 @@ export function RoomsPanel({
         ) : rooms.length === 0 ? (
           <EmptyState icon={DoorOpen} title="Hali xona yo'q" hint={canWrite ? "Xonalarni qo'shing — darslarni xonaga bog'lab, bir xonada ikki dars to'qnashmasligini nazorat qilasiz" : undefined} />
         ) : (
-          <div className={GROUP_BLOCK}>
-            {rooms.map((room) => (
-              <Row
-                key={room.id}
-                leading={<IosIcon icon={DoorOpen} tint={room.isActive ? "indigo" : "gray"} size={30} />}
-                title={tr(room.name)}
-                subtitle={[room.capacity ? tr("{0} kishilik", room.capacity) : tr("Sig'imi belgilanmagan"), tr("{0} ta dars", room.lessonCount)].join(" · ")}
-                value={room.isActive ? undefined : <Pill color={IOS.gray}>{tr("Ishlatilmaydi")}</Pill>}
-                onClick={canWrite ? () => setSheet({ open: true, room }) : undefined}
-              />
-            ))}
+          <div className="ios-snow">
+            <div className={GROUP_BLOCK}>
+              {rooms.map((room) => (
+                <Row
+                  key={room.id}
+                  leading={<IosIcon icon={DoorOpen} tint={room.isActive ? "indigo" : "gray"} size={30} />}
+                  title={tr(room.name)}
+                  subtitle={[room.capacity ? tr("{0} kishilik", room.capacity) : tr("Sig'imi belgilanmagan"), tr("{0} ta dars", room.lessonCount)].join(" · ")}
+                  value={room.isActive ? undefined : <Pill color={IOS.gray}>{tr("Ishlatilmaydi")}</Pill>}
+                  onClick={canWrite ? () => setSheet({ open: true, room }) : undefined}
+                />
+              ))}
+            </div>
           </div>
         )}
       </IosGroup>

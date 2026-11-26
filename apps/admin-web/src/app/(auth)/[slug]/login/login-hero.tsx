@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import clsx from "clsx";
 import { OrgLogo } from "@/features/organization/org-logo";
 import { useTranslations } from "next-intl";
@@ -19,7 +20,58 @@ function Aurora() {
       </span>
       <span className={styles.veil} />
       <span className={styles.grain} />
+      {/* Qishda: pastda qor uyumi (boshqa paytda ko'rinmaydi) */}
+      <span className="winter-login-ground" />
     </div>
+  );
+}
+
+/**
+ * Qor bobo qalpoqchasi — qishda «Z» belgisiga qiyshaytirib kiyiladi va sekin
+ * chayqaladi (winter.css: `.winter-santa-hat`). Qishdan tashqari ko'rinmaydi.
+ */
+function SantaHat() {
+  // Belgi sahifada ikki joyda (telefon / kompyuter) — gradient ID'lari takrorlanmasin,
+  // aks holda yashirin nusxadagi ID topilib, qalpoq rangsiz chiqadi
+  const id = useId().replace(/:/g, "");
+  const red = `santaHatRed${id}`;
+  const fur = `santaHatFur${id}`;
+  const pom = `santaHatPom${id}`;
+  return (
+    <span className="winter-santa-hat" aria-hidden="true">
+      <svg viewBox="0 0 80 64" width="100%" height="100%">
+        <defs>
+          <linearGradient id={red} x1="0.1" y1="0" x2="0.9" y2="1">
+            <stop offset="0" stopColor="#ff5a4f" />
+            <stop offset="0.5" stopColor="#e0322c" />
+            <stop offset="1" stopColor="#a61b1d" />
+          </linearGradient>
+          <linearGradient id={fur} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#ffffff" />
+            <stop offset="1" stopColor="#dfe7f2" />
+          </linearGradient>
+          <radialGradient id={pom} cx="0.38" cy="0.35" r="0.7">
+            <stop offset="0" stopColor="#ffffff" />
+            <stop offset="1" stopColor="#d9e2ef" />
+          </radialGradient>
+        </defs>
+        {/* Qalpoq: tepasi yumshoq egilib, o'ng tomonga osilib tushgan */}
+        <path d="M11 50C13 29 25 11 41 8C57 5 69 15 72 31C66 25 59 25 55 31C53 39 58 45 66 50Z" fill={`url(#${red})`} />
+        {/* Burma soyasi va yorug' chiziq — matodek ko'rinsin */}
+        <path d="M55 31C53 39 58 45 66 50L59 50C51 45 49 37 55 31Z" fill="#6e0d10" fillOpacity="0.28" />
+        <path d="M19 44C21 30 29 18 41 13" fill="none" stroke="#ffffff" strokeOpacity="0.4" strokeWidth="2.4" strokeLinecap="round" />
+        {/* Mo'yna halqa: chetlari yumaloq, ustida mayda tuklar */}
+        <rect x="5" y="45" width="68" height="15" rx="7.5" fill={`url(#${fur})`} />
+        <path
+          d="M8 47C10 44 14 44 16 46C18 43 23 43 25 46C27 43 32 43 34 46C36 43 41 43 43 46C45 43 50 43 52 46C54 43 59 43 61 46C63 43 68 43 70 47"
+          fill="#ffffff"
+        />
+        <rect x="5" y="45" width="68" height="15" rx="7.5" fill="none" stroke="#c9d4e4" strokeWidth="1" />
+        {/* Popuk */}
+        <circle cx="72" cy="33" r="7.5" fill={`url(#${pom})`} stroke="#c9d4e4" strokeWidth="1" />
+        <circle cx="69.5" cy="30.5" r="2.2" fill="#ffffff" />
+      </svg>
+    </span>
   );
 }
 
@@ -28,14 +80,18 @@ function ZeeronLogo({ size = "lg" }: { size?: "lg" | "sm" }) {
   const lg = size === "lg";
   return (
     <div className="flex flex-col items-center">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/brand/zeeron-icon.png"
-        alt=""
-        width={256}
-        height={256}
-        className={clsx("shadow-[0_18px_40px_-14px_rgba(12,12,12,0.45)]", lg ? "h-[76px] w-[76px] rounded-[22px]" : "h-12 w-12 rounded-[14px]")}
-      />
+      {/* winter-login-logo — qishda belgiga Qor bobo qalpoqchasi kiyiladi (boshqa paytda ko'rinmaydi) */}
+      <span className="winter-login-logo inline-flex">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/brand/zeeron-icon.png"
+          alt=""
+          width={256}
+          height={256}
+          className={clsx("shadow-[0_18px_40px_-14px_rgba(12,12,12,0.45)]", lg ? "h-[76px] w-[76px] rounded-[22px]" : "h-12 w-12 rounded-[14px]")}
+        />
+        <SantaHat />
+      </span>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/brand/zeeron-wordmark.png" alt="Zeeron" width={960} height={120} className={clsx("w-auto", lg ? "mt-7 h-9 xl:h-10" : "mt-4 h-6")} />
     </div>
@@ -76,7 +132,7 @@ export function LoginHero({ orgName }: { orgName: string | null }) {
   const year = new Date().getFullYear();
 
   return (
-    <section className={clsx(styles.aurora, "relative m-3 hidden overflow-hidden rounded-[28px] lg:flex lg:flex-col")}>
+    <section className={clsx(styles.aurora, "winter-login-sky relative m-3 hidden overflow-hidden rounded-[28px] lg:flex lg:flex-col")}>
       <Aurora />
 
       <div className="relative flex flex-1 flex-col px-10 pb-9 pt-[68px] xl:px-14 xl:pb-11 xl:pt-[80px]">
@@ -111,7 +167,8 @@ export function LoginHero({ orgName }: { orgName: string | null }) {
 export function LoginHeroCompact() {
   return (
     <>
-      <div className={clsx(styles.aurora, "fixed inset-0 lg:hidden")} aria-hidden="true">
+      {/* winter-login-sky — qishda fon ayozli tong ranglarida (winter.css) */}
+      <div className={clsx(styles.aurora, "winter-login-sky fixed inset-0 lg:hidden")} aria-hidden="true">
         <Aurora />
       </div>
       <div className="relative flex flex-col items-center px-6 pb-1 pt-9 lg:hidden">

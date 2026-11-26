@@ -155,11 +155,13 @@ export function UsefulScreen({
         </div>
 
         {!canWrite && (
-          <div className={clsx(GROUP_BLOCK, "flex items-start gap-3 px-4 py-3.5")}>
-            <InfoIcon className="mt-0.5 h-5 w-5 shrink-0 text-[#8e8e93]" />
-            <p className="text-[13.5px] leading-snug text-[#8e8e93]">
-              {tr(k.viewOnly ?? "Faqat ko'rish. She'r, maqol va ertaklarni tarbiyachilar va filial admini qo'shadi.")}
-            </p>
+          <div className="ios-snow">
+            <div className={clsx(GROUP_BLOCK, "flex items-start gap-3 px-4 py-3.5")}>
+              <InfoIcon className="mt-0.5 h-5 w-5 shrink-0 text-[#8e8e93]" />
+              <p className="text-[13.5px] leading-snug text-[#8e8e93]">
+                {tr(k.viewOnly ?? "Faqat ko'rish. She'r, maqol va ertaklarni tarbiyachilar va filial admini qo'shadi.")}
+              </p>
+            </div>
           </div>
         )}
 
@@ -176,24 +178,26 @@ export function UsefulScreen({
         ) : shown.length === 0 ? (
           <EmptyState icon={k.icon} title={tr("Hech narsa topilmadi")} hint={tr("Boshqa so'z bilan qidirib ko'ring")} />
         ) : (
-          <div className={GROUP_BLOCK}>
-            {shown.map((item) => (
-              <div key={item.id} className="group/row relative">
-                <button type="button" onClick={() => onOpen(item.id)} className={clsx("flex min-h-[64px] w-full items-center gap-3 py-2.5 pl-4 pr-3 text-left", ROW_PRESS)}>
-                  {item.leading ?? <IosIcon icon={k.icon} tint={k.tint} size={30} />}
-                  <span className="min-w-0 flex-1">
-                    <span className={clsx("block text-[15.5px] font-medium leading-snug text-[var(--color-text)]", item.detail ? "line-clamp-2" : "truncate")}>
-                      {tr(item.title)}
+          <div className="ios-snow">
+            <div className={GROUP_BLOCK}>
+              {shown.map((item) => (
+                <div key={item.id} className="group/row relative">
+                  <button type="button" onClick={() => onOpen(item.id)} className={clsx("flex min-h-[64px] w-full items-center gap-3 py-2.5 pl-4 pr-3 text-left", ROW_PRESS)}>
+                    {item.leading ?? <IosIcon icon={k.icon} tint={k.tint} size={30} />}
+                    <span className="min-w-0 flex-1">
+                      <span className={clsx("block text-[15.5px] font-medium leading-snug text-[var(--color-text)]", item.detail ? "line-clamp-2" : "truncate")}>
+                        {tr(item.title)}
+                      </span>
+                      {item.detail && <span className="mt-0.5 line-clamp-2 text-[13.5px] leading-snug text-[var(--color-text)]/70">{tr(item.detail)}</span>}
+                      <span className="mt-0.5 block truncate text-[13px] text-[#8e8e93]">{tr(item.meta)}</span>
                     </span>
-                    {item.detail && <span className="mt-0.5 line-clamp-2 text-[13.5px] leading-snug text-[var(--color-text)]/70">{tr(item.detail)}</span>}
-                    <span className="mt-0.5 block truncate text-[13px] text-[#8e8e93]">{tr(item.meta)}</span>
-                  </span>
-                  {item.draft && <Pill color={IOS.orange}>{tr("Qoralama")}</Pill>}
-                  <ChevronRightIcon className="h-4 w-4 shrink-0 text-[#c7c7cc]" strokeWidth={2.2} aria-hidden="true" />
-                </button>
-                <span className={ROW_SEPARATOR} style={{ left: item.leading ? 68 : 58 }} aria-hidden="true" />
-              </div>
-            ))}
+                    {item.draft && <Pill color={IOS.orange}>{tr("Qoralama")}</Pill>}
+                    <ChevronRightIcon className="h-4 w-4 shrink-0 text-[#c7c7cc]" strokeWidth={2.2} aria-hidden="true" />
+                  </button>
+                  <span className={ROW_SEPARATOR} style={{ left: item.leading ? 68 : 58 }} aria-hidden="true" />
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -325,7 +329,9 @@ export function DeleteActionRow({
 
 /** Varaqdagi o'qish yuzasi — ota-ona ko'radigan matn uchun oq karta */
 export function ReadingCard({ children }: { children: ReactNode }) {
-  return <div className={clsx(GROUP_BLOCK, "space-y-4 px-5 py-5")}>{children}</div>;
+  return <div className="ios-snow">
+    <div className={clsx(GROUP_BLOCK, "space-y-4 px-5 py-5")}>{children}</div>
+  </div>;
 }
 
 /* ---------------- Tahrirlash formasi qatorlari ---------------- */

@@ -108,63 +108,65 @@ export default function ExpensesPage({ params }: { params: Promise<{ slug: strin
             {/* Oylik jami va turkumlar */}
             <section>
               <h3 className={SECTION_TITLE}>{tr("Oylik xarajat")}</h3>
-              <div className={GROUP_BLOCK}>
-                <div className="px-4 pb-4 pt-3.5">
-                  {loading || !data ? (
-                    <span className="block h-9 w-44 animate-pulse rounded-[10px] bg-[#767680]/[0.12]" />
-                  ) : (
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[32px] font-bold leading-none tracking-[-0.02em] tabular-nums text-[var(--color-text)]">
-                        {groupDigits(data.total)} <span className="text-[17px] font-semibold text-[#8e8e93]">{tr("so'm")}</span>
-                      </span>
-                      {diff !== null && diff !== 0 && (
-                        <Pill color={diff > 0 ? IOS.red : IOS.green} title={tr("O'tgan oyga nisbatan")}>
-                          {diff > 0 ? "▲" : "▼"} {Math.abs(diff)}%
-                        </Pill>
-                      )}
-                    </div>
-                  )}
-                  {data && (
-                    <p className="mt-2 text-[13px] text-[#8e8e93] tabular-nums">
-                      {[
-                        `${tr("naqd")} ${groupDigits(data.cashTotal)}`,
-                        data.total - data.cashTotal > 0 ? `${tr("boshqa usulda")} ${groupDigits(data.total - data.cashTotal)}` : null,
-                        data.prevTotal > 0 ? `${tr("o'tgan oy")} ${groupDigits(data.prevTotal)}` : null,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                  )}
-                  {data && data.total > 0 && (
-                    <div className="mt-4 flex h-2.5 w-full gap-[2px] overflow-hidden rounded-full" aria-hidden="true">
-                      {data.byCategory.map((c) => (
-                        <span key={c.category} className="h-full first:rounded-l-full last:rounded-r-full" style={{ width: `${(c.total / data.total) * 100}%`, backgroundColor: categoryMeta(c.category).color }} />
-                      ))}
-                    </div>
-                  )}
-                </div>
-                {data &&
-                  data.byCategory.map((c) => {
-                    const active = filter === c.category;
-                    return (
-                      <div key={c.category} className="group/row relative">
-                        <button
-                          type="button"
-                          onClick={() => setFilter(active ? null : c.category)}
-                          aria-pressed={active}
-                          className={clsx("flex min-h-[48px] w-full items-center gap-3 px-4 py-2 text-left", ROW_PRESS, active && "bg-[#767680]/[0.08]")}
-                        >
-                          <CategoryTile category={c.category} />
-                          <span className="min-w-0 flex-1 truncate text-[15px] text-[var(--color-text)]">
-                            {tr(c.category)} <span className="text-[13px] text-[#8e8e93]">· {tr("{0} ta", c.count)}</span>
-                          </span>
-                          <span className="text-[13px] tabular-nums text-[#8e8e93] max-sm:hidden">{Math.round((c.total / data.total) * 100)}%</span>
-                          <span className="shrink-0 text-right text-[15px] font-semibold tabular-nums text-[var(--color-text)] sm:w-[120px]">{groupDigits(c.total)}</span>
-                        </button>
-                        <span className={ROW_SEPARATOR} style={{ left: 58 }} aria-hidden="true" />
+              <div className="ios-snow">
+                <div className={GROUP_BLOCK}>
+                  <div className="px-4 pb-4 pt-3.5">
+                    {loading || !data ? (
+                      <span className="block h-9 w-44 animate-pulse rounded-[10px] bg-[#767680]/[0.12]" />
+                    ) : (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[32px] font-bold leading-none tracking-[-0.02em] tabular-nums text-[var(--color-text)]">
+                          {groupDigits(data.total)} <span className="text-[17px] font-semibold text-[#8e8e93]">{tr("so'm")}</span>
+                        </span>
+                        {diff !== null && diff !== 0 && (
+                          <Pill color={diff > 0 ? IOS.red : IOS.green} title={tr("O'tgan oyga nisbatan")}>
+                            {diff > 0 ? "▲" : "▼"} {Math.abs(diff)}%
+                          </Pill>
+                        )}
                       </div>
-                    );
-                  })}
+                    )}
+                    {data && (
+                      <p className="mt-2 text-[13px] text-[#8e8e93] tabular-nums">
+                        {[
+                          `${tr("naqd")} ${groupDigits(data.cashTotal)}`,
+                          data.total - data.cashTotal > 0 ? `${tr("boshqa usulda")} ${groupDigits(data.total - data.cashTotal)}` : null,
+                          data.prevTotal > 0 ? `${tr("o'tgan oy")} ${groupDigits(data.prevTotal)}` : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    )}
+                    {data && data.total > 0 && (
+                      <div className="mt-4 flex h-2.5 w-full gap-[2px] overflow-hidden rounded-full" aria-hidden="true">
+                        {data.byCategory.map((c) => (
+                          <span key={c.category} className="h-full first:rounded-l-full last:rounded-r-full" style={{ width: `${(c.total / data.total) * 100}%`, backgroundColor: categoryMeta(c.category).color }} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {data &&
+                    data.byCategory.map((c) => {
+                      const active = filter === c.category;
+                      return (
+                        <div key={c.category} className="group/row relative">
+                          <button
+                            type="button"
+                            onClick={() => setFilter(active ? null : c.category)}
+                            aria-pressed={active}
+                            className={clsx("flex min-h-[48px] w-full items-center gap-3 px-4 py-2 text-left", ROW_PRESS, active && "bg-[#767680]/[0.08]")}
+                          >
+                            <CategoryTile category={c.category} />
+                            <span className="min-w-0 flex-1 truncate text-[15px] text-[var(--color-text)]">
+                              {tr(c.category)} <span className="text-[13px] text-[#8e8e93]">· {tr("{0} ta", c.count)}</span>
+                            </span>
+                            <span className="text-[13px] tabular-nums text-[#8e8e93] max-sm:hidden">{Math.round((c.total / data.total) * 100)}%</span>
+                            <span className="shrink-0 text-right text-[15px] font-semibold tabular-nums text-[var(--color-text)] sm:w-[120px]">{groupDigits(c.total)}</span>
+                          </button>
+                          <span className={ROW_SEPARATOR} style={{ left: 58 }} aria-hidden="true" />
+                        </div>
+                      );
+                    })}
+                </div>
               </div>
             </section>
 

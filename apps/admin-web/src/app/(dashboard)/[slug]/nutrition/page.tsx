@@ -261,16 +261,18 @@ function AdminNutritionPage({ slug }: { slug: string }) {
           ) : menuQuery.isError ? (
             <ErrorState message={(menuQuery.error as Error).message} onRetry={() => menuQuery.refetch()} retrying={menuQuery.isFetching} />
           ) : (
-            <div className={GROUP_BLOCK}>
-              {days.map((day) => (
-                <MenuDayRow
-                  key={day}
-                  day={day}
-                  isToday={day === today}
-                  entry={entryByDate.get(day) ?? null}
-                  onEdit={canWrite ? () => setEditDate(day) : undefined}
-                />
-              ))}
+            <div className="ios-snow">
+              <div className={GROUP_BLOCK}>
+                {days.map((day) => (
+                  <MenuDayRow
+                    key={day}
+                    day={day}
+                    isToday={day === today}
+                    entry={entryByDate.get(day) ?? null}
+                    onEdit={canWrite ? () => setEditDate(day) : undefined}
+                  />
+                ))}
+              </div>
             </div>
           )}
         </Group>
@@ -281,20 +283,24 @@ function AdminNutritionPage({ slug }: { slug: string }) {
           ) : allergiesQuery.isError ? (
             <ErrorState message={(allergiesQuery.error as Error).message} onRetry={() => allergiesQuery.refetch()} retrying={allergiesQuery.isFetching} />
           ) : !allergiesQuery.data?.length ? (
-            <div className={GROUP_BLOCK}>
-              <EmptyState icon={Utensils} title="Allergiyasi bor bola yo'q" />
+            <div className="ios-snow">
+              <div className={GROUP_BLOCK}>
+                <EmptyState icon={Utensils} title="Allergiyasi bor bola yo'q" />
+              </div>
             </div>
           ) : (
-            <div className={GROUP_BLOCK}>
-              {allergiesQuery.data.map((item) => (
-                <ListRow
-                  key={item.child.id}
-                  avatar={<IosAvatar name={item.child.fullName} size={44} />}
-                  title={tr(item.child.fullName)}
-                  subtitle={<span className="text-[#d70015]">{tr(item.allergies)}</span>}
-                  meta={item.child.group ? <Pill color={IOS.gray}>{tr(item.child.group.name)}</Pill> : undefined}
-                />
-              ))}
+            <div className="ios-snow">
+              <div className={GROUP_BLOCK}>
+                {allergiesQuery.data.map((item) => (
+                  <ListRow
+                    key={item.child.id}
+                    avatar={<IosAvatar name={item.child.fullName} size={44} />}
+                    title={tr(item.child.fullName)}
+                    subtitle={<span className="text-[#d70015]">{tr(item.allergies)}</span>}
+                    meta={item.child.group ? <Pill color={IOS.gray}>{tr(item.child.group.name)}</Pill> : undefined}
+                  />
+                ))}
+              </div>
             </div>
           )}
         </Group>

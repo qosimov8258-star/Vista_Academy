@@ -193,10 +193,12 @@ export default function LessonSchedulePage({ params }: { params: Promise<{ slug:
                     {byDay(day).length === 0 ? (
                       <EmptyState icon={CalendarIcon} title={filtersActive ? "Filtr bo'yicha dars yo'q" : "Bu kuni dars yo'q"} />
                     ) : (
-                      <div className={GROUP_BLOCK}>
-                        {byDay(day).map((lesson) => (
-                          <LessonRow key={lesson.id} lesson={lesson} clashes={clashes.get(lesson.id)} onClick={canWrite ? () => openLesson(lesson) : undefined} />
-                        ))}
+                      <div className="ios-snow">
+                        <div className={GROUP_BLOCK}>
+                          {byDay(day).map((lesson) => (
+                            <LessonRow key={lesson.id} lesson={lesson} clashes={clashes.get(lesson.id)} onClick={canWrite ? () => openLesson(lesson) : undefined} />
+                          ))}
+                        </div>
                       </div>
                     )}
                   </IosGroup>

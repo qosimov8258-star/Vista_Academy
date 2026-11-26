@@ -284,79 +284,83 @@ export default function RemindersPage({ params }: { params: Promise<{ slug: stri
 
                 <section>
                   <h3 className={SECTION_TITLE}>{tr("Yuborish vaqti")}</h3>
-                  <div className={clsx(GROUP_BLOCK, "flex flex-wrap items-center gap-2 p-4")}>
-                    {form.sendTimes.map((t, i) => (
-                      <span key={i} className="inline-flex h-10 items-center gap-1 rounded-full bg-[#767680]/[0.12] pl-3.5 pr-1.5">
-                        <input
-                          type="time"
-                          value={t}
-                          disabled={!canWrite}
-                          aria-label={tr("Yuborish vaqti")}
-                          onChange={(e) => set({ sendTimes: form.sendTimes.map((x, j) => (j === i ? e.target.value : x)) })}
-                          className="bg-transparent text-[15px] font-semibold tabular-nums text-[var(--color-text)] outline-none disabled:opacity-100"
-                        />
-                        {canWrite && form.sendTimes.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => set({ sendTimes: form.sendTimes.filter((_, j) => j !== i) })}
-                            className="flex h-7 w-7 items-center justify-center rounded-full text-[#8e8e93] transition-colors hover:bg-white hover:text-[#ff3b30]"
-                            aria-label={tr("O'chirish")}
-                          >
-                            <X className="h-3.5 w-3.5" strokeWidth={2.6} />
-                          </button>
-                        )}
-                      </span>
-                    ))}
-                    {canWrite && form.sendTimes.length < MAX_TIMES && (
-                      <button
-                        type="button"
-                        onClick={() => set({ sendTimes: [...form.sendTimes, "09:00"] })}
-                        className="inline-flex h-10 items-center gap-1.5 rounded-full px-3 text-[15px] font-medium text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)]/[0.08] active:scale-[0.97]"
-                      >
-                        <Plus className="h-4 w-4" strokeWidth={2.4} />
-                        {tr("Vaqt qo'shish")}
-                      </button>
-                    )}
+                  <div className="ios-snow">
+                    <div className={clsx(GROUP_BLOCK, "flex flex-wrap items-center gap-2 p-4")}>
+                      {form.sendTimes.map((t, i) => (
+                        <span key={i} className="inline-flex h-10 items-center gap-1 rounded-full bg-[#767680]/[0.12] pl-3.5 pr-1.5">
+                          <input
+                            type="time"
+                            value={t}
+                            disabled={!canWrite}
+                            aria-label={tr("Yuborish vaqti")}
+                            onChange={(e) => set({ sendTimes: form.sendTimes.map((x, j) => (j === i ? e.target.value : x)) })}
+                            className="bg-transparent text-[15px] font-semibold tabular-nums text-[var(--color-text)] outline-none disabled:opacity-100"
+                          />
+                          {canWrite && form.sendTimes.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => set({ sendTimes: form.sendTimes.filter((_, j) => j !== i) })}
+                              className="flex h-7 w-7 items-center justify-center rounded-full text-[#8e8e93] transition-colors hover:bg-white hover:text-[#ff3b30]"
+                              aria-label={tr("O'chirish")}
+                            >
+                              <X className="h-3.5 w-3.5" strokeWidth={2.6} />
+                            </button>
+                          )}
+                        </span>
+                      ))}
+                      {canWrite && form.sendTimes.length < MAX_TIMES && (
+                        <button
+                          type="button"
+                          onClick={() => set({ sendTimes: [...form.sendTimes, "09:00"] })}
+                          className="inline-flex h-10 items-center gap-1.5 rounded-full px-3 text-[15px] font-medium text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)]/[0.08] active:scale-[0.97]"
+                        >
+                          <Plus className="h-4 w-4" strokeWidth={2.4} />
+                          {tr("Vaqt qo'shish")}
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <p className="px-4 pt-2 text-[12.5px] leading-snug text-[#8e8e93]">{tr("Kuniga {0} martagacha. Ota-onaga shu soatlarda bildirishnoma yuboriladi.", MAX_TIMES)}</p>
                 </section>
 
                 <section>
                   <h3 className={SECTION_TITLE}>{tr("Xabar matni")}</h3>
-                  <div className={GROUP_BLOCK}>
-                    <textarea
-                      ref={messageRef}
-                      rows={3}
-                      maxLength={1000}
-                      value={form.messageTemplate}
-                      disabled={!canWrite}
-                      onChange={(e) => {
-                        set({ messageTemplate: e.target.value });
-                        rememberCursor(e.target);
-                      }}
-                      onSelect={(e) => rememberCursor(e.currentTarget)}
-                      aria-label={tr("Xabar matni")}
-                      className="block w-full resize-none bg-transparent px-4 pt-3.5 text-[15px] leading-relaxed text-[var(--color-text)] outline-none disabled:opacity-100"
-                    />
-                    <div className="flex items-center justify-between gap-3 px-4 pb-3">
-                      {canWrite ? (
-                        <div className="flex min-w-0 flex-wrap gap-1.5">
-                          {PLACEHOLDERS.map((p) => (
-                            <button
-                              key={p.token}
-                              type="button"
-                              onClick={() => insertPlaceholder(p.token)}
-                              className="inline-flex h-8 items-center gap-1 rounded-full bg-[var(--color-primary)]/[0.1] px-3 text-[13px] font-medium text-[var(--color-primary)] transition-transform active:scale-95"
-                            >
-                              <Plus className="h-3.5 w-3.5" strokeWidth={2.4} />
-                              {tr(p.label)}
-                            </button>
-                          ))}
-                        </div>
-                      ) : (
-                        <span />
-                      )}
-                      <span className="shrink-0 text-[12px] tabular-nums text-[#8e8e93]">{form.messageTemplate.length}/1000</span>
+                  <div className="ios-snow">
+                    <div className={GROUP_BLOCK}>
+                      <textarea
+                        ref={messageRef}
+                        rows={3}
+                        maxLength={1000}
+                        value={form.messageTemplate}
+                        disabled={!canWrite}
+                        onChange={(e) => {
+                          set({ messageTemplate: e.target.value });
+                          rememberCursor(e.target);
+                        }}
+                        onSelect={(e) => rememberCursor(e.currentTarget)}
+                        aria-label={tr("Xabar matni")}
+                        className="block w-full resize-none bg-transparent px-4 pt-3.5 text-[15px] leading-relaxed text-[var(--color-text)] outline-none disabled:opacity-100"
+                      />
+                      <div className="flex items-center justify-between gap-3 px-4 pb-3">
+                        {canWrite ? (
+                          <div className="flex min-w-0 flex-wrap gap-1.5">
+                            {PLACEHOLDERS.map((p) => (
+                              <button
+                                key={p.token}
+                                type="button"
+                                onClick={() => insertPlaceholder(p.token)}
+                                className="inline-flex h-8 items-center gap-1 rounded-full bg-[var(--color-primary)]/[0.1] px-3 text-[13px] font-medium text-[var(--color-primary)] transition-transform active:scale-95"
+                              >
+                                <Plus className="h-3.5 w-3.5" strokeWidth={2.4} />
+                                {tr(p.label)}
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <span />
+                        )}
+                        <span className="shrink-0 text-[12px] tabular-nums text-[#8e8e93]">{form.messageTemplate.length}/1000</span>
+                      </div>
                     </div>
                   </div>
                   <p className="px-4 pt-2 text-[12.5px] leading-snug text-[#8e8e93]">{tr("Tugma bosilsa, kursor turgan joyga bolaning ma'lumoti qo'yiladi.")}</p>

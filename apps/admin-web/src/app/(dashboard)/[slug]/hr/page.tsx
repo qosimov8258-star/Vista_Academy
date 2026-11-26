@@ -217,26 +217,28 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
           ) : !employeesQuery.data || employeesQuery.data.length === 0 ? (
             <EmptyState icon={TeacherIcon} title="Xodim topilmadi" />
           ) : (
-            <div className={GROUP_BLOCK}>
-              {employeesQuery.data.map((employee) => {
-                const note = absenceNote(absenceByEmployee.get(employee.id), tr);
-                return (
-                  <ListRow
-                    key={employee.id}
-                    onClick={canWriteScheme ? () => setSalarySchemeEmployee(employee) : undefined}
-                    avatar={<EmployeePhoto employee={employee} size={44} shape="circle" fallback={initials(employee.fullName)} className="text-[15px]" />}
-                    title={tr(employee.fullName)}
-                    subtitle={
-                      <>
-                        {tr(employee.position)}
-                        <SchemeText employee={employee} className="sm:hidden" prefix=" · " />
-                        {note && <span className="text-[#ff3b30]"> · {note}</span>}
-                      </>
-                    }
-                    meta={<SalaryInfo employee={employee} entry={payrollByEmployee.get(employee.id)} loading={monthPayrollQuery.isLoading} />}
-                  />
-                );
-              })}
+            <div className="ios-snow">
+              <div className={GROUP_BLOCK}>
+                {employeesQuery.data.map((employee) => {
+                  const note = absenceNote(absenceByEmployee.get(employee.id), tr);
+                  return (
+                    <ListRow
+                      key={employee.id}
+                      onClick={canWriteScheme ? () => setSalarySchemeEmployee(employee) : undefined}
+                      avatar={<EmployeePhoto employee={employee} size={44} shape="circle" fallback={initials(employee.fullName)} className="text-[15px]" />}
+                      title={tr(employee.fullName)}
+                      subtitle={
+                        <>
+                          {tr(employee.position)}
+                          <SchemeText employee={employee} className="sm:hidden" prefix=" · " />
+                          {note && <span className="text-[#ff3b30]"> · {note}</span>}
+                        </>
+                      }
+                      meta={<SalaryInfo employee={employee} entry={payrollByEmployee.get(employee.id)} loading={monthPayrollQuery.isLoading} />}
+                    />
+                  );
+                })}
+              </div>
             </div>
           )}
         </IosGroup>
@@ -269,15 +271,17 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
           ) : !shiftsQuery.data || shiftsQuery.data.length === 0 ? (
             <EmptyState icon={ClockIcon} title="Bu davr uchun smena topilmadi" />
           ) : (
-            <div className={GROUP_BLOCK}>
-              {shiftsQuery.data.map((shift) => (
-                <Row
-                  key={shift.id}
-                  title={employeeName(shift.employeeId)}
-                  subtitle={[formatDate(shift.date), shift.note ? tr(shift.note) : null].filter(Boolean).join(" · ")}
-                  value={`${tr(shift.hours)} ${tr("soat")}`}
-                />
-              ))}
+            <div className="ios-snow">
+              <div className={GROUP_BLOCK}>
+                {shiftsQuery.data.map((shift) => (
+                  <Row
+                    key={shift.id}
+                    title={employeeName(shift.employeeId)}
+                    subtitle={[formatDate(shift.date), shift.note ? tr(shift.note) : null].filter(Boolean).join(" · ")}
+                    value={`${tr(shift.hours)} ${tr("soat")}`}
+                  />
+                ))}
+              </div>
             </div>
           )}
         </IosGroup>
@@ -308,69 +312,73 @@ export default function HrPage({ params }: { params: Promise<{ slug: string }> }
             ) : (
               <>
                 {/* Telefon va planshet — qatorlar, bosilsa tafsilot varag'i */}
-                <div className={`${GROUP_BLOCK} xl:hidden`}>
-                  {entries.map((entry) => {
-                    const note = absenceNote(absenceByEmployee.get(entry.employeeId), tr);
-                    return (
-                      <ListRow
-                        key={entry.id}
-                        onClick={() => setOpenEntryId(entry.id)}
-                        title={entryName(entry)}
-                        subtitle={
-                          <>
-                            <span className="tabular-nums">{formatMoney(entry.totalAmount)}</span>
-                            {note && <span className="text-[#ff3b30]"> · {note}</span>}
-                          </>
-                        }
-                        meta={<Pill color={PAYROLL_STATUS_COLOR[entry.status]}>{tr(PAYROLL_STATUS_LABEL[entry.status])}</Pill>}
-                      />
-                    );
-                  })}
+                <div className="ios-snow xl:hidden">
+                  <div className={GROUP_BLOCK}>
+                    {entries.map((entry) => {
+                      const note = absenceNote(absenceByEmployee.get(entry.employeeId), tr);
+                      return (
+                        <ListRow
+                          key={entry.id}
+                          onClick={() => setOpenEntryId(entry.id)}
+                          title={entryName(entry)}
+                          subtitle={
+                            <>
+                              <span className="tabular-nums">{formatMoney(entry.totalAmount)}</span>
+                              {note && <span className="text-[#ff3b30]"> · {note}</span>}
+                            </>
+                          }
+                          meta={<Pill color={PAYROLL_STATUS_COLOR[entry.status]}>{tr(PAYROLL_STATUS_LABEL[entry.status])}</Pill>}
+                        />
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* Katta ekran — jadval, qator bosilsa tafsilot varag'i */}
-                <div className={`${GROUP_BLOCK} hidden overflow-x-auto xl:block`}>
-                  <table className="w-full text-left text-[14px]">
-                    <thead>
-                      <tr className="text-[12px] font-semibold uppercase tracking-[0.06em] text-[#6d6d72]">
-                        <th className="px-4 py-3">{tr("Xodim")}</th>
-                        <th className="px-4 py-3">{tr("Davr")}</th>
-                        <th className="px-4 py-3 text-right">{tr("Asosiy")}</th>
-                        <th className="px-4 py-3 text-right">{tr("Mukofot")}</th>
-                        <th className="px-4 py-3 text-right">{tr("Jarima")}</th>
-                        <th className="px-4 py-3 text-right">{tr("Ushlab qolish")}</th>
-                        <th className="px-4 py-3 text-right">{tr("Jami")}</th>
-                        <th className="px-4 py-3">{tr("Holat")}</th>
-                        <th className="px-4 py-3">{tr("To'langan sana")}</th>
-                        <th className="w-px px-4 py-3" />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {entries.map((entry) => {
-                        const note = absenceNote(absenceByEmployee.get(entry.employeeId), tr);
-                        return (
-                          <tr key={entry.id} onClick={() => setOpenEntryId(entry.id)} className={`cursor-pointer border-t border-[#c6c6c8]/50 ${ROW_PRESS}`}>
-                            <td className="max-w-[240px] px-4 py-2.5">
-                              <p className="truncate font-medium text-[var(--color-text)]">{entryName(entry)}</p>
-                              {note && <p className="truncate text-[12.5px] text-[#ff3b30]">{note}</p>}
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-2.5 text-[#8e8e93]">{periodLabel(entry.period, tr)}</td>
-                            <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums text-[#8e8e93]">{formatMoney(entry.baseAmount)}</td>
-                            <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums" style={{ color: IOS.green }}>{formatMoney(entry.bonusAmount)}</td>
-                            <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums" style={{ color: IOS.red }}>{formatMoney(entry.penaltyAmount)}</td>
-                            <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums" style={{ color: IOS.red }}>{formatMoney(entry.deductionAmount)}</td>
-                            <td className="whitespace-nowrap px-4 py-2.5 text-right font-semibold tabular-nums text-[var(--color-text)]">{formatMoney(entry.totalAmount)}</td>
-                            <td className="px-4 py-2.5">
-                              <Pill color={PAYROLL_STATUS_COLOR[entry.status]}>{tr(PAYROLL_STATUS_LABEL[entry.status])}</Pill>
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-2.5 tabular-nums text-[#8e8e93]">{entry.paidAt ? formatDate(entry.paidAt) : "—"}</td>
-                            {/* Qatorda amal tugmasi yo'q — "To'landi" varaq ichida */}
-                            <td className="w-px px-4 py-2.5 text-[#c7c7cc]">›</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                <div className="ios-snow hidden xl:block">
+                  <div className={`${GROUP_BLOCK} overflow-x-auto`}>
+                    <table className="w-full text-left text-[14px]">
+                      <thead>
+                        <tr className="text-[12px] font-semibold uppercase tracking-[0.06em] text-[#6d6d72]">
+                          <th className="px-4 py-3">{tr("Xodim")}</th>
+                          <th className="px-4 py-3">{tr("Davr")}</th>
+                          <th className="px-4 py-3 text-right">{tr("Asosiy")}</th>
+                          <th className="px-4 py-3 text-right">{tr("Mukofot")}</th>
+                          <th className="px-4 py-3 text-right">{tr("Jarima")}</th>
+                          <th className="px-4 py-3 text-right">{tr("Ushlab qolish")}</th>
+                          <th className="px-4 py-3 text-right">{tr("Jami")}</th>
+                          <th className="px-4 py-3">{tr("Holat")}</th>
+                          <th className="px-4 py-3">{tr("To'langan sana")}</th>
+                          <th className="w-px px-4 py-3" />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {entries.map((entry) => {
+                          const note = absenceNote(absenceByEmployee.get(entry.employeeId), tr);
+                          return (
+                            <tr key={entry.id} onClick={() => setOpenEntryId(entry.id)} className={`cursor-pointer border-t border-[#c6c6c8]/50 ${ROW_PRESS}`}>
+                              <td className="max-w-[240px] px-4 py-2.5">
+                                <p className="truncate font-medium text-[var(--color-text)]">{entryName(entry)}</p>
+                                {note && <p className="truncate text-[12.5px] text-[#ff3b30]">{note}</p>}
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-2.5 text-[#8e8e93]">{periodLabel(entry.period, tr)}</td>
+                              <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums text-[#8e8e93]">{formatMoney(entry.baseAmount)}</td>
+                              <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums" style={{ color: IOS.green }}>{formatMoney(entry.bonusAmount)}</td>
+                              <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums" style={{ color: IOS.red }}>{formatMoney(entry.penaltyAmount)}</td>
+                              <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums" style={{ color: IOS.red }}>{formatMoney(entry.deductionAmount)}</td>
+                              <td className="whitespace-nowrap px-4 py-2.5 text-right font-semibold tabular-nums text-[var(--color-text)]">{formatMoney(entry.totalAmount)}</td>
+                              <td className="px-4 py-2.5">
+                                <Pill color={PAYROLL_STATUS_COLOR[entry.status]}>{tr(PAYROLL_STATUS_LABEL[entry.status])}</Pill>
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-2.5 tabular-nums text-[#8e8e93]">{entry.paidAt ? formatDate(entry.paidAt) : "—"}</td>
+                              {/* Qatorda amal tugmasi yo'q — "To'landi" varaq ichida */}
+                              <td className="w-px px-4 py-2.5 text-[#c7c7cc]">›</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
 
                 {payrollQuery.data && (

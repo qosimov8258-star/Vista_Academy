@@ -447,18 +447,20 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
             ) : debtors.length === 0 ? (
               <EmptyBlock icon={ReceiptText} tint="green" title={tr("Qarzdor yo'q")} />
             ) : (
-              <div className={GROUP_BLOCK}>
-                {debtors.map((d) => (
-                  <ListRow
-                    key={d.childId}
-                    href={`/${slug}/network/finance`}
-                    avatar={<IosAvatar name={d.fullName} size={40} />}
-                    title={d.fullName}
-                    subtitle={tr(d.branch)}
-                    meta={<span className="text-[15px] font-semibold tabular-nums" style={{ color: IOS.red }} title={fullMoney(d.balance, tr)}>{compactMoney(d.balance, tr)}</span>}
-                    chevron
-                  />
-                ))}
+              <div className="ios-snow">
+                <div className={GROUP_BLOCK}>
+                  {debtors.map((d) => (
+                    <ListRow
+                      key={d.childId}
+                      href={`/${slug}/network/finance`}
+                      avatar={<IosAvatar name={d.fullName} size={40} />}
+                      title={d.fullName}
+                      subtitle={tr(d.branch)}
+                      meta={<span className="text-[15px] font-semibold tabular-nums" style={{ color: IOS.red }} title={fullMoney(d.balance, tr)}>{compactMoney(d.balance, tr)}</span>}
+                      chevron
+                    />
+                  ))}
+                </div>
               </div>
             )}
           </Group>
@@ -478,49 +480,53 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
             bare
           >
             {org.branches.length === 0 ? (
-              <div className={clsx(GROUP_BLOCK, "flex flex-col items-center px-6 py-9 text-center")}>
-                <IosIcon icon={School} tint="orange" size={48} />
-                <p className="mt-3 text-[15px] font-semibold text-[var(--color-text)]">{tr("Hali filial yo'q")}</p>
-                <Link href={`/${slug}/branches`} className="mt-1.5 text-[15px] font-medium text-[var(--color-primary)] active:opacity-50">
-                  {tr("Filial qo'shish")}
-                </Link>
+              <div className="ios-snow">
+                <div className={clsx(GROUP_BLOCK, "flex flex-col items-center px-6 py-9 text-center")}>
+                  <IosIcon icon={School} tint="orange" size={48} />
+                  <p className="mt-3 text-[15px] font-semibold text-[var(--color-text)]">{tr("Hali filial yo'q")}</p>
+                  <Link href={`/${slug}/branches`} className="mt-1.5 text-[15px] font-medium text-[var(--color-primary)] active:opacity-50">
+                    {tr("Filial qo'shish")}
+                  </Link>
+                </div>
               </div>
             ) : (
-              <div className={GROUP_BLOCK}>
-                {perBranch.map(({ branch, data: b }) => {
-                  const money = branchFinance.get(branch.id);
-                  const rate = money && money.billed > 0 ? pctOf(money.collected, money.billed) : null;
-                  return (
-                    <ListRow
-                      key={branch.id}
-                      href={`/${slug}/${branch.slug}`}
-                      avatar={<IosAvatar name={tr(branch.name)} letters={1} />}
-                      title={tr(branch.name)}
-                      subtitle={
-                        b
-                          ? tr("{0} bola · {1} guruh · {2} xodim", b.childrenCount, b.activeGroupsCount, b.employeesCount)
-                          : branch.address || tr("Yuklanmoqda…")
-                      }
-                      meta={
-                        b && (
-                          <span className="flex items-center gap-2.5">
-                            {/* Telefonda summa sig'maydi — u filial sahifasida ko'rinadi */}
-                            <span className="hidden text-right sm:block">
-                              <span className="block text-[15px] font-semibold tabular-nums text-[var(--color-text)]">{compactMoney(b.monthRevenue, tr)}</span>
-                              <span className="block text-[11.5px] text-[#8e8e93]">{tr("shu oy")}</span>
+              <div className="ios-snow">
+                <div className={GROUP_BLOCK}>
+                  {perBranch.map(({ branch, data: b }) => {
+                    const money = branchFinance.get(branch.id);
+                    const rate = money && money.billed > 0 ? pctOf(money.collected, money.billed) : null;
+                    return (
+                      <ListRow
+                        key={branch.id}
+                        href={`/${slug}/${branch.slug}`}
+                        avatar={<IosAvatar name={tr(branch.name)} letters={1} />}
+                        title={tr(branch.name)}
+                        subtitle={
+                          b
+                            ? tr("{0} bola · {1} guruh · {2} xodim", b.childrenCount, b.activeGroupsCount, b.employeesCount)
+                            : branch.address || tr("Yuklanmoqda…")
+                        }
+                        meta={
+                          b && (
+                            <span className="flex items-center gap-2.5">
+                              {/* Telefonda summa sig'maydi — u filial sahifasida ko'rinadi */}
+                              <span className="hidden text-right sm:block">
+                                <span className="block text-[15px] font-semibold tabular-nums text-[var(--color-text)]">{compactMoney(b.monthRevenue, tr)}</span>
+                                <span className="block text-[11.5px] text-[#8e8e93]">{tr("shu oy")}</span>
+                              </span>
+                              {rate !== null && (
+                                <Pill color={rate >= 80 ? IOS.green : rate >= 50 ? IOS.orange : IOS.red} title={tr("Shu oy hisoblanganidan yig'ilgani")}>
+                                  {rate}%
+                                </Pill>
+                              )}
                             </span>
-                            {rate !== null && (
-                              <Pill color={rate >= 80 ? IOS.green : rate >= 50 ? IOS.orange : IOS.red} title={tr("Shu oy hisoblanganidan yig'ilgani")}>
-                                {rate}%
-                              </Pill>
-                            )}
-                          </span>
-                        )
-                      }
-                      chevron
-                    />
-                  );
-                })}
+                          )
+                        }
+                        chevron
+                      />
+                    );
+                  })}
+                </div>
               </div>
             )}
           </Group>
@@ -566,28 +572,30 @@ export function DirectorHome({ slug, org }: { slug: string; org: Organization })
             ) : birthdays.length === 0 ? (
               <EmptyBlock icon={CakeSlice} tint="pink" title={tr("Bir hafta ichida tug'ilgan kun yo'q")} />
             ) : (
-              <div className={GROUP_BLOCK}>
-                {birthdays.map((b) => {
-                  // Necha yoshga to'ladi — keyingi tug'ilgan kun yili minus tug'ilgan yil
-                  const next = new Date(date.getTime() + b.daysUntil * 86_400_000);
-                  const age = next.getUTCFullYear() - new Date(b.birthDate).getUTCFullYear();
-                  return (
-                    <ListRow
-                      key={b.childId}
-                      avatar={<IosIcon icon={CakeSlice} tint={b.daysUntil <= 1 ? "pink" : "gray"} size={40} />}
-                      title={b.fullName}
-                      // Muddat izohda — tor ustunda ism qirqilib qolmasin
-                      subtitle={
-                        <>
-                          <span className={clsx(b.daysUntil <= 1 && "font-semibold")} style={b.daysUntil <= 1 ? { color: b.daysUntil === 0 ? IOS.green : IOS.orange } : undefined}>
-                            {b.daysUntil === 0 ? tr("Bugun") : b.daysUntil === 1 ? tr("Ertaga") : tr("{0} kundan keyin", b.daysUntil)}
-                          </span>
-                          {` · ${tr("{0} yoshga to'ladi", age)} · ${tr(b.branch)}`}
-                        </>
-                      }
-                    />
-                  );
-                })}
+              <div className="ios-snow">
+                <div className={GROUP_BLOCK}>
+                  {birthdays.map((b) => {
+                    // Necha yoshga to'ladi — keyingi tug'ilgan kun yili minus tug'ilgan yil
+                    const next = new Date(date.getTime() + b.daysUntil * 86_400_000);
+                    const age = next.getUTCFullYear() - new Date(b.birthDate).getUTCFullYear();
+                    return (
+                      <ListRow
+                        key={b.childId}
+                        avatar={<IosIcon icon={CakeSlice} tint={b.daysUntil <= 1 ? "pink" : "gray"} size={40} />}
+                        title={b.fullName}
+                        // Muddat izohda — tor ustunda ism qirqilib qolmasin
+                        subtitle={
+                          <>
+                            <span className={clsx(b.daysUntil <= 1 && "font-semibold")} style={b.daysUntil <= 1 ? { color: b.daysUntil === 0 ? IOS.green : IOS.orange } : undefined}>
+                              {b.daysUntil === 0 ? tr("Bugun") : b.daysUntil === 1 ? tr("Ertaga") : tr("{0} kundan keyin", b.daysUntil)}
+                            </span>
+                            {` · ${tr("{0} yoshga to'ladi", age)} · ${tr(b.branch)}`}
+                          </>
+                        }
+                      />
+                    );
+                  })}
+                </div>
               </div>
             )}
           </Group>
@@ -782,25 +790,29 @@ function ProgressBar({ value, color, thin = false }: { value: number; color: str
 
 function SkeletonBlock({ rows, avatar = true }: { rows: number; avatar?: boolean }) {
   return (
-    <div className={GROUP_BLOCK} aria-busy="true">
-      {Array.from({ length: rows }, (_, i) => (
-        <div key={i} className="flex min-h-[60px] items-center gap-3 px-4 py-2.5">
-          {avatar && <span className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-[#767680]/[0.12]" />}
-          <span className="flex-1 space-y-2">
-            <span className="block h-3.5 w-2/5 animate-pulse rounded-full bg-[#767680]/[0.12]" />
-            <span className="block h-3 w-3/5 animate-pulse rounded-full bg-[#767680]/[0.08]" />
-          </span>
-        </div>
-      ))}
+    <div className="ios-snow">
+      <div className={GROUP_BLOCK} aria-busy="true">
+        {Array.from({ length: rows }, (_, i) => (
+          <div key={i} className="flex min-h-[60px] items-center gap-3 px-4 py-2.5">
+            {avatar && <span className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-[#767680]/[0.12]" />}
+            <span className="flex-1 space-y-2">
+              <span className="block h-3.5 w-2/5 animate-pulse rounded-full bg-[#767680]/[0.12]" />
+              <span className="block h-3 w-3/5 animate-pulse rounded-full bg-[#767680]/[0.08]" />
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
 function EmptyBlock({ icon, tint, title }: { icon: AnyIcon; tint: IosTint; title: string }) {
   return (
-    <div className={clsx(GROUP_BLOCK, "flex flex-col items-center px-6 py-8 text-center")}>
-      <IosIcon icon={icon} tint={tint} size={40} />
-      <p className="mt-3 text-[15px] font-medium text-[var(--color-text)]">{title}</p>
+    <div className="ios-snow">
+      <div className={clsx(GROUP_BLOCK, "flex flex-col items-center px-6 py-8 text-center")}>
+        <IosIcon icon={icon} tint={tint} size={40} />
+        <p className="mt-3 text-[15px] font-medium text-[var(--color-text)]">{title}</p>
+      </div>
     </div>
   );
 }
