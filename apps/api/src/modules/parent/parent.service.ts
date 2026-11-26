@@ -4,6 +4,7 @@ import { PrismaService } from "../../database/prisma.service";
 import { AuthenticatedParent } from "./parent-auth.types";
 import { PaymentRemindersService, daysBetween, tashkentTodayUtcMidnight } from "../payment-reminders/payment-reminders.service";
 import { allOn, loadDisabledFeatures } from "../../common/features/feature-access";
+import { departureMessage, noteMessage, type GuardianWord } from "./parent-messages";
 
 const DEFAULT_TIMEZONE = "Asia/Tashkent";
 
@@ -199,7 +200,8 @@ export class ParentService {
   async notifyDeparture(parent: AuthenticatedParent, childId: string, minutes: number) {
     const child = await this.assertOwnsChild(parent, childId);
     const who = await this.guardianLabel(parent, childId);
-    const message = `${child.fullName}ning ${who} ${parent.fullName} yo'lga chiqdi — taxminan ${minutes} daqiqada yetib keladi. Bolani tayyorlab qo'ying.`;
+    // Qolip parent-messages.ts da — adminlar qo'ng'iroqchasi ham shu qolip bo'yicha o'qiydi
+    const message = departureMessage(child.fullName, who, parent.fullName, minutes);
     const notified = await this.notifyGroupTeachers(child, message);
     return { notified, minutes };
   }
@@ -208,18 +210,18 @@ export class ParentService {
   async notifyNote(parent: AuthenticatedParent, childId: string, text: string) {
     const child = await this.assertOwnsChild(parent, childId);
     const who = await this.guardianLabel(parent, childId);
-    const message = `${child.fullName} ${who}dan (${parent.fullName}) eslatma: ${text.trim()}`;
+    const message = noteMessage(child.fullName, who, parent.fullName, text);
     const notified = await this.notifyGroupTeachers(child, message);
     return { notified };
   }
 
   /** Bolaga qarindoshligiga qarab "onasi" / "otasi"; aniq bo'lmasa "ota-onasi". */
-  private async guardianLabel(parent: AuthenticatedParent, childId: string): Promise<string> {
+  private async guardianLabel(parent: AuthenticatedParent, childId: string): Promise<GuardianWord> {
     const link = await this.prisma.childGuardian.findFirst({
       where: { guardianId: parent.id, childId },
       select: { relation: true },
     });
-    const word = link?.relation === "MOTHER" ? "onasi" : link?.relation === "FATHER" ? "otasi" : "ota-onasi";
+    const word: GuardianWord = link?.relation === "MOTHER" ? "onasi" : link?.relation === "FATHER" ? "otasi" : "ota-onasi";
     return word;
   }
 
