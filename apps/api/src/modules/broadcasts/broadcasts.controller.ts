@@ -27,8 +27,9 @@ export class BroadcastsController {
   ) {}
 
   @Get()
-  list(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query() query: BroadcastListQueryDto, @Query("branchId") branchId?: string) {
-    return this.service.list(user, query, branchId);
+  list(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query() query: BroadcastListQueryDto) {
+    // branchId DTO ichida: alohida @Query("branchId") validatsiyadan o'tmay 400 qaytarardi
+    return this.service.list(user, query, query.branchId);
   }
 
   /** Yuborishdan oldin: necha kishiga boradi */

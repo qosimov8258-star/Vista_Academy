@@ -90,4 +90,10 @@ export class BroadcastListQueryDto {
   @Min(1)
   @Max(50)
   limit: number = 20;
+
+  /** Super Admin filial ichida — faqat o'sha filial xabarlari (filial xodimida e'tiborga olinmaydi) */
+  @ApiPropertyOptional({ format: "uuid" })
+  @IsOptional()
+  @IsUUID()
+  branchId?: string;
 }
