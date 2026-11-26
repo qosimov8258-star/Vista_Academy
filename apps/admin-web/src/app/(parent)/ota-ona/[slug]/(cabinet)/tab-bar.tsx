@@ -58,6 +58,12 @@ export function ParentTabBar({ slug }: { slug: string }) {
   const itemRefs = useRef<Array<HTMLElement | null>>([]);
   const [pill, setPill] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
 
+  // Menyudagi bo'limlar to'plami. Avval faqat doim bor bo'limlar chiziladi,
+  // `me` kelgach qolganlari qo'shiladi va tugmalar torayadi — tamg'a shunda
+  // ham qayta o'lchanishi kerak (aks holda «Bosh menu»da eski, keng o'lchami
+  // qolib, o'ng tomoni cho'zilib ko'rinardi).
+  const layoutKey = `${visible.map((tab) => tab.href).join("|")}|${overflowing ? "more" : ""}`;
+
   const measure = useCallback(() => {
     const item = activeSlot >= 0 ? itemRefs.current[activeSlot] : null;
     if (!item) {
@@ -65,18 +71,23 @@ export function ParentTabBar({ slug }: { slug: string }) {
       return;
     }
     setPill({ x: item.offsetLeft, y: item.offsetTop, w: item.offsetWidth, h: item.offsetHeight });
-  }, [activeSlot]);
+    // layoutKey: bo'limlar o'zgarsa yangi o'lcham olinadi
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSlot, layoutKey]);
 
   useLayoutEffect(() => {
     measure();
     // Menyu eni o'zgarsa (ekran burilishi, oyna kengaytirilishi, shrift
-    // kattalashtirilishi) tamg'a ham o'z o'rnini yangilaydi.
+    // kattalashtirilishi) yoki faol tugmaning o'zi torayib-kengaysa — tamg'a
+    // ham o'z o'rnini yangilaydi.
     const bar = barRef.current;
     if (!bar || typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver(measure);
     observer.observe(bar);
+    const item = activeSlot >= 0 ? itemRefs.current[activeSlot] : null;
+    if (item) observer.observe(item);
     return () => observer.disconnect();
-  }, [measure]);
+  }, [measure, activeSlot]);
 
   useEffect(() => {
     if (!moreOpen) return;
@@ -120,8 +131,11 @@ export function ParentTabBar({ slug }: { slug: string }) {
 
       <div
         ref={barRef}
-        className={clsx(styles.glass, "relative flex w-full max-w-[420px] items-stretch gap-1 rounded-full p-2")}
+        // snowCapPill — qishda menyu ustida qor qatlami
+        className={clsx(styles.glass, styles.snowCapPill, "relative flex w-full max-w-[420px] items-stretch gap-1 rounded-full p-2")}
       >
+        {/* Qishda: shisha chetlarida qirov naqshi (bosilganda yaltiraydi) */}
+        <span aria-hidden="true" className={styles.frost} />
         {/* Suriluvchi tamg'a. Bo'lim tanilmasa ko'rsatilmaydi. */}
         {pill && (
           <span
@@ -196,15 +210,23 @@ function MoreSheet({
       <div className={clsx("absolute inset-0 bg-black/25", styles.enterSoft)} onClick={onClose} aria-hidden />
       <div
         className={clsx(
-          "absolute inset-x-3 mx-auto max-w-[420px] rounded-[28px] p-3 min-[380px]:inset-x-4",
+          "absolute inset-x-3 mx-auto flex max-w-[420px] flex-col rounded-[28px] p-3 min-[380px]:inset-x-4",
           styles.glass,
           styles.moreSheet,
+          // Qishda oyna ustida qor qatlami
+          styles.snowCap,
         )}
-        // Menyu ustida, undan biroz yuqorida suzib turadi
-        style={{ bottom: "calc(max(12px, env(safe-area-inset-bottom)) + 88px)" }}
+        // Menyu ustida, undan biroz yuqorida suzib turadi. Ekran past bo'lsa
+        // oyna ekrandan chiqib ketmaydi — ro'yxat ichida tepa-past suriladi.
+        style={{
+          bottom: "calc(max(12px, env(safe-area-inset-bottom)) + 88px)",
+          maxHeight: "calc(100dvh - max(12px, env(safe-area-inset-bottom)) - 88px - max(16px, env(safe-area-inset-top)))",
+        }}
       >
-        <p className="px-2 pb-2 pt-1 text-[12px] font-bold uppercase tracking-[0.07em] text-[var(--p-muted)]">{tr("Boshqa bo'limlar")}</p>
-        <ul className="space-y-1">
+        {/* Qishda: oyna chetlarida qirov — ochilganda bir marta yaltiraydi */}
+        <span aria-hidden="true" className={clsx(styles.frost, styles.frostIntro)} />
+        <p className="shrink-0 px-2 pb-2 pt-1 text-[12px] font-bold uppercase tracking-[0.07em] text-[var(--p-muted)]">{tr("Boshqa bo'limlar")}</p>
+        <ul className="min-h-0 space-y-1 overflow-y-auto overscroll-contain rounded-[20px] [scrollbar-width:thin]">
           {items.map((tab) => {
             const active = tab.index === activeIndex;
             const Icon = tab.icon;
@@ -217,12 +239,16 @@ function MoreSheet({
                   className={clsx(
                     "flex items-center gap-3.5 rounded-[20px] px-2.5 py-2.5 transition-colors",
                     active ? "bg-[var(--p-sky)]/12" : "active:bg-black/[0.04]",
+                    // Qishda har qator yengil muzdek tusda
+                    styles.winterRow,
                   )}
                 >
                   <span
                     className={clsx(
                       "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl",
                       active ? "bg-[var(--p-sky)]/16 text-[var(--p-sky-ink)]" : "bg-black/[0.05] text-[var(--p-ink)]",
+                      // Qishda ikonka ustida kichik qor qatlami
+                      styles.snowCapSm,
                     )}
                   >
                     <Icon filled={active} className="h-[22px] w-[22px]" />

@@ -20,6 +20,7 @@ import {
   ReceiptText,
   Send,
   Smile,
+  Snowflake,
   Soup,
   StickyNote,
   Wallet,
@@ -50,6 +51,8 @@ import { useParentFeatures } from "./use-parent-features";
 import { FoydaliCards } from "./foydali-cards";
 import { GroupTopics } from "./group-topics";
 import { InstallBanner } from "@/features/pwa/install-banner";
+import { useCabinetTheme } from "./theme";
+import { WinterHeroScene } from "@/components/winter/winter-hero";
 import { useTr } from "@/i18n/tr";
 
 /**
@@ -79,9 +82,21 @@ const GREEN = "var(--p-mint)";
 const RED = "var(--p-red)";
 const ORANGE = "var(--p-sun)";
 
-const CARD = "rounded-[var(--p-radius)] bg-[var(--p-card)] shadow-[var(--p-shadow)]";
+/** `snowCap` — qishda karta ustida qor qatlami (boshqa paytda hech narsa qilmaydi) */
+const CARD = `rounded-[var(--p-radius)] bg-[var(--p-card)] shadow-[var(--p-shadow)] ${styles.snowCap}`;
 /** Asosiy karta va avatar gradienti — ilovaning urg'u ranglari (ko'k → binafsha) */
 const HERO_GRADIENT = "linear-gradient(135deg, #0a84ff 0%, #5e5ce6 58%, #a45cf0 118%)";
+/** Qishda — sovuq tungi ko'k (pastda yengil shimol yog'dusi alohida qatlamda) */
+const WINTER_GRADIENT =
+  "radial-gradient(120% 80% at 100% 0%, rgba(84, 120, 255, 0.35), transparent 60%), linear-gradient(160deg, #060f2b 0%, #0b2257 40%, #153f9c 74%, #2459cf 100%)";
+/** Qishki bosh kartadagi miltillovchi yulduzchalar: joyi, o'lchami, kechikishi */
+const TWINKLES = [
+  { left: "57%", top: "13%", size: 3, delay: "0s" },
+  { left: "44%", top: "7%", size: 2, delay: "0.7s" },
+  { left: "71%", top: "33%", size: 2, delay: "1.4s" },
+  { left: "86%", top: "56%", size: 2.5, delay: "2.1s" },
+  { left: "63%", top: "74%", size: 2, delay: "2.8s" },
+];
 
 function prettyDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00.000Z`);
@@ -92,6 +107,9 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
   const tr = useTr();
   const { slug } = use(params);
   const router = useRouter();
+  // Qishda bosh karta va avatar qishki rangda, kartalar ustida qor
+  const { winter } = useCabinetTheme();
+  const heroBackground = winter ? WINTER_GRADIENT : HERO_GRADIENT;
   // Bog'cha yuborgan yangi xabarlar — bosh sahifada eslatma
   // Platforma o'chirgan funksiyalarga so'rov yuborilmaydi — bo'limlar shunchaki ko'rinmaydi
   const { ready: featuresReady, isOn } = useParentFeatures(slug);
@@ -218,13 +236,16 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
       <header className="flex items-center gap-3">
         <span
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[15px] font-semibold text-white"
-          style={{ background: HERO_GRADIENT }}
+          style={{ background: heroBackground }}
           aria-hidden="true"
         >
           {lettersOf(parent.fullName)}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[13px] leading-tight text-[var(--p-muted)]">{tr(greetingKey())}</p>
+          <p className="flex items-center gap-1 text-[13px] leading-tight text-[var(--p-muted)]">
+            {tr(greetingKey())}
+            {winter && <Snowflake className="h-3.5 w-3.5 shrink-0 text-[#6f9bd8]" strokeWidth={2} aria-hidden="true" />}
+          </p>
           <p className="mt-0.5 truncate text-[19px] font-bold leading-tight tracking-[-0.02em] text-[var(--p-ink)]">
             {tr(parent.fullName)}
           </p>
@@ -269,11 +290,39 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
       {/* Asosiy karta: bola va bugungi holat — rangli, ilovaning «yuzi» */}
       {child && (
         <section
-          className={`${styles.pop} relative mt-5 overflow-hidden rounded-[28px] p-5 text-white`}
-          style={{ background: HERO_GRADIENT, boxShadow: "0 22px 44px -22px rgba(88, 86, 214, 0.65)" }}
+          className={`${styles.pop} relative mt-5 overflow-hidden rounded-[28px] p-5 text-white ${winter ? "pb-12" : ""}`}
+          style={{
+            background: heroBackground,
+            boxShadow: winter ? "0 22px 44px -22px rgba(24, 68, 150, 0.72)" : "0 22px 44px -22px rgba(88, 86, 214, 0.65)",
+          }}
         >
-          <span aria-hidden="true" className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-white/10" />
-          <span aria-hidden="true" className="pointer-events-none absolute -bottom-20 -left-12 h-44 w-44 rounded-full bg-white/[0.07]" />
+          {/* Bezak doiralar — qishda yo'q: tungi osmon tiniq tursin */}
+          {!winter && (
+            <>
+              <span aria-hidden="true" className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-white/10" />
+              <span aria-hidden="true" className="pointer-events-none absolute -bottom-20 -left-12 h-44 w-44 rounded-full bg-white/[0.07]" />
+            </>
+          )}
+          {winter && (
+            <>
+              {/* Qishki osmon: to'lqinlanuvchi shimol yog'dusi, burchakda sekin aylanuvchi qor parchasi,
+                  yulduzchalar, pastda qorli archalar va asta to'planadigan qor uyumi */}
+              <WinterHeroScene crisp />
+              <Snowflake
+                aria-hidden="true"
+                className={`${styles.slowSpin} pointer-events-none absolute -right-8 -top-8 h-40 w-40 text-white/[0.12]`}
+                strokeWidth={1.1}
+              />
+              {TWINKLES.map((star) => (
+                <span
+                  key={`${star.left}-${star.top}`}
+                  aria-hidden="true"
+                  className={`${styles.twinkle} pointer-events-none absolute rounded-full bg-white`}
+                  style={{ left: star.left, top: star.top, width: star.size, height: star.size, animationDelay: star.delay }}
+                />
+              ))}
+            </>
+          )}
 
           <div className="relative flex items-center justify-between gap-3">
             <p className="min-w-0 truncate text-[13px] font-medium text-white/75">{longDate}</p>
@@ -383,12 +432,12 @@ export default function ParentHomePage({ params }: { params: Promise<{ slug: str
             const badge = action.badge ?? 0;
             const inner = (
               <>
-                <span className="relative">
+                <span className={`relative ${styles.snowCapSm}`}>
                   <IosIcon icon={action.icon} tint={action.tint} size={54} />
                   {badge > 0 && (
                     <span
                       aria-hidden="true"
-                      className="absolute -right-2 -top-2 flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-[var(--p-red)] px-1.5 text-[12.5px] font-bold tabular-nums text-white ring-2 ring-[var(--p-bg)]"
+                      className="absolute -right-2 -top-2 z-[3] flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-[var(--p-red)] px-1.5 text-[12.5px] font-bold tabular-nums text-white ring-2 ring-[var(--p-bg)]"
                     >
                       {badge > 99 ? "99+" : badge}
                     </span>

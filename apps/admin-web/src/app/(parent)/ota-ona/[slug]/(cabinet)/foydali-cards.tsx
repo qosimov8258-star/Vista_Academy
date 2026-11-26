@@ -290,7 +290,11 @@ function Slide({
       href={href}
       aria-hidden={copy || undefined}
       tabIndex={copy ? -1 : undefined}
-      className="w-[72%] max-w-[270px] shrink-0 rounded-[var(--p-radius)] bg-[var(--p-card)] p-2 shadow-[var(--p-shadow)] transition-transform active:scale-[0.98]"
+      className={clsx(
+        "w-[72%] max-w-[270px] shrink-0 rounded-[var(--p-radius)] bg-[var(--p-card)] p-2 shadow-[var(--p-shadow)] transition-transform active:scale-[0.98]",
+        // Qishda karta ustida qor qatlami
+        parentStyles.snowCap,
+      )}
     >
       <span className="flex h-[124px] items-center justify-center overflow-hidden rounded-[18px]" style={{ background: mediaBg }}>
         {media}

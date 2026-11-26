@@ -8,6 +8,7 @@ import { ChevronRight, ExternalLink, Mic, Play } from "lucide-react";
 import { PARENT_API_URL, parentApi } from "@/lib/parent-api";
 import { IosIcon } from "@/features/director/ios-icon";
 import { HomeSheet } from "./home-sheet";
+import parentStyles from "../parent.module.css";
 import { useTr } from "@/i18n/tr";
 
 /**
@@ -108,6 +109,8 @@ export function GroupTopics({ slug, childId }: { slug: string; childId: string }
         </Link>
       </div>
 
+      {/* Tashqi o'ram — qishda karta ustidagi qor (ichki karta burchaklarni kesadi, qorni emas) */}
+      <div className={parentStyles.snowCap}>
       <div className="overflow-hidden rounded-[var(--p-radius)] bg-[var(--p-card)] shadow-[var(--p-shadow)]">
         {days.map((day, dayIndex) => (
           <div key={day.key}>
@@ -134,6 +137,7 @@ export function GroupTopics({ slug, childId }: { slug: string; childId: string }
           </div>
         ))}
         <div className="h-1.5" />
+      </div>
       </div>
 
       {open && (
