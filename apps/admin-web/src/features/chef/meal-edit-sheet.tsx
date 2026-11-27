@@ -3,10 +3,9 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Camera, ImagePlus, X } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, authFetch } from "@/lib/api";
 import type { MenuMeal, MenuPhoto } from "@/lib/types";
 import { prepareMenuPhoto } from "@/lib/menu-photo";
-import { getTenantAccessToken } from "@/lib/tenant-session";
 import { FieldRow, TextArea } from "@/components/ios/form";
 import { IosSheet, SheetPrimaryButton, SheetSection } from "@/components/ios/sheet";
 import { Spinner } from "@/components/ios/spinner";
@@ -52,8 +51,7 @@ type EditPhoto =
 
 /** Oldingi kun rasmini bugunga nusxalash uchun — serverdagi rasmni o'qib, qayta yuklashga tayyorlaydi */
 async function copyPhoto(id: string): Promise<string | null> {
-  const token = getTenantAccessToken();
-  const res = await fetch(menuPhotoSrc(id), { credentials: "include", headers: token ? { Authorization: `Bearer ${token}` } : undefined });
+  const res = await authFetch(menuPhotoSrc(id));
   if (!res.ok) return null;
   const blob = await res.blob();
   const prepared = await prepareMenuPhoto(new File([blob], "menu-photo", { type: blob.type || "image/jpeg" }));

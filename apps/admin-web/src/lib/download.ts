@@ -1,4 +1,4 @@
-import { getTenantAccessToken } from "./tenant-session";
+import { authFetch } from "./api";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
 
@@ -14,12 +14,8 @@ export function fileHref(path: string): string {
 
 /** Tarmoq/CORS xatosi (javob umuman kelmadi) — HTTP xato emas */
 async function fetchProtected(path: string): Promise<Response | null> {
-  const accessToken = getTenantAccessToken();
   try {
-    return await fetch(`${API_URL}${path}`, {
-      credentials: "include",
-      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
-    });
+    return await authFetch(`${API_URL}${path}`);
   } catch {
     return null;
   }
@@ -64,11 +60,9 @@ export async function fetchFileUrl(path: string): Promise<string> {
 }
 
 export async function downloadCsv(path: string, filename: string): Promise<void> {
-  const accessToken = getTenantAccessToken();
-  const res = await fetch(`${API_URL}${path}`, {
-    credentials: "include",
-    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
-  });
+  // 401'da token yangilanib qayta so'raladi — aks holda 15 daqiqa ochiq
+  // turgan ilovada «Excel hisobot» «Eksport qilishda xatolik» berardi
+  const res = await authFetch(`${API_URL}${path}`);
   if (!res.ok) {
     throw new Error("Eksport qilishda xatolik yuz berdi");
   }

@@ -25,40 +25,118 @@ interface Envelope<T> {
 
 let refreshPromise: Promise<boolean> | null = null;
 
+interface TokenPair {
+  accessToken: string;
+  refreshToken: string;
+}
+
+/** `null` holat — javob umuman kelmadi (tarmoq uzilgan) */
+type RefreshAttempt = { ok: true; tokens: TokenPair | null } | { ok: false; status: number | null };
+
+async function postRefresh(refreshToken: string | null): Promise<RefreshAttempt> {
+  try {
+    const res = await fetch(`${API_URL}/app/auth/refresh`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(refreshToken ? { refreshToken } : {}),
+    });
+    if (!res.ok) return { ok: false, status: res.status };
+    const body: Envelope<TokenPair> | null = await res.json().catch(() => null);
+    return { ok: true, tokens: body?.data ?? null };
+  } catch {
+    return { ok: false, status: null };
+  }
+}
+
+/** Token API'ning o'zi rad etgani (seans haqiqatan yaroqsiz) — vaqtinchalik server/tarmoq xatosi emas */
+function isRejected(attempt: RefreshAttempt): boolean {
+  return !attempt.ok && attempt.status !== null && attempt.status >= 400 && attempt.status < 500;
+}
+
+/**
+ * Tokenning egasi: foydalanuvchi va (xodim profiliga kirilgan bo'lsa) kirgan admin.
+ * Imzo tekshirilmaydi — faqat ikki tokenni solishtirish uchun.
+ */
+function tokenOwner(token: string | null): string | null {
+  const segment = token?.split(".")[1];
+  if (!segment) return null;
+  try {
+    const json = atob(segment.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(segment.length / 4) * 4, "="));
+    const payload = JSON.parse(json) as { sub?: string; issuerId?: string };
+    return payload.sub ? `${payload.sub}|${payload.issuerId ?? ""}` : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Access token muddati o'tganda yangilaydi. `request()` ichida avtomatik
  * chaqiriladi; token talab qiladigan lekin JSON javob kutmaydigan so'rovlar
  * (masalan `<img>` o'rniga blob bilan yuklanadigan surat) ham shu funksiyani
  * qayta ishlatadi — aks holda ular 401'da hech qachon qayta urinmaydi.
+ *
+ * Avval tabning o'z refresh tokeni ishlatiladi. U rad etilsa — brauzerning
+ * umumiy cookie'sidagi eng so'nggi refresh token bilan bir marta urinadi.
+ * Sabab: o'rnatilgan ilova (PWA) alohida oyna — uning sessionStorage'i bo'sh
+ * ochiladi va u cookie orqali yangilanadi. Refresh token har yangilanishda
+ * almashadi (eskisi bekor bo'ladi), shuning uchun ilova va Chrome tabi
+ * navbatma-navbat bir-birining tokenini bekor qilib qo'yardi: tarbiyachi
+ * ilovaga qaytganda davomat «Unauthorized» bilan yuklanmas va saqlanmasdi.
+ * Cookie'dagi seans boshqa foydalanuvchiniki bo'lsa, u qabul qilinmaydi —
+ * tab boshqa odamga aylanib qolmasin.
  */
 export async function tryRefresh(): Promise<boolean> {
   if (!refreshPromise) {
-    const refreshToken = getTenantRefreshToken();
-    refreshPromise = fetch(`${API_URL}/app/auth/refresh`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(refreshToken ? { refreshToken } : {}),
-    })
-      .then(async (res) => {
-        if (!res.ok) {
-          clearTenantTokens();
-          return false;
-        }
-        const body: Envelope<{ accessToken: string; refreshToken: string }> | null = await res
-          .json()
-          .catch(() => null);
-        if (body?.data) {
-          setTenantTokens(body.data);
-        }
-        return true;
-      })
-      .catch(() => false)
-      .finally(() => {
-        refreshPromise = null;
-      });
+    refreshPromise = refreshSession().finally(() => {
+      refreshPromise = null;
+    });
   }
   return refreshPromise;
+}
+
+async function refreshSession(): Promise<boolean> {
+  const ownRefreshToken = getTenantRefreshToken();
+  const owner = tokenOwner(getTenantAccessToken());
+
+  if (ownRefreshToken) {
+    const own = await postRefresh(ownRefreshToken);
+    if (own.ok) {
+      if (own.tokens) setTenantTokens(own.tokens);
+      return true;
+    }
+    // Tarmoq yoki server xatosi — seans tugamagan, tokenlar keyingi urinish uchun qoladi
+    if (!isRejected(own)) return false;
+  }
+
+  const shared = await postRefresh(null);
+  if (!shared.ok) {
+    if (isRejected(shared) || ownRefreshToken) clearTenantTokens();
+    return false;
+  }
+  if (shared.tokens) {
+    if (owner && tokenOwner(shared.tokens.accessToken) !== owner) {
+      clearTenantTokens();
+      return false;
+    }
+    setTenantTokens(shared.tokens);
+  }
+  return true;
+}
+
+/**
+ * Token bilan oddiy `fetch` (JSON konvertsiz javoblar: fayl, rasm, sahifali
+ * ro'yxat) — 401 da tokenni yangilab, bir marta qayta urinadi.
+ */
+export async function authFetch(url: string, init: RequestInit = {}, retry = true): Promise<Response> {
+  const accessToken = getTenantAccessToken();
+  const headers = new Headers(init.headers);
+  if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
+  const res = await fetch(url, { ...init, credentials: "include", headers });
+  if (res.status === 401 && retry && (await tryRefresh())) {
+    return authFetch(url, init, false);
+  }
+  return res;
 }
 
 async function request<T>(path: string, options: RequestInit = {}, retry = true): Promise<T> {
@@ -152,11 +230,10 @@ export interface Paginated<T> {
 }
 
 export async function getPaginated<T>(path: string): Promise<Paginated<T>> {
-  const accessToken = getTenantAccessToken();
-  const res = await fetch(`${API_URL}${path}`, {
-    credentials: "include",
-    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
-  });
+  // Avval bu yerda 401'da token yangilanmasdi: ilova fondan qaytganda
+  // (15 daqiqadan keyin) tarbiyachining «Bolalar» ro'yxati kabi sahifali
+  // ro'yxatlar «Unauthorized» bilan yuklanmay qolardi.
+  const res = await authFetch(`${API_URL}${path}`);
   const body = (await res.json()) as Envelope<T[]>;
   if (!res.ok || !body.success) {
     throw new ApiError(res.status, body.error?.code ?? "ERROR", body.error?.message ?? res.statusText);
