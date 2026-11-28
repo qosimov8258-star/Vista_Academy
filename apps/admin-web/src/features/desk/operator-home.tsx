@@ -7,6 +7,8 @@ import { useAuth, useFeatureEnabled } from "@/lib/use-auth";
 import { CallsList } from "./calls-list";
 import { CALL_KIND_LABEL, todayTashkent, type CallKind, type CallsResult } from "./shared";
 import { useTr } from "@/i18n/tr";
+import { useWinter } from "@/components/winter/season-shell";
+import { WinterHeroScene } from "@/components/winter/winter-hero";
 
 const KIND_STYLE: Record<CallKind, { dot: string; suffix: string }> = {
   LEAD: { dot: "bg-[var(--accent-bright)]", suffix: "crm" },
@@ -63,10 +65,15 @@ export function OperatorHome({ slug }: { slug: string }) {
   const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
   const openBy = (k: CallKind) => items.filter((i) => i.kind === k && !i.done).length;
   const firstName = user?.fullName?.split(" ")[0] ?? "";
+  // Qishda kartada shimol yog'dusi, pastda qorli archalar
+  const winter = useWinter();
 
   return (
     <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-[28px] bg-[linear-gradient(145deg,var(--accent-rail)_0%,var(--accent-rail-2)_100%)] p-5 text-white shadow-[0_18px_40px_-20px_color-mix(in_srgb,var(--accent-rail)_70%,transparent)]">
+      <section
+        className={`relative isolate overflow-hidden rounded-[28px] bg-[linear-gradient(145deg,var(--accent-rail)_0%,var(--accent-rail-2)_100%)] p-5 text-white shadow-[0_18px_40px_-20px_color-mix(in_srgb,var(--accent-rail)_70%,transparent)] ${winter ? "pb-12" : ""}`}
+      >
+        {winter && <WinterHeroScene behind />}
         <div className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-[var(--accent-bright)]/15 blur-2xl" aria-hidden="true" />
         <p className="text-[13px] font-medium text-[var(--accent-pale)]/80">{todayLabel()}</p>
         <h1 data-hero className="mt-0.5 text-[24px] font-bold tracking-[-0.02em]">{tr("Salom")}{firstName ? `, ${firstName}` : ""}</h1>

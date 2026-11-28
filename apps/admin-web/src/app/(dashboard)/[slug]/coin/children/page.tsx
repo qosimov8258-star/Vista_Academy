@@ -97,13 +97,15 @@ export default function CoinChildrenPage({ params }: { params: Promise<{ slug: s
           ))}
 
         {/* Qanday yig'iladi */}
-        <div className={`${GROUP_BLOCK} flex items-start gap-3 px-4 py-3.5`}>
-          <IosIcon icon={InfoIcon} tint="orange" size={30} />
-          <div className="min-w-0">
-            <p className="text-[15px] font-semibold text-[var(--color-text)]">{tr("Yulduzcha qanday yig'iladi")}</p>
-            <p className="mt-0.5 text-[13px] leading-snug text-[#8e8e93]">
-              {tr("Har kelgan kuni uchun +5 (davomat), haftalik savol-javob va she'r yodlashdan max +50/hafta. Bundan tashqari tarbiyachi o'z guruhidagi bolaga xohlagancha yulduzcha bera oladi.")}
-            </p>
+        <div className="ios-snow">
+          <div className={`${GROUP_BLOCK} flex items-start gap-3 px-4 py-3.5`}>
+            <IosIcon icon={InfoIcon} tint="orange" size={30} />
+            <div className="min-w-0">
+              <p className="text-[15px] font-semibold text-[var(--color-text)]">{tr("Yulduzcha qanday yig'iladi")}</p>
+              <p className="mt-0.5 text-[13px] leading-snug text-[#8e8e93]">
+                {tr("Har kelgan kuni uchun +5 (davomat), haftalik savol-javob va she'r yodlashdan max +50/hafta. Bundan tashqari tarbiyachi o'z guruhidagi bolaga xohlagancha yulduzcha bera oladi.")}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -127,41 +129,43 @@ export default function CoinChildrenPage({ params }: { params: Promise<{ slug: s
           ) : rows.length === 0 ? (
             <EmptyState icon={Star} title="Bu filialda faol bola yo'q" />
           ) : (
-            <div className={GROUP_BLOCK}>
-              {rows.map((child) => {
-                const color = child.balance > 0 ? IOS.orange : child.balance < 0 ? IOS.red : IOS.gray;
-                return (
-                  <ListRow
-                    key={child.childId}
-                    onClick={() => {
-                      setTarget(child);
-                      setView("history");
-                    }}
-                    avatar={
-                      <ChildPhoto
-                        child={{ id: child.childId, fullName: child.fullName, gender: child.gender, avatarUpdatedAt: child.avatarUpdatedAt }}
-                        size={44}
-                        fallback={initials(child.fullName)}
-                      />
-                    }
-                    title={tr(child.fullName)}
-                    subtitle={[
-                      child.groupName ? tr(child.groupName) : null,
-                      `${tr("Davomat:")} ${child.attendanceCoins}`,
-                      `${tr("Haftalik:")} ${child.weeklyAssessmentCoins}`,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                    meta={
-                      <Pill color={color} title={tr("{0} ta yulduzcha", child.balance)}>
-                        <Star className="mr-1 h-3.5 w-3.5" fill={color} stroke={color} />
-                        {child.balance}
-                      </Pill>
-                    }
-                    chevron
-                  />
-                );
-              })}
+            <div className="ios-snow">
+              <div className={GROUP_BLOCK}>
+                {rows.map((child) => {
+                  const color = child.balance > 0 ? IOS.orange : child.balance < 0 ? IOS.red : IOS.gray;
+                  return (
+                    <ListRow
+                      key={child.childId}
+                      onClick={() => {
+                        setTarget(child);
+                        setView("history");
+                      }}
+                      avatar={
+                        <ChildPhoto
+                          child={{ id: child.childId, fullName: child.fullName, gender: child.gender, avatarUpdatedAt: child.avatarUpdatedAt }}
+                          size={44}
+                          fallback={initials(child.fullName)}
+                        />
+                      }
+                      title={tr(child.fullName)}
+                      subtitle={[
+                        child.groupName ? tr(child.groupName) : null,
+                        `${tr("Davomat:")} ${child.attendanceCoins}`,
+                        `${tr("Haftalik:")} ${child.weeklyAssessmentCoins}`,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                      meta={
+                        <Pill color={color} title={tr("{0} ta yulduzcha", child.balance)}>
+                          <Star className="mr-1 h-3.5 w-3.5" fill={color} stroke={color} />
+                          {child.balance}
+                        </Pill>
+                      }
+                      chevron
+                    />
+                  );
+                })}
+              </div>
             </div>
           )}
         </Group>
@@ -169,25 +173,27 @@ export default function CoinChildrenPage({ params }: { params: Promise<{ slug: s
 
       {/* Filial tanlash (ko'p filial bo'lsa) */}
       <IosSheet open={branchPickerOpen} onClose={() => setBranchPickerOpen(false)} cancelLabel="Orqaga" title={tr("Filial")}>
-        <div className={GROUP_BLOCK}>
-          {branches.map((b) => (
-            <div key={b.id} className="group/row relative">
-              <button
-                type="button"
-                role="radio"
-                aria-checked={b.id === branchId}
-                onClick={() => {
-                  setBranchId(b.id);
-                  setBranchPickerOpen(false);
-                }}
-                className="flex min-h-[48px] w-full items-center gap-3 px-4 text-left transition-colors hover:bg-[#767680]/[0.05] active:bg-[#767680]/[0.1]"
-              >
-                <span className="min-w-0 flex-1 truncate py-3 text-[15px] text-[var(--color-text)]">{tr(b.name)}</span>
-                {b.id === branchId && <CheckIcon className="h-[18px] w-[18px] shrink-0 text-[var(--color-primary)]" strokeWidth={2.6} />}
-              </button>
-              <span className={ROW_SEPARATOR} aria-hidden="true" />
-            </div>
-          ))}
+        <div className="ios-snow">
+          <div className={GROUP_BLOCK}>
+            {branches.map((b) => (
+              <div key={b.id} className="group/row relative">
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={b.id === branchId}
+                  onClick={() => {
+                    setBranchId(b.id);
+                    setBranchPickerOpen(false);
+                  }}
+                  className="flex min-h-[48px] w-full items-center gap-3 px-4 text-left transition-colors hover:bg-[#767680]/[0.05] active:bg-[#767680]/[0.1]"
+                >
+                  <span className="min-w-0 flex-1 truncate py-3 text-[15px] text-[var(--color-text)]">{tr(b.name)}</span>
+                  {b.id === branchId && <CheckIcon className="h-[18px] w-[18px] shrink-0 text-[var(--color-primary)]" strokeWidth={2.6} />}
+                </button>
+                <span className={ROW_SEPARATOR} aria-hidden="true" />
+              </div>
+            ))}
+          </div>
         </div>
       </IosSheet>
 

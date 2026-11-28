@@ -358,10 +358,12 @@ export function ParentsPage({ slug }: { slug: string }) {
               />
             ) : (
               <>
-                <div className={GROUP_BLOCK}>
-                  {list.slice(0, limit).map((g) => (
-                    <GuardianRow key={g.id} g={g} href={`${base}/parents/${g.id}`} showBranch={canPickBranch && !pickedBranch} />
-                  ))}
+                <div className="ios-snow">
+                  <div className={GROUP_BLOCK}>
+                    {list.slice(0, limit).map((g) => (
+                      <GuardianRow key={g.id} g={g} href={`${base}/parents/${g.id}`} showBranch={canPickBranch && !pickedBranch} />
+                    ))}
+                  </div>
                 </div>
                 {list.length > limit && (
                   <div className="flex justify-center pt-3">

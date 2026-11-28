@@ -101,69 +101,71 @@ export function DiscountAssistant({
           const allOn = eligible.length > 0 && eligible.every((c) => selected.has(c.childId));
           const anyOn = f.children.some((c) => selected.has(c.childId));
           return (
-            <div key={f.key} className={GROUP_BLOCK}>
-              <div className="flex min-h-[48px] items-center gap-2 px-4 py-2.5">
-                <div className="min-w-0 flex-1">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <span className="truncate text-[15px] font-semibold text-[var(--color-text)]">{f.label}</span>
-                    {f.reason === "GUARDIAN" ? <Pill color={IOS.green}>{tr("ota-ona")}</Pill> : <Pill color={IOS.orange}>{tr("familiya")}</Pill>}
+            <div key={f.key} className="ios-snow">
+              <div className={GROUP_BLOCK}>
+                <div className="flex min-h-[48px] items-center gap-2 px-4 py-2.5">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="truncate text-[15px] font-semibold text-[var(--color-text)]">{f.label}</span>
+                      {f.reason === "GUARDIAN" ? <Pill color={IOS.green}>{tr("ota-ona")}</Pill> : <Pill color={IOS.orange}>{tr("familiya")}</Pill>}
+                    </div>
+                    {f.phone && <p className="truncate text-[12.5px] tabular-nums text-[#8e8e93]">+998 {f.phone}</p>}
                   </div>
-                  {f.phone && <p className="truncate text-[12.5px] tabular-nums text-[#8e8e93]">+998 {f.phone}</p>}
+                  {canWrite && (eligible.length > 0 || anyOn) && (
+                    <button
+                      type="button"
+                      onClick={() => toggleFamily(f)}
+                      className="h-9 shrink-0 rounded-full px-3 text-[14px] font-medium text-[var(--color-primary)] transition-opacity active:opacity-50"
+                    >
+                      {allOn || (eligible.length === 0 && anyOn) ? tr("Bekor") : tr("Hammasi")}
+                    </button>
+                  )}
                 </div>
-                {canWrite && (eligible.length > 0 || anyOn) && (
-                  <button
-                    type="button"
-                    onClick={() => toggleFamily(f)}
-                    className="h-9 shrink-0 rounded-full px-3 text-[14px] font-medium text-[var(--color-primary)] transition-opacity active:opacity-50"
-                  >
-                    {allOn || (eligible.length === 0 && anyOn) ? tr("Bekor") : tr("Hammasi")}
-                  </button>
-                )}
+                {f.children.map((c) => {
+                  const checked = selected.has(c.childId);
+                  const content = (
+                    <>
+                      {canWrite ? (
+                        <span
+                          className={clsx(
+                            "flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full transition-colors",
+                            checked ? "bg-[var(--color-primary)] text-white" : "ring-[1.5px] ring-inset ring-[#c7c7cc]",
+                          )}
+                          aria-hidden="true"
+                        >
+                          {checked && <Check className="h-4 w-4" strokeWidth={3} />}
+                        </span>
+                      ) : (
+                        <IosAvatar name={c.fullName} size={32} />
+                      )}
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[15px] text-[var(--color-text)]">{c.fullName}</span>
+                        <span className="block truncate text-[12.5px] text-[#8e8e93]">
+                          {[c.groupName ? tr(c.groupName) : tr("Guruhsiz"), `${groupDigits(c.net)} ${tr("so'm")}`].join(" · ")}
+                        </span>
+                      </span>
+                      {c.rule && c.discount > 0 && <Pill color={DISCOUNT_COLOR}>{appliedRuleLabel(c.rule, c.discount, tr)}</Pill>}
+                    </>
+                  );
+                  return (
+                    <div key={c.childId} className="group/row relative">
+                      {canWrite ? (
+                        <button
+                          type="button"
+                          onClick={() => toggle(c.childId)}
+                          aria-pressed={checked}
+                          className={clsx("flex min-h-[52px] w-full items-center gap-3 px-4 py-2 text-left", ROW_PRESS)}
+                        >
+                          {content}
+                        </button>
+                      ) : (
+                        <div className="flex min-h-[52px] items-center gap-3 px-4 py-2">{content}</div>
+                      )}
+                      <span className={ROW_SEPARATOR} style={{ left: canWrite ? 54 : 60 }} aria-hidden="true" />
+                    </div>
+                  );
+                })}
               </div>
-              {f.children.map((c) => {
-                const checked = selected.has(c.childId);
-                const content = (
-                  <>
-                    {canWrite ? (
-                      <span
-                        className={clsx(
-                          "flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full transition-colors",
-                          checked ? "bg-[var(--color-primary)] text-white" : "ring-[1.5px] ring-inset ring-[#c7c7cc]",
-                        )}
-                        aria-hidden="true"
-                      >
-                        {checked && <Check className="h-4 w-4" strokeWidth={3} />}
-                      </span>
-                    ) : (
-                      <IosAvatar name={c.fullName} size={32} />
-                    )}
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[15px] text-[var(--color-text)]">{c.fullName}</span>
-                      <span className="block truncate text-[12.5px] text-[#8e8e93]">
-                        {[c.groupName ? tr(c.groupName) : tr("Guruhsiz"), `${groupDigits(c.net)} ${tr("so'm")}`].join(" · ")}
-                      </span>
-                    </span>
-                    {c.rule && c.discount > 0 && <Pill color={DISCOUNT_COLOR}>{appliedRuleLabel(c.rule, c.discount, tr)}</Pill>}
-                  </>
-                );
-                return (
-                  <div key={c.childId} className="group/row relative">
-                    {canWrite ? (
-                      <button
-                        type="button"
-                        onClick={() => toggle(c.childId)}
-                        aria-pressed={checked}
-                        className={clsx("flex min-h-[52px] w-full items-center gap-3 px-4 py-2 text-left", ROW_PRESS)}
-                      >
-                        {content}
-                      </button>
-                    ) : (
-                      <div className="flex min-h-[52px] items-center gap-3 px-4 py-2">{content}</div>
-                    )}
-                    <span className={ROW_SEPARATOR} style={{ left: canWrite ? 54 : 60 }} aria-hidden="true" />
-                  </div>
-                );
-              })}
             </div>
           );
         })}
@@ -314,27 +316,29 @@ export function BulkDiscountSheet({
               </span>
             )}
           </div>
-          <div className={GROUP_BLOCK}>
-            {previews.map(({ row, discount }) => (
-              <div key={row.childId} className="group/row relative flex min-h-[52px] items-center gap-3 px-4 py-2">
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[15px] text-[var(--color-text)]">{row.fullName}</span>
-                  <span className="block truncate text-[12.5px] text-[#8e8e93]">
-                    {row.groupName ? tr(row.groupName) : tr("Guruhsiz")}
-                    {row.rule && row.discount > 0 ? ` · ${tr("hozir")} ${ruleLabel(row.rule, tr)}` : ""}
+          <div className="ios-snow">
+            <div className={GROUP_BLOCK}>
+              {previews.map(({ row, discount }) => (
+                <div key={row.childId} className="group/row relative flex min-h-[52px] items-center gap-3 px-4 py-2">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[15px] text-[var(--color-text)]">{row.fullName}</span>
+                    <span className="block truncate text-[12.5px] text-[#8e8e93]">
+                      {row.groupName ? tr(row.groupName) : tr("Guruhsiz")}
+                      {row.rule && row.discount > 0 ? ` · ${tr("hozir")} ${ruleLabel(row.rule, tr)}` : ""}
+                    </span>
                   </span>
-                </span>
-                <span className="flex shrink-0 flex-col items-end leading-tight">
-                  {value > 0 && row.gross > 0 && row.net !== row.gross - discount && (
-                    <span className="text-[12px] tabular-nums text-[#8e8e93] line-through">{groupDigits(row.net)}</span>
-                  )}
-                  <span className="text-[15px] font-semibold tabular-nums text-[var(--color-text)]">
-                    {row.gross > 0 ? groupDigits(value > 0 ? row.gross - discount : row.net) : "—"}
+                  <span className="flex shrink-0 flex-col items-end leading-tight">
+                    {value > 0 && row.gross > 0 && row.net !== row.gross - discount && (
+                      <span className="text-[12px] tabular-nums text-[#8e8e93] line-through">{groupDigits(row.net)}</span>
+                    )}
+                    <span className="text-[15px] font-semibold tabular-nums text-[var(--color-text)]">
+                      {row.gross > 0 ? groupDigits(value > 0 ? row.gross - discount : row.net) : "—"}
+                    </span>
                   </span>
-                </span>
-                <span className={ROW_SEPARATOR} aria-hidden="true" />
-              </div>
-            ))}
+                  <span className={ROW_SEPARATOR} aria-hidden="true" />
+                </div>
+              ))}
+            </div>
           </div>
         </section>
         {error && <p className="px-4 text-[13px] text-[#ff3b30]">{error}</p>}

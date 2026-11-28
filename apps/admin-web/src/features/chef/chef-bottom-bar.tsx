@@ -97,7 +97,9 @@ export function ChefBottomBar({ slug }: { slug: string }) {
         className="fixed inset-x-0 bottom-0 z-40 px-3 md:hidden"
         style={{ paddingBottom: "max(10px, env(safe-area-inset-bottom))" }}
       >
-        <div className="mx-auto flex max-w-[480px] items-end gap-1 rounded-[26px] border border-black/[0.06] bg-white/90 px-2 pb-2 pt-2 shadow-[0_10px_30px_-10px_rgba(16,24,40,0.25)] backdrop-blur-xl">
+        {/* winter-glass — qishda chetlarida qirov naqshi (winter.css) */}
+        <div className="winter-glass mx-auto flex max-w-[480px] items-end gap-1 rounded-[26px] border border-black/[0.06] bg-white/90 px-2 pb-2 pt-2 shadow-[0_10px_30px_-10px_rgba(16,24,40,0.25)] backdrop-blur-xl">
+          <span className="winter-frost" aria-hidden="true" />
           {left.map(renderTab)}
           {cameraOn && (
           <div className="flex flex-1 justify-center">

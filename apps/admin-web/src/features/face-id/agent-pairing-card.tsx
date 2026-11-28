@@ -258,10 +258,12 @@ export function AgentPairingCard({ branchId, canWrite }: { branchId: string | nu
         </SheetSection>
         <section>
           <h3 className="px-4 pb-1.5 text-[13px] uppercase tracking-wide text-[#8e8e93]">{tr("2. Kod")}</h3>
-          <div className={`${GROUP_BLOCK} px-4 py-5 text-center`}>
-            <div className="select-all font-mono text-[30px] font-bold tracking-[0.18em] text-[var(--color-text)]">{pairing?.code}</div>
-            <div className="mt-1 text-[13px] text-[#8e8e93]">
-              {tr("Bir marta ishlaydi,")} {pairing ? formatDateTime(pairing.expiresAt) : ""} {tr("gacha amal qiladi")}
+          <div className="ios-snow">
+            <div className={`${GROUP_BLOCK} px-4 py-5 text-center`}>
+              <div className="select-all font-mono text-[30px] font-bold tracking-[0.18em] text-[var(--color-text)]">{pairing?.code}</div>
+              <div className="mt-1 text-[13px] text-[#8e8e93]">
+                {tr("Bir marta ishlaydi,")} {pairing ? formatDateTime(pairing.expiresAt) : ""} {tr("gacha amal qiladi")}
+              </div>
             </div>
           </div>
           <p className="px-4 pt-2 text-[12.5px] leading-snug text-[#8e8e93]">

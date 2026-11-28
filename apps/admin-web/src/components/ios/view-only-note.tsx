@@ -22,11 +22,13 @@ export function ViewOnlyNote({ role }: { role?: TenantUserRole }) {
           ? "Oshpaz faqat oshxona bo'limlarida ishlaydi."
           : "Yozish va qo'shish filial darajasidagi foydalanuvchilar uchun.";
   return (
-    <div className={`${GROUP_BLOCK} flex items-start gap-3 px-4 py-3`}>
-      <IosIcon icon={Info} tint="blue" size={30} />
-      <div className="min-w-0 flex-1">
-        <p className="text-[15px] font-semibold text-[var(--color-text)]">{tr("Faqat ko'rish rejimi")}</p>
-        <p className="text-[13px] leading-snug text-[#8e8e93]">{tr(message)}</p>
+    <div className="ios-snow">
+      <div className={`${GROUP_BLOCK} flex items-start gap-3 px-4 py-3`}>
+        <IosIcon icon={Info} tint="blue" size={30} />
+        <div className="min-w-0 flex-1">
+          <p className="text-[15px] font-semibold text-[var(--color-text)]">{tr("Faqat ko'rish rejimi")}</p>
+          <p className="text-[13px] leading-snug text-[#8e8e93]">{tr(message)}</p>
+        </div>
       </div>
     </div>
   );

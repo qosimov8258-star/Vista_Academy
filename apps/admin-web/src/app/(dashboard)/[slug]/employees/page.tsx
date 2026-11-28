@@ -288,35 +288,37 @@ export default function EmployeesPage({ params }: { params: Promise<{ slug: stri
                   }
                 />
               ) : (
-                <div className={`${GROUP_BLOCK} grid grid-cols-3 gap-1 p-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8`}>
-                  {visibleEmployees.map((employee) => {
-                    const payrollEntry = payrollByEmployee.get(employee.id);
-                    return (
-                      <button
-                        key={employee.id}
-                        type="button"
-                        onClick={() => (isFinance ? router.push(employeeHref(employee.id)) : setDetailId(employee.id))}
-                        className={`flex min-w-0 flex-col items-center gap-1.5 rounded-[14px] px-1.5 py-2.5 text-center ${ROW_PRESS}`}
-                      >
-                        <EmployeePhoto employee={employee} size={64} shape="circle" fallback={initials(employee.fullName)} className="text-[20px]" />
-                        <span className="w-full min-w-0">
-                          <span className="block truncate text-[13.5px] font-medium text-[var(--color-text)]">{tr(employee.fullName)}</span>
-                          <span className="block truncate text-[12px] text-[#8e8e93]">{tr(formatPositionLabel(employee.position, employee.subjects))}</span>
-                        </span>
-                        {activeTab === PAID_TAB ? (
-                          <Pill color={IOS.green}>{formatMoney(payrollEntry?.totalAmount ?? 0)}</Pill>
-                        ) : activeTab === UNPAID_TAB ? (
-                          <Pill color={IOS.red}>{tr("To'lanmagan")}</Pill>
-                        ) : activeTab === BONUS_TAB ? (
-                          <Pill color={IOS.blue}>{formatMoney(payrollEntry?.bonusAmount ?? 0)}</Pill>
-                        ) : !employee.isActive ? (
-                          <Pill color={IOS.orange}>{employee.archivedAt ? formatDate(employee.archivedAt) : tr("Arxivda")}</Pill>
-                        ) : (
-                          <Pill color={IOS.green}>{tr("Faol")}</Pill>
-                        )}
-                      </button>
-                    );
-                  })}
+                <div className="ios-snow">
+                  <div className={`${GROUP_BLOCK} grid grid-cols-3 gap-1 p-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8`}>
+                    {visibleEmployees.map((employee) => {
+                      const payrollEntry = payrollByEmployee.get(employee.id);
+                      return (
+                        <button
+                          key={employee.id}
+                          type="button"
+                          onClick={() => (isFinance ? router.push(employeeHref(employee.id)) : setDetailId(employee.id))}
+                          className={`flex min-w-0 flex-col items-center gap-1.5 rounded-[14px] px-1.5 py-2.5 text-center ${ROW_PRESS}`}
+                        >
+                          <EmployeePhoto employee={employee} size={64} shape="circle" fallback={initials(employee.fullName)} className="text-[20px]" />
+                          <span className="w-full min-w-0">
+                            <span className="block truncate text-[13.5px] font-medium text-[var(--color-text)]">{tr(employee.fullName)}</span>
+                            <span className="block truncate text-[12px] text-[#8e8e93]">{tr(formatPositionLabel(employee.position, employee.subjects))}</span>
+                          </span>
+                          {activeTab === PAID_TAB ? (
+                            <Pill color={IOS.green}>{formatMoney(payrollEntry?.totalAmount ?? 0)}</Pill>
+                          ) : activeTab === UNPAID_TAB ? (
+                            <Pill color={IOS.red}>{tr("To'lanmagan")}</Pill>
+                          ) : activeTab === BONUS_TAB ? (
+                            <Pill color={IOS.blue}>{formatMoney(payrollEntry?.bonusAmount ?? 0)}</Pill>
+                          ) : !employee.isActive ? (
+                            <Pill color={IOS.orange}>{employee.archivedAt ? formatDate(employee.archivedAt) : tr("Arxivda")}</Pill>
+                          ) : (
+                            <Pill color={IOS.green}>{tr("Faol")}</Pill>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </IosGroup>

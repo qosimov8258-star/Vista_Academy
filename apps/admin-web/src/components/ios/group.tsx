@@ -46,7 +46,15 @@ export function Group({
           {action && <div className="pb-2 text-[13.5px] font-medium">{action}</div>}
         </div>
       )}
-      {bare ? children : <div className={GROUP_BLOCK}>{children}</div>}
+      {bare ? (
+        children
+      ) : (
+        // Tashqi qobiq — qishda blok ustidagi qor qatlami uchun (blokning o'zi
+        // `overflow-hidden`, qor uning ustidan chiqib turishi kerak)
+        <div className="ios-snow">
+          <div className={GROUP_BLOCK}>{children}</div>
+        </div>
+      )}
       {footer && <p className="px-4 pt-2 text-[12.5px] leading-snug text-[#8e8e93]">{footer}</p>}
     </section>
   );

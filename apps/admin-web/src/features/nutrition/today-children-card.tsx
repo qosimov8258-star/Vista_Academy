@@ -82,27 +82,29 @@ export function TodayChildrenCard({ slug, branchId, today }: { slug: string; bra
         ) : query.isError ? (
           <ErrorState message={(query.error as Error).message} onRetry={() => query.refetch()} retrying={query.isFetching} />
         ) : d && d.groups.length ? (
-          <div className={GROUP_BLOCK}>
-            {d.groups.map((g) => {
-              const unmarked = g.notMarked === g.total && g.total > 0;
-              return (
-                <Row
-                  key={g.groupId ?? "none"}
-                  leading={<IosIcon icon={UsersRound} tint="orange" size={30} />}
-                  title={tr(g.name)}
-                  subtitle={g.absent + g.sick > 0 ? tr("kelmagan {0} · kasal {1}", g.absent, g.sick) : undefined}
-                  value={
-                    unmarked ? (
-                      <Pill color={IOS.gray}>{tr("davomat qilinmagan")}</Pill>
-                    ) : (
-                      <span className="text-[15px] tabular-nums text-[#8e8e93]">
-                        <b className="text-[17px] text-[var(--color-text)]">{g.present + g.late}</b> / {g.total}
-                      </span>
-                    )
-                  }
-                />
-              );
-            })}
+          <div className="ios-snow">
+            <div className={GROUP_BLOCK}>
+              {d.groups.map((g) => {
+                const unmarked = g.notMarked === g.total && g.total > 0;
+                return (
+                  <Row
+                    key={g.groupId ?? "none"}
+                    leading={<IosIcon icon={UsersRound} tint="orange" size={30} />}
+                    title={tr(g.name)}
+                    subtitle={g.absent + g.sick > 0 ? tr("kelmagan {0} · kasal {1}", g.absent, g.sick) : undefined}
+                    value={
+                      unmarked ? (
+                        <Pill color={IOS.gray}>{tr("davomat qilinmagan")}</Pill>
+                      ) : (
+                        <span className="text-[15px] tabular-nums text-[#8e8e93]">
+                          <b className="text-[17px] text-[var(--color-text)]">{g.present + g.late}</b> / {g.total}
+                        </span>
+                      )
+                    }
+                  />
+                );
+              })}
+            </div>
           </div>
         ) : null}
       </Group>

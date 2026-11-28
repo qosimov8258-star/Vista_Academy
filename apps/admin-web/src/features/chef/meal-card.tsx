@@ -71,7 +71,8 @@ export function MealCard({
   const carried = !!carriedLabel && (textCarried || photosCarried);
 
   return (
-    <article className="rounded-[22px] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)]">
+    // ios-snow — qishda karta ustida qor qatlami (boshqa paytda hech narsa qilmaydi)
+    <article className="ios-snow rounded-[22px] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)]">
       <header className="flex items-center gap-3">
         <span className={clsx("flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl", look.tint, look.ink)}>
           <look.Icon className="h-6 w-6" />

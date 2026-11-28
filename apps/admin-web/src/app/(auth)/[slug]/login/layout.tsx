@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import { tenantMetadata } from "@/lib/tenant-metadata";
+// Qishki bezak (qor, qor qatlami, qor uyumi) — faqat qishda ko'rinadi
+import "@/components/winter/winter.css";
 
 // Kirish sahifasining o'z shrifti — Poppins. Faqat shu sahifaga yuklanadi;
 // panelning qolgan qismi tizim shriftida. Poppins'da kirill yo'q — rus

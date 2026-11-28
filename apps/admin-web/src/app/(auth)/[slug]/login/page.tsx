@@ -1,7 +1,9 @@
 "use client";
 
-import { Suspense, use } from "react";
+import { Suspense, use, useEffect, useState } from "react";
 import clsx from "clsx";
+import { isWinterSeason } from "@/lib/winter";
+import { Snowfall } from "@/components/winter/snowfall";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
@@ -22,6 +24,9 @@ import styles from "./login.module.css";
  * Formaning tepasidagi belgi bog'cha nomidan olinadi: tizimda bir necha
  * bog'cha bor, shuning uchun bu yerda bog'cha nomi qattiq yozilmaydi.
  */
+/** Qor qo'nadigan joylar: «Kirish» tugmasi va logo belgisi */
+const LOGIN_SNOW_SURFACES = '[data-season="winter"] .winter-cap-pill, [data-season="winter"] .winter-login-logo';
+
 export default function LoginPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const t = useTranslations("login");
@@ -34,9 +39,20 @@ export default function LoginPage({ params }: { params: Promise<{ slug: string }
   });
   // Yuklanayotganda null (joy egallovchi), topilmasa — slug
   const orgName = orgQuery.isPending ? null : (orgQuery.data?.name ?? slug);
+  // Qishda (20-noyabr — fevral): sahifa o'z holida, ustidan qor yog'adi,
+  // logo, karta va «Kirish» tugmasi ustida qor, pastda qor uyumi (winter.css)
+  const [winter, setWinter] = useState(false);
+  useEffect(() => {
+    setWinter(isWinterSeason());
+  }, []);
 
   return (
-    <div className={clsx(styles.page, "relative min-h-dvh lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]")}>
+    <div
+      // winter-login-page — qishda oq fon o'rniga ayozli tong ranglari (winter.css)
+      className={clsx(styles.page, "winter-login-page relative min-h-dvh lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]")}
+      data-season={winter ? "winter" : undefined}
+    >
+      {winter && <Snowfall dark={false} className="winter-snowfall" surfaces={LOGIN_SNOW_SURFACES} />}
       <LoginHero orgName={orgName} />
 
       <div className="absolute right-5 top-5 z-20 lg:right-8 lg:top-7">
@@ -51,7 +67,8 @@ export default function LoginPage({ params }: { params: Promise<{ slug: string }
           <div
             className={clsx(
               styles.rise,
-              "w-full max-w-[400px] rounded-[30px] bg-white/80 px-4 py-6 shadow-[0_24px_60px_-28px_rgba(120,40,40,0.35)] backdrop-blur-2xl sm:px-7 lg:rounded-none lg:bg-transparent lg:p-0 lg:shadow-none lg:backdrop-blur-none",
+              // winter-login-card — qishda telefondagi karta ustida qor
+              "winter-login-card w-full max-w-[400px] rounded-[30px] bg-white/80 px-4 py-6 shadow-[0_24px_60px_-28px_rgba(120,40,40,0.35)] backdrop-blur-2xl sm:px-7 lg:rounded-none lg:bg-transparent lg:p-0 lg:shadow-none lg:backdrop-blur-none",
             )}
           >
             <OrgMark name={orgName} slug={slug} logoUpdatedAt={orgQuery.data?.logoUpdatedAt} />
@@ -61,7 +78,8 @@ export default function LoginPage({ params }: { params: Promise<{ slug: string }
 
             <div className="mt-7 sm:mt-9">
               <Suspense fallback={null}>
-                <LoginForm slug={slug} inputClassName={styles.input} submitClassName={styles.submit} />
+                {/* winter-cap-pill — qishda «Kirish» tugmasi ustida qor */}
+                <LoginForm slug={slug} inputClassName={styles.input} submitClassName={clsx(styles.submit, "winter-cap-pill")} />
               </Suspense>
             </div>
 

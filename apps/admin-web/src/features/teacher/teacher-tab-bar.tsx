@@ -104,7 +104,9 @@ export function TeacherTabBar({ slug }: { slug: string }) {
         className="fixed inset-x-0 bottom-0 z-40 px-4 md:hidden"
         style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom))" }}
       >
-        <div className={clsx(styles.tabBar, "mx-auto flex max-w-[440px] items-stretch rounded-full p-1")}>
+        {/* winter-glass / ios-snow-pill — qishda qirov naqshi va ustida qor (winter.css) */}
+        <div className={clsx(styles.tabBar, "winter-glass ios-snow-pill mx-auto flex max-w-[440px] items-stretch rounded-full p-1")}>
+          <span className="winter-frost" aria-hidden="true" />
           {tabs.map((tab) => {
             const active = !moreOpen && isActive(tab);
             return (
