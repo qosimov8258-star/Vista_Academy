@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Patch, UseGuards } from "@nestjs/common";
+import { Controller, Get, Param, Patch, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { Public } from "../../common/decorators/public.decorator";
 import { TenantJwtAuthGuard } from "../iam/guards/tenant-jwt-auth.guard";
@@ -19,6 +19,12 @@ export class EmployeeNotificationsController {
   @Get()
   findMine(@CurrentTenantUser() user: TenantAuthenticatedUser) {
     return this.employeeNotificationsService.findMine(toTenantScope(user));
+  }
+
+  /** Admin qo'ng'iroqchasi: so'nggi 48 soatdagi ota-ona eslatmalari va «yo'lga chiqdim» xabarlari */
+  @Get("parent-messages")
+  parentMessages(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query("branchId") branchId?: string) {
+    return this.employeeNotificationsService.parentMessages(toTenantScope(user), branchId || undefined);
   }
 
   @Patch("read-all")

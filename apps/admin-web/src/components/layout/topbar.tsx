@@ -15,6 +15,7 @@ import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { changeStaffLocale } from "@/lib/staff-locale";
 import { useTr } from "@/i18n/tr";
 import { useEmployeeInboxUnread } from "@/features/broadcasts/use-inbox";
+import { AdminBell, isInboxAdmin } from "@/features/admin-inbox/admin-bell";
 
 /**
  * Yuqori panel faqat kontekstni ko'rsatadi — qaysi tashkilotdasiz.
@@ -126,6 +127,8 @@ export function Topbar({ slug }: { slug: string }) {
       <div className={teacher ? "hidden md:ml-auto md:block" : "md:ml-auto"}>
         <LanguageSwitcher change={changeStaffLocale} />
       </div>
+      {/* Super Admin va filial admini: o'ng burchakda qo'ng'iroqcha — yangi xabar bo'lsa qizil nuqta */}
+      {user && isInboxAdmin(user.role) && <AdminBell slug={slug} />}
     </header>
   );
 }
