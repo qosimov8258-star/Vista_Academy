@@ -7,6 +7,8 @@ import { ParentLocaleSync } from "./locale-sync";
 import { ParentFeatureGate } from "./feature-gate";
 import { panelMetadata } from "@/lib/tenant-metadata";
 import type { Metadata } from "next";
+// Qishki umumiy uslublar (qor qatlami, qirov, bosh karta manzarasi)
+import "@/components/winter/winter.css";
 
 /**
  * Kabinet qobig'i. Fon va ko'rinish (yorug'/qorong'i) CabinetThemeProvider'da

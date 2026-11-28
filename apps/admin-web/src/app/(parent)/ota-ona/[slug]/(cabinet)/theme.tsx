@@ -6,6 +6,8 @@ import { parentApi } from "@/lib/parent-api";
 import type { ParentAccount, ParentChild } from "@/lib/types";
 import type { SkyState } from "@/lib/sky";
 import { useSky } from "./use-sky";
+import { isWinterSeason } from "@/lib/winter";
+import { Snowfall } from "@/components/winter/snowfall";
 import styles from "../parent.module.css";
 
 /**
@@ -41,11 +43,16 @@ interface CabinetTheme {
   dark: boolean;
   /** Osmon holati — karta va sozlamalar uchun */
   sky: SkyState | null;
+  /** Qishki bezak davri (20-noyabr — fevral oxiri): qor, qishki fon va ranglar */
+  winter: boolean;
 }
 
-const ThemeContext = createContext<CabinetTheme>({ mode: "yorug", setMode: () => undefined, dark: false, sky: null });
+const ThemeContext = createContext<CabinetTheme>({ mode: "yorug", setMode: () => undefined, dark: false, sky: null, winter: false });
 
 export const useCabinetTheme = () => useContext(ThemeContext);
+
+/** Qor qo'nadigan joylar — qor qatlamli kartalar va plitkalar */
+const PARENT_SNOW_SURFACES = '[data-season="winter"] [class*="snowCap"]';
 
 function readMode(): ThemeMode {
   try {
@@ -90,11 +97,14 @@ export function CabinetThemeProvider({ slug, children }: { slug: string; childre
   const [mode, setModeState] = useState<ThemeMode>("yorug");
   const [mounted, setMounted] = useState(false);
   const [cachedDark, setCachedDark] = useState(false);
+  const [winter, setWinter] = useState(false);
   const serverRendered = useIsServerRendered();
 
   useEffect(() => {
     setModeState(readMode());
     setCachedDark(readCachedDark());
+    // Sana qurilmada aniqlanadi — server bilan nomuvofiqlik bo'lmasin
+    setWinter(isWinterSeason());
     setMounted(true);
   }, []);
 
@@ -127,17 +137,20 @@ export function CabinetThemeProvider({ slug, children }: { slug: string; childre
     }
   }, []);
 
-  const value = useMemo<CabinetTheme>(() => ({ mode, setMode, dark, sky }), [mode, setMode, dark, sky]);
+  const value = useMemo<CabinetTheme>(() => ({ mode, setMode, dark, sky, winter }), [mode, setMode, dark, sky, winter]);
 
   return (
     <ThemeContext.Provider value={value}>
       <div
         className={`${styles.shell} min-h-[100dvh]`}
         data-theme={mounted ? (dark ? "dark" : "light") : undefined}
+        data-season={winter ? "winter" : undefined}
         suppressHydrationWarning
       >
         {serverRendered && <script dangerouslySetInnerHTML={{ __html: BOOT_SCRIPT }} />}
         {children}
+        {/* Qishda: qor yog'adi (bosilmaydi, menyu va oynalardan pastda) */}
+        {winter && <Snowfall dark={dark} className={styles.snowfall} surfaces={PARENT_SNOW_SURFACES} />}
       </div>
     </ThemeContext.Provider>
   );

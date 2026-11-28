@@ -765,3 +765,226 @@
     opacity: 0.5;
   }
 }
+
+/* ==========================================================================
+ * QISH — 20-noyabrdan fevral oxirigacha (`.shell[data-season="winter"]`,
+ * qarang: winter.ts, theme.tsx). Nafis, kattalarga mos qishki muhit:
+ *  - fon: sovuq osmon yog'dusi (qorong'ida — yulduzli tungi osmon);
+ *  - qor yog'ishi (snowfall.tsx) — kartalar ustidan, menyu shishasi ortida;
+ *  - kartalar, plitkalar, menyu ustida yumshoq qor qatlami;
+ *  - ekran tagida past qor uyumlari — suzuvchi menyu ular ustida turadi.
+ * Qish tugagach atribut olib tashlanadi va hammasi o'z holiga qaytadi.
+ * ======================================================================== */
+
+.shell[data-season="winter"] {
+  /* Fon gradiyentining eng pastki rangi — menyu tumani shu rangga eriydi */
+  --p-bg: #cfdef5;
+  /* Qor qatlami, qirov va qor uyumi rasmlari — umumiy winter.css da */
+  position: relative;
+  isolation: isolate;
+  background: var(--p-bg);
+}
+
+/* «Tong shafag'i»: qishki tong osmoni — tepada shaftoli va pushti, pastga
+   qarab lavanda orqali muzdek ko'kka o'tadi. Oq qor shu fonda yaqqol ko'rinadi. */
+.shell[data-season="winter"]::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(180deg, #ffd6c2 0%, #f6cfe0 32%, #d9d3f4 64%, #cfdef5 100%);
+}
+
+/* Ekran tagidagi qor uyumlari — menyu ostida, kontent menyu tumanida yo'qoladi */
+.shell[data-season="winter"]::after {
+  content: "";
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 39;
+  height: calc(env(safe-area-inset-bottom) + 58px);
+  pointer-events: none;
+  background: var(--snow-ground) bottom / 100% 100% no-repeat;
+}
+
+/* Qor yog'adigan qatlam: kartalar ustida, menyu tumani va shishasi ostida */
+.snowfall {
+  position: fixed;
+  inset: 0;
+  z-index: 38;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.6s ease;
+}
+.snowfall[data-on="1"] {
+  opacity: 1;
+}
+
+/* --- Qor qatlami (karta, plitka, menyu ustida) -------------------------- */
+/* «Yana» oynasi o'zi `absolute` — uning joylashuvini buzmaslik kerak */
+.shell[data-season="winter"] .snowCap:not(.moreSheet),
+.shell[data-season="winter"] .snowCapSm,
+.shell[data-season="winter"] .snowCapPill {
+  position: relative;
+}
+.shell[data-season="winter"] .snowCap::after,
+.shell[data-season="winter"] .snowCapSm::after,
+.shell[data-season="winter"] .snowCapPill::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  background: var(--snow-cap) repeat-x;
+  filter: var(--snow-cap-shadow);
+}
+/* Katta karta: chetlari burchak egriligi bo'ylab ingichkalashadi */
+.shell[data-season="winter"] .snowCap::after {
+  left: 12px;
+  right: 12px;
+  top: -7px;
+  height: 14px;
+  background-size: 60px 14px;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 22px, #000 calc(100% - 22px), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 22px, #000 calc(100% - 22px), transparent 100%);
+}
+/* Kichik plitka (ikonka) ustidagi qor */
+.shell[data-season="winter"] .snowCapSm {
+  display: inline-flex;
+}
+.shell[data-season="winter"] .snowCapSm::after {
+  left: 2px;
+  right: 2px;
+  top: -6px;
+  height: 13px;
+  background-size: 31px 13px;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 6px, #000 calc(100% - 6px), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 6px, #000 calc(100% - 6px), transparent 100%);
+}
+/* Dumaloq uchli panel (pastki menyu) */
+.shell[data-season="winter"] .snowCapPill::after {
+  left: 26px;
+  right: 26px;
+  top: -7px;
+  height: 14px;
+  background-size: 60px 14px;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 26px, #000 calc(100% - 26px), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 26px, #000 calc(100% - 26px), transparent 100%);
+}
+
+/* «Yana» oynasi qatorlari: yengil muzdek tus — har qator qishki */
+.shell[data-season="winter"] .winterRow {
+  background-image: linear-gradient(90deg, rgba(214, 232, 252, 0.55), rgba(255, 255, 255, 0) 78%);
+}
+
+/* Bosh kartadagi katta qor parchasi — juda sekin aylanadi */
+@keyframes pSlowSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.slowSpin {
+  animation: pSlowSpin 90s linear infinite;
+}
+/* Bosh kartadagi mayda yulduzchalar — sekin miltillaydi */
+@keyframes pTwinkle {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+.twinkle {
+  animation: pTwinkle 3.6s ease-in-out infinite;
+}
+
+/* --- Qorong'i rejimdagi qish: yulduzli tungi osmon ---------------------- */
+.shell[data-theme="dark"][data-season="winter"] {
+  --p-bg: #050b16;
+  --snow-cap: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 14'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23f1f5fb'/%3E%3Cstop offset='1' stop-color='%23c3d1e6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath fill='url(%23g)' d='M0 5C5 1.5 11 1.5 15 4C19 .5 27 0 31 3.5C36 1 44 1.5 47 4.2C51 2.5 57 2.8 60 5L60 10.3C56 10.6 53 10.2 51 10.5C50.5 12.8 47.5 12.8 47 10.6C39 10.9 29 10.2 21 10.6C20.5 13.2 17.5 13.2 17 10.6C11 10.9 5 10.2 0 10.3Z'/%3E%3C/svg%3E");
+  --snow-cap-shadow: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.45));
+  --snow-ground: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 90' preserveAspectRatio='none'%3E%3Cpath fill='%23182a47' d='M0 38C55 20 118 26 168 36C228 48 292 16 400 30L400 90L0 90Z'/%3E%3Cpath fill='%238fa4c4' d='M0 58C70 42 132 50 200 59C268 68 332 44 400 54L400 90L0 90Z'/%3E%3Cpath fill='none' stroke='%23d6e2f3' stroke-opacity='.5' stroke-width='1' d='M0 58C70 42 132 50 200 59C268 68 332 44 400 54'/%3E%3C/svg%3E");
+}
+.shell[data-theme="dark"][data-season="winter"]::before {
+  background:
+    radial-gradient(1.3px 1.3px at 12% 14%, rgba(255, 255, 255, 0.85), transparent 70%),
+    radial-gradient(1px 1px at 28% 6%, rgba(255, 255, 255, 0.7), transparent 70%),
+    radial-gradient(1.4px 1.4px at 46% 19%, rgba(255, 255, 255, 0.8), transparent 70%),
+    radial-gradient(1px 1px at 63% 9%, rgba(255, 255, 255, 0.65), transparent 70%),
+    radial-gradient(1.2px 1.2px at 78% 24%, rgba(255, 255, 255, 0.75), transparent 70%),
+    radial-gradient(1px 1px at 91% 12%, rgba(255, 255, 255, 0.7), transparent 70%),
+    radial-gradient(1px 1px at 36% 31%, rgba(255, 255, 255, 0.5), transparent 70%),
+    radial-gradient(1px 1px at 84% 36%, rgba(255, 255, 255, 0.45), transparent 70%),
+    radial-gradient(60% 38% at 12% -6%, rgba(66, 116, 204, 0.38), transparent 72%),
+    radial-gradient(52% 34% at 104% -2%, rgba(122, 92, 214, 0.26), transparent 70%),
+    linear-gradient(180deg, #0b1833 0%, #071021 46%, #04080f 100%);
+}
+.shell[data-theme="dark"][data-season="winter"] .winterRow {
+  background-image: linear-gradient(90deg, rgba(120, 160, 230, 0.16), rgba(255, 255, 255, 0) 78%);
+}
+.shell[data-theme="dark"][data-season="winter"] {
+  --frost-color: rgba(214, 232, 255, 0.34);
+  --frost-shine: rgba(255, 255, 255, 0.95);
+}
+
+/* --- Muzlagan shisha: panel va «Yana» oynasi chetlarida qirov ----------- */
+.frost {
+  display: none;
+}
+.shell[data-season="winter"] .frost {
+  display: block;
+  position: absolute;
+  inset: 0;
+  /* Shisha ichida, mazmun ostida (shisha `isolation: isolate`) */
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  /* Rangi — qirov chiziqlarining o'zi (niqob); ustidan yaltiroq o'tadi */
+  background: linear-gradient(
+    110deg,
+    var(--frost-color) 0%,
+    var(--frost-color) 42%,
+    var(--frost-shine) 50%,
+    var(--frost-color) 58%,
+    var(--frost-color) 100%
+  );
+  background-size: 320% 100%;
+  background-position: 100% 0;
+  -webkit-mask:
+    var(--frost-left) left bottom / auto 125% no-repeat,
+    var(--frost-right) right bottom / auto 125% no-repeat;
+  mask:
+    var(--frost-left) left bottom / auto 125% no-repeat,
+    var(--frost-right) right bottom / auto 125% no-repeat;
+}
+/* Bosilganda qirov ustidan yorug' yaltirab o'tadi */
+@keyframes pFrostShine {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+.shell[data-season="winter"] .glass:active .frost {
+  animation: pFrostShine 0.9s ease-out;
+}
+/* «Yana» oynasi ochilganda bir marta yaltiraydi */
+.shell[data-season="winter"] .frostIntro {
+  /* Baland oynada naqsh faqat pastki burchaklarda, qat'iy o'lchamda */
+  -webkit-mask-size: auto 110px, auto 110px;
+  mask-size: auto 110px, auto 110px;
+  animation: pFrostShine 1.4s ease-out 0.2s both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slowSpin,
+  .twinkle,
+  .shell[data-season="winter"] .frostIntro,
+  .shell[data-season="winter"] .glass:active .frost {
+    animation: none;
+  }
+}
