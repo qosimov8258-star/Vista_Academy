@@ -3962,5 +3962,8 @@
  "Kamida bitta rasm tanlang": "Выберите хотя бы одно фото",
  "Ko'pi bilan 5 ta rasm yuklash mumkin": "Можно загрузить не больше 5 фото",
  "Ko'pi bilan 5 ta rasm": "Не больше 5 фото",
- "Matn 500 belgidan oshmasin": "Текст — не больше 500 символов"
+ "Matn 500 belgidan oshmasin": "Текст — не больше 500 символов",
+ "Hali qo'ng'iroq qilinganlar yo'q": "Пока никому не звонили",
+ "«Qo'ng'iroqlar»da «Qo'ng'iroq qildim» bosilganlar shu yerda chiqadi": "Здесь появятся звонки, отмеченные «Позвонил(а)» в разделе «Звонки»",
+ "Oxirgi 30 kunda javob olingan qo'ng'iroqlar": "Звонки с ответом за последние 30 дней"
 }

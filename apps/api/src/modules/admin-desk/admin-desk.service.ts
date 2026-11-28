@@ -122,7 +122,7 @@ export class AdminDeskService {
         select: {
           id: true,
           guardianId: true,
-          child: { select: { fullName: true } },
+          child: { select: { id: true, fullName: true } },
           guardian: { select: { fullName: true, phone: true } },
         },
       }),
@@ -183,6 +183,7 @@ export class AdminDeskService {
         .map((r) => ({
           kind: "DEBT" as const,
           subjectId: r.childId,
+          childId: r.childId as string | null,
           title: r.childName,
           subtitle: `Muddati o'tgan qarz: ${new Intl.NumberFormat("uz-UZ", { maximumFractionDigits: 0 }).format(r.overdue)} UZS · ${Math.round((day.getTime() - toDateOnly(r.oldestDueDate!.slice(0, 10)).getTime()) / DAY_MS)} kun o'tdi`,
           contactName: r.guardianName,
@@ -197,6 +198,7 @@ export class AdminDeskService {
         return {
           kind: "ABSENT" as const,
           subjectId: a.childId,
+          childId: a.childId as string | null,
           title: a.child.fullName,
           subtitle: `Bugun kelmadi${a.child.group ? ` · ${a.child.group.name}` : ""}${a.note ? ` · ${a.note}` : ""}`,
           contactName: g?.guardian.fullName ?? null,
@@ -213,6 +215,8 @@ export class AdminDeskService {
         return {
           kind: "LEAD" as const,
           subjectId: l.id,
+          // Ariza — bola hali bog'chada yo'q, surati ham yo'q
+          childId: null as string | null,
           // Saytdan kelgan arizada bola ismi so'ralmaydi — ota-ona ismi ko'rsatiladi
           title: l.childFullName || l.parentName,
           subtitle: reapplied
@@ -235,6 +239,7 @@ export class AdminDeskService {
           return {
             kind: "FAKE_RECEIPT" as const,
             subjectId: r.guardianId,
+            childId: r.child.id as string | null,
             title: r.child.fullName,
             subtitle: `${count}-marta soxta to'lov cheki yubordi`,
             contactName: r.guardian.fullName,
@@ -245,53 +250,145 @@ export class AdminDeskService {
           };
         }),
     ];
-    return { date, items, open: items.filter((i) => !i.done).length };
+    // Bola surati (Face ID uchun qo'yilgani) — operator kimning bolasi haqida gaplashayotganini tanisin
+    const photos = await this.childPhotoVersions(items.map((i) => i.childId));
+    const withPhotos = items.map((i) => ({ ...i, photoVersion: (i.childId && photos.get(i.childId)) || null }));
+    return { date, items: withPhotos, open: items.filter((i) => !i.done).length };
+  }
+
+  /** Surati bor bolalar: id → surat versiyasi (avatarUpdatedAt, keshni yangilash uchun) */
+  private async childPhotoVersions(childIds: (string | null)[]): Promise<Map<string, string>> {
+    const ids = [...new Set(childIds.filter((id): id is string => !!id))];
+    if (ids.length === 0) return new Map();
+    const rows = await this.prisma.child.findMany({
+      where: { id: { in: ids }, avatarUpdatedAt: { not: null } },
+      select: { id: true, avatarUpdatedAt: true },
+    });
+    return new Map(rows.map((r) => [r.id, r.avatarUpdatedAt!.toISOString()]));
   }
 
   /**
-   * "Qo'ng'iroq qilinganlar": oxirgi 30 kunda javob olingan arizalar (eng
-   * yangisi tepada) — operator kimga qachon qo'ng'iroq qilinganini ko'radi.
+   * Qo'ng'iroq qilinayotgan bolaning surati — call operatorga ham (unga
+   * «Bolalar» bo'limi yopiq). Faqat o'z filialidagi bola; surat bolaning
+   * Face ID uchun qo'yilgan suratining o'zi.
    */
-  async calledLeads(scope: TenantScope) {
+  async childPhoto(scope: TenantScope, childId: string) {
+    const branchId = requireOperationalScope(scope);
+    const child = await this.prisma.child.findFirst({
+      where: { id: childId, organizationId: scope.organizationId, branchId },
+      select: { avatar: true, avatarKey: true, avatarMimeType: true },
+    });
+    if (!child) throw new NotFoundException("Bola topilmadi");
+    return { key: child.avatarKey, bytes: child.avatar, mimeType: child.avatarMimeType ?? "image/jpeg" };
+  }
+
+  /**
+   * "Qo'ng'iroq qilinganlar": oxirgi 30 kunda javob olingan qo'ng'iroqlar
+   * (eng yangisi tepada) — arizalar (sayt arizalari ham) hamda shu filialdagi
+   * qarz va kelmagan bola qo'ng'iroqlari. Operator kimga qachon qo'ng'iroq
+   * qilinganini ko'radi. Funksiyasi o'chiq tur (CRM, to'lovlar, davomat) chiqmaydi.
+   */
+  async calledLeads(scope: TenantScope, disabled: readonly string[] = []) {
     const branchId = requireOperationalScope(scope);
     const since = toDateOnly(addDays(todayTashkent(), -CALLED_LEADS_LOOKBACK_DAYS));
-    const logs = await this.prisma.callLog.findMany({
-      where: { kind: "LEAD", date: { gte: since }, branch: { organizationId: scope.organizationId } },
-      select: { subjectId: true, date: true, note: true, calledByName: true, createdAt: true },
-      orderBy: { createdAt: "desc" },
-    });
-    const answered = logs.filter((l) => !l.note?.startsWith(NO_ANSWER_PREFIX));
-    // Bir arizaga bir necha marta qo'ng'iroq bo'lsa — eng oxirgisi
-    const latest = new Map<string, (typeof answered)[number]>();
-    for (const log of answered) if (!latest.has(log.subjectId)) latest.set(log.subjectId, log);
-    if (latest.size === 0) return { items: [] };
+    const leadOn = allOn(disabled, "crm");
+    const childKinds = [allOn(disabled, "billing") && "DEBT", allOn(disabled, "attendance") && "ABSENT"].filter(
+      (kind): kind is "DEBT" | "ABSENT" => !!kind,
+    );
+    const logSelect = { kind: true, subjectId: true, date: true, note: true, calledByName: true, createdAt: true } as const;
+    const [leadLogs, childLogs] = await Promise.all([
+      !leadOn
+        ? []
+        : this.prisma.callLog.findMany({
+            where: { kind: "LEAD", date: { gte: since }, branch: { organizationId: scope.organizationId } },
+            select: logSelect,
+            orderBy: { createdAt: "desc" },
+          }),
+      childKinds.length === 0
+        ? []
+        : this.prisma.callLog.findMany({
+            where: { kind: { in: childKinds }, branchId, date: { gte: since } },
+            select: logSelect,
+            orderBy: { createdAt: "desc" },
+          }),
+    ]);
+    const answered = (log: { note: string | null }) => !log.note?.startsWith(NO_ANSWER_PREFIX);
 
-    const leads = await this.prisma.lead.findMany({
-      where: {
-        id: { in: [...latest.keys()] },
-        OR: [{ branchId }, { organizationId: scope.organizationId, source: "WEBSITE" }],
-      },
-      select: { id: true, branchId: true, childFullName: true, parentName: true, parentPhone: true, source: true, stage: true, createdAt: true },
+    // Arizalar: bir arizaga bir necha marta qo'ng'iroq bo'lsa — eng oxirgisi
+    const latest = new Map<string, (typeof leadLogs)[number]>();
+    for (const log of leadLogs.filter(answered)) if (!latest.has(log.subjectId)) latest.set(log.subjectId, log);
+    const leads =
+      latest.size === 0
+        ? []
+        : await this.prisma.lead.findMany({
+            where: {
+              id: { in: [...latest.keys()] },
+              OR: [{ branchId }, { organizationId: scope.organizationId, source: "WEBSITE" }],
+            },
+            select: { id: true, branchId: true, childFullName: true, parentName: true, parentPhone: true, source: true, stage: true, createdAt: true },
+          });
+    const leadItems = leads.map((l) => {
+      const log = latest.get(l.id)!;
+      return {
+        kind: "LEAD" as const,
+        key: `LEAD:${l.id}`,
+        subjectId: l.id,
+        leadId: l.id as string | null,
+        childId: null as string | null,
+        photoVersion: null as string | null,
+        title: l.childFullName || l.parentName,
+        parentName: l.parentName,
+        phone: l.parentPhone as string | null,
+        source: l.source as string | null,
+        stage: l.stage as string | null,
+        appliedAt: l.createdAt as Date | null,
+        groupName: null as string | null,
+        calledAt: log.createdAt,
+        calledByName: log.calledByName,
+        note: log.note,
+        // CRM filial bo'yicha: boshqa filialga yozilgan sayt arizasini bu operator CRM'da ocha olmaydi
+        inMyBranch: l.branchId === branchId,
+      };
     });
-    const items = leads
-      .map((l) => {
-        const log = latest.get(l.id)!;
-        return {
-          leadId: l.id,
-          title: l.childFullName || l.parentName,
-          parentName: l.parentName,
-          phone: l.parentPhone,
-          source: l.source,
-          stage: l.stage,
-          appliedAt: l.createdAt,
+
+    // Qarz va kelmagan bola: har kungi qo'ng'iroq alohida (jurnalda kuniga bitta yozuv)
+    const childAnswered = childLogs.filter(answered);
+    const children =
+      childAnswered.length === 0
+        ? []
+        : await this.prisma.child.findMany({
+            where: { id: { in: [...new Set(childAnswered.map((l) => l.subjectId))] }, organizationId: scope.organizationId },
+            select: { id: true, fullName: true, avatarUpdatedAt: true, group: { select: { name: true } }, guardians: { ...GUARDIAN_SELECT, take: 1 } },
+          });
+    const childById = new Map(children.map((c) => [c.id, c]));
+    const childItems = childAnswered.flatMap((log) => {
+      const child = childById.get(log.subjectId);
+      if (!child) return [];
+      const guardian = child.guardians[0]?.guardian;
+      return [
+        {
+          kind: log.kind as "DEBT" | "ABSENT",
+          key: `${log.kind}:${child.id}:${log.date.toISOString().slice(0, 10)}`,
+          subjectId: child.id,
+          leadId: null as string | null,
+          childId: child.id as string | null,
+          photoVersion: child.avatarUpdatedAt?.toISOString() ?? null,
+          title: child.fullName,
+          parentName: guardian?.fullName ?? "",
+          phone: (guardian?.phone ?? null) as string | null,
+          source: null as string | null,
+          stage: null as string | null,
+          appliedAt: null as Date | null,
+          groupName: child.group?.name ?? null,
           calledAt: log.createdAt,
           calledByName: log.calledByName,
           note: log.note,
-          // CRM filial bo'yicha: boshqa filialga yozilgan sayt arizasini bu operator CRM'da ocha olmaydi
-          inMyBranch: l.branchId === branchId,
-        };
-      })
-      .sort((a, b) => b.calledAt.getTime() - a.calledAt.getTime());
+          inMyBranch: false,
+        },
+      ];
+    });
+
+    const items = [...leadItems, ...childItems].sort((a, b) => b.calledAt.getTime() - a.calledAt.getTime());
     return { items };
   }
 

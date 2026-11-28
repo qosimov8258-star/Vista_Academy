@@ -3962,5 +3962,8 @@
  "Kamida bitta rasm tanlang": "Choose at least one photo",
  "Ko'pi bilan 5 ta rasm yuklash mumkin": "You can upload up to 5 photos",
  "Ko'pi bilan 5 ta rasm": "Up to 5 photos",
- "Matn 500 belgidan oshmasin": "Text must be at most 500 characters"
+ "Matn 500 belgidan oshmasin": "Text must be at most 500 characters",
+ "Hali qo'ng'iroq qilinganlar yo'q": "No calls made yet",
+ "«Qo'ng'iroqlar»da «Qo'ng'iroq qildim» bosilganlar shu yerda chiqadi": "Calls marked «I called» in «Calls» will appear here",
+ "Oxirgi 30 kunda javob olingan qo'ng'iroqlar": "Answered calls from the last 30 days"
 }

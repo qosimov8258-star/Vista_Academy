@@ -41,7 +41,7 @@ export default function CalledLeadsPage({ params }: { params: Promise<{ slug: st
           tint="teal"
           title={tr("Qo'ng'iroq qilinganlar")}
           count={query.data ? tr("{0} ta", query.data.items.length) : undefined}
-          subtitle={tr("Oxirgi 30 kunda javob olingan arizalar")}
+          subtitle={tr("Oxirgi 30 kunda javob olingan qo'ng'iroqlar")}
           actions={<IosButton label={tr("Yangilash")} icon={RefreshCw} compact onClick={onRefresh} loading={refreshing} />}
         />
 

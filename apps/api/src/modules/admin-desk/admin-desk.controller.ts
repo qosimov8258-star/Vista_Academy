@@ -1,6 +1,9 @@
-import { Body, Controller, Delete, Get, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Header, Param, ParseUUIDPipe, Post, Query, Res, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
+import type { Response } from "express";
 import { Public } from "../../common/decorators/public.decorator";
+import { sendMediaResponse } from "../../common/media-response";
+import { R2Service } from "../storage/r2.service";
 import { TenantJwtAuthGuard } from "../iam/guards/tenant-jwt-auth.guard";
 import { CurrentTenantUser } from "../iam/decorators/current-tenant-user.decorator";
 import { TenantAuthenticatedUser, toTenantScope } from "../iam/tenant-auth.types";
@@ -13,17 +16,36 @@ import { CallDoneDto, MarkPickupDto } from "./dto/admin-desk.dto";
 @UseGuards(TenantJwtAuthGuard)
 @Controller("app/desk")
 export class AdminDeskController {
-  constructor(private readonly service: AdminDeskService) {}
+  constructor(
+    private readonly service: AdminDeskService,
+    private readonly r2: R2Service,
+  ) {}
+
+  /**
+   * Qo'ng'iroq qilinayotgan bolaning surati (Face ID uchun qo'yilgani) — call
+   * operator ham ko'radi, unga «Bolalar» bo'limi yopiq bo'lsa ham. Faqat o'z
+   * filialidagi bola. Javob — rasmning o'zi (`{ success, data }` qobig'isiz).
+   */
+  @Get("children/:id/photo")
+  @Header("Cache-Control", "private, max-age=300")
+  async childPhoto(
+    @CurrentTenantUser() user: TenantAuthenticatedUser,
+    @Param("id", ParseUUIDPipe) id: string,
+    @Res() res: Response,
+  ) {
+    const media = await this.service.childPhoto(toTenantScope(user), id);
+    await sendMediaResponse(res, this.r2, media, "Bolaning surati yo'q");
+  }
 
   @Get("calls")
   calls(@CurrentTenantUser() user: TenantAuthenticatedUser, @Query("date") date: string) {
     return this.service.calls(toTenantScope(user), date, user.disabledFeatures);
   }
 
-  /** Oxirgi 30 kunda qo'ng'iroq qilingan (javob olingan) arizalar */
+  /** Oxirgi 30 kunda qo'ng'iroq qilingan (javob olingan): arizalar, qarzdorlar va kelmagan bolalar */
   @Get("calls/leads-called")
   calledLeads(@CurrentTenantUser() user: TenantAuthenticatedUser) {
-    return this.service.calledLeads(toTenantScope(user));
+    return this.service.calledLeads(toTenantScope(user), user.disabledFeatures);
   }
 
   @Post("calls/done")
